@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { eq, and } from "drizzle-orm";
 import { Info } from "lucide-react";
-import { db, proformaInvoicesTable, proformaInvoiceItemsTable, customersTable, salesOrdersTable, orgsTable } from "@/db";
+import { db, proformaInvoicesTable, proformaInvoiceItemsTable, customersTable, salesOrdersTable, quotationsTable, orgsTable } from "@/db";
 import { requireSession } from "@/lib/session";
 import { getLocale } from "@/lib/i18n/server";
 import { t } from "@/lib/i18n/dict";
@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { PartyCardSimple } from "../../_shared/party-card";
 import { TotalsStrip } from "../../_shared/totals-strip";
+import { DocRelationships } from "../../_shared/doc-relationships";
 import { fmt } from "../../_shared/totals";
 import { ProformaDetailActions } from "../proforma-detail-actions";
 
@@ -40,6 +41,7 @@ export default async function ProformaDetailPage({ params }: { params: Promise<{
       customerAddress: customersTable.address,
       sourceSalesOrderId: proformaInvoicesTable.sourceSalesOrderId,
       sourceSoNumber: salesOrdersTable.soNumber,
+      sourceSoQuotationId: salesOrdersTable.sourceQuotationId,
     })
     .from(proformaInvoicesTable)
     .innerJoin(customersTable, eq(customersTable.id, proformaInvoicesTable.customerId))
@@ -48,13 +50,22 @@ export default async function ProformaDetailPage({ params }: { params: Promise<{
 
   if (!pf) notFound();
 
-  const [items, [org]] = await Promise.all([
+  const [items, [org], [sourceQuotation]] = await Promise.all([
     db.select().from(proformaInvoiceItemsTable).where(eq(proformaInvoiceItemsTable.proformaInvoiceId, proformaId)),
     db.select().from(orgsTable).where(eq(orgsTable.id, session.orgId)),
+    pf.sourceSoQuotationId
+      ? db.select({ quotationNumber: quotationsTable.quotationNumber }).from(quotationsTable).where(eq(quotationsTable.id, pf.sourceSoQuotationId))
+      : Promise.resolve([]),
   ]);
+
+  const relNodes: { label: string; sub?: string }[] = [];
+  if (sourceQuotation) relNodes.push({ label: "Quotation", sub: sourceQuotation.quotationNumber });
+  if (pf.sourceSoNumber) relNodes.push({ label: "Sales Order", sub: pf.sourceSoNumber });
+  relNodes.push({ label: "Proforma Invoice", sub: "Current" });
 
   return (
     <div className="max-w-4xl">
+      {relNodes.length > 1 && <DocRelationships locale={locale} nodes={relNodes} currentLabel="Proforma Invoice" />}
       <div className="inv-head">
         <div>
           <h3 className="mono">{pf.proformaNumber}</h3>

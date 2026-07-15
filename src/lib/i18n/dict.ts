@@ -249,6 +249,7 @@ const DICT: Record<string, string> = {
   Date: "التاريخ",
   Direction: "الاتجاه",
   Reference: "المرجع",
+  Current: "الحالي",
   "Bank Account": "الحساب البنكي",
   Amount: "المبلغ",
   In: "وارد",

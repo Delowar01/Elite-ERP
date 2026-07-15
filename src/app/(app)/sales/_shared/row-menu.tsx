@@ -23,10 +23,10 @@ export type RowMenuEntry =
 export function RowMenu({ entries }: { entries: RowMenuEntry[] }) {
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger className="size-[30px] rounded-lg inline-flex items-center justify-center text-ink-faint hover:bg-canvas hover:text-ink outline-none">
+      <DropdownMenuTrigger className="row-menu-btn outline-none">
         <MoreVertical className="size-4" />
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="min-w-[220px]">
+      <DropdownMenuContent align="end">
         {entries.map((e, i) => {
           if (e.kind === "separator") return <DropdownMenuSeparator key={i} />;
           if (e.kind === "convert") {
@@ -47,11 +47,7 @@ export function RowMenu({ entries }: { entries: RowMenuEntry[] }) {
           }
           const Icon = e.icon;
           const disabled = !e.onSelect && !e.href;
-          const cls = cn(
-            "cursor-pointer",
-            e.danger && "text-danger data-[highlighted]:bg-danger-bg",
-            disabled && "opacity-45 cursor-default pointer-events-none",
-          );
+          const cls = cn(e.danger && "danger", disabled && "opacity-45 pointer-events-none");
           if (e.href) {
             return (
               <DropdownMenuItem key={i} asChild className={cls}>

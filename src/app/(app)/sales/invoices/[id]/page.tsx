@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { eq, and } from "drizzle-orm";
-import { db, salesInvoicesTable, salesInvoiceItemsTable, customersTable, salesOrdersTable, orgsTable } from "@/db";
+import { db, salesInvoicesTable, salesInvoiceItemsTable, customersTable, salesOrdersTable, quotationsTable, orgsTable } from "@/db";
 import { requireSession } from "@/lib/session";
 import { getLocale } from "@/lib/i18n/server";
 import { t } from "@/lib/i18n/dict";
@@ -9,6 +9,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@
 import { PartyCardSimple } from "../../_shared/party-card";
 import { TotalsStrip } from "../../_shared/totals-strip";
 import { EInvoicePreviewPanel } from "../../_shared/einvoice-preview-panel";
+import { DocRelationships } from "../../_shared/doc-relationships";
 import { fmt } from "../../_shared/totals";
 import { InvoiceDetailActions } from "../invoice-detail-actions";
 
@@ -45,6 +46,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
       customerAddress: customersTable.address,
       sourceSalesOrderId: salesInvoicesTable.sourceSalesOrderId,
       sourceSoNumber: salesOrdersTable.soNumber,
+      sourceSoQuotationId: salesOrdersTable.sourceQuotationId,
     })
     .from(salesInvoicesTable)
     .innerJoin(customersTable, eq(customersTable.id, salesInvoicesTable.customerId))
@@ -53,15 +55,24 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
 
   if (!invoice) notFound();
 
-  const [items, [org]] = await Promise.all([
+  const [items, [org], [sourceQuotation]] = await Promise.all([
     db.select().from(salesInvoiceItemsTable).where(eq(salesInvoiceItemsTable.invoiceId, invoiceId)),
     db.select().from(orgsTable).where(eq(orgsTable.id, session.orgId)),
+    invoice.sourceSoQuotationId
+      ? db.select({ quotationNumber: quotationsTable.quotationNumber }).from(quotationsTable).where(eq(quotationsTable.id, invoice.sourceSoQuotationId))
+      : Promise.resolve([]),
   ]);
   const balanceDue = Number(invoice.total) - Number(invoice.paidAmount);
   const showPayments = invoice.status !== "draft" && invoice.status !== "void";
 
+  const relNodes: { label: string; sub?: string }[] = [];
+  if (sourceQuotation) relNodes.push({ label: "Quotation", sub: sourceQuotation.quotationNumber });
+  if (invoice.sourceSoNumber) relNodes.push({ label: "Sales Order", sub: invoice.sourceSoNumber });
+  relNodes.push({ label: "Invoice", sub: "Current" });
+
   return (
     <div className="max-w-6xl">
+      {relNodes.length > 1 && <DocRelationships locale={locale} nodes={relNodes} currentLabel="Invoice" />}
       <div className="inv-head">
         <div>
           <h3 className="mono">{invoice.invoiceNumber}</h3>
