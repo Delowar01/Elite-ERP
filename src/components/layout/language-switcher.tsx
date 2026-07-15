@@ -12,13 +12,10 @@ export function LanguageSwitcher({ locale }: { locale: Locale }) {
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger
-        disabled={pending}
-        className="flex items-center gap-1 h-9 rounded-[10px] border border-line px-2.5 text-[12px] font-semibold text-ink-muted hover:text-ink outline-none disabled:opacity-60"
-      >
+      <DropdownMenuTrigger disabled={pending} className="topbar-lang outline-none disabled:opacity-60">
         <Languages className="size-3.5" />
-        {locale.toUpperCase()}
-        <ChevronDown className="size-2.5 text-ink-faint" />
+        <span>{locale.toUpperCase()}</span>
+        <ChevronDown className="size-2.5" style={{ color: "var(--ink-faint)" }} />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuItem
