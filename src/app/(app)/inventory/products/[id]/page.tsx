@@ -2,12 +2,14 @@ import { notFound } from "next/navigation";
 import { and, eq } from "drizzle-orm";
 import { db, productsTable } from "@/db";
 import { requireSession } from "@/lib/session";
+import { tenantScope } from "@/lib/tenant";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ProductForm } from "../product-form";
 import { updateProductAction } from "../actions";
 import { AdjustStockDialog } from "../adjust-stock-dialog";
+import { ProductRecordActions } from "../product-record-actions";
 
 export default async function ProductDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await requireSession();
@@ -18,7 +20,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
   const [product] = await db
     .select()
     .from(productsTable)
-    .where(and(eq(productsTable.id, productId), eq(productsTable.orgId, session.orgId)))
+    .where(and(eq(productsTable.id, productId), tenantScope(session.orgId, productsTable, { includeArchived: true })))
     .limit(1);
 
   if (!product) notFound();
@@ -30,7 +32,13 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
       <PageHeader
         title={product.name}
         description={`SKU ${product.sku}`}
-        actions={low ? <Badge variant="warning">Low stock</Badge> : <Badge variant="success">In stock</Badge>}
+        actions={
+          <div className="flex items-center gap-2">
+            {low ? <Badge variant="warning">Low stock</Badge> : <Badge variant="success">In stock</Badge>}
+            {product.recordState === "archived" && <Badge variant="neutral">Archived</Badge>}
+            <ProductRecordActions product={product} />
+          </div>
+        }
       />
 
       <div className="grid grid-cols-3 gap-5">

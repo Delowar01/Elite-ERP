@@ -2,11 +2,13 @@ import { notFound } from "next/navigation";
 import { and, eq } from "drizzle-orm";
 import { db, customersTable, salesInvoicesTable } from "@/db";
 import { requireSession } from "@/lib/session";
+import { tenantScope } from "@/lib/tenant";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ClientForm } from "../client-form";
 import { updateClientAction } from "../actions";
+import { ClientRecordActions } from "../client-record-actions";
 
 export default async function ClientDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await requireSession();
@@ -17,7 +19,7 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
   const [client] = await db
     .select()
     .from(customersTable)
-    .where(and(eq(customersTable.id, clientId), eq(customersTable.orgId, session.orgId)))
+    .where(and(eq(customersTable.id, clientId), tenantScope(session.orgId, customersTable, { includeArchived: true })))
     .limit(1);
 
   if (!client) notFound();
@@ -33,7 +35,13 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
       <PageHeader
         title={client.name}
         description="Client profile"
-        actions={<Badge variant={client.isActive ? "success" : "neutral"}>{client.isActive ? "Active" : "Inactive"}</Badge>}
+        actions={
+          <div className="flex items-center gap-2">
+            <Badge variant={client.isActive ? "success" : "neutral"}>{client.isActive ? "Active" : "Inactive"}</Badge>
+            {client.recordState === "archived" && <Badge variant="neutral">Archived</Badge>}
+            <ClientRecordActions client={client} />
+          </div>
+        }
       />
 
       <div className="grid grid-cols-3 gap-5">

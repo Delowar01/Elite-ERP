@@ -2,8 +2,8 @@
 
 import { useActionState } from "react";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { FormField } from "@/components/ui/form-field";
 import type { Product } from "@/db";
 import type { ActionState } from "./actions";
 
@@ -21,32 +21,25 @@ export function ProductForm({
   return (
     <form action={formAction} className="flex flex-col gap-5 max-w-xl">
       <div className="grid grid-cols-2 gap-4">
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="sku">SKU</Label>
+        <FormField label="SKU" htmlFor="sku">
           <Input id="sku" name="sku" required defaultValue={product?.sku} placeholder="SKU-00482" />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="unit">Unit</Label>
+        </FormField>
+        <FormField label="Unit" htmlFor="unit">
           <Input id="unit" name="unit" defaultValue={product?.unit ?? "pcs"} />
-        </div>
-        <div className="flex flex-col gap-1.5 col-span-2">
-          <Label htmlFor="name">Name</Label>
+        </FormField>
+        <FormField label="Name" htmlFor="name" span={2}>
           <Input id="name" name="name" required defaultValue={product?.name} placeholder="Precision Steel Bracket" />
-        </div>
-        <div className="flex flex-col gap-1.5 col-span-2">
-          <Label htmlFor="description">Description</Label>
+        </FormField>
+        <FormField label="Description" htmlFor="description" span={2}>
           <Input id="description" name="description" defaultValue={product?.description ?? ""} />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="unitPrice">Unit price (SAR)</Label>
+        </FormField>
+        <FormField label="Unit price (SAR)" htmlFor="unitPrice">
           <Input id="unitPrice" name="unitPrice" type="number" step="0.01" min="0" defaultValue={product?.unitPrice ?? "0"} />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="costPrice">Cost price (SAR)</Label>
+        </FormField>
+        <FormField label="Cost price (SAR)" htmlFor="costPrice">
           <Input id="costPrice" name="costPrice" type="number" step="0.01" min="0" defaultValue={product?.costPrice ?? ""} />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="taxRatePercent">Tax rate %</Label>
+        </FormField>
+        <FormField label="Tax rate %" htmlFor="taxRatePercent">
           <Input
             id="taxRatePercent"
             name="taxRatePercent"
@@ -55,16 +48,14 @@ export function ProductForm({
             min="0"
             defaultValue={product?.taxRatePercent ?? "15"}
           />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="reorderLevel">Reorder level</Label>
+        </FormField>
+        <FormField label="Reorder level" htmlFor="reorderLevel">
           <Input id="reorderLevel" name="reorderLevel" type="number" min="0" defaultValue={product?.reorderLevel ?? 0} />
-        </div>
+        </FormField>
         {!product && (
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="quantityOnHand">Opening quantity</Label>
+          <FormField label="Opening quantity" htmlFor="quantityOnHand">
             <Input id="quantityOnHand" name="quantityOnHand" type="number" min="0" defaultValue={0} />
-          </div>
+          </FormField>
         )}
       </div>
       {state?.error && <p className="text-[12.5px] text-danger">{state.error}</p>}

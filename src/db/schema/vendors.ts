@@ -2,6 +2,7 @@ import { pgTable, serial, integer, text, boolean, timestamp } from "drizzle-orm/
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { orgsTable } from "./orgs";
+import { recordStateEnum } from "./record-state";
 
 export const vendorsTable = pgTable("vendors", {
   id: serial("id").primaryKey(),
@@ -15,12 +16,14 @@ export const vendorsTable = pgTable("vendors", {
   taxId: text("tax_id"),
   notes: text("notes"),
   isActive: boolean("is_active").notNull().default(true),
+  recordState: recordStateEnum("record_state").notNull().default("active"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
 export const insertVendorSchema = createInsertSchema(vendorsTable).omit({
   id: true,
+  recordState: true,
   createdAt: true,
   updatedAt: true,
 });

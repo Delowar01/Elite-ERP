@@ -10,6 +10,10 @@ import {
   paymentTermPresetsTable,
   unitsTable,
   bankAccountsTable,
+  departmentsTable,
+  productCategoriesTable,
+  leaveTypesTable,
+  expenseCategoriesTable,
 } from "@/db/schema";
 
 // Seeds the minimal defaults a new org needs to be immediately usable:
@@ -66,4 +70,28 @@ export async function seedOrgDefaults(tx: Tx, orgId: number) {
       openingBalance: "0",
     });
   }
+
+  await tx.insert(departmentsTable).values([
+    { orgId, name: "Operations" },
+    { orgId, name: "Finance" },
+    { orgId, name: "Sales" },
+  ]);
+
+  await tx.insert(productCategoriesTable).values([
+    { orgId, name: "Exhibition Stands" },
+    { orgId, name: "Signage & Printing" },
+    { orgId, name: "Furniture & Fixtures" },
+  ]);
+
+  await tx.insert(leaveTypesTable).values([
+    { orgId, name: "Annual", daysPerYear: 21 },
+    { orgId, name: "Sick", daysPerYear: 10 },
+    { orgId, name: "Unpaid", daysPerYear: null },
+  ]);
+
+  await tx.insert(expenseCategoriesTable).values([
+    { orgId, name: "Travel & Transport" },
+    { orgId, name: "Office Supplies" },
+    { orgId, name: "Equipment Rental" },
+  ]);
 }

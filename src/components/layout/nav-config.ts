@@ -27,7 +27,6 @@ import {
   CalendarClock,
   SlidersHorizontal,
   Settings,
-  UsersRound,
 } from "lucide-react";
 
 export type NavItem = {
@@ -101,11 +100,10 @@ export const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
-    label: "Configuration",
+    label: "Administration",
     items: [
-      { label: "Presets", href: "/settings/presets", icon: SlidersHorizontal, roles: ["owner", "admin"] },
-      { label: "Organization", href: "/settings/organization", icon: Settings, roles: ["owner", "admin"] },
-      { label: "Team", href: "/settings/team", icon: UsersRound, roles: ["owner", "admin"] },
+      { label: "Preset Management", href: "/settings/presets", icon: SlidersHorizontal, roles: ["owner", "admin"] },
+      { label: "Business Settings", href: "/settings/organization", icon: Settings, roles: ["owner", "admin"] },
     ],
   },
 ];

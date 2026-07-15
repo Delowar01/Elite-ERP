@@ -3,8 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { and, eq } from "drizzle-orm";
-import { db, productsTable, activityLogsTable } from "@/db";
-import { requireSession } from "@/lib/session";
+import { db, productsTable } from "@/db";
+import { requireSession, requireRole } from "@/lib/session";
+import { tenantScope } from "@/lib/tenant";
+import { logActivity } from "@/lib/activity";
 
 export type ActionState = { error?: string } | undefined;
 
@@ -41,6 +43,13 @@ export async function createProductAction(_prev: ActionState, formData: FormData
     .values({ orgId: session.orgId, ...fields, quantityOnHand })
     .returning({ id: productsTable.id });
 
+  await logActivity(session, {
+    type: "product.created",
+    description: `Created product "${fields.name}" (${fields.sku})`,
+    entityType: "product",
+    entityId: row.id,
+  });
+
   revalidatePath("/inventory/products");
   redirect(`/inventory/products/${row.id}`);
 }
@@ -50,14 +59,39 @@ export async function updateProductAction(id: number, _prev: ActionState, formDa
   const fields = readProductFields(formData);
   if (!fields.sku || !fields.name) return { error: "SKU and name are required." };
 
-  await db
+  const result = await db
     .update(productsTable)
     .set(fields)
-    .where(and(eq(productsTable.id, id), eq(productsTable.orgId, session.orgId)));
+    .where(and(eq(productsTable.id, id), tenantScope(session.orgId, productsTable)))
+    .returning({ id: productsTable.id });
+  if (!result.length) return { error: "Product not found." };
+
+  await logActivity(session, {
+    type: "product.updated",
+    description: `Updated product "${fields.name}"`,
+    entityType: "product",
+    entityId: id,
+  });
 
   revalidatePath("/inventory/products");
   revalidatePath(`/inventory/products/${id}`);
   return { error: undefined };
+}
+
+export async function toggleProductActiveAction(id: number, isActive: boolean) {
+  const session = await requireSession();
+  await db
+    .update(productsTable)
+    .set({ isActive })
+    .where(and(eq(productsTable.id, id), tenantScope(session.orgId, productsTable)));
+  await logActivity(session, {
+    type: isActive ? "product.activated" : "product.deactivated",
+    description: `Marked product ${isActive ? "active" : "inactive"}`,
+    entityType: "product",
+    entityId: id,
+  });
+  revalidatePath("/inventory/products");
+  revalidatePath(`/inventory/products/${id}`);
 }
 
 export async function adjustStockAction(id: number, delta: number, reason: string) {
@@ -65,7 +99,7 @@ export async function adjustStockAction(id: number, delta: number, reason: strin
   const [product] = await db
     .select()
     .from(productsTable)
-    .where(and(eq(productsTable.id, id), eq(productsTable.orgId, session.orgId)))
+    .where(and(eq(productsTable.id, id), tenantScope(session.orgId, productsTable)))
     .limit(1);
   if (!product) throw new Error("Product not found");
 
@@ -73,13 +107,62 @@ export async function adjustStockAction(id: number, delta: number, reason: strin
   if (newQty < 0) throw new Error("Stock cannot go negative");
 
   await db.update(productsTable).set({ quantityOnHand: newQty }).where(eq(productsTable.id, id));
-  await db.insert(activityLogsTable).values({
-    orgId: session.orgId,
+  await logActivity(session, {
     type: "stock_adjustment",
     description: `${product.name} (${product.sku}) adjusted by ${delta > 0 ? "+" : ""}${delta}: ${reason}`,
-    userId: session.userId,
-    userName: session.name,
+    entityType: "product",
+    entityId: id,
   });
   revalidatePath(`/inventory/products/${id}`);
   revalidatePath("/inventory/products");
+}
+
+async function setRecordState(id: number, recordState: "active" | "archived" | "deleted", type: string, description: string) {
+  const session = await requireSession();
+  const result = await db
+    .update(productsTable)
+    .set({ recordState })
+    .where(and(eq(productsTable.id, id), tenantScope(session.orgId, productsTable, { includeArchived: true, includeDeleted: true })))
+    .returning({ id: productsTable.id });
+  if (!result.length) return { error: "Product not found." };
+
+  await logActivity(session, { type, description, entityType: "product", entityId: id });
+  revalidatePath("/inventory/products");
+  revalidatePath("/inventory/products/recycle-bin");
+  revalidatePath(`/inventory/products/${id}`);
+  return { error: undefined };
+}
+
+export async function archiveProductAction(id: number) {
+  return setRecordState(id, "archived", "product.archived", "Archived product");
+}
+
+export async function unarchiveProductAction(id: number) {
+  return setRecordState(id, "active", "product.unarchived", "Unarchived product");
+}
+
+export async function deleteProductAction(id: number) {
+  return setRecordState(id, "deleted", "product.deleted", "Moved product to Recycle Bin");
+}
+
+export async function restoreProductAction(id: number) {
+  return setRecordState(id, "active", "product.restored", "Restored product from Recycle Bin");
+}
+
+export async function permanentlyDeleteProductAction(id: number) {
+  const session = await requireRole("owner", "admin");
+  const result = await db
+    .delete(productsTable)
+    .where(and(eq(productsTable.id, id), eq(productsTable.orgId, session.orgId), eq(productsTable.recordState, "deleted")))
+    .returning({ id: productsTable.id });
+  if (!result.length) return { error: "Product not found in Recycle Bin." };
+
+  await logActivity(session, {
+    type: "product.permanently-deleted",
+    description: "Permanently deleted product",
+    entityType: "product",
+    entityId: id,
+  });
+  revalidatePath("/inventory/products/recycle-bin");
+  return { error: undefined };
 }

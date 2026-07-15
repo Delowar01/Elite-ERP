@@ -1,7 +1,9 @@
 import { count, eq } from "drizzle-orm";
+import { Users, Building2, Package, Receipt } from "lucide-react";
 import { db, customersTable, vendorsTable, productsTable, salesInvoicesTable } from "@/db";
 import { requireSession } from "@/lib/session";
 import { Card, CardContent } from "@/components/ui/card";
+import { SummaryCard } from "@/components/ui/summary-card";
 
 async function countFor(orgId: number, table: typeof customersTable | typeof vendorsTable | typeof productsTable | typeof salesInvoicesTable) {
   const [row] = await db.select({ n: count() }).from(table).where(eq(table.orgId, orgId));
@@ -19,10 +21,10 @@ export default async function DashboardPage() {
   ]);
 
   const kpis = [
-    { label: "Clients", value: clients },
-    { label: "Vendors", value: vendors },
-    { label: "Products", value: products },
-    { label: "Sales invoices", value: invoices },
+    { label: "Clients", value: clients, icon: Users, accent: "var(--brand-orange)" },
+    { label: "Vendors", value: vendors, icon: Building2, accent: "var(--info)" },
+    { label: "Products", value: products, icon: Package, accent: "var(--success)" },
+    { label: "Sales invoices", value: invoices, icon: Receipt, accent: "var(--warning)" },
   ];
 
   return (
@@ -34,12 +36,7 @@ export default async function DashboardPage() {
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5">
         {kpis.map((k, i) => (
-          <Card key={k.label} hoverable className="animate-fade-up" style={{ animationDelay: `${i * 0.04}s` }}>
-            <CardContent className="pt-5">
-              <div className="text-[11.5px] font-medium text-ink-muted">{k.label}</div>
-              <div className="font-display font-extrabold text-2xl mt-1.5 text-brand-orange">{k.value}</div>
-            </CardContent>
-          </Card>
+          <SummaryCard key={k.label} label={k.label} value={k.value} icon={k.icon} accent={k.accent} delay={i * 0.04} />
         ))}
       </div>
 

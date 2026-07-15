@@ -2,11 +2,13 @@ import { notFound } from "next/navigation";
 import { and, eq } from "drizzle-orm";
 import { db, vendorsTable, purchaseOrdersTable } from "@/db";
 import { requireSession } from "@/lib/session";
+import { tenantScope } from "@/lib/tenant";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { VendorForm } from "../vendor-form";
 import { updateVendorAction } from "../actions";
+import { VendorRecordActions } from "../vendor-record-actions";
 
 export default async function VendorDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await requireSession();
@@ -17,7 +19,7 @@ export default async function VendorDetailPage({ params }: { params: Promise<{ i
   const [vendor] = await db
     .select()
     .from(vendorsTable)
-    .where(and(eq(vendorsTable.id, vendorId), eq(vendorsTable.orgId, session.orgId)))
+    .where(and(eq(vendorsTable.id, vendorId), tenantScope(session.orgId, vendorsTable, { includeArchived: true })))
     .limit(1);
 
   if (!vendor) notFound();
@@ -33,7 +35,13 @@ export default async function VendorDetailPage({ params }: { params: Promise<{ i
       <PageHeader
         title={vendor.name}
         description="Vendor profile"
-        actions={<Badge variant={vendor.isActive ? "success" : "neutral"}>{vendor.isActive ? "Active" : "Inactive"}</Badge>}
+        actions={
+          <div className="flex items-center gap-2">
+            <Badge variant={vendor.isActive ? "success" : "neutral"}>{vendor.isActive ? "Active" : "Inactive"}</Badge>
+            {vendor.recordState === "archived" && <Badge variant="neutral">Archived</Badge>}
+            <VendorRecordActions vendor={vendor} />
+          </div>
+        }
       />
 
       <div className="grid grid-cols-3 gap-5">

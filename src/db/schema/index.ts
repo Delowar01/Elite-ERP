@@ -1,5 +1,6 @@
 export * from "./orgs";
 export * from "./users";
+export * from "./record-state";
 export * from "./document-sequences";
 export * from "./accounting";
 export * from "./presets";

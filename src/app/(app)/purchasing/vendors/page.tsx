@@ -1,25 +1,32 @@
 import Link from "next/link";
-import { and, eq, ilike, or } from "drizzle-orm";
+import { and, ilike, or } from "drizzle-orm";
 import { db, vendorsTable } from "@/db";
 import { requireSession } from "@/lib/session";
+import { tenantScope } from "@/lib/tenant";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { Card, CardContent } from "@/components/ui/card";
-import { Plus, Search } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
+import { VendorsToolbar } from "./vendors-toolbar";
+import { VendorRecordActions } from "./vendor-record-actions";
 
-export default async function VendorsPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
+export default async function VendorsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string; archived?: string }>;
+}) {
   const session = await requireSession();
-  const { q } = await searchParams;
+  const { q, archived } = await searchParams;
+  const includeArchived = archived === "1";
 
   const vendors = await db
     .select()
     .from(vendorsTable)
     .where(
       and(
-        eq(vendorsTable.orgId, session.orgId),
+        tenantScope(session.orgId, vendorsTable, { includeArchived }),
         q ? or(ilike(vendorsTable.name, `%${q}%`), ilike(vendorsTable.email, `%${q}%`)) : undefined,
       ),
     )
@@ -31,20 +38,22 @@ export default async function VendorsPage({ searchParams }: { searchParams: Prom
         title="Vendors"
         description="Suppliers used for purchase orders and debit notes."
         actions={
-          <Button asChild>
-            <Link href="/purchasing/vendors/new">
-              <Plus className="size-4" /> New Vendor
-            </Link>
-          </Button>
+          <>
+            <Button variant="ghost" asChild>
+              <Link href="/purchasing/vendors/recycle-bin">
+                <Trash2 className="size-4" /> Recycle Bin
+              </Link>
+            </Button>
+            <Button asChild>
+              <Link href="/purchasing/vendors/new">
+                <Plus className="size-4" /> New Vendor
+              </Link>
+            </Button>
+          </>
         }
       />
 
-      <form className="mb-4 max-w-xs">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-ink-faint" />
-          <Input name="q" defaultValue={q} placeholder="Search vendors…" className="pl-9" />
-        </div>
-      </form>
+      <VendorsToolbar defaultQ={q} defaultArchived={includeArchived} />
 
       {vendors.length === 0 ? (
         <Card>
@@ -60,6 +69,7 @@ export default async function VendorsPage({ searchParams }: { searchParams: Prom
               <TableHead>Email</TableHead>
               <TableHead>Phone</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead className="w-12" />
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -72,8 +82,12 @@ export default async function VendorsPage({ searchParams }: { searchParams: Prom
                 </TableCell>
                 <TableCell className="text-ink-muted">{v.email ?? "—"}</TableCell>
                 <TableCell className="text-ink-muted font-mono text-xs">{v.phone ?? "—"}</TableCell>
-                <TableCell>
+                <TableCell className="flex items-center gap-1.5 flex-wrap">
                   <Badge variant={v.isActive ? "success" : "neutral"}>{v.isActive ? "Active" : "Inactive"}</Badge>
+                  {v.recordState === "archived" && <Badge variant="neutral">Archived</Badge>}
+                </TableCell>
+                <TableCell className="text-right">
+                  <VendorRecordActions vendor={v} />
                 </TableCell>
               </TableRow>
             ))}

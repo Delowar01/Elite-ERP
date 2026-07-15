@@ -4,7 +4,9 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { and, eq } from "drizzle-orm";
 import { db, customersTable } from "@/db";
-import { requireSession } from "@/lib/session";
+import { requireSession, requireRole } from "@/lib/session";
+import { tenantScope } from "@/lib/tenant";
+import { logActivity } from "@/lib/activity";
 
 export type ActionState = { error?: string } | undefined;
 
@@ -31,6 +33,13 @@ export async function createClientAction(_prev: ActionState, formData: FormData)
     .values({ orgId: session.orgId, ...fields })
     .returning({ id: customersTable.id });
 
+  await logActivity(session, {
+    type: "client.created",
+    description: `Created client "${fields.name}"`,
+    entityType: "client",
+    entityId: row.id,
+  });
+
   revalidatePath("/clients");
   redirect(`/clients/${row.id}`);
 }
@@ -40,10 +49,19 @@ export async function updateClientAction(id: number, _prev: ActionState, formDat
   const fields = readClientFields(formData);
   if (!fields.name) return { error: "Name is required." };
 
-  await db
+  const result = await db
     .update(customersTable)
     .set(fields)
-    .where(and(eq(customersTable.id, id), eq(customersTable.orgId, session.orgId)));
+    .where(and(eq(customersTable.id, id), tenantScope(session.orgId, customersTable)))
+    .returning({ id: customersTable.id });
+  if (!result.length) return { error: "Client not found." };
+
+  await logActivity(session, {
+    type: "client.updated",
+    description: `Updated client "${fields.name}"`,
+    entityType: "client",
+    entityId: id,
+  });
 
   revalidatePath("/clients");
   revalidatePath(`/clients/${id}`);
@@ -55,7 +73,64 @@ export async function toggleClientActiveAction(id: number, isActive: boolean) {
   await db
     .update(customersTable)
     .set({ isActive })
-    .where(and(eq(customersTable.id, id), eq(customersTable.orgId, session.orgId)));
+    .where(and(eq(customersTable.id, id), tenantScope(session.orgId, customersTable)));
+  await logActivity(session, {
+    type: isActive ? "client.activated" : "client.deactivated",
+    description: `Marked client ${isActive ? "active" : "inactive"}`,
+    entityType: "client",
+    entityId: id,
+  });
   revalidatePath("/clients");
   revalidatePath(`/clients/${id}`);
+}
+
+async function setRecordState(id: number, recordState: "active" | "archived" | "deleted", type: string, description: string) {
+  const session = await requireSession();
+  const result = await db
+    .update(customersTable)
+    .set({ recordState })
+    .where(and(eq(customersTable.id, id), tenantScope(session.orgId, customersTable, { includeArchived: true, includeDeleted: true })))
+    .returning({ id: customersTable.id });
+  if (!result.length) return { error: "Client not found." };
+
+  await logActivity(session, { type, description, entityType: "client", entityId: id });
+  revalidatePath("/clients");
+  revalidatePath("/clients/recycle-bin");
+  revalidatePath(`/clients/${id}`);
+  return { error: undefined };
+}
+
+export async function archiveClientAction(id: number) {
+  return setRecordState(id, "archived", "client.archived", "Archived client");
+}
+
+export async function unarchiveClientAction(id: number) {
+  return setRecordState(id, "active", "client.unarchived", "Unarchived client");
+}
+
+export async function deleteClientAction(id: number) {
+  return setRecordState(id, "deleted", "client.deleted", "Moved client to Recycle Bin");
+}
+
+export async function restoreClientAction(id: number) {
+  return setRecordState(id, "active", "client.restored", "Restored client from Recycle Bin");
+}
+
+// Hard delete: the only action in this module that issues a real SQL DELETE. Owner/admin only.
+export async function permanentlyDeleteClientAction(id: number) {
+  const session = await requireRole("owner", "admin");
+  const result = await db
+    .delete(customersTable)
+    .where(and(eq(customersTable.id, id), eq(customersTable.orgId, session.orgId), eq(customersTable.recordState, "deleted")))
+    .returning({ id: customersTable.id });
+  if (!result.length) return { error: "Client not found in Recycle Bin." };
+
+  await logActivity(session, {
+    type: "client.permanently-deleted",
+    description: "Permanently deleted client",
+    entityType: "client",
+    entityId: id,
+  });
+  revalidatePath("/clients/recycle-bin");
+  return { error: undefined };
 }

@@ -2,6 +2,7 @@ import { pgTable, serial, integer, text, numeric, boolean, timestamp, unique } f
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { orgsTable } from "./orgs";
+import { recordStateEnum } from "./record-state";
 
 export const productsTable = pgTable(
   "products",
@@ -20,6 +21,7 @@ export const productsTable = pgTable(
     quantityOnHand: integer("quantity_on_hand").notNull().default(0),
     reorderLevel: integer("reorder_level").notNull().default(0),
     isActive: boolean("is_active").notNull().default(true),
+    recordState: recordStateEnum("record_state").notNull().default("active"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
@@ -28,6 +30,7 @@ export const productsTable = pgTable(
 
 export const insertProductSchema = createInsertSchema(productsTable).omit({
   id: true,
+  recordState: true,
   createdAt: true,
   updatedAt: true,
 });

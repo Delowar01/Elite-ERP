@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
@@ -16,11 +17,9 @@ export type Session = {
   orgName: string;
 };
 
-export async function getSession(): Promise<Session | null> {
-  const cookieStore = await cookies();
-  const token = cookieStore.get(SESSION_COOKIE)?.value;
-  if (!token) return null;
-
+// Session -> org resolution happens once per request: every Server Component/Action on a page
+// calls getSession(), but React's cache() dedups the underlying DB lookup within that one render.
+const lookupSessionByToken = cache(async (token: string): Promise<Session | null> => {
   const payload = await verifySessionToken(token);
   if (!payload) return null;
 
@@ -41,6 +40,13 @@ export async function getSession(): Promise<Session | null> {
 
   if (!row || !row.isActive) return null;
   return { ...row, role: row.role as Role };
+});
+
+export async function getSession(): Promise<Session | null> {
+  const cookieStore = await cookies();
+  const token = cookieStore.get(SESSION_COOKIE)?.value;
+  if (!token) return null;
+  return lookupSessionByToken(token);
 }
 
 export async function requireSession(): Promise<Session> {

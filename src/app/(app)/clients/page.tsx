@@ -1,29 +1,32 @@
 import Link from "next/link";
-import { and, eq, ilike, or } from "drizzle-orm";
+import { and, ilike, or } from "drizzle-orm";
 import { db, customersTable } from "@/db";
 import { requireSession } from "@/lib/session";
+import { tenantScope } from "@/lib/tenant";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { Card, CardContent } from "@/components/ui/card";
-import { Plus, Search } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
+import { ClientsToolbar } from "./clients-toolbar";
+import { ClientRecordActions } from "./client-record-actions";
 
 export default async function ClientsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{ q?: string; archived?: string }>;
 }) {
   const session = await requireSession();
-  const { q } = await searchParams;
+  const { q, archived } = await searchParams;
+  const includeArchived = archived === "1";
 
   const clients = await db
     .select()
     .from(customersTable)
     .where(
       and(
-        eq(customersTable.orgId, session.orgId),
+        tenantScope(session.orgId, customersTable, { includeArchived }),
         q ? or(ilike(customersTable.name, `%${q}%`), ilike(customersTable.email, `%${q}%`)) : undefined,
       ),
     )
@@ -35,20 +38,22 @@ export default async function ClientsPage({
         title="Clients"
         description="Customer directory used across quotations, orders, and invoices."
         actions={
-          <Button asChild>
-            <Link href="/clients/new">
-              <Plus className="size-4" /> New Client
-            </Link>
-          </Button>
+          <>
+            <Button variant="ghost" asChild>
+              <Link href="/clients/recycle-bin">
+                <Trash2 className="size-4" /> Recycle Bin
+              </Link>
+            </Button>
+            <Button asChild>
+              <Link href="/clients/new">
+                <Plus className="size-4" /> New Client
+              </Link>
+            </Button>
+          </>
         }
       />
 
-      <form className="mb-4 max-w-xs">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-ink-faint" />
-          <Input name="q" defaultValue={q} placeholder="Search clients…" className="pl-9" />
-        </div>
-      </form>
+      <ClientsToolbar defaultQ={q} defaultArchived={includeArchived} />
 
       {clients.length === 0 ? (
         <Card>
@@ -64,11 +69,12 @@ export default async function ClientsPage({
               <TableHead>Email</TableHead>
               <TableHead>Phone</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead className="w-12" />
             </TableRow>
           </TableHeader>
           <TableBody>
             {clients.map((c) => (
-              <TableRow key={c.id} className="cursor-pointer">
+              <TableRow key={c.id}>
                 <TableCell className="font-semibold">
                   <Link href={`/clients/${c.id}`} className="hover:text-brand-orange">
                     {c.name}
@@ -76,8 +82,12 @@ export default async function ClientsPage({
                 </TableCell>
                 <TableCell className="text-ink-muted">{c.email ?? "—"}</TableCell>
                 <TableCell className="text-ink-muted font-mono text-xs">{c.phone ?? "—"}</TableCell>
-                <TableCell>
+                <TableCell className="flex items-center gap-1.5 flex-wrap">
                   <Badge variant={c.isActive ? "success" : "neutral"}>{c.isActive ? "Active" : "Inactive"}</Badge>
+                  {c.recordState === "archived" && <Badge variant="neutral">Archived</Badge>}
+                </TableCell>
+                <TableCell className="text-right">
+                  <ClientRecordActions client={c} />
                 </TableCell>
               </TableRow>
             ))}
