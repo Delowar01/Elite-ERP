@@ -442,6 +442,7 @@ const DICT: Record<string, string> = {
   "Search invoice number, client…": "ابحث برقم الفاتورة أو اسم العميل…",
   "Total Invoices": "إجمالي الفواتير",
   "E-Invoice": "الفاتورة الإلكترونية",
+  "E-Invoice preview": "معاينة الفاتورة الإلكترونية",
   "Generated automatically on send — QR encodes seller VAT, timestamp, and totals per ZATCA Phase 1.":
     "تُنشأ تلقائيًا عند الإرسال — يشفّر رمز QR الرقم الضريبي للبائع والطابع الزمني والإجماليات وفق المرحلة الأولى من زاتكا.",
   "Invoice type": "نوع الفاتورة",
@@ -472,6 +473,39 @@ const DICT: Record<string, string> = {
   "Add New Item": "إضافة صنف جديد",
   "Write a note…": "اكتب ملاحظة…",
   "Preview & Print": "معاينة وطباعة",
+
+  // ---- terms & conditions block (document create screens) ----
+  "Terms & Conditions": "الشروط والأحكام",
+  "Add Attachment": "إضافة مرفق",
+  "Change Group": "تغيير المجموعة",
+  Term: "البند",
+  "Add New Term": "إضافة بند جديد",
+  "Add New Group": "إضافة مجموعة جديدة",
+  "More Actions": "إجراءات إضافية",
+  "Save & Submit": "حفظ وإرسال",
+  "Confirm Order": "تأكيد الطلب",
+  "Create & Dispatch": "إنشاء وإرسال",
+  "Group A — Standard Sales Terms": "المجموعة أ — شروط البيع القياسية",
+  "Group B — Tax Invoice Terms": "المجموعة ب — شروط الفاتورة الضريبية",
+  "Group C — Purchase Terms": "المجموعة ج — شروط الشراء",
+  "Lorem Ipsum is simply dummy text of the printing and typesetting industry, standard since the 1500s.":
+    "نص تجريبي قياسي يُستخدم في صناعة الطباعة والتنضيد منذ القرن السادس عشر.",
+  "Prices are valid for the period stated above and are subject to change thereafter.":
+    "الأسعار سارية للفترة المذكورة أعلاه وقابلة للتغيير بعد ذلك.",
+  "Delivery timelines are estimates and may vary based on stock availability.":
+    "الجداول الزمنية للتسليم تقديرية وقد تختلف حسب توفر المخزون.",
+  "Payment is due in full within the payment terms stated on this invoice.":
+    "الدفع مستحق بالكامل ضمن شروط السداد المذكورة في هذه الفاتورة.",
+  "A late payment fee of 2% per month applies to overdue balances.":
+    "تُفرض رسوم تأخير سداد بنسبة 2% شهريًا على الأرصدة المتأخرة.",
+  "Goods remain the property of the seller until payment is received in full.":
+    "تظل البضائع ملكًا للبائع حتى استلام كامل المبلغ.",
+  "Goods must match the specifications and quantities stated on this purchase order.":
+    "يجب أن تطابق البضائع المواصفات والكميات المذكورة في أمر الشراء هذا.",
+  "Vendor is responsible for delivery to the address stated above within the agreed timeframe.":
+    "المورد مسؤول عن التسليم إلى العنوان المذكور أعلاه ضمن الإطار الزمني المتفق عليه.",
+  "Any discrepancy must be reported within 48 hours of receipt.":
+    "يجب الإبلاغ عن أي تباين خلال 48 ساعة من الاستلام.",
 };
 
 export function t(locale: Locale, en: string): string {

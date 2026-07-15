@@ -4,6 +4,9 @@ import Link from "next/link";
 import { Search, SlidersHorizontal, Bookmark, ChevronDown, Download, Upload, Archive, Plus } from "lucide-react";
 import { t, type Locale } from "@/lib/i18n/dict";
 
+// Matches the mockup's list_toolbar() exactly: <div class="list-toolbar">
+// <div class="topbar-search">...<button class="doc-pill-btn">Filters</button>
+// <button class="doc-pill-btn">Views</button><div class="toolbar-actions-right">...
 export function ListToolbar({
   locale,
   searchPlaceholder,
@@ -20,9 +23,9 @@ export function ListToolbar({
   createLabel: string;
 }) {
   return (
-    <div className="flex items-center gap-3 flex-wrap mb-4">
-      <div className="flex-1 min-w-[220px] max-w-[340px] flex items-center gap-2 h-9 rounded-[9px] bg-surface border border-line-strong px-3 text-[12.5px] text-ink">
-        <Search className="size-3.5 text-ink-faint shrink-0" />
+    <div className="list-toolbar">
+      <div className="topbar-search">
+        <Search className="size-3.5 shrink-0" />
         <input
           value={searchValue}
           onChange={(e) => onSearchChange(e.target.value)}
@@ -30,41 +33,23 @@ export function ListToolbar({
           className="flex-1 min-w-0 bg-transparent outline-none placeholder:text-ink-faint"
         />
       </div>
-      <button
-        type="button"
-        className="inline-flex items-center gap-1.5 h-9 rounded-[9px] border border-line-strong bg-surface px-3.5 text-[12px] font-medium text-ink-muted"
-      >
-        <SlidersHorizontal className="size-3.5" /> {t(locale, "Filters")} <ChevronDown className="size-3 text-ink-faint" />
+      <button type="button" className="doc-pill-btn" disabled>
+        <SlidersHorizontal className="size-3.5" /> <span>{t(locale, "Filters")}</span> <ChevronDown className="size-3" style={{ color: "var(--ink-faint)" }} />
       </button>
-      <button
-        type="button"
-        className="inline-flex items-center gap-1.5 h-9 rounded-[9px] border border-line-strong bg-surface px-3.5 text-[12px] font-medium text-ink-muted"
-      >
-        <Bookmark className="size-3.5" /> {t(locale, "Views")} <ChevronDown className="size-3 text-ink-faint" />
+      <button type="button" className="doc-pill-btn" disabled>
+        <Bookmark className="size-3.5" /> <span>{t(locale, "Views")}</span> <ChevronDown className="size-3" style={{ color: "var(--ink-faint)" }} />
       </button>
-      <div className="flex items-center gap-2 ms-auto flex-wrap">
-        <button
-          type="button"
-          className="inline-flex items-center gap-1.5 h-9 rounded-lg border border-line-strong bg-surface/80 px-3.5 text-[12.5px] font-semibold text-ink"
-        >
-          <Download className="size-3.5" /> {t(locale, "Export")} <ChevronDown className="size-3" />
+      <div className="toolbar-actions-right">
+        <button type="button" className="btn btn-glass" disabled>
+          <Download className="size-3.5" /> <span>{t(locale, "Export")}</span> <ChevronDown className="size-3" />
         </button>
-        <button
-          type="button"
-          className="inline-flex items-center gap-1.5 h-9 rounded-lg border border-line-strong bg-surface/80 px-3.5 text-[12.5px] font-semibold text-ink"
-        >
-          <Upload className="size-3.5" /> {t(locale, "Import")}
+        <button type="button" className="btn btn-glass" disabled>
+          <Upload className="size-3.5" /> <span>{t(locale, "Import")}</span>
         </button>
-        <button
-          type="button"
-          className="inline-flex items-center gap-1.5 h-9 rounded-lg border border-line-strong bg-surface/80 px-3.5 text-[12.5px] font-semibold text-ink"
-        >
-          <Archive className="size-3.5" /> {t(locale, "Recycle Bin")}
+        <button type="button" className="btn btn-glass" disabled>
+          <Archive className="size-3.5" /> <span>{t(locale, "Recycle Bin")}</span>
         </button>
-        <Link
-          href={createHref}
-          className="inline-flex items-center gap-1.5 h-9 rounded-lg px-4 text-[12.5px] font-semibold text-white shadow-[0_6px_18px_-4px_rgba(232,119,34,0.55)] bg-linear-to-br from-brand-orange-light to-brand-orange"
-        >
+        <Link href={createHref} className="btn btn-primary">
           <Plus className="size-3.5" /> {createLabel}
         </Link>
       </div>

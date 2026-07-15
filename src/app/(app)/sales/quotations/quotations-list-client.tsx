@@ -9,7 +9,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@
 import { StatRow } from "../_shared/stat-row";
 import { ListToolbar } from "../_shared/list-toolbar";
 import { RowMenu, type RowMenuEntry } from "../_shared/row-menu";
-import { fmt } from "../_shared/totals";
+import { Money } from "../_shared/money";
 import { t, type Locale } from "@/lib/i18n/dict";
 import { convertToSalesOrderAction, convertToProformaAction, convertToInvoiceAction } from "./actions";
 
@@ -127,7 +127,9 @@ export function QuotationsListClient({ locale, rows }: { locale: Locale; rows: Q
                 <TableCell>{r.customerName}</TableCell>
                 <TableCell className="font-mono text-xs">{r.issueDate}</TableCell>
                 <TableCell className="font-mono text-xs">{r.validUntil ?? "—"}</TableCell>
-                <TableCell className="text-right font-mono">{fmt(r.total)}</TableCell>
+                <TableCell className="text-right font-mono">
+                  <Money amount={r.total} />
+                </TableCell>
                 <TableCell className="text-[12.5px] text-ink-muted">{r.creatorName}</TableCell>
                 <TableCell>
                   <Badge variant={STATUS_VARIANT[r.status] ?? "neutral"}>{t(locale, r.status)}</Badge>

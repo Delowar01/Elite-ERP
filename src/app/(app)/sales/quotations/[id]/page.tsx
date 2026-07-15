@@ -6,8 +6,8 @@ import { getLocale } from "@/lib/i18n/server";
 import { t } from "@/lib/i18n/dict";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
-import { PartyCardStatic } from "../../_shared/party-card";
-import { TotalsCard } from "../../_shared/totals-card";
+import { PartyCardSimple } from "../../_shared/party-card";
+import { TotalsStrip } from "../../_shared/totals-strip";
 import { fmt } from "../../_shared/totals";
 import { QuotationDetailActions } from "../quotation-detail-actions";
 
@@ -39,8 +39,7 @@ export default async function QuotationDetailPage({ params }: { params: Promise<
       total: quotationsTable.total,
       notes: quotationsTable.notes,
       customerName: customersTable.name,
-      customerEmail: customersTable.email,
-      customerPhone: customersTable.phone,
+      customerVatNumber: customersTable.vatNumber,
       customerAddress: customersTable.address,
     })
     .from(quotationsTable)
@@ -56,29 +55,27 @@ export default async function QuotationDetailPage({ params }: { params: Promise<
 
   return (
     <div className="max-w-4xl">
-      <div className="flex items-start justify-between mb-[22px]">
+      <div className="inv-head">
         <div>
-          <h3 className="text-[22px] font-bold font-mono">{quotation.quotationNumber}</h3>
-          <p className="text-[12.5px] text-ink-muted mt-1.5">
+          <h3 className="mono">{quotation.quotationNumber}</h3>
+          <div className="inv-sub">
             {t(locale, "Issue Date")} {quotation.issueDate}
             {quotation.validUntil ? ` · ${t(locale, "Valid Till")} ${quotation.validUntil}` : ""}
             {quotation.title ? ` · ${quotation.title}` : ""}
             <Badge className="ms-2" variant={STATUS_VARIANT[quotation.status] ?? "neutral"} live>
               {t(locale, quotation.status)}
             </Badge>
-          </p>
+          </div>
         </div>
         <QuotationDetailActions locale={locale} quotationId={quotation.id} status={quotation.status} />
       </div>
 
-      <div className="grid grid-cols-2 gap-4 mb-[18px]">
-        <PartyCardStatic label={t(locale, "Bill from")} name={org.name} address={org.address} email={org.email} phone={org.phone} />
-        <PartyCardStatic
+      <div className="party-row">
+        <PartyCardSimple label={t(locale, "Bill from")} name={org.name} metaLines={[org.vatNumber ? `VAT ${org.vatNumber}` : null, org.address]} />
+        <PartyCardSimple
           label={t(locale, "Bill to")}
           name={quotation.customerName}
-          address={quotation.customerAddress}
-          email={quotation.customerEmail}
-          phone={quotation.customerPhone}
+          metaLines={[quotation.customerVatNumber ? `VAT ${quotation.customerVatNumber}` : null, quotation.customerAddress]}
         />
       </div>
 
@@ -106,7 +103,14 @@ export default async function QuotationDetailPage({ params }: { params: Promise<
       </Table>
 
       <div className="mt-4 max-w-sm ms-auto">
-        <TotalsCard locale={locale} subtotal={quotation.subtotal} discount={quotation.discount} taxTotal={quotation.taxTotal} total={quotation.total} totalLabel="Total" />
+        <TotalsStrip
+          locale={locale}
+          subtotal={quotation.subtotal}
+          discount={quotation.discount}
+          taxTotal={quotation.taxTotal}
+          finalLabel="Total"
+          finalValue={quotation.total}
+        />
       </div>
 
       {quotation.notes && (

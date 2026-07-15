@@ -6,8 +6,8 @@ import { getLocale } from "@/lib/i18n/server";
 import { t } from "@/lib/i18n/dict";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
-import { PartyCardStatic } from "../../_shared/party-card";
-import { TotalsCard } from "../../_shared/totals-card";
+import { PartyCardSimple } from "../../_shared/party-card";
+import { TotalsStrip } from "../../_shared/totals-strip";
 import { EInvoicePreviewPanel } from "../../_shared/einvoice-preview-panel";
 import { fmt } from "../../_shared/totals";
 import { InvoiceDetailActions } from "../invoice-detail-actions";
@@ -41,8 +41,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
       paidAmount: salesInvoicesTable.paidAmount,
       notes: salesInvoicesTable.notes,
       customerName: customersTable.name,
-      customerEmail: customersTable.email,
-      customerPhone: customersTable.phone,
+      customerVatNumber: customersTable.vatNumber,
       customerAddress: customersTable.address,
       sourceSalesOrderId: salesInvoicesTable.sourceSalesOrderId,
       sourceSoNumber: salesOrdersTable.soNumber,
@@ -59,13 +58,14 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
     db.select().from(orgsTable).where(eq(orgsTable.id, session.orgId)),
   ]);
   const balanceDue = Number(invoice.total) - Number(invoice.paidAmount);
+  const showPayments = invoice.status !== "draft" && invoice.status !== "void";
 
   return (
     <div className="max-w-6xl">
-      <div className="flex items-start justify-between mb-[22px]">
+      <div className="inv-head">
         <div>
-          <h3 className="text-[22px] font-bold font-mono">{invoice.invoiceNumber}</h3>
-          <p className="text-[12.5px] text-ink-muted mt-1.5">
+          <h3 className="mono">{invoice.invoiceNumber}</h3>
+          <div className="inv-sub">
             {t(locale, "Issue Date")} {invoice.issueDate}
             {invoice.dueDate ? ` · ${t(locale, "Due Date")} ${invoice.dueDate}` : ""}
             {invoice.title ? ` · ${invoice.title}` : ""}
@@ -78,21 +78,19 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
             <Badge className="ms-2" variant={STATUS_VARIANT[invoice.status] ?? "neutral"} live>
               {t(locale, invoice.status)}
             </Badge>
-          </p>
+          </div>
         </div>
         <InvoiceDetailActions locale={locale} invoiceId={invoice.id} status={invoice.status} />
       </div>
 
-      <div className="grid grid-cols-[1.6fr_1fr] gap-5 items-start">
+      <div className="inv-grid">
         <div>
-          <div className="grid grid-cols-2 gap-4 mb-[18px]">
-            <PartyCardStatic label={t(locale, "Bill from")} name={org.name} address={org.address} email={org.email} phone={org.phone} />
-            <PartyCardStatic
+          <div className="party-row">
+            <PartyCardSimple label={t(locale, "Bill from")} name={org.name} metaLines={[org.vatNumber ? `VAT ${org.vatNumber}` : null, org.address]} />
+            <PartyCardSimple
               label={t(locale, "Bill to")}
               name={invoice.customerName}
-              address={invoice.customerAddress}
-              email={invoice.customerEmail}
-              phone={invoice.customerPhone}
+              metaLines={[invoice.customerVatNumber ? `VAT ${invoice.customerVatNumber}` : null, invoice.customerAddress]}
             />
           </div>
 
@@ -119,21 +117,15 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
             </TableBody>
           </Table>
 
-          <div className="mt-4 max-w-sm ms-auto">
-            <TotalsCard locale={locale} subtotal={invoice.subtotal} discount={invoice.discount} taxTotal={invoice.taxTotal} total={invoice.total} totalLabel="Total" />
-            {invoice.status !== "draft" && invoice.status !== "void" && (
-              <div className="rounded-2xl border border-line bg-surface shadow-elevated p-5 mt-3 flex flex-col gap-1.5">
-                <div className="flex justify-between text-[13px]">
-                  <span className="text-ink-muted">{t(locale, "Paid")}</span>
-                  <span className="font-mono text-success">{fmt(invoice.paidAmount)}</span>
-                </div>
-                <div className="flex justify-between text-[13px] font-semibold">
-                  <span>{t(locale, "Balance Due")}</span>
-                  <span className="font-mono">{fmt(balanceDue)}</span>
-                </div>
-              </div>
-            )}
-          </div>
+          <TotalsStrip
+            locale={locale}
+            subtotal={invoice.subtotal}
+            discount={invoice.discount}
+            taxTotal={invoice.taxTotal}
+            finalLabel={showPayments ? "Balance due" : "Total"}
+            finalValue={showPayments ? String(balanceDue) : invoice.total}
+            extraRows={showPayments ? [{ label: "Paid", value: invoice.paidAmount, colorClass: "text-success" }] : undefined}
+          />
 
           {invoice.notes && (
             <div className="mt-5">

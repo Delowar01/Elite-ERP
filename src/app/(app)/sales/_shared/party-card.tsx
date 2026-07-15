@@ -1,40 +1,76 @@
-import { MapPin, Mail, Phone, Pencil } from "lucide-react";
+import { MapPin, Mail, Phone, Globe, Pencil, ChevronDown } from "lucide-react";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { t, type Locale } from "@/lib/i18n/dict";
 
-function PartyRow({ icon, text }: { icon: React.ReactNode; text: string }) {
+function PcRow({ icon, text }: { icon: React.ReactNode; text: string }) {
   return (
-    <div className="flex items-start gap-2 text-[12px] text-ink-muted py-0.5">
-      <span className="mt-0.5 opacity-75 shrink-0">{icon}</span>
+    <div className="pc-row">
+      {icon}
       <span>{text}</span>
     </div>
   );
 }
 
+// Matches the mockup's detail-screen party card exactly: <div class="card party-card">
+// <div class="k">Bill from</div><div class="name">...</div><div class="meta">...</div>
+// (invoice_main / proforma_main / cn_main etc.) — simpler than the rich create-screen
+// party-card-v2 (no icon rows, no edit affordance).
+export function PartyCardSimple({
+  label,
+  name,
+  metaLines,
+}: {
+  label: string;
+  name: string;
+  metaLines: (string | null | undefined)[];
+}) {
+  return (
+    <div className="card party-card">
+      <div className="k">{label}</div>
+      <div className="name">{name}</div>
+      {metaLines.filter(Boolean).map((line, i) => (
+        <div className="meta" key={i}>
+          {line}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// Matches the mockup's party_card(is_select=False) exactly: <div class="card party-card-v2">
+// <div class="pc-label">...</div><div class="pc-name">...</div>{pc-row × N}<div class="pc-edit">...</div>
 export function PartyCardStatic({
   label,
   name,
   address,
   email,
   phone,
+  website,
 }: {
   label: string;
   name: string;
   address?: string | null;
   email?: string | null;
   phone?: string | null;
+  website?: string | null;
 }) {
   return (
-    <div className="rounded-2xl border border-line bg-surface shadow-elevated p-4 pr-11 relative">
-      <div className="text-[10.5px] uppercase tracking-wide text-ink-faint mb-2">{label}</div>
-      <div className="font-display font-bold text-[15px] text-ink mb-2 leading-snug">{name}</div>
-      {address && <PartyRow icon={<MapPin className="size-3.5" />} text={address} />}
-      {email && <PartyRow icon={<Mail className="size-3.5" />} text={email} />}
-      {phone && <PartyRow icon={<Phone className="size-3.5" />} text={phone} />}
+    <div className="card party-card-v2">
+      <div className="pc-label">{label}</div>
+      <div className="pc-name">{name}</div>
+      {address && <PcRow icon={<MapPin className="size-3.5" />} text={address} />}
+      {email && <PcRow icon={<Mail className="size-3.5" />} text={email} />}
+      {phone && <PcRow icon={<Phone className="size-3.5" />} text={phone} />}
+      {website && <PcRow icon={<Globe className="size-3.5" />} text={website} />}
+      <div className="pc-edit">
+        <Pencil className="size-3.5" />
+      </div>
     </div>
   );
 }
 
+// Matches the mockup's party_card(is_select=True) exactly — same shape as PartyCardStatic
+// but the name row is a live <Select> (mockup's ".pc-select" chevron-trigger).
 export function PartyCardSelect({
   locale,
   label,
@@ -50,11 +86,12 @@ export function PartyCardSelect({
 }) {
   const selected = customers.find((c) => String(c.id) === value);
   return (
-    <div className="rounded-2xl border border-line bg-surface shadow-elevated p-4 pr-11 relative">
-      <div className="text-[10.5px] uppercase tracking-wide text-ink-faint mb-2">{label}</div>
+    <div className="card party-card-v2">
+      <div className="pc-label">{label}</div>
       <Select value={value} onValueChange={onChange}>
-        <SelectTrigger className="h-auto border-none bg-transparent p-0 shadow-none font-display font-bold text-[14px] text-ink mb-2 hover:bg-transparent focus:ring-0">
+        <SelectTrigger className="pc-select h-auto border-none bg-transparent p-0 shadow-none hover:bg-transparent focus:ring-0 [&_svg]:hidden">
           <SelectValue placeholder={t(locale, "Select a client")} />
+          <ChevronDown className="size-3.5 text-ink-faint" />
         </SelectTrigger>
         <SelectContent>
           {customers.map((c) => (
@@ -64,10 +101,10 @@ export function PartyCardSelect({
           ))}
         </SelectContent>
       </Select>
-      {selected?.address && <PartyRow icon={<MapPin className="size-3.5" />} text={selected.address} />}
-      {selected?.email && <PartyRow icon={<Mail className="size-3.5" />} text={selected.email} />}
-      {selected?.phone && <PartyRow icon={<Phone className="size-3.5" />} text={selected.phone} />}
-      <div className="absolute top-3.5 right-3.5 rtl:right-auto rtl:left-3.5 size-7 rounded-lg border border-line-strong bg-surface flex items-center justify-center text-ink-muted">
+      {selected?.address && <PcRow icon={<MapPin className="size-3.5" />} text={selected.address} />}
+      {selected?.email && <PcRow icon={<Mail className="size-3.5" />} text={selected.email} />}
+      {selected?.phone && <PcRow icon={<Phone className="size-3.5" />} text={selected.phone} />}
+      <div className="pc-edit">
         <Pencil className="size-3.5" />
       </div>
     </div>

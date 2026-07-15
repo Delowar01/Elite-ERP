@@ -6,7 +6,6 @@ import { getLocale } from "@/lib/i18n/server";
 import { t } from "@/lib/i18n/dict";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
-import { DocFieldBox } from "../../_shared/doc-field-box";
 import { DcDetailActions } from "../dc-detail-actions";
 
 const STATUS_VARIANT: Record<string, "success" | "warning" | "danger" | "info" | "neutral"> = {
@@ -52,29 +51,34 @@ export default async function DcDetailPage({ params }: { params: Promise<{ id: s
 
   return (
     <div className="max-w-4xl">
-      <div className="flex items-start justify-between mb-[22px]">
+      <div className="inv-head">
         <div>
-          <h3 className="text-[22px] font-bold font-mono">{dc.dcNumber}</h3>
-          <p className="text-[12.5px] text-ink-muted mt-1.5">
+          <h3 className="mono">{dc.dcNumber}</h3>
+          <div className="inv-sub">
             {(dc.sourceSoNumber || dc.sourceInvoiceNumber) && `${t(locale, "Converted From")} ${dc.sourceSoNumber ?? dc.sourceInvoiceNumber} · `}
             {org.name} → {dc.customerName}
             {dc.title ? ` · ${dc.title}` : ""}
             <Badge className="ms-2" variant={STATUS_VARIANT[dc.status] ?? "neutral"} live>
               {t(locale, dc.status)}
             </Badge>
-          </p>
+          </div>
         </div>
         <DcDetailActions locale={locale} dcId={dc.id} status={dc.status} />
       </div>
 
-      <div className="grid grid-cols-3 gap-3.5 mb-5">
-        <DocFieldBox label={t(locale, "Carrier")} mono={false}>
-          {dc.carrier || <span className="text-ink-faint">—</span>}
-        </DocFieldBox>
-        <DocFieldBox label={t(locale, "Vehicle No.")} mono={false}>
-          {dc.vehicleNo || <span className="text-ink-faint">—</span>}
-        </DocFieldBox>
-        <DocFieldBox label={t(locale, "Dispatch Date")}>{dc.dispatchDate || "—"}</DocFieldBox>
+      <div className="field-row">
+        <div className="field">
+          <label>{t(locale, "Carrier")}</label>
+          <div className="input">{dc.carrier || "—"}</div>
+        </div>
+        <div className="field">
+          <label>{t(locale, "Vehicle No.")}</label>
+          <div className="input">{dc.vehicleNo || "—"}</div>
+        </div>
+        <div className="field">
+          <label>{t(locale, "Dispatch Date")}</label>
+          <div className="input">{dc.dispatchDate || "—"}</div>
+        </div>
       </div>
 
       <Table>
@@ -94,9 +98,9 @@ export default async function DcDetailPage({ params }: { params: Promise<{ id: s
         </TableBody>
       </Table>
 
-      <p className="text-[12px] text-ink-muted mt-5">
+      <div className="note" style={{ marginTop: 20 }}>
         {t(locale, "Logistics-only document — no stock or accounting impact of its own; stock already moved when the source Invoice was sent.")}
-      </p>
+      </div>
     </div>
   );
 }

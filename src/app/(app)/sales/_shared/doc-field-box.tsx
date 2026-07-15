@@ -1,31 +1,30 @@
 import { Settings } from "lucide-react";
 
+// Matches the mockup's doc_field() helper exactly:
+// <div class="doc-field"><label>{label}<span class="req">*</span></label>
+// <div class="doc-field-input-row"><div class="input">{value}</div><div class="doc-gear-btn">...</div></div></div>
 export function DocFieldBox({
   label,
   required,
-  mono = true,
+  plain = false,
   gear = false,
   children,
 }: {
   label: string;
   required?: boolean;
-  mono?: boolean;
+  plain?: boolean;
   gear?: boolean;
   children: React.ReactNode;
 }) {
   return (
-    <div>
-      <label className="block text-[11.5px] font-semibold text-ink-muted mb-1.5">
-        {label} {required && <span className="text-brand-orange">*</span>}
+    <div className="doc-field">
+      <label>
+        {label} {required && <span className="req">*</span>}
       </label>
-      <div className="flex items-center gap-1.5">
-        <div
-          className={`flex-1 min-w-0 h-[38px] rounded-[9px] border border-line-strong bg-surface flex items-center px-3 text-[12.5px] text-ink ${mono ? "font-mono" : ""}`}
-        >
-          {children}
-        </div>
+      <div className="doc-field-input-row">
+        <div className={plain ? "input plain" : "input"}>{children}</div>
         {gear && (
-          <div className="size-[38px] rounded-[9px] border border-line-strong bg-surface flex items-center justify-center text-ink-muted shrink-0">
+          <div className="doc-gear-btn">
             <Settings className="size-[15px]" />
           </div>
         )}

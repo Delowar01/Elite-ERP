@@ -22,19 +22,29 @@ export const emptyLineItem = (): LineItemDraft => ({
   taxRatePercent: "15",
 });
 
+// Matches the mockup's full_items_table()/simple_items_table()/qty_items_table()
+// exactly: <div class="table-scroll"><table class="doc-items-table">...</table></div>
+// <div class="doc-add-item-btn">+ Add New Item</div>. "full" = quotation/SO/proforma/
+// invoice (image thumb + rich description + VAT% + unit price); "simple" = credit/debit
+// note (name + qty + unit price, no VAT/thumb); "qty" = delivery challan (thumb + qty only).
 export function LineItemsEditor({
   locale,
   products,
   items,
   onChange,
-  pricing = true,
+  variant = "full",
+  pricing,
 }: {
   locale: Locale;
   products: Pick<Product, "id" | "name" | "sku" | "unitPrice" | "taxRatePercent">[];
   items: LineItemDraft[];
   onChange: (items: LineItemDraft[]) => void;
+  variant?: "full" | "simple" | "qty";
+  /** @deprecated use variant="simple" instead of pricing={false} */
   pricing?: boolean;
 }) {
+  const resolvedVariant = pricing === false ? "simple" : variant;
+
   function updateLine(index: number, patch: Partial<LineItemDraft>) {
     onChange(items.map((it, i) => (i === index ? { ...it, ...patch } : it)));
   }
@@ -48,7 +58,7 @@ export function LineItemsEditor({
     updateLine(index, {
       productId,
       description: product.name,
-      ...(pricing ? { unitPrice: product.unitPrice, taxRatePercent: product.taxRatePercent } : {}),
+      ...(resolvedVariant !== "qty" ? { unitPrice: product.unitPrice, taxRatePercent: product.taxRatePercent } : {}),
     });
   }
 
@@ -57,45 +67,67 @@ export function LineItemsEditor({
   }
 
   const lineTotal = (it: LineItemDraft) => (Number(it.quantity) || 0) * (Number(it.unitPrice) || 0);
-  const inputCls =
-    "h-8 min-w-[84px] w-full rounded-[7px] border border-line-strong bg-surface px-2 font-mono text-[12px] text-ink text-right outline-none focus:border-brand-orange";
+  const showThumb = resolvedVariant !== "simple";
+  const showPricing = resolvedVariant === "full";
+  const showQtyOnly = resolvedVariant === "qty";
 
   return (
     <div className="flex flex-col gap-1">
-      <div className="overflow-x-auto rounded-xl shadow-elevated">
-        <table className="w-full min-w-[760px] border-separate border-spacing-0">
+      <div className="table-scroll">
+        <table className="doc-items-table">
           <thead>
             <tr>
-              <th className="bg-linear-to-br from-brand-orange-light to-brand-orange text-white text-[10.5px] font-bold uppercase tracking-wide px-3.5 py-2.5 text-start rounded-ss-xl">
-                {t(locale, "Item Description")}
-              </th>
-              <th className="bg-linear-to-br from-brand-orange-light to-brand-orange text-white text-[10.5px] font-bold uppercase tracking-wide px-3.5 py-2.5 text-end w-24">
-                {t(locale, "Qty")}
-              </th>
-              {pricing && (
+              <th>{t(locale, "Item Description")}</th>
+              {showPricing && <th className="num">{t(locale, "VAT %")}</th>}
+              <th className="num">{t(locale, "Qty")}</th>
+              {showPricing && (
                 <>
-                  <th className="bg-linear-to-br from-brand-orange-light to-brand-orange text-white text-[10.5px] font-bold uppercase tracking-wide px-3.5 py-2.5 text-end w-28">
-                    {t(locale, "Unit Price")}
-                  </th>
-                  <th className="bg-linear-to-br from-brand-orange-light to-brand-orange text-white text-[10.5px] font-bold uppercase tracking-wide px-3.5 py-2.5 text-end w-20">
-                    {t(locale, "VAT %")}
-                  </th>
-                  <th className="bg-linear-to-br from-brand-orange-light to-brand-orange text-white text-[10.5px] font-bold uppercase tracking-wide px-3.5 py-2.5 text-end w-28">
-                    {t(locale, "Amount")}
-                  </th>
+                  <th className="num">{t(locale, "Unit Price")}</th>
+                  <th className="num">{t(locale, "Amount")}</th>
                 </>
               )}
-              <th className="bg-linear-to-br from-brand-orange-light to-brand-orange w-10 rounded-se-xl" />
+              {resolvedVariant === "simple" && (
+                <>
+                  <th className="num">{t(locale, "Unit Price")}</th>
+                  <th className="num">{t(locale, "Line Total")}</th>
+                </>
+              )}
+              <th style={{ width: 40 }} />
             </tr>
           </thead>
-          <tbody className="bg-surface">
+          <tbody>
             {items.map((item, i) => (
-              <tr key={i}>
-                <td className="px-3.5 py-3 border-b border-line align-top min-w-[240px]">
-                  <div className="flex gap-2.5 items-start">
-                    <div className="size-10 rounded-[9px] bg-canvas border border-line flex items-center justify-center text-ink-faint shrink-0">
-                      <ImageIcon className="size-4" />
+              <tr className="item-row" key={i}>
+                <td>
+                  {showThumb ? (
+                    <div className="item-desc-cell">
+                      <div className="item-thumb">
+                        <ImageIcon className="size-4" />
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }} className="flex flex-col gap-1.5">
+                        <Select value={item.productId} onValueChange={(v) => selectProduct(i, v)}>
+                          <SelectTrigger className="h-8 text-xs">
+                            <SelectValue placeholder={t(locale, "Select a product")} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {products.map((p) => (
+                              <SelectItem key={p.id} value={String(p.id)}>
+                                {p.sku} · {p.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {!showQtyOnly && (
+                          <input
+                            value={item.description}
+                            onChange={(e) => updateLine(i, { description: e.target.value })}
+                            placeholder={t(locale, "Description")}
+                            className="item-desc-text w-full h-7 rounded-md border border-line px-2 text-[11.5px] outline-none focus:border-brand-orange bg-transparent"
+                          />
+                        )}
+                      </div>
                     </div>
+                  ) : (
                     <div className="flex-1 min-w-0 flex flex-col gap-1.5">
                       <Select value={item.productId} onValueChange={(v) => selectProduct(i, v)}>
                         <SelectTrigger className="h-8 text-xs">
@@ -109,59 +141,50 @@ export function LineItemsEditor({
                           ))}
                         </SelectContent>
                       </Select>
-                      <input
-                        value={item.description}
-                        onChange={(e) => updateLine(i, { description: e.target.value })}
-                        placeholder={t(locale, "Description")}
-                        className="h-7 rounded-md border border-line px-2 text-[11.5px] text-ink-muted outline-none focus:border-brand-orange"
-                      />
                     </div>
-                  </div>
+                  )}
                 </td>
-                <td className="px-3.5 py-3 border-b border-line align-top">
+                {showPricing && (
+                  <td className="num">
+                    <input
+                      type="number"
+                      step="1"
+                      value={item.taxRatePercent}
+                      onChange={(e) => updateLine(i, { taxRatePercent: e.target.value })}
+                      className="item-cell-input"
+                    />
+                  </td>
+                )}
+                <td className="num">
                   <input
                     type="number"
                     step="0.01"
                     value={item.quantity}
                     onChange={(e) => updateLine(i, { quantity: e.target.value })}
-                    className={inputCls}
+                    className="item-cell-input"
                   />
                 </td>
-                {pricing && (
+                {(showPricing || resolvedVariant === "simple") && (
                   <>
-                    <td className="px-3.5 py-3 border-b border-line align-top">
+                    <td className="num">
                       <input
                         type="number"
                         step="0.01"
                         value={item.unitPrice}
                         onChange={(e) => updateLine(i, { unitPrice: e.target.value })}
-                        className={inputCls}
+                        className="item-cell-input"
                       />
                     </td>
-                    <td className="px-3.5 py-3 border-b border-line align-top">
-                      <input
-                        type="number"
-                        step="0.01"
-                        value={item.taxRatePercent}
-                        onChange={(e) => updateLine(i, { taxRatePercent: e.target.value })}
-                        className={inputCls}
-                      />
-                    </td>
-                    <td className="px-3.5 py-3 border-b border-line align-top text-end font-mono text-[13px] font-semibold text-ink whitespace-nowrap">
+                    <td className="num cellval" style={{ fontWeight: 600, whiteSpace: "nowrap" }}>
                       {fmt(lineTotal(item))}
                     </td>
                   </>
                 )}
-                <td className="px-3.5 py-3 border-b border-line align-top">
+                <td>
                   {items.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => removeLine(i)}
-                      className="size-[30px] rounded-lg inline-flex items-center justify-center text-ink-faint hover:bg-danger-bg hover:text-danger"
-                      aria-label={t(locale, "Remove")}
-                    >
+                    <div className="item-del-btn" onClick={() => removeLine(i)} role="button" aria-label={t(locale, "Remove")}>
                       <X className="size-4" />
-                    </button>
+                    </div>
                   )}
                 </td>
               </tr>
@@ -169,13 +192,9 @@ export function LineItemsEditor({
           </tbody>
         </table>
       </div>
-      <button
-        type="button"
-        onClick={() => onChange([...items, emptyLineItem()])}
-        className="inline-flex items-center gap-1.5 self-start text-[12.5px] font-semibold text-brand-orange py-2.5"
-      >
+      <div className="doc-add-item-btn" onClick={() => onChange([...items, emptyLineItem()])} role="button">
         <Plus className="size-3.5" /> {t(locale, "Add New Item")}
-      </button>
+      </div>
     </div>
   );
 }

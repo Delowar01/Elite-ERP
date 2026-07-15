@@ -7,8 +7,8 @@ import { getLocale } from "@/lib/i18n/server";
 import { t } from "@/lib/i18n/dict";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
-import { PartyCardStatic } from "../../_shared/party-card";
-import { TotalsCard } from "../../_shared/totals-card";
+import { PartyCardSimple } from "../../_shared/party-card";
+import { TotalsStrip } from "../../_shared/totals-strip";
 import { fmt } from "../../_shared/totals";
 import { ProformaDetailActions } from "../proforma-detail-actions";
 
@@ -36,8 +36,7 @@ export default async function ProformaDetailPage({ params }: { params: Promise<{
       total: proformaInvoicesTable.total,
       notes: proformaInvoicesTable.notes,
       customerName: customersTable.name,
-      customerEmail: customersTable.email,
-      customerPhone: customersTable.phone,
+      customerVatNumber: customersTable.vatNumber,
       customerAddress: customersTable.address,
       sourceSalesOrderId: proformaInvoicesTable.sourceSalesOrderId,
       sourceSoNumber: salesOrdersTable.soNumber,
@@ -56,10 +55,10 @@ export default async function ProformaDetailPage({ params }: { params: Promise<{
 
   return (
     <div className="max-w-4xl">
-      <div className="flex items-start justify-between mb-[22px]">
+      <div className="inv-head">
         <div>
-          <h3 className="text-[22px] font-bold font-mono">{pf.proformaNumber}</h3>
-          <p className="text-[12.5px] text-ink-muted mt-1.5">
+          <h3 className="mono">{pf.proformaNumber}</h3>
+          <div className="inv-sub">
             {t(locale, "Issue Date")} {pf.issueDate}
             {pf.title ? ` · ${pf.title}` : ""}
             {pf.sourceSoNumber && (
@@ -71,24 +70,22 @@ export default async function ProformaDetailPage({ params }: { params: Promise<{
             <Badge className="ms-2" variant={STATUS_VARIANT[pf.status] ?? "neutral"} live>
               {t(locale, pf.status)}
             </Badge>
-          </p>
+          </div>
         </div>
         <ProformaDetailActions locale={locale} proformaId={pf.id} status={pf.status} />
       </div>
 
-      <div className="inline-flex items-center gap-2 rounded-full bg-info-bg text-info text-[11px] font-semibold px-3 py-1.5 mb-5">
+      <div className="doc-badge-noninvoicing">
         <Info className="size-3.5" />
         {t(locale, "Non-posting — for client reference only. Never affects revenue or stock.")}
       </div>
 
-      <div className="grid grid-cols-2 gap-4 mb-[18px]">
-        <PartyCardStatic label={t(locale, "Bill from")} name={org.name} address={org.address} email={org.email} phone={org.phone} />
-        <PartyCardStatic
+      <div className="party-row">
+        <PartyCardSimple label={t(locale, "Bill from")} name={org.name} metaLines={[org.vatNumber ? `VAT ${org.vatNumber}` : null, org.address]} />
+        <PartyCardSimple
           label={t(locale, "Bill to")}
           name={pf.customerName}
-          address={pf.customerAddress}
-          email={pf.customerEmail}
-          phone={pf.customerPhone}
+          metaLines={[pf.customerVatNumber ? `VAT ${pf.customerVatNumber}` : null, pf.customerAddress]}
         />
       </div>
 
@@ -116,7 +113,7 @@ export default async function ProformaDetailPage({ params }: { params: Promise<{
       </Table>
 
       <div className="mt-4 max-w-sm ms-auto">
-        <TotalsCard locale={locale} subtotal={pf.subtotal} discount={pf.discount} taxTotal={pf.taxTotal} total={pf.total} totalLabel="Total" />
+        <TotalsStrip locale={locale} subtotal={pf.subtotal} discount={pf.discount} taxTotal={pf.taxTotal} finalLabel="Total" finalValue={pf.total} />
       </div>
 
       {pf.notes && (

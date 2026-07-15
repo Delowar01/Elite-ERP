@@ -1,6 +1,15 @@
 import { t, type Locale } from "@/lib/i18n/dict";
+import { Money } from "./money";
 import { fmt, amountInWords } from "./totals";
 
+function vatPercent(subtotal: string, taxTotal: string): string {
+  const sub = Number(subtotal);
+  if (!sub) return "0";
+  return ((Number(taxTotal) / sub) * 100).toFixed(0);
+}
+
+// Matches the mockup's doc_totals() exactly: <div class="card totals-strip doc-totals-card">
+// with .t-row / .t-row.discount / .t-row.grand rows, used on every document's create screen.
 export function TotalsCard({
   locale,
   subtotal,
@@ -19,37 +28,38 @@ export function TotalsCard({
   totalLabel?: string;
 }) {
   return (
-    <div className="rounded-2xl border border-line bg-surface shadow-elevated p-5">
-      <div className="flex justify-between text-[13px] text-ink-muted py-1">
+    <div className="card totals-strip doc-totals-card">
+      <div className="t-row">
         <span>{t(locale, "Sub Total")}</span>
-        <span className="font-mono text-ink">{t(locale, "SAR")} {fmt(subtotal)}</span>
-      </div>
-      <div className="flex justify-between items-center text-[13px] text-ink-muted py-1">
-        <span>{t(locale, "Discount")}</span>
-        {onDiscountChange ? (
-          <input
-            type="number"
-            step="0.01"
-            min="0"
-            value={discount}
-            onChange={(e) => onDiscountChange(e.target.value)}
-            className="w-24 h-7 rounded-[7px] border border-line-strong bg-surface text-right font-mono text-[12.5px] px-2 text-ink"
-          />
-        ) : (
-          <span className="font-mono text-ink">{fmt(discount)}</span>
-        )}
-      </div>
-      <div className="flex justify-between text-[13px] text-ink-muted py-1">
-        <span>{t(locale, "Total VAT")}</span>
-        <span className="font-mono text-ink">{t(locale, "SAR")} {fmt(taxTotal)}</span>
-      </div>
-      <div className="flex justify-between items-center pt-3.5 mt-2 border-t border-line">
-        <span className="text-[13px] font-bold text-ink">{t(locale, totalLabel)}</span>
-        <span className="font-display font-extrabold text-[22px] text-brand-orange">
-          {t(locale, "SAR")} {fmt(total)}
+        <span className="v">
+          <Money amount={subtotal} />
         </span>
       </div>
-      <div className="text-[11px] text-ink-faint italic mt-1.5">
+      <div className="t-row discount">
+        <span>{t(locale, "Discount")}</span>
+        <span className="v">
+          {onDiscountChange ? (
+            <input type="number" step="0.01" min="0" value={discount} onChange={(e) => onDiscountChange(e.target.value)} />
+          ) : (
+            fmt(discount)
+          )}
+        </span>
+      </div>
+      <div className="t-row">
+        <span>
+          {t(locale, "Total VAT")} ({vatPercent(subtotal, taxTotal)}%)
+        </span>
+        <span className="v">
+          <Money amount={taxTotal} />
+        </span>
+      </div>
+      <div className="t-row grand">
+        <span className="lbl">{t(locale, totalLabel)}</span>
+        <span className="v">
+          <Money amount={total} />
+        </span>
+      </div>
+      <div className="doc-totals-words">
         {t(locale, "In Words:")} {amountInWords(total, locale)}
       </div>
     </div>

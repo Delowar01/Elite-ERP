@@ -1,30 +1,32 @@
 import { GitBranch, ChevronRight } from "lucide-react";
 import { t, type Locale } from "@/lib/i18n/dict";
 
+// Matches the mockup's document_relationships() exactly: <div class="doc-relationships">
+// <div class="doc-rel-node[.current]">{label} · {sub}</div> chained by <span class="doc-rel-arrow">
 export function DocRelationships({
   locale,
   nodes,
+  currentLabel,
 }: {
   locale: Locale;
-  nodes: { label: string; sub?: string; current?: boolean }[];
+  nodes: { label: string; sub?: string }[];
+  currentLabel: string;
 }) {
   return (
-    <div className="flex items-center gap-2 flex-wrap mb-4 px-3.5 py-3 rounded-[13px] bg-canvas border border-line">
-      <GitBranch className="size-3.5 text-ink-faint shrink-0" />
+    <div className="doc-relationships">
+      <GitBranch className="size-3.5" style={{ color: "var(--ink-faint)" }} />
       {nodes.map((n, i) => (
-        <div key={i} className="flex items-center gap-2">
-          {i > 0 && <ChevronRight className="size-3.5 text-ink-faint shrink-0 rtl:rotate-180" />}
-          <div
-            className={
-              n.current
-                ? "flex items-center gap-1.5 px-3 py-1.5 rounded-[9px] text-[11.5px] font-semibold bg-brand-navy text-white border border-brand-navy"
-                : "flex items-center gap-1.5 px-3 py-1.5 rounded-[9px] text-[11.5px] font-semibold bg-surface border border-line-strong text-ink"
-            }
-          >
+        <span key={n.label} className="flex items-center gap-2">
+          {i > 0 && (
+            <span className="doc-rel-arrow">
+              <ChevronRight className="size-3.5 rtl:rotate-180" />
+            </span>
+          )}
+          <div className={n.label === currentLabel ? "doc-rel-node current" : "doc-rel-node"}>
             {t(locale, n.label)}
-            {n.sub && <span className="opacity-70 font-medium"> · {n.sub}</span>}
+            {n.sub && <span className="opacity-70 font-medium"> · {t(locale, n.sub)}</span>}
           </div>
-        </div>
+        </span>
       ))}
     </div>
   );

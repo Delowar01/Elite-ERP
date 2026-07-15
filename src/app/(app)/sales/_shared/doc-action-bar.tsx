@@ -1,7 +1,10 @@
-import { FileText } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { FileText, ChevronDown } from "lucide-react";
 import { t, type Locale } from "@/lib/i18n/dict";
 
+// Matches the mockup's doc_action_bar() exactly: <div class="doc-action-bar">
+// <button class="btn btn-glass">Preview & Print</button>
+// <button class="btn btn-glass" style="border-color:var(--success);color:var(--success);">Save as Draft</button>
+// <button class="btn btn-primary">{primary_label} chevron</button></div>
 export function DocActionBar({
   locale,
   pending,
@@ -14,13 +17,13 @@ export function DocActionBar({
   primaryLabel?: string;
 }) {
   return (
-    <div className="flex justify-end gap-2.5 pt-4 mt-2 border-t border-line">
-      <Button type="button" variant="glass" style={{ width: "auto" }} disabled>
+    <div className="doc-action-bar">
+      <button type="button" className="btn btn-glass" disabled>
         <FileText className="size-3.5" /> {t(locale, "Preview & Print")}
-      </Button>
-      <Button type="button" style={{ width: "auto" }} disabled={pending} onClick={onSubmit}>
-        {pending ? t(locale, "Saving…") : t(locale, primaryLabel)}
-      </Button>
+      </button>
+      <button type="button" className="btn btn-primary" disabled={pending} onClick={onSubmit}>
+        {pending ? t(locale, "Saving…") : t(locale, primaryLabel)} <ChevronDown className="size-3" />
+      </button>
     </div>
   );
 }

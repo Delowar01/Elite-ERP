@@ -6,8 +6,8 @@ import { getLocale } from "@/lib/i18n/server";
 import { t } from "@/lib/i18n/dict";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
-import { PartyCardStatic } from "../../_shared/party-card";
-import { TotalsCard } from "../../_shared/totals-card";
+import { PartyCardSimple } from "../../_shared/party-card";
+import { TotalsStrip } from "../../_shared/totals-strip";
 import { fmt } from "../../_shared/totals";
 import { OrderDetailActions } from "../order-detail-actions";
 
@@ -37,8 +37,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
       total: salesOrdersTable.total,
       notes: salesOrdersTable.notes,
       customerName: customersTable.name,
-      customerEmail: customersTable.email,
-      customerPhone: customersTable.phone,
+      customerVatNumber: customersTable.vatNumber,
       customerAddress: customersTable.address,
       sourceQuotationId: salesOrdersTable.sourceQuotationId,
       sourceQuotationNumber: quotationsTable.quotationNumber,
@@ -57,10 +56,10 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
 
   return (
     <div className="max-w-4xl">
-      <div className="flex items-start justify-between mb-[22px]">
+      <div className="inv-head">
         <div>
-          <h3 className="text-[22px] font-bold font-mono">{order.soNumber}</h3>
-          <p className="text-[12.5px] text-ink-muted mt-1.5">
+          <h3 className="mono">{order.soNumber}</h3>
+          <div className="inv-sub">
             {t(locale, "Order Date")} {order.issueDate}
             {order.title ? ` · ${order.title}` : ""}
             {order.sourceQuotationNumber && (
@@ -72,19 +71,17 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
             <Badge className="ms-2" variant={STATUS_VARIANT[order.status] ?? "neutral"} live>
               {t(locale, order.status)}
             </Badge>
-          </p>
+          </div>
         </div>
         <OrderDetailActions locale={locale} orderId={order.id} status={order.status} />
       </div>
 
-      <div className="grid grid-cols-2 gap-4 mb-[18px]">
-        <PartyCardStatic label={t(locale, "Bill from")} name={org.name} address={org.address} email={org.email} phone={org.phone} />
-        <PartyCardStatic
+      <div className="party-row">
+        <PartyCardSimple label={t(locale, "Bill from")} name={org.name} metaLines={[org.vatNumber ? `VAT ${org.vatNumber}` : null, org.address]} />
+        <PartyCardSimple
           label={t(locale, "Bill to")}
           name={order.customerName}
-          address={order.customerAddress}
-          email={order.customerEmail}
-          phone={order.customerPhone}
+          metaLines={[order.customerVatNumber ? `VAT ${order.customerVatNumber}` : null, order.customerAddress]}
         />
       </div>
 
@@ -112,7 +109,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
       </Table>
 
       <div className="mt-4 max-w-sm ms-auto">
-        <TotalsCard locale={locale} subtotal={order.subtotal} discount={order.discount} taxTotal={order.taxTotal} total={order.total} totalLabel="Total" />
+        <TotalsStrip locale={locale} subtotal={order.subtotal} discount={order.discount} taxTotal={order.taxTotal} finalLabel="Total" finalValue={order.total} />
       </div>
 
       {order.notes && (

@@ -8,7 +8,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@
 import { StatRow } from "../_shared/stat-row";
 import { ListToolbar } from "../_shared/list-toolbar";
 import { RowMenu, type RowMenuEntry } from "../_shared/row-menu";
-import { fmt } from "../_shared/totals";
+import { Money } from "../_shared/money";
 import { t, type Locale } from "@/lib/i18n/dict";
 
 const STATUS_VARIANT: Record<string, "success" | "warning" | "danger" | "info" | "neutral"> = {
@@ -111,7 +111,9 @@ export function CnListClient({ locale, rows }: { locale: Locale; rows: CnRow[] }
                   </TableCell>
                   <TableCell>{r.customerName}</TableCell>
                   <TableCell className="font-mono text-xs">{r.issueDate}</TableCell>
-                  <TableCell className="text-right font-mono">{fmt(r.total)}</TableCell>
+                  <TableCell className="text-right font-mono">
+                    <Money amount={r.total} />
+                  </TableCell>
                   <TableCell className="text-[12.5px] text-ink-muted">{r.creatorName}</TableCell>
                   <TableCell>
                     <Badge variant={STATUS_VARIANT[r.status] ?? "neutral"}>{t(locale, r.status)}</Badge>
