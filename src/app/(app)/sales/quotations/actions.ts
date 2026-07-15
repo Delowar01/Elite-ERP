@@ -1,0 +1,220 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+import { and, eq } from "drizzle-orm";
+import { db, quotationsTable, quotationItemsTable, salesOrdersTable, salesOrderItemsTable, proformaInvoicesTable, proformaInvoiceItemsTable, salesInvoicesTable, salesInvoiceItemsTable } from "@/db";
+import { requireSession } from "@/lib/session";
+import { logActivity } from "@/lib/activity";
+import { nextDocumentNumber } from "@/lib/documents";
+import { computeTotals, type LineItemInput } from "../_shared/totals";
+
+export type ActionResult = { error?: string; id?: number };
+
+const PATH = "/sales/quotations";
+const VALID_STATUSES = ["draft", "sent", "accepted", "rejected", "expired"];
+
+type LineInput = { productId: string; description: string; quantity: string; unitPrice: string; taxRatePercent: string };
+
+export async function createQuotationAction(input: {
+  customerId: string;
+  issueDate: string;
+  validUntil: string;
+  notes: string;
+  items: LineInput[];
+}): Promise<ActionResult> {
+  const session = await requireSession();
+  const customerId = Number(input.customerId);
+  if (!customerId) return { error: "Choose a client." };
+  if (!input.issueDate) return { error: "Issue date is required." };
+
+  const items = input.items.filter((l) => l.description.trim() && Number(l.quantity) > 0);
+  if (items.length === 0) return { error: "Add at least one line item." };
+
+  const totals = computeTotals(items as LineItemInput[]);
+
+  const id = await db.transaction(async (tx) => {
+    const quotationNumber = await nextDocumentNumber(tx, session.orgId, "quotation");
+    const [quotation] = await tx
+      .insert(quotationsTable)
+      .values({
+        orgId: session.orgId,
+        quotationNumber,
+        customerId,
+        issueDate: input.issueDate,
+        validUntil: input.validUntil || null,
+        notes: input.notes.trim() || null,
+        subtotal: totals.subtotal,
+        taxTotal: totals.taxTotal,
+        total: totals.total,
+        createdById: session.userId,
+      })
+      .returning({ id: quotationsTable.id });
+
+    await tx.insert(quotationItemsTable).values(
+      items.map((l) => ({
+        quotationId: quotation.id,
+        productId: l.productId ? Number(l.productId) : null,
+        description: l.description.trim(),
+        quantity: l.quantity,
+        unitPrice: l.unitPrice,
+        taxRatePercent: l.taxRatePercent,
+        lineTotal: ((Number(l.quantity) || 0) * (Number(l.unitPrice) || 0)).toFixed(2),
+      })),
+    );
+
+    return quotation.id;
+  });
+
+  await logActivity(session, { type: "quotation.created", description: "Created a quotation", entityType: "quotation", entityId: id });
+  revalidatePath(PATH);
+  redirect(`/sales/quotations/${id}`);
+}
+
+export async function updateQuotationStatusAction(id: number, status: string): Promise<ActionResult> {
+  const session = await requireSession();
+  if (!VALID_STATUSES.includes(status)) return { error: "Invalid status." };
+
+  const result = await db
+    .update(quotationsTable)
+    .set({ status, updatedAt: new Date() })
+    .where(and(eq(quotationsTable.id, id), eq(quotationsTable.orgId, session.orgId)))
+    .returning({ id: quotationsTable.id });
+  if (!result.length) return { error: "Quotation not found." };
+
+  await logActivity(session, { type: "quotation.status_changed", description: `Marked quotation as ${status}`, entityType: "quotation", entityId: id });
+  revalidatePath(PATH);
+  revalidatePath(`/sales/quotations/${id}`);
+  return {};
+}
+
+async function loadQuotationWithItems(orgId: number, id: number) {
+  const [quotation] = await db.select().from(quotationsTable).where(and(eq(quotationsTable.id, id), eq(quotationsTable.orgId, orgId)));
+  if (!quotation) return null;
+  const items = await db.select().from(quotationItemsTable).where(eq(quotationItemsTable.quotationId, id));
+  return { quotation, items };
+}
+
+export async function convertToSalesOrderAction(quotationId: number): Promise<ActionResult> {
+  const session = await requireSession();
+  const data = await loadQuotationWithItems(session.orgId, quotationId);
+  if (!data) return { error: "Quotation not found." };
+
+  const id = await db.transaction(async (tx) => {
+    const soNumber = await nextDocumentNumber(tx, session.orgId, "sales_order");
+    const [so] = await tx
+      .insert(salesOrdersTable)
+      .values({
+        orgId: session.orgId,
+        soNumber,
+        customerId: data.quotation.customerId,
+        sourceQuotationId: data.quotation.id,
+        issueDate: new Date().toISOString().slice(0, 10),
+        subtotal: data.quotation.subtotal,
+        taxTotal: data.quotation.taxTotal,
+        total: data.quotation.total,
+        notes: data.quotation.notes,
+        createdById: session.userId,
+      })
+      .returning({ id: salesOrdersTable.id });
+
+    await tx.insert(salesOrderItemsTable).values(
+      data.items.map((it) => ({
+        salesOrderId: so.id,
+        productId: it.productId,
+        description: it.description,
+        quantity: it.quantity,
+        unitPrice: it.unitPrice,
+        taxRatePercent: it.taxRatePercent,
+        lineTotal: it.lineTotal,
+      })),
+    );
+    return so.id;
+  });
+
+  await logActivity(session, { type: "sales_order.created", description: `Converted from quotation ${data.quotation.quotationNumber}`, entityType: "sales_order", entityId: id });
+  revalidatePath("/sales/orders");
+  redirect(`/sales/orders/${id}`);
+}
+
+export async function convertToProformaAction(quotationId: number): Promise<ActionResult> {
+  const session = await requireSession();
+  const data = await loadQuotationWithItems(session.orgId, quotationId);
+  if (!data) return { error: "Quotation not found." };
+
+  const id = await db.transaction(async (tx) => {
+    const proformaNumber = await nextDocumentNumber(tx, session.orgId, "proforma_invoice");
+    const [pf] = await tx
+      .insert(proformaInvoicesTable)
+      .values({
+        orgId: session.orgId,
+        proformaNumber,
+        customerId: data.quotation.customerId,
+        issueDate: new Date().toISOString().slice(0, 10),
+        subtotal: data.quotation.subtotal,
+        taxTotal: data.quotation.taxTotal,
+        total: data.quotation.total,
+        notes: data.quotation.notes,
+        createdById: session.userId,
+      })
+      .returning({ id: proformaInvoicesTable.id });
+
+    await tx.insert(proformaInvoiceItemsTable).values(
+      data.items.map((it) => ({
+        proformaInvoiceId: pf.id,
+        productId: it.productId,
+        description: it.description,
+        quantity: it.quantity,
+        unitPrice: it.unitPrice,
+        taxRatePercent: it.taxRatePercent,
+        lineTotal: it.lineTotal,
+      })),
+    );
+    return pf.id;
+  });
+
+  await logActivity(session, { type: "proforma_invoice.created", description: `Converted from quotation ${data.quotation.quotationNumber}`, entityType: "proforma_invoice", entityId: id });
+  revalidatePath("/sales/proforma");
+  redirect(`/sales/proforma/${id}`);
+}
+
+export async function convertToInvoiceAction(quotationId: number): Promise<ActionResult> {
+  const session = await requireSession();
+  const data = await loadQuotationWithItems(session.orgId, quotationId);
+  if (!data) return { error: "Quotation not found." };
+
+  const id = await db.transaction(async (tx) => {
+    const invoiceNumber = await nextDocumentNumber(tx, session.orgId, "sales_invoice");
+    const [inv] = await tx
+      .insert(salesInvoicesTable)
+      .values({
+        orgId: session.orgId,
+        invoiceNumber,
+        customerId: data.quotation.customerId,
+        issueDate: new Date().toISOString().slice(0, 10),
+        subtotal: data.quotation.subtotal,
+        taxTotal: data.quotation.taxTotal,
+        total: data.quotation.total,
+        notes: data.quotation.notes,
+        createdById: session.userId,
+      })
+      .returning({ id: salesInvoicesTable.id });
+
+    await tx.insert(salesInvoiceItemsTable).values(
+      data.items.map((it) => ({
+        invoiceId: inv.id,
+        productId: it.productId,
+        description: it.description,
+        quantity: it.quantity,
+        unitPrice: it.unitPrice,
+        taxRatePercent: it.taxRatePercent,
+        lineTotal: it.lineTotal,
+      })),
+    );
+    return inv.id;
+  });
+
+  await logActivity(session, { type: "sales_invoice.created", description: `Converted from quotation ${data.quotation.quotationNumber}`, entityType: "sales_invoice", entityId: id });
+  revalidatePath("/sales/invoices");
+  redirect(`/sales/invoices/${id}`);
+}

@@ -40,6 +40,9 @@ yarn-error.log*
 # user-uploaded files (logos, seals, signatures) — runtime data, not source
 /public/uploads/
 
+# local verification scripts/screenshots, not app source
+/scratchpad/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
