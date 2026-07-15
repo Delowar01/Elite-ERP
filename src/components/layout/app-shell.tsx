@@ -43,14 +43,22 @@ type SessionUser = {
   role: "owner" | "admin" | "staff";
 };
 
+const HEX_COLOR = /^#[0-9a-fA-F]{6}$/;
+
 export function AppShell({
   user,
   orgName,
+  orgLogoUrl,
+  orgPrimaryColor,
+  orgAccentColor,
   locale,
   children,
 }: {
   user: SessionUser;
   orgName: string;
+  orgLogoUrl: string | null;
+  orgPrimaryColor: string;
+  orgAccentColor: string;
   locale: Locale;
   children: React.ReactNode;
 }) {
@@ -67,28 +75,49 @@ export function AppShell({
   );
   const pageTitle = t(locale, activeItem?.label ?? "Dashboard");
 
+  // Per-org white-labeling: override the brand tokens everywhere they're used, in both themes —
+  // !important because the built-in dark-mode block redefines --brand-orange with higher
+  // selector specificity ([data-theme="dark"]) than a plain :root override could beat otherwise.
+  const navy = HEX_COLOR.test(orgPrimaryColor) ? orgPrimaryColor : "#1B1B4E";
+  const orange = HEX_COLOR.test(orgAccentColor) ? orgAccentColor : "#E87722";
+  const themeOverrideCss = `
+    :root { --brand-navy: ${navy} !important; --brand-orange: ${orange} !important; }
+    :root[data-theme="dark"] { --brand-orange: ${orange} !important; }
+    @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --brand-orange: ${orange} !important; } }
+  `;
+
   return (
     <div className="flex min-h-screen">
+      <style>{themeOverrideCss}</style>
       <aside
         className="w-60 shrink-0 flex flex-col gap-[18px] pt-5 px-3.5 pb-3.5 overflow-y-auto border-r"
         style={{ background: "var(--sidebar-bg)", borderColor: "var(--sidebar-border)" }}
       >
         <div>
-          <div className="flex items-center gap-2.5 px-1.5 pb-3 mb-1 border-b" style={{ borderColor: "var(--sidebar-border)" }}>
-            <LogoMark size={30} color="var(--brand-orange)" />
-            <div>
-              <div
-                className="font-display font-extrabold text-[14px] tracking-tight leading-tight"
-                style={{ color: "var(--sidebar-ink)" }}
-              >
-                ELITE
-              </div>
-              <div className="font-medium text-[7.5px] tracking-[0.15em] text-ink-faint">INNOVATION SOLUTIONS</div>
+          {orgLogoUrl ? (
+            <div className="flex items-center px-1.5 pb-3 mb-1 border-b" style={{ borderColor: "var(--sidebar-border)" }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={orgLogoUrl} alt={orgName} className="h-9 max-w-full object-contain" />
             </div>
-          </div>
-          <div className="font-display font-extrabold text-[16px] px-1.5 pb-2" style={{ color: "var(--sidebar-ink)" }}>
-            Elite ERP
-          </div>
+          ) : (
+            <>
+              <div className="flex items-center gap-2.5 px-1.5 pb-3 mb-1 border-b" style={{ borderColor: "var(--sidebar-border)" }}>
+                <LogoMark size={30} color="var(--brand-orange)" />
+                <div>
+                  <div
+                    className="font-display font-extrabold text-[14px] tracking-tight leading-tight"
+                    style={{ color: "var(--sidebar-ink)" }}
+                  >
+                    ELITE
+                  </div>
+                  <div className="font-medium text-[7.5px] tracking-[0.15em] text-ink-faint">INNOVATION SOLUTIONS</div>
+                </div>
+              </div>
+              <div className="font-display font-extrabold text-[16px] px-1.5 pb-2" style={{ color: "var(--sidebar-ink)" }}>
+                Elite ERP
+              </div>
+            </>
+          )}
         </div>
         <nav className="flex flex-col gap-4">
           {NAV_GROUPS.map((group, gi) => {

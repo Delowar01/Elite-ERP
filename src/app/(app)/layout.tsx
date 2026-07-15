@@ -10,6 +10,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     <AppShell
       user={{ name: session.name, email: session.email, role: session.role }}
       orgName={session.orgName}
+      orgLogoUrl={session.orgLogoUrl}
+      orgPrimaryColor={session.orgPrimaryColor}
+      orgAccentColor={session.orgAccentColor}
       locale={locale}
     >
       {children}

@@ -37,6 +37,9 @@ yarn-error.log*
 # vercel
 .vercel
 
+# user-uploaded files (logos, seals, signatures) — runtime data, not source
+/public/uploads/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

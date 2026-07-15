@@ -15,6 +15,9 @@ export type Session = {
   role: Role;
   isActive: boolean;
   orgName: string;
+  orgLogoUrl: string | null;
+  orgPrimaryColor: string;
+  orgAccentColor: string;
 };
 
 // Session -> org resolution happens once per request: every Server Component/Action on a page
@@ -32,6 +35,9 @@ const lookupSessionByToken = cache(async (token: string): Promise<Session | null
       role: usersTable.role,
       isActive: usersTable.isActive,
       orgName: orgsTable.name,
+      orgLogoUrl: orgsTable.logoUrl,
+      orgPrimaryColor: orgsTable.primaryColor,
+      orgAccentColor: orgsTable.accentColor,
     })
     .from(usersTable)
     .innerJoin(orgsTable, eq(orgsTable.id, usersTable.orgId))
