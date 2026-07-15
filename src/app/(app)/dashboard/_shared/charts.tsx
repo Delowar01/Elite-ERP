@@ -44,28 +44,23 @@ export function Donut({
   const cx = size / 2;
   const cy = size / 2;
   const circumference = 2 * Math.PI * r;
-  let offset = 0;
-  const arcs = segments.map((s, i) => {
-    const frac = s.value / total;
-    const dash = circumference * frac;
-    const el = (
-      <circle
-        key={i}
-        cx={cx}
-        cy={cy}
-        r={r}
-        fill="none"
-        stroke={s.color}
-        strokeWidth={thickness}
-        strokeDasharray={`${dash.toFixed(1)} ${circumference.toFixed(1)}`}
-        strokeDashoffset={(-offset).toFixed(1)}
-        transform={`rotate(-90 ${cx} ${cy})`}
-        strokeLinecap="butt"
-      />
-    );
-    offset += dash;
-    return el;
-  });
+  const dashes = segments.map((s) => circumference * (s.value / total));
+  const offsets = dashes.map((_, i) => dashes.slice(0, i).reduce((a, d) => a + d, 0));
+  const arcs = segments.map((s, i) => (
+    <circle
+      key={i}
+      cx={cx}
+      cy={cy}
+      r={r}
+      fill="none"
+      stroke={s.color}
+      strokeWidth={thickness}
+      strokeDasharray={`${dashes[i].toFixed(1)} ${circumference.toFixed(1)}`}
+      strokeDashoffset={(-offsets[i]).toFixed(1)}
+      transform={`rotate(-90 ${cx} ${cy})`}
+      strokeLinecap="butt"
+    />
+  ));
   return (
     <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
       {arcs}

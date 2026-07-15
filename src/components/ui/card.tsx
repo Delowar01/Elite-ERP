@@ -3,8 +3,9 @@ import { cn } from "@/lib/utils";
 
 // Matches the mockup's .card exactly (literal class, defined in mockup-parity.css) —
 // not a Tailwind approximation of the same radius/border/shadow values. .card already
-// has its own hover lift built in, so `hoverable` is a no-op kept only for API compat.
-function Card({ className, hoverable: _hoverable, ...props }: React.ComponentProps<"div"> & { hoverable?: boolean }) {
+// has its own hover lift built in, so `hoverable` is accepted but unused.
+function Card({ className, hoverable, ...props }: React.ComponentProps<"div"> & { hoverable?: boolean }) {
+  void hoverable;
   return <div data-slot="card" className={cn("card", className)} {...props} />;
 }
 
