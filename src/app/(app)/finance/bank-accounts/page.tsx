@@ -7,6 +7,7 @@ import { getAccountBalances } from "@/lib/accounting";
 import { Landmark } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
+import { Money } from "../../sales/_shared/money";
 import { BankAccountDialog } from "./bank-account-dialog";
 
 export default async function BankAccountsPage() {
@@ -38,29 +39,29 @@ export default async function BankAccountsPage() {
 
   return (
     <div className="max-w-5xl">
-      <div className="flex items-center justify-between mb-[22px]">
-        <h3 className="text-[19px] font-bold">{t(locale, "Bank Accounts")}</h3>
+      <div className="main-head">
+        <h3>{t(locale, "Bank Accounts")}</h3>
         <BankAccountDialog locale={locale} accounts={accounts} />
       </div>
 
       {bankAccounts.length === 0 ? (
-        <p className="text-ink-muted text-sm">{t(locale, "No bank accounts yet.")}</p>
+        <p className="text-ink-muted text-sm mb-6">{t(locale, "No bank accounts yet.")}</p>
       ) : (
-        <div className="grid grid-cols-2 gap-4 mb-6">
+        <div className="two-col" style={{ marginBottom: 20 }}>
           {bankAccounts.map((ba) => {
             const glAccount = accountByGl.get(ba.glAccountId);
             const glBalance = balances.get(ba.glAccountId) ?? 0;
             const total = Number(ba.openingBalance) + glBalance;
             return (
-              <div key={ba.id} className="rounded-2xl border border-line bg-surface shadow-elevated p-5">
+              <div key={ba.id} className="card" style={{ padding: "18px 20px" }}>
                 <div className="flex justify-between items-start">
                   <div className="flex gap-3 items-start">
-                    <div className="size-[38px] rounded-[10px] flex items-center justify-center bg-[var(--accent-orange-bg)] text-brand-orange shrink-0">
+                    <div className="kpi-chip" style={{ width: 38, height: 38, background: "var(--accent-orange-bg)", color: "var(--brand-orange)" }}>
                       <Landmark className="size-[17px]" />
                     </div>
                     <div>
-                      <div className="font-bold text-[14px]">{ba.name}</div>
-                      <div className="text-[11.5px] text-ink-muted mt-0.5">
+                      <div style={{ fontWeight: 700, fontSize: 14 }}>{ba.name}</div>
+                      <div style={{ fontSize: 11.5, color: "var(--ink-muted)", marginTop: 2 }}>
                         {glAccount ? `GL ${glAccount.code} · ${glAccount.name}` : "—"}
                         {ba.accountNumberMasked ? ` · ${ba.accountNumberMasked}` : ""}
                       </div>
@@ -68,8 +69,8 @@ export default async function BankAccountsPage() {
                   </div>
                   <Badge variant={ba.isActive ? "success" : "neutral"}>{ba.isActive ? t(locale, "Active") : t(locale, "Inactive")}</Badge>
                 </div>
-                <div className="font-display font-extrabold text-[22px] mt-3.5 font-tabular">
-                  {t(locale, "SAR")} {total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                <div style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 22, marginTop: 14 }}>
+                  <Money amount={total} />
                 </div>
               </div>
             );
@@ -77,8 +78,8 @@ export default async function BankAccountsPage() {
         </div>
       )}
 
-      <div className="mb-3">
-        <h3 className="text-[15px] font-bold">{t(locale, "Recent payment records")}</h3>
+      <div className="main-head" style={{ marginTop: 4 }}>
+        <h3 style={{ fontSize: 15 }}>{t(locale, "Recent payment records")}</h3>
       </div>
       {recentPayments.length === 0 ? (
         <p className="text-ink-muted text-sm">{t(locale, "No payment records yet.")}</p>
@@ -90,19 +91,21 @@ export default async function BankAccountsPage() {
               <TableHead>{t(locale, "Direction")}</TableHead>
               <TableHead>{t(locale, "Reference")}</TableHead>
               <TableHead>{t(locale, "Bank Account")}</TableHead>
-              <TableHead className="text-right">{t(locale, "Amount")}</TableHead>
+              <TableHead className="num">{t(locale, "Amount")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {recentPayments.map((p) => (
               <TableRow key={p.id}>
-                <TableCell className="font-mono text-xs">{p.paymentDate}</TableCell>
+                <TableCell className="mono">{p.paymentDate}</TableCell>
                 <TableCell>
                   <Badge variant={p.direction === "in" ? "success" : "danger"}>{p.direction === "in" ? t(locale, "In") : t(locale, "Out")}</Badge>
                 </TableCell>
                 <TableCell>{p.reference ?? "—"}</TableCell>
                 <TableCell>{p.bankAccountName}</TableCell>
-                <TableCell className="text-right font-mono">{Number(p.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}</TableCell>
+                <TableCell className="num">
+                  <Money amount={p.amount} />
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>

@@ -5,28 +5,26 @@ import { getLocale } from "@/lib/i18n/server";
 import { t } from "@/lib/i18n/dict";
 import { getAccountBalances } from "@/lib/accounting";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { cn } from "@/lib/utils";
-
-function fmt(n: number) {
-  return n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
+import { Money } from "../../sales/_shared/money";
 
 function Line({ label, value, final, positive }: { label: string; value: number; final?: boolean; positive?: boolean }) {
   return (
-    <div
-      className={cn(
-        "flex items-center justify-between py-2.5 text-[13.5px]",
-        final ? "border-t border-line-strong mt-1.5 pt-3 font-bold" : "border-b border-line last:border-0",
-      )}
-    >
+    <div className={final ? "payslip-line final" : "payslip-line"}>
       <span>{label}</span>
-      <span className={cn("font-mono", final && positive && "text-success")}>{fmt(value)}</span>
+      <span className={positive && final ? "mono text-success" : "mono"}>
+        <Money amount={value} />
+      </span>
     </div>
   );
 }
 
-function GroupLabel({ children }: { children: React.ReactNode }) {
-  return <div className="text-[11px] uppercase tracking-wide text-ink-faint mb-1 mt-4 first:mt-0">{children}</div>;
+function GroupLabel({ top, children }: { top?: boolean; children: React.ReactNode }) {
+  return (
+    <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--ink-faint)", margin: top ? "0 0 14px" : "18px 0 14px" }}>
+      {children}
+    </div>
+  );
 }
 
 export default async function ReportsPage() {
@@ -63,8 +61,8 @@ export default async function ReportsPage() {
 
   return (
     <div className="max-w-3xl">
-      <div className="flex items-center justify-between mb-[22px]">
-        <h3 className="text-[19px] font-bold">{t(locale, "Account Reporting")}</h3>
+      <div className="main-head">
+        <h3>{t(locale, "Account Reporting")}</h3>
       </div>
 
       <Tabs defaultValue="pl">
@@ -75,8 +73,8 @@ export default async function ReportsPage() {
         </TabsList>
 
         <TabsContent value="pl">
-          <div className="rounded-2xl border border-line bg-surface shadow-elevated p-6">
-            <GroupLabel>{t(locale, "Revenue")}</GroupLabel>
+          <div className="card" style={{ padding: "22px 24px" }}>
+            <GroupLabel top>{t(locale, "Revenue")}</GroupLabel>
             {byType("revenue").map((a) => (
               <Line key={a.id} label={a.name} value={balances.get(a.id) ?? 0} />
             ))}
@@ -89,8 +87,8 @@ export default async function ReportsPage() {
         </TabsContent>
 
         <TabsContent value="bs">
-          <div className="rounded-2xl border border-line bg-surface shadow-elevated p-6">
-            <GroupLabel>{t(locale, "Assets")}</GroupLabel>
+          <div className="card" style={{ padding: "22px 24px" }}>
+            <GroupLabel top>{t(locale, "Assets")}</GroupLabel>
             {byType("asset").map((a) => (
               <Line key={a.id} label={a.name} value={balances.get(a.id) ?? 0} />
             ))}
@@ -112,47 +110,47 @@ export default async function ReportsPage() {
         </TabsContent>
 
         <TabsContent value="tb">
-          <div className="rounded-2xl border border-line bg-surface shadow-elevated overflow-hidden">
-            <table className="w-full text-[13.5px]">
-              <thead>
-                <tr className="bg-surface-raised border-b border-line">
-                  <th className="text-left px-4 py-2.5 text-[11px] uppercase tracking-wide text-ink-faint font-semibold">{t(locale, "Code")}</th>
-                  <th className="text-left px-4 py-2.5 text-[11px] uppercase tracking-wide text-ink-faint font-semibold">{t(locale, "Account")}</th>
-                  <th className="text-right px-4 py-2.5 text-[11px] uppercase tracking-wide text-ink-faint font-semibold">{t(locale, "Debit")}</th>
-                  <th className="text-right px-4 py-2.5 text-[11px] uppercase tracking-wide text-ink-faint font-semibold">{t(locale, "Credit")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {accounts.map((a) => {
-                  const bal = balances.get(a.id) ?? 0;
-                  const debit = a.normalBalance === "debit" ? Math.max(bal, 0) : Math.max(-bal, 0);
-                  const credit = a.normalBalance === "credit" ? Math.max(bal, 0) : Math.max(-bal, 0);
-                  return (
-                    <tr key={a.id} className="border-b border-line last:border-0">
-                      <td className="px-4 py-2.5 font-mono text-xs">{a.code}</td>
-                      <td className="px-4 py-2.5">{a.name}</td>
-                      <td className="px-4 py-2.5 text-right font-mono">{debit ? fmt(debit) : "—"}</td>
-                      <td className="px-4 py-2.5 text-right font-mono">{credit ? fmt(credit) : "—"}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-          <div className="grid grid-cols-3 gap-3 mt-4">
-            <div className="rounded-2xl border border-line bg-surface p-4">
-              <div className="text-[11px] uppercase tracking-wide text-ink-faint">{t(locale, "Total debits")}</div>
-              <div className="font-mono text-[15px] font-bold mt-1">{fmt(totalDebit)}</div>
-            </div>
-            <div className="rounded-2xl border border-line bg-surface p-4">
-              <div className="text-[11px] uppercase tracking-wide text-ink-faint">{t(locale, "Total credits")}</div>
-              <div className="font-mono text-[15px] font-bold mt-1">{fmt(totalCredit)}</div>
-            </div>
-            <div className={cn("rounded-2xl border p-4", tbBalanced ? "border-success bg-success-bg" : "border-line bg-surface")}>
-              <div className="text-[11px] uppercase tracking-wide text-ink-faint">{t(locale, "Balance check")}</div>
-              <div className={cn("text-[15px] font-bold mt-1", tbBalanced ? "text-success" : "text-ink-muted")}>
-                {tbBalanced ? `✓ ${t(locale, "Balanced")}` : t(locale, "Not balanced")}
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>{t(locale, "Code")}</TableHead>
+                <TableHead>{t(locale, "Account")}</TableHead>
+                <TableHead className="num">{t(locale, "Debit")}</TableHead>
+                <TableHead className="num">{t(locale, "Credit")}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {accounts.map((a) => {
+                const bal = balances.get(a.id) ?? 0;
+                const debit = a.normalBalance === "debit" ? Math.max(bal, 0) : Math.max(-bal, 0);
+                const credit = a.normalBalance === "credit" ? Math.max(bal, 0) : Math.max(-bal, 0);
+                return (
+                  <TableRow key={a.id}>
+                    <TableCell className="mono">{a.code}</TableCell>
+                    <TableCell>{a.name}</TableCell>
+                    <TableCell className="num">{debit ? <Money amount={debit} /> : "—"}</TableCell>
+                    <TableCell className="num">{credit ? <Money amount={credit} /> : "—"}</TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+          <div className="tb-strip">
+            <div className="card tb-tile">
+              <div className="l">{t(locale, "Total debits")}</div>
+              <div className="v">
+                <Money amount={totalDebit} />
               </div>
+            </div>
+            <div className="card tb-tile">
+              <div className="l">{t(locale, "Total credits")}</div>
+              <div className="v">
+                <Money amount={totalCredit} />
+              </div>
+            </div>
+            <div className={tbBalanced ? "card tb-tile balanced" : "card tb-tile"}>
+              <div className="l">{t(locale, "Balance check")}</div>
+              <div className="v">{tbBalanced ? `✓ ${t(locale, "Balanced")}` : t(locale, "Not balanced")}</div>
             </div>
           </div>
         </TabsContent>

@@ -23,8 +23,8 @@ export default async function LedgerPage({ searchParams }: { searchParams: Promi
 
   return (
     <div className="max-w-6xl">
-      <div className="flex items-center justify-between mb-[22px]">
-        <h3 className="text-[19px] font-bold">{t(locale, "Account Ledger")}</h3>
+      <div className="main-head">
+        <h3>{t(locale, "Account Ledger")}</h3>
       </div>
       <AccountLedgerView
         locale={locale}

@@ -66,13 +66,13 @@ export function JournalForm({ locale, accounts }: { locale: Locale; accounts: Ac
         </div>
       </div>
 
-      <Table>
+      <Table className="line-table">
         <TableHeader>
           <TableRow>
             <TableHead>{t(locale, "Account")}</TableHead>
             <TableHead>{t(locale, "Memo")}</TableHead>
-            <TableHead className="text-right">{t(locale, "Debit")}</TableHead>
-            <TableHead className="text-right">{t(locale, "Credit")}</TableHead>
+            <TableHead className="num">{t(locale, "Debit")}</TableHead>
+            <TableHead className="num">{t(locale, "Credit")}</TableHead>
             <TableHead className="w-10" />
           </TableRow>
         </TableHeader>
@@ -96,7 +96,7 @@ export function JournalForm({ locale, accounts }: { locale: Locale; accounts: Ac
               <TableCell>
                 <Input value={line.memo} onChange={(e) => updateLine(i, { memo: e.target.value })} />
               </TableCell>
-              <TableCell className="text-right">
+              <TableCell className="num">
                 <Input
                   type="number"
                   step="0.01"
@@ -105,7 +105,7 @@ export function JournalForm({ locale, accounts }: { locale: Locale; accounts: Ac
                   onChange={(e) => updateLine(i, { debit: e.target.value, credit: e.target.value ? "" : line.credit })}
                 />
               </TableCell>
-              <TableCell className="text-right">
+              <TableCell className="num">
                 <Input
                   type="number"
                   step="0.01"
@@ -125,29 +125,22 @@ export function JournalForm({ locale, accounts }: { locale: Locale; accounts: Ac
           ))}
         </TableBody>
       </Table>
-      <div>
-        <Button variant="ghost" size="sm" onClick={() => setLines((prev) => [...prev, emptyLine()])}>
-          <Plus className="size-3.5" /> {t(locale, "Add line")}
-        </Button>
+      <div className="add-row-btn" onClick={() => setLines((prev) => [...prev, emptyLine()])} role="button">
+        <Plus className="size-3.5" /> {t(locale, "Add line")}
       </div>
 
-      <div className="grid grid-cols-3 gap-3">
-        <div className="rounded-2xl border border-line bg-surface p-4">
-          <div className="text-[11px] uppercase tracking-wide text-ink-faint">{t(locale, "Total debits")}</div>
-          <div className="font-mono text-[15px] font-bold mt-1">{totalDebit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+      <div className="tb-strip">
+        <div className="card tb-tile">
+          <div className="l">{t(locale, "Total debits")}</div>
+          <div className="v">{totalDebit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
         </div>
-        <div className="rounded-2xl border border-line bg-surface p-4">
-          <div className="text-[11px] uppercase tracking-wide text-ink-faint">{t(locale, "Total credits")}</div>
-          <div className="font-mono text-[15px] font-bold mt-1">{totalCredit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+        <div className="card tb-tile">
+          <div className="l">{t(locale, "Total credits")}</div>
+          <div className="v">{totalCredit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
         </div>
-        <div
-          className={cn(
-            "rounded-2xl border p-4",
-            balanced ? "border-success bg-success-bg" : "border-line bg-surface",
-          )}
-        >
-          <div className="text-[11px] uppercase tracking-wide text-ink-faint">{t(locale, "Balance check")}</div>
-          <div className={cn("text-[15px] font-bold mt-1 flex items-center gap-1", balanced ? "text-success" : "text-ink-muted")}>
+        <div className={cn("card tb-tile", balanced && "balanced")}>
+          <div className="l">{t(locale, "Balance check")}</div>
+          <div className="v" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
             {balanced && <Check className="size-4" />} {balanced ? t(locale, "Balanced") : t(locale, "Not balanced")}
           </div>
         </div>

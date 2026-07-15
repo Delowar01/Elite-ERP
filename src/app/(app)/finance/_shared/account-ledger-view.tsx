@@ -5,6 +5,7 @@ import type { Account } from "@/db";
 import type { LedgerRow } from "@/lib/accounting";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Money } from "../../sales/_shared/money";
 import { AddAccountDialog } from "./add-account-dialog";
 
 const TYPE_ORDER = ["asset", "liability", "equity", "revenue", "expense"] as const;
@@ -55,27 +56,16 @@ export function AccountLedgerView({
   })).filter((g) => g.accounts.length > 0);
 
   return (
-    <div className="grid grid-cols-[280px_1fr] gap-4 items-start">
-      <div className="rounded-2xl border border-line bg-surface shadow-elevated p-2">
+    <div className="acct-grid">
+      <div className="card acct-list-card">
         {byType.map((group) => (
           <div key={group.type}>
-            <div className="text-[11px] uppercase tracking-wide text-ink-faint px-2.5 pt-3 pb-1.5">{t(locale, TYPE_LABEL[group.type])}</div>
+            <div className="acct-group-label">{t(locale, TYPE_LABEL[group.type])}</div>
             {group.accounts.map((a) => (
-              <Link
-                key={a.id}
-                href={`${basePath}?account=${a.id}`}
-                className={cn(
-                  "flex items-center justify-between gap-2 px-2.5 py-2 rounded-[9px] text-[12.5px]",
-                  selectedAccount?.id === a.id ? "bg-[var(--accent-orange-bg)] text-ink font-semibold" : "text-ink-muted hover:bg-canvas hover:text-ink",
-                )}
-              >
-                <span className="flex items-center gap-2 min-w-0">
-                  <span className="font-mono text-[11px] text-ink-faint shrink-0">{a.code}</span>
-                  <span className="truncate">{a.name}</span>
-                </span>
-                <span className="font-mono text-[11px] shrink-0">
-                  {t(locale, "SAR")} {(balances.get(a.id) ?? 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                </span>
+              <Link key={a.id} href={`${basePath}?account=${a.id}`} className={cn("acct-row", selectedAccount?.id === a.id && "selected")}>
+                <span className="code">{a.code}</span>
+                <span className="nm truncate">{a.name}</span>
+                <span className="bal">{(balances.get(a.id) ?? 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
               </Link>
             ))}
           </div>
@@ -87,20 +77,18 @@ export function AccountLedgerView({
 
       <div>
         {!selectedAccount ? (
-          <div className="rounded-2xl border border-line bg-surface p-8 text-center text-ink-muted text-sm">
-            {t(locale, "Select an account to view its ledger.")}
-          </div>
+          <div className="card p-8 text-center text-ink-muted text-sm">{t(locale, "Select an account to view its ledger.")}</div>
         ) : (
-          <div className="rounded-2xl border border-line bg-surface shadow-elevated p-5">
+          <div className="card" style={{ padding: 20 }}>
             <div className="flex items-center justify-between mb-4">
               <div>
-                <div className="font-mono font-bold text-[15px]">
+                <div className="mono" style={{ fontWeight: 700, fontSize: 15 }}>
                   {selectedAccount.code} · {selectedAccount.name}
                 </div>
                 <div className="text-[11.5px] text-ink-muted mt-0.5">{t(locale, NORMAL_BALANCE_CAPTION[selectedAccount.type as (typeof TYPE_ORDER)[number]])}</div>
               </div>
-              <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-line/60 text-ink-muted">
-                {t(locale, "Balance")}: {t(locale, "SAR")} {(balances.get(selectedAccount.id) ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+              <span className="org-pill">
+                {t(locale, "Balance")}: <Money amount={balances.get(selectedAccount.id) ?? 0} />
               </span>
             </div>
             {ledgerRows.length === 0 ? (
@@ -112,9 +100,9 @@ export function AccountLedgerView({
                     <TableHead>{t(locale, "Date")}</TableHead>
                     <TableHead>{t(locale, "Memo")}</TableHead>
                     <TableHead>{t(locale, "Source")}</TableHead>
-                    <TableHead className="text-right">{t(locale, "Debit")}</TableHead>
-                    <TableHead className="text-right">{t(locale, "Credit")}</TableHead>
-                    <TableHead className="text-right">{t(locale, "Balance")}</TableHead>
+                    <TableHead className="num">{t(locale, "Debit")}</TableHead>
+                    <TableHead className="num">{t(locale, "Credit")}</TableHead>
+                    <TableHead className="num">{t(locale, "Balance")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -122,14 +110,14 @@ export function AccountLedgerView({
                     const badge = SOURCE_BADGE[row.sourceType] ?? { label: row.sourceType, variant: "neutral" as const };
                     return (
                       <TableRow key={i}>
-                        <TableCell className="font-mono text-xs">{row.date}</TableCell>
+                        <TableCell className="mono">{row.date}</TableCell>
                         <TableCell>{row.memo}</TableCell>
                         <TableCell>
                           <Badge variant={badge.variant}>{t(locale, badge.label)}</Badge>
                         </TableCell>
-                        <TableCell className="text-right font-mono">{row.debit ? row.debit.toLocaleString(undefined, { minimumFractionDigits: 2 }) : "—"}</TableCell>
-                        <TableCell className="text-right font-mono">{row.credit ? row.credit.toLocaleString(undefined, { minimumFractionDigits: 2 }) : "—"}</TableCell>
-                        <TableCell className="text-right font-mono">{row.runningBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</TableCell>
+                        <TableCell className="num">{row.debit ? row.debit.toLocaleString(undefined, { minimumFractionDigits: 2 }) : "—"}</TableCell>
+                        <TableCell className="num">{row.credit ? row.credit.toLocaleString(undefined, { minimumFractionDigits: 2 }) : "—"}</TableCell>
+                        <TableCell className="num">{row.runningBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</TableCell>
                       </TableRow>
                     );
                   })}

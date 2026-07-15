@@ -23,8 +23,8 @@ export default async function ChartOfAccountsPage({ searchParams }: { searchPara
 
   return (
     <div className="max-w-6xl">
-      <div className="flex items-center justify-between mb-[22px]">
-        <h3 className="text-[19px] font-bold">{t(locale, "Chart of Accounts")}</h3>
+      <div className="main-head">
+        <h3>{t(locale, "Chart of Accounts")}</h3>
       </div>
       <AccountLedgerView
         locale={locale}
