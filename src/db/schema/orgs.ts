@@ -8,6 +8,7 @@ export const orgsTable = pgTable("orgs", {
   industry: text("industry"),
   address: text("address"),
   phone: text("phone"),
+  email: text("email"),
   taxId: text("tax_id"),
   vatNumber: text("vat_number"),
   currency: text("currency").notNull().default("SAR"),

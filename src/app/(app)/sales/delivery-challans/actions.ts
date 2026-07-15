@@ -16,7 +16,9 @@ const VALID_STATUSES = ["draft", "dispatched", "delivered"];
 type LineInput = { productId: string; description: string; quantity: string };
 
 export async function createDeliveryChallanAction(input: {
+  title: string;
   customerId: string;
+  dispatchDate: string;
   carrier: string;
   vehicleNo: string;
   items: LineInput[];
@@ -35,7 +37,9 @@ export async function createDeliveryChallanAction(input: {
       .values({
         orgId: session.orgId,
         dcNumber,
+        title: input.title.trim() || null,
         customerId,
+        dispatchDate: input.dispatchDate || null,
         carrier: input.carrier.trim() || null,
         vehicleNo: input.vehicleNo.trim() || null,
         createdById: session.userId,

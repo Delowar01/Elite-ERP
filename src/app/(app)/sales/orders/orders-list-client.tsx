@@ -1,0 +1,145 @@
+"use client";
+
+import { useMemo, useState, useTransition } from "react";
+import Link from "next/link";
+import { toast } from "sonner";
+import { Eye, Printer, Copy, Trash2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
+import { StatRow } from "../_shared/stat-row";
+import { ListToolbar } from "../_shared/list-toolbar";
+import { RowMenu, type RowMenuEntry } from "../_shared/row-menu";
+import { fmt } from "../_shared/totals";
+import { t, type Locale } from "@/lib/i18n/dict";
+import { convertSoToProformaAction, convertSoToInvoiceAction, convertSoToDeliveryChallanAction } from "./actions";
+
+const STATUS_VARIANT: Record<string, "success" | "warning" | "danger" | "info" | "neutral"> = {
+  draft: "neutral",
+  confirmed: "info",
+  fulfilled: "success",
+  cancelled: "danger",
+};
+
+export type OrderRow = {
+  id: number;
+  soNumber: string;
+  title: string | null;
+  customerName: string;
+  issueDate: string;
+  total: string;
+  status: string;
+  creatorName: string;
+  sourceQuotationNumber: string | null;
+};
+
+export function OrdersListClient({ locale, rows }: { locale: Locale; rows: OrderRow[] }) {
+  const [search, setSearch] = useState("");
+  const [, startTransition] = useTransition();
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return rows;
+    return rows.filter((r) => r.soNumber.toLowerCase().includes(q) || r.customerName.toLowerCase().includes(q) || (r.title ?? "").toLowerCase().includes(q));
+  }, [rows, search]);
+
+  const stats = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const r of rows) counts[r.status] = (counts[r.status] ?? 0) + 1;
+    return counts;
+  }, [rows]);
+
+  function convert(id: number, action: (id: number) => Promise<{ error?: string }>) {
+    startTransition(async () => {
+      const result = await action(id);
+      if (result?.error) toast.error(result.error);
+    });
+  }
+
+  return (
+    <div className="max-w-6xl">
+      <div className="flex items-center justify-between mb-[22px]">
+        <h3 className="text-[19px] font-bold">{t(locale, "Sales Orders")}</h3>
+      </div>
+
+      <StatRow
+        items={[
+          { label: t(locale, "Total Sales Orders"), value: String(rows.length) },
+          { label: t(locale, "confirmed"), value: String(stats.confirmed ?? 0), colorClass: "text-info" },
+          { label: t(locale, "fulfilled"), value: String(stats.fulfilled ?? 0), colorClass: "text-success" },
+          { label: t(locale, "draft"), value: String(stats.draft ?? 0) },
+        ]}
+      />
+
+      <ListToolbar
+        locale={locale}
+        searchPlaceholder={t(locale, "Search order number, client…")}
+        searchValue={search}
+        onSearchChange={setSearch}
+        createHref="/sales/orders/new"
+        createLabel={t(locale, "New Sales Order")}
+      />
+
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>{t(locale, "Number")}</TableHead>
+            <TableHead>{t(locale, "Title")}</TableHead>
+            <TableHead>{t(locale, "Converted From")}</TableHead>
+            <TableHead>{t(locale, "Client")}</TableHead>
+            <TableHead>{t(locale, "Order Date")}</TableHead>
+            <TableHead className="text-right">{t(locale, "Amount")}</TableHead>
+            <TableHead>{t(locale, "Created By")}</TableHead>
+            <TableHead>{t(locale, "Status")}</TableHead>
+            <TableHead className="w-10" />
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {filtered.map((r) => {
+            const entries: RowMenuEntry[] = [
+              { kind: "item", icon: Eye, label: t(locale, "View"), href: `/sales/orders/${r.id}` },
+              { kind: "item", icon: Printer, label: t(locale, "Print / Download PDF") },
+              {
+                kind: "convert",
+                label: t(locale, "Convert to…"),
+                targets: [
+                  { label: t(locale, "Proforma Invoice"), onSelect: () => convert(r.id, convertSoToProformaAction) },
+                  { label: t(locale, "Invoice"), onSelect: () => convert(r.id, convertSoToInvoiceAction) },
+                  { label: t(locale, "Delivery Challan"), onSelect: () => convert(r.id, convertSoToDeliveryChallanAction) },
+                ],
+              },
+              { kind: "item", icon: Copy, label: t(locale, "Duplicate") },
+              { kind: "separator" },
+              { kind: "item", icon: Trash2, label: t(locale, "Delete"), danger: true },
+            ];
+            return (
+              <TableRow key={r.id}>
+                <TableCell className="font-semibold">
+                  <Link href={`/sales/orders/${r.id}`} className="hover:text-brand-orange font-mono">
+                    {r.soNumber}
+                  </Link>
+                </TableCell>
+                <TableCell className="max-w-[150px] truncate" title={r.title ?? undefined}>
+                  {r.title ?? <span className="text-ink-faint">—</span>}
+                </TableCell>
+                <TableCell className="text-ink-muted font-mono text-xs">{r.sourceQuotationNumber ?? "—"}</TableCell>
+                <TableCell>{r.customerName}</TableCell>
+                <TableCell className="font-mono text-xs">{r.issueDate}</TableCell>
+                <TableCell className="text-right font-mono">{fmt(r.total)}</TableCell>
+                <TableCell className="text-[12.5px] text-ink-muted">{r.creatorName}</TableCell>
+                <TableCell>
+                  <Badge variant={STATUS_VARIANT[r.status] ?? "neutral"}>{t(locale, r.status)}</Badge>
+                </TableCell>
+                <TableCell>
+                  <RowMenu entries={entries} />
+                </TableCell>
+              </TableRow>
+            );
+          })}
+        </TableBody>
+      </Table>
+      <div className="text-[11.5px] text-ink-faint mt-2">
+        {t(locale, "Showing")} {filtered.length} {t(locale, "of")} {rows.length} {t(locale, "Sales Orders")}.
+      </div>
+    </div>
+  );
+}

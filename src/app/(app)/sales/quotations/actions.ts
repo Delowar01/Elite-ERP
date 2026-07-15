@@ -17,9 +17,11 @@ const VALID_STATUSES = ["draft", "sent", "accepted", "rejected", "expired"];
 type LineInput = { productId: string; description: string; quantity: string; unitPrice: string; taxRatePercent: string };
 
 export async function createQuotationAction(input: {
+  title: string;
   customerId: string;
   issueDate: string;
   validUntil: string;
+  discount: string;
   notes: string;
   items: LineInput[];
 }): Promise<ActionResult> {
@@ -31,7 +33,7 @@ export async function createQuotationAction(input: {
   const items = input.items.filter((l) => l.description.trim() && Number(l.quantity) > 0);
   if (items.length === 0) return { error: "Add at least one line item." };
 
-  const totals = computeTotals(items as LineItemInput[]);
+  const totals = computeTotals(items as LineItemInput[], input.discount);
 
   const id = await db.transaction(async (tx) => {
     const quotationNumber = await nextDocumentNumber(tx, session.orgId, "quotation");
@@ -40,11 +42,13 @@ export async function createQuotationAction(input: {
       .values({
         orgId: session.orgId,
         quotationNumber,
+        title: input.title.trim() || null,
         customerId,
         issueDate: input.issueDate,
         validUntil: input.validUntil || null,
         notes: input.notes.trim() || null,
         subtotal: totals.subtotal,
+        discount: totals.discount,
         taxTotal: totals.taxTotal,
         total: totals.total,
         createdById: session.userId,
@@ -107,10 +111,12 @@ export async function convertToSalesOrderAction(quotationId: number): Promise<Ac
       .values({
         orgId: session.orgId,
         soNumber,
+        title: data.quotation.title,
         customerId: data.quotation.customerId,
         sourceQuotationId: data.quotation.id,
         issueDate: new Date().toISOString().slice(0, 10),
         subtotal: data.quotation.subtotal,
+        discount: data.quotation.discount,
         taxTotal: data.quotation.taxTotal,
         total: data.quotation.total,
         notes: data.quotation.notes,
@@ -149,9 +155,11 @@ export async function convertToProformaAction(quotationId: number): Promise<Acti
       .values({
         orgId: session.orgId,
         proformaNumber,
+        title: data.quotation.title,
         customerId: data.quotation.customerId,
         issueDate: new Date().toISOString().slice(0, 10),
         subtotal: data.quotation.subtotal,
+        discount: data.quotation.discount,
         taxTotal: data.quotation.taxTotal,
         total: data.quotation.total,
         notes: data.quotation.notes,
@@ -190,9 +198,11 @@ export async function convertToInvoiceAction(quotationId: number): Promise<Actio
       .values({
         orgId: session.orgId,
         invoiceNumber,
+        title: data.quotation.title,
         customerId: data.quotation.customerId,
         issueDate: new Date().toISOString().slice(0, 10),
         subtotal: data.quotation.subtotal,
+        discount: data.quotation.discount,
         taxTotal: data.quotation.taxTotal,
         total: data.quotation.total,
         notes: data.quotation.notes,

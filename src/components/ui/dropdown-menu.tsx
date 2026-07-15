@@ -57,6 +57,43 @@ function DropdownMenuLabel({ className, ...props }: React.ComponentProps<typeof 
   );
 }
 
+const DropdownMenuSub = DropdownMenuPrimitive.Sub;
+
+function DropdownMenuSubTrigger({
+  className,
+  children,
+  ...props
+}: React.ComponentProps<typeof DropdownMenuPrimitive.SubTrigger>) {
+  return (
+    <DropdownMenuPrimitive.SubTrigger
+      className={cn(
+        "flex cursor-default select-none items-center rounded-lg px-3 py-2 text-[13px] text-ink outline-none data-[highlighted]:bg-brand-orange/10 data-[state=open]:bg-brand-orange/10",
+        className,
+      )}
+      {...props}
+    >
+      {children}
+    </DropdownMenuPrimitive.SubTrigger>
+  );
+}
+
+function DropdownMenuSubContent({
+  className,
+  ...props
+}: React.ComponentProps<typeof DropdownMenuPrimitive.SubContent>) {
+  return (
+    <DropdownMenuPrimitive.Portal>
+      <DropdownMenuPrimitive.SubContent
+        className={cn(
+          "z-50 min-w-[9rem] rounded-xl border border-line bg-surface-glass p-1 shadow-glass backdrop-blur-xl",
+          className,
+        )}
+        {...props}
+      />
+    </DropdownMenuPrimitive.Portal>
+  );
+}
+
 export {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -64,4 +101,7 @@ export {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuLabel,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
 };

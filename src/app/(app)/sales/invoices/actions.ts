@@ -16,9 +16,11 @@ const PATH = "/sales/invoices";
 type LineInput = { productId: string; description: string; quantity: string; unitPrice: string; taxRatePercent: string };
 
 export async function createInvoiceAction(input: {
+  title: string;
   customerId: string;
   issueDate: string;
   dueDate: string;
+  discount: string;
   notes: string;
   items: LineInput[];
 }): Promise<ActionResult> {
@@ -30,7 +32,7 @@ export async function createInvoiceAction(input: {
   const items = input.items.filter((l) => l.description.trim() && Number(l.quantity) > 0);
   if (items.length === 0) return { error: "Add at least one line item." };
 
-  const totals = computeTotals(items as LineItemInput[]);
+  const totals = computeTotals(items as LineItemInput[], input.discount);
 
   const id = await db.transaction(async (tx) => {
     const invoiceNumber = await nextDocumentNumber(tx, session.orgId, "sales_invoice");
@@ -39,11 +41,13 @@ export async function createInvoiceAction(input: {
       .values({
         orgId: session.orgId,
         invoiceNumber,
+        title: input.title.trim() || null,
         customerId,
         issueDate: input.issueDate,
         dueDate: input.dueDate || null,
         notes: input.notes.trim() || null,
         subtotal: totals.subtotal,
+        discount: totals.discount,
         taxTotal: totals.taxTotal,
         total: totals.total,
         createdById: session.userId,
@@ -150,6 +154,7 @@ export async function convertInvoiceToDeliveryChallanAction(invoiceId: number): 
       .values({
         orgId: session.orgId,
         dcNumber,
+        title: invoice.title,
         customerId: invoice.customerId,
         sourceInvoiceId: invoice.id,
         createdById: session.userId,

@@ -16,6 +16,7 @@ const PATH = "/sales/credit-notes";
 type LineInput = { productId: string; description: string; quantity: string; unitPrice: string; taxRatePercent: string };
 
 export async function createCreditNoteAction(input: {
+  title: string;
   sourceInvoiceId: string;
   reason: string;
   items: LineInput[];
@@ -42,6 +43,7 @@ export async function createCreditNoteAction(input: {
       .values({
         orgId: session.orgId,
         creditNoteNumber,
+        title: input.title.trim() || null,
         customerId: invoice.customerId,
         sourceInvoiceId: invoice.id,
         reason: input.reason.trim() || null,

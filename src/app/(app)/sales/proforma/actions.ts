@@ -17,8 +17,10 @@ const VALID_STATUSES = ["draft", "sent"];
 type LineInput = { productId: string; description: string; quantity: string; unitPrice: string; taxRatePercent: string };
 
 export async function createProformaAction(input: {
+  title: string;
   customerId: string;
   issueDate: string;
+  discount: string;
   notes: string;
   items: LineInput[];
 }): Promise<ActionResult> {
@@ -30,7 +32,7 @@ export async function createProformaAction(input: {
   const items = input.items.filter((l) => l.description.trim() && Number(l.quantity) > 0);
   if (items.length === 0) return { error: "Add at least one line item." };
 
-  const totals = computeTotals(items as LineItemInput[]);
+  const totals = computeTotals(items as LineItemInput[], input.discount);
 
   const id = await db.transaction(async (tx) => {
     const proformaNumber = await nextDocumentNumber(tx, session.orgId, "proforma_invoice");
@@ -39,10 +41,12 @@ export async function createProformaAction(input: {
       .values({
         orgId: session.orgId,
         proformaNumber,
+        title: input.title.trim() || null,
         customerId,
         issueDate: input.issueDate,
         notes: input.notes.trim() || null,
         subtotal: totals.subtotal,
+        discount: totals.discount,
         taxTotal: totals.taxTotal,
         total: totals.total,
         createdById: session.userId,
@@ -98,10 +102,12 @@ export async function convertProformaToInvoiceAction(proformaId: number): Promis
       .values({
         orgId: session.orgId,
         invoiceNumber,
+        title: pf.title,
         customerId: pf.customerId,
         sourceSalesOrderId: pf.sourceSalesOrderId,
         issueDate: new Date().toISOString().slice(0, 10),
         subtotal: pf.subtotal,
+        discount: pf.discount,
         taxTotal: pf.taxTotal,
         total: pf.total,
         notes: pf.notes,

@@ -14,6 +14,7 @@ export const deliveryChallansTable = pgTable("delivery_challans", {
     .notNull()
     .references(() => orgsTable.id, { onDelete: "cascade" }),
   dcNumber: text("dc_number").notNull(),
+  title: text("title"),
   customerId: integer("customer_id")
     .notNull()
     .references(() => customersTable.id),

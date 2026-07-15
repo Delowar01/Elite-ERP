@@ -14,6 +14,7 @@ export const salesInvoicesTable = pgTable("sales_invoices", {
     .notNull()
     .references(() => orgsTable.id, { onDelete: "cascade" }),
   invoiceNumber: text("invoice_number").notNull(),
+  title: text("title"),
   customerId: integer("customer_id")
     .notNull()
     .references(() => customersTable.id),
@@ -23,6 +24,7 @@ export const salesInvoicesTable = pgTable("sales_invoices", {
   issueDate: date("issue_date").notNull(),
   dueDate: date("due_date"),
   subtotal: numeric("subtotal", { precision: 14, scale: 2 }).notNull().default("0"),
+  discount: numeric("discount", { precision: 14, scale: 2 }).notNull().default("0"),
   taxTotal: numeric("tax_total", { precision: 14, scale: 2 }).notNull().default("0"),
   total: numeric("total", { precision: 14, scale: 2 }).notNull().default("0"),
   paidAmount: numeric("paid_amount", { precision: 14, scale: 2 }).notNull().default("0"),

@@ -13,6 +13,7 @@ export const proformaInvoicesTable = pgTable("proforma_invoices", {
     .notNull()
     .references(() => orgsTable.id, { onDelete: "cascade" }),
   proformaNumber: text("proforma_number").notNull(),
+  title: text("title"),
   customerId: integer("customer_id")
     .notNull()
     .references(() => customersTable.id),
@@ -20,6 +21,7 @@ export const proformaInvoicesTable = pgTable("proforma_invoices", {
   status: text("status").notNull().default("draft"), // draft | sent — non-posting, never affects accounting/stock
   issueDate: date("issue_date").notNull(),
   subtotal: numeric("subtotal", { precision: 14, scale: 2 }).notNull().default("0"),
+  discount: numeric("discount", { precision: 14, scale: 2 }).notNull().default("0"),
   taxTotal: numeric("tax_total", { precision: 14, scale: 2 }).notNull().default("0"),
   total: numeric("total", { precision: 14, scale: 2 }).notNull().default("0"),
   notes: text("notes"),

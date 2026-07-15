@@ -17,8 +17,10 @@ const VALID_STATUSES = ["draft", "confirmed", "fulfilled", "cancelled"];
 type LineInput = { productId: string; description: string; quantity: string; unitPrice: string; taxRatePercent: string };
 
 export async function createSalesOrderAction(input: {
+  title: string;
   customerId: string;
   issueDate: string;
+  discount: string;
   notes: string;
   items: LineInput[];
 }): Promise<ActionResult> {
@@ -30,7 +32,7 @@ export async function createSalesOrderAction(input: {
   const items = input.items.filter((l) => l.description.trim() && Number(l.quantity) > 0);
   if (items.length === 0) return { error: "Add at least one line item." };
 
-  const totals = computeTotals(items as LineItemInput[]);
+  const totals = computeTotals(items as LineItemInput[], input.discount);
 
   const id = await db.transaction(async (tx) => {
     const soNumber = await nextDocumentNumber(tx, session.orgId, "sales_order");
@@ -39,10 +41,12 @@ export async function createSalesOrderAction(input: {
       .values({
         orgId: session.orgId,
         soNumber,
+        title: input.title.trim() || null,
         customerId,
         issueDate: input.issueDate,
         notes: input.notes.trim() || null,
         subtotal: totals.subtotal,
+        discount: totals.discount,
         taxTotal: totals.taxTotal,
         total: totals.total,
         createdById: session.userId,
@@ -104,10 +108,12 @@ export async function convertSoToProformaAction(soId: number): Promise<ActionRes
       .values({
         orgId: session.orgId,
         proformaNumber,
+        title: data.so.title,
         customerId: data.so.customerId,
         sourceSalesOrderId: data.so.id,
         issueDate: new Date().toISOString().slice(0, 10),
         subtotal: data.so.subtotal,
+        discount: data.so.discount,
         taxTotal: data.so.taxTotal,
         total: data.so.total,
         notes: data.so.notes,
@@ -146,10 +152,12 @@ export async function convertSoToInvoiceAction(soId: number): Promise<ActionResu
       .values({
         orgId: session.orgId,
         invoiceNumber,
+        title: data.so.title,
         customerId: data.so.customerId,
         sourceSalesOrderId: data.so.id,
         issueDate: new Date().toISOString().slice(0, 10),
         subtotal: data.so.subtotal,
+        discount: data.so.discount,
         taxTotal: data.so.taxTotal,
         total: data.so.total,
         notes: data.so.notes,
@@ -188,6 +196,7 @@ export async function convertSoToDeliveryChallanAction(soId: number): Promise<Ac
       .values({
         orgId: session.orgId,
         dcNumber,
+        title: data.so.title,
         customerId: data.so.customerId,
         sourceSalesOrderId: data.so.id,
         createdById: session.userId,

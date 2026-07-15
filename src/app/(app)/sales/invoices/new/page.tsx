@@ -1,26 +1,25 @@
-import { asc } from "drizzle-orm";
-import { db, customersTable, productsTable } from "@/db";
+import { asc, eq } from "drizzle-orm";
+import { db, customersTable, productsTable, orgsTable } from "@/db";
 import { requireSession } from "@/lib/session";
 import { getLocale } from "@/lib/i18n/server";
-import { t } from "@/lib/i18n/dict";
 import { tenantScope } from "@/lib/tenant";
+import { previewNextDocumentNumber } from "@/lib/documents";
 import { InvoiceForm } from "../invoice-form";
 
 export default async function NewInvoicePage() {
   const session = await requireSession();
   const locale = await getLocale();
 
-  const [customers, products] = await Promise.all([
+  const [customers, products, [org], numberPreview] = await Promise.all([
     db.select().from(customersTable).where(tenantScope(session.orgId, customersTable)).orderBy(asc(customersTable.name)),
     db.select().from(productsTable).where(tenantScope(session.orgId, productsTable)).orderBy(asc(productsTable.name)),
+    db.select().from(orgsTable).where(eq(orgsTable.id, session.orgId)),
+    previewNextDocumentNumber(session.orgId, "sales_invoice"),
   ]);
 
   return (
-    <div className="max-w-4xl">
-      <div className="mb-[22px]">
-        <h3 className="text-[19px] font-bold">{t(locale, "New Invoice")}</h3>
-      </div>
-      <InvoiceForm locale={locale} customers={customers} products={products} />
+    <div className="max-w-6xl">
+      <InvoiceForm locale={locale} customers={customers} products={products} org={org} numberPreview={numberPreview} />
     </div>
   );
 }

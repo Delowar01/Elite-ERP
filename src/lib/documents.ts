@@ -1,6 +1,6 @@
 import "server-only";
 import { and, eq } from "drizzle-orm";
-import { documentSequencesTable, type Tx } from "@/db";
+import { db, documentSequencesTable, type Tx } from "@/db";
 import type { DOCUMENT_TYPES } from "@/db/schema";
 
 type DocumentType = (typeof DOCUMENT_TYPES)[number];
@@ -21,5 +21,16 @@ export async function nextDocumentNumber(tx: Tx, orgId: number, documentType: Do
     .set({ nextNumber: seq.nextNumber + 1 })
     .where(eq(documentSequencesTable.id, seq.id));
 
+  return `${seq.prefix}${String(seq.nextNumber).padStart(seq.padding, "0")}`;
+}
+
+// Read-only preview of the number a new document will get — for display on create screens only.
+// Not authoritative: the real allocation happens transactionally in nextDocumentNumber() on submit.
+export async function previewNextDocumentNumber(orgId: number, documentType: DocumentType): Promise<string> {
+  const [seq] = await db
+    .select()
+    .from(documentSequencesTable)
+    .where(and(eq(documentSequencesTable.orgId, orgId), eq(documentSequencesTable.documentType, documentType)));
+  if (!seq) return "—";
   return `${seq.prefix}${String(seq.nextNumber).padStart(seq.padding, "0")}`;
 }
