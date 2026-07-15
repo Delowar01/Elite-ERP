@@ -19,7 +19,6 @@ import {
   ScrollText,
   BarChart3,
   Wallet,
-  ReceiptText,
   UserSquare2,
   Network,
   Banknote,
@@ -86,7 +85,6 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: "Account Ledger", href: "/finance/ledger", icon: ScrollText },
       { label: "Account Reporting", href: "/finance/reports", icon: BarChart3 },
       { label: "Payment Records", href: "/finance/payments", icon: Wallet },
-      { label: "Expenses", href: "/finance/expenses", icon: ReceiptText },
     ],
   },
   {
