@@ -6,30 +6,17 @@ import { cn } from "@/lib/utils";
 
 const SettingsNav = TabsPrimitive.Root;
 
+// Matches the mockup's .settings-nav/.settings-nav-group-label/.settings-nav-item exactly.
 function SettingsNavList({ className, ...props }: React.ComponentProps<typeof TabsPrimitive.List>) {
-  return <TabsPrimitive.List className={cn("flex flex-col gap-0.5 w-56 shrink-0", className)} {...props} />;
+  return <TabsPrimitive.List className={cn("settings-nav w-56 shrink-0", className)} {...props} />;
 }
 
 function SettingsNavGroupLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="text-[10.5px] font-bold uppercase tracking-wider text-ink-faint px-3 pt-3.5 pb-1 first:pt-1">
-      {children}
-    </div>
-  );
+  return <div className="settings-nav-group-label">{children}</div>;
 }
 
 function SettingsNavItem({ className, ...props }: React.ComponentProps<typeof TabsPrimitive.Trigger>) {
-  return (
-    <TabsPrimitive.Trigger
-      className={cn(
-        "text-left rtl:text-right px-3 py-2.5 rounded-[9px] text-[13px] font-medium text-ink-muted outline-none transition-colors",
-        "hover:bg-canvas hover:text-ink",
-        "data-[state=active]:bg-[var(--accent-orange-bg)] data-[state=active]:text-ink data-[state=active]:font-semibold",
-        className,
-      )}
-      {...props}
-    />
-  );
+  return <TabsPrimitive.Trigger className={cn("settings-nav-item text-left rtl:text-right data-[state=active]:active", className)} {...props} />;
 }
 
 function SettingsNavContent({ className, ...props }: React.ComponentProps<typeof TabsPrimitive.Content>) {

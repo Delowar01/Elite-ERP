@@ -106,10 +106,8 @@ export function SimplePresetPanel({
         </Table>
       )}
 
-      <div>
-        <Button variant="ghost" onClick={() => setEditing("new")}>
-          <Plus className="size-4" /> {addLabel}
-        </Button>
+      <div className="add-row-btn" onClick={() => setEditing("new")} role="button">
+        <Plus className="size-3.5" /> {addLabel}
       </div>
 
       <Dialog open={editing !== null} onOpenChange={(open) => !open && setEditing(null)}>

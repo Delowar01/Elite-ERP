@@ -107,12 +107,12 @@ export default async function PresetsPage() {
 
   return (
     <div className="max-w-5xl">
-      <div className="flex items-center justify-between mb-[22px]">
-        <h3 className="text-[19px] font-bold">{t(locale, "Presets")}</h3>
+      <div className="main-head">
+        <h3>{t(locale, "Presets")}</h3>
       </div>
 
       <Tabs defaultValue="tax-rates">
-        <TabsList className="flex-wrap h-auto justify-start">
+        <TabsList>
           <TabsTrigger value="tax-rates">{t(locale, "Tax Rates")}</TabsTrigger>
           <TabsTrigger value="payment-terms">{t(locale, "Payment Terms")}</TabsTrigger>
           <TabsTrigger value="units">{t(locale, "Units")}</TabsTrigger>

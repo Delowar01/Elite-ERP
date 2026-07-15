@@ -116,10 +116,8 @@ export function BundlesPanel({
         </Table>
       )}
 
-      <div>
-        <Button variant="ghost" onClick={() => setCreating(true)}>
-          <Plus className="size-4" /> {t(locale, "Add Bundle")}
-        </Button>
+      <div className="add-row-btn" onClick={() => setCreating(true)} role="button">
+        <Plus className="size-3.5" /> {t(locale, "Add Bundle")}
       </div>
 
       <Dialog open={creating} onOpenChange={setCreating}>

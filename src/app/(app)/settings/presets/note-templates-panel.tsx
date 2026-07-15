@@ -118,10 +118,8 @@ export function NoteTemplatesPanel({ locale, templates }: { locale: Locale; temp
         </Table>
       )}
 
-      <div>
-        <Button variant="ghost" onClick={() => openEdit("new")}>
-          <Plus className="size-4" /> {t(locale, "Add Note Template")}
-        </Button>
+      <div className="add-row-btn" onClick={() => openEdit("new")} role="button">
+        <Plus className="size-3.5" /> {t(locale, "Add Note Template")}
       </div>
 
       <Dialog open={editing !== null} onOpenChange={(open) => !open && setEditing(null)}>

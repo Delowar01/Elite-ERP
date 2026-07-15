@@ -6,28 +6,13 @@ import { cn } from "@/lib/utils";
 
 const Tabs = TabsPrimitive.Root;
 
+// Matches the mockup's .tab-row/.tab/.tab.active exactly (literal classes).
 function TabsList({ className, ...props }: React.ComponentProps<typeof TabsPrimitive.List>) {
-  return (
-    <TabsPrimitive.List
-      className={cn(
-        "inline-flex flex-wrap items-center gap-1 rounded-2xl border border-line-strong bg-surface p-1 shadow-sm",
-        className,
-      )}
-      {...props}
-    />
-  );
+  return <TabsPrimitive.List className={cn("tab-row", className)} {...props} />;
 }
 
 function TabsTrigger({ className, ...props }: React.ComponentProps<typeof TabsPrimitive.Trigger>) {
-  return (
-    <TabsPrimitive.Trigger
-      className={cn(
-        "rounded-full px-4 py-1.5 text-[12.5px] font-medium text-ink-muted transition-colors data-[state=active]:bg-brand-orange data-[state=active]:text-white outline-none",
-        className,
-      )}
-      {...props}
-    />
-  );
+  return <TabsPrimitive.Trigger className={cn("tab data-[state=active]:active", className)} {...props} />;
 }
 
 function TabsContent({ className, ...props }: React.ComponentProps<typeof TabsPrimitive.Content>) {

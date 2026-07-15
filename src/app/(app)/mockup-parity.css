@@ -481,6 +481,42 @@ table.data-table.list-table td.mono, table.data-table.list-table td.num { white-
 
 .kpi-currency-icon { color: var(--brand-orange); font-size: 15px; display: inline-flex; align-items: center; }
 
+.pill { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 999px; }
+
+.pill::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+
+.pill-success { background: var(--success-bg); color: var(--success); }
+
+.pill-warning { background: var(--warning-bg); color: var(--warning); }
+
+.pill-danger { background: var(--danger-bg); color: var(--danger); }
+
+.pill-info { background: var(--info-bg); color: var(--info); }
+
+.pill-neutral { background: var(--line); color: var(--ink-muted); }
+
+.pill.live::before { animation: pulse-ring 1.8s infinite; }
+
+.tab-row { display: inline-flex; flex-wrap: wrap; gap: 4px; padding: 4px; border-radius: 16px; border: 1px solid var(--line-strong); background: var(--surface); box-shadow: var(--shadow-sm); margin-bottom: 18px; }
+
+.tab { font-size: 12.5px; font-weight: 600; padding: 7px 16px; border-radius: 999px; color: var(--ink-muted); }
+
+.tab.active { background: var(--brand-orange); color: #fff; }
+
+.add-row-btn { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600; color: var(--brand-orange); padding: 8px 4px; cursor: pointer; }
+
+.settings-nav { display: flex; flex-direction: column; gap: 2px; }
+
+.settings-nav-group-label { font-family: var(--font-body); font-size: 10.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-faint); padding: 14px 12px 4px; }
+
+.settings-nav-group-label:first-child { padding-top: 4px; }
+
+.settings-nav-item { padding: 9px 12px; border-radius: 9px; font-size: 13px; font-weight: 500; color: var(--ink-muted); cursor: pointer; }
+
+.settings-nav-item.active { background: var(--accent-orange-bg); color: var(--ink); font-weight: 600; }
+
+.settings-nav-item:not(.active):hover { background: var(--canvas); color: var(--ink); }
+
 /* ---- Dashboard, verbatim from dash_toolbar/kpi_card_v4/fin_overview/quick_actions/etc. ---- */
 
 .dash-toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
