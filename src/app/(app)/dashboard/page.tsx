@@ -6,7 +6,7 @@ import { t } from "@/lib/i18n/dict";
 import { Money } from "../sales/_shared/money";
 import { ComboChart, Donut, Sparkline } from "./_shared/charts";
 import { KpiCard } from "./_shared/kpi-card";
-import { getKpis, getRevenueTrend, getInvoicesOverview, getCashFlowThisMonth, getRecentActivity } from "./_shared/queries";
+import { getKpis, getRevenueTrend, getInvoicesOverview, getCashFlowThisMonth, getRecentActivity, getProjectsOverview } from "./_shared/queries";
 
 function DashWidget({ col, row, children }: { col: number; row: number; children: React.ReactNode }) {
   return (
@@ -24,12 +24,13 @@ export default async function DashboardPage() {
   const session = await requireSession();
   const locale = await getLocale();
 
-  const [kpis, revenueTrend, invoicesOverview, cashFlow, recentActivity] = await Promise.all([
+  const [kpis, revenueTrend, invoicesOverview, cashFlow, recentActivity, projectsOverview] = await Promise.all([
     getKpis(session.orgId),
     getRevenueTrend(session.orgId),
     getInvoicesOverview(session.orgId),
     getCashFlowThisMonth(session.orgId),
     getRecentActivity(session.orgId),
+    getProjectsOverview(session.orgId),
   ]);
 
   const revenueSeries = revenueTrend.map((p) => p.total);
@@ -336,14 +337,29 @@ export default async function DashboardPage() {
         </DashWidget>
 
         <DashWidget col={3} row={4}>
-          <div className="card bottom-card" style={{ opacity: 0.7 }}>
+          <div className="card bottom-card">
             <h4>{t(locale, "Project Overview")}</h4>
-            <div className="bc-bignum">0</div>
+            <div className="bc-bignum">{projectsOverview.active}</div>
             <div style={{ fontSize: 11, color: "var(--ink-faint)", marginBottom: 10 }}>{t(locale, "Active Projects")}</div>
-            <p className="text-[11px] text-ink-faint">{t(locale, "Projects module not yet available.")}</p>
-            <div className="bc-link" style={{ pointerEvents: "none" }}>
-              {t(locale, "Go to Projects")} <ChevronRight className="size-3" style={{ color: "var(--brand-orange)" }} />
+            <div className="bc-stat-row">
+              <span className="lbl">{t(locale, "Completed")}</span>
+              <span className="val">{projectsOverview.completed}</span>
             </div>
+            <div className="bc-stat-row">
+              <span className="lbl">{t(locale, "In Progress")}</span>
+              <span className="val">{projectsOverview.active}</span>
+            </div>
+            <div className="bc-stat-row">
+              <span className="lbl">{t(locale, "On Hold")}</span>
+              <span className="val">{projectsOverview.onHold}</span>
+            </div>
+            <div className="bc-stat-row">
+              <span className="lbl">{t(locale, "Not Started")}</span>
+              <span className="val">{projectsOverview.planned}</span>
+            </div>
+            <Link href="/projects" className="bc-link">
+              {t(locale, "Go to Projects")} <ChevronRight className="size-3" style={{ color: "var(--brand-orange)" }} />
+            </Link>
           </div>
         </DashWidget>
 

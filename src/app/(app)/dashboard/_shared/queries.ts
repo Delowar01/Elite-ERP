@@ -1,6 +1,6 @@
 import "server-only";
 import { and, eq, gte, lte, ne, inArray, sql, desc } from "drizzle-orm";
-import { db, salesInvoicesTable, quotationsTable, bankAccountsTable, journalLinesTable, journalEntriesTable, customersTable, purchaseOrdersTable } from "@/db";
+import { db, salesInvoicesTable, quotationsTable, bankAccountsTable, journalLinesTable, journalEntriesTable, customersTable, purchaseOrdersTable, projectsTable } from "@/db";
 
 function monthBounds(offsetMonths: number) {
   const now = new Date();
@@ -120,6 +120,23 @@ export async function getInvoicesOverview(orgId: number) {
   }
   const total = paid + partial + pending + overdue;
   return { paid, partial, pending, overdue, total };
+}
+
+export async function getProjectsOverview(orgId: number) {
+  const rows = await db
+    .select({ status: projectsTable.status, n: sql<number>`count(*)::int` })
+    .from(projectsTable)
+    .where(eq(projectsTable.orgId, orgId))
+    .groupBy(projectsTable.status);
+
+  const byStatus: Record<string, number> = {};
+  for (const r of rows) byStatus[r.status] = r.n;
+  return {
+    active: byStatus.active ?? 0,
+    completed: byStatus.completed ?? 0,
+    onHold: byStatus.on_hold ?? 0,
+    planned: byStatus.planned ?? 0,
+  };
 }
 
 export async function getCashFlowThisMonth(orgId: number) {
