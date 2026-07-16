@@ -706,3 +706,14 @@ table.data-table.line-table td { padding: 9px 14px; }
 @media (max-width: 1100px) {
   .kanban { grid-template-columns: repeat(2, 1fr); }
 }
+
+/* ---- Section 7: HR / Employees (ported verbatim from build_mockup_v12.py BASE CSS) ---- */
+.emp-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+.emp-card { padding: 16px 18px; display: flex; gap: 13px; align-items: center; }
+.avatar { width: 42px; height: 42px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-family: var(--font-display); font-weight: 700; font-size: 14px; color: #fff; flex-shrink: 0; }
+.emp-name { font-weight: 600; font-size: 13.5px; }
+.emp-role { font-size: 11.5px; color: var(--ink-muted); margin-top: 2px; }
+.emp-meta { display: flex; gap: 6px; align-items: center; margin-top: 6px; }
+@media (max-width: 900px) {
+  .emp-grid { grid-template-columns: 1fr; }
+}

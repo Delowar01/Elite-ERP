@@ -8,6 +8,8 @@ export default async function ProjectsPage() {
   const session = await requireSession();
   const locale = await getLocale();
 
+  // Join + group-by rather than a raw-sql correlated subquery: inside sql`` templates drizzle
+  // renders bare column names, so the "outer" reference silently resolves to the inner table.
   const rows = await db
     .select({
       id: projectsTable.id,
@@ -17,11 +19,13 @@ export default async function ProjectsPage() {
       startDate: projectsTable.startDate,
       endDate: projectsTable.endDate,
       budget: projectsTable.budget,
-      taskCount: sql<number>`(select count(*) from ${tasksTable} where ${tasksTable.projectId} = ${projectsTable.id})`.mapWith(Number),
+      taskCount: sql<number>`count(${tasksTable.id})::int`.mapWith(Number),
     })
     .from(projectsTable)
     .leftJoin(customersTable, eq(projectsTable.clientId, customersTable.id))
+    .leftJoin(tasksTable, eq(tasksTable.projectId, projectsTable.id))
     .where(eq(projectsTable.orgId, session.orgId))
+    .groupBy(projectsTable.id, customersTable.id)
     .orderBy(desc(projectsTable.id));
 
   return <ProjectsListClient locale={locale} rows={rows} />;

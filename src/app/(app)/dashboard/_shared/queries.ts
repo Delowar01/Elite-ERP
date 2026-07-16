@@ -1,6 +1,6 @@
 import "server-only";
 import { and, eq, gte, lte, ne, inArray, sql, desc } from "drizzle-orm";
-import { db, salesInvoicesTable, quotationsTable, bankAccountsTable, journalLinesTable, journalEntriesTable, customersTable, purchaseOrdersTable, projectsTable } from "@/db";
+import { db, salesInvoicesTable, quotationsTable, bankAccountsTable, journalLinesTable, journalEntriesTable, customersTable, purchaseOrdersTable, projectsTable, employeesTable, attendanceRecordsTable } from "@/db";
 
 function monthBounds(offsetMonths: number) {
   const now = new Date();
@@ -137,6 +137,28 @@ export async function getProjectsOverview(orgId: number) {
     onHold: byStatus.on_hold ?? 0,
     planned: byStatus.planned ?? 0,
   };
+}
+
+export async function getHrSnapshot(orgId: number) {
+  const today = new Date().toISOString().slice(0, 10);
+  const [employees, attendance] = await Promise.all([
+    db
+      .select({ n: sql<number>`count(*)::int` })
+      .from(employeesTable)
+      .where(and(eq(employeesTable.orgId, orgId), eq(employeesTable.status, "active"))),
+    db
+      .select({ status: attendanceRecordsTable.status, n: sql<number>`count(*)::int` })
+      .from(attendanceRecordsTable)
+      .where(and(eq(attendanceRecordsTable.orgId, orgId), eq(attendanceRecordsTable.date, today)))
+      .groupBy(attendanceRecordsTable.status),
+  ]);
+
+  const byStatus: Record<string, number> = {};
+  for (const r of attendance) byStatus[r.status] = r.n;
+  const total = employees[0]?.n ?? 0;
+  const present = (byStatus.present ?? 0) + (byStatus.late ?? 0);
+  const onLeave = byStatus.on_leave ?? 0;
+  return { total, present, onLeave, absent: Math.max(0, total - present - onLeave) };
 }
 
 export async function getCashFlowThisMonth(orgId: number) {

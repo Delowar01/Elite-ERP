@@ -6,7 +6,7 @@ import { t } from "@/lib/i18n/dict";
 import { Money } from "../sales/_shared/money";
 import { ComboChart, Donut, Sparkline } from "./_shared/charts";
 import { KpiCard } from "./_shared/kpi-card";
-import { getKpis, getRevenueTrend, getInvoicesOverview, getCashFlowThisMonth, getRecentActivity, getProjectsOverview } from "./_shared/queries";
+import { getKpis, getRevenueTrend, getInvoicesOverview, getCashFlowThisMonth, getRecentActivity, getProjectsOverview, getHrSnapshot } from "./_shared/queries";
 
 function DashWidget({ col, row, children }: { col: number; row: number; children: React.ReactNode }) {
   return (
@@ -24,13 +24,14 @@ export default async function DashboardPage() {
   const session = await requireSession();
   const locale = await getLocale();
 
-  const [kpis, revenueTrend, invoicesOverview, cashFlow, recentActivity, projectsOverview] = await Promise.all([
+  const [kpis, revenueTrend, invoicesOverview, cashFlow, recentActivity, projectsOverview, hrSnapshot] = await Promise.all([
     getKpis(session.orgId),
     getRevenueTrend(session.orgId),
     getInvoicesOverview(session.orgId),
     getCashFlowThisMonth(session.orgId),
     getRecentActivity(session.orgId),
     getProjectsOverview(session.orgId),
+    getHrSnapshot(session.orgId),
   ]);
 
   const revenueSeries = revenueTrend.map((p) => p.total);
@@ -46,7 +47,7 @@ export default async function DashboardPage() {
     { icon: <CreditCard className="size-4" />, label: "Add Expense" },
     { icon: <Building2 className="size-4" />, label: "Bank Transaction", href: "/finance/journal" },
     { icon: <ShoppingCart className="size-4" />, label: "New Purchase Order", href: "/purchasing/orders/new" },
-    { icon: <UserPlus className="size-4" />, label: "Add Employee" },
+    { icon: <UserPlus className="size-4" />, label: "Add Employee", href: "/hr/employees/new" },
   ];
 
   return (
@@ -364,14 +365,31 @@ export default async function DashboardPage() {
         </DashWidget>
 
         <DashWidget col={3} row={3}>
-          <div className="card bottom-card" style={{ opacity: 0.7 }}>
+          <div className="card bottom-card">
             <h4>{t(locale, "HR Snapshot")}</h4>
-            <div className="bc-bignum">0</div>
+            <div className="bc-bignum">{hrSnapshot.total}</div>
             <div style={{ fontSize: 11, color: "var(--ink-faint)", marginBottom: 10 }}>{t(locale, "Total Employees")}</div>
-            <p className="text-[11px] text-ink-faint">{t(locale, "HR module not yet available.")}</p>
-            <div className="bc-link" style={{ pointerEvents: "none" }}>
-              {t(locale, "Go to HRM")} <ChevronRight className="size-3" style={{ color: "var(--brand-orange)" }} />
+            <div className="bc-stat-row">
+              <span className="lbl" style={{ color: "var(--accent-green)" }}>
+                {t(locale, "Present")}
+              </span>
+              <span className="val">{hrSnapshot.present}</span>
             </div>
+            <div className="bc-stat-row">
+              <span className="lbl" style={{ color: "var(--warning)" }}>
+                {t(locale, "On Leave")}
+              </span>
+              <span className="val">{hrSnapshot.onLeave}</span>
+            </div>
+            <div className="bc-stat-row">
+              <span className="lbl" style={{ color: "var(--accent-red)" }}>
+                {t(locale, "Absent")}
+              </span>
+              <span className="val">{hrSnapshot.absent}</span>
+            </div>
+            <Link href="/hr/employees" className="bc-link">
+              {t(locale, "Go to HRM")} <ChevronRight className="size-3" style={{ color: "var(--brand-orange)" }} />
+            </Link>
           </div>
         </DashWidget>
       </div>
