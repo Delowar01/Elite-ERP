@@ -426,7 +426,7 @@ table.data-table.list-table td.mono, table.data-table.list-table td.num { white-
 
 .row-menu-btn:hover { background: var(--canvas); color: var(--ink); }
 
-.row-menu { position: fixed; display: none; flex-direction: column; min-width: 224px; background: var(--surface); border: 1px solid var(--line-strong); border-radius: 12px; box-shadow: var(--shadow-card-hover); padding: 6px; z-index: 200; }
+.row-menu { display: none; flex-direction: column; min-width: 224px; background: var(--surface); border: 1px solid var(--line-strong); border-radius: 12px; box-shadow: var(--shadow-card-hover); padding: 6px; z-index: 200; }
 
 .row-menu.open { display: flex; }
 
@@ -457,12 +457,6 @@ table.data-table.list-table td.mono, table.data-table.list-table td.num { white-
 .row-menu-submenu .row-menu-item svg { opacity: .6; }
 
 [dir="rtl"] .row-menu-item.has-submenu svg:last-child { margin-left: 0; margin-right: auto; }
-
-/* Radix drives .has-submenu's open state via its own [data-state] attribute instead of
-   the mockup's vanilla-JS .expanded class toggle — same visual result, real state. */
-.row-menu-item.has-submenu[data-state="open"] svg:last-child { transform: rotate(90deg); }
-
-.row-menu-item.has-submenu[data-state="open"] { background: var(--canvas); }
 
 [dir="rtl"] .row-menu-submenu { padding-left: 0; padding-right: 10px; margin: 2px 12px 2px 0; border-left: none; border-right: 2px solid var(--line); }
 

@@ -1,19 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
-import { MoreVertical, RefreshCw } from "lucide-react";
+import { MoreVertical, RefreshCw, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuSub,
-  DropdownMenuSubTrigger,
-  DropdownMenuSubContent,
-} from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 
 export type RowMenuEntry =
   | { kind: "item"; icon: LucideIcon; label: string; onSelect?: () => void; href?: string; danger?: boolean }
@@ -21,8 +13,9 @@ export type RowMenuEntry =
   | { kind: "separator" };
 
 export function RowMenu({ entries }: { entries: RowMenuEntry[] }) {
+  const [convertOpen, setConvertOpen] = useState(false);
   return (
-    <DropdownMenu>
+    <DropdownMenu onOpenChange={(open) => !open && setConvertOpen(false)}>
       <DropdownMenuTrigger className="row-menu-btn outline-none">
         <MoreVertical className="size-4" />
       </DropdownMenuTrigger>
@@ -31,18 +24,25 @@ export function RowMenu({ entries }: { entries: RowMenuEntry[] }) {
           if (e.kind === "separator") return <DropdownMenuSeparator key={i} />;
           if (e.kind === "convert") {
             return (
-              <DropdownMenuSub key={i}>
-                <DropdownMenuSubTrigger>
+              <div key={i}>
+                <DropdownMenuItem
+                  className={cn("has-submenu", convertOpen && "expanded")}
+                  onSelect={(ev) => {
+                    ev.preventDefault();
+                    setConvertOpen((v) => !v);
+                  }}
+                >
                   <RefreshCw className="size-3.5 me-2.5 opacity-80" /> {e.label}
-                </DropdownMenuSubTrigger>
-                <DropdownMenuSubContent>
+                  <ChevronRight className="size-3.5" />
+                </DropdownMenuItem>
+                <div className={cn("row-menu-submenu", convertOpen && "open")}>
                   {e.targets.map((target) => (
                     <DropdownMenuItem key={target.label} className="cursor-pointer" onSelect={target.onSelect}>
                       {target.label}
                     </DropdownMenuItem>
                   ))}
-                </DropdownMenuSubContent>
-              </DropdownMenuSub>
+                </div>
+              </div>
             );
           }
           const Icon = e.icon;
