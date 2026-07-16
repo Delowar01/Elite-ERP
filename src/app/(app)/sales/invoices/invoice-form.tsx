@@ -51,7 +51,7 @@ export function InvoiceForm({
   }
 
   return (
-    <div className="max-w-6xl">
+    <div className="max-w-6xl mx-auto">
       <div className="doc-titlebar">
         <div>
           <h3>

@@ -19,7 +19,7 @@ export default async function VendorRecycleBinPage() {
     .orderBy(vendorsTable.updatedAt);
 
   return (
-    <div className="max-w-6xl">
+    <div className="max-w-6xl mx-auto">
       <PageHeader
         title="Vendors — Recycle Bin"
         description="Deleted vendors live here until restored or permanently deleted."

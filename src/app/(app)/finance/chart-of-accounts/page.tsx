@@ -22,7 +22,7 @@ export default async function ChartOfAccountsPage({ searchParams }: { searchPara
   const ledgerRows = selectedAccount ? await getAccountLedger(orgId, selectedAccount.id) : [];
 
   return (
-    <div className="max-w-6xl">
+    <div className="max-w-6xl mx-auto">
       <div className="main-head">
         <h3>{t(locale, "Chart of Accounts")}</h3>
       </div>

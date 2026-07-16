@@ -31,7 +31,7 @@ export default async function NewDebitNotePage({ searchParams }: { searchParams:
   ]);
 
   return (
-    <div className="max-w-4xl">
+    <div className="max-w-4xl mx-auto">
       <DnForm locale={locale} purchaseOrders={purchaseOrders} products={products} org={org} numberPreview={numberPreview} defaultPoId={po} />
     </div>
   );

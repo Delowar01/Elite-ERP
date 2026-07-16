@@ -64,7 +64,7 @@ export default async function ProformaDetailPage({ params }: { params: Promise<{
   relNodes.push({ label: "Proforma Invoice", sub: "Current" });
 
   return (
-    <div className="max-w-4xl">
+    <div className="max-w-4xl mx-auto">
       {relNodes.length > 1 && <DocRelationships locale={locale} nodes={relNodes} currentLabel="Proforma Invoice" />}
       <div className="inv-head">
         <div>

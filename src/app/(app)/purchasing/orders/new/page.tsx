@@ -18,7 +18,7 @@ export default async function NewPurchaseOrderPage() {
   ]);
 
   return (
-    <div className="max-w-5xl">
+    <div className="max-w-5xl mx-auto">
       <PoForm locale={locale} vendors={vendors} products={products} org={org} numberPreview={numberPreview} />
     </div>
   );

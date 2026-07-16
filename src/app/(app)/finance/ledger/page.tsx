@@ -22,7 +22,7 @@ export default async function LedgerPage({ searchParams }: { searchParams: Promi
   const ledgerRows = selectedAccount ? await getAccountLedger(orgId, selectedAccount.id) : [];
 
   return (
-    <div className="max-w-6xl">
+    <div className="max-w-6xl mx-auto">
       <div className="main-head">
         <h3>{t(locale, "Account Ledger")}</h3>
       </div>

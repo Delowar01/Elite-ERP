@@ -5,7 +5,7 @@ import { createClientAction } from "../actions";
 
 export default function NewClientPage() {
   return (
-    <div className="max-w-6xl">
+    <div className="max-w-6xl mx-auto">
       <PageHeader title="New Client" description="Add a client to bill and quote against." />
       <Card>
         <CardContent className="pt-6">

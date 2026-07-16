@@ -31,7 +31,7 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
     .orderBy(salesInvoicesTable.issueDate);
 
   return (
-    <div className="max-w-6xl">
+    <div className="max-w-6xl mx-auto">
       <PageHeader
         title={client.name}
         description="Client profile"

@@ -38,7 +38,7 @@ export default async function BankAccountsPage() {
   const accountByGl = new Map(accounts.map((a) => [a.id, a]));
 
   return (
-    <div className="max-w-5xl">
+    <div className="max-w-5xl mx-auto">
       <div className="main-head">
         <h3>{t(locale, "Bank Accounts")}</h3>
         <BankAccountDialog locale={locale} accounts={accounts} />

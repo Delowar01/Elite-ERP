@@ -27,7 +27,7 @@ export default async function OrganizationSettingsPage() {
   const members = await db.select().from(usersTable).where(eq(usersTable.orgId, session.orgId)).orderBy(asc(usersTable.name));
 
   return (
-    <div className="max-w-5xl">
+    <div className="max-w-5xl mx-auto">
       <SettingsNav defaultValue="color-theme" orientation="vertical" className="flex gap-8 items-start">
         <SettingsNavList>
           <SettingsNavGroupLabel>{t(locale, "Company")}</SettingsNavGroupLabel>

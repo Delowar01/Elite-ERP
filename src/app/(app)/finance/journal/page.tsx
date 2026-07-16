@@ -31,7 +31,7 @@ export default async function JournalPage() {
   ]);
 
   return (
-    <div className="max-w-4xl">
+    <div className="max-w-4xl mx-auto">
       <div className="main-head">
         <h3>{t(locale, "New Journal Entry")}</h3>
         <span className="org-pill">{t(locale, "Manual")}</span>

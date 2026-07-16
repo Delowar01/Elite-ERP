@@ -52,7 +52,7 @@ export default async function DebitNoteDetailPage({ params }: { params: Promise<
   const items = await db.select().from(debitNoteItemsTable).where(eq(debitNoteItemsTable.debitNoteId, dnId));
 
   return (
-    <div className="max-w-4xl">
+    <div className="max-w-4xl mx-auto">
       <div className="inv-head">
         <div>
           <h3 className="mono">{dn.debitNoteNumber}</h3>

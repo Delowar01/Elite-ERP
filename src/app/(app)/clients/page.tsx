@@ -33,7 +33,7 @@ export default async function ClientsPage({
     .orderBy(customersTable.name);
 
   return (
-    <div className="max-w-6xl">
+    <div className="max-w-6xl mx-auto">
       <PageHeader
         title="Clients"
         description="Customer directory used across quotations, orders, and invoices."

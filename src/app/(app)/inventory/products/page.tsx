@@ -34,7 +34,7 @@ export default async function ProductsPage({
     .orderBy(productsTable.name);
 
   return (
-    <div className="max-w-6xl">
+    <div className="max-w-6xl mx-auto">
       <PageHeader
         title="Products"
         description="Inventory catalog used across quotations, orders, and invoices."

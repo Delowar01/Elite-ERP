@@ -33,7 +33,7 @@ export default async function VendorsPage({
     .orderBy(vendorsTable.name);
 
   return (
-    <div className="max-w-6xl">
+    <div className="max-w-6xl mx-auto">
       <PageHeader
         title="Vendors"
         description="Suppliers used for purchase orders and debit notes."

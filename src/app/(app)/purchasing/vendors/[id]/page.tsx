@@ -32,7 +32,7 @@ export default async function VendorDetailPage({ params }: { params: Promise<{ i
     .orderBy(purchaseOrdersTable.orderDate);
 
   return (
-    <div className="max-w-6xl">
+    <div className="max-w-6xl mx-auto">
       <PageHeader
         title={vendor.name}
         description="Vendor profile"

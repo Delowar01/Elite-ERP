@@ -60,7 +60,7 @@ export default async function ReportsPage() {
   const tbBalanced = Math.round(totalDebit * 100) === Math.round(totalCredit * 100);
 
   return (
-    <div className="max-w-3xl">
+    <div className="max-w-3xl mx-auto">
       <div className="main-head">
         <h3>{t(locale, "Account Reporting")}</h3>
       </div>

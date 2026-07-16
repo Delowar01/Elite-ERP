@@ -59,7 +59,7 @@ export function QuotationsListClient({ locale, rows }: { locale: Locale; rows: Q
   }
 
   return (
-    <div className="max-w-6xl">
+    <div className="max-w-6xl mx-auto">
       <div className="main-head flex items-center justify-between mb-[22px]">
         <h3 className="text-[19px] font-bold">{t(locale, "Quotations")}</h3>
       </div>

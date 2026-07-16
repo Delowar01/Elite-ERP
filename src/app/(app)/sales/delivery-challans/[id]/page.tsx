@@ -50,7 +50,7 @@ export default async function DcDetailPage({ params }: { params: Promise<{ id: s
   ]);
 
   return (
-    <div className="max-w-4xl">
+    <div className="max-w-4xl mx-auto">
       <div className="inv-head">
         <div>
           <h3 className="mono">{dc.dcNumber}</h3>

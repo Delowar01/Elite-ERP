@@ -52,7 +52,7 @@ export default async function CreditNoteDetailPage({ params }: { params: Promise
   const items = await db.select().from(creditNoteItemsTable).where(eq(creditNoteItemsTable.creditNoteId, cnId));
 
   return (
-    <div className="max-w-4xl">
+    <div className="max-w-4xl mx-auto">
       <div className="inv-head">
         <div>
           <h3 className="mono">{cn.creditNoteNumber}</h3>

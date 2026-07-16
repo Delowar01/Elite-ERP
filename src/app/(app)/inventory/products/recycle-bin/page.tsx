@@ -19,7 +19,7 @@ export default async function ProductRecycleBinPage() {
     .orderBy(productsTable.updatedAt);
 
   return (
-    <div className="max-w-6xl">
+    <div className="max-w-6xl mx-auto">
       <PageHeader
         title="Products — Recycle Bin"
         description="Deleted products live here until restored or permanently deleted."

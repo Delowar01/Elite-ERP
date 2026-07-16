@@ -54,7 +54,7 @@ export default async function QuotationDetailPage({ params }: { params: Promise<
   ]);
 
   return (
-    <div className="max-w-4xl">
+    <div className="max-w-4xl mx-auto">
       <div className="inv-head">
         <div>
           <h3 className="mono">{quotation.quotationNumber}</h3>

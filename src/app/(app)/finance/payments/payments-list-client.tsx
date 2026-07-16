@@ -46,7 +46,7 @@ export function PaymentsListClient({
   outstandingPos: OutstandingPo[];
 }) {
   return (
-    <div className="max-w-6xl">
+    <div className="max-w-6xl mx-auto">
       <div className="main-head">
         <h3>{t(locale, "Payment Records")}</h3>
         <RecordPaymentDialog

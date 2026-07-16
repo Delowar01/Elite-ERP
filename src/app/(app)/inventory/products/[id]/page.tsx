@@ -28,7 +28,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
   const low = product.quantityOnHand <= product.reorderLevel;
 
   return (
-    <div className="max-w-6xl">
+    <div className="max-w-6xl mx-auto">
       <PageHeader
         title={product.name}
         description={`SKU ${product.sku}`}

@@ -18,7 +18,7 @@ export default async function NewDcPage() {
   ]);
 
   return (
-    <div className="max-w-4xl">
+    <div className="max-w-4xl mx-auto">
       <DcForm locale={locale} customers={customers} products={products} org={org} numberPreview={numberPreview} />
     </div>
   );

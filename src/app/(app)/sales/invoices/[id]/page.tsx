@@ -75,7 +75,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
   relNodes.push({ label: "Invoice", sub: "Current" });
 
   return (
-    <div className="max-w-6xl">
+    <div className="max-w-6xl mx-auto">
       {relNodes.length > 1 && <DocRelationships locale={locale} nodes={relNodes} currentLabel="Invoice" />}
       <div className="inv-head">
         <div>

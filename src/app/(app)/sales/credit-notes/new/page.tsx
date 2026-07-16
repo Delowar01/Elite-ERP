@@ -31,7 +31,7 @@ export default async function NewCreditNotePage({ searchParams }: { searchParams
   ]);
 
   return (
-    <div className="max-w-4xl">
+    <div className="max-w-4xl mx-auto">
       <CnForm locale={locale} invoices={invoices} products={products} org={org} numberPreview={numberPreview} defaultInvoiceId={invoice} />
     </div>
   );

@@ -5,7 +5,7 @@ import { createVendorAction } from "../actions";
 
 export default function NewVendorPage() {
   return (
-    <div className="max-w-6xl">
+    <div className="max-w-6xl mx-auto">
       <PageHeader title="New Vendor" description="Add a vendor to order and receive against." />
       <Card>
         <CardContent className="pt-6">

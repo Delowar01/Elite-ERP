@@ -19,7 +19,7 @@ export default async function ClientRecycleBinPage() {
     .orderBy(customersTable.updatedAt);
 
   return (
-    <div className="max-w-6xl">
+    <div className="max-w-6xl mx-auto">
       <PageHeader
         title="Clients — Recycle Bin"
         description="Deleted clients live here until restored or permanently deleted."

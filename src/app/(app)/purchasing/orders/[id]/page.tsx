@@ -55,7 +55,7 @@ export default async function PurchaseOrderDetailPage({ params }: { params: Prom
   const showPayments = po.status === "received";
 
   return (
-    <div className="max-w-4xl">
+    <div className="max-w-4xl mx-auto">
       <div className="inv-head">
         <div>
           <h3 className="mono">{po.poNumber}</h3>

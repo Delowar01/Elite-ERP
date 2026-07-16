@@ -18,7 +18,7 @@ export default async function NewInvoicePage() {
   ]);
 
   return (
-    <div className="max-w-6xl">
+    <div className="max-w-6xl mx-auto">
       <InvoiceForm locale={locale} customers={customers} products={products} org={org} numberPreview={numberPreview} />
     </div>
   );

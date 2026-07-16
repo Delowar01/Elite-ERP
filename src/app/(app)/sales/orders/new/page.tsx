@@ -18,7 +18,7 @@ export default async function NewOrderPage() {
   ]);
 
   return (
-    <div className="max-w-5xl">
+    <div className="max-w-5xl mx-auto">
       <OrderForm locale={locale} customers={customers} products={products} org={org} numberPreview={numberPreview} />
     </div>
   );

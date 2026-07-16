@@ -5,7 +5,7 @@ import { createProductAction } from "../actions";
 
 export default function NewProductPage() {
   return (
-    <div className="max-w-6xl">
+    <div className="max-w-6xl mx-auto">
       <PageHeader title="New Product" description="Add a product to your inventory catalog." />
       <Card>
         <CardContent className="pt-6">

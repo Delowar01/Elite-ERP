@@ -45,7 +45,7 @@ export function DnListClient({ locale, rows }: { locale: Locale; rows: DnRow[] }
   }, [rows]);
 
   return (
-    <div className="max-w-6xl">
+    <div className="max-w-6xl mx-auto">
       <div className="flex items-center justify-between mb-[22px]">
         <h3 className="text-[19px] font-bold">{t(locale, "Debit Notes")}</h3>
       </div>

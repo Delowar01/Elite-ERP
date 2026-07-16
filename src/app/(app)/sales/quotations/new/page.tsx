@@ -18,7 +18,7 @@ export default async function NewQuotationPage() {
   ]);
 
   return (
-    <div className="max-w-5xl">
+    <div className="max-w-5xl mx-auto">
       <QuotationForm locale={locale} customers={customers} products={products} org={org} numberPreview={numberPreview} />
     </div>
   );
