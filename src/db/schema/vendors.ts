@@ -14,6 +14,7 @@ export const vendorsTable = pgTable("vendors", {
   phone: text("phone"),
   address: text("address"),
   taxId: text("tax_id"),
+  vatNumber: text("vat_number"),
   notes: text("notes"),
   isActive: boolean("is_active").notNull().default(true),
   recordState: recordStateEnum("record_state").notNull().default("active"),

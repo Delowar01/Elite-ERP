@@ -44,7 +44,7 @@ export default async function DashboardPage() {
     { icon: <FileText className="size-4" />, label: "Create Quotation", href: "/sales/quotations/new" },
     { icon: <CreditCard className="size-4" />, label: "Add Expense" },
     { icon: <Building2 className="size-4" />, label: "Bank Transaction", href: "/finance/journal" },
-    { icon: <ShoppingCart className="size-4" />, label: "New Purchase Order" },
+    { icon: <ShoppingCart className="size-4" />, label: "New Purchase Order", href: "/purchasing/orders/new" },
     { icon: <UserPlus className="size-4" />, label: "Add Employee" },
   ];
 

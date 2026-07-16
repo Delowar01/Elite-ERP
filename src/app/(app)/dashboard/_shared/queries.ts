@@ -1,6 +1,6 @@
 import "server-only";
 import { and, eq, gte, lte, ne, inArray, sql, desc } from "drizzle-orm";
-import { db, salesInvoicesTable, quotationsTable, bankAccountsTable, journalLinesTable, journalEntriesTable, customersTable } from "@/db";
+import { db, salesInvoicesTable, quotationsTable, bankAccountsTable, journalLinesTable, journalEntriesTable, customersTable, purchaseOrdersTable } from "@/db";
 
 function monthBounds(offsetMonths: number) {
   const now = new Date();
@@ -66,6 +66,14 @@ export async function getKpis(orgId: number) {
     .from(salesInvoicesTable)
     .where(and(eq(salesInvoicesTable.orgId, orgId), inArray(salesInvoicesTable.status, ["sent", "partially_paid"])));
 
+  // Mirrors totalReceivables exactly, on the purchasing side: received POs are the ones
+  // that have actually posted to Accounts Payable. paidAmount stays 0 for every PO until
+  // Payments (a later section) ships, so this is honestly the full received total for now.
+  const [{ payables } = { payables: "0" }] = await db
+    .select({ payables: sql<string>`coalesce(sum(${purchaseOrdersTable.total} - ${purchaseOrdersTable.paidAmount}), 0)` })
+    .from(purchaseOrdersTable)
+    .where(and(eq(purchaseOrdersTable.orgId, orgId), eq(purchaseOrdersTable.status, "received")));
+
   const salesTrend = trend(salesThis, salesLast);
   const invoicesTrend = trend(invoicesThis, invoicesLast);
 
@@ -75,7 +83,7 @@ export async function getKpis(orgId: number) {
     totalInvoices: invoicesTotal,
     totalInvoicesTrend: invoicesTrend,
     totalReceivables: Number(receivables),
-    totalPayables: 0,
+    totalPayables: Number(payables),
   };
 }
 

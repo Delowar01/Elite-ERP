@@ -39,6 +39,8 @@ const BUILT_ROUTES = new Set([
   "/sales/invoices",
   "/sales/delivery-challans",
   "/sales/credit-notes",
+  "/purchasing/orders",
+  "/purchasing/debit-notes",
 ]);
 
 const ROLE_LABELS: Record<SessionUser["role"], string> = { owner: "Owner", admin: "Admin", staff: "Staff" };

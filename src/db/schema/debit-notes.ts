@@ -13,6 +13,7 @@ export const debitNotesTable = pgTable("debit_notes", {
     .notNull()
     .references(() => orgsTable.id, { onDelete: "cascade" }),
   debitNoteNumber: text("debit_note_number").notNull(),
+  title: text("title"),
   vendorId: integer("vendor_id")
     .notNull()
     .references(() => vendorsTable.id),
@@ -23,6 +24,7 @@ export const debitNotesTable = pgTable("debit_notes", {
   status: text("status").notNull().default("draft"), // draft | issued
   issueDate: date("issue_date").notNull(),
   subtotal: numeric("subtotal", { precision: 14, scale: 2 }).notNull().default("0"),
+  discount: numeric("discount", { precision: 14, scale: 2 }).notNull().default("0"),
   taxTotal: numeric("tax_total", { precision: 14, scale: 2 }).notNull().default("0"),
   total: numeric("total", { precision: 14, scale: 2 }).notNull().default("0"),
   createdById: integer("created_by_id")

@@ -77,12 +77,14 @@ export function PartyCardSelect({
   customers,
   value,
   onChange,
+  placeholder = "Select a client",
 }: {
   locale: Locale;
   label: string;
   customers: { id: number; name: string; address?: string | null; email?: string | null; phone?: string | null }[];
   value: string;
   onChange: (v: string) => void;
+  placeholder?: string;
 }) {
   const selected = customers.find((c) => String(c.id) === value);
   return (
@@ -90,7 +92,7 @@ export function PartyCardSelect({
       <div className="pc-label">{label}</div>
       <Select value={value} onValueChange={onChange}>
         <SelectTrigger className="pc-select h-auto border-none bg-transparent p-0 shadow-none hover:bg-transparent focus:ring-0 [&_svg]:hidden">
-          <SelectValue placeholder={t(locale, "Select a client")} />
+          <SelectValue placeholder={t(locale, placeholder)} />
           <ChevronDown className="size-3.5 text-ink-faint" />
         </SelectTrigger>
         <SelectContent>

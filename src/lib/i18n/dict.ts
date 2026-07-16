@@ -309,6 +309,7 @@ const DICT: Record<string, string> = {
   // ---- Sales document chain ----
   Client: "العميل",
   "Select a client": "اختر عميلاً",
+  "Select a vendor": "اختر مورّدًا",
   Number: "الرقم",
   "Issue Date": "تاريخ الإصدار",
   "Order Date": "تاريخ الطلب",
@@ -381,6 +382,8 @@ const DICT: Record<string, string> = {
   dispatched: "تم الشحن",
   delivered: "تم التسليم",
   issued: "صادر",
+  ordered: "تم الطلب",
+  received: "تم الاستلام",
 
   // ---- Sales document chain — mockup-fidelity rebuild (list toolbar, rich builder, party cards) ----
   From: "من",
@@ -558,6 +561,39 @@ const DICT: Record<string, string> = {
   "CRM Integration": "تكامل إدارة علاقات العملاء",
   "Coming Soon": "قريبًا",
   "We will connect our existing CRM": "سنقوم بربط نظام إدارة علاقات العملاء الحالي",
+
+  // ---- Purchasing document chain (Section 4): Purchase Orders + Debit Notes ----
+  "Total POs": "إجمالي أوامر الشراء",
+  Vendor: "المورّد",
+  "Vendor:": "المورّد:",
+  "To Vendor": "إلى المورّد",
+  "No purchase orders yet.": "لا توجد أوامر شراء بعد.",
+  "Search PO number, vendor…": "ابحث برقم أمر الشراء أو اسم المورّد…",
+  "Create Purchase Order": "إنشاء أمر شراء",
+  "Order stock from a vendor — receiving posts to inventory and accounts payable.": "اطلب مخزونًا من مورّد — الاستلام يُرحّل إلى المخزون والذمم الدائنة.",
+  "PO Number": "رقم أمر الشراء",
+  "Purchase Order Title": "عنوان أمر الشراء",
+  "Write purchase order title here…": "اكتب عنوان أمر الشراء هنا…",
+  "Total Payable": "إجمالي المستحق للدفع",
+  "Unit cost": "تكلفة الوحدة",
+  "Send to Vendor": "إرسال إلى المورّد",
+  Receive: "استلام",
+  "Create Debit Note": "إنشاء إشعار مدين",
+  "Receiving posts Dr Inventory, Cr Accounts Payable in a transaction alongside the stock increment.": "الاستلام يُرحّل مدين المخزون ودائن الذمم الدائنة ضمن معاملة واحدة مع زيادة المخزون.",
+  "Purchase order received — posted to ledger and stock updated.": "تم استلام أمر الشراء — تم الترحيل إلى دفتر الأستاذ وتحديث المخزون.",
+  "Total Debit Notes": "إجمالي إشعارات المدين",
+  "Search debit note number, vendor…": "ابحث برقم إشعار المدين أو اسم المورّد…",
+  "New Debit Note": "إشعار مدين جديد",
+  "No debit notes yet. Open a received purchase order to issue one against it.": "لا توجد إشعارات مدين بعد. افتح أمر شراء مستلمًا لإصدار إشعار مقابله.",
+  "Against PO": "مقابل أمر شراء",
+  "DN Number": "رقم إشعار المدين",
+  "Issue a debit against a received purchase order — posts Dr Accounts Payable, Cr Inventory.": "أصدر إشعار مدين مقابل أمر شراء مستلم — يُرحّل مدين الذمم الدائنة ودائن المخزون.",
+  "Select a purchase order": "اختر أمر شراء",
+  "Select a purchase order to load the vendor.": "اختر أمر شراء لتحميل بيانات المورّد.",
+  "Debit Total": "إجمالي المدين",
+  "Against Purchase Order": "مقابل أمر شراء",
+  "Issue Debit Note": "إصدار إشعار مدين",
+  "Debit note issued — posted to ledger.": "تم إصدار إشعار المدين — تم الترحيل إلى دفتر الأستاذ.",
 };
 
 export function t(locale: Locale, en: string): string {

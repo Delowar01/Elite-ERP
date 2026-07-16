@@ -12,6 +12,7 @@ export const purchaseOrdersTable = pgTable("purchase_orders", {
     .notNull()
     .references(() => orgsTable.id, { onDelete: "cascade" }),
   poNumber: text("po_number").notNull(),
+  title: text("title"),
   vendorId: integer("vendor_id")
     .notNull()
     .references(() => vendorsTable.id),
@@ -19,6 +20,7 @@ export const purchaseOrdersTable = pgTable("purchase_orders", {
   orderDate: date("order_date").notNull(),
   expectedDate: date("expected_date"),
   subtotal: numeric("subtotal", { precision: 14, scale: 2 }).notNull().default("0"),
+  discount: numeric("discount", { precision: 14, scale: 2 }).notNull().default("0"),
   taxTotal: numeric("tax_total", { precision: 14, scale: 2 }).notNull().default("0"),
   total: numeric("total", { precision: 14, scale: 2 }).notNull().default("0"),
   paidAmount: numeric("paid_amount", { precision: 14, scale: 2 }).notNull().default("0"),

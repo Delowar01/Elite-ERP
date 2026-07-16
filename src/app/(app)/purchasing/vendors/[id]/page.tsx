@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import { and, eq } from "drizzle-orm";
 import { db, vendorsTable, purchaseOrdersTable } from "@/db";
 import { requireSession } from "@/lib/session";
@@ -61,10 +62,14 @@ export default async function VendorDetailPage({ params }: { params: Promise<{ i
             ) : (
               <div className="flex flex-col gap-2">
                 {pos.map((po) => (
-                  <div key={po.id} className="flex justify-between text-[13px] border-b border-line pb-2 last:border-0">
+                  <Link
+                    key={po.id}
+                    href={`/purchasing/orders/${po.id}`}
+                    className="flex justify-between text-[13px] border-b border-line pb-2 last:border-0 hover:text-brand-orange"
+                  >
                     <span className="font-mono">{po.poNumber}</span>
                     <span className="text-ink-muted">{po.total} SAR</span>
-                  </div>
+                  </Link>
                 ))}
               </div>
             )}
