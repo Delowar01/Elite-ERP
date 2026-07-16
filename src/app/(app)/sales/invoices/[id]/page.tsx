@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { eq, and } from "drizzle-orm";
-import { db, salesInvoicesTable, salesInvoiceItemsTable, customersTable, salesOrdersTable, quotationsTable, orgsTable } from "@/db";
+import { db, salesInvoicesTable, salesInvoiceItemsTable, customersTable, salesOrdersTable, quotationsTable, orgsTable, bankAccountsTable } from "@/db";
 import { requireSession } from "@/lib/session";
 import { getLocale } from "@/lib/i18n/server";
 import { t } from "@/lib/i18n/dict";
@@ -55,12 +55,16 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
 
   if (!invoice) notFound();
 
-  const [items, [org], [sourceQuotation]] = await Promise.all([
+  const [items, [org], [sourceQuotation], bankAccounts] = await Promise.all([
     db.select().from(salesInvoiceItemsTable).where(eq(salesInvoiceItemsTable.invoiceId, invoiceId)),
     db.select().from(orgsTable).where(eq(orgsTable.id, session.orgId)),
     invoice.sourceSoQuotationId
       ? db.select({ quotationNumber: quotationsTable.quotationNumber }).from(quotationsTable).where(eq(quotationsTable.id, invoice.sourceSoQuotationId))
       : Promise.resolve([]),
+    db
+      .select({ id: bankAccountsTable.id, name: bankAccountsTable.name })
+      .from(bankAccountsTable)
+      .where(and(eq(bankAccountsTable.orgId, session.orgId), eq(bankAccountsTable.isActive, true))),
   ]);
   const balanceDue = Number(invoice.total) - Number(invoice.paidAmount);
   const showPayments = invoice.status !== "draft" && invoice.status !== "void";
@@ -91,7 +95,15 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
             </Badge>
           </div>
         </div>
-        <InvoiceDetailActions locale={locale} invoiceId={invoice.id} status={invoice.status} />
+        <InvoiceDetailActions
+          locale={locale}
+          invoiceId={invoice.id}
+          invoiceNumber={invoice.invoiceNumber}
+          customerName={invoice.customerName}
+          balance={balanceDue}
+          status={invoice.status}
+          bankAccounts={bankAccounts}
+        />
       </div>
 
       <div className="inv-grid">

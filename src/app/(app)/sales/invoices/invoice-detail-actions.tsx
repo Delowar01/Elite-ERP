@@ -4,10 +4,27 @@ import { useTransition } from "react";
 import { toast } from "sonner";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { RecordPaymentDialog, type BankAccountOption } from "../../finance/_shared/record-payment-dialog";
 import { t, type Locale } from "@/lib/i18n/dict";
 import { sendInvoiceAction, voidInvoiceAction, convertInvoiceToDeliveryChallanAction } from "./actions";
 
-export function InvoiceDetailActions({ locale, invoiceId, status }: { locale: Locale; invoiceId: number; status: string }) {
+export function InvoiceDetailActions({
+  locale,
+  invoiceId,
+  invoiceNumber,
+  customerName,
+  balance,
+  status,
+  bankAccounts,
+}: {
+  locale: Locale;
+  invoiceId: number;
+  invoiceNumber: string;
+  customerName: string;
+  balance: number;
+  status: string;
+  bankAccounts: BankAccountOption[];
+}) {
   const [pending, startTransition] = useTransition();
 
   function send() {
@@ -48,12 +65,27 @@ export function InvoiceDetailActions({ locale, invoiceId, status }: { locale: Lo
 
   if (status === "void") return null;
 
+  const canRecordPayment = (status === "sent" || status === "partially_paid") && balance > 0;
+
   return (
     <div className="flex items-center gap-2.5">
       <Button variant="glass" style={{ width: "auto" }} disabled={pending} onClick={createDc}>
         {t(locale, "Create Delivery Challan")}
       </Button>
-      <Button style={{ width: "auto" }} asChild>
+      {canRecordPayment && (
+        <RecordPaymentDialog
+          locale={locale}
+          bankAccounts={bankAccounts}
+          invoices={[{ id: invoiceId, invoiceNumber, customerName, balance }]}
+          purchaseOrders={[]}
+          lockedDirection="in"
+          lockedSourceId={invoiceId}
+          trigger={
+            <Button style={{ width: "auto" }}>{t(locale, "Record Payment")}</Button>
+          }
+        />
+      )}
+      <Button variant="glass" style={{ width: "auto" }} asChild>
         <Link href={`/sales/credit-notes/new?invoice=${invoiceId}`}>{t(locale, "Create Credit Note")}</Link>
       </Button>
     </div>

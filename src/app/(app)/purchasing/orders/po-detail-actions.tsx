@@ -4,10 +4,27 @@ import { useTransition } from "react";
 import { toast } from "sonner";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { RecordPaymentDialog, type BankAccountOption } from "../../finance/_shared/record-payment-dialog";
 import { t, type Locale } from "@/lib/i18n/dict";
 import { sendPurchaseOrderAction, receivePurchaseOrderAction, cancelPurchaseOrderAction } from "./actions";
 
-export function PoDetailActions({ locale, poId, status }: { locale: Locale; poId: number; status: string }) {
+export function PoDetailActions({
+  locale,
+  poId,
+  poNumber,
+  vendorName,
+  balance,
+  status,
+  bankAccounts,
+}: {
+  locale: Locale;
+  poId: number;
+  poNumber: string;
+  vendorName: string;
+  balance: number;
+  status: string;
+  bankAccounts: BankAccountOption[];
+}) {
   const [pending, startTransition] = useTransition();
 
   function send() {
@@ -61,9 +78,22 @@ export function PoDetailActions({ locale, poId, status }: { locale: Locale; poId
 
   if (status === "received") {
     return (
-      <Button style={{ width: "auto" }} asChild>
-        <Link href={`/purchasing/debit-notes/new?po=${poId}`}>{t(locale, "Create Debit Note")}</Link>
-      </Button>
+      <div className="flex items-center gap-2.5">
+        <Button variant="glass" style={{ width: "auto" }} asChild>
+          <Link href={`/purchasing/debit-notes/new?po=${poId}`}>{t(locale, "Create Debit Note")}</Link>
+        </Button>
+        {balance > 0 && (
+          <RecordPaymentDialog
+            locale={locale}
+            bankAccounts={bankAccounts}
+            invoices={[]}
+            purchaseOrders={[{ id: poId, poNumber, vendorName, balance }]}
+            lockedDirection="out"
+            lockedSourceId={poId}
+            trigger={<Button style={{ width: "auto" }}>{t(locale, "Record Payment")}</Button>}
+          />
+        )}
+      </div>
     );
   }
 

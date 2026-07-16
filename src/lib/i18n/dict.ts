@@ -594,6 +594,18 @@ const DICT: Record<string, string> = {
   "Against Purchase Order": "مقابل أمر شراء",
   "Issue Debit Note": "إصدار إشعار مدين",
   "Debit note issued — posted to ledger.": "تم إصدار إشعار المدين — تم الترحيل إلى دفتر الأستاذ.",
+
+  // ---- Payments (Section 5) ----
+  "Received from Customer": "مستلم من العميل",
+  "Paid to Vendor": "مدفوع للمورّد",
+  "Select a document": "اختر مستندًا",
+  Method: "طريقة الدفع",
+  "Bank Transfer": "تحويل بنكي",
+  Cash: "نقدًا",
+  Card: "بطاقة",
+  Cheque: "شيك",
+  "Payment recorded — posted to ledger.": "تم تسجيل الدفعة — تم الترحيل إلى دفتر الأستاذ.",
+  Party: "الطرف",
 };
 
 export function t(locale: Locale, en: string): string {
