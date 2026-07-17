@@ -1,0 +1,83 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   Elite ERP Executive Presentation — animations.css
+   Central timing tokens (Doc 09 table) + the data-anim entry system.
+   Only opacity / transform / stroke-dashoffset are animated (GPU-friendly).
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+:root {
+  --t-fade: 420ms;        /* fades           (spec 300–500ms)  */
+  --t-slide: 500ms;       /* slides          (spec 400–600ms)  */
+  --t-scale: 420ms;       /* scale           (spec 300–500ms)  */
+  --t-callout: 320ms;     /* callout reveal  (spec 250–400ms)  */
+  --t-kpi: 1000ms;        /* KPI counters    (spec 800–1200ms) */
+  --t-screen: 620ms;      /* screen reveal   (spec 500–700ms)  */
+  --t-transition: 600ms;  /* slide change    (spec 500–700ms)  */
+  --anim-step: 120ms;     /* stagger between entry-order ranks */
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);   /* confident, decelerating */
+}
+
+/* Entry system: elements declare data-anim + data-anim-order (1…n).
+   animation.js applies .in with a computed transition-delay per rank
+   whenever the parent slide becomes active. */
+[data-anim] {
+  opacity: 0;
+  transition: opacity var(--t-fade) var(--ease), transform var(--t-fade) var(--ease);
+  will-change: opacity, transform;
+}
+[data-anim='fade-up']   { transform: translateY(30px); }
+[data-anim='fade-down'] { transform: translateY(-24px); }
+[data-anim='fade-start'] { transform: translateX(calc(-34px * var(--dir, 1))); }
+[data-anim='scale-in']  { transform: scale(0.9); transition-duration: var(--t-scale); }
+[data-anim='pop']       { transform: scale(0.75); transition-duration: var(--t-callout); }
+[data-anim='rise'] {
+  transform: translateY(24px) scale(0.965);
+  transition-duration: var(--t-screen);
+}
+html[dir='rtl'] { --dir: -1; }
+
+[data-anim].in {
+  opacity: 1;
+  transform: none;
+}
+
+/* SVG connector draw-in: markup sets pathLength="1" on the path */
+[data-anim='draw'] {
+  opacity: 1;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  transition: stroke-dashoffset var(--t-slide) var(--ease);
+}
+[data-anim='draw'].in { stroke-dashoffset: 0; }
+
+/* Idle accents */
+@keyframes loaderPulse {
+  0%, 100% { transform: scale(1); opacity: 0.98; }
+  50% { transform: scale(1.06); opacity: 0.8; }
+}
+@keyframes loaderSweep {
+  0% { left: -46%; }
+  100% { left: 102%; }
+}
+@keyframes floatSoft {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-9px); }
+}
+@keyframes glowDrift {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(26px, -18px) scale(1.05); }
+}
+@keyframes pulseDot {
+  0%, 100% { opacity: 0.35; transform: scale(0.85); }
+  50% { opacity: 1; transform: scale(1.15); }
+}
+
+/* Accessibility: collapse all motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
+  }
+  [data-anim] { opacity: 1; transform: none; }
+}
