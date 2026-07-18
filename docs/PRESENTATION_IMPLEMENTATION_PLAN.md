@@ -6,6 +6,14 @@
 
 > **Amendment (design-overhaul pass):** Per explicit client direction, this build was temporarily switched to **English-only** — the EN/AR toggle, `data-i18n-ar` content, and Arabic screenshot swapping described in §9 below were removed from `presentation/` to focus entirely on visual/brand quality. Arabic captures and fonts remain on disk (`assets/screenshots/ar/`, `fonts/arabic/`) for reintroduction once the English design is finalized, per CLAUDE.md's standing bilingual requirement. Do not treat §9's bilingual language as currently implemented.
 
+> **Amendment (Round 4 — color/background direction override):** `02_Global_Design_System.md` §5 (Color System → Neutral Palette) and §6 (Background System) instruct that the deck "SHOULD primarily use White / Soft White / Light Gray," "MUST remain bright and spacious," and that "Heavy textures, patterns, and dark themes SHOULD NOT be used." Live client feedback after three rounds of targeted fixes (borders/type, edge framing, reference-concept density) was that the result was **still too white/empty, colors too flat and muted, too minimal and quiet** compared to the reference concept deck — a direction problem, not a residual polish item. **For this project, that feedback overrides Doc 02 §5–6 as of Round 4.** The operative rules going forward, for slides 01–15:
+> - Color does real visual work as solid/gradient fills — navy and orange panels, dark full-bleed sections, gradient-filled icon medallions — not just thin accent lines and 5–15%-opacity glows on white.
+> - No slide should read as more than roughly a third flat white/cream background once finished; an underfilled slide gets more real content or a real color treatment, not more "premium" whitespace.
+> - Every slide matches the 8-image reference concept's density: a real visual (device mockup / diagram / dashboard), a color-filled icon/benefit row, and a bottom proof strip or stat band.
+> - The structural fixes from Rounds 1–3 stand: accent-edge (not flat 4-side) borders on small components, asymmetric icon corner-cuts, real device mockups (no stock photography, no generic circle-icon kits), varied per-slide edge framing, and the ~18px type floor. Round 4 adds color richness and density on top of that foundation.
+>
+> Do not build slides 05–15 against Doc 02 §5–6's "bright, spacious, no heavy texture" instruction — build them to the Round 4 standard above from the start.
+
 ---
 
 ## 1. What the analysis established

@@ -13,7 +13,9 @@
 
 /* ── Icon tile (icon holder) — asymmetric corner-cut, tied to the logomark's
    angular "E" cut, so icon containers read as a signature shape rather than
-   a generic rounded/circular badge. ───────────────────────────────────────── */
+   a generic rounded/circular badge. Round 4: solid gradient color fill with
+   a white icon (real color doing visual work), not a pale 6-8% tint with a
+   thin colored stroke. ────────────────────────────────────────────────────── */
 .icon-tile {
   display: flex;
   align-items: center;
@@ -21,13 +23,17 @@
   width: 66px;
   height: 66px;
   border-radius: 19px 19px 19px 6px;
-  background: var(--orange-08);
-  color: var(--orange);
+  background: linear-gradient(135deg, var(--orange) 0%, #C9530F 100%);
+  color: #fff;
   flex: 0 0 auto;
-  box-shadow: 0 2px 6px rgba(229, 108, 37, 0.10);
+  box-shadow: 0 6px 16px rgba(229, 108, 37, 0.32);
 }
 .icon-tile svg { width: 31px; height: 31px; }
-.icon-tile.tile-navy { background: var(--navy-06); color: var(--navy); box-shadow: 0 2px 6px rgba(21, 19, 72, 0.08); }
+.icon-tile.tile-navy {
+  background: linear-gradient(135deg, #2C2972 0%, var(--navy) 100%);
+  color: #fff;
+  box-shadow: 0 6px 16px rgba(21, 19, 72, 0.34);
+}
 
 /* ── Highlight row (icon + title + caption) ───────────────────────────────── */
 .highlight-row { display: flex; align-items: flex-start; gap: 22px; }
@@ -100,11 +106,11 @@
   width: 44px;
   height: 44px;
   border-radius: 13px 13px 13px 4px;
-  background: var(--orange-08);
-  color: var(--orange);
+  background: linear-gradient(135deg, var(--orange) 0%, #C9530F 100%);
+  color: #fff;
   flex: 0 0 auto;
   margin-top: 1px;
-  box-shadow: 0 2px 6px rgba(229, 108, 37, 0.10);
+  box-shadow: 0 5px 13px rgba(229, 108, 37, 0.3);
 }
 .value-item .vi-icon svg { width: 22px; height: 22px; }
 .value-item .vi-title { font-size: 20px; font-weight: 700; color: var(--navy); margin-bottom: 4px; }
@@ -321,8 +327,8 @@
   height: 46px;
   padding: 0 20px;
   border-radius: 999px;
-  background: var(--navy-06);
-  box-shadow: inset 0 0 0 1px rgba(21, 19, 72, 0.06);
+  background: linear-gradient(135deg, var(--navy-10) 0%, var(--navy-16) 100%);
+  box-shadow: inset 0 0 0 1px rgba(21, 19, 72, 0.08);
 }
 .mini-tag svg { width: 19px; height: 19px; color: var(--orange); flex: 0 0 auto; }
 .mini-tag span {
@@ -376,8 +382,8 @@
   flex-direction: column;
   padding: 15px 15px 0;
   border-radius: 20px 20px 4px 4px;
-  background: linear-gradient(165deg, #232145 0%, var(--navy-deep) 100%);
-  box-shadow: var(--shadow-hero);
+  background: linear-gradient(165deg, #302C6E 0%, var(--navy-deep) 100%);
+  box-shadow: var(--shadow-hero), 0 0 0 1px rgba(255, 255, 255, 0.09);
   position: relative;
 }
 .device-laptop .dl-cam {

@@ -373,7 +373,9 @@ ul, ol { list-style: none; }
 
 /* ── Icon tile (icon holder) — asymmetric corner-cut, tied to the logomark's
    angular "E" cut, so icon containers read as a signature shape rather than
-   a generic rounded/circular badge. ───────────────────────────────────────── */
+   a generic rounded/circular badge. Round 4: solid gradient color fill with
+   a white icon (real color doing visual work), not a pale 6-8% tint with a
+   thin colored stroke. ────────────────────────────────────────────────────── */
 .icon-tile {
   display: flex;
   align-items: center;
@@ -381,13 +383,17 @@ ul, ol { list-style: none; }
   width: 66px;
   height: 66px;
   border-radius: 19px 19px 19px 6px;
-  background: var(--orange-08);
-  color: var(--orange);
+  background: linear-gradient(135deg, var(--orange) 0%, #C9530F 100%);
+  color: #fff;
   flex: 0 0 auto;
-  box-shadow: 0 2px 6px rgba(229, 108, 37, 0.10);
+  box-shadow: 0 6px 16px rgba(229, 108, 37, 0.32);
 }
 .icon-tile svg { width: 31px; height: 31px; }
-.icon-tile.tile-navy { background: var(--navy-06); color: var(--navy); box-shadow: 0 2px 6px rgba(21, 19, 72, 0.08); }
+.icon-tile.tile-navy {
+  background: linear-gradient(135deg, #2C2972 0%, var(--navy) 100%);
+  color: #fff;
+  box-shadow: 0 6px 16px rgba(21, 19, 72, 0.34);
+}
 
 /* ── Highlight row (icon + title + caption) ───────────────────────────────── */
 .highlight-row { display: flex; align-items: flex-start; gap: 22px; }
@@ -460,11 +466,11 @@ ul, ol { list-style: none; }
   width: 44px;
   height: 44px;
   border-radius: 13px 13px 13px 4px;
-  background: var(--orange-08);
-  color: var(--orange);
+  background: linear-gradient(135deg, var(--orange) 0%, #C9530F 100%);
+  color: #fff;
   flex: 0 0 auto;
   margin-top: 1px;
-  box-shadow: 0 2px 6px rgba(229, 108, 37, 0.10);
+  box-shadow: 0 5px 13px rgba(229, 108, 37, 0.3);
 }
 .value-item .vi-icon svg { width: 22px; height: 22px; }
 .value-item .vi-title { font-size: 20px; font-weight: 700; color: var(--navy); margin-bottom: 4px; }
@@ -681,8 +687,8 @@ ul, ol { list-style: none; }
   height: 46px;
   padding: 0 20px;
   border-radius: 999px;
-  background: var(--navy-06);
-  box-shadow: inset 0 0 0 1px rgba(21, 19, 72, 0.06);
+  background: linear-gradient(135deg, var(--navy-10) 0%, var(--navy-16) 100%);
+  box-shadow: inset 0 0 0 1px rgba(21, 19, 72, 0.08);
 }
 .mini-tag svg { width: 19px; height: 19px; color: var(--orange); flex: 0 0 auto; }
 .mini-tag span {
@@ -736,8 +742,8 @@ ul, ol { list-style: none; }
   flex-direction: column;
   padding: 15px 15px 0;
   border-radius: 20px 20px 4px 4px;
-  background: linear-gradient(165deg, #232145 0%, var(--navy-deep) 100%);
-  box-shadow: var(--shadow-hero);
+  background: linear-gradient(165deg, #302C6E 0%, var(--navy-deep) 100%);
+  box-shadow: var(--shadow-hero), 0 0 0 1px rgba(255, 255, 255, 0.09);
   position: relative;
 }
 .device-laptop .dl-cam {
@@ -826,14 +832,17 @@ ul, ol { list-style: none; }
    ═══════════════════════════════════════════════════════════════════════════ */
 
 /* ═══ Slide 01 — Cover ═══════════════════════════════════════════════════── */
-#slide-01 { background: linear-gradient(178deg, #FFFFFF 28%, var(--cream) 100%); }
+/* Round 4: left copy column keeps a warm-tinted (not flat white) wash; the
+   hero half becomes a genuine navy field behind the device + ecosystem
+   diagram, rather than white with faint glows. */
+#slide-01 { background: linear-gradient(165deg, #FFFFFF 4%, var(--cream) 46%, #F2DFC3 100%); }
 
 #slide-01 .s01-orbit {
   width: 640px; height: 640px;
   inset-inline-end: -220px;
   bottom: -260px;
-  color: var(--navy);
-  opacity: 0.07;
+  color: #fff;
+  opacity: 0.05;
 }
 
 #slide-01 .s01-glow-a,
@@ -846,24 +855,13 @@ ul, ol { list-style: none; }
 #slide-01 .s01-glow-a {
   width: 1100px; height: 1100px;
   top: -340px; inset-inline-end: -240px;
-  background: radial-gradient(circle, rgba(229, 108, 37, 0.15) 0%, rgba(229, 108, 37, 0) 62%);
+  background: radial-gradient(circle, rgba(229, 108, 37, 0.4) 0%, rgba(229, 108, 37, 0) 62%);
   animation: glowDrift 11s var(--ease) infinite;
 }
 #slide-01 .s01-glow-b {
   width: 950px; height: 950px;
   bottom: -440px; inset-inline-start: -270px;
-  background: radial-gradient(circle, rgba(21, 19, 72, 0.08) 0%, rgba(21, 19, 72, 0) 60%);
-}
-#slide-01 .s01-grid {
-  position: absolute;
-  top: 0; bottom: 0;
-  inset-inline-end: 0;
-  width: 46%;
-  background-image: radial-gradient(rgba(21, 19, 72, 0.06) 1.2px, transparent 1.2px);
-  background-size: 27px 27px;
-  -webkit-mask-image: radial-gradient(closest-side at 62% 45%, #000 20%, transparent 100%);
-          mask-image: radial-gradient(closest-side at 62% 45%, #000 20%, transparent 100%);
-  pointer-events: none;
+  background: radial-gradient(circle, rgba(21, 19, 72, 0.16) 0%, rgba(21, 19, 72, 0) 60%);
 }
 
 #slide-01 .s01-copy { position: absolute; top: 264px; inset-inline-start: 96px; width: 830px; }
@@ -901,11 +899,27 @@ ul, ol { list-style: none; }
 }
 
 #slide-01 .s01-hero { position: absolute; top: 0; inset-inline-end: 0; width: 960px; height: 1080px; }
+/* Round 4: solid navy field behind the whole hero half — the single
+   biggest lever for cutting slide 01's white/cream canvas area. */
+#slide-01 .s01-hero-panel {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(155deg, #201D66 0%, var(--navy-deep) 72%);
+}
+#slide-01 .s01-hero-grid {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.09) 1.2px, transparent 1.2px);
+  background-size: 27px 27px;
+  -webkit-mask-image: radial-gradient(closest-side at 62% 45%, #000 20%, transparent 100%);
+          mask-image: radial-gradient(closest-side at 62% 45%, #000 20%, transparent 100%);
+  pointer-events: none;
+}
 #slide-01 .s01-shot-glow {
   width: 900px; height: 560px;
   top: 110px;
   inset-inline-end: 20px;
-  background: radial-gradient(closest-side, rgba(229, 108, 37, 0.16), rgba(21, 19, 72, 0.08) 55%, rgba(21, 19, 72, 0) 78%);
+  background: radial-gradient(closest-side, rgba(229, 108, 37, 0.3), rgba(21, 19, 72, 0) 72%);
 }
 #slide-01 .s01-shot {
   position: absolute;
@@ -917,7 +931,7 @@ ul, ol { list-style: none; }
 }
 #slide-01 .s01-net { position: absolute; inset-inline-start: 130px; bottom: 42px; width: 500px; height: 430px; }
 #slide-01 .s01-net .net-lines { position: absolute; inset: 0; }
-#slide-01 .s01-net .net-lines path { stroke: rgba(21, 19, 72, 0.16); stroke-width: 1.6; fill: none; }
+#slide-01 .s01-net .net-lines path { stroke: rgba(255, 255, 255, 0.22); stroke-width: 1.6; fill: none; }
 #slide-01 .s01-net .net-core {
   position: absolute;
   left: 250px; top: 215px;
@@ -927,8 +941,8 @@ ul, ol { list-style: none; }
   justify-content: center;
   width: 86px; height: 86px;
   border-radius: 25px;
-  background: linear-gradient(135deg, #201D66 0%, var(--navy) 62%);
-  box-shadow: 0 14px 32px rgba(21, 19, 72, 0.32);
+  background: linear-gradient(135deg, var(--orange) 0%, #C9530F 100%);
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.4), 0 0 0 5px rgba(255, 255, 255, 0.08);
 }
 #slide-01 .s01-net .net-core img { width: 41px; }
 #slide-01 .s01-net .net-node { translate: -50% -50%; }
@@ -946,13 +960,16 @@ ul, ol { list-style: none; }
 #slide-01 .s01-chip-revenue .icon-tile svg { width: 22px; height: 22px; }
 
 /* ═══ Slide 02 — Executive Summary (Content mood) ════════════════════════── */
-#slide-02 { background: linear-gradient(225deg, #FFFFFF 0%, #FFFFFF 56%, var(--cream) 100%); }
+/* Round 4: named the worst offender at ~60% blank canvas. The diagram panel
+   is now a genuine navy field (not cream-on-cream), and the base wash
+   carries color much further across the slide instead of staying white. */
+#slide-02 { background: linear-gradient(200deg, #FFFFFF 0%, var(--cream) 42%, #F2DFC3 100%); }
 #slide-02 .s02-bg-glow-a {
   position: absolute;
   width: 900px; height: 900px;
   top: -300px; inset-inline-end: -260px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(229, 108, 37, 0.09) 0%, rgba(229, 108, 37, 0) 62%);
+  background: radial-gradient(circle, rgba(229, 108, 37, 0.2) 0%, rgba(229, 108, 37, 0) 62%);
   pointer-events: none;
 }
 #slide-02 .s02-bg-glow-b {
@@ -960,13 +977,13 @@ ul, ol { list-style: none; }
   width: 820px; height: 820px;
   bottom: -380px; inset-inline-start: -260px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(21, 19, 72, 0.07) 0%, rgba(21, 19, 72, 0) 60%);
+  background: radial-gradient(circle, rgba(21, 19, 72, 0.14) 0%, rgba(21, 19, 72, 0) 60%);
   pointer-events: none;
 }
 #slide-02 .s02-grid-wide {
   position: absolute;
   inset: 0;
-  background-image: radial-gradient(rgba(21, 19, 72, 0.045) 1.1px, transparent 1.1px);
+  background-image: radial-gradient(rgba(21, 19, 72, 0.06) 1.1px, transparent 1.1px);
   background-size: 26px 26px;
   -webkit-mask-image: radial-gradient(600px 600px at 4% 98%, #000 0%, transparent 72%);
           mask-image: radial-gradient(600px 600px at 4% 98%, #000 0%, transparent 72%);
@@ -976,8 +993,8 @@ ul, ol { list-style: none; }
   width: 580px; height: 580px;
   top: -210px;
   inset-inline-end: -170px;
-  color: var(--orange);
-  opacity: 0.08;
+  color: #fff;
+  opacity: 0.06;
 }
 #slide-02 .s02-panel {
   position: absolute;
@@ -986,19 +1003,25 @@ ul, ol { list-style: none; }
   width: 950px;
   height: 664px;
   border-radius: 32px;
-  background: linear-gradient(165deg, #FBF9F4 0%, var(--cream) 100%);
-  border: 1px solid var(--line);
-  box-shadow: 0 30px 70px rgba(21, 19, 72, 0.07);
+  background: linear-gradient(160deg, #211E68 0%, var(--navy-deep) 100%);
+  box-shadow: 0 30px 70px rgba(21, 19, 72, 0.32), 0 0 0 1px rgba(255, 255, 255, 0.06);
   overflow: hidden;
 }
 #slide-02 .s02-panel::before {
   content: '';
   position: absolute;
   inset: 0;
-  background-image: radial-gradient(rgba(21, 19, 72, 0.05) 1.1px, transparent 1.1px);
+  background-image: radial-gradient(rgba(255, 255, 255, 0.07) 1.1px, transparent 1.1px);
   background-size: 24px 24px;
   -webkit-mask-image: radial-gradient(closest-side at 85% 12%, #000 0%, transparent 65%);
           mask-image: radial-gradient(closest-side at 85% 12%, #000 0%, transparent 65%);
+}
+#slide-02 .s02-panel::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(480px 300px at 88% 8%, rgba(229, 108, 37, 0.28), transparent 70%);
+  pointer-events: none;
 }
 #slide-02 .s02-head { position: absolute; top: 146px; inset-inline-start: 96px; width: 1000px; }
 #slide-02 .s02-head .headline { font-size: 66px; margin-top: 20px; }
@@ -1026,12 +1049,15 @@ ul, ol { list-style: none; }
 }
 #slide-02 .s02-modules .module-chip { position: static; justify-content: flex-start; padding-inline-start: 20px; }
 #slide-02 .s02-links { position: absolute; left: 0; top: 0; width: 878px; height: 596px; pointer-events: none; }
-#slide-02 .s02-links path { stroke: rgba(21, 19, 72, 0.18); stroke-width: 1.6; fill: none; }
+#slide-02 .s02-links path { stroke: rgba(255, 255, 255, 0.24); stroke-width: 1.6; fill: none; }
 #slide-02 .s02-core {
   left: 139px; top: 418px;
   width: 600px; height: 128px;
   flex-direction: row;
+  background: linear-gradient(135deg, var(--orange) 0%, #C9530F 100%);
+  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.35);
 }
+#slide-02 .s02-core .core-sub { opacity: 0.85; }
 #slide-02 .s02-core .core-text { text-align: start; }
 #slide-02 .s02-core-glow {
   position: absolute;
@@ -1043,13 +1069,13 @@ ul, ol { list-style: none; }
 #slide-02 .benefit-strip { position: absolute; inset-inline: 96px; bottom: 68px; }
 
 /* ═══ Slide 03 — Business Challenges (Narrative mood — heaviest wash) ────── */
-#slide-03 { background: linear-gradient(128deg, #FFFFFF 0%, #FFFFFF 32%, #FBF2E5 74%, #F6E6D0 100%); }
+#slide-03 { background: linear-gradient(128deg, #FFFFFF 0%, #FDF0DC 40%, #FBE4BE 74%, #F6D19B 100%); }
 #slide-03 .s03-bg-glow {
   position: absolute;
   width: 1000px; height: 1000px;
   top: -380px; inset-inline-end: -320px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(229, 108, 37, 0.1) 0%, rgba(229, 108, 37, 0) 62%);
+  background: radial-gradient(circle, rgba(229, 108, 37, 0.24) 0%, rgba(229, 108, 37, 0) 62%);
   pointer-events: none;
 }
 #slide-03 .s03-bg-glow-b {
@@ -1057,7 +1083,15 @@ ul, ol { list-style: none; }
   width: 860px; height: 860px;
   bottom: -360px; inset-inline-start: -280px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(21, 19, 72, 0.075) 0%, rgba(21, 19, 72, 0) 60%);
+  background: radial-gradient(circle, rgba(21, 19, 72, 0.16) 0%, rgba(21, 19, 72, 0) 60%);
+  pointer-events: none;
+}
+#slide-03 .s03-accent-glow {
+  position: absolute;
+  width: 640px; height: 640px;
+  top: 470px; inset-inline-start: -80px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(229, 108, 37, 0.16) 0%, rgba(21, 19, 72, 0.08) 45%, rgba(21, 19, 72, 0) 68%);
   pointer-events: none;
 }
 #slide-03 .s03-orbit {
@@ -1065,13 +1099,13 @@ ul, ol { list-style: none; }
   top: -260px;
   inset-inline-start: -220px;
   color: var(--navy);
-  opacity: 0.07;
+  opacity: 0.09;
 }
 #slide-03 .s03-left { position: absolute; top: 210px; inset-inline-start: 96px; width: 680px; }
-#slide-03 .s03-left .spine { inset-inline-start: -30px; top: 6px; height: 560px; }
+#slide-03 .s03-left .spine { inset-inline-start: -30px; top: 6px; height: 620px; }
 #slide-03 .s03-left .headline { font-size: 68px; margin-top: 26px; }
 #slide-03 .s03-left .support { margin-top: 34px; max-width: 610px; }
-#slide-03 .s03-transition { position: absolute; bottom: 140px; inset-inline-start: 96px; width: 680px; }
+#slide-03 .s03-transition { position: absolute; bottom: 210px; inset-inline-start: 96px; width: 680px; }
 
 #slide-03 .s03-field { position: absolute; top: 118px; inset-inline-end: 60px; width: 1030px; height: 830px; }
 #slide-03 .s03-broken { position: absolute; inset: 0; pointer-events: none; }
@@ -1107,13 +1141,13 @@ ul, ol { list-style: none; }
 #slide-03 .s03-core .core-check svg { width: 17px; height: 17px; color: #fff; }
 
 /* ═══ Slide 04 — Why Elite ERP (Content mood) ════════════════════════════── */
-#slide-04 { background: radial-gradient(1300px 800px at 36% 20%, #FFFFFF 42%, var(--cream) 100%); }
+#slide-04 { background: radial-gradient(1300px 800px at 36% 20%, #FFFFFF 30%, #F5E2C4 100%); }
 #slide-04 .s04-bg-glow-a {
   position: absolute;
   width: 820px; height: 820px;
   top: -300px; inset-inline-start: -260px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(21, 19, 72, 0.06) 0%, rgba(21, 19, 72, 0) 60%);
+  background: radial-gradient(circle, rgba(21, 19, 72, 0.15) 0%, rgba(21, 19, 72, 0) 60%);
   pointer-events: none;
 }
 #slide-04 .s04-bg-glow-b {
@@ -1121,7 +1155,7 @@ ul, ol { list-style: none; }
   width: 760px; height: 760px;
   bottom: -320px; inset-inline-end: -240px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(229, 108, 37, 0.09) 0%, rgba(229, 108, 37, 0) 60%);
+  background: radial-gradient(circle, rgba(229, 108, 37, 0.22) 0%, rgba(229, 108, 37, 0) 60%);
   pointer-events: none;
 }
 #slide-04 .s04-orbit {
@@ -1129,7 +1163,7 @@ ul, ol { list-style: none; }
   bottom: -220px;
   inset-inline-end: -180px;
   color: var(--orange);
-  opacity: 0.075;
+  opacity: 0.1;
 }
 #slide-04 .s04-head { position: absolute; top: 86px; left: 0; right: 0; text-align: center; }
 #slide-04 .s04-head .headline { font-size: 60px; margin-top: 20px; }
@@ -1172,24 +1206,15 @@ ul, ol { list-style: none; }
 #slide-04 .s04-caps { inset-inline-end: 96px; }
 #slide-04 .s04-side .value-item + .value-item { margin-top: 34px; }
 
-#slide-04 .s04-transition {
+#slide-04 .s04-transition-wrap {
   position: absolute;
-  bottom: 88px;
-  left: 0; right: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 16px;
+  bottom: 72px;
+  left: 50%;
+  translate: -50% 0;
+  width: 980px;
 }
-#slide-04 .s04-transition .tr-icon {
-  display: flex; align-items: center; justify-content: center;
-  width: 39px; height: 39px;
-  border-radius: 50%;
-  background: var(--orange-14);
-  color: var(--orange);
-}
-#slide-04 .s04-transition .tr-icon svg { width: 19px; height: 19px; }
-#slide-04 .s04-transition p { font-size: 20.5px; font-weight: 650; color: var(--navy); }
+#slide-04 .s04-transition-wrap .transition-bar { justify-content: center; }
+#slide-04 .s04-transition-wrap p { font-size: 20.5px; }
 
 </style>
 </head>
@@ -1240,7 +1265,6 @@ ul, ol { list-style: none; }
     <section class="slide" id="slide-01" aria-label="Cover">
       <div class="s01-glow-a" data-anim="fade" data-anim-order="1"></div>
       <div class="s01-glow-b" data-anim="fade" data-anim-order="1"></div>
-      <div class="s01-grid" data-anim="fade" data-anim-order="1"></div>
       <div class="ghost-num" aria-hidden="true">01</div>
       <div class="corner-orbit s01-orbit" aria-hidden="true">
         <span class="ring"></span><span class="ring ring-2"></span><span class="ring ring-3"></span>
@@ -1264,6 +1288,8 @@ ul, ol { list-style: none; }
       </div>
 
       <div class="s01-hero">
+        <div class="s01-hero-panel" data-anim="fade" data-anim-order="1"></div>
+        <div class="s01-hero-grid" aria-hidden="true"></div>
         <div class="s01-shot-glow shot-glow" data-anim="fade" data-anim-order="6"></div>
         <div class="s01-shot device-laptop" data-anim="rise" data-anim-order="6">
           <div class="dl-screen">
@@ -1299,9 +1325,9 @@ ul, ol { list-style: none; }
           <span class="pulse" style="left:174px; top:171px; animation-delay:1.7s" data-anim="fade" data-anim-order="8"></span>
         </div>
 
-        <div class="stat-chip chip-navy s01-chip-margin" data-anim="pop" data-anim-order="9">
+        <div class="stat-chip s01-chip-margin" data-anim="pop" data-anim-order="9">
           <svg class="sc-ring" width="44" height="44" viewBox="0 0 44 44" aria-hidden="true">
-            <circle cx="22" cy="22" r="18" fill="none" stroke="rgba(255,255,255,.18)" stroke-width="5"/>
+            <circle cx="22" cy="22" r="18" fill="none" stroke="rgba(21,19,72,.12)" stroke-width="5"/>
             <circle cx="22" cy="22" r="18" fill="none" stroke="#E56C25" stroke-width="5" stroke-linecap="round"
                     stroke-dasharray="113" stroke-dashoffset="74" transform="rotate(-90 22 22)"/>
           </svg>
@@ -1421,6 +1447,7 @@ ul, ol { list-style: none; }
       <div class="ghost-num" aria-hidden="true">03</div>
       <div class="s03-bg-glow" data-anim="fade" data-anim-order="1"></div>
       <div class="s03-bg-glow-b" data-anim="fade" data-anim-order="1"></div>
+      <div class="s03-accent-glow" data-anim="fade" data-anim-order="1"></div>
       <div class="corner-orbit s03-orbit" aria-hidden="true">
         <span class="ring"></span><span class="ring ring-2"></span><span class="ring ring-3"></span>
       </div>
@@ -1601,9 +1628,11 @@ ul, ol { list-style: none; }
         </div>
       </div>
 
-      <div class="s04-transition" data-anim="fade-up" data-anim-order="9">
-        <div class="tr-icon"><svg class="mirror-rtl"><use href="#i-arrow-right"/></svg></div>
-        <p>Let's explore how each business function is transformed with Elite ERP.</p>
+      <div class="s04-transition-wrap" data-anim="fade-up" data-anim-order="9">
+        <div class="transition-bar">
+          <div class="tb-arrow"><svg class="mirror-rtl"><use href="#i-arrow-right"/></svg></div>
+          <p>Let's explore how each business function is transformed with Elite ERP.</p>
+        </div>
       </div>
     </section>
 
