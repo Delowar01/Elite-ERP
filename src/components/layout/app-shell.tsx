@@ -2,9 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LogOut, Search, Star, Bell, Settings, Command } from "lucide-react";
+import { LogOut, Star, Settings } from "lucide-react";
 import { LogoMark } from "@/components/brand/logo-mark";
 import { NAV_GROUPS } from "./nav-config";
+import { CommandPalette } from "./command-palette";
+import { NotificationsMenu } from "./notifications-menu";
+import type { NotificationItem } from "@/lib/notifications";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -69,6 +72,7 @@ export function AppShell({
   orgPrimaryColor,
   orgAccentColor,
   locale,
+  notifications,
   children,
 }: {
   user: SessionUser;
@@ -77,6 +81,7 @@ export function AppShell({
   orgPrimaryColor: string;
   orgAccentColor: string;
   locale: Locale;
+  notifications: NotificationItem[];
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -157,22 +162,12 @@ export function AppShell({
             <p>{orgName}</p>
           </div>
           <div className="topbar-actions">
-            <div className="topbar-search hidden lg:flex">
-              <Search className="size-[15px] shrink-0" />
-              <span className="truncate">{t(locale, "Search anything…")}</span>
-            </div>
-            <button type="button" className="cmdk-trigger-pill hidden md:inline-flex">
-              <Command className="size-3" />
-              <span className="cmdk-kbd">K</span>
-            </button>
+            <CommandPalette locale={locale} />
             <LanguageSwitcher locale={locale} />
-            <button type="button" className="topbar-icon-btn" aria-label={t(locale, "Favorites")}>
+            <button type="button" className="topbar-icon-btn opacity-50 cursor-not-allowed" aria-label={t(locale, "Favorites")} title={t(locale, "Favorites — coming soon")} disabled>
               <Star className="size-4" />
             </button>
-            <button type="button" className="topbar-icon-btn" aria-label={t(locale, "Notifications")}>
-              <Bell className="size-4" />
-              <span className="topbar-icon-badge">4</span>
-            </button>
+            <NotificationsMenu locale={locale} notifications={notifications} />
             <Link href="/settings/organization" className="topbar-icon-btn" aria-label={t(locale, "Business Settings")}>
               <Settings className="size-4" />
             </Link>

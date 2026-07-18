@@ -856,6 +856,15 @@ const DICT: Record<string, string> = {
   "Confidentiality — tenant isolation on every query": "السرية — عزل المستأجرين في كل استعلام",
   "Availability — backup/DR runbook": "التوفّر — دليل النسخ الاحتياطي والتعافي",
   "Processing integrity — transactional ledger posting": "سلامة المعالجة — ترحيل دفتر الأستاذ ضمن معاملة",
+
+  // ---- Topbar: command palette + notifications (audit polish) ----
+  "Jump to a page…": "الانتقال إلى صفحة…",
+  "No matches.": "لا توجد نتائج.",
+  "Favorites — coming soon": "المفضلة — قريباً",
+  "just now": "الآن",
+  "m ago": "د",
+  "h ago": "س",
+  "d ago": "ي",
 };
 
 export function t(locale: Locale, en: string): string {
