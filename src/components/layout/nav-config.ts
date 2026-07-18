@@ -26,6 +26,7 @@ import {
   CalendarClock,
   SlidersHorizontal,
   Settings,
+  ShieldCheck,
 } from "lucide-react";
 
 export type NavItem = {
@@ -102,6 +103,7 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { label: "Preset Management", href: "/settings/presets", icon: SlidersHorizontal, roles: ["owner", "admin"] },
       { label: "Business Settings", href: "/settings/organization", icon: Settings, roles: ["owner", "admin"] },
+      { label: "Security Center", href: "/settings/security", icon: ShieldCheck },
     ],
   },
 ];

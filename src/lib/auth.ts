@@ -24,21 +24,23 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
 export type SessionPayload = {
   userId: number;
   orgId: number;
+  jti?: string; // server-side session id (Stage 11) — enables revocation. Optional for legacy tokens.
 };
 
 export async function signSessionToken(payload: SessionPayload): Promise<string> {
-  return new SignJWT(payload)
+  const builder = new SignJWT({ userId: payload.userId, orgId: payload.orgId })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
-    .setExpirationTime("30d")
-    .sign(secret());
+    .setExpirationTime("30d");
+  if (payload.jti) builder.setJti(payload.jti);
+  return builder.sign(secret());
 }
 
 export async function verifySessionToken(token: string): Promise<SessionPayload | null> {
   try {
     const { payload } = await jwtVerify(token, secret());
     if (typeof payload.userId !== "number" || typeof payload.orgId !== "number") return null;
-    return { userId: payload.userId, orgId: payload.orgId };
+    return { userId: payload.userId, orgId: payload.orgId, jti: typeof payload.jti === "string" ? payload.jti : undefined };
   } catch {
     return null;
   }

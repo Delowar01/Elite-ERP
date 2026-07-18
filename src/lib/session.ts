@@ -6,6 +6,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { usersTable, orgsTable, type Role } from "@/db/schema";
 import { SESSION_COOKIE, verifySessionToken } from "./auth";
+import { isSessionValid } from "./security/session-store";
 
 export type Session = {
   userId: number;
@@ -18,6 +19,7 @@ export type Session = {
   orgLogoUrl: string | null;
   orgPrimaryColor: string;
   orgAccentColor: string;
+  jti?: string;
 };
 
 // Session -> org resolution happens once per request: every Server Component/Action on a page
@@ -25,6 +27,10 @@ export type Session = {
 const lookupSessionByToken = cache(async (token: string): Promise<Session | null> => {
   const payload = await verifySessionToken(token);
   if (!payload) return null;
+
+  // Server-side revocation check: a token carrying a jti must map to a live session row.
+  // Legacy tokens minted before Stage 11 have no jti and remain valid until they expire.
+  if (payload.jti && !(await isSessionValid(payload.jti))) return null;
 
   const [row] = await db
     .select({
@@ -45,7 +51,7 @@ const lookupSessionByToken = cache(async (token: string): Promise<Session | null
     .limit(1);
 
   if (!row || !row.isActive) return null;
-  return { ...row, role: row.role as Role };
+  return { ...row, role: row.role as Role, jti: payload.jti };
 });
 
 export async function getSession(): Promise<Session | null> {
