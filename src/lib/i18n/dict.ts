@@ -745,6 +745,17 @@ const DICT: Record<string, string> = {
   Back: "رجوع",
   "Print / Save as PDF": "طباعة / حفظ PDF",
   "Payment Receipt": "إيصال الدفع",
+
+  // ---- Project tagging + cost report (Section 9) ----
+  Project: "المشروع",
+  Invoiced: "المفوتر",
+  "Labor cost": "تكلفة العمالة",
+  Margin: "الهامش",
+  "Linked Documents": "المستندات المرتبطة",
+  "No documents tagged to this project yet. Pick this project in the Project field when creating a quotation, sales order, or invoice.":
+    "لا توجد مستندات مرتبطة بهذا المشروع بعد. اختر هذا المشروع في حقل المشروع عند إنشاء عرض سعر أو أمر بيع أو فاتورة.",
+  "Labor cost uses each employee's latest salary structure as an hourly rate (monthly gross ÷ 240 hours).":
+    "تُحتسب تكلفة العمالة من أحدث هيكل راتب لكل موظف كمعدل بالساعة (إجمالي الراتب الشهري ÷ 240 ساعة).",
 };
 
 export function t(locale: Locale, en: string): string {

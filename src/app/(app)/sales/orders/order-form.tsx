@@ -22,17 +22,20 @@ export function OrderForm({
   locale,
   customers,
   products,
+  projects,
   org,
   numberPreview,
 }: {
   locale: Locale;
   customers: Customer[];
   products: Product[];
+  projects: { id: number; name: string }[];
   org: Org;
   numberPreview: string;
 }) {
   const [title, setTitle] = useState("");
   const [customerId, setCustomerId] = useState("");
+  const [projectId, setProjectId] = useState("");
   const [issueDate, setIssueDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [expectedDelivery, setExpectedDelivery] = useState("");
   const [discount, setDiscount] = useState("0");
@@ -44,7 +47,7 @@ export function OrderForm({
 
   function submit() {
     startTransition(async () => {
-      const result = await createSalesOrderAction({ title, customerId, issueDate, discount, notes, items });
+      const result = await createSalesOrderAction({ title, customerId, projectId, issueDate, discount, notes, items });
       if (result?.error) toast.error(result.error);
     });
   }
@@ -87,7 +90,16 @@ export function OrderForm({
                 className="w-full bg-transparent outline-none"
               />
             </DocFieldBox>
-            <div />
+            <DocFieldBox label={t(locale, "Project")}>
+              <select value={projectId} onChange={(e) => setProjectId(e.target.value)} className="w-full bg-transparent outline-none">
+                <option value="">—</option>
+                {projects.map((p) => (
+                  <option key={p.id} value={String(p.id)}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+            </DocFieldBox>
           </div>
           <div className="field">
             <label>{t(locale, "Sales Order Title")}</label>

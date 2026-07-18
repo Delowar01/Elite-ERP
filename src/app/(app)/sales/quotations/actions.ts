@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { and, eq } from "drizzle-orm";
-import { db, quotationsTable, quotationItemsTable, salesOrdersTable, salesOrderItemsTable, proformaInvoicesTable, proformaInvoiceItemsTable, salesInvoicesTable, salesInvoiceItemsTable } from "@/db";
+import { db, projectsTable, quotationsTable, quotationItemsTable, salesOrdersTable, salesOrderItemsTable, proformaInvoicesTable, proformaInvoiceItemsTable, salesInvoicesTable, salesInvoiceItemsTable } from "@/db";
 import { requireSession } from "@/lib/session";
 import { logActivity } from "@/lib/activity";
 import { nextDocumentNumber } from "@/lib/documents";
@@ -19,6 +19,7 @@ type LineInput = { productId: string; description: string; quantity: string; uni
 export async function createQuotationAction(input: {
   title: string;
   customerId: string;
+  projectId?: string;
   issueDate: string;
   validUntil: string;
   discount: string;
@@ -28,6 +29,16 @@ export async function createQuotationAction(input: {
   const session = await requireSession();
   const customerId = Number(input.customerId);
   if (!customerId) return { error: "Choose a client." };
+
+  let projectId: number | null = null;
+  if (input.projectId) {
+    const [project] = await db
+      .select({ id: projectsTable.id })
+      .from(projectsTable)
+      .where(and(eq(projectsTable.id, Number(input.projectId)), eq(projectsTable.orgId, session.orgId)));
+    if (!project) return { error: "Project not found." };
+    projectId = project.id;
+  }
   if (!input.issueDate) return { error: "Issue date is required." };
 
   const items = input.items.filter((l) => l.description.trim() && Number(l.quantity) > 0);
@@ -44,6 +55,7 @@ export async function createQuotationAction(input: {
         quotationNumber,
         title: input.title.trim() || null,
         customerId,
+        projectId,
         issueDate: input.issueDate,
         validUntil: input.validUntil || null,
         notes: input.notes.trim() || null,

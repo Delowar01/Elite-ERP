@@ -23,17 +23,20 @@ export function InvoiceForm({
   locale,
   customers,
   products,
+  projects,
   org,
   numberPreview,
 }: {
   locale: Locale;
   customers: Customer[];
   products: Product[];
+  projects: { id: number; name: string }[];
   org: Org;
   numberPreview: string;
 }) {
   const [title, setTitle] = useState("");
   const [customerId, setCustomerId] = useState("");
+  const [projectId, setProjectId] = useState("");
   const [issueDate, setIssueDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [dueDate, setDueDate] = useState("");
   const [discount, setDiscount] = useState("0");
@@ -45,7 +48,7 @@ export function InvoiceForm({
 
   function submit() {
     startTransition(async () => {
-      const result = await createInvoiceAction({ title, customerId, issueDate, dueDate, discount, notes, items });
+      const result = await createInvoiceAction({ title, customerId, projectId, issueDate, dueDate, discount, notes, items });
       if (result?.error) toast.error(result.error);
     });
   }
@@ -83,7 +86,16 @@ export function InvoiceForm({
             <DocFieldBox label={t(locale, "Due Date")} required>
               <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className="w-full bg-transparent outline-none" />
             </DocFieldBox>
-            <div />
+            <DocFieldBox label={t(locale, "Project")}>
+              <select value={projectId} onChange={(e) => setProjectId(e.target.value)} className="w-full bg-transparent outline-none">
+                <option value="">—</option>
+                {projects.map((p) => (
+                  <option key={p.id} value={String(p.id)}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+            </DocFieldBox>
           </div>
           <div className="field">
             <label>{t(locale, "Invoice Title")}</label>

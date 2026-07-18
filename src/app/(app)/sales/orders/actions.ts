@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { and, eq } from "drizzle-orm";
-import { db, salesOrdersTable, salesOrderItemsTable, proformaInvoicesTable, proformaInvoiceItemsTable, salesInvoicesTable, salesInvoiceItemsTable, deliveryChallansTable, deliveryChallanItemsTable } from "@/db";
+import { db, projectsTable, salesOrdersTable, salesOrderItemsTable, proformaInvoicesTable, proformaInvoiceItemsTable, salesInvoicesTable, salesInvoiceItemsTable, deliveryChallansTable, deliveryChallanItemsTable } from "@/db";
 import { requireSession } from "@/lib/session";
 import { logActivity } from "@/lib/activity";
 import { nextDocumentNumber } from "@/lib/documents";
@@ -19,6 +19,7 @@ type LineInput = { productId: string; description: string; quantity: string; uni
 export async function createSalesOrderAction(input: {
   title: string;
   customerId: string;
+  projectId?: string;
   issueDate: string;
   discount: string;
   notes: string;
@@ -27,6 +28,16 @@ export async function createSalesOrderAction(input: {
   const session = await requireSession();
   const customerId = Number(input.customerId);
   if (!customerId) return { error: "Choose a client." };
+
+  let projectId: number | null = null;
+  if (input.projectId) {
+    const [project] = await db
+      .select({ id: projectsTable.id })
+      .from(projectsTable)
+      .where(and(eq(projectsTable.id, Number(input.projectId)), eq(projectsTable.orgId, session.orgId)));
+    if (!project) return { error: "Project not found." };
+    projectId = project.id;
+  }
   if (!input.issueDate) return { error: "Issue date is required." };
 
   const items = input.items.filter((l) => l.description.trim() && Number(l.quantity) > 0);
@@ -43,6 +54,7 @@ export async function createSalesOrderAction(input: {
         soNumber,
         title: input.title.trim() || null,
         customerId,
+        projectId,
         issueDate: input.issueDate,
         notes: input.notes.trim() || null,
         subtotal: totals.subtotal,
