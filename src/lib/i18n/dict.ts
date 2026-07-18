@@ -156,7 +156,7 @@ const DICT: Record<string, string> = {
 
   "Current logo": "الشعار الحالي",
   "Drop a new logo, or click to browse": "أفلت شعارًا جديدًا هنا أو انقر للاستعراض",
-  "PNG, JPG, or SVG · square aspect ratio recommended · up to 2 MB": "PNG أو JPG أو SVG · يُفضّل نسبة عرض إلى ارتفاع مربعة · حتى 2 ميجابايت",
+  "PNG or JPG · square aspect ratio recommended · up to 2 MB": "PNG أو JPG · يُفضّل نسبة عرض إلى ارتفاع مربعة · حتى 2 ميجابايت",
   "Upload Logo": "تحميل الشعار",
 
   "Primary color": "اللون الأساسي",
@@ -756,6 +756,15 @@ const DICT: Record<string, string> = {
     "لا توجد مستندات مرتبطة بهذا المشروع بعد. اختر هذا المشروع في حقل المشروع عند إنشاء عرض سعر أو أمر بيع أو فاتورة.",
   "Labor cost uses each employee's latest salary structure as an hourly rate (monthly gross ÷ 240 hours).":
     "تُحتسب تكلفة العمالة من أحدث هيكل راتب لكل موظف كمعدل بالساعة (إجمالي الراتب الشهري ÷ 240 ساعة).",
+
+  // ---- Error / loading / not-found states (Section 10) ----
+  "Page not found": "الصفحة غير موجودة",
+  "The page you're looking for doesn't exist or may have moved.": "الصفحة التي تبحث عنها غير موجودة أو ربما تم نقلها.",
+  "Back to Dashboard": "العودة إلى لوحة التحكم",
+  "Something went wrong": "حدث خطأ ما",
+  "An unexpected error occurred. You can try again, or head back to your dashboard.": "حدث خطأ غير متوقع. يمكنك المحاولة مرة أخرى أو العودة إلى لوحة التحكم.",
+  "Try again": "إعادة المحاولة",
+  "Go to login": "الذهاب إلى تسجيل الدخول",
 };
 
 export function t(locale: Locale, en: string): string {

@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-const SESSION_COOKIE = "elite_erp_session";
+// Kept in sync with src/lib/auth.ts (middleware can't import it — bcryptjs isn't edge-safe).
+const SESSION_COOKIE = process.env.NODE_ENV === "production" ? "__Host-elite_erp_session" : "elite_erp_session";
 const AUTH_ROUTES = ["/login", "/register"];
 
 export function proxy(request: NextRequest) {

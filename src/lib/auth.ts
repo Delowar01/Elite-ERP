@@ -1,8 +1,17 @@
 import bcrypt from "bcryptjs";
 import { SignJWT, jwtVerify } from "jose";
 
-const SESSION_COOKIE = "elite_erp_session";
-const secret = () => new TextEncoder().encode(process.env.AUTH_SECRET ?? "dev-insecure-fallback-secret");
+// __Host- prefix in production: forces Secure + Path=/ + no Domain at the browser level,
+// closing subdomain/fixation tricks. Plain name in dev — __Host- cookies are rejected on http.
+const SESSION_COOKIE = process.env.NODE_ENV === "production" ? "__Host-elite_erp_session" : "elite_erp_session";
+
+// Fail fast: a missing AUTH_SECRET must never silently fall back to a known string —
+// that would let anyone forge a session token for any user (security audit, High #1).
+const secret = () => {
+  const value = process.env.AUTH_SECRET;
+  if (!value) throw new Error("AUTH_SECRET environment variable is not set");
+  return new TextEncoder().encode(value);
+};
 
 export async function hashPassword(password: string): Promise<string> {
   return bcrypt.hash(password, 10);

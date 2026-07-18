@@ -124,7 +124,7 @@ export function LogoPanel({ locale, org }: { locale: Locale; org: Org }) {
           <CardContent className="p-6 flex flex-col items-center gap-3 text-center">
             <Upload className="size-6 text-brand-orange" />
             <p className="text-[12.5px] font-medium">{t(locale, "Drop a new logo, or click to browse")}</p>
-            <p className="text-[11px] text-ink-faint">{t(locale, "PNG, JPG, or SVG · square aspect ratio recommended · up to 2 MB")}</p>
+            <p className="text-[11px] text-ink-faint">{t(locale, "PNG or JPG · square aspect ratio recommended · up to 2 MB")}</p>
             <Input
               type="file"
               name="logo"

@@ -31,13 +31,15 @@ Next.js (App Router) full-stack app, PostgreSQL via Drizzle ORM, custom JWT-cook
    ```
 
    - `DATABASE_URL` — point this at the database you just created, e.g. `postgresql://erp_app:choose-a-strong-password@localhost:5432/elite_erp`.
-   - `AUTH_SECRET` — generate a fresh one, don't reuse any value that shipped in this repo's history:
+   - `AUTH_SECRET` — **required.** The app refuses to start (and every request fails) if it's unset — there is no insecure fallback. Generate a fresh one, don't reuse any value that shipped in this repo's history:
 
      ```bash
      openssl rand -hex 32
      ```
 
      Changing `AUTH_SECRET` later invalidates every existing session (all users get logged out) — expected the first time you deploy, worth knowing if you ever rotate it afterward.
+
+   Uploaded branding (logos, seals, signatures) is stored under an `uploads/` directory in the project root (gitignored) and served through an authenticated, org-scoped route — keep that directory writable and persistent across deploys, or move it to object storage for a multi-instance setup.
 
 4. Push the schema to your database:
 
