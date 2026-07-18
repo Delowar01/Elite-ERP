@@ -53,38 +53,43 @@
 <div id="viewport">
   <div id="stage">
 
+    <!-- ══ Premium edge framing (shared across every slide) ═══════════════ -->
+    <div id="edge-top-line" aria-hidden="true"></div>
+    <div id="edge-vignette" aria-hidden="true"></div>
+    <div id="edge-corner-mark" aria-hidden="true">
+      <svg viewBox="0 0 140 140"><g fill="currentColor">
+        <circle cx="6" cy="6" r="2.1"/><circle cx="30" cy="6" r="2.1"/><circle cx="54" cy="6" r="2.1"/><circle cx="78" cy="6" r="2.1"/><circle cx="102" cy="6" r="2.1"/><circle cx="126" cy="6" r="2.1"/>
+        <circle cx="6" cy="30" r="2.1"/><circle cx="30" cy="30" r="2.1"/><circle cx="54" cy="30" r="2.1"/><circle cx="78" cy="30" r="2.1"/><circle cx="102" cy="30" r="2.1"/><circle cx="126" cy="30" r="2.1"/>
+        <circle cx="6" cy="54" r="2.1"/><circle cx="30" cy="54" r="2.1"/><circle cx="54" cy="54" r="2.1"/><circle cx="78" cy="54" r="2.1"/><circle cx="102" cy="54" r="2.1"/><circle cx="126" cy="54" r="2.1"/>
+        <circle cx="6" cy="78" r="2.1"/><circle cx="30" cy="78" r="2.1"/><circle cx="54" cy="78" r="2.1"/><circle cx="78" cy="78" r="2.1"/><circle cx="102" cy="78" r="2.1"/><circle cx="126" cy="78" r="2.1"/>
+        <circle cx="6" cy="102" r="2.1"/><circle cx="30" cy="102" r="2.1"/><circle cx="54" cy="102" r="2.1"/><circle cx="78" cy="102" r="2.1"/><circle cx="102" cy="102" r="2.1"/><circle cx="126" cy="102" r="2.1"/>
+        <circle cx="6" cy="126" r="2.1"/><circle cx="30" cy="126" r="2.1"/><circle cx="54" cy="126" r="2.1"/><circle cx="78" cy="126" r="2.1"/><circle cx="102" cy="126" r="2.1"/><circle cx="126" cy="126" r="2.1"/>
+      </g></svg>
+    </div>
+
     <!-- ══ Slide 01 — Cover ════════════════════════════════════════════════ -->
     <section class="slide" id="slide-01" aria-label="Cover">
       <div class="s01-glow-a" data-anim="fade" data-anim-order="1"></div>
       <div class="s01-glow-b" data-anim="fade" data-anim-order="1"></div>
       <div class="s01-grid" data-anim="fade" data-anim-order="1"></div>
-
-      <img class="s01-logo" src="assets/logo/eis-lockup.svg" alt="Elite Innovation Solutions"
-           data-anim="fade-down" data-anim-order="2" />
+      <div class="ghost-num" aria-hidden="true">01</div>
 
       <div class="s01-copy">
-        <p class="eyebrow" data-anim="fade-up" data-anim-order="3"
-           data-i18n-en="Executive Presentation" data-i18n-ar="العرض التنفيذي">Executive Presentation</p>
+        <p class="eyebrow" data-anim="fade-up" data-anim-order="3">Executive Presentation</p>
         <h1 class="headline">
-          <div data-anim="fade-up" data-anim-order="3"
-               data-i18n-en="One Intelligent" data-i18n-ar="منصة ذكية">One Intelligent</div>
-          <div data-anim="fade-up" data-anim-order="4"
-               data-i18n-en="Platform." data-i18n-ar="واحدة.">Platform.</div>
+          <div data-anim="fade-up" data-anim-order="3">One Intelligent</div>
+          <div data-anim="fade-up" data-anim-order="4">Platform.</div>
         </h1>
-        <p class="subheadline" data-anim="fade-up" data-anim-order="5"
-           data-i18n-en="Every Business Process." data-i18n-ar="لكل عمليات أعمالك.">Every Business Process.</p>
-        <p class="support" data-anim="fade-up" data-anim-order="5"
-           data-i18n-en="Elite ERP unifies finance, sales, HR, procurement, operations, and business intelligence in one modern enterprise platform — one database, one experience, real&#8209;time insight."
-           data-i18n-ar="يوحّد Elite ERP المالية والمبيعات والموارد البشرية والمشتريات والعمليات وذكاء الأعمال في منصة مؤسسية عصرية واحدة — قاعدة بيانات واحدة، وتجربة واحدة، ورؤية لحظية.">
+        <p class="subheadline" data-anim="fade-up" data-anim-order="5">Every Business Process.</p>
+        <p class="support" data-anim="fade-up" data-anim-order="5">
           Elite ERP unifies finance, sales, HR, procurement, operations, and business intelligence in one modern enterprise platform — one database, one experience, real&#8209;time insight.</p>
       </div>
 
       <div class="s01-hero">
+        <div class="s01-shot-glow shot-glow" data-anim="fade" data-anim-order="6"></div>
         <div class="s01-shot shot-card" data-anim="rise" data-anim-order="6">
           <img alt="Elite ERP executive dashboard"
-               src="assets/screenshots/en/dashboard.png"
-               data-src-en="assets/screenshots/en/dashboard.png"
-               data-src-ar="assets/screenshots/ar/dashboard.png" />
+               src="assets/screenshots/en/dashboard.png" />
         </div>
 
         <div class="s01-net">
@@ -117,73 +122,66 @@
                     stroke-dasharray="113" stroke-dashoffset="74" transform="rotate(-90 22 22)"/>
           </svg>
           <div>
-            <div class="sc-label" data-i18n-en="Profit margin" data-i18n-ar="هامش الربح">Profit margin</div>
+            <div class="sc-label">Profit margin</div>
             <div class="sc-value num">34.6%</div>
           </div>
         </div>
         <div class="stat-chip s01-chip-revenue" data-anim="pop" data-anim-order="9">
           <div class="icon-tile" style="width:42px;height:42px;border-radius:12px"><svg style="width:20px;height:20px"><use href="#i-productivity"/></svg></div>
           <div>
-            <div class="sc-label" data-i18n-en="Revenue this month" data-i18n-ar="إيرادات هذا الشهر">Revenue this month</div>
+            <div class="sc-label">Revenue this month</div>
             <div class="sc-value num">SAR 245,680</div>
           </div>
         </div>
       </div>
 
-      <p class="s01-tagline" data-anim="fade" data-anim-order="9"
-         data-i18n-en="<b>Elite Innovation Solutions</b> &nbsp;·&nbsp; Enterprise software, beautifully engineered"
-         data-i18n-ar="<b>إليت لحلول الابتكار</b> &nbsp;·&nbsp; برمجيات مؤسسية بصناعة متقنة">
+      <p class="s01-tagline" data-anim="fade" data-anim-order="9">
         <b>Elite Innovation Solutions</b> &nbsp;·&nbsp; Enterprise software, beautifully engineered</p>
     </section>
 
     <!-- ══ Slide 02 — Executive Summary ════════════════════════════════════ -->
     <section class="slide" id="slide-02" aria-label="Executive Summary">
+      <div class="ghost-num" aria-hidden="true">02</div>
+      <div class="s02-bg-glow-a" data-anim="fade" data-anim-order="1"></div>
+      <div class="s02-bg-glow-b" data-anim="fade" data-anim-order="1"></div>
       <div class="s02-panel" data-anim="fade" data-anim-order="1"></div>
 
       <div class="s02-head">
-        <p class="eyebrow" data-anim="fade-up" data-anim-order="2"
-           data-i18n-en="Executive Summary" data-i18n-ar="الملخص التنفيذي">Executive Summary</p>
-        <h2 class="headline" data-anim="fade-up" data-anim-order="3"
-            data-i18n-en="The intelligent enterprise platform." data-i18n-ar="منصة الأعمال الذكية للمؤسسات.">The intelligent enterprise platform.</h2>
+        <p class="eyebrow" data-anim="fade-up" data-anim-order="2">Executive Summary</p>
+        <h2 class="headline" data-anim="fade-up" data-anim-order="3">The intelligent enterprise platform.</h2>
       </div>
 
       <div class="s02-left">
-        <p class="support" data-anim="fade-up" data-anim-order="4"
-           data-i18n-en="Elite ERP is an integrated enterprise platform designed to improve visibility, productivity, collaboration, and operational efficiency — from the first quotation to financial close."
-           data-i18n-ar="Elite ERP منصة مؤسسية متكاملة صُممت لرفع مستوى الوضوح والإنتاجية والتعاون والكفاءة التشغيلية — من أول عرض سعر وحتى الإقفال المالي.">
+        <p class="support" data-anim="fade-up" data-anim-order="4">
           Elite ERP is an integrated enterprise platform designed to improve visibility, productivity, collaboration, and operational efficiency — from the first quotation to financial close.</p>
 
         <div class="s02-highlights">
           <div class="highlight-row" data-anim="fade-up" data-anim-order="5">
             <div class="icon-tile"><svg><use href="#i-unified"/></svg></div>
             <div>
-              <div class="hl-title" data-i18n-en="Unified operations" data-i18n-ar="عمليات موحّدة">Unified operations</div>
-              <div class="hl-caption" data-i18n-en="One database across every department — no silos, no re&#8209;keying."
-                   data-i18n-ar="قاعدة بيانات واحدة لجميع الإدارات — بلا جزر معزولة ولا إدخال متكرر.">One database across every department — no silos, no re&#8209;keying.</div>
+              <div class="hl-title">Unified operations</div>
+              <div class="hl-caption">One database across every department — no silos, no re&#8209;keying.</div>
             </div>
           </div>
           <div class="highlight-row" data-anim="fade-up" data-anim-order="5">
             <div class="icon-tile tile-navy"><svg><use href="#i-automation"/></svg></div>
             <div>
-              <div class="hl-title" data-i18n-en="Intelligent automation" data-i18n-ar="أتمتة ذكية">Intelligent automation</div>
-              <div class="hl-caption" data-i18n-en="Approvals, documents, and workflows execute themselves."
-                   data-i18n-ar="الاعتمادات والمستندات وسير العمل تُنجز تلقائيًا.">Approvals, documents, and workflows execute themselves.</div>
+              <div class="hl-title">Intelligent automation</div>
+              <div class="hl-caption">Approvals, documents, and workflows execute themselves.</div>
             </div>
           </div>
           <div class="highlight-row" data-anim="fade-up" data-anim-order="6">
             <div class="icon-tile"><svg><use href="#i-analytics"/></svg></div>
             <div>
-              <div class="hl-title" data-i18n-en="Real-time reporting" data-i18n-ar="تقارير لحظية">Real-time reporting</div>
-              <div class="hl-caption" data-i18n-en="Live dashboards and KPIs the moment work happens."
-                   data-i18n-ar="لوحات مؤشرات حية تتحدّث لحظة إنجاز العمل.">Live dashboards and KPIs the moment work happens.</div>
+              <div class="hl-title">Real-time reporting</div>
+              <div class="hl-caption">Live dashboards and KPIs the moment work happens.</div>
             </div>
           </div>
           <div class="highlight-row" data-anim="fade-up" data-anim-order="6">
             <div class="icon-tile tile-navy"><svg><use href="#i-growth"/></svg></div>
             <div>
-              <div class="hl-title" data-i18n-en="Enterprise scalability" data-i18n-ar="قابلية توسّع مؤسسية">Enterprise scalability</div>
-              <div class="hl-caption" data-i18n-en="From one branch to a multi&#8209;company group on the same platform."
-                   data-i18n-ar="من فرع واحد إلى مجموعة شركات على المنصة ذاتها.">From one branch to a multi&#8209;company group on the same platform.</div>
+              <div class="hl-title">Enterprise scalability</div>
+              <div class="hl-caption">From one branch to a multi&#8209;company group on the same platform.</div>
             </div>
           </div>
         </div>
@@ -201,46 +199,42 @@
           <path pathLength="1" data-anim="draw" data-anim-order="7" d="M776.5 180 C776.5 290 614 282 614 392"/>
         </svg>
         <div class="s02-modules">
-          <div class="module-chip" data-anim="pop" data-anim-order="5"><svg><use href="#i-crm"/></svg><span data-i18n-en="CRM" data-i18n-ar="علاقات العملاء">CRM</span></div>
-          <div class="module-chip" data-anim="pop" data-anim-order="5"><svg><use href="#i-sales"/></svg><span data-i18n-en="Sales" data-i18n-ar="المبيعات">Sales</span></div>
-          <div class="module-chip" data-anim="pop" data-anim-order="5"><svg><use href="#i-finance"/></svg><span data-i18n-en="Finance" data-i18n-ar="المالية">Finance</span></div>
-          <div class="module-chip" data-anim="pop" data-anim-order="5"><svg><use href="#i-hr"/></svg><span data-i18n-en="HR" data-i18n-ar="الموارد البشرية">HR</span></div>
-          <div class="module-chip" data-anim="pop" data-anim-order="6"><svg><use href="#i-procurement"/></svg><span data-i18n-en="Procurement" data-i18n-ar="المشتريات">Procurement</span></div>
-          <div class="module-chip" data-anim="pop" data-anim-order="6"><svg><use href="#i-inventory"/></svg><span data-i18n-en="Inventory" data-i18n-ar="المخزون">Inventory</span></div>
-          <div class="module-chip" data-anim="pop" data-anim-order="6"><svg><use href="#i-projects"/></svg><span data-i18n-en="Projects" data-i18n-ar="المشاريع">Projects</span></div>
-          <div class="module-chip" data-anim="pop" data-anim-order="6"><svg><use href="#i-analytics"/></svg><span data-i18n-en="Analytics" data-i18n-ar="التحليلات">Analytics</span></div>
+          <div class="module-chip" data-anim="pop" data-anim-order="5"><svg><use href="#i-crm"/></svg><span>CRM</span></div>
+          <div class="module-chip" data-anim="pop" data-anim-order="5"><svg><use href="#i-sales"/></svg><span>Sales</span></div>
+          <div class="module-chip" data-anim="pop" data-anim-order="5"><svg><use href="#i-finance"/></svg><span>Finance</span></div>
+          <div class="module-chip" data-anim="pop" data-anim-order="5"><svg><use href="#i-hr"/></svg><span>HR</span></div>
+          <div class="module-chip" data-anim="pop" data-anim-order="6"><svg><use href="#i-procurement"/></svg><span>Procurement</span></div>
+          <div class="module-chip" data-anim="pop" data-anim-order="6"><svg><use href="#i-inventory"/></svg><span>Inventory</span></div>
+          <div class="module-chip" data-anim="pop" data-anim-order="6"><svg><use href="#i-projects"/></svg><span>Projects</span></div>
+          <div class="module-chip" data-anim="pop" data-anim-order="6"><svg><use href="#i-analytics"/></svg><span>Analytics</span></div>
         </div>
         <div class="core-node s02-core" data-anim="rise" data-anim-order="8">
           <img class="core-mark" src="assets/logo/eis-icon-white.svg" alt="" />
           <div class="core-text">
             <div class="core-title">Elite ERP</div>
-            <div class="core-sub" data-i18n-en="One platform · One database · One experience"
-                 data-i18n-ar="منصة واحدة · قاعدة بيانات واحدة · تجربة واحدة">One platform · One database · One experience</div>
+            <div class="core-sub">One platform · One database · One experience</div>
           </div>
         </div>
         <div class="s02-core-glow" data-anim="fade" data-anim-order="8"></div>
       </div>
 
       <div class="outcome-strip">
-        <div class="outcome-pill" data-anim="fade-up" data-anim-order="9"><svg><use href="#i-decisions"/></svg><span data-i18n-en="Better decisions" data-i18n-ar="قرارات أدق">Better decisions</span></div>
-        <div class="outcome-pill" data-anim="fade-up" data-anim-order="9"><svg><use href="#i-speed"/></svg><span data-i18n-en="Faster operations" data-i18n-ar="عمليات أسرع">Faster operations</span></div>
-        <div class="outcome-pill" data-anim="fade-up" data-anim-order="10"><svg><use href="#i-unified"/></svg><span data-i18n-en="Unified data" data-i18n-ar="بيانات موحّدة">Unified data</span></div>
-        <div class="outcome-pill" data-anim="fade-up" data-anim-order="10"><svg><use href="#i-productivity"/></svg><span data-i18n-en="Higher productivity" data-i18n-ar="إنتاجية أعلى">Higher productivity</span></div>
-        <div class="outcome-pill" data-anim="fade-up" data-anim-order="11"><svg><use href="#i-growth"/></svg><span data-i18n-en="Sustainable growth" data-i18n-ar="نمو مستدام">Sustainable growth</span></div>
+        <div class="outcome-pill" data-anim="fade-up" data-anim-order="9"><svg><use href="#i-decisions"/></svg><span>Better decisions</span></div>
+        <div class="outcome-pill" data-anim="fade-up" data-anim-order="9"><svg><use href="#i-speed"/></svg><span>Faster operations</span></div>
+        <div class="outcome-pill" data-anim="fade-up" data-anim-order="10"><svg><use href="#i-unified"/></svg><span>Unified data</span></div>
+        <div class="outcome-pill" data-anim="fade-up" data-anim-order="10"><svg><use href="#i-productivity"/></svg><span>Higher productivity</span></div>
+        <div class="outcome-pill" data-anim="fade-up" data-anim-order="11"><svg><use href="#i-growth"/></svg><span>Sustainable growth</span></div>
       </div>
     </section>
 
     <!-- ══ Slide 03 — Business Challenges ══════════════════════════════════ -->
     <section class="slide" id="slide-03" aria-label="Business Challenges">
+      <div class="ghost-num" aria-hidden="true">03</div>
+      <div class="s03-bg-glow" data-anim="fade" data-anim-order="1"></div>
       <div class="s03-left">
-        <p class="eyebrow" data-anim="fade-up" data-anim-order="2"
-           data-i18n-en="The Challenge" data-i18n-ar="التحدي">The Challenge</p>
-        <h2 class="headline" data-anim="fade-up" data-anim-order="3"
-            data-i18n-en="Disconnected systems hold business&nbsp;back."
-            data-i18n-ar="الأنظمة المتفرقة تعيق نمو الأعمال.">Disconnected systems hold business&nbsp;back.</h2>
-        <p class="support" data-anim="fade-up" data-anim-order="4"
-           data-i18n-en="When every department runs its own tools, data lives in silos, work is repeated, and leadership sees yesterday's numbers instead of today's."
-           data-i18n-ar="حين يعمل كل قسم بأدواته المنفصلة تتحوّل البيانات إلى جزر معزولة، وتتكرر الأعمال، وترى الإدارة أرقام الأمس بدلًا من أرقام اليوم.">
+        <p class="eyebrow" data-anim="fade-up" data-anim-order="2">The Challenge</p>
+        <h2 class="headline" data-anim="fade-up" data-anim-order="3">Disconnected systems hold business&nbsp;back.</h2>
+        <p class="support" data-anim="fade-up" data-anim-order="4">
           When every department runs its own tools, data lives in silos, work is repeated, and leadership sees yesterday's numbers instead of today's.</p>
       </div>
 
@@ -257,27 +251,27 @@
 
         <div class="challenge-card" style="left:34px; top:64px; --tilt:-1.6deg" data-anim="pop" data-anim-order="4">
           <div class="cc-icon"><svg><use href="#i-silo"/></svg></div>
-          <span data-i18n-en="Data silos" data-i18n-ar="جزر بيانات معزولة">Data silos</span>
+          <span>Data silos</span>
         </div>
         <div class="challenge-card" style="left:398px; top:22px; --tilt:1.4deg" data-anim="pop" data-anim-order="4">
           <div class="cc-icon"><svg><use href="#i-manual"/></svg></div>
-          <span data-i18n-en="Manual processes" data-i18n-ar="إجراءات يدوية">Manual processes</span>
+          <span>Manual processes</span>
         </div>
         <div class="challenge-card" style="left:712px; top:86px; --tilt:-1.1deg" data-anim="pop" data-anim-order="5">
           <div class="cc-icon"><svg><use href="#i-duplicate"/></svg></div>
-          <span data-i18n-en="Duplicate work" data-i18n-ar="عمل مكرر">Duplicate work</span>
+          <span>Duplicate work</span>
         </div>
         <div class="challenge-card" style="left:96px; top:218px; --tilt:1.3deg" data-anim="pop" data-anim-order="5">
           <div class="cc-icon"><svg><use href="#i-delay"/></svg></div>
-          <span data-i18n-en="Delayed reporting" data-i18n-ar="تقارير متأخرة">Delayed reporting</span>
+          <span>Delayed reporting</span>
         </div>
         <div class="challenge-card" style="left:452px; top:192px; --tilt:-1.7deg" data-anim="pop" data-anim-order="6">
           <div class="cc-icon"><svg><use href="#i-blind"/></svg></div>
-          <span data-i18n-en="Limited visibility" data-i18n-ar="رؤية محدودة">Limited visibility</span>
+          <span>Limited visibility</span>
         </div>
         <div class="challenge-card" style="left:714px; top:268px; --tilt:1.8deg" data-anim="pop" data-anim-order="6">
           <div class="cc-icon"><svg><use href="#i-decision-delay"/></svg></div>
-          <span data-i18n-en="Slow decisions" data-i18n-ar="قرارات بطيئة">Slow decisions</span>
+          <span>Slow decisions</span>
         </div>
 
         <svg class="s03-converge" viewBox="0 0 1010 830" aria-hidden="true">
@@ -288,7 +282,7 @@
         <div class="core-node s03-core" data-anim="rise" data-anim-order="8">
           <img class="core-mark" src="assets/logo/eis-icon-white.svg" alt="" />
           <div class="core-text">
-            <div class="core-title" data-i18n-en="One connected enterprise" data-i18n-ar="منظومة واحدة مترابطة">One connected enterprise</div>
+            <div class="core-title">One connected enterprise</div>
           </div>
           <div class="core-check"><svg><use href="#i-check"/></svg></div>
         </div>
@@ -296,19 +290,18 @@
 
       <div class="transition-bar s03-transition" data-anim="fade-up" data-anim-order="8">
         <div class="tb-arrow"><svg class="mirror-rtl"><use href="#i-arrow-right"/></svg></div>
-        <p data-i18n-en="Elite ERP replaces fragmentation with one intelligent, connected platform."
-           data-i18n-ar="يستبدل Elite ERP هذا التشتت بمنصة ذكية واحدة مترابطة.">Elite ERP replaces fragmentation with one intelligent, connected platform.</p>
+        <p>Elite ERP replaces fragmentation with one intelligent, connected platform.</p>
       </div>
     </section>
 
     <!-- ══ Slide 04 — Why Elite ERP ════════════════════════════════════════ -->
     <section class="slide" id="slide-04" aria-label="Why Elite ERP">
+      <div class="ghost-num" aria-hidden="true">04</div>
+      <div class="s04-bg-glow-a" data-anim="fade" data-anim-order="1"></div>
+      <div class="s04-bg-glow-b" data-anim="fade" data-anim-order="1"></div>
       <div class="s04-head">
-        <p class="eyebrow" data-anim="fade-up" data-anim-order="2"
-           data-i18n-en="Why Elite ERP" data-i18n-ar="لماذا Elite ERP؟">Why Elite ERP</p>
-        <h2 class="headline" data-anim="fade-up" data-anim-order="3"
-            data-i18n-en="One intelligent enterprise ecosystem."
-            data-i18n-ar="منظومة أعمال ذكية واحدة.">One intelligent enterprise ecosystem.</h2>
+        <p class="eyebrow" data-anim="fade-up" data-anim-order="2">Why Elite ERP</p>
+        <h2 class="headline" data-anim="fade-up" data-anim-order="3">One intelligent enterprise ecosystem.</h2>
       </div>
 
       <div class="s04-eco">
@@ -323,14 +316,14 @@
           <path pathLength="1" data-anim="draw" data-anim-order="4" d="M404 265 231 150"/>
         </svg>
 
-        <div class="module-chip" style="left:500px; top:80px"  data-anim="pop" data-anim-order="5"><svg><use href="#i-crm"/></svg><span data-i18n-en="CRM" data-i18n-ar="علاقات العملاء">CRM</span></div>
-        <div class="module-chip" style="left:769px; top:150px" data-anim="pop" data-anim-order="5"><svg><use href="#i-sales"/></svg><span data-i18n-en="Sales" data-i18n-ar="المبيعات">Sales</span></div>
-        <div class="module-chip" style="left:880px; top:320px" data-anim="pop" data-anim-order="5"><svg><use href="#i-finance"/></svg><span data-i18n-en="Finance" data-i18n-ar="المالية">Finance</span></div>
-        <div class="module-chip" style="left:769px; top:490px" data-anim="pop" data-anim-order="6"><svg><use href="#i-hr"/></svg><span data-i18n-en="HR" data-i18n-ar="الموارد البشرية">HR</span></div>
-        <div class="module-chip" style="left:500px; top:560px" data-anim="pop" data-anim-order="6"><svg><use href="#i-procurement"/></svg><span data-i18n-en="Procurement" data-i18n-ar="المشتريات">Procurement</span></div>
-        <div class="module-chip" style="left:231px; top:490px" data-anim="pop" data-anim-order="6"><svg><use href="#i-inventory"/></svg><span data-i18n-en="Inventory" data-i18n-ar="المخزون">Inventory</span></div>
-        <div class="module-chip" style="left:120px; top:320px" data-anim="pop" data-anim-order="7"><svg><use href="#i-projects"/></svg><span data-i18n-en="Projects" data-i18n-ar="المشاريع">Projects</span></div>
-        <div class="module-chip" style="left:231px; top:150px" data-anim="pop" data-anim-order="7"><svg><use href="#i-analytics"/></svg><span data-i18n-en="Analytics" data-i18n-ar="التحليلات">Analytics</span></div>
+        <div class="module-chip" style="left:500px; top:80px"  data-anim="pop" data-anim-order="5"><svg><use href="#i-crm"/></svg><span>CRM</span></div>
+        <div class="module-chip" style="left:769px; top:150px" data-anim="pop" data-anim-order="5"><svg><use href="#i-sales"/></svg><span>Sales</span></div>
+        <div class="module-chip" style="left:880px; top:320px" data-anim="pop" data-anim-order="5"><svg><use href="#i-finance"/></svg><span>Finance</span></div>
+        <div class="module-chip" style="left:769px; top:490px" data-anim="pop" data-anim-order="6"><svg><use href="#i-hr"/></svg><span>HR</span></div>
+        <div class="module-chip" style="left:500px; top:560px" data-anim="pop" data-anim-order="6"><svg><use href="#i-procurement"/></svg><span>Procurement</span></div>
+        <div class="module-chip" style="left:231px; top:490px" data-anim="pop" data-anim-order="6"><svg><use href="#i-inventory"/></svg><span>Inventory</span></div>
+        <div class="module-chip" style="left:120px; top:320px" data-anim="pop" data-anim-order="7"><svg><use href="#i-projects"/></svg><span>Projects</span></div>
+        <div class="module-chip" style="left:231px; top:150px" data-anim="pop" data-anim-order="7"><svg><use href="#i-analytics"/></svg><span>Analytics</span></div>
 
         <span class="pulse" style="left:500px; top:161px" data-anim="fade" data-anim-order="7"></span>
         <span class="pulse" style="left:754px; top:315px; animation-delay:1s" data-anim="fade" data-anim-order="7"></span>
@@ -341,100 +334,87 @@
           <img class="core-mark" src="assets/logo/eis-icon-white.svg" alt="" />
           <div class="core-text">
             <div class="core-title">Elite ERP</div>
-            <div class="core-sub" data-i18n-en="One platform" data-i18n-ar="منصة واحدة">One platform</div>
+            <div class="core-sub">One platform</div>
           </div>
         </div>
       </div>
 
       <div class="s04-side s04-value">
-        <p class="panel-label" data-anim="fade-up" data-anim-order="5"
-           data-i18n-en="Business value" data-i18n-ar="القيمة للأعمال">Business value</p>
+        <p class="panel-label" data-anim="fade-up" data-anim-order="5">Business value</p>
         <div class="value-item" data-anim="fade-up" data-anim-order="5">
           <div class="vi-icon"><svg><use href="#i-unified"/></svg></div>
           <div>
-            <div class="vi-title" data-i18n-en="Single source of truth" data-i18n-ar="مصدر واحد موثوق للبيانات">Single source of truth</div>
-            <div class="vi-caption" data-i18n-en="Every department works on the same live data."
-                 data-i18n-ar="جميع الإدارات تعمل على البيانات الحية ذاتها.">Every department works on the same live data.</div>
+            <div class="vi-title">Single source of truth</div>
+            <div class="vi-caption">Every department works on the same live data.</div>
           </div>
         </div>
         <div class="value-item" data-anim="fade-up" data-anim-order="6">
           <div class="vi-icon"><svg><use href="#i-decisions"/></svg></div>
           <div>
-            <div class="vi-title" data-i18n-en="Executive visibility" data-i18n-ar="رؤية تنفيذية شاملة">Executive visibility</div>
-            <div class="vi-caption" data-i18n-en="Live KPIs and dashboards for leadership."
-                 data-i18n-ar="مؤشرات ولوحات حية للإدارة العليا.">Live KPIs and dashboards for leadership.</div>
+            <div class="vi-title">Executive visibility</div>
+            <div class="vi-caption">Live KPIs and dashboards for leadership.</div>
           </div>
         </div>
         <div class="value-item" data-anim="fade-up" data-anim-order="7">
           <div class="vi-icon"><svg><use href="#i-security"/></svg></div>
           <div>
-            <div class="vi-title" data-i18n-en="Enterprise-grade security" data-i18n-ar="أمان بمستوى المؤسسات">Enterprise-grade security</div>
-            <div class="vi-caption" data-i18n-en="Roles, permissions, and full audit trails."
-                 data-i18n-ar="صلاحيات وأدوار وسجلات تدقيق كاملة.">Roles, permissions, and full audit trails.</div>
+            <div class="vi-title">Enterprise-grade security</div>
+            <div class="vi-caption">Roles, permissions, and full audit trails.</div>
           </div>
         </div>
         <div class="value-item" data-anim="fade-up" data-anim-order="8">
           <div class="vi-icon"><svg><use href="#i-growth"/></svg></div>
           <div>
-            <div class="vi-title" data-i18n-en="Scales as you grow" data-i18n-ar="يتوسع مع نمو أعمالك">Scales as you grow</div>
-            <div class="vi-caption" data-i18n-en="Add branches, companies, and users — no re&#8209;platforming."
-                 data-i18n-ar="أضف فروعًا وشركات ومستخدمين دون تغيير المنصة.">Add branches, companies, and users — no re&#8209;platforming.</div>
+            <div class="vi-title">Scales as you grow</div>
+            <div class="vi-caption">Add branches, companies, and users — no re&#8209;platforming.</div>
           </div>
         </div>
       </div>
 
       <div class="s04-side s04-caps">
-        <p class="panel-label" data-anim="fade-up" data-anim-order="5"
-           data-i18n-en="Platform capabilities" data-i18n-ar="قدرات المنصة">Platform capabilities</p>
+        <p class="panel-label" data-anim="fade-up" data-anim-order="5">Platform capabilities</p>
         <div class="value-item" data-anim="fade-up" data-anim-order="5">
           <div class="vi-icon"><svg><use href="#i-analytics"/></svg></div>
           <div>
-            <div class="vi-title" data-i18n-en="Real-time analytics" data-i18n-ar="تحليلات لحظية">Real-time analytics</div>
-            <div class="vi-caption" data-i18n-en="Numbers update the moment work happens."
-                 data-i18n-ar="الأرقام تتحدّث لحظة إنجاز العمل.">Numbers update the moment work happens.</div>
+            <div class="vi-title">Real-time analytics</div>
+            <div class="vi-caption">Numbers update the moment work happens.</div>
           </div>
         </div>
         <div class="value-item" data-anim="fade-up" data-anim-order="6">
           <div class="vi-icon"><svg><use href="#i-automation"/></svg></div>
           <div>
-            <div class="vi-title" data-i18n-en="Workflow automation" data-i18n-ar="أتمتة سير العمل">Workflow automation</div>
-            <div class="vi-caption" data-i18n-en="Approvals and documents flow without manual chasing."
-                 data-i18n-ar="اعتمادات ومستندات تتدفق دون متابعة يدوية.">Approvals and documents flow without manual chasing.</div>
+            <div class="vi-title">Workflow automation</div>
+            <div class="vi-caption">Approvals and documents flow without manual chasing.</div>
           </div>
         </div>
         <div class="value-item" data-anim="fade-up" data-anim-order="7">
           <div class="vi-icon"><svg><use href="#i-collab"/></svg></div>
           <div>
-            <div class="vi-title" data-i18n-en="Connected departments" data-i18n-ar="إدارات مترابطة">Connected departments</div>
-            <div class="vi-caption" data-i18n-en="Sales, finance, and operations share one workspace."
-                 data-i18n-ar="المبيعات والمالية والعمليات في مساحة عمل واحدة.">Sales, finance, and operations share one workspace.</div>
+            <div class="vi-title">Connected departments</div>
+            <div class="vi-caption">Sales, finance, and operations share one workspace.</div>
           </div>
         </div>
         <div class="value-item" data-anim="fade-up" data-anim-order="8">
           <div class="vi-icon"><svg><use href="#i-ai"/></svg></div>
           <div>
-            <div class="vi-title" data-i18n-en="Intelligent reporting" data-i18n-ar="تقارير ذكية">Intelligent reporting</div>
-            <div class="vi-caption" data-i18n-en="AI&#8209;assisted insight built into the platform."
-                 data-i18n-ar="رؤى مدعومة بالذكاء الاصطناعي ضمن المنصة.">AI&#8209;assisted insight built into the platform.</div>
+            <div class="vi-title">Intelligent reporting</div>
+            <div class="vi-caption">AI&#8209;assisted insight built into the platform.</div>
           </div>
         </div>
       </div>
 
       <div class="s04-transition" data-anim="fade-up" data-anim-order="9">
         <div class="tr-icon"><svg class="mirror-rtl"><use href="#i-arrow-right"/></svg></div>
-        <p data-i18n-en="Let's explore how each business function is transformed with Elite ERP."
-           data-i18n-ar="لنستعرض كيف يرتقي Elite ERP بكل وظيفة من وظائف أعمالك.">Let's explore how each business function is transformed with Elite ERP.</p>
+        <p>Let's explore how each business function is transformed with Elite ERP.</p>
       </div>
     </section>
 
     <!-- ══ Presentation chrome ═════════════════════════════════════════════ -->
+    <div id="chrome-brand" aria-hidden="true">
+      <img src="assets/logo/eis-lockup.svg" alt="" />
+    </div>
+
     <header id="chrome-top">
-      <button class="chrome-btn" id="btn-lang" aria-label="Switch language">
-        <svg><use href="#i-globe"/></svg>
-        <span class="lang-half on" data-lang="en">EN</span>
-        <span class="lang-divider">/</span>
-        <span class="lang-half" data-lang="ar">عربي</span>
-      </button>
       <button class="chrome-btn" id="btn-fullscreen" aria-label="Toggle full screen">
         <svg><use href="#i-fullscreen"/></svg>
       </button>

@@ -1,8 +1,8 @@
 /**
- * Presentation QA suite — Phase 1 + Slides 01–04.
+ * Presentation QA suite — Phase 1 + Slides 01–04 (English-only design pass).
  * Asserts: clean load, slide registry, keyboard/button/dot/wheel navigation,
- * deep links, proportional 16:9 scaling, EN/AR switching with RTL + Arabic
- * content on every slide + screenshot swap, full-screen mode, chrome behavior.
+ * deep links, proportional 16:9 scaling, full-screen mode, chrome behavior,
+ * persistent brand mark on every slide, no leftover Arabic/bilingual code.
  *
  * Usage: node presentation/tools/verify_presentation.js
  */
@@ -25,7 +25,6 @@ const ok = (cond, label) => {
   page.on('pageerror', (e) => errors.push(e.message));
   page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
   await page.goto(INDEX, { waitUntil: 'load' });
-  await page.evaluate(() => { try { localStorage.clear(); } catch (e) {} });
 
   console.log('Load & structure:');
   await page.waitForSelector('#loader.done', { timeout: 8000 });
@@ -41,7 +40,50 @@ const ok = (cond, label) => {
   ok(structure.slides === SLIDES, `${SLIDES} slides present (got ${structure.slides})`);
   ok(structure.active === 'slide-01', `slide-01 active on launch (got ${structure.active})`);
   ok(structure.dots === SLIDES, `progress dots built (${structure.dots})`);
-  ok(structure.lang === 'en' && structure.dir === 'ltr', 'English LTR is the default launch language');
+  ok(structure.lang === 'en' && structure.dir === 'ltr', 'English LTR');
+
+  console.log('English-only build (no bilingual leftovers):');
+  ok(await page.evaluate(() => !document.getElementById('btn-lang')), 'no language-toggle button in DOM');
+  ok(await page.evaluate(() => typeof window.setLanguage === 'undefined'), 'setLanguage() removed from app.js');
+  const bodyText = await page.evaluate(() => document.body.textContent);
+  ok(!/[؀-ۿ]/.test(bodyText), 'no Arabic characters anywhere in the document');
+  ok(await page.evaluate(() =>
+    document.querySelectorAll('[data-i18n-en],[data-i18n-ar],[data-src-ar]').length === 0
+  ), 'no leftover data-i18n-*/data-src-ar attributes');
+
+  console.log('Persistent brand mark (requirement: logo on every slide, consistent position):');
+  const brandBox = await page.evaluate(() => {
+    const el = document.getElementById('chrome-brand');
+    const r = el.getBoundingClientRect();
+    return { visible: getComputedStyle(el).display !== 'none' && r.width > 0, top: r.top, left: r.left };
+  });
+  ok(brandBox.visible, `brand mark rendered (${brandBox.left.toFixed(0)},${brandBox.top.toFixed(0)})`);
+  for (let i = 0; i < SLIDES; i++) {
+    const pos = await page.evaluate((idx) => {
+      window.Presentation.go(idx, { force: true });
+      const r = document.getElementById('chrome-brand').getBoundingClientRect();
+      return { top: r.top, left: r.left, visible: r.width > 0 && getComputedStyle(document.getElementById('chrome-brand')).opacity !== '0' };
+    }, i);
+    ok(pos.visible && Math.abs(pos.top - brandBox.top) < 1 && Math.abs(pos.left - brandBox.left) < 1,
+      `slide-${String(i + 1).padStart(2, '0')}: brand mark visible at identical position`);
+  }
+  await page.evaluate(() => window.Presentation.go(0, { force: true }));
+  await page.waitForTimeout(400); // let the transition lock from the rapid-fire loop above clear
+  // brand mark must survive chrome-hidden (identity, not nav clutter)
+  await page.keyboard.press('h');
+  await page.waitForTimeout(120);
+  ok(await page.evaluate(() => {
+    const r = document.getElementById('chrome-brand').getBoundingClientRect();
+    return r.width > 0 && getComputedStyle(document.getElementById('chrome-brand')).opacity !== '0';
+  }), 'brand mark stays visible when nav chrome is hidden (H)');
+  await page.keyboard.press('h');
+
+  console.log('Edge framing elements present:');
+  ok(await page.evaluate(() => !!document.getElementById('edge-top-line')), 'top accent line present');
+  ok(await page.evaluate(() => !!document.getElementById('edge-vignette')), 'edge vignette present');
+  ok(await page.evaluate(() => !!document.getElementById('edge-corner-mark')), 'corner mark present');
+  ok(await page.evaluate((n) => document.querySelectorAll('.ghost-num').length === n, SLIDES),
+    'every slide has its ghost slide-number watermark');
 
   console.log('Keyboard navigation:');
   const activeId = () => page.evaluate(() => document.querySelector('.slide.active').id);
@@ -101,38 +143,20 @@ const ok = (cond, label) => {
   }
   await page.setViewportSize({ width: 1920, height: 1080 });
 
-  console.log('Language switching & RTL:');
-  await page.click('#btn-lang');
-  await page.waitForTimeout(350);
-  const arState = await page.evaluate(() => ({
-    lang: document.documentElement.getAttribute('lang'),
-    dir: document.documentElement.getAttribute('dir'),
-    shot: document.querySelector('#slide-01 .s01-shot img').getAttribute('src'),
-    toggleOn: document.querySelector('#btn-lang .lang-half.on').getAttribute('data-lang'),
-  }));
-  ok(arState.lang === 'ar' && arState.dir === 'rtl', 'toggle switches to Arabic + RTL');
-  ok(arState.shot.includes('/ar/'), `product screenshot swaps to Arabic capture (${arState.shot})`);
-  ok(arState.toggleOn === 'ar', 'language toggle UI reflects Arabic');
+  console.log('No overflow / layout collisions:');
   for (let i = 0; i < SLIDES; i++) {
-    const res = await page.evaluate((idx) => {
-      window.Presentation.go(idx, { force: true });
-      const slide = document.querySelectorAll('#stage > .slide')[idx];
-      return { id: slide.id, arabic: /[؀-ۿ]/.test(slide.textContent) };
-    }, i);
-    ok(res.arabic, `${res.id} content is Arabic after switch`);
+    await page.evaluate((idx) => window.Presentation.go(idx, { force: true }), i);
+    await page.waitForTimeout(2100);
+    const overflow = await page.evaluate(() => ({
+      scrollW: document.documentElement.scrollWidth,
+      scrollH: document.documentElement.scrollHeight,
+      innerW: window.innerWidth,
+    }));
+    ok(overflow.scrollW <= overflow.innerW + 2, `slide-${i + 1}: no horizontal overflow (${overflow.scrollW} vs ${overflow.innerW})`);
   }
-  const numLtr = await page.evaluate(() =>
-    getComputedStyle(document.querySelector('#slide-01 .sc-value.num')).direction);
-  ok(numLtr === 'ltr', 'numeric values stay LTR inside RTL layout');
-  await page.click('#btn-lang');
-  await page.waitForTimeout(350);
-  const backEn = await page.evaluate(() => ({
-    lang: document.documentElement.getAttribute('lang'),
-    arabicLeft: /[؀-ۿ]/.test(document.querySelector('.slide.active').textContent),
-  }));
-  ok(backEn.lang === 'en' && !backEn.arabicLeft, 'toggle returns to English with no Arabic residue');
 
   console.log('Full-screen & chrome:');
+  await page.evaluate(() => window.Presentation.go(0, { force: true }));
   await page.click('#btn-fullscreen');
   await page.waitForTimeout(500);
   const fsOn = await page.evaluate(() => !!document.fullscreenElement);

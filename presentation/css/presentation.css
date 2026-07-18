@@ -1,11 +1,10 @@
 /* ═══════════════════════════════════════════════════════════════════════════
    Elite ERP Executive Presentation — presentation.css
    Per-slide layouts on the fixed 1920×1080 canvas.
-   Logical (inline-start/end) properties are used so RTL mirrors for free.
    ═══════════════════════════════════════════════════════════════════════════ */
 
 /* ═══ Slide 01 — Cover ═══════════════════════════════════════════════════── */
-#slide-01 { background: linear-gradient(178deg, #FFFFFF 30%, var(--cream) 100%); }
+#slide-01 { background: linear-gradient(178deg, #FFFFFF 28%, var(--cream) 100%); }
 
 #slide-01 .s01-glow-a,
 #slide-01 .s01-glow-b {
@@ -15,60 +14,74 @@
   pointer-events: none;
 }
 #slide-01 .s01-glow-a {
-  width: 1050px; height: 1050px;
-  top: -330px; inset-inline-end: -230px;
-  background: radial-gradient(circle, rgba(229, 108, 37, 0.13) 0%, rgba(229, 108, 37, 0) 62%);
+  width: 1100px; height: 1100px;
+  top: -340px; inset-inline-end: -240px;
+  background: radial-gradient(circle, rgba(229, 108, 37, 0.15) 0%, rgba(229, 108, 37, 0) 62%);
   animation: glowDrift 11s var(--ease) infinite;
 }
 #slide-01 .s01-glow-b {
-  width: 900px; height: 900px;
-  bottom: -420px; inset-inline-start: -260px;
-  background: radial-gradient(circle, rgba(21, 19, 72, 0.07) 0%, rgba(21, 19, 72, 0) 60%);
+  width: 950px; height: 950px;
+  bottom: -440px; inset-inline-start: -270px;
+  background: radial-gradient(circle, rgba(21, 19, 72, 0.08) 0%, rgba(21, 19, 72, 0) 60%);
 }
 #slide-01 .s01-grid {
   position: absolute;
   top: 0; bottom: 0;
   inset-inline-end: 0;
   width: 46%;
-  background-image: radial-gradient(rgba(21, 19, 72, 0.055) 1.2px, transparent 1.2px);
+  background-image: radial-gradient(rgba(21, 19, 72, 0.06) 1.2px, transparent 1.2px);
   background-size: 27px 27px;
   -webkit-mask-image: radial-gradient(closest-side at 62% 45%, #000 20%, transparent 100%);
           mask-image: radial-gradient(closest-side at 62% 45%, #000 20%, transparent 100%);
   pointer-events: none;
 }
 
-#slide-01 .s01-logo { position: absolute; top: 66px; inset-inline-start: 96px; width: 252px; }
-#slide-01 .s01-copy { position: absolute; top: 262px; inset-inline-start: 96px; width: 820px; }
+#slide-01 .s01-copy { position: absolute; top: 278px; inset-inline-start: 96px; width: 830px; }
 #slide-01 .s01-copy .eyebrow { margin-bottom: 30px; }
-#slide-01 .s01-copy .headline { font-size: 98px; }
+#slide-01 .s01-copy .headline { font-size: 106px; }
 #slide-01 .s01-copy .subheadline {
   margin-top: 24px;
-  font-size: 35px;
+  font-size: 37px;
   font-weight: 750;
   letter-spacing: -0.015em;
   color: var(--orange);
 }
-html[lang='ar'] #slide-01 .s01-copy .subheadline { letter-spacing: 0; }
-#slide-01 .s01-copy .support { margin-top: 34px; max-width: 640px; }
+#slide-01 .s01-copy .support { margin-top: 36px; max-width: 650px; }
 #slide-01 .s01-tagline {
   position: absolute;
-  bottom: 104px;
+  bottom: 100px;
   inset-inline-start: 96px;
-  font-size: 14.5px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 15px;
   font-weight: 600;
-  letter-spacing: 0.045em;
+  letter-spacing: 0.04em;
   color: var(--graphite);
 }
 #slide-01 .s01-tagline b { color: var(--navy); font-weight: 750; }
+#slide-01 .s01-tagline::before {
+  content: '';
+  width: 22px; height: 2px;
+  border-radius: 2px;
+  background: var(--orange);
+  flex: 0 0 auto;
+}
 
 #slide-01 .s01-hero { position: absolute; top: 0; inset-inline-end: 0; width: 960px; height: 1080px; }
+#slide-01 .s01-shot-glow {
+  width: 900px; height: 560px;
+  top: 110px;
+  inset-inline-end: 20px;
+  background: radial-gradient(closest-side, rgba(229, 108, 37, 0.16), rgba(21, 19, 72, 0.08) 55%, rgba(21, 19, 72, 0) 78%);
+}
 #slide-01 .s01-shot {
   position: absolute;
   top: 140px;
   inset-inline-end: 60px;
   width: 800px;
   height: 500px;
-  rotate: 1.6deg;
+  rotate: 1.4deg;
 }
 #slide-01 .s01-net { position: absolute; inset-inline-start: 130px; bottom: 56px; width: 500px; height: 430px; }
 #slide-01 .s01-net .net-lines { position: absolute; inset: 0; }
@@ -80,12 +93,12 @@ html[lang='ar'] #slide-01 .s01-copy .subheadline { letter-spacing: 0; }
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 84px; height: 84px;
-  border-radius: 24px;
+  width: 86px; height: 86px;
+  border-radius: 25px;
   background: linear-gradient(135deg, #201D66 0%, var(--navy) 62%);
-  box-shadow: 0 12px 30px rgba(21, 19, 72, 0.30);
+  box-shadow: 0 14px 32px rgba(21, 19, 72, 0.32);
 }
-#slide-01 .s01-net .net-core img { width: 40px; }
+#slide-01 .s01-net .net-core img { width: 41px; }
 #slide-01 .s01-net .net-node { translate: -50% -50%; }
 #slide-01 .s01-net .pulse {
   position: absolute;
@@ -95,28 +108,63 @@ html[lang='ar'] #slide-01 .s01-copy .subheadline { letter-spacing: 0; }
   translate: -50% -50%;
   animation: pulseDot 2.6s var(--ease) infinite;
 }
-#slide-01 .s01-chip-margin { top: 608px; inset-inline-end: 690px; animation: floatSoft 7s var(--ease) infinite; }
-#slide-01 .s01-chip-revenue { top: 104px; inset-inline-end: 30px; animation: floatSoft 8s var(--ease) 1.2s infinite; }
+#slide-01 .s01-chip-margin { top: 604px; inset-inline-end: 686px; animation: floatSoft 7s var(--ease) infinite; }
+#slide-01 .s01-chip-revenue { top: 98px; inset-inline-end: 26px; animation: floatSoft 8s var(--ease) 1.2s infinite; }
 
 /* ═══ Slide 02 — Executive Summary ═══════════════════════════════════════── */
 #slide-02 { background: #fff; }
+#slide-02 .s02-bg-glow-a {
+  position: absolute;
+  width: 900px; height: 900px;
+  top: -300px; inset-inline-end: -260px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(229, 108, 37, 0.09) 0%, rgba(229, 108, 37, 0) 62%);
+  pointer-events: none;
+}
+#slide-02 .s02-bg-glow-b {
+  position: absolute;
+  width: 760px; height: 760px;
+  bottom: -360px; inset-inline-start: -240px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(21, 19, 72, 0.055) 0%, rgba(21, 19, 72, 0) 60%);
+  pointer-events: none;
+}
 #slide-02 .s02-panel {
   position: absolute;
-  top: 216px;
+  top: 224px;
   inset-inline-end: 56px;
   width: 950px;
-  height: 660px;
-  border-radius: 30px;
+  height: 664px;
+  border-radius: 32px;
   background: linear-gradient(165deg, #FBF9F4 0%, var(--cream) 100%);
   border: 1px solid var(--line);
+  box-shadow: 0 30px 70px rgba(21, 19, 72, 0.07);
+  overflow: hidden;
 }
-#slide-02 .s02-head { position: absolute; top: 84px; inset-inline-start: 96px; width: 1000px; }
-#slide-02 .s02-head .headline { font-size: 58px; margin-top: 18px; }
-#slide-02 .s02-left { position: absolute; top: 322px; inset-inline-start: 96px; width: 640px; }
-#slide-02 .s02-left .support { font-size: 20px; }
-#slide-02 .s02-highlights { margin-top: 52px; display: grid; gap: 36px; }
+#slide-02 .s02-panel::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(21, 19, 72, 0.05) 1.1px, transparent 1.1px);
+  background-size: 24px 24px;
+  -webkit-mask-image: radial-gradient(closest-side at 85% 12%, #000 0%, transparent 65%);
+          mask-image: radial-gradient(closest-side at 85% 12%, #000 0%, transparent 65%);
+}
+#slide-02 .s02-head { position: absolute; top: 146px; inset-inline-start: 96px; width: 1000px; }
+#slide-02 .s02-head .headline { font-size: 66px; margin-top: 20px; }
+#slide-02 .s02-head::after {
+  content: '';
+  display: block;
+  width: 64px; height: 4px;
+  border-radius: 3px;
+  background: var(--orange);
+  margin-top: 28px;
+}
+#slide-02 .s02-left { position: absolute; top: 396px; inset-inline-start: 96px; width: 640px; }
+#slide-02 .s02-left .support { font-size: 21px; }
+#slide-02 .s02-highlights { margin-top: 50px; display: grid; gap: 36px; }
 
-#slide-02 .s02-diagram { position: absolute; top: 252px; inset-inline-end: 92px; width: 878px; height: 590px; }
+#slide-02 .s02-diagram { position: absolute; top: 258px; inset-inline-end: 92px; width: 878px; height: 596px; }
 #slide-02 .s02-modules {
   position: absolute;
   top: 34px; left: 0;
@@ -125,19 +173,19 @@ html[lang='ar'] #slide-01 .s01-copy .subheadline { letter-spacing: 0; }
   grid-template-columns: repeat(4, 1fr);
   gap: 22px;
 }
-#slide-02 .s02-modules .module-chip { position: static; justify-content: flex-start; height: 62px; }
-#slide-02 .s02-links { position: absolute; left: 0; top: 0; width: 878px; height: 590px; pointer-events: none; }
+#slide-02 .s02-modules .module-chip { position: static; justify-content: flex-start; height: 66px; }
+#slide-02 .s02-links { position: absolute; left: 0; top: 0; width: 878px; height: 596px; pointer-events: none; }
 #slide-02 .s02-links path { stroke: rgba(21, 19, 72, 0.18); stroke-width: 1.6; fill: none; }
 #slide-02 .s02-core {
-  left: 149px; top: 392px;
-  width: 580px; height: 106px;
+  left: 149px; top: 398px;
+  width: 580px; height: 110px;
   flex-direction: row;
 }
-#slide-02 .s02-core .core-mark { width: 38px; }
+#slide-02 .s02-core .core-mark { width: 39px; }
 #slide-02 .s02-core .core-text { text-align: start; }
 #slide-02 .s02-core-glow {
   position: absolute;
-  left: 199px; top: 512px;
+  left: 199px; top: 522px;
   width: 480px; height: 26px;
   border-radius: 50%;
   background: radial-gradient(closest-side, rgba(229, 108, 37, 0.35), rgba(229, 108, 37, 0));
@@ -145,11 +193,19 @@ html[lang='ar'] #slide-01 .s01-copy .subheadline { letter-spacing: 0; }
 #slide-02 .outcome-strip { position: absolute; inset-inline: 96px; bottom: 92px; }
 
 /* ═══ Slide 03 — Business Challenges ═════════════════════════════════════── */
-#slide-03 { background: linear-gradient(120deg, #FFFFFF 46%, #FAF7F1 100%); }
-#slide-03 .s03-left { position: absolute; top: 196px; inset-inline-start: 96px; width: 660px; }
-#slide-03 .s03-left .headline { font-size: 62px; margin-top: 24px; }
-#slide-03 .s03-left .support { margin-top: 32px; max-width: 590px; }
-#slide-03 .s03-transition { position: absolute; bottom: 152px; inset-inline-start: 96px; width: 660px; }
+#slide-03 { background: linear-gradient(120deg, #FFFFFF 44%, #FAF7F1 100%); }
+#slide-03 .s03-bg-glow {
+  position: absolute;
+  width: 1000px; height: 1000px;
+  top: -380px; inset-inline-end: -320px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(229, 108, 37, 0.08) 0%, rgba(229, 108, 37, 0) 62%);
+  pointer-events: none;
+}
+#slide-03 .s03-left { position: absolute; top: 210px; inset-inline-start: 96px; width: 680px; }
+#slide-03 .s03-left .headline { font-size: 68px; margin-top: 26px; }
+#slide-03 .s03-left .support { margin-top: 34px; max-width: 610px; }
+#slide-03 .s03-transition { position: absolute; bottom: 150px; inset-inline-start: 96px; width: 680px; }
 
 #slide-03 .s03-field { position: absolute; top: 128px; inset-inline-end: 70px; width: 1010px; height: 830px; }
 #slide-03 .s03-broken { position: absolute; inset: 0; pointer-events: none; }
@@ -165,32 +221,49 @@ html[lang='ar'] #slide-01 .s01-copy .subheadline { letter-spacing: 0; }
   stroke-dasharray: none;
 }
 #slide-03 .s03-converge { position: absolute; inset: 0; pointer-events: none; }
-#slide-03 .s03-converge path { stroke: var(--orange); stroke-width: 2.2; fill: none; opacity: 0.85; }
+#slide-03 .s03-converge path { stroke: var(--orange); stroke-width: 2.4; fill: none; opacity: 0.85; }
 #slide-03 .s03-core {
   left: 255px; top: 542px;
-  width: 500px; height: 100px;
+  width: 500px; height: 104px;
   gap: 17px;
 }
-#slide-03 .s03-core .core-mark { width: 34px; }
+#slide-03 .s03-core .core-mark { width: 35px; }
 #slide-03 .s03-core .core-check {
   display: flex; align-items: center; justify-content: center;
-  width: 30px; height: 30px;
+  width: 32px; height: 32px;
   border-radius: 50%;
   background: var(--orange);
   position: absolute;
-  top: -14px;
-  inset-inline-end: -11px;
+  top: -15px;
+  inset-inline-end: -12px;
+  box-shadow: 0 4px 10px rgba(229, 108, 37, 0.4);
 }
-#slide-03 .s03-core .core-check svg { width: 15px; height: 15px; color: #fff; }
+#slide-03 .s03-core .core-check svg { width: 16px; height: 16px; color: #fff; }
 
 /* ═══ Slide 04 — Why Elite ERP ═══════════════════════════════════════════── */
-#slide-04 { background: radial-gradient(1300px 800px at 50% 30%, #FFFFFF 45%, var(--cream) 100%); }
-#slide-04 .s04-head { position: absolute; top: 78px; left: 0; right: 0; text-align: center; }
-#slide-04 .s04-head .headline { font-size: 56px; margin-top: 18px; }
+#slide-04 { background: radial-gradient(1300px 800px at 50% 28%, #FFFFFF 45%, var(--cream) 100%); }
+#slide-04 .s04-bg-glow-a {
+  position: absolute;
+  width: 820px; height: 820px;
+  top: -300px; inset-inline-start: -260px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(21, 19, 72, 0.06) 0%, rgba(21, 19, 72, 0) 60%);
+  pointer-events: none;
+}
+#slide-04 .s04-bg-glow-b {
+  position: absolute;
+  width: 760px; height: 760px;
+  bottom: -320px; inset-inline-end: -240px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(229, 108, 37, 0.09) 0%, rgba(229, 108, 37, 0) 60%);
+  pointer-events: none;
+}
+#slide-04 .s04-head { position: absolute; top: 90px; left: 0; right: 0; text-align: center; }
+#slide-04 .s04-head .headline { font-size: 60px; margin-top: 20px; }
 
 #slide-04 .s04-eco {
   position: absolute;
-  top: 250px;
+  top: 254px;
   left: 50%;
   translate: -50%;
   width: 1000px;
@@ -210,33 +283,33 @@ html[lang='ar'] #slide-01 .s01-copy .subheadline { letter-spacing: 0; }
 #slide-04 .s04-core {
   left: 50%; top: 50%;
   translate: -50% -50%;
-  width: 258px; height: 136px;
+  width: 264px; height: 140px;
   flex-direction: column;
   gap: 10px;
 }
-#slide-04 .s04-core .core-mark { width: 36px; }
+#slide-04 .s04-core .core-mark { width: 37px; }
 #slide-04 .s04-core .core-text { text-align: center; }
 
-#slide-04 .s04-side { position: absolute; top: 322px; width: 320px; }
+#slide-04 .s04-side { position: absolute; top: 330px; width: 328px; }
 #slide-04 .s04-value { inset-inline-start: 96px; }
 #slide-04 .s04-caps { inset-inline-end: 96px; }
-#slide-04 .s04-side .value-item + .value-item { margin-top: 30px; }
+#slide-04 .s04-side .value-item + .value-item { margin-top: 32px; }
 
 #slide-04 .s04-transition {
   position: absolute;
-  bottom: 92px;
+  bottom: 90px;
   left: 0; right: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 14px;
+  gap: 15px;
 }
 #slide-04 .s04-transition .tr-icon {
   display: flex; align-items: center; justify-content: center;
-  width: 34px; height: 34px;
+  width: 36px; height: 36px;
   border-radius: 50%;
   background: var(--orange-14);
   color: var(--orange);
 }
-#slide-04 .s04-transition .tr-icon svg { width: 17px; height: 17px; }
-#slide-04 .s04-transition p { font-size: 19px; font-weight: 650; color: var(--navy); }
+#slide-04 .s04-transition .tr-icon svg { width: 18px; height: 18px; }
+#slide-04 .s04-transition p { font-size: 20px; font-weight: 650; color: var(--navy); }

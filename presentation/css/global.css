@@ -2,6 +2,11 @@
    Elite ERP Executive Presentation — global.css
    Brand tokens (EIS Brand Guidelines 2026), typography, reset,
    16:9 stage + proportional scaling, loading screen, presentation chrome.
+
+   English-only build. Arabic/RTL returns in a future version — see
+   docs/PRESENTATION_IMPLEMENTATION_PLAN.md §9 and CLAUDE.md. Font files for
+   IBM Plex Sans Arabic remain in fonts/arabic/ for that pass; they are not
+   declared here to keep this build lean.
    ═══════════════════════════════════════════════════════════════════════════ */
 
 /* ── Fonts (self-hosted, offline) ─────────────────────────────────────────── */
@@ -15,14 +20,6 @@
     U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
     U+2212, U+2215, U+FEFF, U+FFFD;
 }
-@font-face { font-family: 'IBM Plex Sans Arabic'; font-style: normal; font-weight: 400; font-display: block; src: url('../fonts/arabic/plex-arabic-arabic-400.woff2') format('woff2'); unicode-range: U+0600-06FF, U+0750-077F, U+0870-088E, U+08A0-08E1, U+08E3-08FF, U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE70-FE74, U+FE76-FEFC; }
-@font-face { font-family: 'IBM Plex Sans Arabic'; font-style: normal; font-weight: 500; font-display: block; src: url('../fonts/arabic/plex-arabic-arabic-500.woff2') format('woff2'); unicode-range: U+0600-06FF, U+0750-077F, U+0870-088E, U+08A0-08E1, U+08E3-08FF, U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE70-FE74, U+FE76-FEFC; }
-@font-face { font-family: 'IBM Plex Sans Arabic'; font-style: normal; font-weight: 600; font-display: block; src: url('../fonts/arabic/plex-arabic-arabic-600.woff2') format('woff2'); unicode-range: U+0600-06FF, U+0750-077F, U+0870-088E, U+08A0-08E1, U+08E3-08FF, U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE70-FE74, U+FE76-FEFC; }
-@font-face { font-family: 'IBM Plex Sans Arabic'; font-style: normal; font-weight: 700; font-display: block; src: url('../fonts/arabic/plex-arabic-arabic-700.woff2') format('woff2'); unicode-range: U+0600-06FF, U+0750-077F, U+0870-088E, U+08A0-08E1, U+08E3-08FF, U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE70-FE74, U+FE76-FEFC; }
-@font-face { font-family: 'IBM Plex Sans Arabic'; font-style: normal; font-weight: 400; font-display: block; src: url('../fonts/arabic/plex-arabic-latin-400.woff2') format('woff2'); unicode-range: U+0000-00FF; }
-@font-face { font-family: 'IBM Plex Sans Arabic'; font-style: normal; font-weight: 500; font-display: block; src: url('../fonts/arabic/plex-arabic-latin-500.woff2') format('woff2'); unicode-range: U+0000-00FF; }
-@font-face { font-family: 'IBM Plex Sans Arabic'; font-style: normal; font-weight: 600; font-display: block; src: url('../fonts/arabic/plex-arabic-latin-600.woff2') format('woff2'); unicode-range: U+0000-00FF; }
-@font-face { font-family: 'IBM Plex Sans Arabic'; font-style: normal; font-weight: 700; font-display: block; src: url('../fonts/arabic/plex-arabic-latin-700.woff2') format('woff2'); unicode-range: U+0000-00FF; }
 
 /* ── Brand tokens ─────────────────────────────────────────────────────────── */
 :root {
@@ -45,13 +42,13 @@
   --orange-soft: #FBE9DC;
   --line: #E7E2D8;                      /* hairlines on cream/white */
   --shadow-card: 0 2px 6px rgba(21, 19, 72, 0.05), 0 18px 44px rgba(21, 19, 72, 0.09);
-  --shadow-float: 0 6px 16px rgba(21, 19, 72, 0.08), 0 32px 80px rgba(21, 19, 72, 0.16);
+  --shadow-float: 0 10px 24px rgba(21, 19, 72, 0.10), 0 40px 90px rgba(21, 19, 72, 0.18);
+  --shadow-hero: 0 20px 48px rgba(21, 19, 72, 0.16), 0 64px 140px rgba(21, 19, 72, 0.24);
 
   --font-en: 'Inter', 'Helvetica Neue', Arial, sans-serif;
-  --font-ar: 'IBM Plex Sans Arabic', 'Inter', 'Helvetica Neue', Arial, sans-serif;
 
-  --radius-lg: 24px;
-  --radius-md: 16px;
+  --radius-lg: 26px;
+  --radius-md: 17px;
   --radius-sm: 11px;
 }
 
@@ -66,18 +63,12 @@ body {
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
-html[lang='ar'] body { font-family: var(--font-ar); }
 img, svg { display: block; }
 button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
 ul, ol { list-style: none; }
 
-/* Numbers, codes and Latin fragments stay LTR inside RTL text */
-.num { direction: ltr; unicode-bidi: embed; display: inline-block; }
-
-/* Arabic never tracks — kill EN letter-spacing when mirrored */
-html[lang='ar'] .eyebrow,
-html[lang='ar'] .tagline,
-html[lang='ar'] [data-i18n-ar] { letter-spacing: 0; }
+/* Numbers and codes render as tabular/lining figures wherever they appear */
+.num { font-variant-numeric: tabular-nums lining-nums; display: inline-block; }
 
 /* ── Stage: fixed 1920×1080 canvas, proportionally scaled ─────────────────── */
 #viewport { position: fixed; inset: 0; }
@@ -91,6 +82,55 @@ html[lang='ar'] [data-i18n-ar] { letter-spacing: 0; }
   background: var(--paper);
   overflow: hidden;
   box-shadow: 0 0 120px rgba(0, 0, 0, 0.45);
+}
+
+/* ── Premium edge framing (shared across every slide — Doc 10 §"edges") ──── */
+#edge-top-line {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  z-index: 6;
+  pointer-events: none;
+  background: linear-gradient(90deg,
+    rgba(21, 19, 72, 0) 0%, var(--navy) 18%, var(--orange) 50%, var(--navy) 82%, rgba(21, 19, 72, 0) 100%);
+  opacity: 0.9;
+}
+#edge-vignette {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  box-shadow: inset 0 0 10px rgba(21, 19, 72, 0.02), inset 0 0 190px 50px rgba(21, 19, 72, 0.055);
+}
+#edge-corner-mark {
+  position: absolute;
+  top: -18px;
+  inset-inline-end: -18px;
+  width: 150px;
+  height: 150px;
+  color: var(--navy);
+  opacity: 0.1;
+  z-index: 4;
+  pointer-events: none;
+}
+#edge-corner-mark svg { width: 100%; height: 100%; }
+
+/* Giant faint slide-number watermark — one per slide, first child so it
+   always paints behind that slide's real content. Ties the deck together
+   as a consistent editorial motif without competing for attention. */
+.ghost-num {
+  position: absolute;
+  left: 46px;
+  bottom: -78px;
+  font-size: 384px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.045em;
+  color: var(--navy);
+  opacity: 0.032;
+  pointer-events: none;
+  user-select: none;
+  z-index: 0;
 }
 
 /* ── Slides ───────────────────────────────────────────────────────────────── */
@@ -113,26 +153,24 @@ html[lang='ar'] [data-i18n-ar] { letter-spacing: 0; }
 
 /* ── Typography scale ─────────────────────────────────────────────────────── */
 .eyebrow {
-  font-size: 15px;
-  font-weight: 650;
-  letter-spacing: 0.19em;
+  font-size: 16.5px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
   text-transform: uppercase;
   color: var(--orange);
 }
 .headline {
   font-weight: 800;
   color: var(--navy);
-  letter-spacing: -0.022em;
+  letter-spacing: -0.024em;
   line-height: 1.06;
 }
-html[lang='ar'] .headline { letter-spacing: 0; line-height: 1.22; }
 .support {
-  font-size: 21px;
-  line-height: 1.58;
+  font-size: 23px;
+  line-height: 1.62;
   color: var(--graphite);
   font-weight: 450;
 }
-html[lang='ar'] .support { line-height: 1.75; }
 
 /* ── Loading screen ───────────────────────────────────────────────────────── */
 #loader {
@@ -167,7 +205,22 @@ html[lang='ar'] .support { line-height: 1.75; }
   animation: loaderSweep 1.15s cubic-bezier(0.45, 0, 0.4, 1) infinite;
 }
 
-/* ── Presentation chrome ──────────────────────────────────────────────────── */
+/* ── Persistent brand mark — identical position on every slide (Doc req. 1) ── */
+#chrome-brand {
+  position: absolute;
+  top: 44px;
+  inset-inline-start: 64px;
+  width: 172px;
+  z-index: 15;
+  pointer-events: none;
+}
+#chrome-brand img {
+  width: 100%;
+  height: auto;
+  filter: drop-shadow(0 3px 8px rgba(21, 19, 72, 0.16));
+}
+
+/* ── Presentation chrome (navigation controls) ────────────────────────────── */
 #chrome-top, #chrome-bottom {
   position: absolute;
   z-index: 20;
@@ -191,15 +244,15 @@ html[lang='ar'] .support { line-height: 1.75; }
   align-items: center;
   justify-content: center;
   gap: 9px;
-  height: 44px;
-  min-width: 44px;
-  padding: 0 13px;
+  height: 46px;
+  min-width: 46px;
+  padding: 0 14px;
   border-radius: 999px;
   border: 1px solid var(--navy-10);
-  background: rgba(255, 255, 255, 0.82);
+  background: rgba(255, 255, 255, 0.86);
   backdrop-filter: blur(6px);
   color: var(--navy);
-  font-size: 14px;
+  font-size: 14.5px;
   font-weight: 600;
   transition: border-color 200ms var(--ease), background 200ms var(--ease),
     box-shadow 200ms var(--ease), transform 200ms var(--ease);
@@ -210,13 +263,10 @@ html[lang='ar'] .support { line-height: 1.75; }
   box-shadow: 0 4px 14px rgba(21, 19, 72, 0.10);
   transform: translateY(-1px);
 }
-.chrome-btn svg { width: 19px; height: 19px; }
-.chrome-btn .lang-half { opacity: 0.42; transition: opacity 200ms; padding: 0 1px; }
-.chrome-btn .lang-half.on { opacity: 1; color: var(--orange); }
-.lang-divider { opacity: 0.3; font-weight: 400; }
+.chrome-btn svg { width: 20px; height: 20px; }
 
 #slide-counter {
-  font-size: 14.5px;
+  font-size: 15px;
   font-weight: 600;
   letter-spacing: 0.1em;
   color: var(--graphite);
@@ -235,5 +285,3 @@ html[lang='ar'] .support { line-height: 1.75; }
 #progress-dots .dot.on { background: var(--orange); width: 22px; border-radius: 4px; }
 
 #nav-arrows { display: flex; align-items: center; gap: 10px; }
-/* Directional glyphs mirror in RTL */
-html[dir='rtl'] .mirror-rtl { transform: scaleX(-1); }

@@ -49,9 +49,7 @@
     const dx = e.changedTouches[0].clientX - touchX;
     touchX = null;
     if (Math.abs(dx) < 56) return;
-    const rtl = document.documentElement.getAttribute('dir') === 'rtl';
-    const forward = rtl ? dx > 0 : dx < 0;
-    if (forward) P.next(); else P.prev();
+    if (dx < 0) P.next(); else P.prev();
   }, { passive: true });
 
   /* ── Buttons & dots ─────────────────────────────────────────────────────── */

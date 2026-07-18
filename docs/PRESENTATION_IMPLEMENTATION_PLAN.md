@@ -4,6 +4,8 @@
 > **Inputs analyzed:** All 10 Markdown specification documents (01–10), EIS Brand Guidelines 2026 (PDF), EIS logo pack (SVG, full lockup + icon), Elite ERP Product Knowledge Base v2.0, and the latest approved HTML mockup (V27, "Design System v12 Clickable Prototype", 26 screens).
 > **Date:** 2026-07-17
 
+> **Amendment (design-overhaul pass):** Per explicit client direction, this build was temporarily switched to **English-only** — the EN/AR toggle, `data-i18n-ar` content, and Arabic screenshot swapping described in §9 below were removed from `presentation/` to focus entirely on visual/brand quality. Arabic captures and fonts remain on disk (`assets/screenshots/ar/`, `fonts/arabic/`) for reintroduction once the English design is finalized, per CLAUDE.md's standing bilingual requirement. Do not treat §9's bilingual language as currently implemented.
+
 ---
 
 ## 1. What the analysis established

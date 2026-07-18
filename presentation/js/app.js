@@ -1,7 +1,7 @@
 /* ═══════════════════════════════════════════════════════════════════════════
-   app.js — boot: stage scaling, EN/AR language engine (mockup pattern:
-   data-i18n-en / data-i18n-ar + RTL dir + screenshot swap), loading screen.
-   English is the default launch language; Arabic persists via localStorage.
+   app.js — boot: stage scaling + loading screen.
+   English-only build. (Arabic/RTL support returns in a future version —
+   see docs/PRESENTATION_IMPLEMENTATION_PLAN.md.)
    ═══════════════════════════════════════════════════════════════════════════ */
 (function () {
   'use strict';
@@ -14,52 +14,11 @@
     document.getElementById('stage').style.setProperty('--stage-scale', scale);
   }
   window.addEventListener('resize', fitStage);
-
-  /* ── Language engine ────────────────────────────────────────────────────── */
-  function translateAll(lang) {
-    document.querySelectorAll('[data-i18n-en]').forEach(function (el) {
-      const value = lang === 'ar' ? el.getAttribute('data-i18n-ar') : el.getAttribute('data-i18n-en');
-      if (value !== null) el.innerHTML = value;
-    });
-  }
-
-  function swapScreens(lang) {
-    document.querySelectorAll('img[data-src-en]').forEach(function (img) {
-      const src = lang === 'ar' ? img.getAttribute('data-src-ar') : img.getAttribute('data-src-en');
-      if (src && img.getAttribute('src') !== src) img.setAttribute('src', src);
-    });
-  }
-
-  function setLanguage(lang) {
-    const rtl = lang === 'ar';
-    document.documentElement.setAttribute('lang', lang);
-    document.documentElement.setAttribute('dir', rtl ? 'rtl' : 'ltr');
-    translateAll(lang);
-    swapScreens(lang);
-    document.querySelectorAll('#btn-lang .lang-half').forEach(function (half) {
-      half.classList.toggle('on', half.getAttribute('data-lang') === lang);
-    });
-    try { localStorage.setItem('eliteErpPresentationLang', lang); } catch (e) {}
-  }
-  window.setLanguage = setLanguage;
-
-  document.getElementById('btn-lang').addEventListener('click', function () {
-    const nextLang = document.documentElement.getAttribute('lang') === 'ar' ? 'en' : 'ar';
-    setLanguage(nextLang);
-  });
-
-  /* ── Boot ───────────────────────────────────────────────────────────────── */
-  let lang = 'en'; // English is the default launch language
-  try {
-    const stored = localStorage.getItem('eliteErpPresentationLang');
-    if (stored === 'ar' || stored === 'en') lang = stored;
-  } catch (e) {}
-
   fitStage();
-  setLanguage(lang);
+
   window.Presentation.init();
 
-  /* Loading screen: dismiss once fonts + first assets are ready */
+  /* ── Loading screen: dismiss once fonts + first assets are ready ─────────── */
   function dismissLoader() {
     document.getElementById('loader').classList.add('done');
   }

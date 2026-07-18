@@ -9,89 +9,87 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 52px;
-  height: 52px;
-  border-radius: 15px;
+  width: 60px;
+  height: 60px;
+  border-radius: 17px;
   background: var(--orange-08);
   color: var(--orange);
   flex: 0 0 auto;
 }
-.icon-tile svg { width: 25px; height: 25px; }
+.icon-tile svg { width: 28px; height: 28px; }
 .icon-tile.tile-navy { background: var(--navy-06); color: var(--navy); }
 
 /* ── Highlight row (icon + title + caption) ───────────────────────────────── */
-.highlight-row { display: flex; align-items: flex-start; gap: 19px; }
+.highlight-row { display: flex; align-items: flex-start; gap: 21px; }
 .highlight-row .hl-title {
-  font-size: 20px;
+  font-size: 21.5px;
   font-weight: 700;
   color: var(--navy);
-  margin-bottom: 4px;
+  margin-bottom: 5px;
   letter-spacing: -0.012em;
 }
-html[lang='ar'] .highlight-row .hl-title { letter-spacing: 0; }
-.highlight-row .hl-caption { font-size: 16.5px; line-height: 1.5; color: var(--graphite); }
+.highlight-row .hl-caption { font-size: 17px; line-height: 1.52; color: var(--graphite); }
 
 /* ── Outcome pill strip (bottom of editorial slides) ──────────────────────── */
 .outcome-strip { display: flex; gap: 18px; }
 .outcome-pill {
   display: flex;
   align-items: center;
-  gap: 13px;
-  height: 66px;
-  padding: 0 26px;
+  gap: 14px;
+  height: 74px;
+  padding: 0 27px;
   flex: 1;
   border-radius: 999px;
   background: #fff;
   border: 1px solid var(--line);
-  box-shadow: 0 2px 10px rgba(21, 19, 72, 0.045);
+  box-shadow: 0 3px 12px rgba(21, 19, 72, 0.055);
 }
-.outcome-pill svg { width: 22px; height: 22px; color: var(--orange); flex: 0 0 auto; }
-.outcome-pill span { font-size: 16.5px; font-weight: 650; color: var(--navy); white-space: nowrap; }
+.outcome-pill svg { width: 24px; height: 24px; color: var(--orange); flex: 0 0 auto; }
+.outcome-pill span { font-size: 17.5px; font-weight: 650; color: var(--navy); white-space: nowrap; }
 
 /* ── Value list item (checkmark / icon + text) ────────────────────────────── */
-.value-item { display: flex; align-items: flex-start; gap: 15px; }
+.value-item { display: flex; align-items: flex-start; gap: 16px; }
 .value-item .vi-icon {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 34px;
-  border-radius: 10px;
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
   background: var(--orange-08);
   color: var(--orange);
   flex: 0 0 auto;
   margin-top: 1px;
 }
-.value-item .vi-icon svg { width: 17px; height: 17px; }
-.value-item .vi-title { font-size: 18px; font-weight: 700; color: var(--navy); margin-bottom: 3px; }
-.value-item .vi-caption { font-size: 15px; line-height: 1.45; color: var(--graphite); }
+.value-item .vi-icon svg { width: 19px; height: 19px; }
+.value-item .vi-title { font-size: 19px; font-weight: 700; color: var(--navy); margin-bottom: 4px; }
+.value-item .vi-caption { font-size: 16px; line-height: 1.48; color: var(--graphite); }
 
 /* ── Side panel headers (slides 04+) ──────────────────────────────────────── */
 .panel-label {
-  font-size: 13.5px;
+  font-size: 14.5px;
   font-weight: 700;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.17em;
   text-transform: uppercase;
   color: var(--graphite);
-  margin-bottom: 26px;
+  margin-bottom: 28px;
 }
-html[lang='ar'] .panel-label { letter-spacing: 0; }
 
 /* ── Diagram module chip ──────────────────────────────────────────────────── */
 .module-chip {
   position: absolute;
   display: flex;
   align-items: center;
-  gap: 11px;
-  height: 58px;
-  padding: 0 19px;
-  border-radius: 15px;
+  gap: 12px;
+  height: 64px;
+  padding: 0 21px;
+  border-radius: 16px;
   background: #fff;
   border: 1px solid var(--line);
   box-shadow: var(--shadow-card);
 }
-.module-chip svg { width: 21px; height: 21px; color: var(--orange); flex: 0 0 auto; }
-.module-chip span { font-size: 16px; font-weight: 650; color: var(--navy); white-space: nowrap; }
+.module-chip svg { width: 23px; height: 23px; color: var(--orange); flex: 0 0 auto; }
+.module-chip span { font-size: 17px; font-weight: 650; color: var(--navy); white-space: nowrap; }
 
 /* ── Platform core bar / node ─────────────────────────────────────────────── */
 .core-node {
@@ -102,93 +100,133 @@ html[lang='ar'] .panel-label { letter-spacing: 0; }
   gap: 15px;
   border-radius: 20px;
   background: linear-gradient(135deg, #201D66 0%, var(--navy) 58%);
-  box-shadow: 0 10px 24px rgba(21, 19, 72, 0.28), 0 30px 70px rgba(21, 19, 72, 0.22);
+  box-shadow: 0 14px 30px rgba(21, 19, 72, 0.30), 0 36px 80px rgba(21, 19, 72, 0.24);
   color: #fff;
 }
-.core-node .core-mark { width: 34px; }
-.core-node .core-title { font-size: 19px; font-weight: 750; letter-spacing: 0.01em; }
-.core-node .core-sub { font-size: 12.5px; font-weight: 550; opacity: 0.62; margin-top: 2px; }
+.core-node::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.35), rgba(255, 255, 255, 0) 40%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+.core-node .core-mark { width: 36px; }
+.core-node .core-title { font-size: 21px; font-weight: 750; letter-spacing: 0.008em; }
+.core-node .core-sub { font-size: 13.5px; font-weight: 550; opacity: 0.64; margin-top: 3px; }
 
 /* ── Challenge card (slide 03) ────────────────────────────────────────────── */
 .challenge-card {
   position: absolute;
   display: flex;
   align-items: center;
-  gap: 13px;
-  height: 72px;
-  padding: 0 21px;
+  gap: 14px;
+  height: 78px;
+  padding: 0 23px;
   border-radius: var(--radius-md);
-  background: #FAF8F4;
+  background: #FDFCFA;
   border: 1px solid var(--line);
-  box-shadow: 0 2px 8px rgba(26, 26, 26, 0.05);
+  box-shadow: 0 3px 10px rgba(26, 26, 26, 0.055);
   rotate: var(--tilt, 0deg);
 }
 .challenge-card .cc-icon {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
+  width: 44px;
+  height: 44px;
+  border-radius: 13px;
   background: var(--stone);
   color: var(--graphite);
   flex: 0 0 auto;
 }
-.challenge-card .cc-icon svg { width: 20px; height: 20px; }
-.challenge-card span { font-size: 16.5px; font-weight: 650; color: #4A4A52; white-space: nowrap; }
+.challenge-card .cc-icon svg { width: 22px; height: 22px; }
+.challenge-card span { font-size: 17.5px; font-weight: 650; color: #40404A; white-space: nowrap; }
 
 /* ── Transition statement bar ─────────────────────────────────────────────── */
 .transition-bar {
   display: flex;
   align-items: center;
-  gap: 17px;
-  padding: 21px 26px;
+  gap: 18px;
+  padding: 23px 28px;
   border-radius: var(--radius-md);
   background: linear-gradient(135deg, #201D66 0%, var(--navy) 60%);
   color: #fff;
-  box-shadow: 0 14px 36px rgba(21, 19, 72, 0.24);
+  box-shadow: 0 16px 40px rgba(21, 19, 72, 0.26);
+  position: relative;
+  overflow: hidden;
+}
+.transition-bar::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(320px 140px at 88% -20%, rgba(229, 108, 37, 0.35), transparent 70%);
+  pointer-events: none;
 }
 .transition-bar .tb-arrow {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   background: var(--orange);
   flex: 0 0 auto;
+  position: relative;
 }
-.transition-bar .tb-arrow svg { width: 19px; height: 19px; color: #fff; }
-.transition-bar p { font-size: 17.5px; font-weight: 600; line-height: 1.42; }
+.transition-bar .tb-arrow svg { width: 20px; height: 20px; color: #fff; }
+.transition-bar p { font-size: 18.5px; font-weight: 600; line-height: 1.42; position: relative; }
 
 /* ── Floating stat chip (cover hero) ──────────────────────────────────────── */
 .stat-chip {
   position: absolute;
   display: flex;
   align-items: center;
-  gap: 13px;
-  padding: 15px 21px;
+  gap: 14px;
+  padding: 16px 22px;
   border-radius: var(--radius-md);
   background: #fff;
   border: 1px solid var(--line);
   box-shadow: var(--shadow-float);
 }
-.stat-chip .sc-label { font-size: 12.5px; font-weight: 600; color: var(--graphite); margin-bottom: 3px; }
-.stat-chip .sc-value { font-size: 19px; font-weight: 800; color: var(--navy); letter-spacing: -0.01em; }
+.stat-chip .sc-label { font-size: 13px; font-weight: 600; color: var(--graphite); margin-bottom: 3px; }
+.stat-chip .sc-value { font-size: 21px; font-weight: 800; color: var(--navy); letter-spacing: -0.01em; }
 .stat-chip.chip-navy { background: linear-gradient(135deg, #201D66 0%, var(--navy) 62%); border: 0; }
-.stat-chip.chip-navy .sc-label { color: rgba(255, 255, 255, 0.62); }
+.stat-chip.chip-navy .sc-label { color: rgba(255, 255, 255, 0.64); }
 .stat-chip.chip-navy .sc-value { color: #fff; }
 .stat-chip .sc-ring { flex: 0 0 auto; }
 
-/* ── Screenshot card ──────────────────────────────────────────────────────── */
+/* ── Screenshot card — premium flagship-product framing ───────────────────── */
 .shot-card {
+  position: relative;
   border-radius: var(--radius-lg);
   overflow: hidden;
-  border: 1px solid rgba(21, 19, 72, 0.09);
-  box-shadow: var(--shadow-float);
+  border: 1px solid rgba(21, 19, 72, 0.08);
+  box-shadow: var(--shadow-hero);
   background: #fff;
 }
 .shot-card img { width: 100%; height: 100%; object-fit: cover; object-position: top; }
+/* glassy top highlight, like light catching a device bezel */
+.shot-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55), inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+  pointer-events: none;
+}
+/* ambient brand glow seated behind the frame */
+.shot-glow {
+  position: absolute;
+  border-radius: 40%;
+  filter: blur(46px);
+  pointer-events: none;
+  z-index: -1;
+}
 
 /* ── Network node (cover hero) ────────────────────────────────────────────── */
 .net-node {
@@ -196,13 +234,13 @@ html[lang='ar'] .panel-label { letter-spacing: 0; }
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 58px;
-  height: 58px;
-  border-radius: 17px;
+  width: 62px;
+  height: 62px;
+  border-radius: 18px;
   background: #fff;
   border: 1px solid var(--line);
-  box-shadow: 0 4px 12px rgba(21, 19, 72, 0.09);
+  box-shadow: 0 6px 16px rgba(21, 19, 72, 0.11);
   color: var(--navy);
 }
-.net-node svg { width: 25px; height: 25px; }
+.net-node svg { width: 27px; height: 27px; }
 .net-node.node-accent { color: var(--orange); }
