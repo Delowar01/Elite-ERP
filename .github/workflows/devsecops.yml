@@ -1,0 +1,86 @@
+name: DevSecOps
+
+# Stage 11 Part 6 — every push / PR runs static analysis, dependency & secret
+# scanning, and the security test suite. Any failure fails the pipeline.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  static-analysis:
+    name: Static analysis (lint + types)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: TypeScript
+        run: npx tsc --noEmit
+      - name: ESLint (fails on warnings)
+        run: npx eslint src --max-warnings=0
+
+  dependency-scan:
+    name: Dependency vulnerability scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: npm audit (high+ fails)
+        run: npm audit --audit-level=high
+      - name: Report outdated packages (non-blocking)
+        run: npm outdated || true
+
+  secret-scan:
+    name: Secret scanning
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITLEAKS_CONFIG: .gitleaks.toml
+
+  security-tests:
+    name: Security tests + production build
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: erp_app
+          POSTGRES_PASSWORD: erp_dev_password
+          POSTGRES_DB: elite_erp
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+    env:
+      DATABASE_URL: postgresql://erp_app:erp_dev_password@localhost:5432/elite_erp
+      AUTH_SECRET: ci-only-secret-not-used-in-production-0000000000
+      FIELD_ENCRYPTION_KEYS: "1:aW5zZWN1cmUtY2ktb25seS0zMi1ieXRlLWtleS0xMjM0NTY="
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Committed security test suite
+        run: node tests/security/crypto-policy.test.mjs
+      - name: Push schema
+        run: npm run db:push
+      - name: Build (production)
+        run: npm run build

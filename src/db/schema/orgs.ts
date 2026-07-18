@@ -1,4 +1,4 @@
-import { pgTable, serial, text, integer, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, integer, boolean, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -42,6 +42,16 @@ export const orgsTable = pgTable("orgs", {
   zatcaEnvironment: text("zatca_environment").notNull().default("sandbox"), // sandbox | production
   zatcaCsid: text("zatca_csid"),
   zatcaCertExpiresAt: timestamp("zatca_cert_expires_at"),
+
+  // --- Stage 11: configurable password policy (per-org) ---
+  pwdMinLength: integer("pwd_min_length").notNull().default(8),
+  pwdRequireUppercase: boolean("pwd_require_uppercase").notNull().default(true),
+  pwdRequireLowercase: boolean("pwd_require_lowercase").notNull().default(true),
+  pwdRequireNumber: boolean("pwd_require_number").notNull().default(true),
+  pwdRequireSpecial: boolean("pwd_require_special").notNull().default(true),
+  pwdHistoryCount: integer("pwd_history_count").notNull().default(5),
+  pwdExpiryDays: integer("pwd_expiry_days").notNull().default(0), // 0 = no expiry
+  mfaRequiredForPrivileged: boolean("mfa_required_for_privileged").notNull().default(true),
 
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),

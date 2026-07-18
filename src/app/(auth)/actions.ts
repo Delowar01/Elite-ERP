@@ -8,6 +8,8 @@ import { usersTable, orgsTable } from "@/db/schema";
 import { hashPassword, verifyPassword, signSessionToken, SESSION_COOKIE } from "@/lib/auth";
 import { checkLoginRateLimit, clearLoginRateLimit } from "@/lib/rate-limit";
 import { seedOrgDefaults } from "@/lib/seed-org";
+import { recordSecurityEvent, recordAudit } from "@/lib/security/audit";
+import { validatePassword, DEFAULT_POLICY } from "@/lib/security/password-policy";
 
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 30; // 30 days
 
@@ -23,17 +25,25 @@ export async function loginAction(_prev: ActionState, formData: FormData): Promi
   // (security audit, Medium #4). A successful login clears the counter.
   const waitMinutes = checkLoginRateLimit(email);
   if (waitMinutes !== null) {
+    await recordSecurityEvent({ email, type: "login.rate_limited", severity: "high", detail: `Locked for ${waitMinutes} min` });
     return { error: `Too many login attempts. Try again in ${waitMinutes} min.` };
   }
 
   const [user] = await db.select().from(usersTable).where(eq(usersTable.email, email)).limit(1);
-  if (!user || !user.isActive) return { error: "Invalid email or password." };
+  if (!user || !user.isActive) {
+    await recordSecurityEvent({ email, orgId: user?.orgId ?? null, type: "login.failed", severity: "medium", detail: user ? "account disabled" : "unknown email" });
+    return { error: "Invalid email or password." };
+  }
 
   const valid = await verifyPassword(password, user.passwordHash);
-  if (!valid) return { error: "Invalid email or password." };
+  if (!valid) {
+    await recordSecurityEvent({ email, orgId: user.orgId, userId: user.id, type: "login.failed", severity: "medium", detail: "bad password" });
+    return { error: "Invalid email or password." };
+  }
   clearLoginRateLimit(email);
 
   await db.update(usersTable).set({ lastLoginAt: new Date() }).where(eq(usersTable.id, user.id));
+  await recordSecurityEvent({ email, orgId: user.orgId, userId: user.id, type: "login.success", severity: "info" });
 
   const token = await signSessionToken({ userId: user.id, orgId: user.orgId });
   const cookieStore = await cookies();
@@ -55,7 +65,9 @@ export async function registerAction(_prev: ActionState, formData: FormData): Pr
   const password = String(formData.get("password") ?? "");
 
   if (!orgName || !name || !email || !password) return { error: "All fields are required." };
-  if (password.length < 8) return { error: "Password must be at least 8 characters." };
+  // First account uses the default enterprise policy; per-org policy applies to later members.
+  const pwErrors = validatePassword(password, DEFAULT_POLICY);
+  if (pwErrors.length > 0) return { error: pwErrors[0] };
 
   const [existing] = await db.select({ id: usersTable.id }).from(usersTable).where(eq(usersTable.email, email)).limit(1);
   if (existing) return { error: "An account with this email already exists." };
@@ -71,6 +83,9 @@ export async function registerAction(_prev: ActionState, formData: FormData): Pr
     await seedOrgDefaults(tx, org.id);
     return { userId: user.id, orgId: org.id };
   });
+
+  await recordAudit({ orgId, userId, userName: name }, { action: "org.registered", entityType: "org", entityId: orgId, newValue: { orgName, ownerEmail: email } });
+  await recordSecurityEvent({ email, orgId, userId, type: "account.created", severity: "info", detail: "organization owner" });
 
   const token = await signSessionToken({ userId, orgId });
   const cookieStore = await cookies();

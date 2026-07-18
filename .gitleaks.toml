@@ -1,0 +1,27 @@
+# Stage 11 Part 6 — secret scanning config for gitleaks.
+title = "Elite ERP secret scan"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Ignore test fixtures, docs, and the gitignored env"
+paths = [
+  '''\.env\.example$''',
+  '''scratchpad/''',
+  '''drizzle/''',
+]
+
+[[rules]]
+id = "auth-secret"
+description = "AUTH_SECRET assignment with a real-looking value"
+regex = '''AUTH_SECRET\s*=\s*[A-Fa-f0-9]{32,}'''
+[rules.allowlist]
+regexes = ['''replace-with''', '''ci-only''']
+
+[[rules]]
+id = "field-encryption-key"
+description = "Base64 32-byte encryption key"
+regex = '''FIELD_ENCRYPTION_KEYS\s*=\s*\d+:[A-Za-z0-9+/]{40,}'''
+[rules.allowlist]
+regexes = ['''replace-with''', '''ci-only''', '''insecure''']

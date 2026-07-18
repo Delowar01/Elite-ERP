@@ -14,6 +14,12 @@ export const usersTable = pgTable("users", {
   role: text("role").notNull().default("staff"), // owner | admin | staff
   isActive: boolean("is_active").notNull().default(true),
   lastLoginAt: timestamp("last_login_at"),
+  // --- Stage 11: MFA (TOTP) ---
+  mfaEnabled: boolean("mfa_enabled").notNull().default(false),
+  mfaSecret: text("mfa_secret"), // field-encrypted TOTP secret (base32)
+  mfaRecoveryCodes: text("mfa_recovery_codes"), // field-encrypted JSON array of bcrypt-hashed recovery codes
+  // --- Stage 11: password lifecycle ---
+  passwordChangedAt: timestamp("password_changed_at").notNull().defaultNow(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
