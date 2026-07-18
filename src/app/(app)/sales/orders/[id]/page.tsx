@@ -10,6 +10,7 @@ import { PartyCardSimple } from "../../_shared/party-card";
 import { TotalsStrip } from "../../_shared/totals-strip";
 import { fmt } from "../../_shared/totals";
 import { OrderDetailActions } from "../order-detail-actions";
+import { PrintButton } from "../../_shared/print-button";
 
 const STATUS_VARIANT: Record<string, "success" | "warning" | "danger" | "info" | "neutral"> = {
   draft: "neutral",
@@ -73,7 +74,10 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
             </Badge>
           </div>
         </div>
-        <OrderDetailActions locale={locale} orderId={order.id} status={order.status} />
+        <div className="flex items-center gap-2.5">
+          <PrintButton locale={locale} href={`/print/sales-order/${order.id}`} />
+          <OrderDetailActions locale={locale} orderId={order.id} status={order.status} />
+        </div>
       </div>
 
       <div className="party-row">

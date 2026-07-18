@@ -9,6 +9,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@
 import { Money } from "../../../sales/_shared/money";
 import { fmt } from "../../../sales/_shared/totals";
 import { DnDetailActions } from "../dn-detail-actions";
+import { PrintButton } from "../../../sales/_shared/print-button";
 
 const STATUS_VARIANT: Record<string, "success" | "warning" | "danger" | "info" | "neutral"> = {
   draft: "neutral",
@@ -64,7 +65,10 @@ export default async function DebitNoteDetailPage({ params }: { params: Promise<
             </Badge>
           </div>
         </div>
-        <DnDetailActions locale={locale} debitNoteId={dn.id} status={dn.status} />
+        <div className="flex items-center gap-2.5">
+          <PrintButton locale={locale} href={`/print/debit-note/${dn.id}`} />
+          <DnDetailActions locale={locale} debitNoteId={dn.id} status={dn.status} />
+        </div>
       </div>
 
       <div className="field-row" style={{ gridTemplateColumns: "1fr 1fr" }}>

@@ -100,7 +100,7 @@ export function InvoicesListClient({ locale, rows }: { locale: Locale; rows: Inv
           {filtered.map((r) => {
             const entries: RowMenuEntry[] = [
               { kind: "item", icon: Eye, label: t(locale, "View"), href: `/sales/invoices/${r.id}` },
-              { kind: "item", icon: Printer, label: t(locale, "Print / Download PDF") },
+              { kind: "item", icon: Printer, label: t(locale, "Print / Download PDF"), href: `/print/invoice/${r.id}` },
               { kind: "item", icon: Wallet, label: t(locale, "Record Payment") },
               {
                 kind: "convert",

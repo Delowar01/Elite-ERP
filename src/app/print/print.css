@@ -1,0 +1,155 @@
+/* Print/PDF document styles — ported verbatim from the approved PDF-templates mockup
+   (scratchpad build_pdf_docs.py, THEME_CLASSIC + BASE_CSS). Do not hand-tune values here;
+   fidelity to the approved design is the contract. Print docs are single-theme (paper). */
+
+.print-root {
+  --pdf-navy: #1B1B4E; --pdf-navy-deep: #100F32;
+  --pdf-orange: #E87722; --pdf-orange-deep: #C75E10; --pdf-orange-light: #F5A25C;
+  --pdf-ink: #171A3D; --pdf-ink-muted: #63678C; --pdf-ink-faint: #9698B8;
+  --pdf-line: #E9EAF2; --pdf-line-strong: #DBDDE9;
+  --pdf-canvas: #F7F7FB; --pdf-tint: #EEF0FC; --pdf-zebra: #F7F7FB;
+  --pdf-accent: #E87722;
+
+  background: #E7E8F0; min-height: 100vh; padding: 24px 16px 64px;
+  font-family: var(--font-body), sans-serif; color: var(--pdf-ink);
+  -webkit-font-smoothing: antialiased; font-size: 16px;
+}
+.print-root .mono { font-family: var(--font-mono), monospace; font-variant-numeric: tabular-nums; }
+
+.print-toolbar {
+  max-width: 794px; margin: 0 auto 18px; display: flex; justify-content: space-between; align-items: center; gap: 12px;
+}
+.print-toolbar .back { font-size: 13px; color: var(--pdf-ink-muted); text-decoration: none; font-weight: 600; }
+.print-toolbar .back:hover { color: var(--pdf-ink); }
+.print-toolbar button {
+  font-family: var(--font-body), sans-serif; font-weight: 700; font-size: 13px; color: #fff;
+  background: var(--pdf-navy); border: none; border-radius: 10px; padding: 11px 22px; cursor: pointer;
+  box-shadow: 0 6px 16px -6px rgba(16,15,50,.4);
+}
+.print-toolbar button:hover { background: var(--pdf-navy-deep); }
+
+.page-wrap { display: flex; justify-content: center; }
+.a4-page {
+  width: 794px; min-height: 1123px; background: #FFFFFF;
+  box-shadow: 0 2px 4px rgba(16,15,50,0.07), 0 30px 66px -24px rgba(16,15,50,0.30);
+  border-radius: 5px; position: relative; overflow: hidden;
+  display: flex; flex-direction: column;
+  padding: 40px 44px 0;
+}
+.a4-body { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+
+/* ===== header row: meta / badge / brand ===== */
+.pdf-header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 26px; gap: 16px; }
+.pdf-meta { flex-shrink: 0; }
+.pdf-meta .row { display: flex; font-size: 12.5px; margin-bottom: 5px; }
+.pdf-meta .row:last-child { margin-bottom: 0; }
+.pdf-meta .k { min-width: 76px; color: var(--pdf-ink); font-weight: 600; }
+.pdf-meta .sep { margin-right: 8px; color: var(--pdf-ink-muted); }
+.pdf-meta .v { font-weight: 600; font-family: var(--font-mono), monospace; color: var(--pdf-ink); }
+.pdf-badge {
+  background: var(--pdf-orange); color: #fff; font-family: var(--font-display), sans-serif; font-weight: 800;
+  font-size: 14.5px; letter-spacing: 0.05em; padding: 9px 26px; border-radius: 4px; text-transform: uppercase;
+  flex-shrink: 0; box-shadow: 0 4px 10px -4px rgba(232,119,34,0.45);
+}
+.pdf-brand { display: flex; align-items: center; gap: 9px; flex-shrink: 0; text-align: left; }
+.pdf-brand img { height: 34px; max-width: 120px; object-fit: contain; }
+.pdf-brand .word1 { font-family: var(--font-display), sans-serif; font-weight: 800; font-size: 17px; color: var(--pdf-navy); line-height: 1; }
+.pdf-brand .word2 { font-weight: 600; font-size: 8px; letter-spacing: 0.16em; color: var(--pdf-orange); margin-top: 3px; text-transform: uppercase; }
+
+/* ===== party cards ===== */
+.pdf-parties { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 22px; }
+.pdf-party { padding: 16px 18px; border-radius: 8px; }
+.pdf-party.tint { background: var(--pdf-tint); }
+.pdf-party .lbl { font-family: var(--font-display), sans-serif; font-weight: 700; font-size: 13px; color: var(--pdf-ink); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.03em; }
+.pdf-party .name { font-family: var(--font-display), sans-serif; font-weight: 700; font-size: 14.5px; margin-bottom: 6px; }
+.pdf-party.tint .name { color: var(--pdf-navy); }
+.pdf-party .line { font-size: 11.5px; color: var(--pdf-ink-muted); line-height: 1.6; }
+.pdf-party .line b { color: var(--pdf-ink); font-weight: 600; }
+
+/* ===== items table ===== */
+table.pdf-items { width: 100%; border-collapse: collapse; margin-bottom: 0; }
+table.pdf-items thead th {
+  background: var(--pdf-orange); color: #fff;
+  font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
+  padding: 10px 12px; text-align: left; white-space: nowrap;
+}
+table.pdf-items thead th.num { text-align: right; }
+table.pdf-items thead th:first-child { border-top-left-radius: 6px; }
+table.pdf-items thead th:last-child { border-top-right-radius: 6px; }
+table.pdf-items tbody td { padding: 11px 12px; font-size: 11.5px; vertical-align: top; }
+table.pdf-items tbody tr:nth-child(odd) { background: var(--pdf-zebra); }
+table.pdf-items tbody td.num { text-align: right; font-family: var(--font-mono), monospace; }
+table.pdf-items .item-name { font-weight: 600; color: var(--pdf-ink); }
+table.pdf-items .item-desc { font-size: 10px; color: var(--pdf-ink-faint); margin-top: 2px; line-height: 1.45; max-width: 220px; }
+.pdf-items-wrap { border-bottom: 2.5px solid var(--pdf-accent); margin-bottom: 18px; }
+
+.pdf-bottom { display: grid; grid-template-columns: 1.2fr 1fr; gap: 26px; align-items: start; }
+.pdf-bottom.single { grid-template-columns: 1fr; }
+.pdf-words { font-size: 12px; margin-bottom: 16px; }
+.pdf-words b { color: var(--pdf-ink); }
+.pdf-words .val { color: var(--pdf-ink-muted); }
+
+/* ===== totals box ===== */
+.totals-box { border: 1px solid var(--pdf-line-strong); border-radius: 8px; overflow: hidden; }
+.totals-box .t-row { display: flex; justify-content: space-between; padding: 9px 16px; font-size: 12px; color: var(--pdf-ink-muted); }
+.totals-box .t-row:nth-child(odd) { background: var(--pdf-zebra); }
+.totals-box .t-row .v { font-family: var(--font-mono), monospace; font-weight: 600; color: var(--pdf-ink); }
+.totals-box .t-row.grand { border-top: 2px solid var(--pdf-navy); font-weight: 700; }
+.totals-box .t-row.grand .k { color: var(--pdf-ink); font-weight: 700; }
+.totals-box .t-row.grand .v { color: var(--pdf-navy); font-size: 14px; font-weight: 800; }
+
+/* ===== bank details ===== */
+.bank-block { margin-top: 2px; }
+.bank-block .lbl { font-family: var(--font-display), sans-serif; font-size: 12px; font-weight: 700; color: var(--pdf-ink); margin-bottom: 9px; text-transform: uppercase; letter-spacing: 0.03em; }
+.bank-block .row { display: flex; font-size: 11.5px; padding: 3px 0; }
+.bank-block .row .k { color: var(--pdf-ink); font-weight: 600; min-width: 118px; }
+.bank-block .row .sep { color: var(--pdf-ink-muted); margin-right: 8px; }
+.bank-block .row .v { font-weight: 600; font-family: var(--font-mono), monospace; color: var(--pdf-ink); }
+
+/* ===== notes / terms ===== */
+.notes-block { margin-top: 22px; font-size: 11.5px; color: var(--pdf-ink-muted); line-height: 1.6; }
+.notes-block b { color: var(--pdf-ink); }
+
+/* ===== approval block ===== */
+.approval-block { margin-top: 22px; padding-top: 16px; border-top: 1px dashed var(--pdf-line-strong); }
+.approval-block .title { font-family: var(--font-display), sans-serif; font-weight: 700; font-size: 12px; letter-spacing: 0.04em; margin-bottom: 12px; color: var(--pdf-ink); }
+.approval-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 32px; font-size: 11.5px; }
+.approval-grid .f { border-bottom: 1px solid var(--pdf-line-strong); padding-bottom: 5px; color: var(--pdf-ink-muted); }
+
+/* ===== seal + signature ===== */
+.seal-sig-row { display: flex; justify-content: flex-end; align-items: flex-end; gap: 40px; margin-top: 22px; }
+.seal-mark { width: 100px; height: 100px; flex-shrink: 0; position: relative; filter: drop-shadow(0 3px 8px rgba(27,27,78,0.14)); }
+.seal-mark img, .sig-img { width: 100%; height: 100%; object-fit: contain; }
+.seal-ring-outer { width: 100%; height: 100%; border-radius: 50%; border: 2px solid var(--pdf-navy); display: flex; align-items: center; justify-content: center; padding: 4px; }
+.seal-ring-inner { width: 100%; height: 100%; border-radius: 50%; border: 1px dashed var(--pdf-orange); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 8px; }
+.seal-mark .t1 { font-family: var(--font-display), sans-serif; font-weight: 800; font-size: 8px; color: var(--pdf-navy); letter-spacing: 0.02em; line-height: 1.3; }
+.seal-mark .star { color: var(--pdf-orange); font-size: 8px; margin: 3px 0; letter-spacing: 2px; }
+.seal-mark .t2 { font-family: var(--font-mono), monospace; font-size: 6.5px; letter-spacing: 0.08em; color: var(--pdf-orange-deep); font-weight: 500; }
+.sig-slot { text-align: center; }
+.sig-slot .box { width: 148px; height: 50px; border-bottom: 1.5px solid var(--pdf-line-strong); display: flex; align-items: flex-end; justify-content: center; }
+.sig-slot .box img { max-width: 140px; max-height: 46px; object-fit: contain; }
+.sig-slot .cap { font-size: 9.5px; color: var(--pdf-ink-faint); margin-top: 7px; }
+
+/* ===== QR panel ===== */
+.qr-panel { margin-top: 16px; display: flex; justify-content: flex-end; }
+.qr-panel .qr-box { width: 96px; height: 96px; background: #fff; border: 1px solid var(--pdf-line); border-radius: 6px; padding: 6px; }
+.qr-panel .qr-box img { width: 100%; height: 100%; }
+
+/* ===== footer ===== */
+.pdf-footer { margin-top: auto; padding: 16px 0 22px; text-align: center; font-size: 11.5px; color: var(--pdf-accent); border-top: 1px solid var(--pdf-line); font-weight: 500; }
+.pdf-footer b { font-weight: 700; }
+.pdf-footer .sys-note { display: block; margin-top: 4px; font-size: 9.5px; color: var(--pdf-ink-faint); font-style: italic; font-weight: 400; }
+
+.qty-table td.num, .qty-table th.num { text-align: right; }
+
+.client-comments { margin-top: 16px; }
+.client-comments .lbl { font-family: var(--font-display), sans-serif; font-weight: 700; font-size: 12px; margin-bottom: 8px; }
+.client-comments .box { height: 70px; background: var(--pdf-canvas); border-radius: 8px; border: 1px solid var(--pdf-line); }
+
+/* ===== real print output ===== */
+@media print {
+  .print-root { background: #fff; padding: 0; }
+  .print-toolbar { display: none; }
+  .a4-page { width: auto; min-height: 0; box-shadow: none; border-radius: 0; padding: 0; }
+  @page { size: A4; margin: 14mm; }
+}

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { Plus, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
@@ -76,6 +76,7 @@ export function PaymentsListClient({
               <TableHead>{t(locale, "Bank Account")}</TableHead>
               <TableHead>{t(locale, "Method")}</TableHead>
               <TableHead className="text-right">{t(locale, "Amount")}</TableHead>
+              <TableHead className="w-10" />
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -104,6 +105,17 @@ export function PaymentsListClient({
                 <TableCell className="text-[12.5px] text-ink-muted">{p.method ? t(locale, METHOD_LABELS[p.method] ?? p.method) : "—"}</TableCell>
                 <TableCell className="text-right font-mono">
                   <Money amount={p.amount} />
+                </TableCell>
+                <TableCell>
+                  <a
+                    href={`/print/payment/${p.id}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-ink-faint hover:text-brand-orange inline-flex"
+                    title={t(locale, "Payment Receipt")}
+                  >
+                    <Printer className="size-4" />
+                  </a>
                 </TableCell>
               </TableRow>
             ))}

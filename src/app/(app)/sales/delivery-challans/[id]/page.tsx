@@ -7,6 +7,7 @@ import { t } from "@/lib/i18n/dict";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { DcDetailActions } from "../dc-detail-actions";
+import { PrintButton } from "../../_shared/print-button";
 
 const STATUS_VARIANT: Record<string, "success" | "warning" | "danger" | "info" | "neutral"> = {
   draft: "neutral",
@@ -63,7 +64,10 @@ export default async function DcDetailPage({ params }: { params: Promise<{ id: s
             </Badge>
           </div>
         </div>
-        <DcDetailActions locale={locale} dcId={dc.id} status={dc.status} />
+        <div className="flex items-center gap-2.5">
+          <PrintButton locale={locale} href={`/print/delivery-challan/${dc.id}`} />
+          <DcDetailActions locale={locale} dcId={dc.id} status={dc.status} />
+        </div>
       </div>
 
       <div className="field-row">

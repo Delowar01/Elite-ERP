@@ -100,7 +100,7 @@ export function QuotationsListClient({ locale, rows }: { locale: Locale; rows: Q
           {filtered.map((r) => {
             const entries: RowMenuEntry[] = [
               { kind: "item", icon: Eye, label: t(locale, "View"), href: `/sales/quotations/${r.id}` },
-              { kind: "item", icon: Printer, label: t(locale, "Print / Download PDF") },
+              { kind: "item", icon: Printer, label: t(locale, "Print / Download PDF"), href: `/print/quotation/${r.id}` },
               {
                 kind: "convert",
                 label: t(locale, "Convert to…"),

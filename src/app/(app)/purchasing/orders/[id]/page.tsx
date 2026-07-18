@@ -9,6 +9,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@
 import { TotalsStrip } from "../../../sales/_shared/totals-strip";
 import { fmt } from "../../../sales/_shared/totals";
 import { PoDetailActions } from "../po-detail-actions";
+import { PrintButton } from "../../../sales/_shared/print-button";
 
 const STATUS_VARIANT: Record<string, "success" | "warning" | "danger" | "info" | "neutral"> = {
   draft: "neutral",
@@ -67,15 +68,18 @@ export default async function PurchaseOrderDetailPage({ params }: { params: Prom
             </Badge>
           </div>
         </div>
-        <PoDetailActions
-          locale={locale}
-          poId={po.id}
-          poNumber={po.poNumber}
-          vendorName={po.vendorName}
-          balance={balanceDue}
-          status={po.status}
-          bankAccounts={bankAccounts}
-        />
+        <div className="flex items-center gap-2.5">
+          <PrintButton locale={locale} href={`/print/purchase-order/${po.id}`} />
+          <PoDetailActions
+            locale={locale}
+            poId={po.id}
+            poNumber={po.poNumber}
+            vendorName={po.vendorName}
+            balance={balanceDue}
+            status={po.status}
+            bankAccounts={bankAccounts}
+          />
+        </div>
       </div>
 
       <Table>

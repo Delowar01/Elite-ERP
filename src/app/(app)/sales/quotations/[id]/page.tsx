@@ -10,6 +10,7 @@ import { PartyCardSimple } from "../../_shared/party-card";
 import { TotalsStrip } from "../../_shared/totals-strip";
 import { fmt } from "../../_shared/totals";
 import { QuotationDetailActions } from "../quotation-detail-actions";
+import { PrintButton } from "../../_shared/print-button";
 
 const STATUS_VARIANT: Record<string, "success" | "warning" | "danger" | "info" | "neutral"> = {
   draft: "neutral",
@@ -67,7 +68,10 @@ export default async function QuotationDetailPage({ params }: { params: Promise<
             </Badge>
           </div>
         </div>
-        <QuotationDetailActions locale={locale} quotationId={quotation.id} status={quotation.status} />
+        <div className="flex items-center gap-2.5">
+          <PrintButton locale={locale} href={`/print/quotation/${quotation.id}`} />
+          <QuotationDetailActions locale={locale} quotationId={quotation.id} status={quotation.status} />
+        </div>
       </div>
 
       <div className="party-row">

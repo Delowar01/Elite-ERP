@@ -92,7 +92,7 @@ export function PoListClient({ locale, rows }: { locale: Locale; rows: PoRow[] }
             {filtered.map((r) => {
               const entries: RowMenuEntry[] = [
                 { kind: "item", icon: Eye, label: t(locale, "View"), href: `/purchasing/orders/${r.id}` },
-                { kind: "item", icon: Printer, label: t(locale, "Print / Download PDF") },
+                { kind: "item", icon: Printer, label: t(locale, "Print / Download PDF"), href: `/print/purchase-order/${r.id}` },
                 { kind: "separator" },
                 { kind: "item", icon: Trash2, label: t(locale, "Delete"), danger: true },
               ];

@@ -83,7 +83,7 @@ export function DcListClient({ locale, rows }: { locale: Locale; rows: DcRow[] }
           {filtered.map((r) => {
             const entries: RowMenuEntry[] = [
               { kind: "item", icon: Eye, label: t(locale, "View"), href: `/sales/delivery-challans/${r.id}` },
-              { kind: "item", icon: Printer, label: t(locale, "Print") },
+              { kind: "item", icon: Printer, label: t(locale, "Print"), href: `/print/delivery-challan/${r.id}` },
               { kind: "item", icon: TruckIcon, label: t(locale, "Mark Delivered") },
               { kind: "separator" },
               { kind: "item", icon: Trash2, label: t(locale, "Delete"), danger: true },

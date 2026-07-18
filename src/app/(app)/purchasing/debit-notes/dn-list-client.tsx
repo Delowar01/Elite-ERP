@@ -90,7 +90,7 @@ export function DnListClient({ locale, rows }: { locale: Locale; rows: DnRow[] }
             {filtered.map((r) => {
               const entries: RowMenuEntry[] = [
                 { kind: "item", icon: Eye, label: t(locale, "View"), href: `/purchasing/debit-notes/${r.id}` },
-                { kind: "item", icon: Printer, label: t(locale, "Print") },
+                { kind: "item", icon: Printer, label: t(locale, "Print"), href: `/print/debit-note/${r.id}` },
                 { kind: "separator" },
                 { kind: "item", icon: Trash2, label: t(locale, "Delete"), danger: true },
               ];

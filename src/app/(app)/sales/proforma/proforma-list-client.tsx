@@ -94,7 +94,7 @@ export function ProformaListClient({ locale, rows }: { locale: Locale; rows: Pro
           {filtered.map((r) => {
             const entries: RowMenuEntry[] = [
               { kind: "item", icon: Eye, label: t(locale, "View"), href: `/sales/proforma/${r.id}` },
-              { kind: "item", icon: Printer, label: t(locale, "Print / Download PDF") },
+              { kind: "item", icon: Printer, label: t(locale, "Print / Download PDF"), href: `/print/proforma/${r.id}` },
               { kind: "item", icon: Wallet, label: t(locale, "Record Payment") },
               {
                 kind: "convert",

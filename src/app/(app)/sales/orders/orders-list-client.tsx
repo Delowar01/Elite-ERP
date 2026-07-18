@@ -97,7 +97,7 @@ export function OrdersListClient({ locale, rows }: { locale: Locale; rows: Order
           {filtered.map((r) => {
             const entries: RowMenuEntry[] = [
               { kind: "item", icon: Eye, label: t(locale, "View"), href: `/sales/orders/${r.id}` },
-              { kind: "item", icon: Printer, label: t(locale, "Print / Download PDF") },
+              { kind: "item", icon: Printer, label: t(locale, "Print / Download PDF"), href: `/print/sales-order/${r.id}` },
               {
                 kind: "convert",
                 label: t(locale, "Convert to…"),

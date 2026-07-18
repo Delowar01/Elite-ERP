@@ -740,6 +740,11 @@ const DICT: Record<string, string> = {
   "This run was processed on": "تمت معالجة هذه الدورة في",
   // dashboard HR snapshot
   "On Leave": "في إجازة",
+
+  // ---- Print / PDF export (Section 8) ----
+  Back: "رجوع",
+  "Print / Save as PDF": "طباعة / حفظ PDF",
+  "Payment Receipt": "إيصال الدفع",
 };
 
 export function t(locale: Locale, en: string): string {

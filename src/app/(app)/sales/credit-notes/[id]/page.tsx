@@ -9,6 +9,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@
 import { Money } from "../../_shared/money";
 import { fmt } from "../../_shared/totals";
 import { CnDetailActions } from "../cn-detail-actions";
+import { PrintButton } from "../../_shared/print-button";
 
 const STATUS_VARIANT: Record<string, "success" | "warning" | "danger" | "info" | "neutral"> = {
   draft: "neutral",
@@ -64,7 +65,10 @@ export default async function CreditNoteDetailPage({ params }: { params: Promise
             </Badge>
           </div>
         </div>
-        <CnDetailActions locale={locale} creditNoteId={cn.id} status={cn.status} />
+        <div className="flex items-center gap-2.5">
+          <PrintButton locale={locale} href={`/print/credit-note/${cn.id}`} />
+          <CnDetailActions locale={locale} creditNoteId={cn.id} status={cn.status} />
+        </div>
       </div>
 
       <div className="field-row" style={{ gridTemplateColumns: "1fr 1fr" }}>

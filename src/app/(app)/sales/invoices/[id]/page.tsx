@@ -12,6 +12,7 @@ import { EInvoicePreviewPanel } from "../../_shared/einvoice-preview-panel";
 import { DocRelationships } from "../../_shared/doc-relationships";
 import { fmt } from "../../_shared/totals";
 import { InvoiceDetailActions } from "../invoice-detail-actions";
+import { PrintButton } from "../../_shared/print-button";
 
 const STATUS_VARIANT: Record<string, "success" | "warning" | "danger" | "info" | "neutral"> = {
   draft: "neutral",
@@ -95,15 +96,18 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
             </Badge>
           </div>
         </div>
-        <InvoiceDetailActions
-          locale={locale}
-          invoiceId={invoice.id}
-          invoiceNumber={invoice.invoiceNumber}
-          customerName={invoice.customerName}
-          balance={balanceDue}
-          status={invoice.status}
-          bankAccounts={bankAccounts}
-        />
+        <div className="flex items-center gap-2.5">
+          <PrintButton locale={locale} href={`/print/invoice/${invoice.id}`} />
+          <InvoiceDetailActions
+            locale={locale}
+            invoiceId={invoice.id}
+            invoiceNumber={invoice.invoiceNumber}
+            customerName={invoice.customerName}
+            balance={balanceDue}
+            status={invoice.status}
+            bankAccounts={bankAccounts}
+          />
+        </div>
       </div>
 
       <div className="inv-grid">
