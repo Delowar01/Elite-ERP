@@ -84,36 +84,12 @@ ul, ol { list-style: none; }
   box-shadow: 0 0 120px rgba(0, 0, 0, 0.45);
 }
 
-/* ── Premium edge framing (shared across every slide — Doc 10 §"edges") ──── */
-#edge-top-line {
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 3px;
-  z-index: 6;
-  pointer-events: none;
-  background: linear-gradient(90deg,
-    rgba(21, 19, 72, 0) 0%, var(--navy) 18%, var(--orange) 50%, var(--navy) 82%, rgba(21, 19, 72, 0) 100%);
-  opacity: 0.9;
-}
-#edge-vignette {
-  position: absolute;
-  inset: 0;
-  z-index: 5;
-  pointer-events: none;
-  box-shadow: inset 0 0 10px rgba(21, 19, 72, 0.02), inset 0 0 190px 50px rgba(21, 19, 72, 0.055);
-}
-#edge-corner-mark {
-  position: absolute;
-  top: -18px;
-  inset-inline-end: -18px;
-  width: 150px;
-  height: 150px;
-  color: var(--navy);
-  opacity: 0.1;
-  z-index: 4;
-  pointer-events: none;
-}
-#edge-corner-mark svg { width: 100%; height: 100%; }
+/* Edge/corner framing is authored per-slide in presentation.css — Round 2
+   client feedback was explicit that a single shared symmetric vignette/line/
+   corner-mark applied identically to all four sides of every slide reads as
+   an empty frame, not a design choice. Each slide now gets its own
+   asymmetric background "mood" (see presentation.css §Background moods)
+   instead of a global overlay. */
 
 /* Giant faint slide-number watermark — one per slide, first child so it
    always paints behind that slide's real content. Ties the deck together
@@ -153,9 +129,9 @@ ul, ol { list-style: none; }
 
 /* ── Typography scale ─────────────────────────────────────────────────────── */
 .eyebrow {
-  font-size: 17.5px;
+  font-size: 18px;
   font-weight: 700;
-  letter-spacing: 0.2em;
+  letter-spacing: 0.19em;
   text-transform: uppercase;
   color: var(--orange);
 }
@@ -252,7 +228,7 @@ ul, ol { list-style: none; }
   background: rgba(255, 255, 255, 0.86);
   backdrop-filter: blur(6px);
   color: var(--navy);
-  font-size: 14.5px;
+  font-size: 18px;
   font-weight: 600;
   transition: border-color 200ms var(--ease), background 200ms var(--ease),
     box-shadow 200ms var(--ease), transform 200ms var(--ease);
@@ -266,9 +242,9 @@ ul, ol { list-style: none; }
 .chrome-btn svg { width: 20px; height: 20px; }
 
 #slide-counter {
-  font-size: 15px;
+  font-size: 18px;
   font-weight: 600;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.08em;
   color: var(--graphite);
 }
 #slide-counter b { color: var(--navy); font-weight: 750; }

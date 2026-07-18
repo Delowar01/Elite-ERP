@@ -26,17 +26,21 @@ const ok = (cond, label) => {
   if (!cond) failures++;
 };
 
-// Selectors sanctioned to keep a plain 4-side border: the single primary
-// container per slide (hero screenshot, main diagram panel) and pure nav
-// chrome (not slide content).
-const BORDER_ALLOWLIST = ['.shot-card', '.s02-panel', '.chrome-btn'];
+// Selectors sanctioned to keep a plain border: the single primary container
+// per slide (hero screenshot, main diagram panel), pure nav chrome (not
+// slide content), and the decorative corner-orbit rings (a deliberately
+// asymmetric, off-canvas background device — not a card/chip outline).
+const BORDER_ALLOWLIST = ['.shot-card', '.s02-panel', '.chrome-btn', '.corner-orbit'];
 
-// Selectors sanctioned to render under 18px: true section eyebrows/micro
-// labels that carry uppercase + letter-spacing + weight to stay legible,
-// nav chrome, and the decorative (non-informational) ghost-num watermark.
+// Selectors sanctioned to render under 18px: ONLY micro-labels genuinely
+// constrained by a small chip/pill's footprint, styled as true eyebrows
+// (uppercase + letter-spacing + weight), and the decorative (non-
+// informational) ghost-num watermark. Round 2 client feedback explicitly
+// rejected exempting nav chrome / slide-counter / section eyebrows that
+// have room to breathe — those must hit the real 18px floor like
+// everything else, so they are NOT in this list.
 const SIZE_ALLOWLIST = [
-  '.eyebrow', '.panel-label', '.core-sub', '.stat-chip .sc-label',
-  '.mini-tag span', '.chrome-btn', '#slide-counter', '.ghost-num',
+  '.core-sub', '.stat-chip .sc-label', '.mini-tag span', '.ghost-num',
 ];
 
 function readAllCss() {

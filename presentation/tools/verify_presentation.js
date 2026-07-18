@@ -78,10 +78,23 @@ const ok = (cond, label) => {
   }), 'brand mark stays visible when nav chrome is hidden (H)');
   await page.keyboard.press('h');
 
-  console.log('Edge framing elements present:');
-  ok(await page.evaluate(() => !!document.getElementById('edge-top-line')), 'top accent line present');
-  ok(await page.evaluate(() => !!document.getElementById('edge-vignette')), 'edge vignette present');
-  ok(await page.evaluate(() => !!document.getElementById('edge-corner-mark')), 'corner mark present');
+  console.log('Per-slide asymmetric background system (Round 2):');
+  ok(await page.evaluate(() => !document.getElementById('edge-top-line')
+      && !document.getElementById('edge-vignette') && !document.getElementById('edge-corner-mark')),
+    'uniform shared edge-frame elements removed (no symmetric 4-side vignette)');
+  ok(await page.evaluate((n) => document.querySelectorAll('.corner-orbit').length === n, SLIDES),
+    'every slide has its own corner-orbit device');
+  const orbitCorners = await page.evaluate(() => {
+    const rects = Array.from(document.querySelectorAll('.corner-orbit')).map((el) => {
+      const r = el.getBoundingClientRect();
+      const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+      const horiz = cx < window.innerWidth / 2 ? 'start' : 'end';
+      const vert = cy < window.innerHeight / 2 ? 'top' : 'bottom';
+      return vert + '-' + horiz;
+    });
+    return { corners: rects, unique: new Set(rects).size };
+  });
+  ok(orbitCorners.unique >= 3, `orbit devices occupy varied corners, not one repeated position (${orbitCorners.corners.join(', ')})`);
   ok(await page.evaluate((n) => document.querySelectorAll('.ghost-num').length === n, SLIDES),
     'every slide has its ghost slide-number watermark');
 

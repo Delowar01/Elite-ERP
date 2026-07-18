@@ -178,36 +178,12 @@ ul, ol { list-style: none; }
   box-shadow: 0 0 120px rgba(0, 0, 0, 0.45);
 }
 
-/* ── Premium edge framing (shared across every slide — Doc 10 §"edges") ──── */
-#edge-top-line {
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 3px;
-  z-index: 6;
-  pointer-events: none;
-  background: linear-gradient(90deg,
-    rgba(21, 19, 72, 0) 0%, var(--navy) 18%, var(--orange) 50%, var(--navy) 82%, rgba(21, 19, 72, 0) 100%);
-  opacity: 0.9;
-}
-#edge-vignette {
-  position: absolute;
-  inset: 0;
-  z-index: 5;
-  pointer-events: none;
-  box-shadow: inset 0 0 10px rgba(21, 19, 72, 0.02), inset 0 0 190px 50px rgba(21, 19, 72, 0.055);
-}
-#edge-corner-mark {
-  position: absolute;
-  top: -18px;
-  inset-inline-end: -18px;
-  width: 150px;
-  height: 150px;
-  color: var(--navy);
-  opacity: 0.1;
-  z-index: 4;
-  pointer-events: none;
-}
-#edge-corner-mark svg { width: 100%; height: 100%; }
+/* Edge/corner framing is authored per-slide in presentation.css — Round 2
+   client feedback was explicit that a single shared symmetric vignette/line/
+   corner-mark applied identically to all four sides of every slide reads as
+   an empty frame, not a design choice. Each slide now gets its own
+   asymmetric background "mood" (see presentation.css §Background moods)
+   instead of a global overlay. */
 
 /* Giant faint slide-number watermark — one per slide, first child so it
    always paints behind that slide's real content. Ties the deck together
@@ -247,9 +223,9 @@ ul, ol { list-style: none; }
 
 /* ── Typography scale ─────────────────────────────────────────────────────── */
 .eyebrow {
-  font-size: 17.5px;
+  font-size: 18px;
   font-weight: 700;
-  letter-spacing: 0.2em;
+  letter-spacing: 0.19em;
   text-transform: uppercase;
   color: var(--orange);
 }
@@ -346,7 +322,7 @@ ul, ol { list-style: none; }
   background: rgba(255, 255, 255, 0.86);
   backdrop-filter: blur(6px);
   color: var(--navy);
-  font-size: 14.5px;
+  font-size: 18px;
   font-weight: 600;
   transition: border-color 200ms var(--ease), background 200ms var(--ease),
     box-shadow 200ms var(--ease), transform 200ms var(--ease);
@@ -360,9 +336,9 @@ ul, ol { list-style: none; }
 .chrome-btn svg { width: 20px; height: 20px; }
 
 #slide-counter {
-  font-size: 15px;
+  font-size: 18px;
   font-weight: 600;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.08em;
   color: var(--graphite);
 }
 #slide-counter b { color: var(--navy); font-weight: 750; }
@@ -461,10 +437,10 @@ ul, ol { list-style: none; }
 .panel-label {
   display: flex;
   align-items: center;
-  gap: 10px;
-  font-size: 15.5px;
+  gap: 11px;
+  font-size: 18px;
   font-weight: 750;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.11em;
   text-transform: uppercase;
   color: var(--navy);
   margin-bottom: 30px;
@@ -520,12 +496,12 @@ ul, ol { list-style: none; }
 .core-node .core-mark { width: 42px; }
 .core-node .core-title { font-size: 24px; font-weight: 750; letter-spacing: 0.006em; }
 .core-node .core-sub {
-  font-size: 13.5px;
+  font-size: 15px;
   font-weight: 700;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
-  opacity: 0.68;
-  margin-top: 5px;
+  opacity: 0.72;
+  margin-top: 6px;
 }
 
 /* ── Challenge card (slide 03) — left accent edge, no boxed border ───────── */
@@ -602,12 +578,12 @@ ul, ol { list-style: none; }
   box-shadow: var(--shadow-float);
 }
 .stat-chip .sc-label {
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 750;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--graphite);
-  margin-bottom: 5px;
+  margin-bottom: 6px;
 }
 .stat-chip .sc-value { font-size: 24px; font-weight: 800; color: var(--navy); letter-spacing: -0.012em; }
 .stat-chip.chip-navy { background: linear-gradient(135deg, #201D66 0%, var(--navy) 62%); }
@@ -671,11 +647,11 @@ ul, ol { list-style: none; }
   background: var(--navy-06);
   box-shadow: inset 0 0 0 1px rgba(21, 19, 72, 0.06);
 }
-.mini-tag svg { width: 18px; height: 18px; color: var(--orange); flex: 0 0 auto; }
+.mini-tag svg { width: 19px; height: 19px; color: var(--orange); flex: 0 0 auto; }
 .mini-tag span {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 750;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--navy);
   white-space: nowrap;
@@ -689,6 +665,26 @@ ul, ol { list-style: none; }
   background: linear-gradient(180deg, var(--orange) 0%, var(--navy-16) 70%, transparent 100%);
 }
 
+/* ── Signature corner orbit — the deck's one recurring edge device ───────────
+   Two concentric thin rings, sized large and bled off-canvas at a corner so
+   only an arc reads within the slide. Deliberately asymmetric by
+   construction (always one corner, never mirrored/repeated at the same
+   weight on all sides): each slide places it at a different corner, size,
+   and brand color via the per-slide selectors in presentation.css. This
+   replaces the old uniform symmetric vignette/corner-mark. ───────────────── */
+.corner-orbit {
+  position: absolute;
+  pointer-events: none;
+}
+.corner-orbit .ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 1.5px solid currentColor;
+}
+.corner-orbit .ring-2 { inset: 13%; border-width: 1px; }
+.corner-orbit .ring-3 { inset: 27%; border-width: 1px; border-style: dashed; }
+
 </style>
 <style>
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -696,8 +692,31 @@ ul, ol { list-style: none; }
    Per-slide layouts on the fixed 1920×1080 canvas.
    ═══════════════════════════════════════════════════════════════════════════ */
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   Background moods (Round 2 revision)
+   Every slide's edge/corner treatment is authored here, per slide, on
+   purpose asymmetric — never the same weight on all four sides, never
+   mirrored. Three moods share one visual language (thin brand-color
+   strokes, low-opacity dot-grids, off-corner glows) so the deck still
+   reads as one system:
+     • Hero      (01)     — richest: glows + masked grid + orbit device
+     • Content   (02, 04) — off-center gradient wash + one big corner
+                             motif (orbit or extended grid) + two off-
+                             corner glows
+     • Narrative (03)     — heavier multi-stop gradient wash + a second,
+                             asymmetric counter-glow + a corner orbit
+   ═══════════════════════════════════════════════════════════════════════════ */
+
 /* ═══ Slide 01 — Cover ═══════════════════════════════════════════════════── */
 #slide-01 { background: linear-gradient(178deg, #FFFFFF 28%, var(--cream) 100%); }
+
+#slide-01 .s01-orbit {
+  width: 640px; height: 640px;
+  inset-inline-end: -220px;
+  bottom: -260px;
+  color: var(--navy);
+  opacity: 0.07;
+}
 
 #slide-01 .s01-glow-a,
 #slide-01 .s01-glow-b {
@@ -808,8 +827,8 @@ ul, ol { list-style: none; }
 #slide-01 .s01-chip-revenue .icon-tile { width: 48px; height: 48px; border-radius: 13px; }
 #slide-01 .s01-chip-revenue .icon-tile svg { width: 22px; height: 22px; }
 
-/* ═══ Slide 02 — Executive Summary ═══════════════════════════════════════── */
-#slide-02 { background: #fff; }
+/* ═══ Slide 02 — Executive Summary (Content mood) ════════════════════════── */
+#slide-02 { background: linear-gradient(225deg, #FFFFFF 0%, #FFFFFF 56%, var(--cream) 100%); }
 #slide-02 .s02-bg-glow-a {
   position: absolute;
   width: 900px; height: 900px;
@@ -820,11 +839,27 @@ ul, ol { list-style: none; }
 }
 #slide-02 .s02-bg-glow-b {
   position: absolute;
-  width: 760px; height: 760px;
-  bottom: -360px; inset-inline-start: -240px;
+  width: 820px; height: 820px;
+  bottom: -380px; inset-inline-start: -260px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(21, 19, 72, 0.055) 0%, rgba(21, 19, 72, 0) 60%);
+  background: radial-gradient(circle, rgba(21, 19, 72, 0.07) 0%, rgba(21, 19, 72, 0) 60%);
   pointer-events: none;
+}
+#slide-02 .s02-grid-wide {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(21, 19, 72, 0.045) 1.1px, transparent 1.1px);
+  background-size: 26px 26px;
+  -webkit-mask-image: radial-gradient(600px 600px at 4% 98%, #000 0%, transparent 72%);
+          mask-image: radial-gradient(600px 600px at 4% 98%, #000 0%, transparent 72%);
+  pointer-events: none;
+}
+#slide-02 .s02-orbit {
+  width: 580px; height: 580px;
+  top: -210px;
+  inset-inline-end: -170px;
+  color: var(--orange);
+  opacity: 0.08;
 }
 #slide-02 .s02-panel {
   position: absolute;
@@ -889,15 +924,30 @@ ul, ol { list-style: none; }
 }
 #slide-02 .outcome-strip { position: absolute; inset-inline: 96px; bottom: 68px; }
 
-/* ═══ Slide 03 — Business Challenges ═════════════════════════════════════── */
-#slide-03 { background: linear-gradient(120deg, #FFFFFF 44%, #FAF7F1 100%); }
+/* ═══ Slide 03 — Business Challenges (Narrative mood — heaviest wash) ────── */
+#slide-03 { background: linear-gradient(128deg, #FFFFFF 0%, #FFFFFF 32%, #FBF2E5 74%, #F6E6D0 100%); }
 #slide-03 .s03-bg-glow {
   position: absolute;
   width: 1000px; height: 1000px;
   top: -380px; inset-inline-end: -320px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(229, 108, 37, 0.08) 0%, rgba(229, 108, 37, 0) 62%);
+  background: radial-gradient(circle, rgba(229, 108, 37, 0.1) 0%, rgba(229, 108, 37, 0) 62%);
   pointer-events: none;
+}
+#slide-03 .s03-bg-glow-b {
+  position: absolute;
+  width: 860px; height: 860px;
+  bottom: -360px; inset-inline-start: -280px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(21, 19, 72, 0.075) 0%, rgba(21, 19, 72, 0) 60%);
+  pointer-events: none;
+}
+#slide-03 .s03-orbit {
+  width: 480px; height: 480px;
+  top: -260px;
+  inset-inline-start: -220px;
+  color: var(--navy);
+  opacity: 0.07;
 }
 #slide-03 .s03-left { position: absolute; top: 210px; inset-inline-start: 96px; width: 680px; }
 #slide-03 .s03-left .spine { inset-inline-start: -30px; top: 6px; height: 560px; }
@@ -938,8 +988,8 @@ ul, ol { list-style: none; }
 }
 #slide-03 .s03-core .core-check svg { width: 17px; height: 17px; color: #fff; }
 
-/* ═══ Slide 04 — Why Elite ERP ═══════════════════════════════════════════── */
-#slide-04 { background: radial-gradient(1300px 800px at 50% 28%, #FFFFFF 45%, var(--cream) 100%); }
+/* ═══ Slide 04 — Why Elite ERP (Content mood) ════════════════════════════── */
+#slide-04 { background: radial-gradient(1300px 800px at 36% 20%, #FFFFFF 42%, var(--cream) 100%); }
 #slide-04 .s04-bg-glow-a {
   position: absolute;
   width: 820px; height: 820px;
@@ -955,6 +1005,13 @@ ul, ol { list-style: none; }
   border-radius: 50%;
   background: radial-gradient(circle, rgba(229, 108, 37, 0.09) 0%, rgba(229, 108, 37, 0) 60%);
   pointer-events: none;
+}
+#slide-04 .s04-orbit {
+  width: 560px; height: 560px;
+  bottom: -220px;
+  inset-inline-end: -180px;
+  color: var(--orange);
+  opacity: 0.075;
 }
 #slide-04 .s04-head { position: absolute; top: 86px; left: 0; right: 0; text-align: center; }
 #slide-04 .s04-head .headline { font-size: 60px; margin-top: 20px; }
@@ -1056,26 +1113,15 @@ ul, ol { list-style: none; }
 <div id="viewport">
   <div id="stage">
 
-    <!-- ══ Premium edge framing (shared across every slide) ═══════════════ -->
-    <div id="edge-top-line" aria-hidden="true"></div>
-    <div id="edge-vignette" aria-hidden="true"></div>
-    <div id="edge-corner-mark" aria-hidden="true">
-      <svg viewBox="0 0 140 140"><g fill="currentColor">
-        <circle cx="6" cy="6" r="2.1"/><circle cx="30" cy="6" r="2.1"/><circle cx="54" cy="6" r="2.1"/><circle cx="78" cy="6" r="2.1"/><circle cx="102" cy="6" r="2.1"/><circle cx="126" cy="6" r="2.1"/>
-        <circle cx="6" cy="30" r="2.1"/><circle cx="30" cy="30" r="2.1"/><circle cx="54" cy="30" r="2.1"/><circle cx="78" cy="30" r="2.1"/><circle cx="102" cy="30" r="2.1"/><circle cx="126" cy="30" r="2.1"/>
-        <circle cx="6" cy="54" r="2.1"/><circle cx="30" cy="54" r="2.1"/><circle cx="54" cy="54" r="2.1"/><circle cx="78" cy="54" r="2.1"/><circle cx="102" cy="54" r="2.1"/><circle cx="126" cy="54" r="2.1"/>
-        <circle cx="6" cy="78" r="2.1"/><circle cx="30" cy="78" r="2.1"/><circle cx="54" cy="78" r="2.1"/><circle cx="78" cy="78" r="2.1"/><circle cx="102" cy="78" r="2.1"/><circle cx="126" cy="78" r="2.1"/>
-        <circle cx="6" cy="102" r="2.1"/><circle cx="30" cy="102" r="2.1"/><circle cx="54" cy="102" r="2.1"/><circle cx="78" cy="102" r="2.1"/><circle cx="102" cy="102" r="2.1"/><circle cx="126" cy="102" r="2.1"/>
-        <circle cx="6" cy="126" r="2.1"/><circle cx="30" cy="126" r="2.1"/><circle cx="54" cy="126" r="2.1"/><circle cx="78" cy="126" r="2.1"/><circle cx="102" cy="126" r="2.1"/><circle cx="126" cy="126" r="2.1"/>
-      </g></svg>
-    </div>
-
     <!-- ══ Slide 01 — Cover ════════════════════════════════════════════════ -->
     <section class="slide" id="slide-01" aria-label="Cover">
       <div class="s01-glow-a" data-anim="fade" data-anim-order="1"></div>
       <div class="s01-glow-b" data-anim="fade" data-anim-order="1"></div>
       <div class="s01-grid" data-anim="fade" data-anim-order="1"></div>
       <div class="ghost-num" aria-hidden="true">01</div>
+      <div class="corner-orbit s01-orbit" aria-hidden="true">
+        <span class="ring"></span><span class="ring ring-2"></span><span class="ring ring-3"></span>
+      </div>
 
       <div class="s01-copy">
         <p class="eyebrow" data-anim="fade-up" data-anim-order="3">Executive Presentation</p>
@@ -1153,6 +1199,10 @@ ul, ol { list-style: none; }
       <div class="ghost-num" aria-hidden="true">02</div>
       <div class="s02-bg-glow-a" data-anim="fade" data-anim-order="1"></div>
       <div class="s02-bg-glow-b" data-anim="fade" data-anim-order="1"></div>
+      <div class="s02-grid-wide" aria-hidden="true"></div>
+      <div class="corner-orbit s02-orbit" aria-hidden="true">
+        <span class="ring"></span><span class="ring ring-2"></span>
+      </div>
       <div class="s02-panel" data-anim="fade" data-anim-order="1"></div>
 
       <div class="s02-head">
@@ -1241,6 +1291,10 @@ ul, ol { list-style: none; }
     <section class="slide" id="slide-03" aria-label="Business Challenges">
       <div class="ghost-num" aria-hidden="true">03</div>
       <div class="s03-bg-glow" data-anim="fade" data-anim-order="1"></div>
+      <div class="s03-bg-glow-b" data-anim="fade" data-anim-order="1"></div>
+      <div class="corner-orbit s03-orbit" aria-hidden="true">
+        <span class="ring"></span><span class="ring ring-2"></span><span class="ring ring-3"></span>
+      </div>
       <div class="s03-left">
         <div class="spine" data-anim="fade" data-anim-order="2"></div>
         <p class="eyebrow" data-anim="fade-up" data-anim-order="2">The Challenge</p>
@@ -1310,6 +1364,9 @@ ul, ol { list-style: none; }
       <div class="ghost-num" aria-hidden="true">04</div>
       <div class="s04-bg-glow-a" data-anim="fade" data-anim-order="1"></div>
       <div class="s04-bg-glow-b" data-anim="fade" data-anim-order="1"></div>
+      <div class="corner-orbit s04-orbit" aria-hidden="true">
+        <span class="ring"></span><span class="ring ring-2"></span>
+      </div>
       <div class="s04-head">
         <p class="eyebrow" data-anim="fade-up" data-anim-order="2">Why Elite ERP</p>
         <h2 class="headline" data-anim="fade-up" data-anim-order="3">One intelligent enterprise ecosystem.</h2>

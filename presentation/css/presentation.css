@@ -3,8 +3,31 @@
    Per-slide layouts on the fixed 1920×1080 canvas.
    ═══════════════════════════════════════════════════════════════════════════ */
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   Background moods (Round 2 revision)
+   Every slide's edge/corner treatment is authored here, per slide, on
+   purpose asymmetric — never the same weight on all four sides, never
+   mirrored. Three moods share one visual language (thin brand-color
+   strokes, low-opacity dot-grids, off-corner glows) so the deck still
+   reads as one system:
+     • Hero      (01)     — richest: glows + masked grid + orbit device
+     • Content   (02, 04) — off-center gradient wash + one big corner
+                             motif (orbit or extended grid) + two off-
+                             corner glows
+     • Narrative (03)     — heavier multi-stop gradient wash + a second,
+                             asymmetric counter-glow + a corner orbit
+   ═══════════════════════════════════════════════════════════════════════════ */
+
 /* ═══ Slide 01 — Cover ═══════════════════════════════════════════════════── */
 #slide-01 { background: linear-gradient(178deg, #FFFFFF 28%, var(--cream) 100%); }
+
+#slide-01 .s01-orbit {
+  width: 640px; height: 640px;
+  inset-inline-end: -220px;
+  bottom: -260px;
+  color: var(--navy);
+  opacity: 0.07;
+}
 
 #slide-01 .s01-glow-a,
 #slide-01 .s01-glow-b {
@@ -115,8 +138,8 @@
 #slide-01 .s01-chip-revenue .icon-tile { width: 48px; height: 48px; border-radius: 13px; }
 #slide-01 .s01-chip-revenue .icon-tile svg { width: 22px; height: 22px; }
 
-/* ═══ Slide 02 — Executive Summary ═══════════════════════════════════════── */
-#slide-02 { background: #fff; }
+/* ═══ Slide 02 — Executive Summary (Content mood) ════════════════════════── */
+#slide-02 { background: linear-gradient(225deg, #FFFFFF 0%, #FFFFFF 56%, var(--cream) 100%); }
 #slide-02 .s02-bg-glow-a {
   position: absolute;
   width: 900px; height: 900px;
@@ -127,11 +150,27 @@
 }
 #slide-02 .s02-bg-glow-b {
   position: absolute;
-  width: 760px; height: 760px;
-  bottom: -360px; inset-inline-start: -240px;
+  width: 820px; height: 820px;
+  bottom: -380px; inset-inline-start: -260px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(21, 19, 72, 0.055) 0%, rgba(21, 19, 72, 0) 60%);
+  background: radial-gradient(circle, rgba(21, 19, 72, 0.07) 0%, rgba(21, 19, 72, 0) 60%);
   pointer-events: none;
+}
+#slide-02 .s02-grid-wide {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(21, 19, 72, 0.045) 1.1px, transparent 1.1px);
+  background-size: 26px 26px;
+  -webkit-mask-image: radial-gradient(600px 600px at 4% 98%, #000 0%, transparent 72%);
+          mask-image: radial-gradient(600px 600px at 4% 98%, #000 0%, transparent 72%);
+  pointer-events: none;
+}
+#slide-02 .s02-orbit {
+  width: 580px; height: 580px;
+  top: -210px;
+  inset-inline-end: -170px;
+  color: var(--orange);
+  opacity: 0.08;
 }
 #slide-02 .s02-panel {
   position: absolute;
@@ -196,15 +235,30 @@
 }
 #slide-02 .outcome-strip { position: absolute; inset-inline: 96px; bottom: 68px; }
 
-/* ═══ Slide 03 — Business Challenges ═════════════════════════════════════── */
-#slide-03 { background: linear-gradient(120deg, #FFFFFF 44%, #FAF7F1 100%); }
+/* ═══ Slide 03 — Business Challenges (Narrative mood — heaviest wash) ────── */
+#slide-03 { background: linear-gradient(128deg, #FFFFFF 0%, #FFFFFF 32%, #FBF2E5 74%, #F6E6D0 100%); }
 #slide-03 .s03-bg-glow {
   position: absolute;
   width: 1000px; height: 1000px;
   top: -380px; inset-inline-end: -320px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(229, 108, 37, 0.08) 0%, rgba(229, 108, 37, 0) 62%);
+  background: radial-gradient(circle, rgba(229, 108, 37, 0.1) 0%, rgba(229, 108, 37, 0) 62%);
   pointer-events: none;
+}
+#slide-03 .s03-bg-glow-b {
+  position: absolute;
+  width: 860px; height: 860px;
+  bottom: -360px; inset-inline-start: -280px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(21, 19, 72, 0.075) 0%, rgba(21, 19, 72, 0) 60%);
+  pointer-events: none;
+}
+#slide-03 .s03-orbit {
+  width: 480px; height: 480px;
+  top: -260px;
+  inset-inline-start: -220px;
+  color: var(--navy);
+  opacity: 0.07;
 }
 #slide-03 .s03-left { position: absolute; top: 210px; inset-inline-start: 96px; width: 680px; }
 #slide-03 .s03-left .spine { inset-inline-start: -30px; top: 6px; height: 560px; }
@@ -245,8 +299,8 @@
 }
 #slide-03 .s03-core .core-check svg { width: 17px; height: 17px; color: #fff; }
 
-/* ═══ Slide 04 — Why Elite ERP ═══════════════════════════════════════════── */
-#slide-04 { background: radial-gradient(1300px 800px at 50% 28%, #FFFFFF 45%, var(--cream) 100%); }
+/* ═══ Slide 04 — Why Elite ERP (Content mood) ════════════════════════════── */
+#slide-04 { background: radial-gradient(1300px 800px at 36% 20%, #FFFFFF 42%, var(--cream) 100%); }
 #slide-04 .s04-bg-glow-a {
   position: absolute;
   width: 820px; height: 820px;
@@ -262,6 +316,13 @@
   border-radius: 50%;
   background: radial-gradient(circle, rgba(229, 108, 37, 0.09) 0%, rgba(229, 108, 37, 0) 60%);
   pointer-events: none;
+}
+#slide-04 .s04-orbit {
+  width: 560px; height: 560px;
+  bottom: -220px;
+  inset-inline-end: -180px;
+  color: var(--orange);
+  opacity: 0.075;
 }
 #slide-04 .s04-head { position: absolute; top: 86px; left: 0; right: 0; text-align: center; }
 #slide-04 .s04-head .headline { font-size: 60px; margin-top: 20px; }
