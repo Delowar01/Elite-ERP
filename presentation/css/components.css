@@ -11,14 +11,16 @@
    uppercase + letter-spacing + weight to remain legible at that size.
    ═══════════════════════════════════════════════════════════════════════════ */
 
-/* ── Icon tile (square rounded icon holder) ───────────────────────────────── */
+/* ── Icon tile (icon holder) — asymmetric corner-cut, tied to the logomark's
+   angular "E" cut, so icon containers read as a signature shape rather than
+   a generic rounded/circular badge. ───────────────────────────────────────── */
 .icon-tile {
   display: flex;
   align-items: center;
   justify-content: center;
   width: 66px;
   height: 66px;
-  border-radius: 18px;
+  border-radius: 19px 19px 19px 6px;
   background: var(--orange-08);
   color: var(--orange);
   flex: 0 0 auto;
@@ -38,21 +40,56 @@
 }
 .highlight-row .hl-caption { font-size: 19px; line-height: 1.5; color: var(--graphite); }
 
-/* ── Outcome pill strip (bottom of editorial slides) ──────────────────────── */
-.outcome-strip { display: flex; gap: 18px; }
-.outcome-pill {
+/* ── Benefit strip — dark navy proof-point bar closing out a content slide.
+   Reworked from the reference deck's bottom icon+label stat bar: a single
+   brand-dark surface with angular icon medallions and hairline dividers,
+   not a row of separate pastel pills. Reusable across any editorial slide
+   that needs a closing proof-point row. ──────────────────────────────────── */
+.benefit-strip {
+  display: flex;
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, #201D66 0%, var(--navy) 62%);
+  box-shadow: 0 18px 44px rgba(21, 19, 72, 0.28);
+  overflow: hidden;
+  position: relative;
+}
+.benefit-strip::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(420px 160px at 92% 0%, rgba(229, 108, 37, 0.3), transparent 70%);
+  pointer-events: none;
+}
+.benefit-item {
+  flex: 1;
   display: flex;
   align-items: center;
   gap: 15px;
-  height: 80px;
-  padding: 0 28px;
-  flex: 1;
-  border-radius: 999px;
-  background: linear-gradient(180deg, #fff 0%, #FDFCFA 100%);
-  box-shadow: 0 3px 10px rgba(21, 19, 72, 0.05), 0 14px 30px rgba(21, 19, 72, 0.07);
+  padding: 22px 22px;
+  position: relative;
+  min-width: 0;
 }
-.outcome-pill svg { width: 26px; height: 26px; color: var(--orange); flex: 0 0 auto; }
-.outcome-pill span { font-size: 18.5px; font-weight: 650; color: var(--navy); white-space: nowrap; }
+.benefit-item + .benefit-item::before {
+  content: '';
+  position: absolute;
+  inset-inline-start: 0;
+  top: 18px; bottom: 18px;
+  width: 1px;
+  background: rgba(255, 255, 255, 0.14);
+}
+.benefit-item .bi-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 13px 13px 13px 4px;
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--orange);
+  flex: 0 0 auto;
+}
+.benefit-item .bi-icon svg { width: 21px; height: 21px; }
+.benefit-item span { font-size: 18.5px; font-weight: 650; color: #fff; line-height: 1.25; }
 
 /* ── Value list item (checkmark / icon + text) ────────────────────────────── */
 .value-item { display: flex; align-items: flex-start; gap: 17px; }
@@ -62,7 +99,7 @@
   justify-content: center;
   width: 44px;
   height: 44px;
-  border-radius: 12px;
+  border-radius: 13px 13px 13px 4px;
   background: var(--orange-08);
   color: var(--orange);
   flex: 0 0 auto;
@@ -164,7 +201,7 @@
   justify-content: center;
   width: 48px;
   height: 48px;
-  border-radius: 13px;
+  border-radius: 14px 14px 14px 4px;
   background: var(--stone);
   color: var(--graphite);
   flex: 0 0 auto;
@@ -267,7 +304,7 @@
   justify-content: center;
   width: 66px;
   height: 66px;
-  border-radius: 19px;
+  border-radius: 20px 20px 20px 6px;
   background: #fff;
   box-shadow: 0 4px 10px rgba(21, 19, 72, 0.08), 0 14px 28px rgba(21, 19, 72, 0.10);
   color: var(--navy);
@@ -324,3 +361,84 @@
 }
 .corner-orbit .ring-2 { inset: 13%; border-width: 1px; }
 .corner-orbit .ring-3 { inset: 27%; border-width: 1px; border-style: dashed; }
+
+/* ── Device frame — laptop bezel wrapping a live product screenshot. Real
+   Elite ERP UI shown inside real device chrome (the reference set's single
+   best move), built in CSS so no stock device-mockup imagery is needed. ── */
+.device-laptop {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+.device-laptop .dl-screen {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  padding: 15px 15px 0;
+  border-radius: 20px 20px 4px 4px;
+  background: linear-gradient(165deg, #232145 0%, var(--navy-deep) 100%);
+  box-shadow: var(--shadow-hero);
+  position: relative;
+}
+.device-laptop .dl-cam {
+  position: absolute;
+  top: 6px; left: 50%;
+  translate: -50% 0;
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.16);
+}
+.device-laptop .dl-inner {
+  flex: 1 1 auto;
+  border-radius: 6px;
+  overflow: hidden;
+  background: #fff;
+  position: relative;
+}
+.device-laptop .dl-inner img { width: 100%; height: 100%; object-fit: cover; object-position: top; display: block; }
+.device-laptop .dl-inner::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  pointer-events: none;
+}
+.device-laptop .dl-base {
+  flex: 0 0 auto;
+  height: 15px;
+  background: linear-gradient(180deg, #2B2948 0%, #17153A 100%);
+  border-radius: 0 0 9px 9px;
+  position: relative;
+}
+.device-laptop .dl-base::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 50%;
+  translate: -50% 0;
+  width: 130px; height: 5px;
+  background: rgba(0, 0, 0, 0.22);
+  border-radius: 0 0 7px 7px;
+}
+
+/* ── Core ring — segmented brand-color ring behind a radial ecosystem's hub.
+   Reworked replacement for the reference deck's plain circular icon ring:
+   an alternating navy/orange segmented arc, CSS-only (conic-gradient +
+   radial mask), signalling "one platform, many modules" without a pastel
+   circle badge. Used once, on the deck's one true hub-and-spoke slide. ──── */
+.core-ring {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  background: conic-gradient(from 0deg,
+    var(--navy) 0deg 38deg, var(--orange) 38deg 45deg,
+    var(--navy) 45deg 83deg, var(--orange) 83deg 90deg,
+    var(--navy) 90deg 128deg, var(--orange) 128deg 135deg,
+    var(--navy) 135deg 173deg, var(--orange) 173deg 180deg,
+    var(--navy) 180deg 218deg, var(--orange) 218deg 225deg,
+    var(--navy) 225deg 263deg, var(--orange) 263deg 270deg,
+    var(--navy) 270deg 308deg, var(--orange) 308deg 315deg,
+    var(--navy) 315deg 360deg);
+  -webkit-mask: radial-gradient(closest-side, transparent calc(100% - 15px), #000 calc(100% - 14px), #000 100%);
+          mask: radial-gradient(closest-side, transparent calc(100% - 15px), #000 calc(100% - 14px), #000 100%);
+  opacity: 0.92;
+}

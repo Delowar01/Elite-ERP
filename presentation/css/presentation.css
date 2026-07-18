@@ -135,7 +135,7 @@
 }
 #slide-01 .s01-chip-margin { top: 604px; inset-inline-end: 686px; animation: floatSoft 7s var(--ease) infinite; }
 #slide-01 .s01-chip-revenue { top: 98px; inset-inline-end: 26px; animation: floatSoft 8s var(--ease) 1.2s infinite; }
-#slide-01 .s01-chip-revenue .icon-tile { width: 48px; height: 48px; border-radius: 13px; }
+#slide-01 .s01-chip-revenue .icon-tile { width: 48px; height: 48px; border-radius: 14px 14px 14px 4px; }
 #slide-01 .s01-chip-revenue .icon-tile svg { width: 22px; height: 22px; }
 
 /* ═══ Slide 02 — Executive Summary (Content mood) ════════════════════════── */
@@ -233,7 +233,7 @@
   border-radius: 50%;
   background: radial-gradient(closest-side, rgba(229, 108, 37, 0.35), rgba(229, 108, 37, 0));
 }
-#slide-02 .outcome-strip { position: absolute; inset-inline: 96px; bottom: 68px; }
+#slide-02 .benefit-strip { position: absolute; inset-inline: 96px; bottom: 68px; }
 
 /* ═══ Slide 03 — Business Challenges (Narrative mood — heaviest wash) ────── */
 #slide-03 { background: linear-gradient(128deg, #FFFFFF 0%, #FFFFFF 32%, #FBF2E5 74%, #F6E6D0 100%); }
@@ -345,6 +345,11 @@
   background: var(--orange);
   translate: -50% -50%;
   animation: pulseDot 3s var(--ease) infinite;
+}
+#slide-04 .s04-core-ring {
+  left: 50%; top: 50%;
+  translate: -50% -50%;
+  width: 372px; height: 372px;
 }
 #slide-04 .s04-core {
   left: 50%; top: 50%;
