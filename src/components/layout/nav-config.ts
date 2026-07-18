@@ -104,6 +104,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: "Preset Management", href: "/settings/presets", icon: SlidersHorizontal, roles: ["owner", "admin"] },
       { label: "Business Settings", href: "/settings/organization", icon: Settings, roles: ["owner", "admin"] },
       { label: "Security Center", href: "/settings/security", icon: ShieldCheck },
+      { label: "Compliance Center", href: "/settings/compliance", icon: FileCheck2, roles: ["owner", "admin"] },
     ],
   },
 ];
