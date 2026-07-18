@@ -1,5 +1,5 @@
 import "server-only";
-import { db, auditLogsTable, securityEventsTable } from "@/db";
+import { db, auditLogsTable, securityEventsTable, fileAccessLogsTable } from "@/db";
 import { getRequestContext } from "./request-context";
 
 // ---------------------------------------------------------------------------
@@ -67,4 +67,26 @@ export async function recordSecurityEvent(entry: {
     os: ctx.os,
     device: ctx.device,
   });
+}
+
+// Part 3 — download auditing for the private uploads/ store. Insert-only, like
+// the trail above. Best-effort: a logging failure must never block the download.
+export async function recordFileAccess(entry: {
+  orgId: number;
+  userId: number | null;
+  folder: string;
+  fileName: string;
+  ipAddress: string | null;
+}) {
+  try {
+    await db.insert(fileAccessLogsTable).values({
+      orgId: entry.orgId,
+      userId: entry.userId,
+      folder: entry.folder,
+      fileName: entry.fileName,
+      ipAddress: entry.ipAddress,
+    });
+  } catch {
+    // swallow — audit logging must not affect file serving
+  }
 }
