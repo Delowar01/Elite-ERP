@@ -410,6 +410,13 @@ const DICT: Record<string, string> = {
   Quantity: "الكمية",
 
   "Quotation #": "رقم عرض السعر",
+  "SO #": "رقم أمر البيع",
+  "Proforma #": "رقم الفاتورة المبدئية",
+  "Invoice #": "رقم الفاتورة",
+  "PO #": "رقم أمر الشراء",
+  "DC #": "رقم إذن التسليم",
+  "CN #": "رقم إشعار الدائن",
+  "DN #": "رقم إشعار المدين",
   "Quotation Number": "رقم عرض السعر",
   "Quotation Date": "تاريخ عرض السعر",
   "Quotation Title": "عنوان عرض السعر",

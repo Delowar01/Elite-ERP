@@ -15,15 +15,18 @@ const PATH = "/purchasing/orders";
 
 type LineInput = { productId: string; description: string; quantity: string; unitPrice: string; taxRatePercent: string };
 
-export async function createPurchaseOrderAction(input: {
-  title: string;
-  vendorId: string;
-  orderDate: string;
-  expectedDate: string;
-  discount: string;
-  notes: string;
-  items: LineInput[];
-}): Promise<ActionResult> {
+export async function createPurchaseOrderAction(
+  input: {
+    title: string;
+    vendorId: string;
+    orderDate: string;
+    expectedDate: string;
+    discount: string;
+    notes: string;
+    items: LineInput[];
+  },
+  andSend = false,
+): Promise<ActionResult> {
   const session = await requireSession();
   const vendorId = Number(input.vendorId);
   if (!vendorId) return { error: "Choose a vendor." };
@@ -69,6 +72,9 @@ export async function createPurchaseOrderAction(input: {
   });
 
   await logActivity(session, { type: "purchase_order.created", description: "Created a purchase order", entityType: "purchase_order", entityId: id });
+  if (andSend) {
+    await sendPurchaseOrderAction(id);
+  }
   revalidatePath(PATH);
   redirect(`/purchasing/orders/${id}`);
 }

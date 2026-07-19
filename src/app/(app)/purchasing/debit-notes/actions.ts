@@ -15,12 +15,15 @@ const PATH = "/purchasing/debit-notes";
 
 type LineInput = { productId: string; description: string; quantity: string; unitPrice: string; taxRatePercent: string };
 
-export async function createDebitNoteAction(input: {
-  title: string;
-  sourcePurchaseOrderId: string;
-  reason: string;
-  items: LineInput[];
-}): Promise<ActionResult> {
+export async function createDebitNoteAction(
+  input: {
+    title: string;
+    sourcePurchaseOrderId: string;
+    reason: string;
+    items: LineInput[];
+  },
+  andIssue = false,
+): Promise<ActionResult> {
   const session = await requireSession();
   const sourcePurchaseOrderId = Number(input.sourcePurchaseOrderId);
   if (!sourcePurchaseOrderId) return { error: "Choose the purchase order this debit note is against." };
@@ -70,6 +73,9 @@ export async function createDebitNoteAction(input: {
   });
 
   await logActivity(session, { type: "debit_note.created", description: `Created a debit note against purchase order ${po.poNumber}`, entityType: "debit_note", entityId: id });
+  if (andIssue) {
+    await issueDebitNoteAction(id);
+  }
   revalidatePath(PATH);
   redirect(`/purchasing/debit-notes/${id}`);
 }

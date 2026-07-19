@@ -16,15 +16,19 @@ const VALID_STATUSES = ["draft", "confirmed", "fulfilled", "cancelled"];
 
 type LineInput = { productId: string; description: string; quantity: string; unitPrice: string; taxRatePercent: string };
 
-export async function createSalesOrderAction(input: {
-  title: string;
-  customerId: string;
-  projectId?: string;
-  issueDate: string;
-  discount: string;
-  notes: string;
-  items: LineInput[];
-}): Promise<ActionResult> {
+export async function createSalesOrderAction(
+  input: {
+    title: string;
+    customerId: string;
+    projectId?: string;
+    issueDate: string;
+    expectedDate: string;
+    discount: string;
+    notes: string;
+    items: LineInput[];
+  },
+  andConfirm = false,
+): Promise<ActionResult> {
   const session = await requireSession();
   const customerId = Number(input.customerId);
   if (!customerId) return { error: "Choose a client." };
@@ -56,6 +60,7 @@ export async function createSalesOrderAction(input: {
         customerId,
         projectId,
         issueDate: input.issueDate,
+        expectedDate: input.expectedDate || null,
         notes: input.notes.trim() || null,
         subtotal: totals.subtotal,
         discount: totals.discount,
@@ -80,6 +85,9 @@ export async function createSalesOrderAction(input: {
   });
 
   await logActivity(session, { type: "sales_order.created", description: "Created a sales order", entityType: "sales_order", entityId: id });
+  if (andConfirm) {
+    await updateSalesOrderStatusAction(id, "confirmed");
+  }
   revalidatePath(PATH);
   redirect(`/sales/orders/${id}`);
 }

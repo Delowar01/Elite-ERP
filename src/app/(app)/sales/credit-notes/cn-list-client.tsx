@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Eye, Printer, Trash2 } from "lucide-react";
+import { Eye, Printer, Archive, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { StatRow } from "../_shared/stat-row";
@@ -44,6 +44,14 @@ export function CnListClient({ locale, rows }: { locale: Locale; rows: CnRow[] }
     return counts;
   }, [rows]);
 
+  const thisMonthCount = useMemo(() => {
+    const now = new Date();
+    return rows.filter((r) => {
+      const d = new Date(r.issueDate);
+      return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+    }).length;
+  }, [rows]);
+
   return (
     <div className="max-w-6xl mx-auto">
       <div className="flex items-center justify-between mb-[22px]">
@@ -55,6 +63,7 @@ export function CnListClient({ locale, rows }: { locale: Locale; rows: CnRow[] }
           { label: t(locale, "Total Credit Notes"), value: String(rows.length) },
           { label: t(locale, "issued"), value: String(stats.issued ?? 0), colorClass: "text-success" },
           { label: t(locale, "draft"), value: String(stats.draft ?? 0) },
+          { label: t(locale, "This Month"), value: String(thisMonthCount) },
         ]}
       />
 
@@ -75,9 +84,9 @@ export function CnListClient({ locale, rows }: { locale: Locale; rows: CnRow[] }
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>{t(locale, "Number")}</TableHead>
+              <TableHead>{t(locale, "CN #")}</TableHead>
               <TableHead>{t(locale, "Title")}</TableHead>
-              <TableHead>{t(locale, "Against Invoice")}</TableHead>
+              <TableHead>{t(locale, "Converted From")}</TableHead>
               <TableHead>{t(locale, "Client")}</TableHead>
               <TableHead>{t(locale, "Issue Date")}</TableHead>
               <TableHead className="text-right">{t(locale, "Amount")}</TableHead>
@@ -91,6 +100,7 @@ export function CnListClient({ locale, rows }: { locale: Locale; rows: CnRow[] }
               const entries: RowMenuEntry[] = [
                 { kind: "item", icon: Eye, label: t(locale, "View"), href: `/sales/credit-notes/${r.id}` },
                 { kind: "item", icon: Printer, label: t(locale, "Print"), href: `/print/credit-note/${r.id}` },
+                { kind: "item", icon: Archive, label: t(locale, "Archive") },
                 { kind: "separator" },
                 { kind: "item", icon: Trash2, label: t(locale, "Delete"), danger: true },
               ];

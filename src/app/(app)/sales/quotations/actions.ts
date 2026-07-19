@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { and, eq } from "drizzle-orm";
-import { db, projectsTable, quotationsTable, quotationItemsTable, salesOrdersTable, salesOrderItemsTable, proformaInvoicesTable, proformaInvoiceItemsTable, salesInvoicesTable, salesInvoiceItemsTable } from "@/db";
+import { db, projectsTable, quotationsTable, quotationItemsTable, salesOrdersTable, salesOrderItemsTable, proformaInvoicesTable, proformaInvoiceItemsTable, salesInvoicesTable, salesInvoiceItemsTable, deliveryChallansTable, deliveryChallanItemsTable } from "@/db";
 import { requireSession } from "@/lib/session";
 import { logActivity } from "@/lib/activity";
 import { nextDocumentNumber } from "@/lib/documents";
@@ -16,16 +16,19 @@ const VALID_STATUSES = ["draft", "sent", "accepted", "rejected", "expired"];
 
 type LineInput = { productId: string; description: string; quantity: string; unitPrice: string; taxRatePercent: string };
 
-export async function createQuotationAction(input: {
-  title: string;
-  customerId: string;
-  projectId?: string;
-  issueDate: string;
-  validUntil: string;
-  discount: string;
-  notes: string;
-  items: LineInput[];
-}): Promise<ActionResult> {
+export async function createQuotationAction(
+  input: {
+    title: string;
+    customerId: string;
+    projectId?: string;
+    issueDate: string;
+    validUntil: string;
+    discount: string;
+    notes: string;
+    items: LineInput[];
+  },
+  andSend = false,
+): Promise<ActionResult> {
   const session = await requireSession();
   const customerId = Number(input.customerId);
   if (!customerId) return { error: "Choose a client." };
@@ -83,6 +86,9 @@ export async function createQuotationAction(input: {
   });
 
   await logActivity(session, { type: "quotation.created", description: "Created a quotation", entityType: "quotation", entityId: id });
+  if (andSend) {
+    await updateQuotationStatusAction(id, "sent");
+  }
   revalidatePath(PATH);
   redirect(`/sales/quotations/${id}`);
 }
@@ -239,4 +245,39 @@ export async function convertToInvoiceAction(quotationId: number): Promise<Actio
   await logActivity(session, { type: "sales_invoice.created", description: `Converted from quotation ${data.quotation.quotationNumber}`, entityType: "sales_invoice", entityId: id });
   revalidatePath("/sales/invoices");
   redirect(`/sales/invoices/${id}`);
+}
+
+export async function convertToDeliveryChallanAction(quotationId: number): Promise<ActionResult> {
+  const session = await requireSession();
+  const data = await loadQuotationWithItems(session.orgId, quotationId);
+  if (!data) return { error: "Quotation not found." };
+
+  const id = await db.transaction(async (tx) => {
+    const dcNumber = await nextDocumentNumber(tx, session.orgId, "delivery_challan");
+    const [dc] = await tx
+      .insert(deliveryChallansTable)
+      .values({
+        orgId: session.orgId,
+        dcNumber,
+        title: data.quotation.title,
+        customerId: data.quotation.customerId,
+        sourceQuotationId: data.quotation.id,
+        createdById: session.userId,
+      })
+      .returning({ id: deliveryChallansTable.id });
+
+    await tx.insert(deliveryChallanItemsTable).values(
+      data.items.map((it) => ({
+        deliveryChallanId: dc.id,
+        productId: it.productId,
+        description: it.description,
+        quantity: it.quantity,
+      })),
+    );
+    return dc.id;
+  });
+
+  await logActivity(session, { type: "delivery_challan.created", description: `Converted from quotation ${data.quotation.quotationNumber}`, entityType: "delivery_challan", entityId: id });
+  revalidatePath("/sales/delivery-challans");
+  redirect(`/sales/delivery-challans/${id}`);
 }

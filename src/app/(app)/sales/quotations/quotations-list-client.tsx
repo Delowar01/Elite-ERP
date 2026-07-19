@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Eye, Printer, Send, Trash2 } from "lucide-react";
+import { Eye, Star, Pencil, Copy, Printer, Send, Archive, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { StatRow } from "../_shared/stat-row";
@@ -11,7 +11,13 @@ import { ListToolbar } from "../_shared/list-toolbar";
 import { RowMenu, type RowMenuEntry } from "../_shared/row-menu";
 import { Money } from "../_shared/money";
 import { t, type Locale } from "@/lib/i18n/dict";
-import { convertToSalesOrderAction, convertToProformaAction, convertToInvoiceAction } from "./actions";
+import {
+  convertToSalesOrderAction,
+  convertToProformaAction,
+  convertToInvoiceAction,
+  convertToDeliveryChallanAction,
+  updateQuotationStatusAction,
+} from "./actions";
 
 const STATUS_VARIANT: Record<string, "success" | "warning" | "danger" | "info" | "neutral"> = {
   draft: "neutral",
@@ -87,6 +93,7 @@ export function QuotationsListClient({ locale, rows }: { locale: Locale; rows: Q
           <TableRow>
             <TableHead>{t(locale, "Quotation #")}</TableHead>
             <TableHead>{t(locale, "Title")}</TableHead>
+            <TableHead>{t(locale, "Converted From")}</TableHead>
             <TableHead>{t(locale, "Client")}</TableHead>
             <TableHead>{t(locale, "Issue Date")}</TableHead>
             <TableHead>{t(locale, "Valid Till")}</TableHead>
@@ -100,6 +107,9 @@ export function QuotationsListClient({ locale, rows }: { locale: Locale; rows: Q
           {filtered.map((r) => {
             const entries: RowMenuEntry[] = [
               { kind: "item", icon: Eye, label: t(locale, "View"), href: `/sales/quotations/${r.id}` },
+              { kind: "item", icon: Star, label: t(locale, "Add to Favorites") },
+              { kind: "item", icon: Pencil, label: t(locale, "Edit") },
+              { kind: "item", icon: Copy, label: t(locale, "Duplicate") },
               { kind: "item", icon: Printer, label: t(locale, "Print / Download PDF"), href: `/print/quotation/${r.id}` },
               {
                 kind: "convert",
@@ -108,9 +118,11 @@ export function QuotationsListClient({ locale, rows }: { locale: Locale; rows: Q
                   { label: t(locale, "Sales Order"), onSelect: () => convert(r.id, convertToSalesOrderAction) },
                   { label: t(locale, "Proforma Invoice"), onSelect: () => convert(r.id, convertToProformaAction) },
                   { label: t(locale, "Invoice"), onSelect: () => convert(r.id, convertToInvoiceAction) },
+                  { label: t(locale, "Delivery Challan"), onSelect: () => convert(r.id, convertToDeliveryChallanAction) },
                 ],
               },
-              { kind: "item", icon: Send, label: t(locale, "Send to Client") },
+              { kind: "item", icon: Send, label: t(locale, "Send to Client"), onSelect: () => convert(r.id, (id) => updateQuotationStatusAction(id, "sent")) },
+              { kind: "item", icon: Archive, label: t(locale, "Archive") },
               { kind: "separator" },
               { kind: "item", icon: Trash2, label: t(locale, "Delete"), danger: true },
             ];
@@ -124,6 +136,7 @@ export function QuotationsListClient({ locale, rows }: { locale: Locale; rows: Q
                 <TableCell className="max-w-[150px] truncate" title={r.title ?? undefined}>
                   {r.title ?? <span className="text-ink-faint">—</span>}
                 </TableCell>
+                <TableCell className="text-ink-faint font-mono text-xs">—</TableCell>
                 <TableCell>{r.customerName}</TableCell>
                 <TableCell className="font-mono text-xs">{r.issueDate}</TableCell>
                 <TableCell className="font-mono text-xs">{r.validUntil ?? "—"}</TableCell>

@@ -22,6 +22,7 @@ export const salesOrdersTable = pgTable("sales_orders", {
   sourceQuotationId: integer("source_quotation_id").references(() => quotationsTable.id),
   status: text("status").notNull().default("draft"), // draft | confirmed | fulfilled | cancelled
   issueDate: date("issue_date").notNull(),
+  expectedDate: date("expected_date"),
   subtotal: numeric("subtotal", { precision: 14, scale: 2 }).notNull().default("0"),
   discount: numeric("discount", { precision: 14, scale: 2 }).notNull().default("0"),
   taxTotal: numeric("tax_total", { precision: 14, scale: 2 }).notNull().default("0"),

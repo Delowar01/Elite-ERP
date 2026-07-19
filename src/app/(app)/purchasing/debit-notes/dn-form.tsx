@@ -36,14 +36,16 @@ export function DnForm({
   const [issueDate, setIssueDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [reason, setReason] = useState("");
   const [items, setItems] = useState<LineItemDraft[]>([emptyLineItem()]);
-  const [pending, startTransition] = useTransition();
+  const [pendingDraft, startDraftTransition] = useTransition();
+  const [pendingPrimary, startPrimaryTransition] = useTransition();
 
   const totals = computeTotals(items);
   const selectedPo = purchaseOrders.find((po) => String(po.id) === sourcePurchaseOrderId);
 
-  function submit() {
-    startTransition(async () => {
-      const result = await createDebitNoteAction({ title: "", sourcePurchaseOrderId, reason, items });
+  function submit(andIssue: boolean) {
+    const start = andIssue ? startPrimaryTransition : startDraftTransition;
+    start(async () => {
+      const result = await createDebitNoteAction({ title: "", sourcePurchaseOrderId, reason, items }, andIssue);
       if (result?.error) toast.error(result.error);
     });
   }
@@ -132,7 +134,14 @@ export function DnForm({
 
       <DocFooterContact locale={locale} email={org.email} phone={org.phone} />
 
-      <DocActionBar locale={locale} pending={pending} onSubmit={submit} primaryLabel="Save as Draft" />
+      <DocActionBar
+        locale={locale}
+        pendingDraft={pendingDraft}
+        pendingPrimary={pendingPrimary}
+        onSaveDraft={() => submit(false)}
+        onPrimary={() => submit(true)}
+        primaryLabel="Issue Debit Note"
+      />
     </div>
   );
 }

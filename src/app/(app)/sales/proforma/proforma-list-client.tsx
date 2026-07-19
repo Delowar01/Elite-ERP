@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Eye, Printer, Wallet, Trash2 } from "lucide-react";
+import { Eye, Star, Pencil, Printer, Wallet, Archive, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { StatRow } from "../_shared/stat-row";
@@ -11,7 +11,7 @@ import { ListToolbar } from "../_shared/list-toolbar";
 import { RowMenu, type RowMenuEntry } from "../_shared/row-menu";
 import { Money } from "../_shared/money";
 import { t, type Locale } from "@/lib/i18n/dict";
-import { convertProformaToInvoiceAction } from "./actions";
+import { convertProformaToInvoiceAction, convertProformaToDeliveryChallanAction } from "./actions";
 
 const STATUS_VARIANT: Record<string, "success" | "warning" | "danger" | "info" | "neutral"> = {
   draft: "neutral",
@@ -46,9 +46,9 @@ export function ProformaListClient({ locale, rows }: { locale: Locale; rows: Pro
     return counts;
   }, [rows]);
 
-  function convert(id: number) {
+  function convert(id: number, action: (id: number) => Promise<{ error?: string }>) {
     startTransition(async () => {
-      const result = await convertProformaToInvoiceAction(id);
+      const result = await action(id);
       if (result?.error) toast.error(result.error);
     });
   }
@@ -79,7 +79,7 @@ export function ProformaListClient({ locale, rows }: { locale: Locale; rows: Pro
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>{t(locale, "Number")}</TableHead>
+            <TableHead>{t(locale, "Proforma #")}</TableHead>
             <TableHead>{t(locale, "Title")}</TableHead>
             <TableHead>{t(locale, "Converted From")}</TableHead>
             <TableHead>{t(locale, "Client")}</TableHead>
@@ -94,13 +94,19 @@ export function ProformaListClient({ locale, rows }: { locale: Locale; rows: Pro
           {filtered.map((r) => {
             const entries: RowMenuEntry[] = [
               { kind: "item", icon: Eye, label: t(locale, "View"), href: `/sales/proforma/${r.id}` },
+              { kind: "item", icon: Star, label: t(locale, "Add to Favorites") },
+              { kind: "item", icon: Pencil, label: t(locale, "Edit") },
               { kind: "item", icon: Printer, label: t(locale, "Print / Download PDF"), href: `/print/proforma/${r.id}` },
               { kind: "item", icon: Wallet, label: t(locale, "Record Payment") },
               {
                 kind: "convert",
                 label: t(locale, "Convert to…"),
-                targets: [{ label: t(locale, "Invoice"), onSelect: () => convert(r.id) }],
+                targets: [
+                  { label: t(locale, "Invoice"), onSelect: () => convert(r.id, convertProformaToInvoiceAction) },
+                  { label: t(locale, "Delivery Challan"), onSelect: () => convert(r.id, convertProformaToDeliveryChallanAction) },
+                ],
               },
+              { kind: "item", icon: Archive, label: t(locale, "Archive") },
               { kind: "separator" },
               { kind: "item", icon: Trash2, label: t(locale, "Delete"), danger: true },
             ];

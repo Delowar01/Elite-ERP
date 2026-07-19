@@ -37,13 +37,15 @@ export function ProformaForm({
   const [discount, setDiscount] = useState("0");
   const [notes, setNotes] = useState("");
   const [items, setItems] = useState<LineItemDraft[]>([emptyLineItem()]);
-  const [pending, startTransition] = useTransition();
+  const [pendingDraft, startDraftTransition] = useTransition();
+  const [pendingPrimary, startPrimaryTransition] = useTransition();
 
   const totals = computeTotals(items, discount);
 
-  function submit() {
-    startTransition(async () => {
-      const result = await createProformaAction({ title, customerId, issueDate, discount, notes, items });
+  function submit(andSend: boolean) {
+    const start = andSend ? startPrimaryTransition : startDraftTransition;
+    start(async () => {
+      const result = await createProformaAction({ title, customerId, issueDate, discount, notes, items }, andSend);
       if (result?.error) toast.error(result.error);
     });
   }
@@ -123,7 +125,14 @@ export function ProformaForm({
 
       <DocFooterContact locale={locale} email={org.email} phone={org.phone} />
 
-      <DocActionBar locale={locale} pending={pending} onSubmit={submit} primaryLabel="Save as Draft" />
+      <DocActionBar
+        locale={locale}
+        pendingDraft={pendingDraft}
+        pendingPrimary={pendingPrimary}
+        onSaveDraft={() => submit(false)}
+        onPrimary={() => submit(true)}
+        primaryLabel="Send to Client"
+      />
     </div>
   );
 }

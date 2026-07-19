@@ -15,16 +15,19 @@ const PATH = "/sales/invoices";
 
 type LineInput = { productId: string; description: string; quantity: string; unitPrice: string; taxRatePercent: string };
 
-export async function createInvoiceAction(input: {
-  title: string;
-  customerId: string;
-  projectId?: string;
-  issueDate: string;
-  dueDate: string;
-  discount: string;
-  notes: string;
-  items: LineInput[];
-}): Promise<ActionResult> {
+export async function createInvoiceAction(
+  input: {
+    title: string;
+    customerId: string;
+    projectId?: string;
+    issueDate: string;
+    dueDate: string;
+    discount: string;
+    notes: string;
+    items: LineInput[];
+  },
+  andSend = false,
+): Promise<ActionResult> {
   const session = await requireSession();
   const customerId = Number(input.customerId);
   if (!customerId) return { error: "Choose a client." };
@@ -81,6 +84,9 @@ export async function createInvoiceAction(input: {
   });
 
   await logActivity(session, { type: "sales_invoice.created", description: "Created an invoice", entityType: "sales_invoice", entityId: id });
+  if (andSend) {
+    await sendInvoiceAction(id);
+  }
   revalidatePath(PATH);
   redirect(`/sales/invoices/${id}`);
 }

@@ -41,13 +41,15 @@ export function QuotationForm({
   const [discount, setDiscount] = useState("0");
   const [notes, setNotes] = useState("");
   const [items, setItems] = useState<LineItemDraft[]>([emptyLineItem()]);
-  const [pending, startTransition] = useTransition();
+  const [pendingDraft, startDraftTransition] = useTransition();
+  const [pendingPrimary, startPrimaryTransition] = useTransition();
 
   const totals = computeTotals(items, discount);
 
-  function submit() {
-    startTransition(async () => {
-      const result = await createQuotationAction({ title, customerId, projectId, issueDate, validUntil, discount, notes, items });
+  function submit(andSend: boolean) {
+    const start = andSend ? startPrimaryTransition : startDraftTransition;
+    start(async () => {
+      const result = await createQuotationAction({ title, customerId, projectId, issueDate, validUntil, discount, notes, items }, andSend);
       if (result?.error) toast.error(result.error);
     });
   }
@@ -137,7 +139,14 @@ export function QuotationForm({
 
       <DocFooterContact locale={locale} email={org.email} phone={org.phone} />
 
-      <DocActionBar locale={locale} pending={pending} onSubmit={submit} primaryLabel="Save as Draft" />
+      <DocActionBar
+        locale={locale}
+        pendingDraft={pendingDraft}
+        pendingPrimary={pendingPrimary}
+        onSaveDraft={() => submit(false)}
+        onPrimary={() => submit(true)}
+        primaryLabel="Save & Submit"
+      />
     </div>
   );
 }

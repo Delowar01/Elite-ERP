@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Eye, Printer, Copy, Trash2 } from "lucide-react";
+import { Eye, Star, Pencil, Printer, Copy, Archive, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { StatRow } from "../_shared/stat-row";
@@ -26,6 +26,7 @@ export type OrderRow = {
   title: string | null;
   customerName: string;
   issueDate: string;
+  expectedDate: string | null;
   total: string;
   status: string;
   creatorName: string;
@@ -82,11 +83,12 @@ export function OrdersListClient({ locale, rows }: { locale: Locale; rows: Order
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>{t(locale, "Number")}</TableHead>
+            <TableHead>{t(locale, "SO #")}</TableHead>
             <TableHead>{t(locale, "Title")}</TableHead>
             <TableHead>{t(locale, "Converted From")}</TableHead>
             <TableHead>{t(locale, "Client")}</TableHead>
             <TableHead>{t(locale, "Order Date")}</TableHead>
+            <TableHead>{t(locale, "Expected Delivery")}</TableHead>
             <TableHead className="text-right">{t(locale, "Amount")}</TableHead>
             <TableHead>{t(locale, "Created By")}</TableHead>
             <TableHead>{t(locale, "Status")}</TableHead>
@@ -97,6 +99,8 @@ export function OrdersListClient({ locale, rows }: { locale: Locale; rows: Order
           {filtered.map((r) => {
             const entries: RowMenuEntry[] = [
               { kind: "item", icon: Eye, label: t(locale, "View"), href: `/sales/orders/${r.id}` },
+              { kind: "item", icon: Star, label: t(locale, "Add to Favorites") },
+              { kind: "item", icon: Pencil, label: t(locale, "Edit") },
               { kind: "item", icon: Printer, label: t(locale, "Print / Download PDF"), href: `/print/sales-order/${r.id}` },
               {
                 kind: "convert",
@@ -108,6 +112,7 @@ export function OrdersListClient({ locale, rows }: { locale: Locale; rows: Order
                 ],
               },
               { kind: "item", icon: Copy, label: t(locale, "Duplicate") },
+              { kind: "item", icon: Archive, label: t(locale, "Archive") },
               { kind: "separator" },
               { kind: "item", icon: Trash2, label: t(locale, "Delete"), danger: true },
             ];
@@ -124,6 +129,7 @@ export function OrdersListClient({ locale, rows }: { locale: Locale; rows: Order
                 <TableCell className="text-ink-muted font-mono text-xs">{r.sourceQuotationNumber ?? "—"}</TableCell>
                 <TableCell>{r.customerName}</TableCell>
                 <TableCell className="font-mono text-xs">{r.issueDate}</TableCell>
+                <TableCell className="font-mono text-xs">{r.expectedDate ?? <span className="text-ink-faint">—</span>}</TableCell>
                 <TableCell className="text-right font-mono">
                   <Money amount={r.total} />
                 </TableCell>

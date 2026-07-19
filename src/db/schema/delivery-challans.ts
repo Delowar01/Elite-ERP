@@ -5,7 +5,9 @@ import { orgsTable } from "./orgs";
 import { customersTable } from "./customers";
 import { productsTable } from "./products";
 import { usersTable } from "./users";
+import { quotationsTable } from "./quotations";
 import { salesOrdersTable } from "./sales-orders";
+import { proformaInvoicesTable } from "./proforma-invoices";
 import { salesInvoicesTable } from "./sales-invoices";
 
 export const deliveryChallansTable = pgTable("delivery_challans", {
@@ -18,7 +20,9 @@ export const deliveryChallansTable = pgTable("delivery_challans", {
   customerId: integer("customer_id")
     .notNull()
     .references(() => customersTable.id),
+  sourceQuotationId: integer("source_quotation_id").references(() => quotationsTable.id),
   sourceSalesOrderId: integer("source_sales_order_id").references(() => salesOrdersTable.id),
+  sourceProformaId: integer("source_proforma_id").references(() => proformaInvoicesTable.id),
   sourceInvoiceId: integer("source_invoice_id").references(() => salesInvoicesTable.id),
   status: text("status").notNull().default("draft"), // draft | dispatched | delivered — logistics-only, no stock/accounting posting
   dispatchDate: date("dispatch_date"),

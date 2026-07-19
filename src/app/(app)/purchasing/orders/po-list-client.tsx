@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Eye, Printer, Trash2 } from "lucide-react";
+import { Eye, Star, Pencil, Printer, RefreshCw, Archive, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { StatRow } from "../../sales/_shared/stat-row";
@@ -77,8 +77,9 @@ export function PoListClient({ locale, rows }: { locale: Locale; rows: PoRow[] }
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>{t(locale, "Number")}</TableHead>
+              <TableHead>{t(locale, "PO #")}</TableHead>
               <TableHead>{t(locale, "Title")}</TableHead>
+              <TableHead>{t(locale, "Converted From")}</TableHead>
               <TableHead>{t(locale, "Vendor")}</TableHead>
               <TableHead>{t(locale, "Order Date")}</TableHead>
               <TableHead>{t(locale, "Expected Delivery")}</TableHead>
@@ -92,7 +93,16 @@ export function PoListClient({ locale, rows }: { locale: Locale; rows: PoRow[] }
             {filtered.map((r) => {
               const entries: RowMenuEntry[] = [
                 { kind: "item", icon: Eye, label: t(locale, "View"), href: `/purchasing/orders/${r.id}` },
+                { kind: "item", icon: Star, label: t(locale, "Add to Favorites") },
+                { kind: "item", icon: Pencil, label: t(locale, "Edit") },
                 { kind: "item", icon: Printer, label: t(locale, "Print / Download PDF"), href: `/print/purchase-order/${r.id}` },
+                {
+                  kind: "item",
+                  icon: RefreshCw,
+                  label: t(locale, "Create Debit Note"),
+                  href: r.status === "received" ? `/purchasing/debit-notes/new?po=${r.id}` : undefined,
+                },
+                { kind: "item", icon: Archive, label: t(locale, "Archive") },
                 { kind: "separator" },
                 { kind: "item", icon: Trash2, label: t(locale, "Delete"), danger: true },
               ];
@@ -106,6 +116,7 @@ export function PoListClient({ locale, rows }: { locale: Locale; rows: PoRow[] }
                   <TableCell className="max-w-[150px] truncate" title={r.title ?? undefined}>
                     {r.title ?? <span className="text-ink-faint">—</span>}
                   </TableCell>
+                  <TableCell className="text-ink-faint font-mono text-xs">—</TableCell>
                   <TableCell>{r.vendorName}</TableCell>
                   <TableCell className="font-mono text-xs">{r.orderDate}</TableCell>
                   <TableCell className="font-mono text-xs">{r.expectedDate ?? <span className="text-ink-faint">—</span>}</TableCell>

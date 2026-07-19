@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Eye, Printer, Wallet, Send, Trash2 } from "lucide-react";
+import { Eye, Star, Printer, Wallet, Send, Archive, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { StatRow } from "../_shared/stat-row";
@@ -84,7 +84,7 @@ export function InvoicesListClient({ locale, rows }: { locale: Locale; rows: Inv
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>{t(locale, "Number")}</TableHead>
+            <TableHead>{t(locale, "Invoice #")}</TableHead>
             <TableHead>{t(locale, "Title")}</TableHead>
             <TableHead>{t(locale, "Converted From")}</TableHead>
             <TableHead>{t(locale, "Client")}</TableHead>
@@ -100,17 +100,19 @@ export function InvoicesListClient({ locale, rows }: { locale: Locale; rows: Inv
           {filtered.map((r) => {
             const entries: RowMenuEntry[] = [
               { kind: "item", icon: Eye, label: t(locale, "View"), href: `/sales/invoices/${r.id}` },
+              { kind: "item", icon: Star, label: t(locale, "Add to Favorites") },
               { kind: "item", icon: Printer, label: t(locale, "Print / Download PDF"), href: `/print/invoice/${r.id}` },
               { kind: "item", icon: Wallet, label: t(locale, "Record Payment") },
               {
                 kind: "convert",
                 label: t(locale, "Convert to…"),
                 targets: [
-                  { label: t(locale, "Delivery Challan"), onSelect: () => createDc(r.id) },
                   { label: t(locale, "Credit Note"), onSelect: () => window.location.assign(`/sales/credit-notes/new?invoice=${r.id}`) },
+                  { label: t(locale, "Delivery Challan"), onSelect: () => createDc(r.id) },
                 ],
               },
               { kind: "item", icon: Send, label: t(locale, "Send Reminder") },
+              { kind: "item", icon: Archive, label: t(locale, "Archive") },
               { kind: "separator" },
               { kind: "item", icon: Trash2, label: t(locale, "Delete"), danger: true },
             ];

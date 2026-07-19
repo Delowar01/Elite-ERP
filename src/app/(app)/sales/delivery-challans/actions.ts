@@ -15,14 +15,17 @@ const VALID_STATUSES = ["draft", "dispatched", "delivered"];
 
 type LineInput = { productId: string; description: string; quantity: string };
 
-export async function createDeliveryChallanAction(input: {
-  title: string;
-  customerId: string;
-  dispatchDate: string;
-  carrier: string;
-  vehicleNo: string;
-  items: LineInput[];
-}): Promise<ActionResult> {
+export async function createDeliveryChallanAction(
+  input: {
+    title: string;
+    customerId: string;
+    dispatchDate: string;
+    carrier: string;
+    vehicleNo: string;
+    items: LineInput[];
+  },
+  andDispatch = false,
+): Promise<ActionResult> {
   const session = await requireSession();
   const customerId = Number(input.customerId);
   if (!customerId) return { error: "Choose a client." };
@@ -58,6 +61,9 @@ export async function createDeliveryChallanAction(input: {
   });
 
   await logActivity(session, { type: "delivery_challan.created", description: "Created a delivery challan", entityType: "delivery_challan", entityId: id });
+  if (andDispatch) {
+    await updateDeliveryChallanStatusAction(id, "dispatched");
+  }
   revalidatePath(PATH);
   redirect(`/sales/delivery-challans/${id}`);
 }

@@ -30,11 +30,13 @@ export function DcForm({
   const [carrier, setCarrier] = useState("");
   const [vehicleNo, setVehicleNo] = useState("");
   const [items, setItems] = useState<LineItemDraft[]>([emptyLineItem()]);
-  const [pending, startTransition] = useTransition();
+  const [pendingDraft, startDraftTransition] = useTransition();
+  const [pendingPrimary, startPrimaryTransition] = useTransition();
 
-  function submit() {
-    startTransition(async () => {
-      const result = await createDeliveryChallanAction({ title: "", customerId, dispatchDate, carrier, vehicleNo, items });
+  function submit(andDispatch: boolean) {
+    const start = andDispatch ? startPrimaryTransition : startDraftTransition;
+    start(async () => {
+      const result = await createDeliveryChallanAction({ title: "", customerId, dispatchDate, carrier, vehicleNo, items }, andDispatch);
       if (result?.error) toast.error(result.error);
     });
   }
@@ -81,7 +83,14 @@ export function DcForm({
 
       <DocFooterContact locale={locale} email={org.email} phone={org.phone} />
 
-      <DocActionBar locale={locale} pending={pending} onSubmit={submit} primaryLabel="Save as Draft" />
+      <DocActionBar
+        locale={locale}
+        pendingDraft={pendingDraft}
+        pendingPrimary={pendingPrimary}
+        onSaveDraft={() => submit(false)}
+        onPrimary={() => submit(true)}
+        primaryLabel="Create & Dispatch"
+      />
     </div>
   );
 }

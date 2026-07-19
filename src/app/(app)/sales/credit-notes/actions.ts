@@ -15,12 +15,15 @@ const PATH = "/sales/credit-notes";
 
 type LineInput = { productId: string; description: string; quantity: string; unitPrice: string; taxRatePercent: string };
 
-export async function createCreditNoteAction(input: {
-  title: string;
-  sourceInvoiceId: string;
-  reason: string;
-  items: LineInput[];
-}): Promise<ActionResult> {
+export async function createCreditNoteAction(
+  input: {
+    title: string;
+    sourceInvoiceId: string;
+    reason: string;
+    items: LineInput[];
+  },
+  andIssue = false,
+): Promise<ActionResult> {
   const session = await requireSession();
   const sourceInvoiceId = Number(input.sourceInvoiceId);
   if (!sourceInvoiceId) return { error: "Choose the invoice this credit note is against." };
@@ -70,6 +73,9 @@ export async function createCreditNoteAction(input: {
   });
 
   await logActivity(session, { type: "credit_note.created", description: `Created a credit note against invoice ${invoice.invoiceNumber}`, entityType: "credit_note", entityId: id });
+  if (andIssue) {
+    await issueCreditNoteAction(id);
+  }
   revalidatePath(PATH);
   redirect(`/sales/credit-notes/${id}`);
 }

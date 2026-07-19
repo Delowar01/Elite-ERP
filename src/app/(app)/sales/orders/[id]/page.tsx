@@ -32,6 +32,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
       title: salesOrdersTable.title,
       status: salesOrdersTable.status,
       issueDate: salesOrdersTable.issueDate,
+      expectedDate: salesOrdersTable.expectedDate,
       subtotal: salesOrdersTable.subtotal,
       discount: salesOrdersTable.discount,
       taxTotal: salesOrdersTable.taxTotal,
@@ -62,6 +63,12 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
           <h3 className="mono">{order.soNumber}</h3>
           <div className="inv-sub">
             {t(locale, "Order Date")} {order.issueDate}
+            {order.expectedDate && (
+              <>
+                {" · "}
+                {t(locale, "Expected Delivery")} {order.expectedDate}
+              </>
+            )}
             {order.title ? ` · ${order.title}` : ""}
             {order.sourceQuotationNumber && (
               <>

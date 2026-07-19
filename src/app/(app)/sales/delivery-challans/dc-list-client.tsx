@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Eye, Printer, Truck as TruckIcon, Trash2 } from "lucide-react";
+import { Eye, Printer, Truck as TruckIcon, Archive, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { StatRow } from "../_shared/stat-row";
@@ -69,7 +69,7 @@ export function DcListClient({ locale, rows }: { locale: Locale; rows: DcRow[] }
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>{t(locale, "Number")}</TableHead>
+            <TableHead>{t(locale, "DC #")}</TableHead>
             <TableHead>{t(locale, "Title")}</TableHead>
             <TableHead>{t(locale, "Converted From")}</TableHead>
             <TableHead>{t(locale, "Client")}</TableHead>
@@ -85,6 +85,7 @@ export function DcListClient({ locale, rows }: { locale: Locale; rows: DcRow[] }
               { kind: "item", icon: Eye, label: t(locale, "View"), href: `/sales/delivery-challans/${r.id}` },
               { kind: "item", icon: Printer, label: t(locale, "Print"), href: `/print/delivery-challan/${r.id}` },
               { kind: "item", icon: TruckIcon, label: t(locale, "Mark Delivered") },
+              { kind: "item", icon: Archive, label: t(locale, "Archive") },
               { kind: "separator" },
               { kind: "item", icon: Trash2, label: t(locale, "Delete"), danger: true },
             ];

@@ -41,13 +41,15 @@ export function OrderForm({
   const [discount, setDiscount] = useState("0");
   const [notes, setNotes] = useState("");
   const [items, setItems] = useState<LineItemDraft[]>([emptyLineItem()]);
-  const [pending, startTransition] = useTransition();
+  const [pendingDraft, startDraftTransition] = useTransition();
+  const [pendingPrimary, startPrimaryTransition] = useTransition();
 
   const totals = computeTotals(items, discount);
 
-  function submit() {
-    startTransition(async () => {
-      const result = await createSalesOrderAction({ title, customerId, projectId, issueDate, discount, notes, items });
+  function submit(andConfirm: boolean) {
+    const start = andConfirm ? startPrimaryTransition : startDraftTransition;
+    start(async () => {
+      const result = await createSalesOrderAction({ title, customerId, projectId, issueDate, expectedDate: expectedDelivery, discount, notes, items }, andConfirm);
       if (result?.error) toast.error(result.error);
     });
   }
@@ -142,7 +144,14 @@ export function OrderForm({
 
       <DocFooterContact locale={locale} email={org.email} phone={org.phone} />
 
-      <DocActionBar locale={locale} pending={pending} onSubmit={submit} primaryLabel="Save as Draft" />
+      <DocActionBar
+        locale={locale}
+        pendingDraft={pendingDraft}
+        pendingPrimary={pendingPrimary}
+        onSaveDraft={() => submit(false)}
+        onPrimary={() => submit(true)}
+        primaryLabel="Confirm Order"
+      />
     </div>
   );
 }

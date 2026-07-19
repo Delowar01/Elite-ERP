@@ -15,6 +15,7 @@ export default async function OrdersPage() {
       title: salesOrdersTable.title,
       customerName: customersTable.name,
       issueDate: salesOrdersTable.issueDate,
+      expectedDate: salesOrdersTable.expectedDate,
       total: salesOrdersTable.total,
       status: salesOrdersTable.status,
       creatorName: usersTable.name,
