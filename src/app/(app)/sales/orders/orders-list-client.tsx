@@ -109,6 +109,7 @@ export function OrdersListClient({ locale, rows }: { locale: Locale; rows: Order
                   { label: t(locale, "Proforma Invoice"), onSelect: () => convert(r.id, convertSoToProformaAction) },
                   { label: t(locale, "Invoice"), onSelect: () => convert(r.id, convertSoToInvoiceAction) },
                   { label: t(locale, "Delivery Challan"), onSelect: () => convert(r.id, convertSoToDeliveryChallanAction) },
+                  { label: t(locale, "Purchase Order"), onSelect: () => window.location.assign(`/purchasing/orders/new?fromSalesOrder=${r.id}`) },
                 ],
               },
               { kind: "item", icon: Copy, label: t(locale, "Duplicate") },

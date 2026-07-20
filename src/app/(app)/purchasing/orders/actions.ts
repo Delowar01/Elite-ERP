@@ -24,6 +24,10 @@ export async function createPurchaseOrderAction(
     discount: string;
     notes: string;
     items: LineInput[];
+    sourceQuotationId?: string;
+    sourceSalesOrderId?: string;
+    sourceProformaId?: string;
+    sourceInvoiceId?: string;
   },
   andSend = false,
 ): Promise<ActionResult> {
@@ -46,6 +50,10 @@ export async function createPurchaseOrderAction(
         poNumber,
         title: input.title.trim() || null,
         vendorId,
+        sourceQuotationId: input.sourceQuotationId ? Number(input.sourceQuotationId) : null,
+        sourceSalesOrderId: input.sourceSalesOrderId ? Number(input.sourceSalesOrderId) : null,
+        sourceProformaId: input.sourceProformaId ? Number(input.sourceProformaId) : null,
+        sourceInvoiceId: input.sourceInvoiceId ? Number(input.sourceInvoiceId) : null,
         orderDate: input.orderDate,
         expectedDate: input.expectedDate || null,
         notes: input.notes.trim() || null,

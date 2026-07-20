@@ -104,6 +104,7 @@ export function ProformaListClient({ locale, rows }: { locale: Locale; rows: Pro
                 targets: [
                   { label: t(locale, "Invoice"), onSelect: () => convert(r.id, convertProformaToInvoiceAction) },
                   { label: t(locale, "Delivery Challan"), onSelect: () => convert(r.id, convertProformaToDeliveryChallanAction) },
+                  { label: t(locale, "Purchase Order"), onSelect: () => window.location.assign(`/purchasing/orders/new?fromProforma=${r.id}`) },
                 ],
               },
               { kind: "item", icon: Archive, label: t(locale, "Archive") },

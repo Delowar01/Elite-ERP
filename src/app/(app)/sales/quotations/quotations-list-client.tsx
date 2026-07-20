@@ -119,6 +119,7 @@ export function QuotationsListClient({ locale, rows }: { locale: Locale; rows: Q
                   { label: t(locale, "Proforma Invoice"), onSelect: () => convert(r.id, convertToProformaAction) },
                   { label: t(locale, "Invoice"), onSelect: () => convert(r.id, convertToInvoiceAction) },
                   { label: t(locale, "Delivery Challan"), onSelect: () => convert(r.id, convertToDeliveryChallanAction) },
+                  { label: t(locale, "Purchase Order"), onSelect: () => window.location.assign(`/purchasing/orders/new?fromQuotation=${r.id}`) },
                 ],
               },
               { kind: "item", icon: Send, label: t(locale, "Send to Client"), onSelect: () => convert(r.id, (id) => updateQuotationStatusAction(id, "sent")) },

@@ -109,6 +109,7 @@ export function InvoicesListClient({ locale, rows }: { locale: Locale; rows: Inv
                 targets: [
                   { label: t(locale, "Credit Note"), onSelect: () => window.location.assign(`/sales/credit-notes/new?invoice=${r.id}`) },
                   { label: t(locale, "Delivery Challan"), onSelect: () => createDc(r.id) },
+                  { label: t(locale, "Purchase Order"), onSelect: () => window.location.assign(`/purchasing/orders/new?fromInvoice=${r.id}`) },
                 ],
               },
               { kind: "item", icon: Send, label: t(locale, "Send Reminder") },

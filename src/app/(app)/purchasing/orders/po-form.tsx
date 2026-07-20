@@ -24,20 +24,32 @@ export function PoForm({
   products,
   org,
   numberPreview,
+  initialTitle,
+  initialItems,
+  sourceQuotationId,
+  sourceSalesOrderId,
+  sourceProformaId,
+  sourceInvoiceId,
 }: {
   locale: Locale;
   vendors: Vendor[];
   products: Product[];
   org: Org;
   numberPreview: string;
+  initialTitle?: string;
+  initialItems?: LineItemDraft[];
+  sourceQuotationId?: string;
+  sourceSalesOrderId?: string;
+  sourceProformaId?: string;
+  sourceInvoiceId?: string;
 }) {
-  const [title, setTitle] = useState("");
+  const [title, setTitle] = useState(initialTitle ?? "");
   const [vendorId, setVendorId] = useState("");
   const [orderDate, setOrderDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [expectedDate, setExpectedDate] = useState("");
   const [discount, setDiscount] = useState("0");
   const [notes, setNotes] = useState("");
-  const [items, setItems] = useState<LineItemDraft[]>([emptyLineItem()]);
+  const [items, setItems] = useState<LineItemDraft[]>(initialItems && initialItems.length > 0 ? initialItems : [emptyLineItem()]);
   const [pendingDraft, startDraftTransition] = useTransition();
   const [pendingPrimary, startPrimaryTransition] = useTransition();
 
@@ -46,7 +58,10 @@ export function PoForm({
   function submit(andSend: boolean) {
     const start = andSend ? startPrimaryTransition : startDraftTransition;
     start(async () => {
-      const result = await createPurchaseOrderAction({ title, vendorId, orderDate, expectedDate, discount, notes, items }, andSend);
+      const result = await createPurchaseOrderAction(
+        { title, vendorId, orderDate, expectedDate, discount, notes, items, sourceQuotationId, sourceSalesOrderId, sourceProformaId, sourceInvoiceId },
+        andSend,
+      );
       if (result?.error) toast.error(result.error);
     });
   }
