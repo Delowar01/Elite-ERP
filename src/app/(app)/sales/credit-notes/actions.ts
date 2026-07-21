@@ -7,6 +7,7 @@ import { db, creditNotesTable, creditNoteItemsTable, salesInvoicesTable, account
 import { requireSession } from "@/lib/session";
 import { logActivity } from "@/lib/activity";
 import { nextDocumentNumber } from "@/lib/documents";
+import { can } from "@/lib/document-lifecycle";
 import { computeTotals, type LineItemInput } from "../_shared/totals";
 
 export type ActionResult = { error?: string; id?: number };
@@ -77,6 +78,50 @@ export async function createCreditNoteAction(
     await issueCreditNoteAction(id);
   }
   revalidatePath(PATH);
+  redirect(`/sales/credit-notes/${id}`);
+}
+
+// Batch A2 — draft-only edit. Preserves number/org/status/customer + source-invoice link; recomputes totals server-side.
+export async function updateCreditNoteAction(
+  id: number,
+  input: { reason: string; items: LineInput[] },
+): Promise<ActionResult> {
+  const session = await requireSession();
+  const [existing] = await db.select().from(creditNotesTable).where(and(eq(creditNotesTable.id, id), eq(creditNotesTable.orgId, session.orgId)));
+  if (!existing) return { error: "Credit note not found." };
+  if (!can("credit_note", existing.status, "edit")) return { error: "Only draft credit notes can be edited." };
+
+  const items = input.items.filter((l) => l.description.trim() && Number(l.quantity) > 0);
+  if (items.length === 0) return { error: "Add at least one line item." };
+  const totals = computeTotals(items as LineItemInput[]);
+
+  await db.transaction(async (tx) => {
+    await tx
+      .update(creditNotesTable)
+      .set({
+        reason: input.reason.trim() || null,
+        subtotal: totals.subtotal,
+        taxTotal: totals.taxTotal,
+        total: totals.total,
+      })
+      .where(and(eq(creditNotesTable.id, id), eq(creditNotesTable.orgId, session.orgId)));
+    await tx.delete(creditNoteItemsTable).where(eq(creditNoteItemsTable.creditNoteId, id));
+    await tx.insert(creditNoteItemsTable).values(
+      items.map((l) => ({
+        creditNoteId: id,
+        productId: l.productId ? Number(l.productId) : null,
+        description: l.description.trim(),
+        quantity: l.quantity,
+        unitPrice: l.unitPrice,
+        taxRatePercent: l.taxRatePercent,
+        lineTotal: ((Number(l.quantity) || 0) * (Number(l.unitPrice) || 0)).toFixed(2),
+      })),
+    );
+  });
+
+  await logActivity(session, { type: "credit_note.updated", description: `Edited draft credit note ${existing.creditNoteNumber}`, entityType: "credit_note", entityId: id });
+  revalidatePath(PATH);
+  revalidatePath(`/sales/credit-notes/${id}`);
   redirect(`/sales/credit-notes/${id}`);
 }
 

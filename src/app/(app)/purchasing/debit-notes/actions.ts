@@ -7,6 +7,7 @@ import { db, debitNotesTable, debitNoteItemsTable, purchaseOrdersTable, products
 import { requireSession } from "@/lib/session";
 import { logActivity } from "@/lib/activity";
 import { nextDocumentNumber } from "@/lib/documents";
+import { can } from "@/lib/document-lifecycle";
 import { computeTotals, type LineItemInput } from "../../sales/_shared/totals";
 
 export type ActionResult = { error?: string; id?: number };
@@ -77,6 +78,50 @@ export async function createDebitNoteAction(
     await issueDebitNoteAction(id);
   }
   revalidatePath(PATH);
+  redirect(`/purchasing/debit-notes/${id}`);
+}
+
+// Batch A2 — draft-only edit. Preserves number/org/status/vendor + source-PO link; recomputes totals server-side.
+export async function updateDebitNoteAction(
+  id: number,
+  input: { reason: string; items: LineInput[] },
+): Promise<ActionResult> {
+  const session = await requireSession();
+  const [existing] = await db.select().from(debitNotesTable).where(and(eq(debitNotesTable.id, id), eq(debitNotesTable.orgId, session.orgId)));
+  if (!existing) return { error: "Debit note not found." };
+  if (!can("debit_note", existing.status, "edit")) return { error: "Only draft debit notes can be edited." };
+
+  const items = input.items.filter((l) => l.description.trim() && Number(l.quantity) > 0);
+  if (items.length === 0) return { error: "Add at least one line item." };
+  const totals = computeTotals(items as LineItemInput[]);
+
+  await db.transaction(async (tx) => {
+    await tx
+      .update(debitNotesTable)
+      .set({
+        reason: input.reason.trim() || null,
+        subtotal: totals.subtotal,
+        taxTotal: totals.taxTotal,
+        total: totals.total,
+      })
+      .where(and(eq(debitNotesTable.id, id), eq(debitNotesTable.orgId, session.orgId)));
+    await tx.delete(debitNoteItemsTable).where(eq(debitNoteItemsTable.debitNoteId, id));
+    await tx.insert(debitNoteItemsTable).values(
+      items.map((l) => ({
+        debitNoteId: id,
+        productId: l.productId ? Number(l.productId) : null,
+        description: l.description.trim(),
+        quantity: l.quantity,
+        unitCost: l.unitPrice,
+        taxRatePercent: l.taxRatePercent,
+        lineTotal: ((Number(l.quantity) || 0) * (Number(l.unitPrice) || 0)).toFixed(2),
+      })),
+    );
+  });
+
+  await logActivity(session, { type: "debit_note.updated", description: `Edited draft debit note ${existing.debitNoteNumber}`, entityType: "debit_note", entityId: id });
+  revalidatePath(PATH);
+  revalidatePath(`/purchasing/debit-notes/${id}`);
   redirect(`/purchasing/debit-notes/${id}`);
 }
 

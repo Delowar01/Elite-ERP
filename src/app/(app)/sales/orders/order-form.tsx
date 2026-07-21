@@ -16,7 +16,18 @@ import { DocActionBar } from "../_shared/doc-action-bar";
 import { computeTotals } from "../_shared/totals";
 import { t, type Locale } from "@/lib/i18n/dict";
 import type { Customer, Product, Org } from "@/db";
-import { createSalesOrderAction } from "./actions";
+import { createSalesOrderAction, updateSalesOrderAction } from "./actions";
+
+export type OrderFormInitial = {
+  title: string;
+  customerId: string;
+  projectId: string;
+  issueDate: string;
+  expectedDelivery: string;
+  discount: string;
+  notes: string;
+  items: LineItemDraft[];
+};
 
 export function OrderForm({
   locale,
@@ -25,6 +36,9 @@ export function OrderForm({
   projects,
   org,
   numberPreview,
+  mode = "create",
+  documentId,
+  initial,
 }: {
   locale: Locale;
   customers: Customer[];
@@ -32,15 +46,19 @@ export function OrderForm({
   projects: { id: number; name: string }[];
   org: Org;
   numberPreview: string;
+  mode?: "create" | "edit";
+  documentId?: number;
+  initial?: OrderFormInitial;
 }) {
-  const [title, setTitle] = useState("");
-  const [customerId, setCustomerId] = useState("");
-  const [projectId, setProjectId] = useState("");
-  const [issueDate, setIssueDate] = useState(() => new Date().toISOString().slice(0, 10));
-  const [expectedDelivery, setExpectedDelivery] = useState("");
-  const [discount, setDiscount] = useState("0");
-  const [notes, setNotes] = useState("");
-  const [items, setItems] = useState<LineItemDraft[]>([emptyLineItem()]);
+  const isEdit = mode === "edit";
+  const [title, setTitle] = useState(initial?.title ?? "");
+  const [customerId, setCustomerId] = useState(initial?.customerId ?? "");
+  const [projectId, setProjectId] = useState(initial?.projectId ?? "");
+  const [issueDate, setIssueDate] = useState(initial?.issueDate ?? new Date().toISOString().slice(0, 10));
+  const [expectedDelivery, setExpectedDelivery] = useState(initial?.expectedDelivery ?? "");
+  const [discount, setDiscount] = useState(initial?.discount ?? "0");
+  const [notes, setNotes] = useState(initial?.notes ?? "");
+  const [items, setItems] = useState<LineItemDraft[]>(initial?.items && initial.items.length > 0 ? initial.items : [emptyLineItem()]);
   const [pendingDraft, startDraftTransition] = useTransition();
   const [pendingPrimary, startPrimaryTransition] = useTransition();
 
@@ -49,7 +67,8 @@ export function OrderForm({
   function submit(andConfirm: boolean) {
     const start = andConfirm ? startPrimaryTransition : startDraftTransition;
     start(async () => {
-      const result = await createSalesOrderAction({ title, customerId, projectId, issueDate, expectedDate: expectedDelivery, discount, notes, items }, andConfirm);
+      const payload = { title, customerId, projectId, issueDate, expectedDate: expectedDelivery, discount, notes, items };
+      const result = isEdit && documentId ? await updateSalesOrderAction(documentId, payload) : await createSalesOrderAction(payload, andConfirm);
       if (result?.error) toast.error(result.error);
     });
   }
@@ -59,9 +78,9 @@ export function OrderForm({
       <div className="doc-titlebar">
         <div>
           <h3>
-            <ClipboardList className="size-5" style={{ color: "var(--brand-orange)" }} /> {t(locale, "Create Sales Order")}
+            <ClipboardList className="size-5" style={{ color: "var(--brand-orange)" }} /> {t(locale, isEdit ? "Edit Sales Order" : "Create Sales Order")}
           </h3>
-          <div className="sub">{t(locale, "Confirm client orders and track them through to delivery.")}</div>
+          <div className="sub">{t(locale, isEdit ? "Edit this draft document." : "Confirm client orders and track them through to delivery.")}</div>
         </div>
         <div className="doc-titlebar-actions">
           <button type="button" className="btn btn-glass" disabled>
@@ -149,8 +168,9 @@ export function OrderForm({
         pendingDraft={pendingDraft}
         pendingPrimary={pendingPrimary}
         onSaveDraft={() => submit(false)}
-        onPrimary={() => submit(true)}
+        onPrimary={() => submit(isEdit ? false : true)}
         primaryLabel="Confirm Order"
+        editMode={isEdit}
       />
     </div>
   );

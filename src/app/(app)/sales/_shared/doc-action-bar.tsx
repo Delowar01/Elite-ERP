@@ -17,6 +17,7 @@ export function DocActionBar({
   onSaveDraft,
   onPrimary,
   primaryLabel = "Save as Draft",
+  editMode = false,
 }: {
   locale: Locale;
   pendingDraft: boolean;
@@ -24,8 +25,22 @@ export function DocActionBar({
   onSaveDraft: () => void;
   onPrimary: () => void;
   primaryLabel?: string;
+  /** Edit mode (Batch A2): a single "Save Changes" button — no create/send split. */
+  editMode?: boolean;
 }) {
   const busy = pendingDraft || pendingPrimary;
+  if (editMode) {
+    return (
+      <div className="doc-action-bar">
+        <button type="button" className="btn btn-glass" disabled>
+          <FileText className="size-3.5" /> {t(locale, "Preview & Print")}
+        </button>
+        <button type="button" className="btn btn-primary" disabled={busy} onClick={onPrimary}>
+          {pendingPrimary ? t(locale, "Saving…") : t(locale, "Save Changes")}
+        </button>
+      </div>
+    );
+  }
   return (
     <div className="doc-action-bar">
       <button type="button" className="btn btn-glass" disabled>

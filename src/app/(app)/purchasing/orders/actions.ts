@@ -7,6 +7,7 @@ import { db, purchaseOrdersTable, purchaseOrderItemsTable, productsTable, accoun
 import { requireSession } from "@/lib/session";
 import { logActivity } from "@/lib/activity";
 import { nextDocumentNumber } from "@/lib/documents";
+import { can } from "@/lib/document-lifecycle";
 import { computeTotals, type LineItemInput } from "../../sales/_shared/totals";
 
 export type ActionResult = { error?: string; id?: number };
@@ -84,6 +85,59 @@ export async function createPurchaseOrderAction(
     await sendPurchaseOrderAction(id);
   }
   revalidatePath(PATH);
+  redirect(`/purchasing/orders/${id}`);
+}
+
+// Batch A2 — draft-only edit. Preserves number/org/status/source links; recomputes totals server-side.
+export async function updatePurchaseOrderAction(
+  id: number,
+  input: { title: string; vendorId: string; orderDate: string; expectedDate: string; discount: string; notes: string; items: LineInput[] },
+): Promise<ActionResult> {
+  const session = await requireSession();
+  const [existing] = await db.select().from(purchaseOrdersTable).where(and(eq(purchaseOrdersTable.id, id), eq(purchaseOrdersTable.orgId, session.orgId)));
+  if (!existing) return { error: "Purchase order not found." };
+  if (!can("purchase_order", existing.status, "edit")) return { error: "Only draft purchase orders can be edited." };
+
+  const vendorId = Number(input.vendorId);
+  if (!vendorId) return { error: "Choose a vendor." };
+  if (!input.orderDate) return { error: "Order date is required." };
+  const items = input.items.filter((l) => l.description.trim() && Number(l.quantity) > 0);
+  if (items.length === 0) return { error: "Add at least one line item." };
+  const totals = computeTotals(items as LineItemInput[], input.discount);
+
+  await db.transaction(async (tx) => {
+    await tx
+      .update(purchaseOrdersTable)
+      .set({
+        title: input.title.trim() || null,
+        vendorId,
+        orderDate: input.orderDate,
+        expectedDate: input.expectedDate || null,
+        notes: input.notes.trim() || null,
+        subtotal: totals.subtotal,
+        discount: totals.discount,
+        taxTotal: totals.taxTotal,
+        total: totals.total,
+        updatedAt: new Date(),
+      })
+      .where(and(eq(purchaseOrdersTable.id, id), eq(purchaseOrdersTable.orgId, session.orgId)));
+    await tx.delete(purchaseOrderItemsTable).where(eq(purchaseOrderItemsTable.purchaseOrderId, id));
+    await tx.insert(purchaseOrderItemsTable).values(
+      items.map((l) => ({
+        purchaseOrderId: id,
+        productId: l.productId ? Number(l.productId) : null,
+        description: l.description.trim(),
+        quantity: l.quantity,
+        unitCost: l.unitPrice,
+        taxRatePercent: l.taxRatePercent,
+        lineTotal: ((Number(l.quantity) || 0) * (Number(l.unitPrice) || 0)).toFixed(2),
+      })),
+    );
+  });
+
+  await logActivity(session, { type: "purchase_order.updated", description: `Edited draft purchase order ${existing.poNumber}`, entityType: "purchase_order", entityId: id });
+  revalidatePath(PATH);
+  revalidatePath(`/purchasing/orders/${id}`);
   redirect(`/purchasing/orders/${id}`);
 }
 

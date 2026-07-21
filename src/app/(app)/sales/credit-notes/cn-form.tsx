@@ -13,9 +13,16 @@ import { Money } from "../_shared/money";
 import { computeTotals } from "../_shared/totals";
 import { t, type Locale } from "@/lib/i18n/dict";
 import type { Product, Org } from "@/db";
-import { createCreditNoteAction } from "./actions";
+import { createCreditNoteAction, updateCreditNoteAction } from "./actions";
 
 type InvoiceOption = { id: number; invoiceNumber: string; customerName: string; customerAddress?: string | null; customerEmail?: string | null; customerPhone?: string | null };
+
+export type CnFormInitial = {
+  sourceInvoiceId: string;
+  issueDate: string;
+  reason: string;
+  items: LineItemDraft[];
+};
 
 export function CnForm({
   locale,
@@ -24,6 +31,9 @@ export function CnForm({
   org,
   numberPreview,
   defaultInvoiceId,
+  mode = "create",
+  documentId,
+  initial,
 }: {
   locale: Locale;
   invoices: InvoiceOption[];
@@ -31,11 +41,15 @@ export function CnForm({
   org: Org;
   numberPreview: string;
   defaultInvoiceId?: string;
+  mode?: "create" | "edit";
+  documentId?: number;
+  initial?: CnFormInitial;
 }) {
-  const [sourceInvoiceId, setSourceInvoiceId] = useState(defaultInvoiceId ?? "");
-  const [issueDate, setIssueDate] = useState(() => new Date().toISOString().slice(0, 10));
-  const [reason, setReason] = useState("");
-  const [items, setItems] = useState<LineItemDraft[]>([emptyLineItem()]);
+  const isEdit = mode === "edit";
+  const [sourceInvoiceId, setSourceInvoiceId] = useState(initial?.sourceInvoiceId ?? defaultInvoiceId ?? "");
+  const [issueDate, setIssueDate] = useState(initial?.issueDate ?? new Date().toISOString().slice(0, 10));
+  const [reason, setReason] = useState(initial?.reason ?? "");
+  const [items, setItems] = useState<LineItemDraft[]>(initial?.items && initial.items.length > 0 ? initial.items : [emptyLineItem()]);
   const [pendingDraft, startDraftTransition] = useTransition();
   const [pendingPrimary, startPrimaryTransition] = useTransition();
 
@@ -45,7 +59,9 @@ export function CnForm({
   function submit(andIssue: boolean) {
     const start = andIssue ? startPrimaryTransition : startDraftTransition;
     start(async () => {
-      const result = await createCreditNoteAction({ title: "", sourceInvoiceId, reason, items }, andIssue);
+      const result = isEdit && documentId
+        ? await updateCreditNoteAction(documentId, { reason, items })
+        : await createCreditNoteAction({ title: "", sourceInvoiceId, reason, items }, andIssue);
       if (result?.error) toast.error(result.error);
     });
   }
@@ -55,9 +71,9 @@ export function CnForm({
       <div className="doc-titlebar">
         <div>
           <h3>
-            <FileMinus2 className="size-5" style={{ color: "var(--brand-orange)" }} /> {t(locale, "Create Credit Note")}
+            <FileMinus2 className="size-5" style={{ color: "var(--brand-orange)" }} /> {t(locale, isEdit ? "Edit Credit Note" : "Create Credit Note")}
           </h3>
-          <div className="sub">{t(locale, "Issue a credit against a sent invoice — posts Dr Sales Revenue + Dr VAT Payable, Cr Accounts Receivable.")}</div>
+          <div className="sub">{t(locale, isEdit ? "Edit this draft document." : "Issue a credit against a sent invoice — posts Dr Sales Revenue + Dr VAT Payable, Cr Accounts Receivable.")}</div>
         </div>
         <div className="doc-titlebar-actions">
           <button type="button" className="btn btn-glass" disabled>
@@ -81,7 +97,7 @@ export function CnForm({
             {t(locale, "Against Invoice")} <span className="req">*</span>
           </label>
           <div className="doc-field-input-row">
-            <Select value={sourceInvoiceId} onValueChange={setSourceInvoiceId}>
+            <Select value={sourceInvoiceId} onValueChange={setSourceInvoiceId} disabled={isEdit}>
               <SelectTrigger className="input plain h-[38px] w-full border-0 shadow-none justify-between">
                 <SelectValue placeholder={t(locale, "Select an invoice")} />
               </SelectTrigger>
@@ -139,8 +155,9 @@ export function CnForm({
         pendingDraft={pendingDraft}
         pendingPrimary={pendingPrimary}
         onSaveDraft={() => submit(false)}
-        onPrimary={() => submit(true)}
+        onPrimary={() => submit(isEdit ? false : true)}
         primaryLabel="Issue Credit Note"
+        editMode={isEdit}
       />
     </div>
   );

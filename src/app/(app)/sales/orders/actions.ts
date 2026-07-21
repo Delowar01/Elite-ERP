@@ -7,6 +7,7 @@ import { db, projectsTable, salesOrdersTable, salesOrderItemsTable, proformaInvo
 import { requireSession } from "@/lib/session";
 import { logActivity } from "@/lib/activity";
 import { nextDocumentNumber } from "@/lib/documents";
+import { can } from "@/lib/document-lifecycle";
 import { computeTotals, type LineItemInput } from "../_shared/totals";
 
 export type ActionResult = { error?: string; id?: number };
@@ -89,6 +90,66 @@ export async function createSalesOrderAction(
     await updateSalesOrderStatusAction(id, "confirmed");
   }
   revalidatePath(PATH);
+  redirect(`/sales/orders/${id}`);
+}
+
+// Batch A2 — draft-only edit. Preserves number/org/status/source links; recomputes totals server-side.
+export async function updateSalesOrderAction(
+  id: number,
+  input: { title: string; customerId: string; projectId?: string; issueDate: string; expectedDate: string; discount: string; notes: string; items: LineInput[] },
+): Promise<ActionResult> {
+  const session = await requireSession();
+  const [existing] = await db.select().from(salesOrdersTable).where(and(eq(salesOrdersTable.id, id), eq(salesOrdersTable.orgId, session.orgId)));
+  if (!existing) return { error: "Sales order not found." };
+  if (!can("sales_order", existing.status, "edit")) return { error: "Only draft sales orders can be edited." };
+
+  const customerId = Number(input.customerId);
+  if (!customerId) return { error: "Choose a client." };
+  let projectId: number | null = null;
+  if (input.projectId) {
+    const [project] = await db.select({ id: projectsTable.id }).from(projectsTable).where(and(eq(projectsTable.id, Number(input.projectId)), eq(projectsTable.orgId, session.orgId)));
+    if (!project) return { error: "Project not found." };
+    projectId = project.id;
+  }
+  if (!input.issueDate) return { error: "Order date is required." };
+  const items = input.items.filter((l) => l.description.trim() && Number(l.quantity) > 0);
+  if (items.length === 0) return { error: "Add at least one line item." };
+  const totals = computeTotals(items as LineItemInput[], input.discount);
+
+  await db.transaction(async (tx) => {
+    await tx
+      .update(salesOrdersTable)
+      .set({
+        title: input.title.trim() || null,
+        customerId,
+        projectId,
+        issueDate: input.issueDate,
+        expectedDate: input.expectedDate || null,
+        notes: input.notes.trim() || null,
+        subtotal: totals.subtotal,
+        discount: totals.discount,
+        taxTotal: totals.taxTotal,
+        total: totals.total,
+        updatedAt: new Date(),
+      })
+      .where(and(eq(salesOrdersTable.id, id), eq(salesOrdersTable.orgId, session.orgId)));
+    await tx.delete(salesOrderItemsTable).where(eq(salesOrderItemsTable.salesOrderId, id));
+    await tx.insert(salesOrderItemsTable).values(
+      items.map((l) => ({
+        salesOrderId: id,
+        productId: l.productId ? Number(l.productId) : null,
+        description: l.description.trim(),
+        quantity: l.quantity,
+        unitPrice: l.unitPrice,
+        taxRatePercent: l.taxRatePercent,
+        lineTotal: ((Number(l.quantity) || 0) * (Number(l.unitPrice) || 0)).toFixed(2),
+      })),
+    );
+  });
+
+  await logActivity(session, { type: "sales_order.updated", description: `Edited draft sales order ${existing.soNumber}`, entityType: "sales_order", entityId: id });
+  revalidatePath(PATH);
+  revalidatePath(`/sales/orders/${id}`);
   redirect(`/sales/orders/${id}`);
 }
 

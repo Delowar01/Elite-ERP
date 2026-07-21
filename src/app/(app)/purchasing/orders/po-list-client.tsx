@@ -10,6 +10,7 @@ import { ListToolbar } from "../../sales/_shared/list-toolbar";
 import { RowMenu, type RowMenuEntry } from "../../sales/_shared/row-menu";
 import { Money } from "../../sales/_shared/money";
 import { t, type Locale } from "@/lib/i18n/dict";
+import { can } from "@/lib/document-lifecycle";
 
 const STATUS_VARIANT: Record<string, "success" | "warning" | "danger" | "info" | "neutral"> = {
   draft: "neutral",
@@ -94,7 +95,7 @@ export function PoListClient({ locale, rows }: { locale: Locale; rows: PoRow[] }
               const entries: RowMenuEntry[] = [
                 { kind: "item", icon: Eye, label: t(locale, "View"), href: `/purchasing/orders/${r.id}` },
                 { kind: "item", icon: Star, label: t(locale, "Add to Favorites") },
-                { kind: "item", icon: Pencil, label: t(locale, "Edit") },
+                { kind: "item", icon: Pencil, label: t(locale, "Edit"), href: can("purchase_order", r.status, "edit") ? `/purchasing/orders/${r.id}/edit` : undefined },
                 { kind: "item", icon: Printer, label: t(locale, "Print / Download PDF"), href: `/print/purchase-order/${r.id}` },
                 {
                   kind: "item",

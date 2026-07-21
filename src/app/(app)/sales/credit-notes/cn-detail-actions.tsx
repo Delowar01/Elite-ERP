@@ -2,6 +2,7 @@
 
 import { useTransition } from "react";
 import { toast } from "sonner";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { t, type Locale } from "@/lib/i18n/dict";
 import { issueCreditNoteAction } from "./actions";
@@ -20,8 +21,13 @@ export function CnDetailActions({ locale, creditNoteId, status }: { locale: Loca
   if (status !== "draft") return null;
 
   return (
-    <Button style={{ width: "auto" }} disabled={pending} onClick={issue}>
-      {t(locale, "Issue Credit Note")}
-    </Button>
+    <div className="flex items-center gap-2.5">
+      <Button variant="glass" style={{ width: "auto" }} asChild>
+        <Link href={`/sales/credit-notes/${creditNoteId}/edit`}>{t(locale, "Edit")}</Link>
+      </Button>
+      <Button style={{ width: "auto" }} disabled={pending} onClick={issue}>
+        {t(locale, "Issue Credit Note")}
+      </Button>
+    </div>
   );
 }

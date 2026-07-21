@@ -56,6 +56,9 @@ export function InvoiceDetailActions({
         <Button variant="ghost" style={{ width: "auto" }} disabled={pending} onClick={voidInvoice}>
           {t(locale, "Void")}
         </Button>
+        <Button variant="glass" style={{ width: "auto" }} asChild>
+          <Link href={`/sales/invoices/${invoiceId}/edit`}>{t(locale, "Edit")}</Link>
+        </Button>
         <Button style={{ width: "auto" }} disabled={pending} onClick={send}>
           {t(locale, "Send Invoice")}
         </Button>

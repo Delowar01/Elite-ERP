@@ -10,7 +10,15 @@ import { DocFooterContact } from "../_shared/doc-footer-contact";
 import { DocActionBar } from "../_shared/doc-action-bar";
 import { t, type Locale } from "@/lib/i18n/dict";
 import type { Customer, Product, Org } from "@/db";
-import { createDeliveryChallanAction } from "./actions";
+import { createDeliveryChallanAction, updateDeliveryChallanAction } from "./actions";
+
+export type DcFormInitial = {
+  customerId: string;
+  dispatchDate: string;
+  carrier: string;
+  vehicleNo: string;
+  items: LineItemDraft[];
+};
 
 export function DcForm({
   locale,
@@ -18,25 +26,35 @@ export function DcForm({
   products,
   org,
   numberPreview,
+  mode = "create",
+  documentId,
+  initial,
 }: {
   locale: Locale;
   customers: Customer[];
   products: Product[];
   org: Org;
   numberPreview: string;
+  mode?: "create" | "edit";
+  documentId?: number;
+  initial?: DcFormInitial;
 }) {
-  const [customerId, setCustomerId] = useState("");
-  const [dispatchDate, setDispatchDate] = useState(() => new Date().toISOString().slice(0, 10));
-  const [carrier, setCarrier] = useState("");
-  const [vehicleNo, setVehicleNo] = useState("");
-  const [items, setItems] = useState<LineItemDraft[]>([emptyLineItem()]);
+  const isEdit = mode === "edit";
+  const [customerId, setCustomerId] = useState(initial?.customerId ?? "");
+  const [dispatchDate, setDispatchDate] = useState(initial?.dispatchDate ?? new Date().toISOString().slice(0, 10));
+  const [carrier, setCarrier] = useState(initial?.carrier ?? "");
+  const [vehicleNo, setVehicleNo] = useState(initial?.vehicleNo ?? "");
+  const [items, setItems] = useState<LineItemDraft[]>(initial?.items && initial.items.length > 0 ? initial.items : [emptyLineItem()]);
   const [pendingDraft, startDraftTransition] = useTransition();
   const [pendingPrimary, startPrimaryTransition] = useTransition();
 
   function submit(andDispatch: boolean) {
     const start = andDispatch ? startPrimaryTransition : startDraftTransition;
     start(async () => {
-      const result = await createDeliveryChallanAction({ title: "", customerId, dispatchDate, carrier, vehicleNo, items }, andDispatch);
+      const payload = { customerId, dispatchDate, carrier, vehicleNo, items };
+      const result = isEdit && documentId
+        ? await updateDeliveryChallanAction(documentId, payload)
+        : await createDeliveryChallanAction({ title: "", ...payload }, andDispatch);
       if (result?.error) toast.error(result.error);
     });
   }
@@ -46,9 +64,9 @@ export function DcForm({
       <div className="doc-titlebar">
         <div>
           <h3>
-            <Truck className="size-5" style={{ color: "var(--brand-orange)" }} /> {t(locale, "Create Delivery Challan")}
+            <Truck className="size-5" style={{ color: "var(--brand-orange)" }} /> {t(locale, isEdit ? "Edit Delivery Challan" : "Create Delivery Challan")}
           </h3>
-          <div className="sub">{t(locale, "Dispatch stock to a client — logistics only, no pricing or ledger impact.")}</div>
+          <div className="sub">{t(locale, isEdit ? "Edit this draft document." : "Dispatch stock to a client — logistics only, no pricing or ledger impact.")}</div>
         </div>
         <div className="doc-titlebar-actions">
           <button type="button" className="btn btn-glass" disabled>
@@ -88,8 +106,9 @@ export function DcForm({
         pendingDraft={pendingDraft}
         pendingPrimary={pendingPrimary}
         onSaveDraft={() => submit(false)}
-        onPrimary={() => submit(true)}
+        onPrimary={() => submit(isEdit ? false : true)}
         primaryLabel="Create & Dispatch"
+        editMode={isEdit}
       />
     </div>
   );

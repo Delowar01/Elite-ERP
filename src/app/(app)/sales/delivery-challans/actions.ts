@@ -7,6 +7,7 @@ import { db, deliveryChallansTable, deliveryChallanItemsTable } from "@/db";
 import { requireSession } from "@/lib/session";
 import { logActivity } from "@/lib/activity";
 import { nextDocumentNumber } from "@/lib/documents";
+import { can } from "@/lib/document-lifecycle";
 
 export type ActionResult = { error?: string; id?: number };
 
@@ -65,6 +66,49 @@ export async function createDeliveryChallanAction(
     await updateDeliveryChallanStatusAction(id, "dispatched");
   }
   revalidatePath(PATH);
+  redirect(`/sales/delivery-challans/${id}`);
+}
+
+// Batch A2 — draft-only edit. Preserves number/org/status/title/source links (logistics-only: no totals).
+export async function updateDeliveryChallanAction(
+  id: number,
+  input: { customerId: string; dispatchDate: string; carrier: string; vehicleNo: string; items: LineInput[] },
+): Promise<ActionResult> {
+  const session = await requireSession();
+  const [existing] = await db.select().from(deliveryChallansTable).where(and(eq(deliveryChallansTable.id, id), eq(deliveryChallansTable.orgId, session.orgId)));
+  if (!existing) return { error: "Delivery challan not found." };
+  if (!can("delivery_challan", existing.status, "edit")) return { error: "Only draft delivery challans can be edited." };
+
+  const customerId = Number(input.customerId);
+  if (!customerId) return { error: "Choose a client." };
+  const items = input.items.filter((l) => l.description.trim() && Number(l.quantity) > 0);
+  if (items.length === 0) return { error: "Add at least one line item." };
+
+  await db.transaction(async (tx) => {
+    await tx
+      .update(deliveryChallansTable)
+      .set({
+        customerId,
+        dispatchDate: input.dispatchDate || null,
+        carrier: input.carrier.trim() || null,
+        vehicleNo: input.vehicleNo.trim() || null,
+        updatedAt: new Date(),
+      })
+      .where(and(eq(deliveryChallansTable.id, id), eq(deliveryChallansTable.orgId, session.orgId)));
+    await tx.delete(deliveryChallanItemsTable).where(eq(deliveryChallanItemsTable.deliveryChallanId, id));
+    await tx.insert(deliveryChallanItemsTable).values(
+      items.map((l) => ({
+        deliveryChallanId: id,
+        productId: l.productId ? Number(l.productId) : null,
+        description: l.description.trim(),
+        quantity: l.quantity,
+      })),
+    );
+  });
+
+  await logActivity(session, { type: "delivery_challan.updated", description: `Edited draft delivery challan ${existing.dcNumber}`, entityType: "delivery_challan", entityId: id });
+  revalidatePath(PATH);
+  revalidatePath(`/sales/delivery-challans/${id}`);
   redirect(`/sales/delivery-challans/${id}`);
 }
 

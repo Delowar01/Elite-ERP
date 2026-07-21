@@ -17,7 +17,18 @@ import { EInvoicePreviewPanel } from "../_shared/einvoice-preview-panel";
 import { computeTotals } from "../_shared/totals";
 import { t, type Locale } from "@/lib/i18n/dict";
 import type { Customer, Product, Org } from "@/db";
-import { createInvoiceAction } from "./actions";
+import { createInvoiceAction, updateInvoiceAction } from "./actions";
+
+export type InvoiceFormInitial = {
+  title: string;
+  customerId: string;
+  projectId: string;
+  issueDate: string;
+  dueDate: string;
+  discount: string;
+  notes: string;
+  items: LineItemDraft[];
+};
 
 export function InvoiceForm({
   locale,
@@ -26,6 +37,9 @@ export function InvoiceForm({
   projects,
   org,
   numberPreview,
+  mode = "create",
+  documentId,
+  initial,
 }: {
   locale: Locale;
   customers: Customer[];
@@ -33,15 +47,19 @@ export function InvoiceForm({
   projects: { id: number; name: string }[];
   org: Org;
   numberPreview: string;
+  mode?: "create" | "edit";
+  documentId?: number;
+  initial?: InvoiceFormInitial;
 }) {
-  const [title, setTitle] = useState("");
-  const [customerId, setCustomerId] = useState("");
-  const [projectId, setProjectId] = useState("");
-  const [issueDate, setIssueDate] = useState(() => new Date().toISOString().slice(0, 10));
-  const [dueDate, setDueDate] = useState("");
-  const [discount, setDiscount] = useState("0");
-  const [notes, setNotes] = useState("");
-  const [items, setItems] = useState<LineItemDraft[]>([emptyLineItem()]);
+  const isEdit = mode === "edit";
+  const [title, setTitle] = useState(initial?.title ?? "");
+  const [customerId, setCustomerId] = useState(initial?.customerId ?? "");
+  const [projectId, setProjectId] = useState(initial?.projectId ?? "");
+  const [issueDate, setIssueDate] = useState(initial?.issueDate ?? new Date().toISOString().slice(0, 10));
+  const [dueDate, setDueDate] = useState(initial?.dueDate ?? "");
+  const [discount, setDiscount] = useState(initial?.discount ?? "0");
+  const [notes, setNotes] = useState(initial?.notes ?? "");
+  const [items, setItems] = useState<LineItemDraft[]>(initial?.items && initial.items.length > 0 ? initial.items : [emptyLineItem()]);
   const [pendingDraft, startDraftTransition] = useTransition();
   const [pendingPrimary, startPrimaryTransition] = useTransition();
 
@@ -50,7 +68,8 @@ export function InvoiceForm({
   function submit(andSend: boolean) {
     const start = andSend ? startPrimaryTransition : startDraftTransition;
     start(async () => {
-      const result = await createInvoiceAction({ title, customerId, projectId, issueDate, dueDate, discount, notes, items }, andSend);
+      const payload = { title, customerId, projectId, issueDate, dueDate, discount, notes, items };
+      const result = isEdit && documentId ? await updateInvoiceAction(documentId, payload) : await createInvoiceAction(payload, andSend);
       if (result?.error) toast.error(result.error);
     });
   }
@@ -60,9 +79,9 @@ export function InvoiceForm({
       <div className="doc-titlebar">
         <div>
           <h3>
-            <Receipt className="size-5" style={{ color: "var(--brand-orange)" }} /> {t(locale, "Create Invoice")}
+            <Receipt className="size-5" style={{ color: "var(--brand-orange)" }} /> {t(locale, isEdit ? "Edit Invoice" : "Create Invoice")}
           </h3>
-          <div className="sub">{t(locale, "Issue a tax invoice — posts to the ledger and decrements stock on send.")}</div>
+          <div className="sub">{t(locale, isEdit ? "Edit this draft document." : "Issue a tax invoice — posts to the ledger and decrements stock on send.")}</div>
         </div>
         <div className="doc-titlebar-actions">
           <button type="button" className="btn btn-glass" disabled>
@@ -146,8 +165,9 @@ export function InvoiceForm({
         pendingDraft={pendingDraft}
         pendingPrimary={pendingPrimary}
         onSaveDraft={() => submit(false)}
-        onPrimary={() => submit(true)}
+        onPrimary={() => submit(isEdit ? false : true)}
         primaryLabel="Send to Client"
+        editMode={isEdit}
       />
     </div>
   );

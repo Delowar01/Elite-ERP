@@ -16,7 +16,18 @@ import { DocActionBar } from "../_shared/doc-action-bar";
 import { computeTotals } from "../_shared/totals";
 import { t, type Locale } from "@/lib/i18n/dict";
 import type { Customer, Product, Org } from "@/db";
-import { createQuotationAction } from "./actions";
+import { createQuotationAction, updateQuotationAction } from "./actions";
+
+export type QuotationFormInitial = {
+  title: string;
+  customerId: string;
+  projectId: string;
+  issueDate: string;
+  validUntil: string;
+  discount: string;
+  notes: string;
+  items: LineItemDraft[];
+};
 
 export function QuotationForm({
   locale,
@@ -25,6 +36,9 @@ export function QuotationForm({
   projects,
   org,
   numberPreview,
+  mode = "create",
+  documentId,
+  initial,
 }: {
   locale: Locale;
   customers: Customer[];
@@ -32,15 +46,19 @@ export function QuotationForm({
   projects: { id: number; name: string }[];
   org: Org;
   numberPreview: string;
+  mode?: "create" | "edit";
+  documentId?: number;
+  initial?: QuotationFormInitial;
 }) {
-  const [title, setTitle] = useState("");
-  const [customerId, setCustomerId] = useState("");
-  const [projectId, setProjectId] = useState("");
-  const [issueDate, setIssueDate] = useState(() => new Date().toISOString().slice(0, 10));
-  const [validUntil, setValidUntil] = useState("");
-  const [discount, setDiscount] = useState("0");
-  const [notes, setNotes] = useState("");
-  const [items, setItems] = useState<LineItemDraft[]>([emptyLineItem()]);
+  const isEdit = mode === "edit";
+  const [title, setTitle] = useState(initial?.title ?? "");
+  const [customerId, setCustomerId] = useState(initial?.customerId ?? "");
+  const [projectId, setProjectId] = useState(initial?.projectId ?? "");
+  const [issueDate, setIssueDate] = useState(initial?.issueDate ?? new Date().toISOString().slice(0, 10));
+  const [validUntil, setValidUntil] = useState(initial?.validUntil ?? "");
+  const [discount, setDiscount] = useState(initial?.discount ?? "0");
+  const [notes, setNotes] = useState(initial?.notes ?? "");
+  const [items, setItems] = useState<LineItemDraft[]>(initial?.items && initial.items.length > 0 ? initial.items : [emptyLineItem()]);
   const [pendingDraft, startDraftTransition] = useTransition();
   const [pendingPrimary, startPrimaryTransition] = useTransition();
 
@@ -49,7 +67,8 @@ export function QuotationForm({
   function submit(andSend: boolean) {
     const start = andSend ? startPrimaryTransition : startDraftTransition;
     start(async () => {
-      const result = await createQuotationAction({ title, customerId, projectId, issueDate, validUntil, discount, notes, items }, andSend);
+      const payload = { title, customerId, projectId, issueDate, validUntil, discount, notes, items };
+      const result = isEdit && documentId ? await updateQuotationAction(documentId, payload) : await createQuotationAction(payload, andSend);
       if (result?.error) toast.error(result.error);
     });
   }
@@ -59,9 +78,9 @@ export function QuotationForm({
       <div className="doc-titlebar">
         <div>
           <h3>
-            <FileText className="size-5" style={{ color: "var(--brand-orange)" }} /> {t(locale, "Create Quotation")}
+            <FileText className="size-5" style={{ color: "var(--brand-orange)" }} /> {t(locale, isEdit ? "Edit Quotation" : "Create Quotation")}
           </h3>
-          <div className="sub">{t(locale, "Create and send professional quotations to your clients.")}</div>
+          <div className="sub">{t(locale, isEdit ? "Edit this draft quotation." : "Create and send professional quotations to your clients.")}</div>
         </div>
         <div className="doc-titlebar-actions">
           <button type="button" className="btn btn-glass" disabled>
@@ -144,8 +163,9 @@ export function QuotationForm({
         pendingDraft={pendingDraft}
         pendingPrimary={pendingPrimary}
         onSaveDraft={() => submit(false)}
-        onPrimary={() => submit(true)}
+        onPrimary={() => submit(isEdit ? false : true)}
         primaryLabel="Save & Submit"
+        editMode={isEdit}
       />
     </div>
   );

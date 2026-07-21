@@ -11,6 +11,7 @@ import { ListToolbar } from "../_shared/list-toolbar";
 import { RowMenu, type RowMenuEntry } from "../_shared/row-menu";
 import { Money } from "../_shared/money";
 import { t, type Locale } from "@/lib/i18n/dict";
+import { can } from "@/lib/document-lifecycle";
 import { convertProformaToInvoiceAction, convertProformaToDeliveryChallanAction } from "./actions";
 
 const STATUS_VARIANT: Record<string, "success" | "warning" | "danger" | "info" | "neutral"> = {
@@ -95,7 +96,7 @@ export function ProformaListClient({ locale, rows }: { locale: Locale; rows: Pro
             const entries: RowMenuEntry[] = [
               { kind: "item", icon: Eye, label: t(locale, "View"), href: `/sales/proforma/${r.id}` },
               { kind: "item", icon: Star, label: t(locale, "Add to Favorites") },
-              { kind: "item", icon: Pencil, label: t(locale, "Edit") },
+              { kind: "item", icon: Pencil, label: t(locale, "Edit"), href: can("proforma_invoice", r.status, "edit") ? `/sales/proforma/${r.id}/edit` : undefined },
               { kind: "item", icon: Printer, label: t(locale, "Print / Download PDF"), href: `/print/proforma/${r.id}` },
               { kind: "item", icon: Wallet, label: t(locale, "Record Payment") },
               {

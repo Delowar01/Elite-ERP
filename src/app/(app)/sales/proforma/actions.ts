@@ -7,6 +7,7 @@ import { db, proformaInvoicesTable, proformaInvoiceItemsTable, salesInvoicesTabl
 import { requireSession } from "@/lib/session";
 import { logActivity } from "@/lib/activity";
 import { nextDocumentNumber } from "@/lib/documents";
+import { can } from "@/lib/document-lifecycle";
 import { computeTotals, type LineItemInput } from "../_shared/totals";
 
 export type ActionResult = { error?: string; id?: number };
@@ -75,6 +76,58 @@ export async function createProformaAction(
     await updateProformaStatusAction(id, "sent");
   }
   revalidatePath(PATH);
+  redirect(`/sales/proforma/${id}`);
+}
+
+// Batch A2 — draft-only edit. Preserves number/org/status/source links; recomputes totals server-side.
+export async function updateProformaAction(
+  id: number,
+  input: { title: string; customerId: string; issueDate: string; discount: string; notes: string; items: LineInput[] },
+): Promise<ActionResult> {
+  const session = await requireSession();
+  const [existing] = await db.select().from(proformaInvoicesTable).where(and(eq(proformaInvoicesTable.id, id), eq(proformaInvoicesTable.orgId, session.orgId)));
+  if (!existing) return { error: "Proforma invoice not found." };
+  if (!can("proforma_invoice", existing.status, "edit")) return { error: "Only draft proforma invoices can be edited." };
+
+  const customerId = Number(input.customerId);
+  if (!customerId) return { error: "Choose a client." };
+  if (!input.issueDate) return { error: "Issue date is required." };
+  const items = input.items.filter((l) => l.description.trim() && Number(l.quantity) > 0);
+  if (items.length === 0) return { error: "Add at least one line item." };
+  const totals = computeTotals(items as LineItemInput[], input.discount);
+
+  await db.transaction(async (tx) => {
+    await tx
+      .update(proformaInvoicesTable)
+      .set({
+        title: input.title.trim() || null,
+        customerId,
+        issueDate: input.issueDate,
+        notes: input.notes.trim() || null,
+        subtotal: totals.subtotal,
+        discount: totals.discount,
+        taxTotal: totals.taxTotal,
+        total: totals.total,
+        updatedAt: new Date(),
+      })
+      .where(and(eq(proformaInvoicesTable.id, id), eq(proformaInvoicesTable.orgId, session.orgId)));
+    await tx.delete(proformaInvoiceItemsTable).where(eq(proformaInvoiceItemsTable.proformaInvoiceId, id));
+    await tx.insert(proformaInvoiceItemsTable).values(
+      items.map((l) => ({
+        proformaInvoiceId: id,
+        productId: l.productId ? Number(l.productId) : null,
+        description: l.description.trim(),
+        quantity: l.quantity,
+        unitPrice: l.unitPrice,
+        taxRatePercent: l.taxRatePercent,
+        lineTotal: ((Number(l.quantity) || 0) * (Number(l.unitPrice) || 0)).toFixed(2),
+      })),
+    );
+  });
+
+  await logActivity(session, { type: "proforma_invoice.updated", description: `Edited draft proforma ${existing.proformaNumber}`, entityType: "proforma_invoice", entityId: id });
+  revalidatePath(PATH);
+  revalidatePath(`/sales/proforma/${id}`);
   redirect(`/sales/proforma/${id}`);
 }
 

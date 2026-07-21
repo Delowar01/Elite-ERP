@@ -16,7 +16,16 @@ import { DocActionBar } from "../_shared/doc-action-bar";
 import { computeTotals } from "../_shared/totals";
 import { t, type Locale } from "@/lib/i18n/dict";
 import type { Customer, Product, Org } from "@/db";
-import { createProformaAction } from "./actions";
+import { createProformaAction, updateProformaAction } from "./actions";
+
+export type ProformaFormInitial = {
+  title: string;
+  customerId: string;
+  issueDate: string;
+  discount: string;
+  notes: string;
+  items: LineItemDraft[];
+};
 
 export function ProformaForm({
   locale,
@@ -24,19 +33,26 @@ export function ProformaForm({
   products,
   org,
   numberPreview,
+  mode = "create",
+  documentId,
+  initial,
 }: {
   locale: Locale;
   customers: Customer[];
   products: Product[];
   org: Org;
   numberPreview: string;
+  mode?: "create" | "edit";
+  documentId?: number;
+  initial?: ProformaFormInitial;
 }) {
-  const [title, setTitle] = useState("");
-  const [customerId, setCustomerId] = useState("");
-  const [issueDate, setIssueDate] = useState(() => new Date().toISOString().slice(0, 10));
-  const [discount, setDiscount] = useState("0");
-  const [notes, setNotes] = useState("");
-  const [items, setItems] = useState<LineItemDraft[]>([emptyLineItem()]);
+  const isEdit = mode === "edit";
+  const [title, setTitle] = useState(initial?.title ?? "");
+  const [customerId, setCustomerId] = useState(initial?.customerId ?? "");
+  const [issueDate, setIssueDate] = useState(initial?.issueDate ?? new Date().toISOString().slice(0, 10));
+  const [discount, setDiscount] = useState(initial?.discount ?? "0");
+  const [notes, setNotes] = useState(initial?.notes ?? "");
+  const [items, setItems] = useState<LineItemDraft[]>(initial?.items && initial.items.length > 0 ? initial.items : [emptyLineItem()]);
   const [pendingDraft, startDraftTransition] = useTransition();
   const [pendingPrimary, startPrimaryTransition] = useTransition();
 
@@ -45,7 +61,8 @@ export function ProformaForm({
   function submit(andSend: boolean) {
     const start = andSend ? startPrimaryTransition : startDraftTransition;
     start(async () => {
-      const result = await createProformaAction({ title, customerId, issueDate, discount, notes, items }, andSend);
+      const payload = { title, customerId, issueDate, discount, notes, items };
+      const result = isEdit && documentId ? await updateProformaAction(documentId, payload) : await createProformaAction(payload, andSend);
       if (result?.error) toast.error(result.error);
     });
   }
@@ -55,9 +72,9 @@ export function ProformaForm({
       <div className="doc-titlebar">
         <div>
           <h3>
-            <FileCheck2 className="size-5" style={{ color: "var(--brand-orange)" }} /> {t(locale, "Create Proforma Invoice")}
+            <FileCheck2 className="size-5" style={{ color: "var(--brand-orange)" }} /> {t(locale, isEdit ? "Edit Proforma Invoice" : "Create Proforma Invoice")}
           </h3>
-          <div className="sub">{t(locale, "A preview invoice for client reference — never posts revenue or affects stock.")}</div>
+          <div className="sub">{t(locale, isEdit ? "Edit this draft document." : "A preview invoice for client reference — never posts revenue or affects stock.")}</div>
         </div>
         <div className="doc-titlebar-actions">
           <button type="button" className="btn btn-glass" disabled>
@@ -130,8 +147,9 @@ export function ProformaForm({
         pendingDraft={pendingDraft}
         pendingPrimary={pendingPrimary}
         onSaveDraft={() => submit(false)}
-        onPrimary={() => submit(true)}
+        onPrimary={() => submit(isEdit ? false : true)}
         primaryLabel="Send to Client"
+        editMode={isEdit}
       />
     </div>
   );

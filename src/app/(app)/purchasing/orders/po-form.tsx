@@ -16,7 +16,17 @@ import { DocActionBar } from "../../sales/_shared/doc-action-bar";
 import { computeTotals } from "../../sales/_shared/totals";
 import { t, type Locale } from "@/lib/i18n/dict";
 import type { Vendor, Product, Org } from "@/db";
-import { createPurchaseOrderAction } from "./actions";
+import { createPurchaseOrderAction, updatePurchaseOrderAction } from "./actions";
+
+export type PoFormInitial = {
+  title: string;
+  vendorId: string;
+  orderDate: string;
+  expectedDate: string;
+  discount: string;
+  notes: string;
+  items: LineItemDraft[];
+};
 
 export function PoForm({
   locale,
@@ -30,6 +40,9 @@ export function PoForm({
   sourceSalesOrderId,
   sourceProformaId,
   sourceInvoiceId,
+  mode = "create",
+  documentId,
+  initial,
 }: {
   locale: Locale;
   vendors: Vendor[];
@@ -42,14 +55,20 @@ export function PoForm({
   sourceSalesOrderId?: string;
   sourceProformaId?: string;
   sourceInvoiceId?: string;
+  mode?: "create" | "edit";
+  documentId?: number;
+  initial?: PoFormInitial;
 }) {
-  const [title, setTitle] = useState(initialTitle ?? "");
-  const [vendorId, setVendorId] = useState("");
-  const [orderDate, setOrderDate] = useState(() => new Date().toISOString().slice(0, 10));
-  const [expectedDate, setExpectedDate] = useState("");
-  const [discount, setDiscount] = useState("0");
-  const [notes, setNotes] = useState("");
-  const [items, setItems] = useState<LineItemDraft[]>(initialItems && initialItems.length > 0 ? initialItems : [emptyLineItem()]);
+  const isEdit = mode === "edit";
+  const [title, setTitle] = useState(initial?.title ?? initialTitle ?? "");
+  const [vendorId, setVendorId] = useState(initial?.vendorId ?? "");
+  const [orderDate, setOrderDate] = useState(initial?.orderDate ?? new Date().toISOString().slice(0, 10));
+  const [expectedDate, setExpectedDate] = useState(initial?.expectedDate ?? "");
+  const [discount, setDiscount] = useState(initial?.discount ?? "0");
+  const [notes, setNotes] = useState(initial?.notes ?? "");
+  const [items, setItems] = useState<LineItemDraft[]>(
+    initial?.items && initial.items.length > 0 ? initial.items : initialItems && initialItems.length > 0 ? initialItems : [emptyLineItem()],
+  );
   const [pendingDraft, startDraftTransition] = useTransition();
   const [pendingPrimary, startPrimaryTransition] = useTransition();
 
@@ -58,10 +77,12 @@ export function PoForm({
   function submit(andSend: boolean) {
     const start = andSend ? startPrimaryTransition : startDraftTransition;
     start(async () => {
-      const result = await createPurchaseOrderAction(
-        { title, vendorId, orderDate, expectedDate, discount, notes, items, sourceQuotationId, sourceSalesOrderId, sourceProformaId, sourceInvoiceId },
-        andSend,
-      );
+      const result = isEdit && documentId
+        ? await updatePurchaseOrderAction(documentId, { title, vendorId, orderDate, expectedDate, discount, notes, items })
+        : await createPurchaseOrderAction(
+            { title, vendorId, orderDate, expectedDate, discount, notes, items, sourceQuotationId, sourceSalesOrderId, sourceProformaId, sourceInvoiceId },
+            andSend,
+          );
       if (result?.error) toast.error(result.error);
     });
   }
@@ -71,9 +92,9 @@ export function PoForm({
       <div className="doc-titlebar">
         <div>
           <h3>
-            <ShoppingCart className="size-5" style={{ color: "var(--brand-orange)" }} /> {t(locale, "Create Purchase Order")}
+            <ShoppingCart className="size-5" style={{ color: "var(--brand-orange)" }} /> {t(locale, isEdit ? "Edit Purchase Order" : "Create Purchase Order")}
           </h3>
-          <div className="sub">{t(locale, "Order stock from a vendor — receiving posts to inventory and accounts payable.")}</div>
+          <div className="sub">{t(locale, isEdit ? "Edit this draft document." : "Order stock from a vendor — receiving posts to inventory and accounts payable.")}</div>
         </div>
         <div className="doc-titlebar-actions">
           <button type="button" className="btn btn-glass" disabled>
@@ -155,8 +176,9 @@ export function PoForm({
         pendingDraft={pendingDraft}
         pendingPrimary={pendingPrimary}
         onSaveDraft={() => submit(false)}
-        onPrimary={() => submit(true)}
+        onPrimary={() => submit(isEdit ? false : true)}
         primaryLabel="Send to Vendor"
+        editMode={isEdit}
       />
     </div>
   );

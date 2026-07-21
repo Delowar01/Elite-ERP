@@ -7,6 +7,7 @@ import { db, projectsTable, salesInvoicesTable, salesInvoiceItemsTable, products
 import { requireSession } from "@/lib/session";
 import { logActivity } from "@/lib/activity";
 import { nextDocumentNumber } from "@/lib/documents";
+import { can } from "@/lib/document-lifecycle";
 import { computeTotals, type LineItemInput } from "../_shared/totals";
 
 export type ActionResult = { error?: string; id?: number };
@@ -88,6 +89,66 @@ export async function createInvoiceAction(
     await sendInvoiceAction(id);
   }
   revalidatePath(PATH);
+  redirect(`/sales/invoices/${id}`);
+}
+
+// Batch A2 — draft-only edit. Preserves number/org/status/source links; recomputes totals server-side.
+export async function updateInvoiceAction(
+  id: number,
+  input: { title: string; customerId: string; projectId?: string; issueDate: string; dueDate: string; discount: string; notes: string; items: LineInput[] },
+): Promise<ActionResult> {
+  const session = await requireSession();
+  const [existing] = await db.select().from(salesInvoicesTable).where(and(eq(salesInvoicesTable.id, id), eq(salesInvoicesTable.orgId, session.orgId)));
+  if (!existing) return { error: "Invoice not found." };
+  if (!can("sales_invoice", existing.status, "edit")) return { error: "Only draft invoices can be edited." };
+
+  const customerId = Number(input.customerId);
+  if (!customerId) return { error: "Choose a client." };
+  let projectId: number | null = null;
+  if (input.projectId) {
+    const [project] = await db.select({ id: projectsTable.id }).from(projectsTable).where(and(eq(projectsTable.id, Number(input.projectId)), eq(projectsTable.orgId, session.orgId)));
+    if (!project) return { error: "Project not found." };
+    projectId = project.id;
+  }
+  if (!input.issueDate) return { error: "Issue date is required." };
+  const items = input.items.filter((l) => l.description.trim() && Number(l.quantity) > 0);
+  if (items.length === 0) return { error: "Add at least one line item." };
+  const totals = computeTotals(items as LineItemInput[], input.discount);
+
+  await db.transaction(async (tx) => {
+    await tx
+      .update(salesInvoicesTable)
+      .set({
+        title: input.title.trim() || null,
+        customerId,
+        projectId,
+        issueDate: input.issueDate,
+        dueDate: input.dueDate || null,
+        notes: input.notes.trim() || null,
+        subtotal: totals.subtotal,
+        discount: totals.discount,
+        taxTotal: totals.taxTotal,
+        total: totals.total,
+        updatedAt: new Date(),
+      })
+      .where(and(eq(salesInvoicesTable.id, id), eq(salesInvoicesTable.orgId, session.orgId)));
+    await tx.delete(salesInvoiceItemsTable).where(eq(salesInvoiceItemsTable.invoiceId, id));
+    await tx.insert(salesInvoiceItemsTable).values(
+      items.map((l) => ({
+        invoiceId: id,
+        productId: l.productId ? Number(l.productId) : null,
+        description: l.description.trim(),
+        quantity: l.quantity,
+        unitPrice: l.unitPrice,
+        taxRatePercent: l.taxRatePercent,
+        lineTotal: ((Number(l.quantity) || 0) * (Number(l.unitPrice) || 0)).toFixed(2),
+      })),
+    );
+  });
+
+  await logActivity(session, { type: "sales_invoice.updated", description: `Edited draft invoice ${existing.invoiceNumber}`, entityType: "sales_invoice", entityId: id });
+  revalidatePath(PATH);
+  revalidatePath(`/sales/invoices/${id}`);
   redirect(`/sales/invoices/${id}`);
 }
 

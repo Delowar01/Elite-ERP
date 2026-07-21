@@ -13,9 +13,16 @@ import { Money } from "../../sales/_shared/money";
 import { computeTotals } from "../../sales/_shared/totals";
 import { t, type Locale } from "@/lib/i18n/dict";
 import type { Product, Org } from "@/db";
-import { createDebitNoteAction } from "./actions";
+import { createDebitNoteAction, updateDebitNoteAction } from "./actions";
 
 type PoOption = { id: number; poNumber: string; vendorName: string; vendorAddress?: string | null; vendorEmail?: string | null; vendorPhone?: string | null };
+
+export type DnFormInitial = {
+  sourcePurchaseOrderId: string;
+  issueDate: string;
+  reason: string;
+  items: LineItemDraft[];
+};
 
 export function DnForm({
   locale,
@@ -24,6 +31,9 @@ export function DnForm({
   org,
   numberPreview,
   defaultPoId,
+  mode = "create",
+  documentId,
+  initial,
 }: {
   locale: Locale;
   purchaseOrders: PoOption[];
@@ -31,11 +41,15 @@ export function DnForm({
   org: Org;
   numberPreview: string;
   defaultPoId?: string;
+  mode?: "create" | "edit";
+  documentId?: number;
+  initial?: DnFormInitial;
 }) {
-  const [sourcePurchaseOrderId, setSourcePurchaseOrderId] = useState(defaultPoId ?? "");
-  const [issueDate, setIssueDate] = useState(() => new Date().toISOString().slice(0, 10));
-  const [reason, setReason] = useState("");
-  const [items, setItems] = useState<LineItemDraft[]>([emptyLineItem()]);
+  const isEdit = mode === "edit";
+  const [sourcePurchaseOrderId, setSourcePurchaseOrderId] = useState(initial?.sourcePurchaseOrderId ?? defaultPoId ?? "");
+  const [issueDate, setIssueDate] = useState(initial?.issueDate ?? new Date().toISOString().slice(0, 10));
+  const [reason, setReason] = useState(initial?.reason ?? "");
+  const [items, setItems] = useState<LineItemDraft[]>(initial?.items && initial.items.length > 0 ? initial.items : [emptyLineItem()]);
   const [pendingDraft, startDraftTransition] = useTransition();
   const [pendingPrimary, startPrimaryTransition] = useTransition();
 
@@ -45,7 +59,9 @@ export function DnForm({
   function submit(andIssue: boolean) {
     const start = andIssue ? startPrimaryTransition : startDraftTransition;
     start(async () => {
-      const result = await createDebitNoteAction({ title: "", sourcePurchaseOrderId, reason, items }, andIssue);
+      const result = isEdit && documentId
+        ? await updateDebitNoteAction(documentId, { reason, items })
+        : await createDebitNoteAction({ title: "", sourcePurchaseOrderId, reason, items }, andIssue);
       if (result?.error) toast.error(result.error);
     });
   }
@@ -55,9 +71,9 @@ export function DnForm({
       <div className="doc-titlebar">
         <div>
           <h3>
-            <FileMinus2 className="size-5" style={{ color: "var(--brand-orange)" }} /> {t(locale, "Create Debit Note")}
+            <FileMinus2 className="size-5" style={{ color: "var(--brand-orange)" }} /> {t(locale, isEdit ? "Edit Debit Note" : "Create Debit Note")}
           </h3>
-          <div className="sub">{t(locale, "Issue a debit against a received purchase order — posts Dr Accounts Payable, Cr Inventory.")}</div>
+          <div className="sub">{t(locale, isEdit ? "Edit this draft document." : "Issue a debit against a received purchase order — posts Dr Accounts Payable, Cr Inventory.")}</div>
         </div>
         <div className="doc-titlebar-actions">
           <button type="button" className="btn btn-glass" disabled>
@@ -81,7 +97,7 @@ export function DnForm({
             {t(locale, "Against PO")} <span className="req">*</span>
           </label>
           <div className="doc-field-input-row">
-            <Select value={sourcePurchaseOrderId} onValueChange={setSourcePurchaseOrderId}>
+            <Select value={sourcePurchaseOrderId} onValueChange={setSourcePurchaseOrderId} disabled={isEdit}>
               <SelectTrigger className="input plain h-[38px] w-full border-0 shadow-none justify-between">
                 <SelectValue placeholder={t(locale, "Select a purchase order")} />
               </SelectTrigger>
@@ -139,8 +155,9 @@ export function DnForm({
         pendingDraft={pendingDraft}
         pendingPrimary={pendingPrimary}
         onSaveDraft={() => submit(false)}
-        onPrimary={() => submit(true)}
+        onPrimary={() => submit(isEdit ? false : true)}
         primaryLabel="Issue Debit Note"
+        editMode={isEdit}
       />
     </div>
   );

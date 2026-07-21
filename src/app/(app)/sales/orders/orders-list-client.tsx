@@ -11,6 +11,7 @@ import { ListToolbar } from "../_shared/list-toolbar";
 import { RowMenu, type RowMenuEntry } from "../_shared/row-menu";
 import { Money } from "../_shared/money";
 import { t, type Locale } from "@/lib/i18n/dict";
+import { can } from "@/lib/document-lifecycle";
 import { convertSoToProformaAction, convertSoToInvoiceAction, convertSoToDeliveryChallanAction } from "./actions";
 
 const STATUS_VARIANT: Record<string, "success" | "warning" | "danger" | "info" | "neutral"> = {
@@ -100,7 +101,7 @@ export function OrdersListClient({ locale, rows }: { locale: Locale; rows: Order
             const entries: RowMenuEntry[] = [
               { kind: "item", icon: Eye, label: t(locale, "View"), href: `/sales/orders/${r.id}` },
               { kind: "item", icon: Star, label: t(locale, "Add to Favorites") },
-              { kind: "item", icon: Pencil, label: t(locale, "Edit") },
+              { kind: "item", icon: Pencil, label: t(locale, "Edit"), href: can("sales_order", r.status, "edit") ? `/sales/orders/${r.id}/edit` : undefined },
               { kind: "item", icon: Printer, label: t(locale, "Print / Download PDF"), href: `/print/sales-order/${r.id}` },
               {
                 kind: "convert",

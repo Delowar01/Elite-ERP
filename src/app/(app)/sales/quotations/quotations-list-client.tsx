@@ -11,6 +11,7 @@ import { ListToolbar } from "../_shared/list-toolbar";
 import { RowMenu, type RowMenuEntry } from "../_shared/row-menu";
 import { Money } from "../_shared/money";
 import { t, type Locale } from "@/lib/i18n/dict";
+import { can } from "@/lib/document-lifecycle";
 import {
   convertToSalesOrderAction,
   convertToProformaAction,
@@ -108,7 +109,7 @@ export function QuotationsListClient({ locale, rows }: { locale: Locale; rows: Q
             const entries: RowMenuEntry[] = [
               { kind: "item", icon: Eye, label: t(locale, "View"), href: `/sales/quotations/${r.id}` },
               { kind: "item", icon: Star, label: t(locale, "Add to Favorites") },
-              { kind: "item", icon: Pencil, label: t(locale, "Edit") },
+              { kind: "item", icon: Pencil, label: t(locale, "Edit"), href: can("quotation", r.status, "edit") ? `/sales/quotations/${r.id}/edit` : undefined },
               { kind: "item", icon: Copy, label: t(locale, "Duplicate") },
               { kind: "item", icon: Printer, label: t(locale, "Print / Download PDF"), href: `/print/quotation/${r.id}` },
               {
