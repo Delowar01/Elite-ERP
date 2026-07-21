@@ -63,7 +63,10 @@ export async function getSession(): Promise<Session | null> {
 
 export async function requireSession(): Promise<Session> {
   const session = await getSession();
-  if (!session) redirect("/login");
+  // A request can reach here with a cryptographically-valid but server-side-REVOKED cookie
+  // (the edge middleware can't check revocation). Redirect through /auth/clear so the stale
+  // cookie is deleted at a real response boundary instead of bouncing to /login and looping (B1).
+  if (!session) redirect("/auth/clear?next=/login");
   return session;
 }
 

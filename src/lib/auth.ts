@@ -46,4 +46,14 @@ export async function verifySessionToken(token: string): Promise<SessionPayload 
   }
 }
 
+// Options used to DELETE the session cookie. Must match how issueSession() sets it so the browser
+// actually drops it — including the __Host- prefix's Secure + Path=/ + no-Domain requirements.
+export const SESSION_COOKIE_CLEAR = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: "lax" as const,
+  path: "/",
+  maxAge: 0,
+};
+
 export { SESSION_COOKIE };

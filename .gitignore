@@ -51,3 +51,4 @@ next-env.d.ts
 
 # Local backup artifacts (never commit database dumps)
 backups/
+scripts/tests/.last-b1-results.json
