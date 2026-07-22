@@ -7,7 +7,7 @@ import { db, creditNotesTable, creditNoteItemsTable, salesInvoicesTable, account
 import { requireSession } from "@/lib/session";
 import { logActivity } from "@/lib/activity";
 import { nextDocumentNumber } from "@/lib/documents";
-import { can } from "@/lib/document-lifecycle";
+import { can, evaluate } from "@/lib/document-lifecycle";
 import { computeTotals, type LineItemInput } from "../_shared/totals";
 
 export type ActionResult = { error?: string; id?: number };
@@ -177,5 +177,67 @@ export async function issueCreditNoteAction(creditNoteId: number): Promise<Actio
   revalidatePath("/finance/chart-of-accounts");
   revalidatePath("/finance/ledger");
   revalidatePath("/finance/reports");
+  return {};
+}
+
+// Batch A4 — safely reverse an issued credit note: the exact inverse of issueCreditNoteAction,
+// in one transaction. Posts a reversing journal entry (Dr Accounts Receivable / Cr Sales
+// Revenue + Cr VAT Payable) and restores the source invoice's balance (subtracts the credit
+// back from paidAmount, floored at zero), then marks the credit note reversed. The lifecycle
+// rule only permits reverse on an issued credit note, so a reversed note cannot be reversed
+// again — no double reversal.
+export async function reverseCreditNoteAction(creditNoteId: number): Promise<ActionResult> {
+  const session = await requireSession();
+  const [cn] = await db.select().from(creditNotesTable).where(and(eq(creditNotesTable.id, creditNoteId), eq(creditNotesTable.orgId, session.orgId)));
+  if (!cn) return { error: "Credit note not found." };
+  const decision = evaluate("credit_note", cn.status, "reverse");
+  if (!decision.allowed) return { error: decision.reason };
+
+  const accounts = await db.select().from(accountsTable).where(eq(accountsTable.orgId, session.orgId));
+  const byCode = new Map(accounts.map((a) => [a.code, a]));
+  const ar = byCode.get("1100");
+  const revenue = byCode.get("4000");
+  const vatPayable = byCode.get("2100");
+  if (!ar || !revenue || !vatPayable) {
+    return { error: "Chart of accounts is missing a required system account (1100/4000/2100)." };
+  }
+
+  await db.transaction(async (tx) => {
+    const [entry] = await tx
+      .insert(journalEntriesTable)
+      .values({
+        orgId: session.orgId,
+        entryDate: new Date().toISOString().slice(0, 10),
+        memo: `Credit note ${cn.creditNoteNumber} reversed`,
+        sourceType: "credit_note",
+        sourceId: cn.id,
+        createdById: session.userId,
+      })
+      .returning({ id: journalEntriesTable.id });
+
+    const lines: { accountId: number; debit: string; credit: string }[] = [
+      { accountId: ar.id, debit: cn.total, credit: "0" },
+      { accountId: revenue.id, debit: "0", credit: cn.subtotal },
+    ];
+    if (Number(cn.taxTotal) > 0) {
+      lines.push({ accountId: vatPayable.id, debit: "0", credit: cn.taxTotal });
+    }
+    await tx.insert(journalLinesTable).values(lines.map((l) => ({ journalEntryId: entry.id, ...l })));
+
+    await tx.update(creditNotesTable).set({ status: "reversed" }).where(eq(creditNotesTable.id, creditNoteId));
+    await tx
+      .update(salesInvoicesTable)
+      .set({ paidAmount: sql`GREATEST(0, ${salesInvoicesTable.paidAmount} - ${cn.total})`, updatedAt: new Date() })
+      .where(eq(salesInvoicesTable.id, cn.sourceInvoiceId));
+  });
+
+  await logActivity(session, { type: "credit_note.reversed", description: `Reversed credit note ${cn.creditNoteNumber} — posted reversing entry and restored invoice balance`, entityType: "credit_note", entityId: creditNoteId });
+  revalidatePath(PATH);
+  revalidatePath(`/sales/credit-notes/${creditNoteId}`);
+  revalidatePath(`/sales/invoices/${cn.sourceInvoiceId}`);
+  revalidatePath("/finance/chart-of-accounts");
+  revalidatePath("/finance/ledger");
+  revalidatePath("/finance/reports");
+  revalidatePath("/dashboard");
   return {};
 }

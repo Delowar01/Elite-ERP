@@ -116,10 +116,13 @@ const RULES: Record<DocumentType, Record<string, StatusRule>> = {
     draft: { posted: false, terminal: false, allow: ["edit", "archive", "soft_delete", "permanent_delete"] },
     // Posted (reversing entry against the source invoice). Correct only via a further reversing entry.
     issued: { posted: true, terminal: true, allow: ["archive", "reverse"] },
+    // Reversed: the issue entry has been backed out and the invoice balance restored. Net-zero, terminal.
+    reversed: { posted: false, terminal: true, allow: ["archive"] },
   },
   debit_note: {
     draft: { posted: false, terminal: false, allow: ["edit", "archive", "soft_delete", "permanent_delete"] },
     issued: { posted: true, terminal: true, allow: ["archive", "reverse"] },
+    reversed: { posted: false, terminal: true, allow: ["archive"] },
   },
   purchase_order: {
     draft: { posted: false, terminal: false, allow: ["edit", "duplicate", "archive", "soft_delete", "cancel", "permanent_delete"] },
@@ -216,10 +219,18 @@ export function evaluate(
     return allow(`Move the ${status} ${docType} to the Recycle Bin.`);
   }
 
+  // ---- void: posted, unpaid only. The settlement guard must run even when the status
+  // otherwise permits void — a "sent" invoice can carry payments or a credit note against
+  // it (paidAmount > 0) while still being "sent", and those must not be voided. ----
+  if (action === "void") {
+    if (!permitted) return deny(rule.posted ? `A ${status} ${docType} cannot be voided; ${correctionPath(docType)}.` : `Nothing to void: a ${status} ${docType} has not posted.`);
+    if (ctx.hasPayments) return deny("A settled invoice cannot be voided; issue a Credit Note instead.");
+    return allow(`Void the ${status} ${docType}: reverse its journal entry and restore stock in one transaction.`);
+  }
+
   // ---- everything else: base allow-list + a reason ----
   if (!permitted) {
-    if ((action === "void" || action === "reverse") && !rule.posted) return deny(`Nothing to ${action}: a ${status} ${docType} has not posted.`);
-    if (action === "void" && ctx.hasPayments) return deny("A settled invoice cannot be voided; issue a Credit Note instead.");
+    if (action === "reverse" && !rule.posted) return deny(`Nothing to ${action}: a ${status} ${docType} has not posted.`);
     return deny(`${action} is not available for a ${status} ${docType}.`);
   }
   switch (action) {
@@ -229,8 +240,6 @@ export function evaluate(
       return allow(`Archive the ${status} ${docType} (hidden from lists, reversible).`);
     case "cancel":
       return allow(`Cancel the ${status} ${docType} (terminal, no ledger/stock effect).`);
-    case "void":
-      return allow(`Void the ${status} ${docType}: reverse its journal entry and restore stock in one transaction.`);
     case "reverse":
       return allow(`Correct the posted ${docType} via ${correctionPath(docType)} — transactional, updating the ledger and linked balances/stock together.`);
     default:

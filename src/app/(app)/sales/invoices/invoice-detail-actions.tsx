@@ -15,6 +15,7 @@ export function InvoiceDetailActions({
   customerName,
   balance,
   status,
+  canVoid,
   bankAccounts,
 }: {
   locale: Locale;
@@ -23,6 +24,7 @@ export function InvoiceDetailActions({
   customerName: string;
   balance: number;
   status: string;
+  canVoid: boolean;
   bankAccounts: BankAccountOption[];
 }) {
   const [pending, startTransition] = useTransition();
@@ -39,7 +41,7 @@ export function InvoiceDetailActions({
     startTransition(async () => {
       const result = await voidInvoiceAction(invoiceId);
       if (result?.error) toast.error(result.error);
-      else toast.success(t(locale, "Saved"));
+      else toast.success(t(locale, "Invoice voided — ledger entry reversed and stock restored."));
     });
   }
 
@@ -53,9 +55,6 @@ export function InvoiceDetailActions({
   if (status === "draft") {
     return (
       <div className="flex items-center gap-2.5">
-        <Button variant="ghost" style={{ width: "auto" }} disabled={pending} onClick={voidInvoice}>
-          {t(locale, "Void")}
-        </Button>
         <Button variant="glass" style={{ width: "auto" }} asChild>
           <Link href={`/sales/invoices/${invoiceId}/edit`}>{t(locale, "Edit")}</Link>
         </Button>
@@ -72,6 +71,11 @@ export function InvoiceDetailActions({
 
   return (
     <div className="flex items-center gap-2.5">
+      {canVoid && (
+        <Button variant="ghost" style={{ width: "auto" }} disabled={pending} onClick={voidInvoice} className="text-danger">
+          {t(locale, "Void")}
+        </Button>
+      )}
       <Button variant="glass" style={{ width: "auto" }} disabled={pending} onClick={createDc}>
         {t(locale, "Create Delivery Challan")}
       </Button>

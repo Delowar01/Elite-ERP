@@ -72,6 +72,13 @@ const DICT: Record<string, string> = {
   "The Recycle Bin is empty.": "سلة المحذوفات فارغة.",
   "Document restored.": "تمت استعادة المستند.",
   "Document permanently deleted.": "تم حذف المستند نهائيًا.",
+  // ---- Batch A4: cancel / void / reversal ----
+  reversed: "معكوس",
+  "Reverse Credit Note": "عكس إشعار الدائن",
+  "Reverse Debit Note": "عكس إشعار المدين",
+  "Invoice voided — ledger entry reversed and stock restored.": "تم إبطال الفاتورة — تم عكس قيد الدفتر واستعادة المخزون.",
+  "Credit note reversed — reversing entry posted and invoice balance restored.": "تم عكس إشعار الدائن — تم ترحيل القيد العكسي واستعادة رصيد الفاتورة.",
+  "Debit note reversed — reversing entry posted and stock restored.": "تم عكس إشعار المدين — تم ترحيل القيد العكسي واستعادة المخزون.",
   "Search number, party, type…": "ابحث بالرقم أو الجهة أو النوع…",
   "Deleted documents are kept here. Restore returns them to their list. Permanent delete is owner-only and irreversible; the document number is retained in the audit log and never reissued.":
     "يتم الاحتفاظ بالمستندات المحذوفة هنا. تعيد الاستعادة المستند إلى قائمته. الحذف النهائي متاح للمالك فقط ولا يمكن التراجع عنه؛ يُحتفظ برقم المستند في سجل التدقيق ولا يُعاد إصداره أبدًا.",

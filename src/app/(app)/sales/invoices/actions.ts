@@ -7,7 +7,7 @@ import { db, projectsTable, salesInvoicesTable, salesInvoiceItemsTable, products
 import { requireSession } from "@/lib/session";
 import { logActivity } from "@/lib/activity";
 import { nextDocumentNumber } from "@/lib/documents";
-import { can } from "@/lib/document-lifecycle";
+import { can, evaluate } from "@/lib/document-lifecycle";
 import { computeTotals, type LineItemInput } from "../_shared/totals";
 
 export type ActionResult = { error?: string; id?: number };
@@ -256,15 +256,71 @@ export async function convertInvoiceToDeliveryChallanAction(invoiceId: number): 
   redirect(`/sales/delivery-challans/${id}`);
 }
 
+// Batch A4 — void a posted, unpaid invoice: the exact reversal of sendInvoiceAction, in one
+// transaction. Restores stock and posts a reversing journal entry (Dr Revenue + Dr VAT
+// Payable / Cr Accounts Receivable), then marks the invoice void. The lifecycle rule refuses
+// void once any payment exists (partially_paid / paid — correct those with a Credit Note) and
+// refuses a second void (a void invoice is terminal), so no double-reversal is possible.
 export async function voidInvoiceAction(invoiceId: number): Promise<ActionResult> {
   const session = await requireSession();
   const [invoice] = await db.select().from(salesInvoicesTable).where(and(eq(salesInvoicesTable.id, invoiceId), eq(salesInvoicesTable.orgId, session.orgId)));
   if (!invoice) return { error: "Invoice not found." };
-  if (invoice.status !== "draft") return { error: "Only draft invoices can be voided — sent invoices need a Credit Note instead." };
 
-  await db.update(salesInvoicesTable).set({ status: "void", updatedAt: new Date() }).where(eq(salesInvoicesTable.id, invoiceId));
-  await logActivity(session, { type: "sales_invoice.voided", description: `Voided invoice ${invoice.invoiceNumber}`, entityType: "sales_invoice", entityId: invoiceId });
+  const hasPayments = Number(invoice.paidAmount) > 0;
+  const decision = evaluate("sales_invoice", invoice.status, "void", { hasPayments });
+  if (!decision.allowed) return { error: decision.reason };
+
+  const items = await db.select().from(salesInvoiceItemsTable).where(eq(salesInvoiceItemsTable.invoiceId, invoiceId));
+  const accounts = await db.select().from(accountsTable).where(eq(accountsTable.orgId, session.orgId));
+  const byCode = new Map(accounts.map((a) => [a.code, a]));
+  const ar = byCode.get("1100");
+  const revenue = byCode.get("4000");
+  const vatPayable = byCode.get("2100");
+  if (!ar || !revenue || !vatPayable) {
+    return { error: "Chart of accounts is missing a required system account (1100/4000/2100)." };
+  }
+
+  await db.transaction(async (tx) => {
+    for (const item of items) {
+      if (item.productId) {
+        await tx
+          .update(productsTable)
+          .set({ quantityOnHand: sql`${productsTable.quantityOnHand} + ${Math.trunc(Number(item.quantity))}` })
+          .where(and(eq(productsTable.id, item.productId), eq(productsTable.orgId, session.orgId)));
+      }
+    }
+
+    const [entry] = await tx
+      .insert(journalEntriesTable)
+      .values({
+        orgId: session.orgId,
+        entryDate: new Date().toISOString().slice(0, 10),
+        memo: `Invoice ${invoice.invoiceNumber} voided (reversal)`,
+        sourceType: "sales_invoice",
+        sourceId: invoice.id,
+        createdById: session.userId,
+      })
+      .returning({ id: journalEntriesTable.id });
+
+    const lines: { accountId: number; debit: string; credit: string }[] = [
+      { accountId: revenue.id, debit: invoice.subtotal, credit: "0" },
+      { accountId: ar.id, debit: "0", credit: invoice.total },
+    ];
+    if (Number(invoice.taxTotal) > 0) {
+      lines.push({ accountId: vatPayable.id, debit: invoice.taxTotal, credit: "0" });
+    }
+    await tx.insert(journalLinesTable).values(lines.map((l) => ({ journalEntryId: entry.id, ...l })));
+
+    await tx.update(salesInvoicesTable).set({ status: "void", updatedAt: new Date() }).where(eq(salesInvoicesTable.id, invoiceId));
+  });
+
+  await logActivity(session, { type: "sales_invoice.voided", description: `Voided invoice ${invoice.invoiceNumber} — reversed ledger entry and restored stock`, entityType: "sales_invoice", entityId: invoiceId });
   revalidatePath(PATH);
   revalidatePath(`/sales/invoices/${invoiceId}`);
+  revalidatePath("/finance/chart-of-accounts");
+  revalidatePath("/finance/ledger");
+  revalidatePath("/finance/reports");
+  revalidatePath("/inventory/products");
+  revalidatePath("/dashboard");
   return {};
 }

@@ -7,7 +7,7 @@ import { db, purchaseOrdersTable, purchaseOrderItemsTable, productsTable, accoun
 import { requireSession } from "@/lib/session";
 import { logActivity } from "@/lib/activity";
 import { nextDocumentNumber } from "@/lib/documents";
-import { can } from "@/lib/document-lifecycle";
+import { can, evaluate } from "@/lib/document-lifecycle";
 import { computeTotals, type LineItemInput } from "../../sales/_shared/totals";
 
 export type ActionResult = { error?: string; id?: number };
@@ -154,11 +154,15 @@ export async function sendPurchaseOrderAction(poId: number): Promise<ActionResul
   return {};
 }
 
+// Batch A4 — cancel a non-posted purchase order. A received PO has posted inventory + AP
+// and is refused by the lifecycle rule (correct it with a Debit Note instead); a cancelled
+// PO cannot be re-cancelled. No accounting/inventory to reverse for draft/ordered.
 export async function cancelPurchaseOrderAction(poId: number): Promise<ActionResult> {
   const session = await requireSession();
   const [po] = await db.select().from(purchaseOrdersTable).where(and(eq(purchaseOrdersTable.id, poId), eq(purchaseOrdersTable.orgId, session.orgId)));
   if (!po) return { error: "Purchase order not found." };
-  if (po.status !== "draft" && po.status !== "ordered") return { error: "Only draft or ordered purchase orders can be cancelled." };
+  const decision = evaluate("purchase_order", po.status, "cancel");
+  if (!decision.allowed) return { error: decision.reason };
 
   await db.update(purchaseOrdersTable).set({ status: "cancelled", updatedAt: new Date() }).where(eq(purchaseOrdersTable.id, poId));
   await logActivity(session, { type: "purchase_order.cancelled", description: `Cancelled purchase order ${po.poNumber}`, entityType: "purchase_order", entityId: poId });

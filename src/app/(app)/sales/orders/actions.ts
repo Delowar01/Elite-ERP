@@ -7,7 +7,7 @@ import { db, projectsTable, salesOrdersTable, salesOrderItemsTable, proformaInvo
 import { requireSession } from "@/lib/session";
 import { logActivity } from "@/lib/activity";
 import { nextDocumentNumber } from "@/lib/documents";
-import { can } from "@/lib/document-lifecycle";
+import { can, evaluate } from "@/lib/document-lifecycle";
 import { computeTotals, type LineItemInput } from "../_shared/totals";
 
 export type ActionResult = { error?: string; id?: number };
@@ -151,6 +151,24 @@ export async function updateSalesOrderAction(
   revalidatePath(PATH);
   revalidatePath(`/sales/orders/${id}`);
   redirect(`/sales/orders/${id}`);
+}
+
+// Batch A4 — cancel a non-posted sales order. Sales orders never post to the ledger or
+// stock, so cancelling is a pure status transition (no accounting/inventory to reverse).
+// The lifecycle rule refuses cancel on a fulfilled/cancelled SO, so re-cancellation and
+// cancelling a fulfilled order are both blocked.
+export async function cancelSalesOrderAction(id: number): Promise<ActionResult> {
+  const session = await requireSession();
+  const [so] = await db.select().from(salesOrdersTable).where(and(eq(salesOrdersTable.id, id), eq(salesOrdersTable.orgId, session.orgId)));
+  if (!so) return { error: "Sales order not found." };
+  const decision = evaluate("sales_order", so.status, "cancel");
+  if (!decision.allowed) return { error: decision.reason };
+
+  await db.update(salesOrdersTable).set({ status: "cancelled", updatedAt: new Date() }).where(and(eq(salesOrdersTable.id, id), eq(salesOrdersTable.orgId, session.orgId)));
+  await logActivity(session, { type: "sales_order.cancelled", description: `Cancelled sales order ${so.soNumber}`, entityType: "sales_order", entityId: id });
+  revalidatePath(PATH);
+  revalidatePath(`/sales/orders/${id}`);
+  return {};
 }
 
 export async function updateSalesOrderStatusAction(id: number, status: string): Promise<ActionResult> {

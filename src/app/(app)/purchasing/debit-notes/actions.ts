@@ -7,7 +7,7 @@ import { db, debitNotesTable, debitNoteItemsTable, purchaseOrdersTable, products
 import { requireSession } from "@/lib/session";
 import { logActivity } from "@/lib/activity";
 import { nextDocumentNumber } from "@/lib/documents";
-import { can } from "@/lib/document-lifecycle";
+import { can, evaluate } from "@/lib/document-lifecycle";
 import { computeTotals, type LineItemInput } from "../../sales/_shared/totals";
 
 export type ActionResult = { error?: string; id?: number };
@@ -180,6 +180,69 @@ export async function issueDebitNoteAction(debitNoteId: number): Promise<ActionR
   });
 
   await logActivity(session, { type: "debit_note.issued", description: `Issued debit note ${dn.debitNoteNumber} — posted reversing entry to ledger`, entityType: "debit_note", entityId: debitNoteId });
+  revalidatePath(PATH);
+  revalidatePath(`/purchasing/debit-notes/${debitNoteId}`);
+  revalidatePath(`/purchasing/orders/${dn.sourcePurchaseOrderId}`);
+  revalidatePath("/finance/chart-of-accounts");
+  revalidatePath("/finance/ledger");
+  revalidatePath("/finance/reports");
+  revalidatePath("/inventory/products");
+  revalidatePath("/dashboard");
+  return {};
+}
+
+// Batch A4 — safely reverse an issued debit note: the exact inverse of issueDebitNoteAction,
+// in one transaction. Increments product stock back (the returned goods come back on hand) and
+// posts a reversing journal entry (Dr Inventory / Cr Accounts Payable), then marks the debit
+// note reversed. The lifecycle rule only permits reverse on an issued debit note, so a reversed
+// note cannot be reversed again — no double reversal.
+export async function reverseDebitNoteAction(debitNoteId: number): Promise<ActionResult> {
+  const session = await requireSession();
+  const [dn] = await db.select().from(debitNotesTable).where(and(eq(debitNotesTable.id, debitNoteId), eq(debitNotesTable.orgId, session.orgId)));
+  if (!dn) return { error: "Debit note not found." };
+  const decision = evaluate("debit_note", dn.status, "reverse");
+  if (!decision.allowed) return { error: decision.reason };
+
+  const items = await db.select().from(debitNoteItemsTable).where(eq(debitNoteItemsTable.debitNoteId, debitNoteId));
+  const accounts = await db.select().from(accountsTable).where(eq(accountsTable.orgId, session.orgId));
+  const byCode = new Map(accounts.map((a) => [a.code, a]));
+  const inventory = byCode.get("1200");
+  const accountsPayable = byCode.get("2000");
+  if (!inventory || !accountsPayable) {
+    return { error: "Chart of accounts is missing a required system account (1200/2000)." };
+  }
+
+  await db.transaction(async (tx) => {
+    for (const item of items) {
+      if (item.productId) {
+        await tx
+          .update(productsTable)
+          .set({ quantityOnHand: sql`${productsTable.quantityOnHand} + ${Math.trunc(Number(item.quantity))}` })
+          .where(and(eq(productsTable.id, item.productId), eq(productsTable.orgId, session.orgId)));
+      }
+    }
+
+    const [entry] = await tx
+      .insert(journalEntriesTable)
+      .values({
+        orgId: session.orgId,
+        entryDate: new Date().toISOString().slice(0, 10),
+        memo: `Debit note ${dn.debitNoteNumber} reversed`,
+        sourceType: "debit_note",
+        sourceId: dn.id,
+        createdById: session.userId,
+      })
+      .returning({ id: journalEntriesTable.id });
+
+    await tx.insert(journalLinesTable).values([
+      { journalEntryId: entry.id, accountId: inventory.id, debit: dn.total, credit: "0" },
+      { journalEntryId: entry.id, accountId: accountsPayable.id, debit: "0", credit: dn.total },
+    ]);
+
+    await tx.update(debitNotesTable).set({ status: "reversed" }).where(eq(debitNotesTable.id, debitNoteId));
+  });
+
+  await logActivity(session, { type: "debit_note.reversed", description: `Reversed debit note ${dn.debitNoteNumber} — posted reversing entry and restored stock`, entityType: "debit_note", entityId: debitNoteId });
   revalidatePath(PATH);
   revalidatePath(`/purchasing/debit-notes/${debitNoteId}`);
   revalidatePath(`/purchasing/orders/${dn.sourcePurchaseOrderId}`);

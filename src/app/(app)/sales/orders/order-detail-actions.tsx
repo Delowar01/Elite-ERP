@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { t, type Locale } from "@/lib/i18n/dict";
-import { updateSalesOrderStatusAction, convertSoToProformaAction, convertSoToInvoiceAction, convertSoToDeliveryChallanAction } from "./actions";
+import { updateSalesOrderStatusAction, cancelSalesOrderAction, convertSoToProformaAction, convertSoToInvoiceAction, convertSoToDeliveryChallanAction } from "./actions";
 
 const STATUSES = ["draft", "confirmed", "fulfilled", "cancelled"];
 
@@ -16,7 +16,9 @@ export function OrderDetailActions({ locale, orderId, status }: { locale: Locale
 
   function changeStatus(value: string) {
     startTransition(async () => {
-      const result = await updateSalesOrderStatusAction(orderId, value);
+      // Cancel is a lifecycle-gated transition (a fulfilled order cannot be cancelled), so route
+      // it through the dedicated, audited action rather than the free-form status setter.
+      const result = value === "cancelled" ? await cancelSalesOrderAction(orderId) : await updateSalesOrderStatusAction(orderId, value);
       if (result?.error) toast.error(result.error);
       else toast.success(t(locale, "Saved"));
     });

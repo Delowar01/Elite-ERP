@@ -4,6 +4,7 @@ import { db, salesInvoicesTable, salesInvoiceItemsTable, customersTable, salesOr
 import { requireSession } from "@/lib/session";
 import { getLocale } from "@/lib/i18n/server";
 import { t } from "@/lib/i18n/dict";
+import { can } from "@/lib/document-lifecycle";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { PartyCardSimple } from "../../_shared/party-card";
@@ -105,6 +106,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
             customerName={invoice.customerName}
             balance={balanceDue}
             status={invoice.status}
+            canVoid={can("sales_invoice", invoice.status, "void", { hasPayments: Number(invoice.paidAmount) > 0 })}
             bankAccounts={bankAccounts}
           />
         </div>
