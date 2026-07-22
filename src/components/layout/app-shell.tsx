@@ -7,7 +7,9 @@ import { LogoMark } from "@/components/brand/logo-mark";
 import { NAV_GROUPS } from "./nav-config";
 import { CommandPalette } from "./command-palette";
 import { NotificationsMenu } from "./notifications-menu";
+import { ThemeToggle } from "./theme-toggle";
 import type { NotificationItem } from "@/lib/notifications";
+import type { Theme } from "@/lib/theme";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -73,7 +75,9 @@ export function AppShell({
   orgPrimaryColor,
   orgAccentColor,
   locale,
+  theme,
   notifications,
+  unreadCount,
   children,
 }: {
   user: SessionUser;
@@ -82,7 +86,9 @@ export function AppShell({
   orgPrimaryColor: string;
   orgAccentColor: string;
   locale: Locale;
+  theme: Theme | null;
   notifications: NotificationItem[];
+  unreadCount: number;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -165,10 +171,11 @@ export function AppShell({
           <div className="topbar-actions">
             <CommandPalette locale={locale} />
             <LanguageSwitcher locale={locale} />
+            <ThemeToggle locale={locale} initial={theme} />
             <button type="button" className="topbar-icon-btn opacity-50 cursor-not-allowed" aria-label={t(locale, "Favorites")} title={t(locale, "Favorites — coming soon")} disabled>
               <Star className="size-4" />
             </button>
-            <NotificationsMenu locale={locale} notifications={notifications} />
+            <NotificationsMenu locale={locale} notifications={notifications} unreadCount={unreadCount} />
             <Link href="/settings/organization" className="topbar-icon-btn" aria-label={t(locale, "Business Settings")}>
               <Settings className="size-4" />
             </Link>

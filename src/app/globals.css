@@ -177,6 +177,18 @@ body {
   font-size: 14.5px;
 }
 
+/* Batch E — smooth light/dark cross-fade. Scoped to structural surfaces so switching the
+   theme eases the color change instead of snapping; interactive hover/press transitions are
+   unaffected, and prefers-reduced-motion (below) already neutralizes it. */
+body,
+.sidebar,
+.topbar,
+.card,
+.dash-widget,
+main {
+  transition: background-color 0.25s ease, border-color 0.25s ease, color 0.25s ease;
+}
+
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-display), sans-serif;
   text-wrap: balance;

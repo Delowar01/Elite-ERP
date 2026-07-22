@@ -48,7 +48,7 @@ export function KpiCard({
       </div>
       <div className={`kpi-trend ${trendUp ? "up" : "down"}`}>
         {trendUp ? <ArrowUp className="size-2.5" style={{ color: "var(--accent-green)" }} /> : <ArrowDown className="size-2.5" style={{ color: "var(--accent-red)" }} />}
-        {trendPct} <span className="muted">{t(locale, "vs Last Month")}</span>
+        {trendPct} <span className="muted">{t(locale, "vs prev. period")}</span>
       </div>
       <div className="kpi-spark">
         <Sparkline values={sparkValues} color={accent} />

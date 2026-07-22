@@ -1,14 +1,7 @@
 import "server-only";
 import { and, eq, gte, lte, ne, inArray, sql, desc } from "drizzle-orm";
 import { db, salesInvoicesTable, quotationsTable, bankAccountsTable, journalLinesTable, journalEntriesTable, customersTable, purchaseOrdersTable, projectsTable, employeesTable, attendanceRecordsTable } from "@/db";
-
-function monthBounds(offsetMonths: number) {
-  const now = new Date();
-  const start = new Date(now.getFullYear(), now.getMonth() + offsetMonths, 1);
-  const end = new Date(now.getFullYear(), now.getMonth() + offsetMonths + 1, 0);
-  const fmt = (d: Date) => d.toISOString().slice(0, 10);
-  return { start: fmt(start), end: fmt(end) };
-}
+import { rangeBuckets, type ResolvedRange } from "@/lib/dashboard-range";
 
 async function invoiceTotalBetween(orgId: number, start: string, end: string): Promise<number> {
   const [row] = await db
@@ -32,78 +25,79 @@ function trend(current: number, previous: number): { pct: string; up: boolean } 
   return { pct: `${Math.abs(pct).toFixed(1)}%`, up: pct >= 0 };
 }
 
-export async function getKpis(orgId: number) {
-  const thisMonth = monthBounds(0);
-  const lastMonth = monthBounds(-1);
-
-  const [salesThis, salesLast] = await Promise.all([
-    invoiceTotalBetween(orgId, thisMonth.start, thisMonth.end),
-    invoiceTotalBetween(orgId, lastMonth.start, lastMonth.end),
+// KPIs for the selected date range, with a period-over-period trend vs. the preceding window.
+// Receivables/Payables are point-in-time balances (all outstanding), not range-scoped.
+export async function getKpis(orgId: number, range: ResolvedRange) {
+  const [salesThis, salesPrev] = await Promise.all([
+    invoiceTotalBetween(orgId, range.start, range.end),
+    invoiceTotalBetween(orgId, range.prevStart, range.prevEnd),
   ]);
 
-  const [{ n: invoicesThis } = { n: 0 }] = await db
-    .select({ n: sql<number>`count(*)::int` })
-    .from(salesInvoicesTable)
-    .where(and(eq(salesInvoicesTable.orgId, orgId), ne(salesInvoicesTable.status, "draft"), gte(salesInvoicesTable.issueDate, thisMonth.start)));
-  const [{ n: invoicesLast } = { n: 0 }] = await db
-    .select({ n: sql<number>`count(*)::int` })
-    .from(salesInvoicesTable)
-    .where(
-      and(
-        eq(salesInvoicesTable.orgId, orgId),
-        ne(salesInvoicesTable.status, "draft"),
-        gte(salesInvoicesTable.issueDate, lastMonth.start),
-        lte(salesInvoicesTable.issueDate, lastMonth.end),
-      ),
-    );
-  const [{ n: invoicesTotal } = { n: 0 }] = await db
-    .select({ n: sql<number>`count(*)::int` })
-    .from(salesInvoicesTable)
-    .where(and(eq(salesInvoicesTable.orgId, orgId), ne(salesInvoicesTable.status, "draft")));
+  const countBetween = async (start: string, end: string) => {
+    const [{ n } = { n: 0 }] = await db
+      .select({ n: sql<number>`count(*)::int` })
+      .from(salesInvoicesTable)
+      .where(and(eq(salesInvoicesTable.orgId, orgId), ne(salesInvoicesTable.status, "draft"), gte(salesInvoicesTable.issueDate, start), lte(salesInvoicesTable.issueDate, end)));
+    return n;
+  };
+  const [invoicesThis, invoicesPrev] = await Promise.all([countBetween(range.start, range.end), countBetween(range.prevStart, range.prevEnd)]);
 
   const [{ receivables } = { receivables: "0" }] = await db
     .select({ receivables: sql<string>`coalesce(sum(${salesInvoicesTable.total} - ${salesInvoicesTable.paidAmount}), 0)` })
     .from(salesInvoicesTable)
     .where(and(eq(salesInvoicesTable.orgId, orgId), inArray(salesInvoicesTable.status, ["sent", "partially_paid"])));
 
-  // Mirrors totalReceivables exactly, on the purchasing side: received POs are the ones
-  // that have actually posted to Accounts Payable. paidAmount stays 0 for every PO until
-  // Payments (a later section) ships, so this is honestly the full received total for now.
   const [{ payables } = { payables: "0" }] = await db
     .select({ payables: sql<string>`coalesce(sum(${purchaseOrdersTable.total} - ${purchaseOrdersTable.paidAmount}), 0)` })
     .from(purchaseOrdersTable)
     .where(and(eq(purchaseOrdersTable.orgId, orgId), eq(purchaseOrdersTable.status, "received")));
 
-  const salesTrend = trend(salesThis, salesLast);
-  const invoicesTrend = trend(invoicesThis, invoicesLast);
-
   return {
     totalSalesThisMonth: salesThis,
-    totalSalesTrend: salesTrend,
-    totalInvoices: invoicesTotal,
-    totalInvoicesTrend: invoicesTrend,
+    totalSalesTrend: trend(salesThis, salesPrev),
+    totalInvoices: invoicesThis,
+    totalInvoicesTrend: trend(invoicesThis, invoicesPrev),
     totalReceivables: Number(receivables),
     totalPayables: Number(payables),
   };
 }
 
-export async function getRevenueTrend(orgId: number, months = 7) {
-  const points: { label: string; total: number }[] = [];
-  for (let i = months - 1; i >= 0; i--) {
-    const { start, end } = monthBounds(-i);
-    const total = await invoiceTotalBetween(orgId, start, end);
-    const label = new Date(start).toLocaleDateString("en-US", { month: "short" });
-    points.push({ label, total });
-  }
-  return points;
+// Revenue series for the range's chart buckets (day or month). One query, bucketed in JS.
+export async function getRevenueSeries(orgId: number, range: ResolvedRange): Promise<{ label: string; total: number }[]> {
+  const buckets = rangeBuckets(range);
+  const rows = await db
+    .select({ date: salesInvoicesTable.issueDate, total: salesInvoicesTable.total })
+    .from(salesInvoicesTable)
+    .where(
+      and(
+        eq(salesInvoicesTable.orgId, orgId),
+        ne(salesInvoicesTable.status, "draft"),
+        ne(salesInvoicesTable.status, "void"),
+        gte(salesInvoicesTable.issueDate, range.start),
+        lte(salesInvoicesTable.issueDate, range.end),
+      ),
+    );
+  return buckets.map((b) => {
+    let sum = 0;
+    for (const r of rows) if (r.date >= b.start && r.date <= b.end) sum += Number(r.total);
+    return { label: b.label, total: sum };
+  });
 }
 
-export async function getInvoicesOverview(orgId: number) {
+export async function getInvoicesOverview(orgId: number, range: ResolvedRange) {
   const today = new Date().toISOString().slice(0, 10);
   const rows = await db
     .select({ status: salesInvoicesTable.status, dueDate: salesInvoicesTable.dueDate, n: sql<number>`count(*)::int` })
     .from(salesInvoicesTable)
-    .where(and(eq(salesInvoicesTable.orgId, orgId), ne(salesInvoicesTable.status, "draft"), ne(salesInvoicesTable.status, "void")))
+    .where(
+      and(
+        eq(salesInvoicesTable.orgId, orgId),
+        ne(salesInvoicesTable.status, "draft"),
+        ne(salesInvoicesTable.status, "void"),
+        gte(salesInvoicesTable.issueDate, range.start),
+        lte(salesInvoicesTable.issueDate, range.end),
+      ),
+    )
     .groupBy(salesInvoicesTable.status, salesInvoicesTable.dueDate);
 
   let paid = 0;
@@ -161,8 +155,7 @@ export async function getHrSnapshot(orgId: number) {
   return { total, present, onLeave, absent: Math.max(0, total - present - onLeave) };
 }
 
-export async function getCashFlowThisMonth(orgId: number) {
-  const { start, end } = monthBounds(0);
+export async function getCashFlow(orgId: number, range: ResolvedRange) {
   const bankGlAccountIds = await db.select({ id: bankAccountsTable.glAccountId }).from(bankAccountsTable).where(eq(bankAccountsTable.orgId, orgId));
   const ids = bankGlAccountIds.map((r) => r.id);
   if (ids.length === 0) return { inflow: 0, outflow: 0, net: 0 };
@@ -178,8 +171,8 @@ export async function getCashFlowThisMonth(orgId: number) {
       and(
         eq(journalEntriesTable.orgId, orgId),
         inArray(journalLinesTable.accountId, ids),
-        gte(journalEntriesTable.entryDate, start),
-        lte(journalEntriesTable.entryDate, end),
+        gte(journalEntriesTable.entryDate, range.start),
+        lte(journalEntriesTable.entryDate, range.end),
       ),
     );
   const inflow = Number(row?.debit ?? 0);
@@ -189,20 +182,23 @@ export async function getCashFlowThisMonth(orgId: number) {
 
 export type RecentActivity = { kind: "quotation" | "invoice"; label: string; time: Date };
 
-export async function getRecentActivity(orgId: number, limit = 4): Promise<RecentActivity[]> {
+// Recent quotations + invoices created within the selected range.
+export async function getRecentActivity(orgId: number, range: ResolvedRange, limit = 4): Promise<RecentActivity[]> {
+  const startTs = new Date(range.start + "T00:00:00");
+  const endTs = new Date(range.end + "T23:59:59");
   const [quotes, invoices] = await Promise.all([
     db
       .select({ number: quotationsTable.quotationNumber, customerName: customersTable.name, createdAt: quotationsTable.createdAt })
       .from(quotationsTable)
       .innerJoin(customersTable, eq(customersTable.id, quotationsTable.customerId))
-      .where(eq(quotationsTable.orgId, orgId))
+      .where(and(eq(quotationsTable.orgId, orgId), gte(quotationsTable.createdAt, startTs), lte(quotationsTable.createdAt, endTs)))
       .orderBy(desc(quotationsTable.createdAt))
       .limit(limit),
     db
       .select({ number: salesInvoicesTable.invoiceNumber, customerName: customersTable.name, createdAt: salesInvoicesTable.createdAt })
       .from(salesInvoicesTable)
       .innerJoin(customersTable, eq(customersTable.id, salesInvoicesTable.customerId))
-      .where(eq(salesInvoicesTable.orgId, orgId))
+      .where(and(eq(salesInvoicesTable.orgId, orgId), gte(salesInvoicesTable.createdAt, startTs), lte(salesInvoicesTable.createdAt, endTs)))
       .orderBy(desc(salesInvoicesTable.createdAt))
       .limit(limit),
   ]);

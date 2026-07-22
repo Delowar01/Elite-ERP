@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Plus_Jakarta_Sans, IBM_Plex_Sans, IBM_Plex_Mono } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
 import { getLocale } from "@/lib/i18n/server";
+import { getTheme } from "@/lib/theme";
 import "./globals.css";
 
 const display = Plus_Jakarta_Sans({
@@ -33,11 +34,13 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const locale = await getLocale();
+  const theme = await getTheme();
 
   return (
     <html
       lang={locale}
       dir={locale === "ar" ? "rtl" : "ltr"}
+      data-theme={theme ?? undefined}
       className={`${display.variable} ${body.variable} ${mono.variable} h-full antialiased`}
       suppressHydrationWarning
     >

@@ -1,13 +1,15 @@
 import { requireSession } from "@/lib/session";
 import { getLocale } from "@/lib/i18n/server";
-import { getRecentNotifications } from "@/lib/notifications";
+import { getTheme } from "@/lib/theme";
+import { getNotifications } from "@/lib/notifications";
 import { AppShell } from "@/components/layout/app-shell";
 import "./mockup-parity.css";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await requireSession();
   const locale = await getLocale();
-  const notifications = await getRecentNotifications(session.orgId);
+  const theme = await getTheme();
+  const notifications = await getNotifications(session.orgId, session.userId);
 
   return (
     <AppShell
@@ -17,7 +19,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       orgPrimaryColor={session.orgPrimaryColor}
       orgAccentColor={session.orgAccentColor}
       locale={locale}
-      notifications={notifications}
+      theme={theme}
+      notifications={notifications.items}
+      unreadCount={notifications.unreadCount}
     >
       {children}
     </AppShell>

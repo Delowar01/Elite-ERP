@@ -928,6 +928,27 @@ const DICT: Record<string, string> = {
   "View saved.": "تم حفظ العرض.",
   valid: "صالح",
   "with errors": "به أخطاء",
+  // Global shell & dashboard — Batch E
+  "Switch to light mode": "التبديل إلى الوضع الفاتح",
+  "Switch to dark mode": "التبديل إلى الوضع الداكن",
+  "Mark all as read": "تعليم الكل كمقروء",
+  "Mark as read": "تعليم كمقروء",
+  "Search records or jump to a page…": "ابحث في السجلات أو انتقل إلى صفحة…",
+  "Last Month": "الشهر الماضي",
+  "Last 7 Days": "آخر ٧ أيام",
+  "Last 30 Days": "آخر ٣٠ يوماً",
+  "This Quarter": "هذا الربع",
+  "This Year": "هذه السنة",
+  "All Time": "كل الأوقات",
+  "Show, hide and reorder your dashboard widgets.": "أظهر عناصر لوحة المعلومات أو أخفِها وأعد ترتيبها.",
+  "Layout saved.": "تم حفظ التخطيط.",
+  "Reset to default": "إعادة التعيين إلى الوضع الافتراضي",
+  "Move up": "تحريك لأعلى",
+  "Move down": "تحريك لأسفل",
+  "Total Sales": "إجمالي المبيعات",
+  "Cash Flow": "التدفق النقدي",
+  "vs prev. period": "مقارنةً بالفترة السابقة",
+  "Feature Highlights": "أبرز الميزات",
 };
 
 export function t(locale: Locale, en: string): string {
