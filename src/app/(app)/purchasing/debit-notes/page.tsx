@@ -1,4 +1,4 @@
-import { eq, desc } from "drizzle-orm";
+import { and, eq, desc, isNull, sql } from "drizzle-orm";
 import { db, debitNotesTable, vendorsTable, usersTable, purchaseOrdersTable } from "@/db";
 import { requireSession } from "@/lib/session";
 import { getLocale } from "@/lib/i18n/server";
@@ -18,6 +18,7 @@ export default async function DebitNotesPage() {
       total: debitNotesTable.total,
       status: debitNotesTable.status,
       creatorName: usersTable.name,
+      isArchived: sql<boolean>`${debitNotesTable.archivedAt} is not null`,
       sourcePoNumber: purchaseOrdersTable.poNumber,
       sourcePurchaseOrderId: debitNotesTable.sourcePurchaseOrderId,
     })
@@ -25,7 +26,7 @@ export default async function DebitNotesPage() {
     .innerJoin(vendorsTable, eq(vendorsTable.id, debitNotesTable.vendorId))
     .innerJoin(usersTable, eq(usersTable.id, debitNotesTable.createdById))
     .innerJoin(purchaseOrdersTable, eq(purchaseOrdersTable.id, debitNotesTable.sourcePurchaseOrderId))
-    .where(eq(debitNotesTable.orgId, session.orgId))
+    .where(and(eq(debitNotesTable.orgId, session.orgId), isNull(debitNotesTable.deletedAt)))
     .orderBy(desc(debitNotesTable.id));
 
   return <DnListClient locale={locale} rows={rows} />;

@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Eye, Star, Pencil, Copy, Printer, Send, Archive, Trash2 } from "lucide-react";
+import { Eye, Star, Pencil, Copy, Printer, Send } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { StatRow } from "../_shared/stat-row";
@@ -12,6 +12,7 @@ import { RowMenu, type RowMenuEntry } from "../_shared/row-menu";
 import { Money } from "../_shared/money";
 import { t, type Locale } from "@/lib/i18n/dict";
 import { can } from "@/lib/document-lifecycle";
+import { useDocumentRowActions } from "../../_shared/document-row-actions";
 import {
   convertToSalesOrderAction,
   convertToProformaAction,
@@ -38,11 +39,13 @@ export type QuotationRow = {
   total: string;
   status: string;
   creatorName: string;
+  isArchived: boolean;
 };
 
 export function QuotationsListClient({ locale, rows }: { locale: Locale; rows: QuotationRow[] }) {
   const [search, setSearch] = useState("");
   const [, startTransition] = useTransition();
+  const rowActions = useDocumentRowActions(locale);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -124,9 +127,8 @@ export function QuotationsListClient({ locale, rows }: { locale: Locale; rows: Q
                 ],
               },
               { kind: "item", icon: Send, label: t(locale, "Send to Client"), onSelect: () => convert(r.id, (id) => updateQuotationStatusAction(id, "sent")) },
-              { kind: "item", icon: Archive, label: t(locale, "Archive") },
               { kind: "separator" },
-              { kind: "item", icon: Trash2, label: t(locale, "Delete"), danger: true },
+              ...rowActions("quotation", r.id, r.status, r.isArchived),
             ];
             return (
               <TableRow key={r.id}>
@@ -148,6 +150,11 @@ export function QuotationsListClient({ locale, rows }: { locale: Locale; rows: Q
                 <TableCell className="text-[12.5px] text-ink-muted">{r.creatorName}</TableCell>
                 <TableCell>
                   <Badge variant={STATUS_VARIANT[r.status] ?? "neutral"}>{t(locale, r.status)}</Badge>
+                  {r.isArchived && (
+                    <Badge variant="neutral" className="ms-1">
+                      {t(locale, "Archived")}
+                    </Badge>
+                  )}
                 </TableCell>
                 <TableCell>
                   <RowMenu entries={entries} />

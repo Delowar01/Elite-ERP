@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Eye, Printer, Archive, Trash2 } from "lucide-react";
+import { Eye, Printer } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { StatRow } from "../_shared/stat-row";
@@ -10,6 +10,7 @@ import { ListToolbar } from "../_shared/list-toolbar";
 import { RowMenu, type RowMenuEntry } from "../_shared/row-menu";
 import { Money } from "../_shared/money";
 import { t, type Locale } from "@/lib/i18n/dict";
+import { useDocumentRowActions } from "../../_shared/document-row-actions";
 
 const STATUS_VARIANT: Record<string, "success" | "warning" | "danger" | "info" | "neutral"> = {
   draft: "neutral",
@@ -25,12 +26,14 @@ export type CnRow = {
   total: string;
   status: string;
   creatorName: string;
+  isArchived: boolean;
   sourceInvoiceNumber: string;
   sourceInvoiceId: number;
 };
 
 export function CnListClient({ locale, rows }: { locale: Locale; rows: CnRow[] }) {
   const [search, setSearch] = useState("");
+  const rowActions = useDocumentRowActions(locale);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -100,9 +103,8 @@ export function CnListClient({ locale, rows }: { locale: Locale; rows: CnRow[] }
               const entries: RowMenuEntry[] = [
                 { kind: "item", icon: Eye, label: t(locale, "View"), href: `/sales/credit-notes/${r.id}` },
                 { kind: "item", icon: Printer, label: t(locale, "Print"), href: `/print/credit-note/${r.id}` },
-                { kind: "item", icon: Archive, label: t(locale, "Archive") },
                 { kind: "separator" },
-                { kind: "item", icon: Trash2, label: t(locale, "Delete"), danger: true },
+                ...rowActions("credit_note", r.id, r.status, r.isArchived),
               ];
               return (
                 <TableRow key={r.id}>
@@ -127,6 +129,11 @@ export function CnListClient({ locale, rows }: { locale: Locale; rows: CnRow[] }
                   <TableCell className="text-[12.5px] text-ink-muted">{r.creatorName}</TableCell>
                   <TableCell>
                     <Badge variant={STATUS_VARIANT[r.status] ?? "neutral"}>{t(locale, r.status)}</Badge>
+                    {r.isArchived && (
+                      <Badge variant="neutral" className="ms-1">
+                        {t(locale, "Archived")}
+                      </Badge>
+                    )}
                   </TableCell>
                   <TableCell>
                     <RowMenu entries={entries} />

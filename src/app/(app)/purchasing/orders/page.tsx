@@ -1,4 +1,4 @@
-import { eq, desc } from "drizzle-orm";
+import { and, eq, desc, isNull, sql } from "drizzle-orm";
 import { db, purchaseOrdersTable, vendorsTable, usersTable } from "@/db";
 import { requireSession } from "@/lib/session";
 import { getLocale } from "@/lib/i18n/server";
@@ -19,11 +19,12 @@ export default async function PurchaseOrdersPage() {
       total: purchaseOrdersTable.total,
       status: purchaseOrdersTable.status,
       creatorName: usersTable.name,
+      isArchived: sql<boolean>`${purchaseOrdersTable.archivedAt} is not null`,
     })
     .from(purchaseOrdersTable)
     .innerJoin(vendorsTable, eq(vendorsTable.id, purchaseOrdersTable.vendorId))
     .innerJoin(usersTable, eq(usersTable.id, purchaseOrdersTable.createdById))
-    .where(eq(purchaseOrdersTable.orgId, session.orgId))
+    .where(and(eq(purchaseOrdersTable.orgId, session.orgId), isNull(purchaseOrdersTable.deletedAt)))
     .orderBy(desc(purchaseOrdersTable.id));
 
   return <PoListClient locale={locale} rows={rows} />;

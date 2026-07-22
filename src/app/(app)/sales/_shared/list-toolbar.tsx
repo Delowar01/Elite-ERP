@@ -14,6 +14,7 @@ export function ListToolbar({
   onSearchChange,
   createHref,
   createLabel,
+  recycleBinHref = "/recycle-bin",
 }: {
   locale: Locale;
   searchPlaceholder: string;
@@ -21,6 +22,7 @@ export function ListToolbar({
   onSearchChange: (v: string) => void;
   createHref: string;
   createLabel: string;
+  recycleBinHref?: string;
 }) {
   return (
     <div className="list-toolbar">
@@ -46,9 +48,15 @@ export function ListToolbar({
         <button type="button" className="btn btn-glass" disabled>
           <Upload className="size-3.5" /> <span>{t(locale, "Import")}</span>
         </button>
-        <button type="button" className="btn btn-glass" disabled>
-          <Archive className="size-3.5" /> <span>{t(locale, "Recycle Bin")}</span>
-        </button>
+        {recycleBinHref ? (
+          <Link href={recycleBinHref} className="btn btn-glass">
+            <Archive className="size-3.5" /> <span>{t(locale, "Recycle Bin")}</span>
+          </Link>
+        ) : (
+          <button type="button" className="btn btn-glass" disabled>
+            <Archive className="size-3.5" /> <span>{t(locale, "Recycle Bin")}</span>
+          </button>
+        )}
         <Link href={createHref} className="btn btn-primary">
           <Plus className="size-3.5" /> {createLabel}
         </Link>

@@ -53,6 +53,7 @@ const BUILT_ROUTES = new Set([
   "/hr/payroll",
   "/settings/security",
   "/settings/compliance",
+  "/recycle-bin",
 ]);
 
 const ROLE_LABELS: Record<SessionUser["role"], string> = { owner: "Owner", admin: "Admin", staff: "Staff" };

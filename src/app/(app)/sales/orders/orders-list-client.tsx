@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Eye, Star, Pencil, Printer, Copy, Archive, Trash2 } from "lucide-react";
+import { Eye, Star, Pencil, Printer, Copy } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { StatRow } from "../_shared/stat-row";
@@ -11,6 +11,7 @@ import { ListToolbar } from "../_shared/list-toolbar";
 import { RowMenu, type RowMenuEntry } from "../_shared/row-menu";
 import { Money } from "../_shared/money";
 import { t, type Locale } from "@/lib/i18n/dict";
+import { useDocumentRowActions } from "../../_shared/document-row-actions";
 import { can } from "@/lib/document-lifecycle";
 import { convertSoToProformaAction, convertSoToInvoiceAction, convertSoToDeliveryChallanAction } from "./actions";
 
@@ -31,11 +32,13 @@ export type OrderRow = {
   total: string;
   status: string;
   creatorName: string;
+  isArchived: boolean;
   sourceQuotationNumber: string | null;
 };
 
 export function OrdersListClient({ locale, rows }: { locale: Locale; rows: OrderRow[] }) {
   const [search, setSearch] = useState("");
+  const rowActions = useDocumentRowActions(locale);
   const [, startTransition] = useTransition();
 
   const filtered = useMemo(() => {
@@ -114,9 +117,8 @@ export function OrdersListClient({ locale, rows }: { locale: Locale; rows: Order
                 ],
               },
               { kind: "item", icon: Copy, label: t(locale, "Duplicate") },
-              { kind: "item", icon: Archive, label: t(locale, "Archive") },
               { kind: "separator" },
-              { kind: "item", icon: Trash2, label: t(locale, "Delete"), danger: true },
+              ...rowActions("sales_order", r.id, r.status, r.isArchived),
             ];
             return (
               <TableRow key={r.id}>
@@ -138,6 +140,11 @@ export function OrdersListClient({ locale, rows }: { locale: Locale; rows: Order
                 <TableCell className="text-[12.5px] text-ink-muted">{r.creatorName}</TableCell>
                 <TableCell>
                   <Badge variant={STATUS_VARIANT[r.status] ?? "neutral"}>{t(locale, r.status)}</Badge>
+                  {r.isArchived && (
+                    <Badge variant="neutral" className="ms-1">
+                      {t(locale, "Archived")}
+                    </Badge>
+                  )}
                 </TableCell>
                 <TableCell>
                   <RowMenu entries={entries} />

@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Eye, Star, Pencil, Printer, RefreshCw, Archive, Trash2 } from "lucide-react";
+import { Eye, Star, Pencil, Printer, RefreshCw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { StatRow } from "../../sales/_shared/stat-row";
@@ -10,6 +10,7 @@ import { ListToolbar } from "../../sales/_shared/list-toolbar";
 import { RowMenu, type RowMenuEntry } from "../../sales/_shared/row-menu";
 import { Money } from "../../sales/_shared/money";
 import { t, type Locale } from "@/lib/i18n/dict";
+import { useDocumentRowActions } from "../../_shared/document-row-actions";
 import { can } from "@/lib/document-lifecycle";
 
 const STATUS_VARIANT: Record<string, "success" | "warning" | "danger" | "info" | "neutral"> = {
@@ -29,10 +30,12 @@ export type PoRow = {
   total: string;
   status: string;
   creatorName: string;
+  isArchived: boolean;
 };
 
 export function PoListClient({ locale, rows }: { locale: Locale; rows: PoRow[] }) {
   const [search, setSearch] = useState("");
+  const rowActions = useDocumentRowActions(locale);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -103,9 +106,8 @@ export function PoListClient({ locale, rows }: { locale: Locale; rows: PoRow[] }
                   label: t(locale, "Create Debit Note"),
                   href: r.status === "received" ? `/purchasing/debit-notes/new?po=${r.id}` : undefined,
                 },
-                { kind: "item", icon: Archive, label: t(locale, "Archive") },
                 { kind: "separator" },
-                { kind: "item", icon: Trash2, label: t(locale, "Delete"), danger: true },
+                ...rowActions("purchase_order", r.id, r.status, r.isArchived),
               ];
               return (
                 <TableRow key={r.id}>
@@ -127,6 +129,11 @@ export function PoListClient({ locale, rows }: { locale: Locale; rows: PoRow[] }
                   <TableCell className="text-[12.5px] text-ink-muted">{r.creatorName}</TableCell>
                   <TableCell>
                     <Badge variant={STATUS_VARIANT[r.status] ?? "neutral"}>{t(locale, r.status)}</Badge>
+                    {r.isArchived && (
+                      <Badge variant="neutral" className="ms-1">
+                        {t(locale, "Archived")}
+                      </Badge>
+                    )}
                   </TableCell>
                   <TableCell>
                     <RowMenu entries={entries} />

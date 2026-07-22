@@ -30,6 +30,9 @@ export const debitNotesTable = pgTable("debit_notes", {
   createdById: integer("created_by_id")
     .notNull()
     .references(() => usersTable.id),
+  // Batch A3 — record-state columns (orthogonal to business status): NULL = active.
+  archivedAt: timestamp("archived_at"),
+  deletedAt: timestamp("deleted_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 export const insertDebitNoteSchema = createInsertSchema(debitNotesTable).omit({ id: true, createdAt: true });

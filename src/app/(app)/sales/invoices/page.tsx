@@ -1,4 +1,4 @@
-import { eq, desc } from "drizzle-orm";
+import { and, eq, desc, isNull, sql } from "drizzle-orm";
 import { db, salesInvoicesTable, customersTable, usersTable, salesOrdersTable } from "@/db";
 import { requireSession } from "@/lib/session";
 import { getLocale } from "@/lib/i18n/server";
@@ -19,13 +19,14 @@ export default async function InvoicesPage() {
       total: salesInvoicesTable.total,
       status: salesInvoicesTable.status,
       creatorName: usersTable.name,
+      isArchived: sql<boolean>`${salesInvoicesTable.archivedAt} is not null`,
       sourceSoNumber: salesOrdersTable.soNumber,
     })
     .from(salesInvoicesTable)
     .innerJoin(customersTable, eq(customersTable.id, salesInvoicesTable.customerId))
     .innerJoin(usersTable, eq(usersTable.id, salesInvoicesTable.createdById))
     .leftJoin(salesOrdersTable, eq(salesOrdersTable.id, salesInvoicesTable.sourceSalesOrderId))
-    .where(eq(salesInvoicesTable.orgId, session.orgId))
+    .where(and(eq(salesInvoicesTable.orgId, session.orgId), isNull(salesInvoicesTable.deletedAt)))
     .orderBy(desc(salesInvoicesTable.id));
 
   return <InvoicesListClient locale={locale} rows={rows} />;

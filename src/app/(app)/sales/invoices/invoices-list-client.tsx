@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Eye, Star, Printer, Wallet, Send, Archive, Trash2 } from "lucide-react";
+import { Eye, Star, Printer, Wallet, Send } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { StatRow } from "../_shared/stat-row";
@@ -11,6 +11,7 @@ import { ListToolbar } from "../_shared/list-toolbar";
 import { RowMenu, type RowMenuEntry } from "../_shared/row-menu";
 import { Money } from "../_shared/money";
 import { t, type Locale } from "@/lib/i18n/dict";
+import { useDocumentRowActions } from "../../_shared/document-row-actions";
 import { convertInvoiceToDeliveryChallanAction } from "./actions";
 
 const STATUS_VARIANT: Record<string, "success" | "warning" | "danger" | "info" | "neutral"> = {
@@ -31,11 +32,13 @@ export type InvoiceRow = {
   total: string;
   status: string;
   creatorName: string;
+  isArchived: boolean;
   sourceSoNumber: string | null;
 };
 
 export function InvoicesListClient({ locale, rows }: { locale: Locale; rows: InvoiceRow[] }) {
   const [search, setSearch] = useState("");
+  const rowActions = useDocumentRowActions(locale);
   const [, startTransition] = useTransition();
 
   function createDc(id: number) {
@@ -113,9 +116,8 @@ export function InvoicesListClient({ locale, rows }: { locale: Locale; rows: Inv
                 ],
               },
               { kind: "item", icon: Send, label: t(locale, "Send Reminder") },
-              { kind: "item", icon: Archive, label: t(locale, "Archive") },
               { kind: "separator" },
-              { kind: "item", icon: Trash2, label: t(locale, "Delete"), danger: true },
+              ...rowActions("sales_invoice", r.id, r.status, r.isArchived),
             ];
             return (
               <TableRow key={r.id}>
@@ -137,6 +139,11 @@ export function InvoicesListClient({ locale, rows }: { locale: Locale; rows: Inv
                 <TableCell className="text-[12.5px] text-ink-muted">{r.creatorName}</TableCell>
                 <TableCell>
                   <Badge variant={STATUS_VARIANT[r.status] ?? "neutral"}>{t(locale, r.status)}</Badge>
+                  {r.isArchived && (
+                    <Badge variant="neutral" className="ms-1">
+                      {t(locale, "Archived")}
+                    </Badge>
+                  )}
                 </TableCell>
                 <TableCell>
                   <RowMenu entries={entries} />

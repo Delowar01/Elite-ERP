@@ -39,6 +39,9 @@ export const salesInvoicesTable = pgTable("sales_invoices", {
   invoiceHash: text("invoice_hash"),
   previousInvoiceHash: text("previous_invoice_hash"),
 
+  // Batch A3 — record-state columns (orthogonal to business status): NULL = active.
+  archivedAt: timestamp("archived_at"),
+  deletedAt: timestamp("deleted_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

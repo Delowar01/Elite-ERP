@@ -36,6 +36,9 @@ export const purchaseOrdersTable = pgTable("purchase_orders", {
   createdById: integer("created_by_id")
     .notNull()
     .references(() => usersTable.id),
+  // Batch A3 — record-state columns (orthogonal to business status): NULL = active.
+  archivedAt: timestamp("archived_at"),
+  deletedAt: timestamp("deleted_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

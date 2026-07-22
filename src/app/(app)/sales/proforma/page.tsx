@@ -1,4 +1,4 @@
-import { eq, desc } from "drizzle-orm";
+import { and, eq, desc, isNull, sql } from "drizzle-orm";
 import { db, proformaInvoicesTable, customersTable, usersTable, salesOrdersTable } from "@/db";
 import { requireSession } from "@/lib/session";
 import { getLocale } from "@/lib/i18n/server";
@@ -18,13 +18,14 @@ export default async function ProformaPage() {
       total: proformaInvoicesTable.total,
       status: proformaInvoicesTable.status,
       creatorName: usersTable.name,
+      isArchived: sql<boolean>`${proformaInvoicesTable.archivedAt} is not null`,
       sourceSoNumber: salesOrdersTable.soNumber,
     })
     .from(proformaInvoicesTable)
     .innerJoin(customersTable, eq(customersTable.id, proformaInvoicesTable.customerId))
     .innerJoin(usersTable, eq(usersTable.id, proformaInvoicesTable.createdById))
     .leftJoin(salesOrdersTable, eq(salesOrdersTable.id, proformaInvoicesTable.sourceSalesOrderId))
-    .where(eq(proformaInvoicesTable.orgId, session.orgId))
+    .where(and(eq(proformaInvoicesTable.orgId, session.orgId), isNull(proformaInvoicesTable.deletedAt)))
     .orderBy(desc(proformaInvoicesTable.id));
 
   return <ProformaListClient locale={locale} rows={rows} />;

@@ -1,4 +1,4 @@
-import { eq, desc } from "drizzle-orm";
+import { and, eq, desc, isNull, sql } from "drizzle-orm";
 import { db, creditNotesTable, customersTable, usersTable, salesInvoicesTable } from "@/db";
 import { requireSession } from "@/lib/session";
 import { getLocale } from "@/lib/i18n/server";
@@ -18,6 +18,7 @@ export default async function CreditNotesPage() {
       total: creditNotesTable.total,
       status: creditNotesTable.status,
       creatorName: usersTable.name,
+      isArchived: sql<boolean>`${creditNotesTable.archivedAt} is not null`,
       sourceInvoiceNumber: salesInvoicesTable.invoiceNumber,
       sourceInvoiceId: creditNotesTable.sourceInvoiceId,
     })
@@ -25,7 +26,7 @@ export default async function CreditNotesPage() {
     .innerJoin(customersTable, eq(customersTable.id, creditNotesTable.customerId))
     .innerJoin(usersTable, eq(usersTable.id, creditNotesTable.createdById))
     .innerJoin(salesInvoicesTable, eq(salesInvoicesTable.id, creditNotesTable.sourceInvoiceId))
-    .where(eq(creditNotesTable.orgId, session.orgId))
+    .where(and(eq(creditNotesTable.orgId, session.orgId), isNull(creditNotesTable.deletedAt)))
     .orderBy(desc(creditNotesTable.id));
 
   return <CnListClient locale={locale} rows={rows} />;

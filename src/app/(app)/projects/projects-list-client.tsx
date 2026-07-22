@@ -67,6 +67,7 @@ export function ProjectsListClient({ locale, rows }: { locale: Locale; rows: Pro
         onSearchChange={setSearch}
         createHref="/projects/new"
         createLabel={t(locale, "New Project")}
+        recycleBinHref=""
       />
 
       {rows.length === 0 ? (
