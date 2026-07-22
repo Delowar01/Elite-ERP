@@ -15,6 +15,7 @@ import { DocFooterContact } from "../_shared/doc-footer-contact";
 import { DocActionBar } from "../_shared/doc-action-bar";
 import { computeTotals } from "../_shared/totals";
 import { t, type Locale } from "@/lib/i18n/dict";
+import type { ContentPreset } from "@/lib/document-presets";
 import type { Customer, Product, Org } from "@/db";
 import { createSalesOrderAction, updateSalesOrderAction } from "./actions";
 
@@ -39,6 +40,8 @@ export function OrderForm({
   mode = "create",
   documentId,
   initial,
+  noteTemplates = [],
+  termsGroups = [],
 }: {
   locale: Locale;
   customers: Customer[];
@@ -49,6 +52,8 @@ export function OrderForm({
   mode?: "create" | "edit";
   documentId?: number;
   initial?: OrderFormInitial;
+  noteTemplates?: ContentPreset[];
+  termsGroups?: ContentPreset[];
 }) {
   const isEdit = mode === "edit";
   const [title, setTitle] = useState(initial?.title ?? "");
@@ -57,7 +62,8 @@ export function OrderForm({
   const [issueDate, setIssueDate] = useState(initial?.issueDate ?? new Date().toISOString().slice(0, 10));
   const [expectedDelivery, setExpectedDelivery] = useState(initial?.expectedDelivery ?? "");
   const [discount, setDiscount] = useState(initial?.discount ?? "0");
-  const [notes, setNotes] = useState(initial?.notes ?? "");
+  const defaultNote = noteTemplates.find((n) => n.isDefault) ?? noteTemplates[0];
+  const [notes, setNotes] = useState(initial?.notes ?? defaultNote?.content ?? "");
   const [items, setItems] = useState<LineItemDraft[]>(initial?.items && initial.items.length > 0 ? initial.items : [emptyLineItem()]);
   const [pendingDraft, startDraftTransition] = useTransition();
   const [pendingPrimary, startPrimaryTransition] = useTransition();
@@ -153,7 +159,7 @@ export function OrderForm({
       <LineItemsEditor locale={locale} products={products} items={items} onChange={setItems} variant="full" />
 
       <div className="doc-bottom-grid">
-        <TermsBlock locale={locale} groupKey="group-a" notes={notes} onNotesChange={setNotes} />
+        <TermsBlock locale={locale} notes={notes} onNotesChange={setNotes} noteTemplates={noteTemplates} termsGroups={termsGroups} />
         <div className="flex flex-col gap-4">
           <TotalsCard locale={locale} subtotal={totals.subtotal} discount={discount} onDiscountChange={setDiscount} taxTotal={totals.taxTotal} total={totals.total} />
         </div>

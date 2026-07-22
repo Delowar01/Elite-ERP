@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { Plus, Trash2, Package } from "lucide-react";
+import { Plus, Trash2, Package, Pencil } from "lucide-react";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { t, type Locale } from "@/lib/i18n/dict";
 import type { ProductBundle, ProductBundleItem, Product } from "@/db";
-import { createBundleAction, deleteBundleAction, addBundleItemAction, removeBundleItemAction } from "./actions";
+import { createBundleAction, updateBundleAction, deleteBundleAction, addBundleItemAction, removeBundleItemAction } from "./actions";
 
 type BundleWithItems = ProductBundle & { items: (ProductBundleItem & { productName: string; productSku: string })[] };
 
@@ -26,6 +26,7 @@ export function BundlesPanel({
   products: Pick<Product, "id" | "name" | "sku">[];
 }) {
   const [creating, setCreating] = useState(false);
+  const [renaming, setRenaming] = useState<BundleWithItems | null>(null);
   const [managing, setManaging] = useState<BundleWithItems | null>(null);
   const [productId, setProductId] = useState<string>("");
   const [pending, startTransition] = useTransition();
@@ -38,6 +39,19 @@ export function BundlesPanel({
       else {
         toast.success(t(locale, "Saved"));
         setCreating(false);
+      }
+    });
+  }
+
+  function renameBundle(formData: FormData) {
+    if (!renaming) return;
+    const name = String(formData.get("name") ?? "");
+    startTransition(async () => {
+      const result = await updateBundleAction(renaming.id, name);
+      if (result.error) toast.error(result.error);
+      else {
+        toast.success(t(locale, "Saved"));
+        setRenaming(null);
       }
     });
   }
@@ -99,6 +113,9 @@ export function BundlesPanel({
                   <Button variant="ghost" size="sm" disabled={pending} onClick={() => setManaging(bundle)}>
                     <Package className="size-3.5" /> {t(locale, "Manage")}
                   </Button>
+                  <Button variant="ghost" size="icon" disabled={pending} onClick={() => setRenaming(bundle)} aria-label={t(locale, "Rename")}>
+                    <Pencil className="size-3.5" />
+                  </Button>
                   <Button
                     variant="ghost"
                     size="icon"
@@ -128,6 +145,24 @@ export function BundlesPanel({
           <form action={createBundle} className="flex flex-col gap-4">
             <FormField label={t(locale, "Bundle Name")} htmlFor="bundle-name">
               <Input id="bundle-name" name="name" required autoFocus />
+            </FormField>
+            <DialogFooter>
+              <Button type="submit" disabled={pending}>
+                {pending ? t(locale, "Saving…") : t(locale, "Save")}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={renaming !== null} onOpenChange={(open) => !open && setRenaming(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t(locale, "Rename Bundle")}</DialogTitle>
+          </DialogHeader>
+          <form action={renameBundle} className="flex flex-col gap-4">
+            <FormField label={t(locale, "Bundle Name")} htmlFor="bundle-rename">
+              <Input id="bundle-rename" name="name" required autoFocus defaultValue={renaming?.name ?? ""} />
             </FormField>
             <DialogFooter>
               <Button type="submit" disabled={pending}>

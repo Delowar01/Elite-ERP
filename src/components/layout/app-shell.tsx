@@ -2,13 +2,15 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LogOut, Star, Settings } from "lucide-react";
+import { LogOut, Settings } from "lucide-react";
 import { LogoMark } from "@/components/brand/logo-mark";
 import { NAV_GROUPS } from "./nav-config";
 import { CommandPalette } from "./command-palette";
 import { NotificationsMenu } from "./notifications-menu";
 import { ThemeToggle } from "./theme-toggle";
+import { FavoritesMenu } from "./favorites-menu";
 import type { NotificationItem } from "@/lib/notifications";
+import type { FavoriteItem } from "@/lib/favorites";
 import type { Theme } from "@/lib/theme";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -78,6 +80,7 @@ export function AppShell({
   theme,
   notifications,
   unreadCount,
+  favorites,
   children,
 }: {
   user: SessionUser;
@@ -89,6 +92,7 @@ export function AppShell({
   theme: Theme | null;
   notifications: NotificationItem[];
   unreadCount: number;
+  favorites: FavoriteItem[];
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -172,9 +176,7 @@ export function AppShell({
             <CommandPalette locale={locale} />
             <LanguageSwitcher locale={locale} />
             <ThemeToggle locale={locale} initial={theme} />
-            <button type="button" className="topbar-icon-btn opacity-50 cursor-not-allowed" aria-label={t(locale, "Favorites")} title={t(locale, "Favorites — coming soon")} disabled>
-              <Star className="size-4" />
-            </button>
+            <FavoritesMenu locale={locale} favorites={favorites} currentLabel={pageTitle} />
             <NotificationsMenu locale={locale} notifications={notifications} unreadCount={unreadCount} />
             <Link href="/settings/organization" className="topbar-icon-btn" aria-label={t(locale, "Business Settings")}>
               <Settings className="size-4" />

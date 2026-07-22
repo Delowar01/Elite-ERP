@@ -10,9 +10,16 @@ import { DefaultBankAccountPanel, FiscalYearPanel, VatConfigurationPanel } from 
 import { RolesPermissionsPanel, ZatcaPanel } from "./reference-panels";
 import { TeamPanel } from "../team/team-panel";
 
-export default async function OrganizationSettingsPage() {
+const SETTINGS_TABS = new Set([
+  "business-details", "logo", "color-theme", "default-terms", "seal-signature", "print-layout",
+  "default-bank", "fiscal-year", "vat-config", "team", "roles-permissions", "zatca",
+]);
+
+export default async function OrganizationSettingsPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
   const session = await requireRole("owner", "admin");
   const locale = await getLocale();
+  const { tab } = await searchParams;
+  const defaultTab = tab && SETTINGS_TABS.has(tab) ? tab : "color-theme";
 
   const [org] = await db.select().from(orgsTable).where(eq(orgsTable.id, session.orgId));
   const bankAccounts = await db
@@ -28,7 +35,7 @@ export default async function OrganizationSettingsPage() {
 
   return (
     <div className="max-w-5xl mx-auto">
-      <SettingsNav defaultValue="color-theme" orientation="vertical" className="flex gap-8 items-start">
+      <SettingsNav defaultValue={defaultTab} orientation="vertical" className="flex gap-8 items-start">
         <SettingsNavList>
           <SettingsNavGroupLabel>{t(locale, "Company")}</SettingsNavGroupLabel>
           <SettingsNavItem value="business-details">{t(locale, "Business Details")}</SettingsNavItem>

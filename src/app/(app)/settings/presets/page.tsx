@@ -9,6 +9,7 @@ import {
   leaveTypesTable,
   expenseCategoriesTable,
   noteTemplatesTable,
+  termsConditionsGroupsTable,
   productBundlesTable,
   productBundleItemsTable,
   productsTable,
@@ -22,6 +23,7 @@ import { tenantScope } from "@/lib/tenant";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { SimplePresetPanel } from "./simple-preset-panel";
 import { NoteTemplatesPanel } from "./note-templates-panel";
+import { TermsGroupsPanel } from "./terms-groups-panel";
 import { BundlesPanel } from "./bundles-panel";
 import { NumberingPanel } from "./numbering-panel";
 import {
@@ -62,6 +64,7 @@ export default async function PresetsPage() {
     leaveTypes,
     expenseCategories,
     noteTemplates,
+    termsGroups,
     bundles,
     bundleItems,
     products,
@@ -75,6 +78,7 @@ export default async function PresetsPage() {
     db.select().from(leaveTypesTable).where(eq(leaveTypesTable.orgId, orgId)).orderBy(asc(leaveTypesTable.name)),
     db.select().from(expenseCategoriesTable).where(eq(expenseCategoriesTable.orgId, orgId)).orderBy(asc(expenseCategoriesTable.name)),
     db.select().from(noteTemplatesTable).where(eq(noteTemplatesTable.orgId, orgId)).orderBy(asc(noteTemplatesTable.name)),
+    db.select().from(termsConditionsGroupsTable).where(eq(termsConditionsGroupsTable.orgId, orgId)).orderBy(asc(termsConditionsGroupsTable.name)),
     db.select().from(productBundlesTable).where(eq(productBundlesTable.orgId, orgId)).orderBy(asc(productBundlesTable.name)),
     db
       .select({
@@ -117,6 +121,7 @@ export default async function PresetsPage() {
           <TabsTrigger value="payment-terms">{t(locale, "Payment Terms")}</TabsTrigger>
           <TabsTrigger value="units">{t(locale, "Units")}</TabsTrigger>
           <TabsTrigger value="note-templates">{t(locale, "Note Templates")}</TabsTrigger>
+          <TabsTrigger value="terms-groups">{t(locale, "Terms & Conditions Groups")}</TabsTrigger>
           <TabsTrigger value="bundles">{t(locale, "Bundles")}</TabsTrigger>
           <TabsTrigger value="numbering">{t(locale, "Numbering")}</TabsTrigger>
           <TabsTrigger value="departments">{t(locale, "Departments")}</TabsTrigger>
@@ -168,6 +173,10 @@ export default async function PresetsPage() {
 
         <TabsContent value="note-templates">
           <NoteTemplatesPanel locale={locale} templates={noteTemplates} />
+        </TabsContent>
+
+        <TabsContent value="terms-groups">
+          <TermsGroupsPanel locale={locale} groups={termsGroups} />
         </TabsContent>
 
         <TabsContent value="bundles">

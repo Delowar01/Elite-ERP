@@ -17,6 +17,7 @@ import { requireSession } from "@/lib/session";
 import { getLocale } from "@/lib/i18n/server";
 import { tenantScope } from "@/lib/tenant";
 import { previewNextDocumentNumber } from "@/lib/documents";
+import { getDocumentContentPresets } from "@/lib/document-presets";
 import type { LineItemDraft } from "../../../sales/_shared/line-items-editor";
 import { PoForm } from "../po-form";
 
@@ -83,11 +84,12 @@ export default async function NewPurchaseOrderPage({
     }
   }
 
-  const [vendors, products, [org], numberPreview] = await Promise.all([
+  const [vendors, products, [org], numberPreview, presets] = await Promise.all([
     db.select().from(vendorsTable).where(tenantScope(session.orgId, vendorsTable)).orderBy(asc(vendorsTable.name)),
     db.select().from(productsTable).where(tenantScope(session.orgId, productsTable)).orderBy(asc(productsTable.name)),
     db.select().from(orgsTable).where(eq(orgsTable.id, session.orgId)),
     previewNextDocumentNumber(session.orgId, "purchase_order"),
+    getDocumentContentPresets(session.orgId, "purchase_order"),
   ]);
 
   return (
@@ -103,6 +105,8 @@ export default async function NewPurchaseOrderPage({
         sourceQuotationId={fromQuotation}
         sourceSalesOrderId={fromSalesOrder}
         sourceInvoiceId={fromInvoice}
+        noteTemplates={presets.noteTemplates}
+        termsGroups={presets.termsGroups}
       />
     </div>
   );

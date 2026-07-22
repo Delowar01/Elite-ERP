@@ -29,6 +29,13 @@
       "when": 1784747316123,
       "tag": "0003_careful_nomad",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1784748824249,
+      "tag": "0004_wooden_christian_walker",
+      "breakpoints": true
     }
   ]
 }

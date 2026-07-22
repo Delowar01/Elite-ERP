@@ -12,6 +12,7 @@ import {
   leaveTypesTable,
   expenseCategoriesTable,
   noteTemplatesTable,
+  termsConditionsGroupsTable,
   productBundlesTable,
   productBundleItemsTable,
   documentSequencesTable,
@@ -288,12 +289,83 @@ export async function deleteNoteTemplateAction(id: number): Promise<ActionResult
   return {};
 }
 
+// ---- Terms & Conditions Groups: name + document type + content + isDefault ----
+// Same shape/rules as Note Templates. Consumed by document create forms to pre-fill / insert
+// the default (or chosen) terms into the document's notes. purchase_order is included since POs
+// also carry terms.
+
+const TERMS_DOC_TYPE_OPTIONS = ["quotation", "sales_order", "proforma_invoice", "sales_invoice", "delivery_challan", "purchase_order"] as const;
+
+export async function saveTermsGroupAction(input: {
+  id?: number;
+  name: string;
+  documentType: string | null;
+  content: string;
+  isDefault: boolean;
+}): Promise<ActionResult> {
+  const session = await requireRole("owner", "admin");
+  if (!input.name.trim()) return { error: "Name is required." };
+  if (!input.content.trim()) return { error: "Content is required." };
+  if (input.documentType && !TERMS_DOC_TYPE_OPTIONS.includes(input.documentType as (typeof TERMS_DOC_TYPE_OPTIONS)[number])) {
+    return { error: "Invalid document type." };
+  }
+
+  await db.transaction(async (tx) => {
+    // At most one default per (orgId, documentType).
+    if (input.isDefault && input.documentType) {
+      await tx
+        .update(termsConditionsGroupsTable)
+        .set({ isDefault: false })
+        .where(and(eq(termsConditionsGroupsTable.orgId, session.orgId), eq(termsConditionsGroupsTable.documentType, input.documentType)));
+    }
+    if (input.id) {
+      const updated = await tx
+        .update(termsConditionsGroupsTable)
+        .set({ name: input.name.trim(), documentType: input.documentType, content: input.content.trim(), isDefault: input.isDefault })
+        .where(and(eq(termsConditionsGroupsTable.id, input.id), eq(termsConditionsGroupsTable.orgId, session.orgId)))
+        .returning({ id: termsConditionsGroupsTable.id });
+      if (!updated.length) throw new Error("Not found.");
+    } else {
+      await tx.insert(termsConditionsGroupsTable).values({
+        orgId: session.orgId,
+        name: input.name.trim(),
+        documentType: input.documentType,
+        content: input.content.trim(),
+        isDefault: input.isDefault,
+      });
+    }
+  });
+
+  revalidatePath(PATH);
+  return {};
+}
+export async function deleteTermsGroupAction(id: number): Promise<ActionResult> {
+  const session = await requireRole("owner", "admin");
+  await db
+    .delete(termsConditionsGroupsTable)
+    .where(and(eq(termsConditionsGroupsTable.id, id), eq(termsConditionsGroupsTable.orgId, session.orgId)));
+  revalidatePath(PATH);
+  return {};
+}
+
 // ---- Product Bundles: name + line items (product + quantity) ----
 
 export async function createBundleAction(name: string): Promise<ActionResult> {
   const session = await requireRole("owner", "admin");
   if (!name.trim()) return { error: "Name is required." };
   await db.insert(productBundlesTable).values({ orgId: session.orgId, name: name.trim() });
+  revalidatePath(PATH);
+  return {};
+}
+export async function updateBundleAction(id: number, name: string): Promise<ActionResult> {
+  const session = await requireRole("owner", "admin");
+  if (!name.trim()) return { error: "Name is required." };
+  const result = await db
+    .update(productBundlesTable)
+    .set({ name: name.trim() })
+    .where(and(eq(productBundlesTable.id, id), eq(productBundlesTable.orgId, session.orgId)))
+    .returning({ id: productBundlesTable.id });
+  if (!result.length) return { error: "Not found." };
   revalidatePath(PATH);
   return {};
 }

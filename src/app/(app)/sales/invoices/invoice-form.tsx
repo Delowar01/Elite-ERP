@@ -16,6 +16,7 @@ import { DocActionBar } from "../_shared/doc-action-bar";
 import { EInvoicePreviewPanel } from "../_shared/einvoice-preview-panel";
 import { computeTotals } from "../_shared/totals";
 import { t, type Locale } from "@/lib/i18n/dict";
+import type { ContentPreset } from "@/lib/document-presets";
 import type { Customer, Product, Org } from "@/db";
 import { createInvoiceAction, updateInvoiceAction } from "./actions";
 
@@ -40,6 +41,8 @@ export function InvoiceForm({
   mode = "create",
   documentId,
   initial,
+  noteTemplates = [],
+  termsGroups = [],
 }: {
   locale: Locale;
   customers: Customer[];
@@ -50,6 +53,8 @@ export function InvoiceForm({
   mode?: "create" | "edit";
   documentId?: number;
   initial?: InvoiceFormInitial;
+  noteTemplates?: ContentPreset[];
+  termsGroups?: ContentPreset[];
 }) {
   const isEdit = mode === "edit";
   const [title, setTitle] = useState(initial?.title ?? "");
@@ -58,7 +63,8 @@ export function InvoiceForm({
   const [issueDate, setIssueDate] = useState(initial?.issueDate ?? new Date().toISOString().slice(0, 10));
   const [dueDate, setDueDate] = useState(initial?.dueDate ?? "");
   const [discount, setDiscount] = useState(initial?.discount ?? "0");
-  const [notes, setNotes] = useState(initial?.notes ?? "");
+  const defaultNote = noteTemplates.find((n) => n.isDefault) ?? noteTemplates[0];
+  const [notes, setNotes] = useState(initial?.notes ?? defaultNote?.content ?? "");
   const [items, setItems] = useState<LineItemDraft[]>(initial?.items && initial.items.length > 0 ? initial.items : [emptyLineItem()]);
   const [pendingDraft, startDraftTransition] = useTransition();
   const [pendingPrimary, startPrimaryTransition] = useTransition();
@@ -149,7 +155,7 @@ export function InvoiceForm({
       <LineItemsEditor locale={locale} products={products} items={items} onChange={setItems} variant="full" />
 
       <div className="doc-bottom-grid">
-        <TermsBlock locale={locale} groupKey="group-b" notes={notes} onNotesChange={setNotes} />
+        <TermsBlock locale={locale} notes={notes} onNotesChange={setNotes} noteTemplates={noteTemplates} termsGroups={termsGroups} />
         <div className="flex flex-col gap-4">
           <TotalsCard locale={locale} subtotal={totals.subtotal} discount={discount} onDiscountChange={setDiscount} taxTotal={totals.taxTotal} total={totals.total} />
           <EInvoicePreviewPanel locale={locale} vatNumber={org.vatNumber} taxTotal={totals.taxTotal} variant="create" />

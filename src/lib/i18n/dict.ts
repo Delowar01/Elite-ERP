@@ -949,6 +949,24 @@ const DICT: Record<string, string> = {
   "Cash Flow": "التدفق النقدي",
   "vs prev. period": "مقارنةً بالفترة السابقة",
   "Feature Highlights": "أبرز الميزات",
+  // Presets & settings completion — Batch F
+  "Terms & Conditions Groups": "مجموعات الشروط والأحكام",
+  "No terms & conditions groups yet.": "لا توجد مجموعات شروط وأحكام بعد.",
+  "Add Terms Group": "إضافة مجموعة شروط",
+  "Use as default for this document type": "استخدامها كافتراضي لنوع المستند هذا",
+  "Terms & Conditions Group": "مجموعة الشروط والأحكام",
+  "Select a group": "اختر مجموعة",
+  "Insert into notes": "إدراج في الملاحظات",
+  "Note Template": "قالب ملاحظة",
+  "Select a template": "اختر قالباً",
+  "Apply to notes": "تطبيق على الملاحظات",
+  "Add Note": "إضافة ملاحظة",
+  "Rename Bundle": "إعادة تسمية الحزمة",
+  "Added to favorites.": "أُضيف إلى المفضلة.",
+  "Removed from favorites.": "أُزيل من المفضلة.",
+  "Add this page": "إضافة هذه الصفحة",
+  "Remove this page": "إزالة هذه الصفحة",
+  "No favorites yet.": "لا توجد مفضلة بعد.",
 };
 
 export function t(locale: Locale, en: string): string {

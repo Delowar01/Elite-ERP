@@ -15,6 +15,7 @@ import { DocFooterContact } from "../../sales/_shared/doc-footer-contact";
 import { DocActionBar } from "../../sales/_shared/doc-action-bar";
 import { computeTotals } from "../../sales/_shared/totals";
 import { t, type Locale } from "@/lib/i18n/dict";
+import type { ContentPreset } from "@/lib/document-presets";
 import type { Vendor, Product, Org } from "@/db";
 import { createPurchaseOrderAction, updatePurchaseOrderAction } from "./actions";
 
@@ -43,6 +44,8 @@ export function PoForm({
   mode = "create",
   documentId,
   initial,
+  noteTemplates = [],
+  termsGroups = [],
 }: {
   locale: Locale;
   vendors: Vendor[];
@@ -58,6 +61,8 @@ export function PoForm({
   mode?: "create" | "edit";
   documentId?: number;
   initial?: PoFormInitial;
+  noteTemplates?: ContentPreset[];
+  termsGroups?: ContentPreset[];
 }) {
   const isEdit = mode === "edit";
   const [title, setTitle] = useState(initial?.title ?? initialTitle ?? "");
@@ -65,7 +70,8 @@ export function PoForm({
   const [orderDate, setOrderDate] = useState(initial?.orderDate ?? new Date().toISOString().slice(0, 10));
   const [expectedDate, setExpectedDate] = useState(initial?.expectedDate ?? "");
   const [discount, setDiscount] = useState(initial?.discount ?? "0");
-  const [notes, setNotes] = useState(initial?.notes ?? "");
+  const defaultNote = noteTemplates.find((n) => n.isDefault) ?? noteTemplates[0];
+  const [notes, setNotes] = useState(initial?.notes ?? defaultNote?.content ?? "");
   const [items, setItems] = useState<LineItemDraft[]>(
     initial?.items && initial.items.length > 0 ? initial.items : initialItems && initialItems.length > 0 ? initialItems : [emptyLineItem()],
   );
@@ -153,7 +159,7 @@ export function PoForm({
       <LineItemsEditor locale={locale} products={products} items={items} onChange={setItems} variant="full" />
 
       <div className="doc-bottom-grid">
-        <TermsBlock locale={locale} groupKey="group-c" notes={notes} onNotesChange={setNotes} />
+        <TermsBlock locale={locale} notes={notes} onNotesChange={setNotes} noteTemplates={noteTemplates} termsGroups={termsGroups} />
         <div className="flex flex-col gap-4">
           <TotalsCard
             locale={locale}
