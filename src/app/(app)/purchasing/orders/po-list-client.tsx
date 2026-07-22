@@ -1,12 +1,15 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import Link from "next/link";
 import { Eye, Star, Pencil, Printer, RefreshCw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { StatRow } from "../../sales/_shared/stat-row";
-import { ListToolbar } from "../../sales/_shared/list-toolbar";
+import { ListWorkspaceToolbar } from "../../documents/_workspace/list-workspace-toolbar";
+import { useListFilters } from "../../documents/_workspace/use-list-filters";
+import type { SavedViewDTO } from "../../documents/_workspace/saved-view-actions";
+import type { ImportColumn } from "@/lib/document-list-workspace";
 import { RowMenu, type RowMenuEntry } from "../../sales/_shared/row-menu";
 import { Money } from "../../sales/_shared/money";
 import { t, type Locale } from "@/lib/i18n/dict";
@@ -33,15 +36,31 @@ export type PoRow = {
   isArchived: boolean;
 };
 
-export function PoListClient({ locale, rows }: { locale: Locale; rows: PoRow[] }) {
-  const [search, setSearch] = useState("");
+export function PoListClient({
+  locale,
+  rows,
+  savedViews,
+  importColumns,
+  statusOptions,
+  partyLabel,
+}: {
+  locale: Locale;
+  rows: PoRow[];
+  savedViews: SavedViewDTO[];
+  importColumns: ImportColumn[];
+  statusOptions: string[];
+  partyLabel: string;
+}) {
   const rowActions = useDocumentRowActions(locale);
 
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return rows;
-    return rows.filter((r) => r.poNumber.toLowerCase().includes(q) || r.vendorName.toLowerCase().includes(q) || (r.title ?? "").toLowerCase().includes(q));
-  }, [rows, search]);
+  const { filters, setFilters, filtered } = useListFilters(rows, {
+    search: (r) => [r.poNumber, r.vendorName, r.title ?? ""],
+    status: (r) => r.status,
+    party: (r) => r.vendorName,
+    date: (r) => r.orderDate,
+    archived: (r) => r.isArchived,
+  });
+  const partyOptions = useMemo(() => Array.from(new Set(rows.map((r) => r.vendorName))).sort(), [rows]);
 
   const stats = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -64,13 +83,19 @@ export function PoListClient({ locale, rows }: { locale: Locale; rows: PoRow[] }
         ]}
       />
 
-      <ListToolbar
+      <ListWorkspaceToolbar
         locale={locale}
+        module="purchase_order"
         searchPlaceholder={t(locale, "Search PO number, vendor…")}
-        searchValue={search}
-        onSearchChange={setSearch}
         createHref="/purchasing/orders/new"
         createLabel={t(locale, "New Purchase Order")}
+        filters={filters}
+        setFilters={setFilters}
+        statusOptions={statusOptions}
+        partyLabel={partyLabel}
+        partyOptions={partyOptions}
+        savedViews={savedViews}
+        importColumns={importColumns}
       />
 
       {rows.length === 0 ? (

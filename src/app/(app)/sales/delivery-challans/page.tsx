@@ -2,11 +2,15 @@ import { and, eq, desc, isNull, sql } from "drizzle-orm";
 import { db, deliveryChallansTable, customersTable, usersTable, salesOrdersTable, salesInvoicesTable } from "@/db";
 import { requireSession } from "@/lib/session";
 import { getLocale } from "@/lib/i18n/server";
+import { workspaceEntry } from "@/lib/document-list-workspace";
+import { listSavedViews } from "../../documents/_workspace/saved-view-actions";
 import { DcListClient } from "./dc-list-client";
 
 export default async function DeliveryChallansPage() {
   const session = await requireSession();
   const locale = await getLocale();
+  const entry = workspaceEntry("delivery_challan");
+  const savedViews = await listSavedViews("delivery_challan");
 
   const rows = await db
     .select({
@@ -31,5 +35,14 @@ export default async function DeliveryChallansPage() {
 
   const mapped = rows.map((r) => ({ ...r, sourceLabel: r.sourceSoNumber ?? r.sourceInvoiceNumber ?? null }));
 
-  return <DcListClient locale={locale} rows={mapped} />;
+  return (
+    <DcListClient
+      locale={locale}
+      rows={mapped}
+      savedViews={savedViews}
+      importColumns={entry.importColumns}
+      statusOptions={entry.statuses}
+      partyLabel={entry.partyLabel}
+    />
+  );
 }

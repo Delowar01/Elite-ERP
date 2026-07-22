@@ -2,11 +2,15 @@ import { and, eq, desc, isNull, sql } from "drizzle-orm";
 import { db, proformaInvoicesTable, customersTable, usersTable, salesOrdersTable } from "@/db";
 import { requireSession } from "@/lib/session";
 import { getLocale } from "@/lib/i18n/server";
+import { workspaceEntry } from "@/lib/document-list-workspace";
+import { listSavedViews } from "../../documents/_workspace/saved-view-actions";
 import { ProformaListClient } from "./proforma-list-client";
 
 export default async function ProformaPage() {
   const session = await requireSession();
   const locale = await getLocale();
+  const entry = workspaceEntry("proforma_invoice");
+  const savedViews = await listSavedViews("proforma_invoice");
 
   const rows = await db
     .select({
@@ -28,5 +32,14 @@ export default async function ProformaPage() {
     .where(and(eq(proformaInvoicesTable.orgId, session.orgId), isNull(proformaInvoicesTable.deletedAt)))
     .orderBy(desc(proformaInvoicesTable.id));
 
-  return <ProformaListClient locale={locale} rows={rows} />;
+  return (
+    <ProformaListClient
+      locale={locale}
+      rows={rows}
+      savedViews={savedViews}
+      importColumns={entry.importColumns}
+      statusOptions={entry.statuses}
+      partyLabel={entry.partyLabel}
+    />
+  );
 }

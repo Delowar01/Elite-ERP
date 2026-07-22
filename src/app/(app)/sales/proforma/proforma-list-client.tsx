@@ -1,13 +1,16 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useTransition } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { Eye, Star, Pencil, Printer, Wallet } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { StatRow } from "../_shared/stat-row";
-import { ListToolbar } from "../_shared/list-toolbar";
+import { ListWorkspaceToolbar } from "../../documents/_workspace/list-workspace-toolbar";
+import { useListFilters } from "../../documents/_workspace/use-list-filters";
+import type { SavedViewDTO } from "../../documents/_workspace/saved-view-actions";
+import type { ImportColumn } from "@/lib/document-list-workspace";
 import { RowMenu, type RowMenuEntry } from "../_shared/row-menu";
 import { Money } from "../_shared/money";
 import { t, type Locale } from "@/lib/i18n/dict";
@@ -33,16 +36,32 @@ export type ProformaRow = {
   sourceSoNumber: string | null;
 };
 
-export function ProformaListClient({ locale, rows }: { locale: Locale; rows: ProformaRow[] }) {
-  const [search, setSearch] = useState("");
+export function ProformaListClient({
+  locale,
+  rows,
+  savedViews,
+  importColumns,
+  statusOptions,
+  partyLabel,
+}: {
+  locale: Locale;
+  rows: ProformaRow[];
+  savedViews: SavedViewDTO[];
+  importColumns: ImportColumn[];
+  statusOptions: string[];
+  partyLabel: string;
+}) {
   const rowActions = useDocumentRowActions(locale);
   const [, startTransition] = useTransition();
 
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return rows;
-    return rows.filter((r) => r.proformaNumber.toLowerCase().includes(q) || r.customerName.toLowerCase().includes(q) || (r.title ?? "").toLowerCase().includes(q));
-  }, [rows, search]);
+  const { filters, setFilters, filtered } = useListFilters(rows, {
+    search: (r) => [r.proformaNumber, r.customerName, r.title ?? ""],
+    status: (r) => r.status,
+    party: (r) => r.customerName,
+    date: (r) => r.issueDate,
+    archived: (r) => r.isArchived,
+  });
+  const partyOptions = useMemo(() => Array.from(new Set(rows.map((r) => r.customerName))).sort(), [rows]);
 
   const stats = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -71,13 +90,19 @@ export function ProformaListClient({ locale, rows }: { locale: Locale; rows: Pro
         ]}
       />
 
-      <ListToolbar
+      <ListWorkspaceToolbar
         locale={locale}
+        module="proforma_invoice"
         searchPlaceholder={t(locale, "Search proforma number, client…")}
-        searchValue={search}
-        onSearchChange={setSearch}
         createHref="/sales/proforma/new"
         createLabel={t(locale, "New Proforma Invoice")}
+        filters={filters}
+        setFilters={setFilters}
+        statusOptions={statusOptions}
+        partyLabel={partyLabel}
+        partyOptions={partyOptions}
+        savedViews={savedViews}
+        importColumns={importColumns}
       />
 
       <Table>

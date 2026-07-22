@@ -20,3 +20,4 @@ export * from "./debit-notes";
 export * from "./finance";
 export * from "./activity-log";
 export * from "./security";
+export * from "./saved-views";

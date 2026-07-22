@@ -903,6 +903,31 @@ const DICT: Record<string, string> = {
   "m ago": "د",
   "h ago": "س",
   "d ago": "ي",
+  // List workspace — Batch B (Filters / Saved Views / Export / Import)
+  "Active only": "النشطة فقط",
+  All: "الكل",
+  "Archived only": "المؤرشفة فقط",
+  "Choose CSV File": "اختر ملف CSV",
+  "Clear filters": "مسح عوامل التصفية",
+  "Delete this view?": "هل تريد حذف هذا العرض؟",
+  "Download Template": "تنزيل القالب",
+  Errors: "الأخطاء",
+  Excel: "إكسل",
+  "Import creates draft records only — nothing is posted to the ledger or stock. Download the template, fill it in, then upload to preview.":
+    "الاستيراد ينشئ سجلات مسودة فقط — لا يُرحَّل أي شيء إلى دفتر الأستاذ أو المخزون. نزّل القالب، واملأه، ثم ارفعه للمعاينة.",
+  "Import {n} valid record(s)": "استيراد {n} سجل صالح",
+  "Imported {n} record(s).": "تم استيراد {n} سجل.",
+  "Name this view": "سمِّ هذا العرض",
+  "No saved views yet.": "لا توجد عروض محفوظة بعد.",
+  Rename: "إعادة تسمية",
+  "Rename view": "إعادة تسمية العرض",
+  "Save current view": "حفظ العرض الحالي",
+  "The file has no data rows.": "لا يحتوي الملف على صفوف بيانات.",
+  To: "إلى",
+  "View deleted.": "تم حذف العرض.",
+  "View saved.": "تم حفظ العرض.",
+  valid: "صالح",
+  "with errors": "به أخطاء",
 };
 
 export function t(locale: Locale, en: string): string {

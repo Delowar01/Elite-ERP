@@ -2,11 +2,15 @@ import { and, eq, desc, isNull, sql } from "drizzle-orm";
 import { db, salesOrdersTable, customersTable, usersTable, quotationsTable } from "@/db";
 import { requireSession } from "@/lib/session";
 import { getLocale } from "@/lib/i18n/server";
+import { workspaceEntry } from "@/lib/document-list-workspace";
+import { listSavedViews } from "../../documents/_workspace/saved-view-actions";
 import { OrdersListClient } from "./orders-list-client";
 
 export default async function OrdersPage() {
   const session = await requireSession();
   const locale = await getLocale();
+  const entry = workspaceEntry("sales_order");
+  const savedViews = await listSavedViews("sales_order");
 
   const rows = await db
     .select({
@@ -29,5 +33,14 @@ export default async function OrdersPage() {
     .where(and(eq(salesOrdersTable.orgId, session.orgId), isNull(salesOrdersTable.deletedAt)))
     .orderBy(desc(salesOrdersTable.id));
 
-  return <OrdersListClient locale={locale} rows={rows} />;
+  return (
+    <OrdersListClient
+      locale={locale}
+      rows={rows}
+      savedViews={savedViews}
+      importColumns={entry.importColumns}
+      statusOptions={entry.statuses}
+      partyLabel={entry.partyLabel}
+    />
+  );
 }

@@ -15,6 +15,13 @@
       "when": 1784710040890,
       "tag": "0001_marvelous_maximus",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1784730852572,
+      "tag": "0002_strange_mad_thinker",
+      "breakpoints": true
     }
   ]
 }

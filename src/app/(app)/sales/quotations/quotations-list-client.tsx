@@ -1,18 +1,21 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useTransition } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { Eye, Star, Pencil, Copy, Printer, Send } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { StatRow } from "../_shared/stat-row";
-import { ListToolbar } from "../_shared/list-toolbar";
 import { RowMenu, type RowMenuEntry } from "../_shared/row-menu";
 import { Money } from "../_shared/money";
 import { t, type Locale } from "@/lib/i18n/dict";
 import { can } from "@/lib/document-lifecycle";
 import { useDocumentRowActions } from "../../_shared/document-row-actions";
+import { ListWorkspaceToolbar } from "../../documents/_workspace/list-workspace-toolbar";
+import { useListFilters } from "../../documents/_workspace/use-list-filters";
+import type { SavedViewDTO } from "../../documents/_workspace/saved-view-actions";
+import type { ImportColumn } from "@/lib/document-list-workspace";
 import {
   convertToSalesOrderAction,
   convertToProformaAction,
@@ -42,18 +45,31 @@ export type QuotationRow = {
   isArchived: boolean;
 };
 
-export function QuotationsListClient({ locale, rows }: { locale: Locale; rows: QuotationRow[] }) {
-  const [search, setSearch] = useState("");
+export function QuotationsListClient({
+  locale,
+  rows,
+  savedViews,
+  importColumns,
+  statusOptions,
+  partyLabel,
+}: {
+  locale: Locale;
+  rows: QuotationRow[];
+  savedViews: SavedViewDTO[];
+  importColumns: ImportColumn[];
+  statusOptions: string[];
+  partyLabel: string;
+}) {
   const [, startTransition] = useTransition();
   const rowActions = useDocumentRowActions(locale);
-
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return rows;
-    return rows.filter(
-      (r) => r.quotationNumber.toLowerCase().includes(q) || r.customerName.toLowerCase().includes(q) || (r.title ?? "").toLowerCase().includes(q),
-    );
-  }, [rows, search]);
+  const { filters, setFilters, filtered } = useListFilters(rows, {
+    search: (r) => [r.quotationNumber, r.customerName, r.title ?? ""],
+    status: (r) => r.status,
+    party: (r) => r.customerName,
+    date: (r) => r.issueDate,
+    archived: (r) => r.isArchived,
+  });
+  const partyOptions = useMemo(() => Array.from(new Set(rows.map((r) => r.customerName))).sort(), [rows]);
 
   const stats = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -83,13 +99,19 @@ export function QuotationsListClient({ locale, rows }: { locale: Locale; rows: Q
         ]}
       />
 
-      <ListToolbar
+      <ListWorkspaceToolbar
         locale={locale}
+        module="quotation"
         searchPlaceholder={t(locale, "Search quotation number, client…")}
-        searchValue={search}
-        onSearchChange={setSearch}
         createHref="/sales/quotations/new"
         createLabel={t(locale, "New Quotation")}
+        filters={filters}
+        setFilters={setFilters}
+        statusOptions={statusOptions}
+        partyLabel={partyLabel}
+        partyOptions={partyOptions}
+        savedViews={savedViews}
+        importColumns={importColumns}
       />
 
       <Table>

@@ -2,11 +2,15 @@ import { and, eq, desc, isNull, sql } from "drizzle-orm";
 import { db, quotationsTable, customersTable, usersTable } from "@/db";
 import { requireSession } from "@/lib/session";
 import { getLocale } from "@/lib/i18n/server";
+import { workspaceEntry } from "@/lib/document-list-workspace";
+import { listSavedViews } from "../../documents/_workspace/saved-view-actions";
 import { QuotationsListClient } from "./quotations-list-client";
 
 export default async function QuotationsPage() {
   const session = await requireSession();
   const locale = await getLocale();
+  const entry = workspaceEntry("quotation");
+  const savedViews = await listSavedViews("quotation");
 
   const rows = await db
     .select({
@@ -27,5 +31,14 @@ export default async function QuotationsPage() {
     .where(and(eq(quotationsTable.orgId, session.orgId), isNull(quotationsTable.deletedAt)))
     .orderBy(desc(quotationsTable.id));
 
-  return <QuotationsListClient locale={locale} rows={rows} />;
+  return (
+    <QuotationsListClient
+      locale={locale}
+      rows={rows}
+      savedViews={savedViews}
+      importColumns={entry.importColumns}
+      statusOptions={entry.statuses}
+      partyLabel={entry.partyLabel}
+    />
+  );
 }

@@ -2,11 +2,15 @@ import { and, eq, desc, isNull, sql } from "drizzle-orm";
 import { db, creditNotesTable, customersTable, usersTable, salesInvoicesTable } from "@/db";
 import { requireSession } from "@/lib/session";
 import { getLocale } from "@/lib/i18n/server";
+import { workspaceEntry } from "@/lib/document-list-workspace";
+import { listSavedViews } from "../../documents/_workspace/saved-view-actions";
 import { CnListClient } from "./cn-list-client";
 
 export default async function CreditNotesPage() {
   const session = await requireSession();
   const locale = await getLocale();
+  const entry = workspaceEntry("credit_note");
+  const savedViews = await listSavedViews("credit_note");
 
   const rows = await db
     .select({
@@ -29,5 +33,14 @@ export default async function CreditNotesPage() {
     .where(and(eq(creditNotesTable.orgId, session.orgId), isNull(creditNotesTable.deletedAt)))
     .orderBy(desc(creditNotesTable.id));
 
-  return <CnListClient locale={locale} rows={rows} />;
+  return (
+    <CnListClient
+      locale={locale}
+      rows={rows}
+      savedViews={savedViews}
+      importColumns={entry.importColumns}
+      statusOptions={entry.statuses}
+      partyLabel={entry.partyLabel}
+    />
+  );
 }

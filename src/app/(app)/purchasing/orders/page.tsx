@@ -2,11 +2,15 @@ import { and, eq, desc, isNull, sql } from "drizzle-orm";
 import { db, purchaseOrdersTable, vendorsTable, usersTable } from "@/db";
 import { requireSession } from "@/lib/session";
 import { getLocale } from "@/lib/i18n/server";
+import { workspaceEntry } from "@/lib/document-list-workspace";
+import { listSavedViews } from "../../documents/_workspace/saved-view-actions";
 import { PoListClient } from "./po-list-client";
 
 export default async function PurchaseOrdersPage() {
   const session = await requireSession();
   const locale = await getLocale();
+  const entry = workspaceEntry("purchase_order");
+  const savedViews = await listSavedViews("purchase_order");
 
   const rows = await db
     .select({
@@ -27,5 +31,14 @@ export default async function PurchaseOrdersPage() {
     .where(and(eq(purchaseOrdersTable.orgId, session.orgId), isNull(purchaseOrdersTable.deletedAt)))
     .orderBy(desc(purchaseOrdersTable.id));
 
-  return <PoListClient locale={locale} rows={rows} />;
+  return (
+    <PoListClient
+      locale={locale}
+      rows={rows}
+      savedViews={savedViews}
+      importColumns={entry.importColumns}
+      statusOptions={entry.statuses}
+      partyLabel={entry.partyLabel}
+    />
+  );
 }
