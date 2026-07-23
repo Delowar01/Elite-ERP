@@ -11,11 +11,11 @@ const buttonVariants = cva(
         primary:
           "text-white shadow-[0_6px_18px_-4px_rgba(232,119,34,0.55)] bg-linear-to-br from-brand-orange-light to-brand-orange hover:brightness-105 hover:-translate-y-px active:translate-y-0 active:brightness-95",
         secondary:
-          "bg-brand-navy text-white shadow-elevated hover:-translate-y-px hover:shadow-elevated-hover",
+          "bg-brand-navy text-white shadow-elevated hover:-translate-y-px hover:shadow-elevated-hover active:translate-y-0 active:brightness-95",
         glass:
-          "bg-surface/80 backdrop-blur-md border border-line-strong text-ink hover:bg-surface",
-        ghost: "text-ink-muted border border-line-strong bg-transparent hover:bg-surface",
-        destructive: "bg-danger text-white hover:brightness-105",
+          "bg-surface/80 backdrop-blur-md border border-line-strong text-ink hover:bg-surface active:bg-canvas",
+        ghost: "text-ink-muted border border-line-strong bg-transparent hover:bg-surface active:bg-canvas",
+        destructive: "bg-danger text-white hover:brightness-105 active:brightness-95",
         link: "text-brand-orange underline-offset-4 hover:underline p-0 h-auto",
       },
       size: {

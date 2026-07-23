@@ -16,7 +16,8 @@ function SettingsNavGroupLabel({ children }: { children: React.ReactNode }) {
 }
 
 function SettingsNavItem({ className, ...props }: React.ComponentProps<typeof TabsPrimitive.Trigger>) {
-  return <TabsPrimitive.Trigger className={cn("settings-nav-item text-left rtl:text-right data-[state=active]:active", className)} {...props} />;
+  // Active fill is driven by the [data-state="active"] attribute Radix sets (see .settings-nav-item CSS).
+  return <TabsPrimitive.Trigger className={cn("settings-nav-item text-left rtl:text-right", className)} {...props} />;
 }
 
 function SettingsNavContent({ className, ...props }: React.ComponentProps<typeof TabsPrimitive.Content>) {

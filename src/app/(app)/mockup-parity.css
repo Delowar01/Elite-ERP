@@ -214,6 +214,9 @@ table.data-table tbody tr.row-clickable { cursor: pointer; }
 
 .doc-pill-btn:hover { background: var(--canvas); color: var(--ink); }
 
+/* Config pill keeps a visible fill while the dialog/menu it opens is open (data-state=open). */
+.doc-pill-btn[data-state="open"] { background: var(--accent-orange-bg); color: var(--ink); border-color: var(--brand-orange); }
+
 .doc-pill-btn .dpb-val { font-weight: 700; color: var(--ink); }
 
 .table-scroll { overflow-x: auto; border-radius: 12px; box-shadow: var(--shadow-card); }
@@ -376,15 +379,20 @@ table.doc-items-table td.num { min-width: 92px; }
 
 .topbar-icon-btn { position: relative; width: 36px; height: 36px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); display: flex; align-items: center; justify-content: center; color: var(--ink-muted); }
 
-.topbar-icon-btn:hover { background: var(--canvas); border-color: var(--line-strong); color: var(--ink); }
+.topbar-icon-btn:hover,
+.topbar-icon-btn[data-state="open"] { background: var(--canvas); border-color: var(--line-strong); color: var(--ink); }
 
 .topbar-icon-badge { position: absolute; top: -2px; right: -2px; min-width: 15px; height: 15px; padding: 0 3px; border-radius: 999px; background: var(--danger); color: #fff; font-size: 9px; font-weight: 800; display: flex; align-items: center; justify-content: center; }
 
-.topbar-lang { display: flex; align-items: center; gap: 4px; height: 36px; padding: 0 10px; border-radius: 10px; border: 1px solid var(--line); font-size: 12px; font-weight: 600; color: var(--ink-muted); }
+.topbar-lang { display: flex; align-items: center; gap: 4px; height: 36px; padding: 0 10px; border-radius: 10px; border: 1px solid var(--line); font-size: 12px; font-weight: 600; color: var(--ink-muted); cursor: pointer; }
+
+.topbar-lang:hover,
+.topbar-lang[data-state="open"] { background: var(--canvas); border-color: var(--line-strong); color: var(--ink); }
 
 .topbar-profile { display: flex; align-items: center; gap: 9px; padding-left: 12px; border-left: 1px solid var(--line); cursor: pointer; border-radius: 10px; padding: 4px 6px 4px 12px; margin: -4px -6px -4px 0; }
 
-.topbar-profile:hover { background: var(--canvas); }
+.topbar-profile:hover,
+.topbar-profile[data-state="open"] { background: var(--canvas); }
 
 .topbar-profile-name { font-size: 12.5px; font-weight: 700; line-height: 1.2; }
 
@@ -426,6 +434,9 @@ table.data-table.list-table td.mono, table.data-table.list-table td.num { white-
 
 .row-menu-btn:hover { background: var(--canvas); color: var(--ink); }
 
+/* Kebab / menu trigger keeps a visible fill while its menu is open (data-state=open). */
+.row-menu-btn[data-state="open"] { background: var(--canvas); color: var(--ink); }
+
 .row-menu { display: none; flex-direction: column; min-width: 224px; background: var(--surface); border: 1px solid var(--line-strong); border-radius: 12px; box-shadow: var(--shadow-card-hover); padding: 6px; z-index: 200; }
 
 .row-menu.open { display: flex; }
@@ -434,11 +445,17 @@ table.data-table.list-table td.mono, table.data-table.list-table td.num { white-
 
 .row-menu-item svg { flex-shrink: 0; opacity: .8; }
 
-.row-menu-item:hover { background: var(--canvas); }
+/* Pointer hover AND Radix keyboard highlight (data-highlighted) share the same visible fill. */
+.row-menu-item:hover,
+.row-menu-item[data-highlighted] { background: var(--canvas); }
+
+/* Persistent selected state (e.g. current language) — a filled tint, not text-colour only. */
+.row-menu-item[data-selected="true"] { background: var(--accent-orange-bg); color: var(--ink); font-weight: 600; }
 
 .row-menu-item.danger { color: var(--danger); }
 
-.row-menu-item.danger:hover { background: var(--danger-bg); }
+.row-menu-item.danger:hover,
+.row-menu-item.danger[data-highlighted] { background: var(--danger-bg); }
 
 .row-menu-divider { height: 1px; background: var(--line); margin: 5px 2px; }
 
@@ -499,9 +516,14 @@ table.data-table.list-table td.mono, table.data-table.list-table td.num { white-
 
 .tab-row { display: inline-flex; flex-wrap: wrap; gap: 4px; padding: 4px; border-radius: 16px; border: 1px solid var(--line-strong); background: var(--surface); box-shadow: var(--shadow-sm); margin-bottom: 18px; }
 
-.tab { font-size: 12.5px; font-weight: 600; padding: 7px 16px; border-radius: 999px; color: var(--ink-muted); }
+.tab { font-size: 12.5px; font-weight: 600; padding: 7px 16px; border-radius: 999px; color: var(--ink-muted); cursor: pointer; transition: background-color .12s ease, color .12s ease; }
 
-.tab.active { background: var(--brand-orange); color: #fff; }
+/* Hover on an inactive tab shows a neutral fill, kept visually distinct from the solid orange active fill.
+   (Radix TabsTrigger marks the active tab with data-state="active", not a literal .active class.) */
+.tab:not(.active):not([data-state="active"]):hover { background: var(--canvas); color: var(--ink); }
+
+.tab.active,
+.tab[data-state="active"] { background: var(--brand-orange); color: #fff; }
 
 .add-row-btn { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600; color: var(--brand-orange); padding: 8px 4px; cursor: pointer; }
 
@@ -513,9 +535,11 @@ table.data-table.list-table td.mono, table.data-table.list-table td.num { white-
 
 .settings-nav-item { padding: 9px 12px; border-radius: 9px; font-size: 13px; font-weight: 500; color: var(--ink-muted); cursor: pointer; }
 
-.settings-nav-item.active { background: var(--accent-orange-bg); color: var(--ink); font-weight: 600; }
+/* Radix Tabs marks the active item with data-state="active", not a literal .active class. */
+.settings-nav-item.active,
+.settings-nav-item[data-state="active"] { background: var(--accent-orange-bg); color: var(--ink); font-weight: 600; }
 
-.settings-nav-item:not(.active):hover { background: var(--canvas); color: var(--ink); }
+.settings-nav-item:not(.active):not([data-state="active"]):hover { background: var(--canvas); color: var(--ink); }
 
 /* ---- Finance: Bank Accounts / Journal Entry / Chart of Accounts+Ledger / Reports ---- */
 

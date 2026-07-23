@@ -3,7 +3,6 @@
 import { useTransition } from "react";
 import { Languages, ChevronDown } from "lucide-react";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
-import { cn } from "@/lib/utils";
 import { setLocaleAction } from "@/lib/i18n/actions";
 import type { Locale } from "@/lib/i18n/dict";
 
@@ -19,13 +18,15 @@ export function LanguageSwitcher({ locale }: { locale: Locale }) {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuItem
-          className={cn("cursor-pointer", locale === "en" && "font-semibold text-brand-orange")}
+          className="cursor-pointer"
+          data-selected={locale === "en" ? "true" : undefined}
           onSelect={() => startTransition(() => setLocaleAction("en"))}
         >
           🇬🇧 English
         </DropdownMenuItem>
         <DropdownMenuItem
-          className={cn("cursor-pointer", locale === "ar" && "font-semibold text-brand-orange")}
+          className="cursor-pointer"
+          data-selected={locale === "ar" ? "true" : undefined}
           onSelect={() => startTransition(() => setLocaleAction("ar"))}
         >
           🇸🇦 العربية

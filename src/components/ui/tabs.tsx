@@ -12,7 +12,8 @@ function TabsList({ className, ...props }: React.ComponentProps<typeof TabsPrimi
 }
 
 function TabsTrigger({ className, ...props }: React.ComponentProps<typeof TabsPrimitive.Trigger>) {
-  return <TabsPrimitive.Trigger className={cn("tab data-[state=active]:active", className)} {...props} />;
+  // Active fill is driven by the [data-state="active"] attribute Radix sets (see .tab CSS in mockup-parity.css).
+  return <TabsPrimitive.Trigger className={cn("tab", className)} {...props} />;
 }
 
 function TabsContent({ className, ...props }: React.ComponentProps<typeof TabsPrimitive.Content>) {

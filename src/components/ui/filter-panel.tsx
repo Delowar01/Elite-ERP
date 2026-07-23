@@ -31,7 +31,10 @@ export function FilterPanel({
         <Button
           variant="glass"
           size="sm"
-          className={cn(hasActiveFilters && "border-brand-orange text-brand-orange")}
+          className={cn(
+            "data-[state=open]:bg-canvas data-[state=open]:text-ink",
+            hasActiveFilters && "border-brand-orange text-brand-orange bg-brand-orange/10 hover:bg-brand-orange/15",
+          )}
         >
           <SlidersHorizontal className="size-3.5" /> {triggerLabel}
         </Button>
