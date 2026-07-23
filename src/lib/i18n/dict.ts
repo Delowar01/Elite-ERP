@@ -1025,6 +1025,34 @@ const DICT: Record<string, string> = {
   "VAT is applied at your organization's configured rate.": "تُطبَّق ضريبة القيمة المضافة وفق النسبة المحددة في مؤسستك.",
   "Documents use your organization's base currency.": "تستخدم المستندات العملة الأساسية لمؤسستك.",
   "Document numbers follow your configured numbering rules.": "تتبع أرقام المستندات قواعد الترقيم المحددة لديك.",
+  // Rich-text editor toolbar
+  Bold: "عريض",
+  Italic: "مائل",
+  Underline: "تسطير",
+  "Numbered list": "قائمة مرقمة",
+  "Insert link": "إدراج رابط",
+  "Close editor": "إغلاق المحرر",
+  "Enter a URL (https://…)": "أدخل رابطًا (‎https://…)",
+  // Date settings popup
+  "Days after": "أيام بعد",
+  Apply: "تطبيق",
+  "Set validity period": "تحديد مدة الصلاحية",
+  "Set payment term": "تحديد مدة السداد",
+  "Set expected delivery": "تحديد موعد التسليم المتوقع",
+  // Preview & totals
+  "Grand Total": "الإجمالي الكلي",
+  "VAT Total": "إجمالي ضريبة القيمة المضافة",
+  // Item image
+  "Add Image": "إضافة صورة",
+  "PNG or JPG, up to 2 MB.": "PNG أو JPG، بحد أقصى 2 ميجابايت.",
+  "Upload failed.": "فشل الرفع.",
+  // Terms editor + attachments
+  "Inserted into notes.": "تم الإدراج في الملاحظات.",
+  "Applied to notes.": "تم التطبيق على الملاحظات.",
+  "Remove Term": "حذف البند",
+  "Term text…": "نص البند…",
+  "PDF, PNG or JPG, up to 8 MB.": "PDF أو PNG أو JPG، بحد أقصى 8 ميجابايت.",
+  Unit: "الوحدة",
 };
 
 export function t(locale: Locale, en: string): string {

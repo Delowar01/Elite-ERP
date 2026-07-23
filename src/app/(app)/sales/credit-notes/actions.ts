@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { sanitizeIfHtml } from "@/lib/sanitize-html";
 import { redirect } from "next/navigation";
 import { and, eq, sql } from "drizzle-orm";
 import { db, creditNotesTable, creditNoteItemsTable, salesInvoicesTable, accountsTable, journalEntriesTable, journalLinesTable } from "@/db";
@@ -14,7 +15,7 @@ export type ActionResult = { error?: string; id?: number };
 
 const PATH = "/sales/credit-notes";
 
-type LineInput = { productId: string; description: string; quantity: string; unitPrice: string; taxRatePercent: string };
+type LineInput = { productId: string; description: string; quantity: string; unitPrice: string; taxRatePercent: string; imageUrl?: string; unit?: string };
 
 export async function createCreditNoteAction(
   input: {
@@ -63,7 +64,9 @@ export async function createCreditNoteAction(
       items.map((l) => ({
         creditNoteId: cn.id,
         productId: l.productId ? Number(l.productId) : null,
-        description: l.description.trim(),
+        imageUrl: l.imageUrl || null,
+        unit: l.unit || null,
+        description: sanitizeIfHtml(l.description),
         quantity: l.quantity,
         unitPrice: l.unitPrice,
         taxRatePercent: l.taxRatePercent,
@@ -110,7 +113,9 @@ export async function updateCreditNoteAction(
       items.map((l) => ({
         creditNoteId: id,
         productId: l.productId ? Number(l.productId) : null,
-        description: l.description.trim(),
+        imageUrl: l.imageUrl || null,
+        unit: l.unit || null,
+        description: sanitizeIfHtml(l.description),
         quantity: l.quantity,
         unitPrice: l.unitPrice,
         taxRatePercent: l.taxRatePercent,

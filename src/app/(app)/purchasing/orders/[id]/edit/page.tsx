@@ -31,6 +31,8 @@ export default async function EditPurchaseOrderPage({ params }: { params: Promis
     quantity: it.quantity,
     unitPrice: it.unitCost,
     taxRatePercent: it.taxRatePercent,
+    imageUrl: it.imageUrl ?? "",
+    unit: it.unit ?? "",
   }));
 
   return (

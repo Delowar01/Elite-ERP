@@ -8,6 +8,8 @@ import { DocFieldBox } from "../_shared/doc-field-box";
 import { LineItemsEditor, emptyLineItem, type LineItemDraft } from "../_shared/line-items-editor";
 import { DocFooterContact } from "../_shared/doc-footer-contact";
 import { DocActionBar } from "../_shared/doc-action-bar";
+import { DocTopActions } from "../_shared/doc-top-actions";
+import { PreviewDialog, type PreviewData } from "../_shared/preview-dialog";
 import { t, type Locale } from "@/lib/i18n/dict";
 import type { Customer, Product, Org } from "@/db";
 import { createDeliveryChallanAction, updateDeliveryChallanAction } from "./actions";
@@ -45,8 +47,25 @@ export function DcForm({
   const [carrier, setCarrier] = useState(initial?.carrier ?? "");
   const [vehicleNo, setVehicleNo] = useState(initial?.vehicleNo ?? "");
   const [items, setItems] = useState<LineItemDraft[]>(initial?.items && initial.items.length > 0 ? initial.items : [emptyLineItem()]);
+  const [previewOpen, setPreviewOpen] = useState(false);
   const [pendingDraft, startDraftTransition] = useTransition();
   const [pendingPrimary, startPrimaryTransition] = useTransition();
+
+  const selectedCustomer = customers.find((c) => String(c.id) === customerId);
+  const previewData: PreviewData = {
+    docLabel: t(locale, "Delivery Challan"),
+    number: numberPreview,
+    fields: [
+      { label: t(locale, "Dispatch Date"), value: dispatchDate },
+      { label: t(locale, "Carrier"), value: carrier },
+      { label: t(locale, "Vehicle No."), value: vehicleNo },
+    ],
+    from: { label: t(locale, "From"), name: org.name, lines: [org.address, org.email, org.phone] },
+    to: selectedCustomer ? { label: t(locale, "To Client"), name: selectedCustomer.name, lines: [selectedCustomer.address, selectedCustomer.email, selectedCustomer.phone] } : undefined,
+    items: items.map((it) => ({ description: it.description, quantity: it.quantity })),
+    showPricing: false,
+    currency: org.currency,
+  };
 
   function submit(andDispatch: boolean) {
     const start = andDispatch ? startPrimaryTransition : startDraftTransition;
@@ -68,11 +87,7 @@ export function DcForm({
           </h3>
           <div className="sub">{t(locale, isEdit ? "Edit this draft document." : "Dispatch stock to a client — logistics only, no pricing or ledger impact.")}</div>
         </div>
-        <div className="doc-titlebar-actions">
-          <button type="button" className="btn btn-glass" disabled={pendingDraft || pendingPrimary} onClick={() => submit(false)}>
-            {t(locale, "Save as Draft")}
-          </button>
-        </div>
+        <DocTopActions locale={locale} busy={pendingDraft || pendingPrimary} onSaveDraft={() => submit(false)} onPreview={() => setPreviewOpen(true)} />
       </div>
 
       <div className="doc-header-grid" style={{ gridTemplateColumns: "1fr 1fr" }}>
@@ -110,7 +125,10 @@ export function DcForm({
         onPrimary={() => submit(isEdit ? false : true)}
         primaryLabel="Create & Dispatch"
         editMode={isEdit}
+        onPreview={documentId ? undefined : () => setPreviewOpen(true)}
       />
+
+      <PreviewDialog locale={locale} data={previewData} open={previewOpen} onOpenChange={setPreviewOpen} />
     </div>
   );
 }

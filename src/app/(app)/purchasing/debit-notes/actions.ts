@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { sanitizeIfHtml } from "@/lib/sanitize-html";
 import { redirect } from "next/navigation";
 import { and, eq, sql } from "drizzle-orm";
 import { db, debitNotesTable, debitNoteItemsTable, purchaseOrdersTable, productsTable, accountsTable, journalEntriesTable, journalLinesTable } from "@/db";
@@ -14,7 +15,7 @@ export type ActionResult = { error?: string; id?: number };
 
 const PATH = "/purchasing/debit-notes";
 
-type LineInput = { productId: string; description: string; quantity: string; unitPrice: string; taxRatePercent: string };
+type LineInput = { productId: string; description: string; quantity: string; unitPrice: string; taxRatePercent: string; imageUrl?: string; unit?: string };
 
 export async function createDebitNoteAction(
   input: {
@@ -63,7 +64,9 @@ export async function createDebitNoteAction(
       items.map((l) => ({
         debitNoteId: dn.id,
         productId: l.productId ? Number(l.productId) : null,
-        description: l.description.trim(),
+        imageUrl: l.imageUrl || null,
+        unit: l.unit || null,
+        description: sanitizeIfHtml(l.description),
         quantity: l.quantity,
         unitCost: l.unitPrice,
         taxRatePercent: l.taxRatePercent,
@@ -110,7 +113,9 @@ export async function updateDebitNoteAction(
       items.map((l) => ({
         debitNoteId: id,
         productId: l.productId ? Number(l.productId) : null,
-        description: l.description.trim(),
+        imageUrl: l.imageUrl || null,
+        unit: l.unit || null,
+        description: sanitizeIfHtml(l.description),
         quantity: l.quantity,
         unitCost: l.unitPrice,
         taxRatePercent: l.taxRatePercent,

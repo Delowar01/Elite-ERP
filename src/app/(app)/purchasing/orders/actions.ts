@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { sanitizeIfHtml } from "@/lib/sanitize-html";
 import { redirect } from "next/navigation";
 import { and, eq, sql } from "drizzle-orm";
 import { db, vendorsTable, purchaseOrdersTable, purchaseOrderItemsTable, productsTable, accountsTable, journalEntriesTable, journalLinesTable } from "@/db";
@@ -9,12 +10,13 @@ import { logActivity } from "@/lib/activity";
 import { nextDocumentNumber } from "@/lib/documents";
 import { can, evaluate } from "@/lib/document-lifecycle";
 import { computeTotals, type LineItemInput } from "../../sales/_shared/totals";
+import { persistDocumentAttachments, type AttachmentInput } from "../../sales/_shared/attachment-persist";
 
 export type ActionResult = { error?: string; id?: number };
 
 const PATH = "/purchasing/orders";
 
-type LineInput = { productId: string; description: string; quantity: string; unitPrice: string; taxRatePercent: string };
+type LineInput = { productId: string; description: string; quantity: string; unitPrice: string; taxRatePercent: string; imageUrl?: string; unit?: string };
 
 export async function createPurchaseOrderAction(
   input: {
@@ -25,6 +27,7 @@ export async function createPurchaseOrderAction(
     discount: string;
     notes: string;
     items: LineInput[];
+    attachments?: AttachmentInput[];
     sourceQuotationId?: string;
     sourceSalesOrderId?: string;
     sourceProformaId?: string;
@@ -59,7 +62,7 @@ export async function createPurchaseOrderAction(
         sourceInvoiceId: input.sourceInvoiceId ? Number(input.sourceInvoiceId) : null,
         orderDate: input.orderDate,
         expectedDate: input.expectedDate || null,
-        notes: input.notes.trim() || null,
+        notes: sanitizeIfHtml(input.notes) || null,
         subtotal: totals.subtotal,
         discount: totals.discount,
         taxTotal: totals.taxTotal,
@@ -72,13 +75,17 @@ export async function createPurchaseOrderAction(
       items.map((l) => ({
         purchaseOrderId: po.id,
         productId: l.productId ? Number(l.productId) : null,
-        description: l.description.trim(),
+        imageUrl: l.imageUrl || null,
+        unit: l.unit || null,
+        description: sanitizeIfHtml(l.description),
         quantity: l.quantity,
         unitCost: l.unitPrice,
         taxRatePercent: l.taxRatePercent,
         lineTotal: ((Number(l.quantity) || 0) * (Number(l.unitPrice) || 0)).toFixed(2),
       })),
     );
+    await persistDocumentAttachments(tx, session.orgId, session.userId, "purchase_order", po.id, input.attachments);
+
     return po.id;
   });
 
@@ -93,7 +100,7 @@ export async function createPurchaseOrderAction(
 // Batch A2 — draft-only edit. Preserves number/org/status/source links; recomputes totals server-side.
 export async function updatePurchaseOrderAction(
   id: number,
-  input: { title: string; vendorId: string; orderDate: string; expectedDate: string; discount: string; notes: string; items: LineInput[] },
+  input: { title: string; vendorId: string; orderDate: string; expectedDate: string; discount: string; notes: string; items: LineInput[]; attachments?: AttachmentInput[] },
 ): Promise<ActionResult> {
   const session = await requireSession();
   const [existing] = await db.select().from(purchaseOrdersTable).where(and(eq(purchaseOrdersTable.id, id), eq(purchaseOrdersTable.orgId, session.orgId)));
@@ -117,7 +124,7 @@ export async function updatePurchaseOrderAction(
         vendorId,
         orderDate: input.orderDate,
         expectedDate: input.expectedDate || null,
-        notes: input.notes.trim() || null,
+        notes: sanitizeIfHtml(input.notes) || null,
         subtotal: totals.subtotal,
         discount: totals.discount,
         taxTotal: totals.taxTotal,
@@ -130,13 +137,16 @@ export async function updatePurchaseOrderAction(
       items.map((l) => ({
         purchaseOrderId: id,
         productId: l.productId ? Number(l.productId) : null,
-        description: l.description.trim(),
+        imageUrl: l.imageUrl || null,
+        unit: l.unit || null,
+        description: sanitizeIfHtml(l.description),
         quantity: l.quantity,
         unitCost: l.unitPrice,
         taxRatePercent: l.taxRatePercent,
         lineTotal: ((Number(l.quantity) || 0) * (Number(l.unitPrice) || 0)).toFixed(2),
       })),
     );
+    await persistDocumentAttachments(tx, session.orgId, session.userId, "purchase_order", id, input.attachments);
   });
 
   await logActivity(session, { type: "purchase_order.updated", description: `Edited draft purchase order ${existing.poNumber}`, entityType: "purchase_order", entityId: id });

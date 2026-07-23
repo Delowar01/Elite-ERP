@@ -30,6 +30,8 @@ function toDrafts(items: SourceItem[]): LineItemDraft[] {
     quantity: it.quantity,
     unitPrice: it.unitPrice,
     taxRatePercent: it.taxRatePercent,
+    imageUrl: "",
+    unit: "",
   }));
 }
 

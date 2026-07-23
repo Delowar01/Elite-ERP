@@ -31,6 +31,8 @@ export default async function EditProformaPage({ params }: { params: Promise<{ i
     quantity: it.quantity,
     unitPrice: it.unitPrice,
     taxRatePercent: it.taxRatePercent,
+    imageUrl: it.imageUrl ?? "",
+    unit: it.unit ?? "",
   }));
 
   return (

@@ -20,6 +20,7 @@ export function DocActionBar({
   primaryLabel = "Save as Draft",
   editMode = false,
   printHref,
+  onPreview,
 }: {
   locale: Locale;
   pendingDraft: boolean;
@@ -31,6 +32,8 @@ export function DocActionBar({
   editMode?: boolean;
   /** When the document already exists, the print route to open; enables Preview & Print. */
   printHref?: string;
+  /** Create mode: opens the in-page preview modal built from the current unsaved form data. */
+  onPreview?: () => void;
 }) {
   const busy = pendingDraft || pendingPrimary;
 
@@ -38,6 +41,10 @@ export function DocActionBar({
     <a className="btn btn-glass" href={printHref} target="_blank" rel="noreferrer">
       <FileText className="size-3.5" /> {t(locale, "Preview & Print")}
     </a>
+  ) : onPreview ? (
+    <button type="button" className="btn btn-glass" onClick={onPreview}>
+      <FileText className="size-3.5" /> {t(locale, "Preview & Print")}
+    </button>
   ) : (
     <button type="button" className="btn btn-glass cursor-not-allowed" disabled title={t(locale, "Save the document first to preview & print.")}>
       <FileText className="size-3.5" /> {t(locale, "Preview & Print")}

@@ -42,6 +42,8 @@ export default async function EditDebitNotePage({ params }: { params: Promise<{ 
     quantity: it.quantity,
     unitPrice: it.unitCost,
     taxRatePercent: it.taxRatePercent,
+    imageUrl: it.imageUrl ?? "",
+    unit: it.unit ?? "",
   }));
 
   return (

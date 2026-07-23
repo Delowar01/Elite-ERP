@@ -11,21 +11,28 @@ import { getRequestContext } from "@/lib/security/request-context";
 //   2. A valid, unexpired HMAC-signed URL (?exp=&sig=) for session-less access (share links, PDFs).
 // Seals and signatures are forgery-sensitive, so they are never publicly enumerable (audit, Medium #5).
 // Every successful serve is written to the append-only file_access_logs (download auditing).
-const FOLDERS = new Set(["logos", "seals", "signatures"]);
-const FILE_RE = /^(\d+)-\d+\.(png|jpg)$/;
-const CONTENT_TYPES: Record<string, string> = { png: "image/png", jpg: "image/jpeg" };
+// Branding folders (signed-URL enumerable for PDFs/share links) vs. document-scoped uploads
+// (item images, attachments) which require a live owning session only.
+const BRANDING_FOLDERS = new Set(["logos", "seals", "signatures"]);
+const DOCUMENT_FOLDERS = new Set(["item-images", "attachments"]);
+// item-images/logos/seals/signatures are png|jpg; attachments additionally allow pdf.
+const FILE_RE = /^(\d+)-\d+\.(png|jpg|pdf)$/;
+const CONTENT_TYPES: Record<string, string> = { png: "image/png", jpg: "image/jpeg", pdf: "application/pdf" };
 
 export async function GET(req: Request, ctx: { params: Promise<{ folder: string; file: string }> }) {
   const { folder, file } = await ctx.params;
-  if (!FOLDERS.has(folder)) return new Response("Not found", { status: 404 });
+  if (!BRANDING_FOLDERS.has(folder) && !DOCUMENT_FOLDERS.has(folder)) return new Response("Not found", { status: 404 });
 
   const match = FILE_RE.exec(file);
   if (!match) return new Response("Not found", { status: 404 });
+  // pdf is only valid in the attachments folder.
+  if (match[2] === "pdf" && folder !== "attachments") return new Response("Not found", { status: 404 });
   const fileOrgId = Number(match[1]);
 
-  // Path 2: signed URL — authorizes without a session, still scoped to this exact file + expiry.
+  // Path 2: signed URL — only branding files are signed-URL accessible; document uploads require a
+  // live session (they are never embedded in session-less PDFs/share links).
   const url = new URL(req.url);
-  const signed = verifySignedFile(folder, file, url.searchParams.get("exp"), url.searchParams.get("sig"));
+  const signed = BRANDING_FOLDERS.has(folder) && verifySignedFile(folder, file, url.searchParams.get("exp"), url.searchParams.get("sig"));
 
   // Path 1: session must exist and own the file.
   const session = signed ? null : await getSession();

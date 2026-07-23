@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { sanitizeIfHtml } from "@/lib/sanitize-html";
 import { redirect } from "next/navigation";
 import { and, eq } from "drizzle-orm";
 import { db, customersTable, projectsTable, salesOrdersTable, salesOrderItemsTable, proformaInvoicesTable, proformaInvoiceItemsTable, salesInvoicesTable, salesInvoiceItemsTable, deliveryChallansTable, deliveryChallanItemsTable } from "@/db";
@@ -9,13 +10,14 @@ import { logActivity } from "@/lib/activity";
 import { nextDocumentNumber } from "@/lib/documents";
 import { can, evaluate } from "@/lib/document-lifecycle";
 import { computeTotals, type LineItemInput } from "../_shared/totals";
+import { persistDocumentAttachments, type AttachmentInput } from "../_shared/attachment-persist";
 
 export type ActionResult = { error?: string; id?: number };
 
 const PATH = "/sales/orders";
 const VALID_STATUSES = ["draft", "confirmed", "fulfilled", "cancelled"];
 
-type LineInput = { productId: string; description: string; quantity: string; unitPrice: string; taxRatePercent: string };
+type LineInput = { productId: string; description: string; quantity: string; unitPrice: string; taxRatePercent: string; imageUrl?: string; unit?: string };
 
 export async function createSalesOrderAction(
   input: {
@@ -27,6 +29,7 @@ export async function createSalesOrderAction(
     discount: string;
     notes: string;
     items: LineInput[];
+    attachments?: AttachmentInput[];
   },
   andConfirm = false,
 ): Promise<ActionResult> {
@@ -64,7 +67,7 @@ export async function createSalesOrderAction(
         projectId,
         issueDate: input.issueDate,
         expectedDate: input.expectedDate || null,
-        notes: input.notes.trim() || null,
+        notes: sanitizeIfHtml(input.notes) || null,
         subtotal: totals.subtotal,
         discount: totals.discount,
         taxTotal: totals.taxTotal,
@@ -77,13 +80,17 @@ export async function createSalesOrderAction(
       items.map((l) => ({
         salesOrderId: so.id,
         productId: l.productId ? Number(l.productId) : null,
-        description: l.description.trim(),
+        imageUrl: l.imageUrl || null,
+        unit: l.unit || null,
+        description: sanitizeIfHtml(l.description),
         quantity: l.quantity,
         unitPrice: l.unitPrice,
         taxRatePercent: l.taxRatePercent,
         lineTotal: ((Number(l.quantity) || 0) * (Number(l.unitPrice) || 0)).toFixed(2),
       })),
     );
+    await persistDocumentAttachments(tx, session.orgId, session.userId, "sales_order", so.id, input.attachments);
+
     return so.id;
   });
 
@@ -98,7 +105,7 @@ export async function createSalesOrderAction(
 // Batch A2 — draft-only edit. Preserves number/org/status/source links; recomputes totals server-side.
 export async function updateSalesOrderAction(
   id: number,
-  input: { title: string; customerId: string; projectId?: string; issueDate: string; expectedDate: string; discount: string; notes: string; items: LineInput[] },
+  input: { title: string; customerId: string; projectId?: string; issueDate: string; expectedDate: string; discount: string; notes: string; items: LineInput[]; attachments?: AttachmentInput[] },
 ): Promise<ActionResult> {
   const session = await requireSession();
   const [existing] = await db.select().from(salesOrdersTable).where(and(eq(salesOrdersTable.id, id), eq(salesOrdersTable.orgId, session.orgId)));
@@ -129,7 +136,7 @@ export async function updateSalesOrderAction(
         projectId,
         issueDate: input.issueDate,
         expectedDate: input.expectedDate || null,
-        notes: input.notes.trim() || null,
+        notes: sanitizeIfHtml(input.notes) || null,
         subtotal: totals.subtotal,
         discount: totals.discount,
         taxTotal: totals.taxTotal,
@@ -142,13 +149,16 @@ export async function updateSalesOrderAction(
       items.map((l) => ({
         salesOrderId: id,
         productId: l.productId ? Number(l.productId) : null,
-        description: l.description.trim(),
+        imageUrl: l.imageUrl || null,
+        unit: l.unit || null,
+        description: sanitizeIfHtml(l.description),
         quantity: l.quantity,
         unitPrice: l.unitPrice,
         taxRatePercent: l.taxRatePercent,
         lineTotal: ((Number(l.quantity) || 0) * (Number(l.unitPrice) || 0)).toFixed(2),
       })),
     );
+    await persistDocumentAttachments(tx, session.orgId, session.userId, "sales_order", id, input.attachments);
   });
 
   await logActivity(session, { type: "sales_order.updated", description: `Edited draft sales order ${existing.soNumber}`, entityType: "sales_order", entityId: id });
@@ -228,6 +238,8 @@ export async function convertSoToProformaAction(soId: number): Promise<ActionRes
       data.items.map((it) => ({
         proformaInvoiceId: pf.id,
         productId: it.productId,
+        imageUrl: it.imageUrl,
+        unit: it.unit,
         description: it.description,
         quantity: it.quantity,
         unitPrice: it.unitPrice,
@@ -272,6 +284,8 @@ export async function convertSoToInvoiceAction(soId: number): Promise<ActionResu
       data.items.map((it) => ({
         invoiceId: inv.id,
         productId: it.productId,
+        imageUrl: it.imageUrl,
+        unit: it.unit,
         description: it.description,
         quantity: it.quantity,
         unitPrice: it.unitPrice,
@@ -310,6 +324,8 @@ export async function convertSoToDeliveryChallanAction(soId: number): Promise<Ac
       data.items.map((it) => ({
         deliveryChallanId: dc.id,
         productId: it.productId,
+        imageUrl: it.imageUrl,
+        unit: it.unit,
         description: it.description,
         quantity: it.quantity,
       })),

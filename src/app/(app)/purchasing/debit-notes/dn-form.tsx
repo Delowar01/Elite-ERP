@@ -9,8 +9,10 @@ import { DocFieldBox } from "../../sales/_shared/doc-field-box";
 import { LineItemsEditor, emptyLineItem, type LineItemDraft } from "../../sales/_shared/line-items-editor";
 import { DocFooterContact } from "../../sales/_shared/doc-footer-contact";
 import { DocActionBar } from "../../sales/_shared/doc-action-bar";
+import { DocTopActions } from "../../sales/_shared/doc-top-actions";
+import { PreviewDialog, type PreviewData } from "../../sales/_shared/preview-dialog";
 import { Money } from "../../sales/_shared/money";
-import { computeTotals } from "../../sales/_shared/totals";
+import { computeTotals, fmt } from "../../sales/_shared/totals";
 import { t, type Locale } from "@/lib/i18n/dict";
 import type { Product, Org } from "@/db";
 import { createDebitNoteAction, updateDebitNoteAction } from "./actions";
@@ -50,11 +52,27 @@ export function DnForm({
   const [issueDate, setIssueDate] = useState(initial?.issueDate ?? new Date().toISOString().slice(0, 10));
   const [reason, setReason] = useState(initial?.reason ?? "");
   const [items, setItems] = useState<LineItemDraft[]>(initial?.items && initial.items.length > 0 ? initial.items : [emptyLineItem()]);
+  const [previewOpen, setPreviewOpen] = useState(false);
   const [pendingDraft, startDraftTransition] = useTransition();
   const [pendingPrimary, startPrimaryTransition] = useTransition();
 
   const totals = computeTotals(items);
   const selectedPo = purchaseOrders.find((po) => String(po.id) === sourcePurchaseOrderId);
+
+  const previewData: PreviewData = {
+    docLabel: t(locale, "Debit Note"),
+    number: numberPreview,
+    fields: [
+      { label: t(locale, "Issue Date"), value: issueDate },
+      { label: t(locale, "Reason"), value: reason },
+    ],
+    from: { label: t(locale, "From"), name: org.name, lines: [org.address, org.email, org.phone] },
+    to: selectedPo ? { label: t(locale, "To Vendor"), name: selectedPo.vendorName, lines: [selectedPo.vendorAddress, selectedPo.vendorEmail, selectedPo.vendorPhone] } : undefined,
+    items: items.map((it) => ({ description: it.description, quantity: it.quantity, unitPrice: fmt(Number(it.unitPrice) || 0), lineTotal: fmt((Number(it.quantity) || 0) * (Number(it.unitPrice) || 0)) })),
+    showPricing: true,
+    totals: { subtotal: totals.subtotal, discount: totals.discount, taxTotal: totals.taxTotal, total: totals.total },
+    currency: org.currency,
+  };
 
   function submit(andIssue: boolean) {
     const start = andIssue ? startPrimaryTransition : startDraftTransition;
@@ -75,11 +93,7 @@ export function DnForm({
           </h3>
           <div className="sub">{t(locale, isEdit ? "Edit this draft document." : "Issue a debit against a received purchase order — posts Dr Accounts Payable, Cr Inventory.")}</div>
         </div>
-        <div className="doc-titlebar-actions">
-          <button type="button" className="btn btn-glass" disabled={pendingDraft || pendingPrimary} onClick={() => submit(false)}>
-            {t(locale, "Save as Draft")}
-          </button>
-        </div>
+        <DocTopActions locale={locale} busy={pendingDraft || pendingPrimary} onSaveDraft={() => submit(false)} onPreview={() => setPreviewOpen(true)} />
       </div>
 
       <div className="doc-header-grid" style={{ gridTemplateColumns: "1fr 1fr" }}>
@@ -161,7 +175,10 @@ export function DnForm({
         onPrimary={() => submit(isEdit ? false : true)}
         primaryLabel="Issue Debit Note"
         editMode={isEdit}
+        onPreview={documentId ? undefined : () => setPreviewOpen(true)}
       />
+
+      <PreviewDialog locale={locale} data={previewData} open={previewOpen} onOpenChange={setPreviewOpen} />
     </div>
   );
 }

@@ -12,6 +12,7 @@ export function DocFieldBox({
   plain = false,
   gear = false,
   gearDocType,
+  gearDialog,
   locale,
   children,
 }: {
@@ -21,6 +22,8 @@ export function DocFieldBox({
   gear?: boolean;
   /** When set, the gear opens the numbering-settings popup for this document type. */
   gearDocType?: string;
+  /** A ready-made in-page gear dialog (e.g. the date-settings popup) rendered in the gear slot. */
+  gearDialog?: React.ReactNode;
   locale?: Locale;
   children: React.ReactNode;
 }) {
@@ -31,7 +34,9 @@ export function DocFieldBox({
       </label>
       <div className="doc-field-input-row">
         <div className={plain ? "input plain" : "input"}>{children}</div>
-        {gear && gearDocType && locale ? (
+        {gearDialog ? (
+          gearDialog
+        ) : gear && gearDocType && locale ? (
           <NumberSettingsDialog
             locale={locale}
             documentType={gearDocType}

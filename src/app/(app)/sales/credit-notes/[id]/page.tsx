@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { eq, and } from "drizzle-orm";
+import { SafeRichText } from "../../_shared/safe-rich-text";
 import { db, creditNotesTable, creditNoteItemsTable, customersTable, salesInvoicesTable } from "@/db";
 import { requireSession } from "@/lib/session";
 import { getLocale } from "@/lib/i18n/server";
@@ -94,7 +95,7 @@ export default async function CreditNoteDetailPage({ params }: { params: Promise
         <TableBody>
           {items.map((it) => (
             <TableRow key={it.id}>
-              <TableCell>{it.description}</TableCell>
+              <TableCell><SafeRichText value={it.description} /></TableCell>
               <TableCell className="text-right font-mono">{it.quantity}</TableCell>
               <TableCell className="text-right font-mono">{fmt(it.unitPrice)}</TableCell>
               <TableCell className="text-right font-mono">{fmt(it.lineTotal)}</TableCell>

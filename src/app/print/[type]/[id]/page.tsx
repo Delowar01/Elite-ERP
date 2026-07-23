@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { and, eq } from "drizzle-orm";
+import { richTextToPlain } from "@/lib/sanitize-html";
 import {
   db,
   orgsTable,
@@ -127,7 +128,7 @@ export default async function PrintPage({ params }: { params: Promise<{ type: st
     if (!customer) notFound();
 
     const fullItems = items.map((it) => ({
-      name: it.description ?? "—",
+      name: richTextToPlain(it.description) || "—",
       vatPercent: it.taxRatePercent,
       quantity: it.quantity,
       rate: it.unitPrice,
@@ -154,7 +155,7 @@ export default async function PrintPage({ params }: { params: Promise<{ type: st
             </div>
             <TotalsBox rows={baseTotals} grandLabel="Total (SAR)" grandVal={sar(q.total)} />
           </div>
-          <NotesBlock notes={q.notes} />
+          <NotesBlock notes={richTextToPlain(q.notes) || null} />
           <SealSignature org={org} />
           <PdfFooter org={org} />
         </A4Page>
@@ -174,7 +175,7 @@ export default async function PrintPage({ params }: { params: Promise<{ type: st
             </div>
             <TotalsBox rows={baseTotals} grandLabel="Total (SAR)" grandVal={sar(so.total)} />
           </div>
-          <NotesBlock notes={so.notes} />
+          <NotesBlock notes={richTextToPlain(so.notes) || null} />
           <ApprovalBlock />
           <SealSignature org={org} />
           <PdfFooter org={org} />
@@ -242,7 +243,7 @@ export default async function PrintPage({ params }: { params: Promise<{ type: st
             </div>
             <TotalsBox rows={totalsRows} grandLabel={paid ? "Due Amount" : "Total (SAR)"} grandVal={sar(paid ? due : inv.total)} />
           </div>
-          <NotesBlock notes={inv.notes} />
+          <NotesBlock notes={richTextToPlain(inv.notes) || null} />
           {qrDataUrl && <QrPanel dataUrl={qrDataUrl} />}
           <SealSignature org={org} />
           <PdfFooter org={org} />
@@ -268,14 +269,14 @@ export default async function PrintPage({ params }: { params: Promise<{ type: st
           {orgParty("DELIVERY TO")}
           <Party label="SUPPLY FROM" name={vendor.name} lines={customerLines(vendor)} />
         </Parties>
-        <ItemsTableFull items={items.map((it) => ({ name: it.description ?? "—", vatPercent: it.taxRatePercent, quantity: it.quantity, rate: it.unitCost }))} />
+        <ItemsTableFull items={items.map((it) => ({ name: richTextToPlain(it.description) || "—", vatPercent: it.taxRatePercent, quantity: it.quantity, rate: it.unitCost }))} />
         <div className="pdf-bottom">
           <div>
             <AmountWords words={amountInWords(po.total, "en")} />
           </div>
           <TotalsBox rows={[["Amount", sar(po.subtotal)], ["VAT", sar(po.taxTotal)], ["Discounts", sar(po.discount)]]} grandLabel="Total Payable" grandVal={sar(po.total)} />
         </div>
-        <NotesBlock notes={po.notes} />
+        <NotesBlock notes={richTextToPlain(po.notes) || null} />
         <ApprovalBlock />
         <SealSignature org={org} />
         <PdfFooter org={org} />
@@ -301,7 +302,7 @@ export default async function PrintPage({ params }: { params: Promise<{ type: st
           {orgParty("ISSUED BY")}
           <Party label="DELIVERED TO" name={customer.name} lines={customerLines(customer)} />
         </Parties>
-        <ItemsTableQty items={items.map((it) => ({ name: it.description ?? "—", quantity: it.quantity }))} />
+        <ItemsTableQty items={items.map((it) => ({ name: richTextToPlain(it.description) || "—", quantity: it.quantity }))} />
         <NotesBlock notes={logistics || null} />
         <ClientComments />
         <ApprovalBlock />
@@ -337,7 +338,7 @@ export default async function PrintPage({ params }: { params: Promise<{ type: st
               </>
             ) : null}
           </div>
-          <ItemsTableSimple items={items.map((it) => ({ name: it.description ?? "—", quantity: it.quantity, rate: it.unitPrice }))} />
+          <ItemsTableSimple items={items.map((it) => ({ name: richTextToPlain(it.description) || "—", quantity: it.quantity, rate: it.unitPrice }))} />
           <div className="pdf-bottom">
             <AmountWords words={amountInWords(cn.total, "en")} />
             <TotalsBox rows={[["VAT", sar(cn.taxTotal)]]} grandLabel="Credit Total" grandVal={sar(cn.total)} />
@@ -370,7 +371,7 @@ export default async function PrintPage({ params }: { params: Promise<{ type: st
               </>
             ) : null}
           </div>
-          <ItemsTableSimple items={items.map((it) => ({ name: it.description ?? "—", quantity: it.quantity, rate: it.unitCost }))} />
+          <ItemsTableSimple items={items.map((it) => ({ name: richTextToPlain(it.description) || "—", quantity: it.quantity, rate: it.unitCost }))} />
           <div className="pdf-bottom">
             <AmountWords words={amountInWords(dn.total, "en")} />
             <TotalsBox rows={[["VAT", sar(dn.taxTotal)]]} grandLabel="Debit Total" grandVal={sar(dn.total)} />

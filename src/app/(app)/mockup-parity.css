@@ -717,3 +717,34 @@ table.data-table.line-table td { padding: 9px 14px; }
 @media (max-width: 900px) {
   .emp-grid { grid-template-columns: 1fr; }
 }
+
+/* ---- Creation-page rich-text editor (sanitized) ---- */
+.rte-editable:empty::before {
+  content: attr(data-placeholder);
+  color: var(--ink-faint);
+  pointer-events: none;
+}
+.rte-body ol { list-style: decimal; padding-inline-start: 1.5em; }
+.rte-body ul { list-style: disc; padding-inline-start: 1.5em; }
+.rte-body a { color: var(--brand-orange); text-decoration: underline; }
+/* Render sanitized notes/descriptions on detail/print views */
+.rich-html ol { list-style: decimal; padding-inline-start: 1.5em; }
+.rich-html ul { list-style: disc; padding-inline-start: 1.5em; }
+.rich-html a { color: var(--brand-orange); text-decoration: underline; }
+.rich-html b, .rich-html strong { font-weight: 700; }
+
+/* ---- In-page Preview & Print modal: print only the preview area ---- */
+@media print {
+  body * { visibility: hidden !important; }
+  .preview-print-area, .preview-print-area * { visibility: visible !important; }
+  .preview-print-area {
+    position: absolute !important;
+    inset: 0 !important;
+    margin: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+  .preview-no-print { display: none !important; }
+}

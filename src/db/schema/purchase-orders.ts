@@ -56,6 +56,8 @@ export const purchaseOrderItemsTable = pgTable("purchase_order_items", {
     .notNull()
     .references(() => purchaseOrdersTable.id, { onDelete: "cascade" }),
   productId: integer("product_id").references(() => productsTable.id),
+  imageUrl: text("image_url"),
+  unit: text("unit"),
   description: text("description"),
   quantity: numeric("quantity", { precision: 12, scale: 2 }).notNull().default("1"),
   unitCost: numeric("unit_cost", { precision: 14, scale: 2 }).notNull().default("0"),

@@ -2,18 +2,21 @@
 
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { ClipboardList, ChevronDown } from "lucide-react";
+import { ClipboardList, Settings } from "lucide-react";
 import { PartyCardStatic, PartyCardSelect } from "../_shared/party-card";
 import { DocFieldBox } from "../_shared/doc-field-box";
+import { DateSettingsDialog } from "../_shared/date-settings-dialog";
 import { DocBrandPanel } from "../_shared/doc-brand-panel";
 import { DocPillsRow } from "../_shared/doc-pills-row";
 import { LineItemsEditor, emptyLineItem, type LineItemDraft } from "../_shared/line-items-editor";
 import { TotalsCard } from "../_shared/totals-card";
-import { TermsBlock } from "../_shared/terms-block";
+import { TermsBlock, type AttachmentDraft } from "../_shared/terms-block";
 import { SealSignaturePreview } from "../_shared/seal-signature";
 import { DocFooterContact } from "../_shared/doc-footer-contact";
 import { DocActionBar } from "../_shared/doc-action-bar";
-import { computeTotals } from "../_shared/totals";
+import { DocTopActions } from "../_shared/doc-top-actions";
+import { PreviewDialog, type PreviewData } from "../_shared/preview-dialog";
+import { computeTotals, fmt } from "../_shared/totals";
 import { t, type Locale } from "@/lib/i18n/dict";
 import type { ContentPreset } from "@/lib/document-presets";
 import type { Customer, Product, Org } from "@/db";
@@ -65,19 +68,39 @@ export function OrderForm({
   const defaultNote = noteTemplates.find((n) => n.isDefault) ?? noteTemplates[0];
   const [notes, setNotes] = useState(initial?.notes ?? defaultNote?.content ?? "");
   const [items, setItems] = useState<LineItemDraft[]>(initial?.items && initial.items.length > 0 ? initial.items : [emptyLineItem()]);
+  const [attachments, setAttachments] = useState<AttachmentDraft[]>([]);
+  const [previewOpen, setPreviewOpen] = useState(false);
   const [pendingDraft, startDraftTransition] = useTransition();
   const [pendingPrimary, startPrimaryTransition] = useTransition();
 
   const totals = computeTotals(items, discount);
+  const selectedCustomer = customers.find((c) => String(c.id) === customerId);
 
   function submit(andConfirm: boolean) {
     const start = andConfirm ? startPrimaryTransition : startDraftTransition;
     start(async () => {
-      const payload = { title, customerId, projectId, issueDate, expectedDate: expectedDelivery, discount, notes, items };
+      const payload = { title, customerId, projectId, issueDate, expectedDate: expectedDelivery, discount, notes, items, attachments };
       const result = isEdit && documentId ? await updateSalesOrderAction(documentId, payload) : await createSalesOrderAction(payload, andConfirm);
       if (result?.error) toast.error(result.error);
     });
   }
+
+  const previewData: PreviewData = {
+    docLabel: t(locale, "Sales Order"),
+    number: numberPreview,
+    title,
+    fields: [
+      { label: t(locale, "Order Date"), value: issueDate },
+      { label: t(locale, "Expected Delivery"), value: expectedDelivery },
+    ],
+    from: { label: t(locale, "From"), name: org.name, lines: [org.address, org.email, org.phone] },
+    to: selectedCustomer ? { label: t(locale, "To Client"), name: selectedCustomer.name, lines: [selectedCustomer.address, selectedCustomer.email, selectedCustomer.phone] } : undefined,
+    items: items.map((it) => ({ description: it.description, quantity: it.quantity, unitPrice: fmt(Number(it.unitPrice) || 0), lineTotal: fmt((Number(it.quantity) || 0) * (Number(it.unitPrice) || 0)) })),
+    showPricing: true,
+    totals: { subtotal: totals.subtotal, discount: totals.discount, taxTotal: totals.taxTotal, total: totals.total },
+    notes,
+    currency: org.currency,
+  };
 
   return (
     <div className="max-w-5xl mx-auto">
@@ -88,14 +111,7 @@ export function OrderForm({
           </h3>
           <div className="sub">{t(locale, isEdit ? "Edit this draft document." : "Confirm client orders and track them through to delivery.")}</div>
         </div>
-        <div className="doc-titlebar-actions">
-          <button type="button" className="btn btn-glass" disabled={pendingDraft || pendingPrimary} onClick={() => submit(false)}>
-            {t(locale, "Save as Draft")}
-          </button>
-          <button type="button" className="btn btn-glass cursor-not-allowed" disabled title={t(locale, "More options are in the action bar at the bottom.")}>
-            {t(locale, "More Actions")} <ChevronDown className="size-3" />
-          </button>
-        </div>
+        <DocTopActions locale={locale} busy={pendingDraft || pendingPrimary} onSaveDraft={() => submit(false)} onPreview={() => setPreviewOpen(true)} />
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1.7fr 1fr", gap: 20, marginBottom: 18, alignItems: "start" }}>
@@ -109,7 +125,24 @@ export function OrderForm({
             </DocFieldBox>
           </div>
           <div className="doc-header-grid" style={{ gridTemplateColumns: "1fr 1fr" }}>
-            <DocFieldBox label={t(locale, "Expected Delivery")} required>
+            <DocFieldBox
+              label={t(locale, "Expected Delivery")}
+              required
+              gearDialog={
+                <DateSettingsDialog
+                  locale={locale}
+                  title={t(locale, "Expected Delivery")}
+                  baseDate={issueDate}
+                  baseLabel={t(locale, "Order Date")}
+                  onApply={setExpectedDelivery}
+                  trigger={
+                    <button type="button" className="doc-gear-btn" title={t(locale, "Set expected delivery")} aria-label={t(locale, "Set expected delivery")}>
+                      <Settings className="size-[15px]" />
+                    </button>
+                  }
+                />
+              }
+            >
               <input
                 type="date"
                 value={expectedDelivery}
@@ -159,7 +192,7 @@ export function OrderForm({
       <LineItemsEditor locale={locale} products={products} items={items} onChange={setItems} variant="full" />
 
       <div className="doc-bottom-grid">
-        <TermsBlock locale={locale} notes={notes} onNotesChange={setNotes} noteTemplates={noteTemplates} termsGroups={termsGroups} />
+        <TermsBlock locale={locale} notes={notes} onNotesChange={setNotes} noteTemplates={noteTemplates} termsGroups={termsGroups} attachments={attachments} onAttachmentsChange={setAttachments} />
         <div className="flex flex-col gap-4">
           <TotalsCard locale={locale} subtotal={totals.subtotal} discount={discount} onDiscountChange={setDiscount} taxTotal={totals.taxTotal} total={totals.total} />
         </div>
@@ -178,7 +211,10 @@ export function OrderForm({
         onPrimary={() => submit(isEdit ? false : true)}
         primaryLabel="Confirm Order"
         editMode={isEdit}
+        onPreview={documentId ? undefined : () => setPreviewOpen(true)}
       />
+
+      <PreviewDialog locale={locale} data={previewData} open={previewOpen} onOpenChange={setPreviewOpen} />
     </div>
   );
 }

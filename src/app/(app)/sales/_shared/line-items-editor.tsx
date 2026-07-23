@@ -1,9 +1,11 @@
 "use client";
 
-import { Plus, X, Image as ImageIcon } from "lucide-react";
+import { Plus, X } from "lucide-react";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { t, type Locale } from "@/lib/i18n/dict";
 import { fmt } from "./totals";
+import { ItemImageDialog } from "./item-image-dialog";
+import { RichTextField } from "./rich-text-field";
 import type { Product } from "@/db";
 
 export type LineItemDraft = {
@@ -12,6 +14,8 @@ export type LineItemDraft = {
   quantity: string;
   unitPrice: string;
   taxRatePercent: string;
+  imageUrl: string;
+  unit: string;
 };
 
 export const emptyLineItem = (): LineItemDraft => ({
@@ -20,13 +24,15 @@ export const emptyLineItem = (): LineItemDraft => ({
   quantity: "1",
   unitPrice: "0",
   taxRatePercent: "15",
+  imageUrl: "",
+  unit: "",
 });
 
-// Matches the mockup's full_items_table()/simple_items_table()/qty_items_table()
-// exactly: <div class="table-scroll"><table class="doc-items-table">...</table></div>
-// <div class="doc-add-item-btn">+ Add New Item</div>. "full" = quotation/SO/proforma/
-// invoice (image thumb + rich description + VAT% + unit price); "simple" = credit/debit
-// note (name + qty + unit price, no VAT/thumb); "qty" = delivery challan (thumb + qty only).
+const DEFAULT_UNITS = ["pcs", "unit", "box", "kg", "m", "m²", "hour", "day", "set", "lot"];
+
+// Matches the mockup's full_items_table()/simple_items_table()/qty_items_table(). "full" =
+// quotation/SO/proforma/invoice/PO (image upload + rich description + unit + VAT% + unit price);
+// "simple" = credit/debit note (name + qty + unit price); "qty" = delivery challan (image + qty).
 export function LineItemsEditor({
   locale,
   products,
@@ -34,6 +40,7 @@ export function LineItemsEditor({
   onChange,
   variant = "full",
   pricing,
+  units = [],
 }: {
   locale: Locale;
   products: Pick<Product, "id" | "name" | "sku" | "unitPrice" | "taxRatePercent">[];
@@ -42,8 +49,11 @@ export function LineItemsEditor({
   variant?: "full" | "simple" | "qty";
   /** @deprecated use variant="simple" instead of pricing={false} */
   pricing?: boolean;
+  /** Preset unit names (Presets → Units) offered in the unit selector; falls back to common units. */
+  units?: string[];
 }) {
   const resolvedVariant = pricing === false ? "simple" : variant;
+  const unitOptions = Array.from(new Set([...units, ...DEFAULT_UNITS]));
 
   function updateLine(index: number, patch: Partial<LineItemDraft>) {
     onChange(items.map((it, i) => (i === index ? { ...it, ...patch } : it)));
@@ -73,6 +83,11 @@ export function LineItemsEditor({
 
   return (
     <div className="flex flex-col gap-1">
+      <datalist id="lie-units">
+        {unitOptions.map((u) => (
+          <option key={u} value={u} />
+        ))}
+      </datalist>
       <div className="table-scroll">
         <table className="doc-items-table">
           <thead>
@@ -80,6 +95,7 @@ export function LineItemsEditor({
               <th>{t(locale, "Item Description")}</th>
               {showPricing && <th className="num">{t(locale, "VAT %")}</th>}
               <th className="num">{t(locale, "Qty")}</th>
+              {showPricing && <th>{t(locale, "Unit")}</th>}
               {showPricing && (
                 <>
                   <th className="num">{t(locale, "Unit Price")}</th>
@@ -101,9 +117,7 @@ export function LineItemsEditor({
                 <td>
                   {showThumb ? (
                     <div className="item-desc-cell">
-                      <div className="item-thumb cursor-not-allowed" title={t(locale, "Product images are managed in Inventory.")} aria-disabled>
-                        <ImageIcon className="size-4" />
-                      </div>
+                      <ItemImageDialog locale={locale} imageUrl={item.imageUrl || undefined} onUploaded={(url) => updateLine(i, { imageUrl: url })} />
                       <div style={{ flex: 1, minWidth: 0 }} className="flex flex-col gap-1.5">
                         <Select value={item.productId} onValueChange={(v) => selectProduct(i, v)}>
                           <SelectTrigger className="h-8 text-xs">
@@ -117,7 +131,16 @@ export function LineItemsEditor({
                             ))}
                           </SelectContent>
                         </Select>
-                        {!showQtyOnly && (
+                        {showPricing && (
+                          <RichTextField
+                            locale={locale}
+                            value={item.description}
+                            onChange={(html) => updateLine(i, { description: html })}
+                            placeholder={t(locale, "Description")}
+                            compact
+                          />
+                        )}
+                        {showQtyOnly && (
                           <input
                             value={item.description}
                             onChange={(e) => updateLine(i, { description: e.target.value })}
@@ -164,6 +187,18 @@ export function LineItemsEditor({
                     className="item-cell-input"
                   />
                 </td>
+                {showPricing && (
+                  <td>
+                    <input
+                      list="lie-units"
+                      value={item.unit}
+                      onChange={(e) => updateLine(i, { unit: e.target.value })}
+                      placeholder={t(locale, "Unit")}
+                      className="item-cell-input"
+                      style={{ minWidth: 64 }}
+                    />
+                  </td>
+                )}
                 {(showPricing || resolvedVariant === "simple") && (
                   <>
                     <td className="num">

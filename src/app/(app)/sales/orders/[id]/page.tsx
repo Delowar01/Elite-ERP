@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { eq, and } from "drizzle-orm";
+import { SafeRichText } from "../../_shared/safe-rich-text";
 import { db, salesOrdersTable, salesOrderItemsTable, customersTable, quotationsTable, orgsTable } from "@/db";
 import { requireSession } from "@/lib/session";
 import { getLocale } from "@/lib/i18n/server";
@@ -109,7 +110,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
         <TableBody>
           {items.map((it) => (
             <TableRow key={it.id}>
-              <TableCell>{it.description}</TableCell>
+              <TableCell><SafeRichText value={it.description} /></TableCell>
               <TableCell className="text-right font-mono">{it.quantity}</TableCell>
               <TableCell className="text-right font-mono">{fmt(it.unitPrice)}</TableCell>
               <TableCell className="text-right font-mono">{it.taxRatePercent}%</TableCell>
@@ -126,7 +127,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
       {order.notes && (
         <div className="mt-5">
           <div className="text-[11px] uppercase tracking-wide text-ink-faint mb-1.5">{t(locale, "Notes")}</div>
-          <p className="text-[13px] text-ink-muted">{order.notes}</p>
+          <div className="text-[13px] text-ink-muted"><SafeRichText value={order.notes} /></div>
         </div>
       )}
     </div>

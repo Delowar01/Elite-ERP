@@ -2,19 +2,23 @@
 
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { FileText, ChevronDown } from "lucide-react";
+import { FileText } from "lucide-react";
 import { PartyCardStatic, PartyCardSelect } from "../_shared/party-card";
 import { DocFieldBox } from "../_shared/doc-field-box";
+import { DateSettingsDialog } from "../_shared/date-settings-dialog";
 import { DocBrandPanel } from "../_shared/doc-brand-panel";
 import { DocPillsRow } from "../_shared/doc-pills-row";
 import { LineItemsEditor, emptyLineItem, type LineItemDraft } from "../_shared/line-items-editor";
 import { TotalsCard } from "../_shared/totals-card";
-import { TermsBlock } from "../_shared/terms-block";
+import { TermsBlock, type AttachmentDraft } from "../_shared/terms-block";
 import { SealSignaturePreview } from "../_shared/seal-signature";
 import { DocFooterContact } from "../_shared/doc-footer-contact";
 import { DocActionBar } from "../_shared/doc-action-bar";
-import { computeTotals } from "../_shared/totals";
+import { DocTopActions } from "../_shared/doc-top-actions";
+import { PreviewDialog, type PreviewData } from "../_shared/preview-dialog";
+import { computeTotals, fmt } from "../_shared/totals";
 import { t, type Locale } from "@/lib/i18n/dict";
+import { Settings } from "lucide-react";
 import type { Customer, Product, Org } from "@/db";
 import type { ContentPreset } from "@/lib/document-presets";
 import { createQuotationAction, updateQuotationAction } from "./actions";
@@ -65,19 +69,41 @@ export function QuotationForm({
   const [discount, setDiscount] = useState(initial?.discount ?? "0");
   const [notes, setNotes] = useState(initial?.notes ?? defaultNote?.content ?? "");
   const [items, setItems] = useState<LineItemDraft[]>(initial?.items && initial.items.length > 0 ? initial.items : [emptyLineItem()]);
+  const [attachments, setAttachments] = useState<AttachmentDraft[]>([]);
+  const [previewOpen, setPreviewOpen] = useState(false);
   const [pendingDraft, startDraftTransition] = useTransition();
   const [pendingPrimary, startPrimaryTransition] = useTransition();
 
   const totals = computeTotals(items, discount);
+  const selectedCustomer = customers.find((c) => String(c.id) === customerId);
 
   function submit(andSend: boolean) {
     const start = andSend ? startPrimaryTransition : startDraftTransition;
     start(async () => {
-      const payload = { title, customerId, projectId, issueDate, validUntil, discount, notes, items };
+      const payload = { title, customerId, projectId, issueDate, validUntil, discount, notes, items, attachments };
       const result = isEdit && documentId ? await updateQuotationAction(documentId, payload) : await createQuotationAction(payload, andSend);
       if (result?.error) toast.error(result.error);
     });
   }
+
+  const previewData: PreviewData = {
+    docLabel: t(locale, "Quotation"),
+    number: numberPreview,
+    title,
+    fields: [
+      { label: t(locale, "Quotation Date"), value: issueDate },
+      { label: t(locale, "Valid Till Date"), value: validUntil },
+    ],
+    from: { label: t(locale, "From"), name: org.name, lines: [org.address, org.email, org.phone] },
+    to: selectedCustomer
+      ? { label: t(locale, "To Client"), name: selectedCustomer.name, lines: [selectedCustomer.address, selectedCustomer.email, selectedCustomer.phone] }
+      : undefined,
+    items: items.map((it) => ({ description: it.description, quantity: it.quantity, unitPrice: fmt(Number(it.unitPrice) || 0), lineTotal: fmt((Number(it.quantity) || 0) * (Number(it.unitPrice) || 0)) })),
+    showPricing: true,
+    totals: { subtotal: totals.subtotal, discount: totals.discount, taxTotal: totals.taxTotal, total: totals.total },
+    notes,
+    currency: org.currency,
+  };
 
   return (
     <div className="max-w-5xl mx-auto">
@@ -88,14 +114,7 @@ export function QuotationForm({
           </h3>
           <div className="sub">{t(locale, isEdit ? "Edit this draft quotation." : "Create and send professional quotations to your clients.")}</div>
         </div>
-        <div className="doc-titlebar-actions">
-          <button type="button" className="btn btn-glass" disabled={pendingDraft || pendingPrimary} onClick={() => submit(false)}>
-            {t(locale, "Save as Draft")}
-          </button>
-          <button type="button" className="btn btn-glass cursor-not-allowed" disabled title={t(locale, "More options are in the action bar at the bottom.")}>
-            {t(locale, "More Actions")} <ChevronDown className="size-3" />
-          </button>
-        </div>
+        <DocTopActions locale={locale} busy={pendingDraft || pendingPrimary} onSaveDraft={() => submit(false)} onPreview={() => setPreviewOpen(true)} />
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1.7fr 1fr", gap: 20, marginBottom: 18, alignItems: "start" }}>
@@ -109,7 +128,24 @@ export function QuotationForm({
             </DocFieldBox>
           </div>
           <div className="doc-header-grid" style={{ gridTemplateColumns: "1fr 1fr" }}>
-            <DocFieldBox label={t(locale, "Valid Till Date")} required gear>
+            <DocFieldBox
+              label={t(locale, "Valid Till Date")}
+              required
+              gearDialog={
+                <DateSettingsDialog
+                  locale={locale}
+                  title={t(locale, "Valid Till Date")}
+                  baseDate={issueDate}
+                  baseLabel={t(locale, "Quotation Date")}
+                  onApply={setValidUntil}
+                  trigger={
+                    <button type="button" className="doc-gear-btn" title={t(locale, "Set validity period")} aria-label={t(locale, "Set validity period")}>
+                      <Settings className="size-[15px]" />
+                    </button>
+                  }
+                />
+              }
+            >
               <input type="date" value={validUntil} onChange={(e) => setValidUntil(e.target.value)} className="w-full bg-transparent outline-none" />
             </DocFieldBox>
             <DocFieldBox label={t(locale, "Project")}>
@@ -154,7 +190,7 @@ export function QuotationForm({
       <LineItemsEditor locale={locale} products={products} items={items} onChange={setItems} variant="full" />
 
       <div className="doc-bottom-grid">
-        <TermsBlock locale={locale} notes={notes} onNotesChange={setNotes} noteTemplates={noteTemplates} termsGroups={termsGroups} />
+        <TermsBlock locale={locale} notes={notes} onNotesChange={setNotes} noteTemplates={noteTemplates} termsGroups={termsGroups} attachments={attachments} onAttachmentsChange={setAttachments} />
         <div className="flex flex-col gap-4">
           <TotalsCard locale={locale} subtotal={totals.subtotal} discount={discount} onDiscountChange={setDiscount} taxTotal={totals.taxTotal} total={totals.total} />
         </div>
@@ -173,7 +209,10 @@ export function QuotationForm({
         onPrimary={() => submit(isEdit ? false : true)}
         primaryLabel="Save & Submit"
         editMode={isEdit}
+        onPreview={documentId ? undefined : () => setPreviewOpen(true)}
       />
+
+      <PreviewDialog locale={locale} data={previewData} open={previewOpen} onOpenChange={setPreviewOpen} />
     </div>
   );
 }

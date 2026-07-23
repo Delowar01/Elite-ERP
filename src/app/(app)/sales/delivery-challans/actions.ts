@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { sanitizeIfHtml } from "@/lib/sanitize-html";
 import { redirect } from "next/navigation";
 import { and, eq } from "drizzle-orm";
 import { db, customersTable, deliveryChallansTable, deliveryChallanItemsTable } from "@/db";
@@ -14,7 +15,7 @@ export type ActionResult = { error?: string; id?: number };
 const PATH = "/sales/delivery-challans";
 const VALID_STATUSES = ["draft", "dispatched", "delivered"];
 
-type LineInput = { productId: string; description: string; quantity: string };
+type LineInput = { productId: string; description: string; quantity: string; imageUrl?: string; unit?: string };
 
 export async function createDeliveryChallanAction(
   input: {
@@ -56,7 +57,9 @@ export async function createDeliveryChallanAction(
       items.map((l) => ({
         deliveryChallanId: dc.id,
         productId: l.productId ? Number(l.productId) : null,
-        description: l.description.trim(),
+        imageUrl: l.imageUrl || null,
+        unit: l.unit || null,
+        description: sanitizeIfHtml(l.description),
         quantity: l.quantity,
       })),
     );
@@ -104,7 +107,9 @@ export async function updateDeliveryChallanAction(
       items.map((l) => ({
         deliveryChallanId: id,
         productId: l.productId ? Number(l.productId) : null,
-        description: l.description.trim(),
+        imageUrl: l.imageUrl || null,
+        unit: l.unit || null,
+        description: sanitizeIfHtml(l.description),
         quantity: l.quantity,
       })),
     );

@@ -59,6 +59,8 @@ export const salesInvoiceItemsTable = pgTable("sales_invoice_items", {
     .notNull()
     .references(() => salesInvoicesTable.id, { onDelete: "cascade" }),
   productId: integer("product_id").references(() => productsTable.id),
+  imageUrl: text("image_url"),
+  unit: text("unit"),
   description: text("description"),
   quantity: numeric("quantity", { precision: 12, scale: 2 }).notNull().default("1"),
   unitPrice: numeric("unit_price", { precision: 14, scale: 2 }).notNull().default("0"),

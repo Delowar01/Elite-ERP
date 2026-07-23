@@ -9,8 +9,10 @@ import { DocFieldBox } from "../_shared/doc-field-box";
 import { LineItemsEditor, emptyLineItem, type LineItemDraft } from "../_shared/line-items-editor";
 import { DocFooterContact } from "../_shared/doc-footer-contact";
 import { DocActionBar } from "../_shared/doc-action-bar";
+import { DocTopActions } from "../_shared/doc-top-actions";
+import { PreviewDialog, type PreviewData } from "../_shared/preview-dialog";
 import { Money } from "../_shared/money";
-import { computeTotals } from "../_shared/totals";
+import { computeTotals, fmt } from "../_shared/totals";
 import { t, type Locale } from "@/lib/i18n/dict";
 import type { Product, Org } from "@/db";
 import { createCreditNoteAction, updateCreditNoteAction } from "./actions";
@@ -50,11 +52,27 @@ export function CnForm({
   const [issueDate, setIssueDate] = useState(initial?.issueDate ?? new Date().toISOString().slice(0, 10));
   const [reason, setReason] = useState(initial?.reason ?? "");
   const [items, setItems] = useState<LineItemDraft[]>(initial?.items && initial.items.length > 0 ? initial.items : [emptyLineItem()]);
+  const [previewOpen, setPreviewOpen] = useState(false);
   const [pendingDraft, startDraftTransition] = useTransition();
   const [pendingPrimary, startPrimaryTransition] = useTransition();
 
   const totals = computeTotals(items);
   const selectedInvoice = invoices.find((inv) => String(inv.id) === sourceInvoiceId);
+
+  const previewData: PreviewData = {
+    docLabel: t(locale, "Credit Note"),
+    number: numberPreview,
+    fields: [
+      { label: t(locale, "Issue Date"), value: issueDate },
+      { label: t(locale, "Reason"), value: reason },
+    ],
+    from: { label: t(locale, "From"), name: org.name, lines: [org.address, org.email, org.phone] },
+    to: selectedInvoice ? { label: t(locale, "To Client"), name: selectedInvoice.customerName, lines: [selectedInvoice.customerAddress, selectedInvoice.customerEmail, selectedInvoice.customerPhone] } : undefined,
+    items: items.map((it) => ({ description: it.description, quantity: it.quantity, unitPrice: fmt(Number(it.unitPrice) || 0), lineTotal: fmt((Number(it.quantity) || 0) * (Number(it.unitPrice) || 0)) })),
+    showPricing: true,
+    totals: { subtotal: totals.subtotal, discount: totals.discount, taxTotal: totals.taxTotal, total: totals.total },
+    currency: org.currency,
+  };
 
   function submit(andIssue: boolean) {
     const start = andIssue ? startPrimaryTransition : startDraftTransition;
@@ -75,11 +93,7 @@ export function CnForm({
           </h3>
           <div className="sub">{t(locale, isEdit ? "Edit this draft document." : "Issue a credit against a sent invoice — posts Dr Sales Revenue + Dr VAT Payable, Cr Accounts Receivable.")}</div>
         </div>
-        <div className="doc-titlebar-actions">
-          <button type="button" className="btn btn-glass" disabled={pendingDraft || pendingPrimary} onClick={() => submit(false)}>
-            {t(locale, "Save as Draft")}
-          </button>
-        </div>
+        <DocTopActions locale={locale} busy={pendingDraft || pendingPrimary} onSaveDraft={() => submit(false)} onPreview={() => setPreviewOpen(true)} />
       </div>
 
       <div className="doc-header-grid" style={{ gridTemplateColumns: "1fr 1fr" }}>
@@ -161,7 +175,10 @@ export function CnForm({
         onPrimary={() => submit(isEdit ? false : true)}
         primaryLabel="Issue Credit Note"
         editMode={isEdit}
+        onPreview={documentId ? undefined : () => setPreviewOpen(true)}
       />
+
+      <PreviewDialog locale={locale} data={previewData} open={previewOpen} onOpenChange={setPreviewOpen} />
     </div>
   );
 }

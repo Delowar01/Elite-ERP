@@ -32,6 +32,8 @@ export default async function EditInvoicePage({ params }: { params: Promise<{ id
     quantity: it.quantity,
     unitPrice: it.unitPrice,
     taxRatePercent: it.taxRatePercent,
+    imageUrl: it.imageUrl ?? "",
+    unit: it.unit ?? "",
   }));
 
   return (

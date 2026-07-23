@@ -31,6 +31,8 @@ export default async function EditDcPage({ params }: { params: Promise<{ id: str
     quantity: it.quantity,
     unitPrice: "0",
     taxRatePercent: "0",
+    imageUrl: it.imageUrl ?? "",
+    unit: it.unit ?? "",
   }));
 
   return (

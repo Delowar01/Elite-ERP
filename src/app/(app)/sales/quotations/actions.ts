@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { sanitizeIfHtml } from "@/lib/sanitize-html";
 import { redirect } from "next/navigation";
 import { and, eq } from "drizzle-orm";
 import { db, customersTable, projectsTable, quotationsTable, quotationItemsTable, salesOrdersTable, salesOrderItemsTable, proformaInvoicesTable, proformaInvoiceItemsTable, salesInvoicesTable, salesInvoiceItemsTable, deliveryChallansTable, deliveryChallanItemsTable } from "@/db";
@@ -9,13 +10,14 @@ import { logActivity } from "@/lib/activity";
 import { nextDocumentNumber } from "@/lib/documents";
 import { can } from "@/lib/document-lifecycle";
 import { computeTotals, type LineItemInput } from "../_shared/totals";
+import { persistDocumentAttachments, type AttachmentInput } from "../_shared/attachment-persist";
 
 export type ActionResult = { error?: string; id?: number };
 
 const PATH = "/sales/quotations";
 const VALID_STATUSES = ["draft", "sent", "accepted", "rejected", "expired"];
 
-type LineInput = { productId: string; description: string; quantity: string; unitPrice: string; taxRatePercent: string };
+type LineInput = { productId: string; description: string; quantity: string; unitPrice: string; taxRatePercent: string; imageUrl?: string; unit?: string };
 
 export async function createQuotationAction(
   input: {
@@ -27,6 +29,7 @@ export async function createQuotationAction(
     discount: string;
     notes: string;
     items: LineInput[];
+    attachments?: AttachmentInput[];
   },
   andSend = false,
 ): Promise<ActionResult> {
@@ -64,7 +67,7 @@ export async function createQuotationAction(
         projectId,
         issueDate: input.issueDate,
         validUntil: input.validUntil || null,
-        notes: input.notes.trim() || null,
+        notes: sanitizeIfHtml(input.notes) || null,
         subtotal: totals.subtotal,
         discount: totals.discount,
         taxTotal: totals.taxTotal,
@@ -77,13 +80,17 @@ export async function createQuotationAction(
       items.map((l) => ({
         quotationId: quotation.id,
         productId: l.productId ? Number(l.productId) : null,
-        description: l.description.trim(),
+        imageUrl: l.imageUrl || null,
+        unit: l.unit || null,
+        description: sanitizeIfHtml(l.description),
         quantity: l.quantity,
         unitPrice: l.unitPrice,
         taxRatePercent: l.taxRatePercent,
         lineTotal: ((Number(l.quantity) || 0) * (Number(l.unitPrice) || 0)).toFixed(2),
       })),
     );
+
+    await persistDocumentAttachments(tx, session.orgId, session.userId, "quotation", quotation.id, input.attachments);
 
     return quotation.id;
   });
@@ -108,6 +115,7 @@ export async function updateQuotationAction(
     discount: string;
     notes: string;
     items: LineInput[];
+    attachments?: AttachmentInput[];
   },
 ): Promise<ActionResult> {
   const session = await requireSession();
@@ -147,7 +155,7 @@ export async function updateQuotationAction(
         projectId,
         issueDate: input.issueDate,
         validUntil: input.validUntil || null,
-        notes: input.notes.trim() || null,
+        notes: sanitizeIfHtml(input.notes) || null,
         subtotal: totals.subtotal,
         discount: totals.discount,
         taxTotal: totals.taxTotal,
@@ -161,13 +169,17 @@ export async function updateQuotationAction(
       items.map((l) => ({
         quotationId: id,
         productId: l.productId ? Number(l.productId) : null,
-        description: l.description.trim(),
+        imageUrl: l.imageUrl || null,
+        unit: l.unit || null,
+        description: sanitizeIfHtml(l.description),
         quantity: l.quantity,
         unitPrice: l.unitPrice,
         taxRatePercent: l.taxRatePercent,
         lineTotal: ((Number(l.quantity) || 0) * (Number(l.unitPrice) || 0)).toFixed(2),
       })),
     );
+
+    await persistDocumentAttachments(tx, session.orgId, session.userId, "quotation", id, input.attachments);
   });
 
   await logActivity(session, { type: "quotation.updated", description: `Edited draft quotation ${existing.quotationNumber}`, entityType: "quotation", entityId: id });
@@ -229,6 +241,8 @@ export async function convertToSalesOrderAction(quotationId: number): Promise<Ac
       data.items.map((it) => ({
         salesOrderId: so.id,
         productId: it.productId,
+        imageUrl: it.imageUrl,
+        unit: it.unit,
         description: it.description,
         quantity: it.quantity,
         unitPrice: it.unitPrice,
@@ -272,6 +286,8 @@ export async function convertToProformaAction(quotationId: number): Promise<Acti
       data.items.map((it) => ({
         proformaInvoiceId: pf.id,
         productId: it.productId,
+        imageUrl: it.imageUrl,
+        unit: it.unit,
         description: it.description,
         quantity: it.quantity,
         unitPrice: it.unitPrice,
@@ -315,6 +331,8 @@ export async function convertToInvoiceAction(quotationId: number): Promise<Actio
       data.items.map((it) => ({
         invoiceId: inv.id,
         productId: it.productId,
+        imageUrl: it.imageUrl,
+        unit: it.unit,
         description: it.description,
         quantity: it.quantity,
         unitPrice: it.unitPrice,
@@ -353,6 +371,8 @@ export async function convertToDeliveryChallanAction(quotationId: number): Promi
       data.items.map((it) => ({
         deliveryChallanId: dc.id,
         productId: it.productId,
+        imageUrl: it.imageUrl,
+        unit: it.unit,
         description: it.description,
         quantity: it.quantity,
       })),
