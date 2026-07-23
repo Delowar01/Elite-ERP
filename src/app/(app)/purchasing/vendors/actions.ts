@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { validateUpload, storeBlob, deleteStoredBlob, IMAGE_MAX_BYTES } from "@/lib/storage/blob-storage";
 import { redirect } from "next/navigation";
 import { and, eq } from "drizzle-orm";
 import { db, vendorsTable } from "@/db";
@@ -131,4 +132,20 @@ export async function permanentlyDeleteVendorAction(id: number) {
   });
   revalidatePath("/purchasing/vendors/recycle-bin");
   return { error: undefined };
+}
+
+// Vendor logo — cropped (square/wide) client-side, stored on Vercel Blob (tenant-scoped).
+export async function uploadVendorLogoAction(vendorId: number, formData: FormData): Promise<{ error?: string }> {
+  const session = await requireSession();
+  const [row] = await db.select({ id: vendorsTable.id, logoUrl: vendorsTable.logoUrl }).from(vendorsTable).where(and(tenantScope(session.orgId, vendorsTable), eq(vendorsTable.id, vendorId)));
+  if (!row) return { error: "Vendor not found." };
+  const v = await validateUpload(formData.get("logo"), { kind: "image", maxBytes: IMAGE_MAX_BYTES, maxDimension: 2000 });
+  if (v.error) return { error: v.error };
+  const newUrl = await storeBlob(session.orgId, "vendor-logos", v.bytes!, v.ext!, v.contentType!);
+  await db.update(vendorsTable).set({ logoUrl: newUrl }).where(and(tenantScope(session.orgId, vendorsTable), eq(vendorsTable.id, vendorId)));
+  await deleteStoredBlob(row.logoUrl);
+  await logActivity(session, { type: "vendor.logo_updated", description: "Updated vendor logo", entityType: "vendor", entityId: vendorId });
+  revalidatePath("/purchasing/vendors");
+  revalidatePath(`/purchasing/vendors/${vendorId}`);
+  return {};
 }

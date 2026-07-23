@@ -5,9 +5,11 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { FormField } from "@/components/ui/form-field";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { RecordImageUpload } from "@/components/upload/record-image-upload";
+import { CROP_EMPLOYEE_PHOTO } from "@/components/upload/crop-configs";
 import { t, type Locale } from "@/lib/i18n/dict";
 import type { Employee } from "@/db";
-import type { ActionState } from "./actions";
+import { type ActionState, uploadEmployeePhotoAction } from "./actions";
 
 const EMPLOYMENT_TYPES: { value: string; label: string }[] = [
   { value: "full_time", label: "Full Time" },
@@ -40,6 +42,21 @@ export function EmployeeForm({
       <input type="hidden" name="departmentId" value={departmentId} />
       <input type="hidden" name="employmentType" value={employmentType} />
       <input type="hidden" name="status" value={status} />
+      {employee && (
+        <div>
+          <FormField label={t(locale, "Photo")} htmlFor="photo">
+            <RecordImageUpload
+              locale={locale}
+              currentUrl={employee.photoUrl}
+              config={CROP_EMPLOYEE_PHOTO}
+              fieldName="photo"
+              label="Upload Photo"
+              round
+              action={uploadEmployeePhotoAction.bind(null, employee.id)}
+            />
+          </FormField>
+        </div>
+      )}
       <div className="grid grid-cols-2 gap-4">
         <FormField label={t(locale, "Employee Code")} htmlFor="employeeCode">
           <Input id="employeeCode" name="employeeCode" required defaultValue={employee?.employeeCode ?? codeSuggestion} />

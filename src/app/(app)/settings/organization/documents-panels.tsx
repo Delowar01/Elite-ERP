@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Stamp, PenLine } from "lucide-react";
 import Link from "next/link";
@@ -9,24 +10,26 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FormField } from "@/components/ui/form-field";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { CropImageUpload } from "@/components/upload/crop-image-upload";
+import { CROP_SEAL, CROP_SIGNATURE } from "@/components/upload/crop-configs";
 import { cn } from "@/lib/utils";
 import { t, type Locale } from "@/lib/i18n/dict";
 import type { Org, NoteTemplate } from "@/db";
 import { uploadSealSignatureAction, updatePrintLayoutAction } from "./actions";
 
 export function SealSignaturePanel({ locale, org }: { locale: Locale; org: Org }) {
-  const [pending, startTransition] = useTransition();
+  const router = useRouter();
 
-  function submit(formData: FormData) {
-    startTransition(async () => {
-      const result = await uploadSealSignatureAction(formData);
-      if (result.error) toast.error(result.error);
-      else toast.success(t(locale, "Saved"));
-    });
+  async function upload(field: "seal" | "signature", file: File) {
+    const fd = new FormData();
+    fd.set(field, file);
+    const result = await uploadSealSignatureAction(fd);
+    if (result.error) return { error: result.error };
+    router.refresh();
   }
 
   return (
-    <form action={submit} className="flex flex-col gap-5 max-w-xl">
+    <div className="flex flex-col gap-5 max-w-xl">
       <h3 className="text-[17px] font-bold">{t(locale, "Seal & Signature")}</h3>
       <div className="grid grid-cols-2 gap-4">
         <Card>
@@ -38,8 +41,13 @@ export function SealSignaturePanel({ locale, org }: { locale: Locale; org: Org }
               <Stamp className="size-6 text-brand-orange" />
             )}
             <p className="text-[12.5px] font-medium">{t(locale, "Company Seal")}</p>
-            <p className="text-[11px] text-ink-faint">{t(locale, "PNG or JPG · transparent background recommended")}</p>
-            <Input type="file" name="seal" accept="image/png,image/jpeg" />
+            <p className="text-[11px] text-ink-faint">{t(locale, "1:1 · 600×600 · transparency preserved")}</p>
+            <CropImageUpload
+              locale={locale}
+              config={CROP_SEAL}
+              trigger={<Button type="button" size="sm">{t(locale, "Upload Seal")}</Button>}
+              onUpload={(file) => upload("seal", file)}
+            />
           </CardContent>
         </Card>
         <Card>
@@ -51,17 +59,17 @@ export function SealSignaturePanel({ locale, org }: { locale: Locale; org: Org }
               <PenLine className="size-6 text-brand-orange" />
             )}
             <p className="text-[12.5px] font-medium">{t(locale, "Authorized Signature")}</p>
-            <p className="text-[11px] text-ink-faint">{t(locale, "PNG or JPG · transparent background recommended")}</p>
-            <Input type="file" name="signature" accept="image/png,image/jpeg" />
+            <p className="text-[11px] text-ink-faint">{t(locale, "3:1 · 1200×400 · transparency preserved")}</p>
+            <CropImageUpload
+              locale={locale}
+              config={CROP_SIGNATURE}
+              trigger={<Button type="button" size="sm">{t(locale, "Upload Signature")}</Button>}
+              onUpload={(file) => upload("signature", file)}
+            />
           </CardContent>
         </Card>
       </div>
-      <div>
-        <Button type="submit" disabled={pending}>
-          {pending ? t(locale, "Saving…") : t(locale, "Save")}
-        </Button>
-      </div>
-    </form>
+    </div>
   );
 }
 

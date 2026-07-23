@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { validateUpload, storeBlob, deleteStoredBlob, IMAGE_MAX_BYTES } from "@/lib/storage/blob-storage";
 import { redirect } from "next/navigation";
 import { and, eq } from "drizzle-orm";
 import { db, employeesTable, departmentsTable, salaryStructuresTable } from "@/db";
@@ -146,5 +147,22 @@ export async function saveSalaryStructureAction(employeeId: number, formData: Fo
 
   revalidatePath(`/hr/employees/${employeeId}`);
   revalidatePath("/hr/payroll");
+  return {};
+}
+
+// Employee photo — cropped 1:1 (512×512) client-side, stored on Vercel Blob (tenant-scoped).
+// Replace flow: validate ownership → validate image → upload new → update DB → delete old blob.
+export async function uploadEmployeePhotoAction(employeeId: number, formData: FormData): Promise<{ error?: string }> {
+  const session = await requireSession();
+  const [emp] = await db.select({ id: employeesTable.id, photoUrl: employeesTable.photoUrl }).from(employeesTable).where(and(eq(employeesTable.id, employeeId), eq(employeesTable.orgId, session.orgId)));
+  if (!emp) return { error: "Employee not found." };
+  const v = await validateUpload(formData.get("photo"), { kind: "image", maxBytes: IMAGE_MAX_BYTES, exactDimensions: { width: 512, height: 512 } });
+  if (v.error) return { error: v.error };
+  const newUrl = await storeBlob(session.orgId, "employee-photos", v.bytes!, v.ext!, v.contentType!);
+  await db.update(employeesTable).set({ photoUrl: newUrl }).where(and(eq(employeesTable.id, employeeId), eq(employeesTable.orgId, session.orgId)));
+  await deleteStoredBlob(emp.photoUrl);
+  await logActivity(session, { type: "employee.photo_updated", description: "Updated employee photo", entityType: "employee", entityId: employeeId });
+  revalidatePath("/hr/employees");
+  revalidatePath(`/hr/employees/${employeeId}`);
   return {};
 }

@@ -2,11 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { and, eq } from "drizzle-orm";
-import { writeFile, mkdir } from "fs/promises";
-import path from "path";
 import { db, orgsTable, bankAccountsTable } from "@/db";
 import { requireRole } from "@/lib/session";
 import { logActivity } from "@/lib/activity";
+import { validateUpload, storeBlob, deleteStoredBlob, IMAGE_MAX_BYTES } from "@/lib/storage/blob-storage";
 
 export type ActionResult = { error?: string };
 
@@ -57,38 +56,19 @@ export async function updateColorThemeAction(primaryColor: string, accentColor: 
   return {};
 }
 
-// PNG/JPG only, validated by magic bytes (client MIME is spoofable), stored OUTSIDE public/
-// and served through the authenticated, org-scoped /uploads route — SVG is excluded entirely
-// because an SVG served from the app origin can carry scripts (security audit, High #2 + Medium #5).
-function sniffImage(bytes: Buffer): "png" | "jpg" | null {
-  if (bytes.length > 8 && bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47) return "png";
-  if (bytes.length > 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return "jpg";
-  return null;
-}
-
-async function saveUpload(file: File, folder: string, orgId: number): Promise<string | null> {
-  const bytes = Buffer.from(await file.arrayBuffer());
-  const ext = sniffImage(bytes);
-  if (!ext) return null;
-  const filename = `${orgId}-${Date.now()}.${ext}`;
-  const dir = path.join(process.cwd(), "uploads", folder);
-  await mkdir(dir, { recursive: true });
-  await writeFile(path.join(dir, filename), bytes);
-  return `/uploads/${folder}/${filename}`;
-}
-
-const ALLOWED_IMAGE_TYPES = new Set(["image/png", "image/jpeg"]);
-
+// Company logo — cropped client-side; PNG/JPG only, validated by magic bytes + size + dimensions,
+// stored on Vercel Blob (tenant-scoped) and served through the authenticated /uploads proxy. SVG is
+// excluded (no safe sanitizer). Replace flow: validate → upload new → update DB → delete old blob.
 export async function uploadLogoAction(formData: FormData): Promise<ActionResult> {
   const session = await requireRole("owner", "admin");
-  const file = formData.get("logo");
-  if (!(file instanceof File) || file.size === 0) return { error: "Choose a file to upload." };
-  if (!ALLOWED_IMAGE_TYPES.has(file.type)) return { error: "PNG or JPG only." };
-  if (file.size > 2 * 1024 * 1024) return { error: "File must be under 2 MB." };
+  const v = await validateUpload(formData.get("logo"), { kind: "image", maxBytes: IMAGE_MAX_BYTES, maxDimension: 2000 });
+  if (v.error) return { error: v.error };
 
-  const url = await saveUpload(file, "logos", session.orgId);
-  if (!url) return { error: "File content is not a valid PNG or JPG image." };
-  await db.update(orgsTable).set({ logoUrl: url, updatedAt: new Date() }).where(eq(orgsTable.id, session.orgId));
+  const newUrl = await storeBlob(session.orgId, "logos", v.bytes!, v.ext!, v.contentType!);
+  const [prev] = await db.select({ logoUrl: orgsTable.logoUrl }).from(orgsTable).where(eq(orgsTable.id, session.orgId));
+  await db.update(orgsTable).set({ logoUrl: newUrl, updatedAt: new Date() }).where(eq(orgsTable.id, session.orgId));
+  await deleteStoredBlob(prev?.logoUrl); // only after the DB update succeeds
+  await logActivity(session, { type: "org.logo_updated", description: "Updated company logo", entityType: "org", entityId: session.orgId });
   revalidatePath(PATH);
   revalidatePath("/", "layout");
   return {};
@@ -99,25 +79,28 @@ export async function uploadSealSignatureAction(formData: FormData): Promise<Act
   const seal = formData.get("seal");
   const signature = formData.get("signature");
   const updates: { sealUrl?: string; signatureUrl?: string } = {};
+  const oldBlobs: (string | null | undefined)[] = [];
 
   if (seal instanceof File && seal.size > 0) {
-    if (!ALLOWED_IMAGE_TYPES.has(seal.type)) return { error: "Seal: PNG or JPG only." };
-    if (seal.size > 2 * 1024 * 1024) return { error: "Seal: file must be under 2 MB." };
-    const url = await saveUpload(seal, "seals", session.orgId);
-    if (!url) return { error: "Seal: file content is not a valid PNG or JPG image." };
-    updates.sealUrl = url;
+    const v = await validateUpload(seal, { kind: "image", maxBytes: IMAGE_MAX_BYTES, exactDimensions: { width: 600, height: 600 } });
+    if (v.error) return { error: `Seal: ${v.error}` };
+    updates.sealUrl = await storeBlob(session.orgId, "seals", v.bytes!, v.ext!, v.contentType!);
   }
   if (signature instanceof File && signature.size > 0) {
-    if (!ALLOWED_IMAGE_TYPES.has(signature.type)) return { error: "Signature: PNG or JPG only." };
-    if (signature.size > 2 * 1024 * 1024) return { error: "Signature: file must be under 2 MB." };
-    const url = await saveUpload(signature, "signatures", session.orgId);
-    if (!url) return { error: "Signature: file content is not a valid PNG or JPG image." };
-    updates.signatureUrl = url;
+    const v = await validateUpload(signature, { kind: "image", maxBytes: IMAGE_MAX_BYTES, exactDimensions: { width: 1200, height: 400 } });
+    if (v.error) return { error: `Signature: ${v.error}` };
+    updates.signatureUrl = await storeBlob(session.orgId, "signatures", v.bytes!, v.ext!, v.contentType!);
   }
   if (!updates.sealUrl && !updates.signatureUrl) return { error: "Choose at least one file to upload." };
 
+  const [prev] = await db.select({ sealUrl: orgsTable.sealUrl, signatureUrl: orgsTable.signatureUrl }).from(orgsTable).where(eq(orgsTable.id, session.orgId));
+  if (updates.sealUrl) oldBlobs.push(prev?.sealUrl);
+  if (updates.signatureUrl) oldBlobs.push(prev?.signatureUrl);
   await db.update(orgsTable).set({ ...updates, updatedAt: new Date() }).where(eq(orgsTable.id, session.orgId));
+  for (const old of oldBlobs) await deleteStoredBlob(old);
+  await logActivity(session, { type: "org.seal_signature_updated", description: "Updated seal / signature", entityType: "org", entityId: session.orgId });
   revalidatePath(PATH);
+  revalidatePath("/", "layout");
   return {};
 }
 

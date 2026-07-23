@@ -1,56 +1,34 @@
 "use server";
 
-import { writeFile, mkdir } from "fs/promises";
-import path from "path";
 import { and, eq } from "drizzle-orm";
 import { db, orgsTable, customersTable, vendorsTable, documentSequencesTable } from "@/db";
 import { requireSession } from "@/lib/session";
 import { logActivity } from "@/lib/activity";
-
-// Magic-byte sniff (client MIME is spoofable) — png/jpg for images, %PDF for attachments.
-function sniff(bytes: Buffer, allowPdf: boolean): "png" | "jpg" | "pdf" | null {
-  if (bytes.length > 8 && bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47) return "png";
-  if (bytes.length > 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return "jpg";
-  if (allowPdf && bytes.length > 4 && bytes[0] === 0x25 && bytes[1] === 0x50 && bytes[2] === 0x44 && bytes[3] === 0x46) return "pdf";
-  return null;
-}
-
-async function storeUpload(file: File, folder: string, orgId: number, allowPdf: boolean): Promise<{ url: string; ext: string } | null> {
-  const bytes = Buffer.from(await file.arrayBuffer());
-  const ext = sniff(bytes, allowPdf);
-  if (!ext) return null;
-  const filename = `${orgId}-${Date.now()}-${Math.floor(Math.random() * 1e6)}.${ext}`;
-  const dir = path.join(process.cwd(), "uploads", folder);
-  await mkdir(dir, { recursive: true });
-  await writeFile(path.join(dir, filename), bytes);
-  return { url: `/uploads/${folder}/${filename}`, ext };
-}
+import { validateUpload, storeBlob, IMAGE_MAX_BYTES, ATTACHMENT_MAX_BYTES, CONTENT_TYPES } from "@/lib/storage/blob-storage";
 
 export type UploadResult = { error?: string; url?: string; fileName?: string; contentType?: string; sizeBytes?: number };
 
-// Item image upload (Line Items → Add Image). Stores the file and returns its URL; the URL is held
-// in the line-item draft and persisted with the document (imageUrl column) on save.
+// Item image upload (Line Items → Add Image). Receives the cropped 1:1 image, stores it on Vercel
+// Blob (tenant-scoped) and returns its proxy URL; the URL is held in the line-item draft and
+// persisted with the document (imageUrl column) on save.
 export async function uploadItemImageAction(formData: FormData): Promise<UploadResult> {
   const session = await requireSession();
-  const file = formData.get("image");
-  if (!(file instanceof File) || file.size === 0) return { error: "Choose a file to upload." };
-  if (file.size > 2 * 1024 * 1024) return { error: "File must be under 2 MB." };
-  const stored = await storeUpload(file, "item-images", session.orgId, false);
-  if (!stored) return { error: "File content is not a valid PNG or JPG image." };
-  return { url: stored.url };
+  const v = await validateUpload(formData.get("image"), { kind: "image", maxBytes: IMAGE_MAX_BYTES, maxDimension: 1600 });
+  if (v.error) return { error: v.error };
+  const url = await storeBlob(session.orgId, "item-images", v.bytes!, v.ext!, v.contentType!);
+  return { url };
 }
 
-// Document attachment upload (Terms, Notes & Attachments → Add Attachment). Stores the file and
-// returns metadata; the create/update action inserts the document_attachments row on save so the
-// attachment is tied to the real document. PDF/PNG/JPG only.
+// Document attachment upload (Terms, Notes & Attachments → Add Attachment). PDFs are stored as-is
+// (no crop); images may be cropped client-side. Stored on Vercel Blob; the create/update action
+// inserts the document_attachments row on save so the attachment is tied to the real document.
 export async function uploadDocumentAttachmentAction(formData: FormData): Promise<UploadResult> {
   const session = await requireSession();
   const file = formData.get("attachment");
-  if (!(file instanceof File) || file.size === 0) return { error: "Choose a file to upload." };
-  if (file.size > 8 * 1024 * 1024) return { error: "File must be under 8 MB." };
-  const stored = await storeUpload(file, "attachments", session.orgId, true);
-  if (!stored) return { error: "PDF, PNG or JPG only." };
-  return { url: stored.url, fileName: file.name.slice(0, 200), contentType: stored.ext === "pdf" ? "application/pdf" : stored.ext === "png" ? "image/png" : "image/jpeg", sizeBytes: file.size };
+  const v = await validateUpload(file, { kind: "attachment", maxBytes: ATTACHMENT_MAX_BYTES });
+  if (v.error) return { error: v.error };
+  const url = await storeBlob(session.orgId, "attachments", v.bytes!, v.ext!, v.contentType!);
+  return { url, fileName: (file as File).name.slice(0, 200), contentType: CONTENT_TYPES[v.ext!], sizeBytes: v.bytes!.length };
 }
 
 // In-page creation-page popups. Each updates the real record and the caller refreshes the form

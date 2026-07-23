@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Upload } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -8,6 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FormField } from "@/components/ui/form-field";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { CropImageUpload } from "@/components/upload/crop-image-upload";
+import { CROP_LOGO } from "@/components/upload/crop-configs";
 import { t, type Locale } from "@/lib/i18n/dict";
 import type { Org } from "@/db";
 import { updateBusinessDetailsAction, updateColorThemeAction, uploadLogoAction } from "./actions";
@@ -89,17 +92,7 @@ export function BusinessDetailsForm({ locale, org }: { locale: Locale; org: Org 
 }
 
 export function LogoPanel({ locale, org }: { locale: Locale; org: Org }) {
-  const [pending, startTransition] = useTransition();
-  const [preview, setPreview] = useState<string | null>(null);
-
-  function submit(formData: FormData) {
-    startTransition(async () => {
-      const result = await uploadLogoAction(formData);
-      if (result.error) toast.error(result.error);
-      else toast.success(t(locale, "Saved"));
-    });
-  }
-
+  const router = useRouter();
   return (
     <div className="flex flex-col gap-4">
       <h3 className="text-[17px] font-bold">{t(locale, "Logo")}</h3>
@@ -107,9 +100,9 @@ export function LogoPanel({ locale, org }: { locale: Locale; org: Org }) {
       <Card>
         <CardContent className="p-5 flex flex-col items-center gap-3">
           <div className="w-full aspect-square rounded-2xl bg-brand-navy flex items-center justify-center overflow-hidden">
-            {preview || org.logoUrl ? (
+            {org.logoUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={preview ?? org.logoUrl ?? ""} alt={org.name} className="max-w-[70%] max-h-[70%] object-contain" />
+              <img src={org.logoUrl} alt={org.name} className="max-w-[70%] max-h-[70%] object-contain" />
             ) : (
               <span className="text-white font-display font-extrabold text-2xl">
                 {org.name.slice(0, 2).toUpperCase()}
@@ -119,28 +112,25 @@ export function LogoPanel({ locale, org }: { locale: Locale; org: Org }) {
           <p className="text-[11px] text-ink-faint text-center">{t(locale, "Current logo")}</p>
         </CardContent>
       </Card>
-      <form action={submit} className="contents">
-        <Card>
-          <CardContent className="p-6 flex flex-col items-center gap-3 text-center">
-            <Upload className="size-6 text-brand-orange" />
-            <p className="text-[12.5px] font-medium">{t(locale, "Drop a new logo, or click to browse")}</p>
-            <p className="text-[11px] text-ink-faint">{t(locale, "PNG or JPG · square aspect ratio recommended · up to 2 MB")}</p>
-            <Input
-              type="file"
-              name="logo"
-              accept="image/png,image/jpeg,image/svg+xml"
-              required
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) setPreview(URL.createObjectURL(file));
-              }}
-            />
-            <Button type="submit" disabled={pending} size="sm">
-              {pending ? t(locale, "Saving…") : t(locale, "Upload Logo")}
-            </Button>
-          </CardContent>
-        </Card>
-      </form>
+      <Card>
+        <CardContent className="p-6 flex flex-col items-center gap-3 text-center">
+          <Upload className="size-6 text-brand-orange" />
+          <p className="text-[12.5px] font-medium">{t(locale, "Click to choose a logo, then crop it")}</p>
+          <p className="text-[11px] text-ink-faint">{t(locale, "PNG or JPG · square or wide crop · transparency preserved")}</p>
+          <CropImageUpload
+            locale={locale}
+            config={CROP_LOGO}
+            trigger={<Button type="button" size="sm">{t(locale, "Upload Logo")}</Button>}
+            onUpload={async (file) => {
+              const fd = new FormData();
+              fd.set("logo", file);
+              const result = await uploadLogoAction(fd);
+              if (result.error) return { error: result.error };
+              router.refresh();
+            }}
+          />
+        </CardContent>
+      </Card>
       </div>
     </div>
   );

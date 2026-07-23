@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { validateUpload, storeBlob, deleteStoredBlob, IMAGE_MAX_BYTES } from "@/lib/storage/blob-storage";
 import { redirect } from "next/navigation";
 import { and, eq } from "drizzle-orm";
 import { db, customersTable } from "@/db";
@@ -133,4 +134,20 @@ export async function permanentlyDeleteClientAction(id: number) {
   });
   revalidatePath("/clients/recycle-bin");
   return { error: undefined };
+}
+
+// Client logo — cropped (square/wide) client-side, stored on Vercel Blob (tenant-scoped).
+export async function uploadClientLogoAction(clientId: number, formData: FormData): Promise<{ error?: string }> {
+  const session = await requireSession();
+  const [row] = await db.select({ id: customersTable.id, logoUrl: customersTable.logoUrl }).from(customersTable).where(and(tenantScope(session.orgId, customersTable), eq(customersTable.id, clientId)));
+  if (!row) return { error: "Client not found." };
+  const v = await validateUpload(formData.get("logo"), { kind: "image", maxBytes: IMAGE_MAX_BYTES, maxDimension: 2000 });
+  if (v.error) return { error: v.error };
+  const newUrl = await storeBlob(session.orgId, "client-logos", v.bytes!, v.ext!, v.contentType!);
+  await db.update(customersTable).set({ logoUrl: newUrl }).where(and(tenantScope(session.orgId, customersTable), eq(customersTable.id, clientId)));
+  await deleteStoredBlob(row.logoUrl);
+  await logActivity(session, { type: "client.logo_updated", description: "Updated client logo", entityType: "client", entityId: clientId });
+  revalidatePath("/clients");
+  revalidatePath(`/clients/${clientId}`);
+  return {};
 }

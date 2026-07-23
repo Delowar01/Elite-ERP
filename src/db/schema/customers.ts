@@ -5,6 +5,7 @@ import { orgsTable } from "./orgs";
 import { recordStateEnum } from "./record-state";
 
 export const customersTable = pgTable("customers", {
+  logoUrl: text("logo_url"),
   id: serial("id").primaryKey(),
   orgId: integer("org_id")
     .notNull()

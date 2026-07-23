@@ -21,28 +21,29 @@ function secret(): string {
   return s;
 }
 
-function sign(folder: string, file: string, exp: number): string {
-  return createHmac("sha256", secret()).update(`${folder}/${file}:${exp}`).digest("base64url");
+function sign(pathname: string, exp: number): string {
+  return createHmac("sha256", secret()).update(`${pathname}:${exp}`).digest("base64url");
 }
 
 const DEFAULT_TTL_SECONDS = 15 * 60;
 
-/** Returns a relative URL (`/uploads/...?exp=...&sig=...`) valid for `ttlSeconds`. */
-export function signFileUrl(folder: string, file: string, ttlSeconds: number = DEFAULT_TTL_SECONDS): string {
+/** Returns a relative URL (`/uploads/<pathname>?exp=...&sig=...`) valid for `ttlSeconds`.
+ *  `pathname` is the tenant-scoped blob pathname, e.g. organizations/1/seals/abc.png. */
+export function signFileUrl(pathname: string, ttlSeconds: number = DEFAULT_TTL_SECONDS): string {
   const exp = Math.floor(Date.now() / 1000) + Math.max(1, Math.floor(ttlSeconds));
-  const sig = sign(folder, file, exp);
-  return `/uploads/${encodeURIComponent(folder)}/${encodeURIComponent(file)}?exp=${exp}&sig=${sig}`;
+  const sig = sign(pathname, exp);
+  return `/uploads/${pathname}?exp=${exp}&sig=${sig}`;
 }
 
 /**
  * Verifies a signed request. Returns true only when the signature matches and
  * the token has not expired. Constant-time comparison; never throws on bad input.
  */
-export function verifySignedFile(folder: string, file: string, expRaw: string | null, sigRaw: string | null): boolean {
+export function verifySignedFile(pathname: string, expRaw: string | null, sigRaw: string | null): boolean {
   if (!expRaw || !sigRaw) return false;
   const exp = Number(expRaw);
   if (!Number.isFinite(exp) || exp < Math.floor(Date.now() / 1000)) return false;
-  const expected = sign(folder, file, exp);
+  const expected = sign(pathname, exp);
   const a = Buffer.from(expected);
   const b = Buffer.from(sigRaw);
   if (a.length !== b.length) return false;

@@ -4,8 +4,10 @@ import { useActionState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { FormField } from "@/components/ui/form-field";
+import { RecordImageUpload } from "@/components/upload/record-image-upload";
+import { CROP_PARTY_LOGO } from "@/components/upload/crop-configs";
 import type { Vendor } from "@/db";
-import type { ActionState } from "./actions";
+import { type ActionState, uploadVendorLogoAction } from "./actions";
 
 export function VendorForm({
   vendor,
@@ -20,6 +22,11 @@ export function VendorForm({
 
   return (
     <form action={formAction} className="flex flex-col gap-5 max-w-xl">
+      {vendor && (
+        <FormField label="Logo" htmlFor="logo">
+          <RecordImageUpload locale="en" currentUrl={vendor.logoUrl} config={CROP_PARTY_LOGO} fieldName="logo" label="Upload Logo" action={uploadVendorLogoAction.bind(null, vendor.id)} />
+        </FormField>
+      )}
       <div className="grid grid-cols-2 gap-4">
         <FormField label="Name" htmlFor="name" span={2}>
           <Input id="name" name="name" required defaultValue={vendor?.name} placeholder="Northbound Steel Ltd" />

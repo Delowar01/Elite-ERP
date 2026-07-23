@@ -17,6 +17,7 @@ export type InsertDepartment = z.infer<typeof insertDepartmentSchema>;
 export type Department = typeof departmentsTable.$inferSelect;
 
 export const employeesTable = pgTable("employees", {
+  photoUrl: text("photo_url"),
   id: serial("id").primaryKey(),
   orgId: integer("org_id")
     .notNull()
