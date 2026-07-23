@@ -17,8 +17,10 @@ import { DocActionBar } from "../_shared/doc-action-bar";
 import { DocTopActions } from "../_shared/doc-top-actions";
 import { PreviewDialog, type PreviewData } from "../_shared/preview-dialog";
 import { computeTotals, fmt } from "../_shared/totals";
+import { ConfigureColumnsDialog } from "../_shared/configure-columns-dialog";
+import { resolveColumns, type ColumnDef } from "@/lib/column-config";
 import { t, type Locale } from "@/lib/i18n/dict";
-import { Settings } from "lucide-react";
+import { Settings, Columns3 } from "lucide-react";
 import type { Customer, Product, Org } from "@/db";
 import type { ContentPreset } from "@/lib/document-presets";
 import { createQuotationAction, updateQuotationAction } from "./actions";
@@ -46,6 +48,7 @@ export function QuotationForm({
   initial,
   noteTemplates = [],
   termsGroups = [],
+  columnConfig,
 }: {
   locale: Locale;
   customers: Customer[];
@@ -58,8 +61,10 @@ export function QuotationForm({
   initial?: QuotationFormInitial;
   noteTemplates?: ContentPreset[];
   termsGroups?: ContentPreset[];
+  columnConfig?: ColumnDef[];
 }) {
   const isEdit = mode === "edit";
+  const [columns, setColumns] = useState<ColumnDef[]>(columnConfig ?? resolveColumns(null));
   const defaultNote = noteTemplates.find((n) => n.isDefault) ?? noteTemplates[0];
   const [title, setTitle] = useState(initial?.title ?? "");
   const [customerId, setCustomerId] = useState(initial?.customerId ?? "");
@@ -183,11 +188,23 @@ export function QuotationForm({
           { icon: "percent", label: "VAT Settings" },
           { icon: "wallet", label: "Currency", value: org.currency },
           { icon: "info", label: "Number Format", value: "123,456.78" },
-          { icon: "columns", label: "Edit Columns" },
         ]}
+        trailing={
+          <ConfigureColumnsDialog
+            locale={locale}
+            documentType="quotation"
+            columns={columns}
+            onApply={setColumns}
+            trigger={
+              <button type="button" className="doc-pill-btn">
+                <Columns3 className="size-3.5" /> <span>{t(locale, "Edit Columns")}</span>
+              </button>
+            }
+          />
+        }
       />
 
-      <LineItemsEditor locale={locale} products={products} items={items} onChange={setItems} variant="full" />
+      <LineItemsEditor locale={locale} products={products} items={items} onChange={setItems} variant="full" columns={columns} />
 
       <div className="doc-bottom-grid">
         <TermsBlock locale={locale} notes={notes} onNotesChange={setNotes} noteTemplates={noteTemplates} termsGroups={termsGroups} attachments={attachments} onAttachmentsChange={setAttachments} />

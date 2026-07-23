@@ -1,5 +1,6 @@
 import { and, asc, eq } from "drizzle-orm";
 import { notFound, redirect } from "next/navigation";
+import { getColumnConfig } from "@/lib/column-config-server";
 import { db, customersTable, productsTable, orgsTable, proformaInvoicesTable, proformaInvoiceItemsTable } from "@/db";
 import { requireSession } from "@/lib/session";
 import { getLocale } from "@/lib/i18n/server";
@@ -10,6 +11,7 @@ import { ProformaForm } from "../../proforma-form";
 
 export default async function EditProformaPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await requireSession();
+  const columnConfig = await getColumnConfig(session.orgId, session.userId, "proforma_invoice");
   const locale = await getLocale();
   const pfId = Number((await params).id);
   if (!Number.isInteger(pfId)) notFound();
@@ -33,6 +35,7 @@ export default async function EditProformaPage({ params }: { params: Promise<{ i
     taxRatePercent: it.taxRatePercent,
     imageUrl: it.imageUrl ?? "",
     unit: it.unit ?? "",
+    customFields: (it.customFields as Record<string, string>) ?? {},
   }));
 
   return (
@@ -44,6 +47,7 @@ export default async function EditProformaPage({ params }: { params: Promise<{ i
         org={org}
         numberPreview={pf.proformaNumber}
         mode="edit"
+        columnConfig={columnConfig}
         documentId={pfId}
         initial={{
           title: pf.title ?? "",

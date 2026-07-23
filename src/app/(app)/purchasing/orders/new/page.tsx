@@ -13,6 +13,7 @@ import {
   salesInvoicesTable,
   salesInvoiceItemsTable,
 } from "@/db";
+import { getColumnConfig } from "@/lib/column-config-server";
 import { requireSession } from "@/lib/session";
 import { getLocale } from "@/lib/i18n/server";
 import { tenantScope } from "@/lib/tenant";
@@ -32,6 +33,7 @@ function toDrafts(items: SourceItem[]): LineItemDraft[] {
     taxRatePercent: it.taxRatePercent,
     imageUrl: "",
     unit: "",
+    customFields: {},
   }));
 }
 
@@ -46,6 +48,7 @@ export default async function NewPurchaseOrderPage({
   searchParams: Promise<{ fromQuotation?: string; fromSalesOrder?: string; fromProforma?: string; fromInvoice?: string }>;
 }) {
   const session = await requireSession();
+  const columnConfig = await getColumnConfig(session.orgId, session.userId, "purchase_order");
   const locale = await getLocale();
   const { fromQuotation, fromSalesOrder, fromProforma, fromInvoice } = await searchParams;
 
@@ -109,6 +112,7 @@ export default async function NewPurchaseOrderPage({
         sourceInvoiceId={fromInvoice}
         noteTemplates={presets.noteTemplates}
         termsGroups={presets.termsGroups}
+        columnConfig={columnConfig}
       />
     </div>
   );

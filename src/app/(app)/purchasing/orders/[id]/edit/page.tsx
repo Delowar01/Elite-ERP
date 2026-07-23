@@ -1,5 +1,6 @@
 import { and, asc, eq } from "drizzle-orm";
 import { notFound, redirect } from "next/navigation";
+import { getColumnConfig } from "@/lib/column-config-server";
 import { db, vendorsTable, productsTable, orgsTable, purchaseOrdersTable, purchaseOrderItemsTable } from "@/db";
 import { requireSession } from "@/lib/session";
 import { getLocale } from "@/lib/i18n/server";
@@ -10,6 +11,7 @@ import { PoForm } from "../../po-form";
 
 export default async function EditPurchaseOrderPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await requireSession();
+  const columnConfig = await getColumnConfig(session.orgId, session.userId, "purchase_order");
   const locale = await getLocale();
   const poId = Number((await params).id);
   if (!Number.isInteger(poId)) notFound();
@@ -33,6 +35,7 @@ export default async function EditPurchaseOrderPage({ params }: { params: Promis
     taxRatePercent: it.taxRatePercent,
     imageUrl: it.imageUrl ?? "",
     unit: it.unit ?? "",
+    customFields: (it.customFields as Record<string, string>) ?? {},
   }));
 
   return (
@@ -44,6 +47,7 @@ export default async function EditPurchaseOrderPage({ params }: { params: Promis
         org={org}
         numberPreview={po.poNumber}
         mode="edit"
+        columnConfig={columnConfig}
         documentId={poId}
         initial={{
           title: po.title ?? "",

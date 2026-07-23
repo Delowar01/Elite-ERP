@@ -24,3 +24,4 @@ export * from "./saved-views";
 export * from "./user-preferences";
 export * from "./settings-completion";
 export * from "./document-attachments";
+export * from "./document-column-configs";

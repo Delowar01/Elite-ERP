@@ -44,6 +44,7 @@ export default async function EditCreditNotePage({ params }: { params: Promise<{
     taxRatePercent: it.taxRatePercent,
     imageUrl: it.imageUrl ?? "",
     unit: it.unit ?? "",
+    customFields: {},
   }));
 
   return (

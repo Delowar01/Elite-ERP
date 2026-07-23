@@ -1053,6 +1053,35 @@ const DICT: Record<string, string> = {
   "Term text…": "نص البند…",
   "PDF, PNG or JPG, up to 8 MB.": "PDF أو PNG أو JPG، بحد أقصى 8 ميجابايت.",
   Unit: "الوحدة",
+  // Configure Columns (Edit Columns)
+  "Edit Columns": "تعديل الأعمدة",
+  "Configure Columns": "تهيئة الأعمدة",
+  "Drag to reorder • Toggle visibility • Rename columns • Actions column always stays at the end":
+    "اسحب لإعادة الترتيب • بدّل الظهور • أعد تسمية الأعمدة • يبقى عمود الإجراءات دائمًا في النهاية",
+  "Drag columns to reorder. Click to toggle visibility and edit names.":
+    "اسحب الأعمدة لإعادة ترتيبها. انقر لتبديل الظهور وتعديل الأسماء.",
+  "Drag to reorder": "اسحب لإعادة الترتيب",
+  "Hide column": "إخفاء العمود",
+  "Show column": "إظهار العمود",
+  "Required by the totals — cannot be hidden.": "مطلوب للإجماليات — لا يمكن إخفاؤه.",
+  Last: "الأخير",
+  "Remove column": "حذف العمود",
+  "Add Custom Column": "إضافة عمود مخصص",
+  "Column Label": "عنوان العمود",
+  "e.g., Margin, Notes, Location": "مثال: الهامش، ملاحظات، الموقع",
+  "Field Type": "نوع الحقل",
+  Text: "نص",
+  "Formula (calculated)": "معادلة (محسوبة)",
+  Width: "العرض",
+  "Visible by default": "ظاهر افتراضيًا",
+  "Formula (optional - for calculated columns)": "المعادلة (اختياري — للأعمدة المحسوبة)",
+  "Use {field_name} to reference other fields": "استخدم ‎{field_name}‎ للإشارة إلى الحقول الأخرى",
+  "Add Column": "إضافة عمود",
+  "Save Configuration": "حفظ الإعدادات",
+  "Configuration saved.": "تم حفظ الإعدادات.",
+  "Column added.": "تمت إضافة العمود.",
+  "Column labels cannot be empty.": "لا يمكن ترك عنوان العمود فارغًا.",
+  "Duplicate column name is not allowed.": "لا يُسمح بتكرار اسم العمود.",
 };
 
 export function t(locale: Locale, en: string): string {

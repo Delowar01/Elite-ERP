@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { FileCheck2, Info } from "lucide-react";
+import { FileCheck2, Info, Columns3 } from "lucide-react";
 import { PartyCardStatic, PartyCardSelect } from "../_shared/party-card";
 import { DocFieldBox } from "../_shared/doc-field-box";
 import { DocBrandPanel } from "../_shared/doc-brand-panel";
@@ -16,6 +16,8 @@ import { DocActionBar } from "../_shared/doc-action-bar";
 import { DocTopActions } from "../_shared/doc-top-actions";
 import { PreviewDialog, type PreviewData } from "../_shared/preview-dialog";
 import { computeTotals, fmt } from "../_shared/totals";
+import { ConfigureColumnsDialog } from "../_shared/configure-columns-dialog";
+import { resolveColumns, type ColumnDef } from "@/lib/column-config";
 import { t, type Locale } from "@/lib/i18n/dict";
 import type { ContentPreset } from "@/lib/document-presets";
 import type { Customer, Product, Org } from "@/db";
@@ -41,6 +43,7 @@ export function ProformaForm({
   initial,
   noteTemplates = [],
   termsGroups = [],
+  columnConfig,
 }: {
   locale: Locale;
   customers: Customer[];
@@ -52,8 +55,10 @@ export function ProformaForm({
   initial?: ProformaFormInitial;
   noteTemplates?: ContentPreset[];
   termsGroups?: ContentPreset[];
+  columnConfig?: ColumnDef[];
 }) {
   const isEdit = mode === "edit";
+  const [columns, setColumns] = useState<ColumnDef[]>(columnConfig ?? resolveColumns(null));
   const [title, setTitle] = useState(initial?.title ?? "");
   const [customerId, setCustomerId] = useState(initial?.customerId ?? "");
   const [issueDate, setIssueDate] = useState(initial?.issueDate ?? new Date().toISOString().slice(0, 10));
@@ -143,11 +148,23 @@ export function ProformaForm({
           { icon: "percent", label: "VAT Settings" },
           { icon: "wallet", label: "Currency", value: org.currency },
           { icon: "info", label: "Number Format", value: "123,456.78" },
-          { icon: "columns", label: "Edit Columns" },
         ]}
+        trailing={
+          <ConfigureColumnsDialog
+            locale={locale}
+            documentType="proforma_invoice"
+            columns={columns}
+            onApply={setColumns}
+            trigger={
+              <button type="button" className="doc-pill-btn">
+                <Columns3 className="size-3.5" /> <span>{t(locale, "Edit Columns")}</span>
+              </button>
+            }
+          />
+        }
       />
 
-      <LineItemsEditor locale={locale} products={products} items={items} onChange={setItems} variant="full" />
+      <LineItemsEditor locale={locale} products={products} items={items} onChange={setItems} variant="full" columns={columns} />
 
       <div className="doc-bottom-grid">
         <TermsBlock locale={locale} notes={notes} onNotesChange={setNotes} noteTemplates={noteTemplates} termsGroups={termsGroups} attachments={attachments} onAttachmentsChange={setAttachments} />

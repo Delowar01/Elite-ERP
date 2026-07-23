@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { ShoppingCart, Settings } from "lucide-react";
+import { ShoppingCart, Settings, Columns3 } from "lucide-react";
 import { PartyCardStatic, PartyCardSelect } from "../../sales/_shared/party-card";
 import { DocFieldBox } from "../../sales/_shared/doc-field-box";
 import { DateSettingsDialog } from "../../sales/_shared/date-settings-dialog";
@@ -17,6 +17,8 @@ import { DocActionBar } from "../../sales/_shared/doc-action-bar";
 import { DocTopActions } from "../../sales/_shared/doc-top-actions";
 import { PreviewDialog, type PreviewData } from "../../sales/_shared/preview-dialog";
 import { computeTotals, fmt } from "../../sales/_shared/totals";
+import { ConfigureColumnsDialog } from "../../sales/_shared/configure-columns-dialog";
+import { resolveColumns, type ColumnDef } from "@/lib/column-config";
 import { t, type Locale } from "@/lib/i18n/dict";
 import type { ContentPreset } from "@/lib/document-presets";
 import type { Vendor, Product, Org } from "@/db";
@@ -49,6 +51,7 @@ export function PoForm({
   initial,
   noteTemplates = [],
   termsGroups = [],
+  columnConfig,
 }: {
   locale: Locale;
   vendors: Vendor[];
@@ -66,8 +69,10 @@ export function PoForm({
   initial?: PoFormInitial;
   noteTemplates?: ContentPreset[];
   termsGroups?: ContentPreset[];
+  columnConfig?: ColumnDef[];
 }) {
   const isEdit = mode === "edit";
+  const [columns, setColumns] = useState<ColumnDef[]>(columnConfig ?? resolveColumns(null));
   const [title, setTitle] = useState(initial?.title ?? initialTitle ?? "");
   const [vendorId, setVendorId] = useState(initial?.vendorId ?? "");
   const [orderDate, setOrderDate] = useState(initial?.orderDate ?? new Date().toISOString().slice(0, 10));
@@ -185,11 +190,23 @@ export function PoForm({
           { icon: "percent", label: "VAT Settings" },
           { icon: "wallet", label: "Currency", value: org.currency },
           { icon: "info", label: "Number Format", value: "123,456.78" },
-          { icon: "columns", label: "Edit Columns" },
         ]}
+        trailing={
+          <ConfigureColumnsDialog
+            locale={locale}
+            documentType="purchase_order"
+            columns={columns}
+            onApply={setColumns}
+            trigger={
+              <button type="button" className="doc-pill-btn">
+                <Columns3 className="size-3.5" /> <span>{t(locale, "Edit Columns")}</span>
+              </button>
+            }
+          />
+        }
       />
 
-      <LineItemsEditor locale={locale} products={products} items={items} onChange={setItems} variant="full" />
+      <LineItemsEditor locale={locale} products={products} items={items} onChange={setItems} variant="full" columns={columns} />
 
       <div className="doc-bottom-grid">
         <TermsBlock locale={locale} notes={notes} onNotesChange={setNotes} noteTemplates={noteTemplates} termsGroups={termsGroups} attachments={attachments} onAttachmentsChange={setAttachments} />

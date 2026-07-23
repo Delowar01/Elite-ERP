@@ -1,5 +1,6 @@
 import { asc, eq } from "drizzle-orm";
 import { db, customersTable, productsTable, orgsTable, projectsTable } from "@/db";
+import { getColumnConfig } from "@/lib/column-config-server";
 import { requireSession } from "@/lib/session";
 import { getLocale } from "@/lib/i18n/server";
 import { tenantScope } from "@/lib/tenant";
@@ -9,6 +10,7 @@ import { InvoiceForm } from "../invoice-form";
 
 export default async function NewInvoicePage() {
   const session = await requireSession();
+  const columnConfig = await getColumnConfig(session.orgId, session.userId, "sales_invoice");
   const locale = await getLocale();
 
   const [customers, products, [org], numberPreview, projects, presets] = await Promise.all([
@@ -22,7 +24,8 @@ export default async function NewInvoicePage() {
 
   return (
     <div className="max-w-6xl mx-auto">
-      <InvoiceForm locale={locale} customers={customers} products={products} org={org} numberPreview={numberPreview} projects={projects} noteTemplates={presets.noteTemplates} termsGroups={presets.termsGroups} />
+      <InvoiceForm locale={locale} customers={customers} products={products} org={org} numberPreview={numberPreview} projects={projects} noteTemplates={presets.noteTemplates} termsGroups={presets.termsGroups}
+        columnConfig={columnConfig} />
     </div>
   );
 }

@@ -14,7 +14,8 @@ const PILL_SETTINGS: Record<string, { href: string; description: string }> = {
 };
 
 // Matches the mockup's doc_pills() exactly: <div class="doc-pills-row"><div class="doc-pill-btn">...
-export function DocPillsRow({ locale, pills }: { locale: Locale; pills: { icon: keyof typeof PILL_ICONS; label: string; value?: string }[] }) {
+// `trailing` renders extra controls inline after the pills (e.g. the Edit Columns dialog trigger).
+export function DocPillsRow({ locale, pills, trailing }: { locale: Locale; pills: { icon: keyof typeof PILL_ICONS; label: string; value?: string }[]; trailing?: React.ReactNode }) {
   return (
     <div className="doc-pills-row">
       {pills.map((p) => {
@@ -51,6 +52,7 @@ export function DocPillsRow({ locale, pills }: { locale: Locale; pills: { icon: 
           </span>
         );
       })}
+      {trailing}
     </div>
   );
 }

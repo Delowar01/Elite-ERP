@@ -1,4 +1,4 @@
-import { pgTable, serial, integer, text, numeric, date, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, serial, integer, text, numeric, date, timestamp, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { orgsTable } from "./orgs";
@@ -61,6 +61,7 @@ export const salesInvoiceItemsTable = pgTable("sales_invoice_items", {
   productId: integer("product_id").references(() => productsTable.id),
   imageUrl: text("image_url"),
   unit: text("unit"),
+  customFields: jsonb("custom_fields"),
   description: text("description"),
   quantity: numeric("quantity", { precision: 12, scale: 2 }).notNull().default("1"),
   unitPrice: numeric("unit_price", { precision: 14, scale: 2 }).notNull().default("0"),

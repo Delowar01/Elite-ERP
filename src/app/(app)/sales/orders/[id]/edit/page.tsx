@@ -1,5 +1,6 @@
 import { and, asc, eq } from "drizzle-orm";
 import { notFound, redirect } from "next/navigation";
+import { getColumnConfig } from "@/lib/column-config-server";
 import { db, customersTable, productsTable, orgsTable, projectsTable, salesOrdersTable, salesOrderItemsTable } from "@/db";
 import { requireSession } from "@/lib/session";
 import { getLocale } from "@/lib/i18n/server";
@@ -10,6 +11,7 @@ import { OrderForm } from "../../order-form";
 
 export default async function EditSalesOrderPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await requireSession();
+  const columnConfig = await getColumnConfig(session.orgId, session.userId, "sales_order");
   const locale = await getLocale();
   const soId = Number((await params).id);
   if (!Number.isInteger(soId)) notFound();
@@ -34,6 +36,7 @@ export default async function EditSalesOrderPage({ params }: { params: Promise<{
     taxRatePercent: it.taxRatePercent,
     imageUrl: it.imageUrl ?? "",
     unit: it.unit ?? "",
+    customFields: (it.customFields as Record<string, string>) ?? {},
   }));
 
   return (
@@ -46,6 +49,7 @@ export default async function EditSalesOrderPage({ params }: { params: Promise<{
         numberPreview={so.soNumber}
         projects={projects}
         mode="edit"
+        columnConfig={columnConfig}
         documentId={soId}
         initial={{
           title: so.title ?? "",
