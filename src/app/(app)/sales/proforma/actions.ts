@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { and, eq } from "drizzle-orm";
-import { db, proformaInvoicesTable, proformaInvoiceItemsTable, salesInvoicesTable, salesInvoiceItemsTable, deliveryChallansTable, deliveryChallanItemsTable } from "@/db";
+import { db, customersTable, proformaInvoicesTable, proformaInvoiceItemsTable, salesInvoicesTable, salesInvoiceItemsTable, deliveryChallansTable, deliveryChallanItemsTable } from "@/db";
 import { requireSession } from "@/lib/session";
 import { logActivity } from "@/lib/activity";
 import { nextDocumentNumber } from "@/lib/documents";
@@ -31,6 +31,8 @@ export async function createProformaAction(
   const session = await requireSession();
   const customerId = Number(input.customerId);
   if (!customerId) return { error: "Choose a client." };
+  const [customerOwned] = await db.select({ id: customersTable.id }).from(customersTable).where(and(eq(customersTable.id, customerId), eq(customersTable.orgId, session.orgId)));
+  if (!customerOwned) return { error: "Client not found." };
   if (!input.issueDate) return { error: "Issue date is required." };
 
   const items = input.items.filter((l) => l.description.trim() && Number(l.quantity) > 0);
@@ -91,6 +93,8 @@ export async function updateProformaAction(
 
   const customerId = Number(input.customerId);
   if (!customerId) return { error: "Choose a client." };
+  const [customerOwned] = await db.select({ id: customersTable.id }).from(customersTable).where(and(eq(customersTable.id, customerId), eq(customersTable.orgId, session.orgId)));
+  if (!customerOwned) return { error: "Client not found." };
   if (!input.issueDate) return { error: "Issue date is required." };
   const items = input.items.filter((l) => l.description.trim() && Number(l.quantity) > 0);
   if (items.length === 0) return { error: "Add at least one line item." };

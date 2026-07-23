@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { and, eq, sql } from "drizzle-orm";
-import { db, projectsTable, salesInvoicesTable, salesInvoiceItemsTable, productsTable, accountsTable, journalEntriesTable, journalLinesTable, deliveryChallansTable, deliveryChallanItemsTable } from "@/db";
+import { db, customersTable, projectsTable, salesInvoicesTable, salesInvoiceItemsTable, productsTable, accountsTable, journalEntriesTable, journalLinesTable, deliveryChallansTable, deliveryChallanItemsTable } from "@/db";
 import { requireSession } from "@/lib/session";
 import { logActivity } from "@/lib/activity";
 import { nextDocumentNumber } from "@/lib/documents";
@@ -32,6 +32,8 @@ export async function createInvoiceAction(
   const session = await requireSession();
   const customerId = Number(input.customerId);
   if (!customerId) return { error: "Choose a client." };
+  const [customerOwned] = await db.select({ id: customersTable.id }).from(customersTable).where(and(eq(customersTable.id, customerId), eq(customersTable.orgId, session.orgId)));
+  if (!customerOwned) return { error: "Client not found." };
 
   let projectId: number | null = null;
   if (input.projectId) {
@@ -104,6 +106,8 @@ export async function updateInvoiceAction(
 
   const customerId = Number(input.customerId);
   if (!customerId) return { error: "Choose a client." };
+  const [customerOwned] = await db.select({ id: customersTable.id }).from(customersTable).where(and(eq(customersTable.id, customerId), eq(customersTable.orgId, session.orgId)));
+  if (!customerOwned) return { error: "Client not found." };
   let projectId: number | null = null;
   if (input.projectId) {
     const [project] = await db.select({ id: projectsTable.id }).from(projectsTable).where(and(eq(projectsTable.id, Number(input.projectId)), eq(projectsTable.orgId, session.orgId)));

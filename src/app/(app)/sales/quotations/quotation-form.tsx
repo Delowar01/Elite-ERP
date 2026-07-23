@@ -89,10 +89,10 @@ export function QuotationForm({
           <div className="sub">{t(locale, isEdit ? "Edit this draft quotation." : "Create and send professional quotations to your clients.")}</div>
         </div>
         <div className="doc-titlebar-actions">
-          <button type="button" className="btn btn-glass" disabled>
+          <button type="button" className="btn btn-glass" disabled={pendingDraft || pendingPrimary} onClick={() => submit(false)}>
             {t(locale, "Save as Draft")}
           </button>
-          <button type="button" className="btn btn-glass" disabled>
+          <button type="button" className="btn btn-glass cursor-not-allowed" disabled title={t(locale, "More options are in the action bar at the bottom.")}>
             {t(locale, "More Actions")} <ChevronDown className="size-3" />
           </button>
         </div>
@@ -137,7 +137,7 @@ export function QuotationForm({
       </div>
 
       <div className="doc-meta-row" style={{ gridTemplateColumns: "1fr 1fr" }}>
-        <PartyCardStatic label={t(locale, "From")} name={org.name} address={org.address} email={org.email} phone={org.phone} />
+        <PartyCardStatic locale={locale} label={t(locale, "From")} name={org.name} address={org.address} email={org.email} phone={org.phone} />
         <PartyCardSelect locale={locale} label={t(locale, "To Client")} customers={customers} value={customerId} onChange={setCustomerId} />
       </div>
 
@@ -165,6 +165,7 @@ export function QuotationForm({
       <DocFooterContact locale={locale} email={org.email} phone={org.phone} />
 
       <DocActionBar
+        printHref={documentId ? `/print/quotation/${documentId}` : undefined}
         locale={locale}
         pendingDraft={pendingDraft}
         pendingPrimary={pendingPrimary}

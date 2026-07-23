@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { MapPin, Mail, Phone, Globe, Pencil, ChevronDown } from "lucide-react";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { t, type Locale } from "@/lib/i18n/dict";
@@ -40,20 +41,28 @@ export function PartyCardSimple({
 // Matches the mockup's party_card(is_select=False) exactly: <div class="card party-card-v2">
 // <div class="pc-label">...</div><div class="pc-name">...</div>{pc-row × N}<div class="pc-edit">...</div>
 export function PartyCardStatic({
+  locale,
   label,
   name,
   address,
   email,
   phone,
   website,
+  editHref = "/settings/organization?tab=business-details",
 }: {
+  locale?: Locale;
   label: string;
   name: string;
   address?: string | null;
   email?: string | null;
   phone?: string | null;
   website?: string | null;
+  /** Where the "edit" pencil links to. The "From" party is the org itself → Business Settings.
+   *  Pass null for a derived/read-only party (e.g. a Credit/Debit Note's party copied from its
+   *  source document) to hide the pencil rather than link somewhere misleading. */
+  editHref?: string | null;
 }) {
+  const editLabel = locale ? t(locale, "Edit business details") : "Edit business details";
   return (
     <div className="card party-card-v2">
       <div className="pc-label">{label}</div>
@@ -62,9 +71,11 @@ export function PartyCardStatic({
       {email && <PcRow icon={<Mail className="size-3.5" />} text={email} />}
       {phone && <PcRow icon={<Phone className="size-3.5" />} text={phone} />}
       {website && <PcRow icon={<Globe className="size-3.5" />} text={website} />}
-      <div className="pc-edit">
-        <Pencil className="size-3.5" />
-      </div>
+      {editHref && (
+        <Link href={editHref} className="pc-edit" title={editLabel} aria-label={editLabel}>
+          <Pencil className="size-3.5" />
+        </Link>
+      )}
     </div>
   );
 }
@@ -78,6 +89,7 @@ export function PartyCardSelect({
   value,
   onChange,
   placeholder = "Select a client",
+  editHrefBase = "/clients",
 }: {
   locale: Locale;
   label: string;
@@ -85,8 +97,13 @@ export function PartyCardSelect({
   value: string;
   onChange: (v: string) => void;
   placeholder?: string;
+  /** Base path for the "edit" pencil: it links to `${editHrefBase}/${selectedId}` when a party
+   *  is chosen (client or vendor detail). Disabled with a reason when nothing is selected. */
+  editHrefBase?: string;
 }) {
   const selected = customers.find((c) => String(c.id) === value);
+  const openLabel = t(locale, "Open record");
+  const pickFirst = t(locale, "Select first");
   return (
     <div className="card party-card-v2">
       <div className="pc-label">{label}</div>
@@ -106,9 +123,15 @@ export function PartyCardSelect({
       {selected?.address && <PcRow icon={<MapPin className="size-3.5" />} text={selected.address} />}
       {selected?.email && <PcRow icon={<Mail className="size-3.5" />} text={selected.email} />}
       {selected?.phone && <PcRow icon={<Phone className="size-3.5" />} text={selected.phone} />}
-      <div className="pc-edit">
-        <Pencil className="size-3.5" />
-      </div>
+      {selected ? (
+        <Link href={`${editHrefBase}/${value}`} className="pc-edit" title={openLabel} aria-label={openLabel} target="_blank" rel="noreferrer">
+          <Pencil className="size-3.5" />
+        </Link>
+      ) : (
+        <span className="pc-edit opacity-40 cursor-not-allowed" title={pickFirst} aria-disabled>
+          <Pencil className="size-3.5" />
+        </span>
+      )}
     </div>
   );
 }

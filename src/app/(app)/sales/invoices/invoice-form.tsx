@@ -90,10 +90,10 @@ export function InvoiceForm({
           <div className="sub">{t(locale, isEdit ? "Edit this draft document." : "Issue a tax invoice — posts to the ledger and decrements stock on send.")}</div>
         </div>
         <div className="doc-titlebar-actions">
-          <button type="button" className="btn btn-glass" disabled>
+          <button type="button" className="btn btn-glass" disabled={pendingDraft || pendingPrimary} onClick={() => submit(false)}>
             {t(locale, "Save as Draft")}
           </button>
-          <button type="button" className="btn btn-glass" disabled>
+          <button type="button" className="btn btn-glass cursor-not-allowed" disabled title={t(locale, "More options are in the action bar at the bottom.")}>
             {t(locale, "More Actions")} <ChevronDown className="size-3" />
           </button>
         </div>
@@ -138,7 +138,7 @@ export function InvoiceForm({
       </div>
 
       <div className="doc-meta-row" style={{ gridTemplateColumns: "1fr 1fr" }}>
-        <PartyCardStatic label={t(locale, "From")} name={org.name} address={org.address} email={org.email} phone={org.phone} />
+        <PartyCardStatic locale={locale} label={t(locale, "From")} name={org.name} address={org.address} email={org.email} phone={org.phone} />
         <PartyCardSelect locale={locale} label={t(locale, "To Client")} customers={customers} value={customerId} onChange={setCustomerId} />
       </div>
 
@@ -167,6 +167,7 @@ export function InvoiceForm({
       <DocFooterContact locale={locale} email={org.email} phone={org.phone} />
 
       <DocActionBar
+        printHref={documentId ? `/print/invoice/${documentId}` : undefined}
         locale={locale}
         pendingDraft={pendingDraft}
         pendingPrimary={pendingPrimary}

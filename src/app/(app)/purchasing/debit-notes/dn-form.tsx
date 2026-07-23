@@ -76,7 +76,7 @@ export function DnForm({
           <div className="sub">{t(locale, isEdit ? "Edit this draft document." : "Issue a debit against a received purchase order — posts Dr Accounts Payable, Cr Inventory.")}</div>
         </div>
         <div className="doc-titlebar-actions">
-          <button type="button" className="btn btn-glass" disabled>
+          <button type="button" className="btn btn-glass" disabled={pendingDraft || pendingPrimary} onClick={() => submit(false)}>
             {t(locale, "Save as Draft")}
           </button>
         </div>
@@ -117,14 +117,16 @@ export function DnForm({
       </div>
 
       <div className="doc-meta-row" style={{ gridTemplateColumns: "1fr 1fr" }}>
-        <PartyCardStatic label={t(locale, "From")} name={org.name} address={org.address} email={org.email} phone={org.phone} />
+        <PartyCardStatic locale={locale} label={t(locale, "From")} name={org.name} address={org.address} email={org.email} phone={org.phone} />
         {selectedPo ? (
           <PartyCardStatic
+            locale={locale}
             label={t(locale, "To Vendor")}
             name={selectedPo.vendorName}
             address={selectedPo.vendorAddress}
             email={selectedPo.vendorEmail}
             phone={selectedPo.vendorPhone}
+            editHref={null}
           />
         ) : (
           <div className="card party-card-v2 flex items-center text-[12.5px] text-ink-faint">{t(locale, "Select a purchase order to load the vendor.")}</div>
@@ -151,6 +153,7 @@ export function DnForm({
       <DocFooterContact locale={locale} email={org.email} phone={org.phone} />
 
       <DocActionBar
+        printHref={documentId ? `/print/debit-note/${documentId}` : undefined}
         locale={locale}
         pendingDraft={pendingDraft}
         pendingPrimary={pendingPrimary}

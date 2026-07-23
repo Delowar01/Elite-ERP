@@ -103,10 +103,10 @@ export function PoForm({
           <div className="sub">{t(locale, isEdit ? "Edit this draft document." : "Order stock from a vendor — receiving posts to inventory and accounts payable.")}</div>
         </div>
         <div className="doc-titlebar-actions">
-          <button type="button" className="btn btn-glass" disabled>
+          <button type="button" className="btn btn-glass" disabled={pendingDraft || pendingPrimary} onClick={() => submit(false)}>
             {t(locale, "Save as Draft")}
           </button>
-          <button type="button" className="btn btn-glass" disabled>
+          <button type="button" className="btn btn-glass cursor-not-allowed" disabled title={t(locale, "More options are in the action bar at the bottom.")}>
             {t(locale, "More Actions")} <ChevronDown className="size-3" />
           </button>
         </div>
@@ -142,8 +142,8 @@ export function PoForm({
       </div>
 
       <div className="doc-meta-row" style={{ gridTemplateColumns: "1fr 1fr" }}>
-        <PartyCardStatic label={t(locale, "From")} name={org.name} address={org.address} email={org.email} phone={org.phone} />
-        <PartyCardSelect locale={locale} label={t(locale, "To Vendor")} customers={vendors} value={vendorId} onChange={setVendorId} placeholder="Select a vendor" />
+        <PartyCardStatic locale={locale} label={t(locale, "From")} name={org.name} address={org.address} email={org.email} phone={org.phone} />
+        <PartyCardSelect locale={locale} label={t(locale, "To Vendor")} customers={vendors} value={vendorId} onChange={setVendorId} placeholder="Select a vendor" editHrefBase="/purchasing/vendors" />
       </div>
 
       <DocPillsRow
@@ -178,6 +178,7 @@ export function PoForm({
       <DocFooterContact locale={locale} email={org.email} phone={org.phone} />
 
       <DocActionBar
+        printHref={documentId ? `/print/purchase-order/${documentId}` : undefined}
         locale={locale}
         pendingDraft={pendingDraft}
         pendingPrimary={pendingPrimary}

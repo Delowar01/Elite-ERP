@@ -101,7 +101,7 @@ export function LineItemsEditor({
                 <td>
                   {showThumb ? (
                     <div className="item-desc-cell">
-                      <div className="item-thumb">
+                      <div className="item-thumb cursor-not-allowed" title={t(locale, "Product images are managed in Inventory.")} aria-disabled>
                         <ImageIcon className="size-4" />
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }} className="flex flex-col gap-1.5">

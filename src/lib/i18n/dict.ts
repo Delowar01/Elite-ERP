@@ -993,6 +993,21 @@ const DICT: Record<string, string> = {
   "Already have an account?": "لديك حساب بالفعل؟",
   "All fields are required.": "جميع الحقول مطلوبة.",
   "An account with this email already exists.": "يوجد حساب بهذا البريد الإلكتروني بالفعل.",
+  // Document creation-page controls — tooltips / reasons
+  "Configure in Presets": "الإعداد من الإعدادات المسبقة",
+  "Edit business details": "تعديل بيانات المؤسسة",
+  "Open record": "فتح السجل",
+  "Select first": "اختر أولاً",
+  "Upload in Business Settings": "الرفع من إعدادات المؤسسة",
+  "Open settings": "فتح الإعدادات",
+  "Not configurable yet": "غير قابل للتهيئة بعد",
+  "Save the document first to preview & print.": "احفظ المستند أولاً للمعاينة والطباعة.",
+  "Current tab": "علامة التبويب الحالية",
+  "Type your note in the box below.": "اكتب ملاحظتك في المربع أدناه.",
+  "File attachments are not supported on documents.": "المرفقات غير مدعومة على المستندات.",
+  "Notes are saved as plain text.": "تُحفظ الملاحظات كنص عادي.",
+  "Product images are managed in Inventory.": "تُدار صور المنتجات من المخزون.",
+  "More options are in the action bar at the bottom.": "توجد خيارات إضافية في شريط الإجراءات بالأسفل.",
 };
 
 export function t(locale: Locale, en: string): string {

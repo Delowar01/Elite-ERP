@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { and, eq, sql } from "drizzle-orm";
-import { db, purchaseOrdersTable, purchaseOrderItemsTable, productsTable, accountsTable, journalEntriesTable, journalLinesTable } from "@/db";
+import { db, vendorsTable, purchaseOrdersTable, purchaseOrderItemsTable, productsTable, accountsTable, journalEntriesTable, journalLinesTable } from "@/db";
 import { requireSession } from "@/lib/session";
 import { logActivity } from "@/lib/activity";
 import { nextDocumentNumber } from "@/lib/documents";
@@ -35,6 +35,8 @@ export async function createPurchaseOrderAction(
   const session = await requireSession();
   const vendorId = Number(input.vendorId);
   if (!vendorId) return { error: "Choose a vendor." };
+  const [vendorOwned] = await db.select({ id: vendorsTable.id }).from(vendorsTable).where(and(eq(vendorsTable.id, vendorId), eq(vendorsTable.orgId, session.orgId)));
+  if (!vendorOwned) return { error: "Vendor not found." };
   if (!input.orderDate) return { error: "Order date is required." };
 
   const items = input.items.filter((l) => l.description.trim() && Number(l.quantity) > 0);
@@ -100,6 +102,8 @@ export async function updatePurchaseOrderAction(
 
   const vendorId = Number(input.vendorId);
   if (!vendorId) return { error: "Choose a vendor." };
+  const [vendorOwned] = await db.select({ id: vendorsTable.id }).from(vendorsTable).where(and(eq(vendorsTable.id, vendorId), eq(vendorsTable.orgId, session.orgId)));
+  if (!vendorOwned) return { error: "Vendor not found." };
   if (!input.orderDate) return { error: "Order date is required." };
   const items = input.items.filter((l) => l.description.trim() && Number(l.quantity) > 0);
   if (items.length === 0) return { error: "Add at least one line item." };

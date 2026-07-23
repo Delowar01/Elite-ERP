@@ -46,13 +46,13 @@ export function TermsBlock({
   return (
     <div>
       <div className="doc-tabbar">
-        <button type="button" className="active" disabled>
+        <button type="button" className="active" disabled title={t(locale, "Current tab")}>
           <FileSignature className="size-3.5" /> {t(locale, "Terms & Conditions")}
         </button>
-        <button type="button" disabled>
+        <button type="button" disabled className="cursor-not-allowed" title={t(locale, "Type your note in the box below.")}>
           <FileText className="size-3.5" /> {t(locale, "Add Note")}
         </button>
-        <button type="button" disabled>
+        <button type="button" disabled className="cursor-not-allowed" title={t(locale, "File attachments are not supported on documents.")}>
           <Paperclip className="size-3.5" /> {t(locale, "Add Attachment")}
         </button>
       </div>
@@ -107,12 +107,12 @@ export function TermsBlock({
       )}
 
       <div className="doc-note-box">
-        <div className="rte-toolbar">
-          <button type="button" disabled><Bold className="size-3.5" /></button>
-          <button type="button" disabled><Italic className="size-3.5" /></button>
-          <button type="button" disabled><Underline className="size-3.5" /></button>
-          <button type="button" disabled><List className="size-3.5" /></button>
-          <button type="button" className="rte-close" disabled><X className="size-3.5" /></button>
+        <div className="rte-toolbar" title={t(locale, "Notes are saved as plain text.")}>
+          <button type="button" disabled className="cursor-not-allowed"><Bold className="size-3.5" /></button>
+          <button type="button" disabled className="cursor-not-allowed"><Italic className="size-3.5" /></button>
+          <button type="button" disabled className="cursor-not-allowed"><Underline className="size-3.5" /></button>
+          <button type="button" disabled className="cursor-not-allowed"><List className="size-3.5" /></button>
+          <button type="button" className="rte-close cursor-not-allowed" disabled><X className="size-3.5" /></button>
         </div>
         <textarea
           value={notes}

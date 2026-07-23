@@ -76,7 +76,7 @@ export function CnForm({
           <div className="sub">{t(locale, isEdit ? "Edit this draft document." : "Issue a credit against a sent invoice — posts Dr Sales Revenue + Dr VAT Payable, Cr Accounts Receivable.")}</div>
         </div>
         <div className="doc-titlebar-actions">
-          <button type="button" className="btn btn-glass" disabled>
+          <button type="button" className="btn btn-glass" disabled={pendingDraft || pendingPrimary} onClick={() => submit(false)}>
             {t(locale, "Save as Draft")}
           </button>
         </div>
@@ -117,14 +117,16 @@ export function CnForm({
       </div>
 
       <div className="doc-meta-row" style={{ gridTemplateColumns: "1fr 1fr" }}>
-        <PartyCardStatic label={t(locale, "From")} name={org.name} address={org.address} email={org.email} phone={org.phone} />
+        <PartyCardStatic locale={locale} label={t(locale, "From")} name={org.name} address={org.address} email={org.email} phone={org.phone} />
         {selectedInvoice ? (
           <PartyCardStatic
+            locale={locale}
             label={t(locale, "To Client")}
             name={selectedInvoice.customerName}
             address={selectedInvoice.customerAddress}
             email={selectedInvoice.customerEmail}
             phone={selectedInvoice.customerPhone}
+            editHref={null}
           />
         ) : (
           <div className="card party-card-v2 flex items-center text-[12.5px] text-ink-faint">{t(locale, "Select an invoice to load the client.")}</div>
@@ -151,6 +153,7 @@ export function CnForm({
       <DocFooterContact locale={locale} email={org.email} phone={org.phone} />
 
       <DocActionBar
+        printHref={documentId ? `/print/credit-note/${documentId}` : undefined}
         locale={locale}
         pendingDraft={pendingDraft}
         pendingPrimary={pendingPrimary}
