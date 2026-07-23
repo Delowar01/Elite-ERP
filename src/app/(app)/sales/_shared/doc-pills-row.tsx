@@ -1,16 +1,16 @@
-import Link from "next/link";
 import { Percent, Wallet, Info, Columns3, ChevronDown, type LucideIcon } from "lucide-react";
 import { t, type Locale } from "@/lib/i18n/dict";
+import { PillSettingsDialog } from "./pill-settings-dialog";
 
 const PILL_ICONS: Record<string, LucideIcon> = { percent: Percent, wallet: Wallet, info: Info, columns: Columns3 };
 
-// Each config pill mirrors an org-level setting, so it now links to where that setting is
-// actually configured instead of being a dead button. A pill with no settings home is clearly
-// disabled with a reason.
-const PILL_HREFS: Record<string, string> = {
-  "VAT Settings": "/settings/organization?tab=vat-config",
-  Currency: "/settings/organization?tab=business-details",
-  "Number Format": "/settings/presets",
+// Each config pill mirrors an org-level setting. Per the creation-page rule it must not redirect:
+// clicking opens an in-page popup showing the current value + an optional "Open Full Settings" link
+// (new tab). A pill with no settings home is clearly disabled with a reason.
+const PILL_SETTINGS: Record<string, { href: string; description: string }> = {
+  "VAT Settings": { href: "/settings/organization?tab=vat-config", description: "VAT is applied at your organization's configured rate." },
+  Currency: { href: "/settings/organization?tab=business-details", description: "Documents use your organization's base currency." },
+  "Number Format": { href: "/settings/presets", description: "Document numbers follow your configured numbering rules." },
 };
 
 // Matches the mockup's doc_pills() exactly: <div class="doc-pills-row"><div class="doc-pill-btn">...
@@ -19,7 +19,7 @@ export function DocPillsRow({ locale, pills }: { locale: Locale; pills: { icon: 
     <div className="doc-pills-row">
       {pills.map((p) => {
         const Icon = PILL_ICONS[p.icon];
-        const href = PILL_HREFS[p.label];
+        const settings = PILL_SETTINGS[p.label];
         const inner = (
           <>
             <Icon className="size-3.5" />
@@ -28,11 +28,21 @@ export function DocPillsRow({ locale, pills }: { locale: Locale; pills: { icon: 
             <ChevronDown className="size-3" style={{ color: "var(--ink-faint)" }} />
           </>
         );
-        if (href) {
+        if (settings) {
           return (
-            <Link href={href} key={p.label} className="doc-pill-btn" title={t(locale, "Open settings")}>
-              {inner}
-            </Link>
+            <PillSettingsDialog
+              key={p.label}
+              locale={locale}
+              label={p.label}
+              description={settings.description}
+              value={p.value}
+              fullSettingsHref={settings.href}
+              trigger={
+                <button type="button" className="doc-pill-btn" title={t(locale, "Open settings")}>
+                  {inner}
+                </button>
+              }
+            />
           );
         }
         return (

@@ -1,7 +1,7 @@
-import Link from "next/link";
 import { MapPin, Mail, Phone, Globe, Pencil, ChevronDown } from "lucide-react";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { t, type Locale } from "@/lib/i18n/dict";
+import { PartyEditDialog } from "./party-edit-dialog";
 
 function PcRow({ icon, text }: { icon: React.ReactNode; text: string }) {
   return (
@@ -48,7 +48,7 @@ export function PartyCardStatic({
   email,
   phone,
   website,
-  editHref = "/settings/organization?tab=business-details",
+  editable = true,
 }: {
   locale?: Locale;
   label: string;
@@ -57,10 +57,10 @@ export function PartyCardStatic({
   email?: string | null;
   phone?: string | null;
   website?: string | null;
-  /** Where the "edit" pencil links to. The "From" party is the org itself → Business Settings.
-   *  Pass null for a derived/read-only party (e.g. a Credit/Debit Note's party copied from its
-   *  source document) to hide the pencil rather than link somewhere misleading. */
-  editHref?: string | null;
+  /** The "From" card is the org itself → its pencil opens the in-page business-details popup.
+   *  Pass false for a derived/read-only party (e.g. a Credit/Debit Note's party copied from its
+   *  source document) to hide the pencil. */
+  editable?: boolean;
 }) {
   const editLabel = locale ? t(locale, "Edit business details") : "Edit business details";
   return (
@@ -71,10 +71,18 @@ export function PartyCardStatic({
       {email && <PcRow icon={<Mail className="size-3.5" />} text={email} />}
       {phone && <PcRow icon={<Phone className="size-3.5" />} text={phone} />}
       {website && <PcRow icon={<Globe className="size-3.5" />} text={website} />}
-      {editHref && (
-        <Link href={editHref} className="pc-edit" title={editLabel} aria-label={editLabel}>
-          <Pencil className="size-3.5" />
-        </Link>
+      {editable && locale && (
+        <PartyEditDialog
+          locale={locale}
+          kind="from"
+          initial={{ name, email: email ?? "", phone: phone ?? "", address: address ?? "" }}
+          fullSettingsHref="/settings/organization?tab=business-details"
+          trigger={
+            <button type="button" className="pc-edit" title={editLabel} aria-label={editLabel}>
+              <Pencil className="size-3.5" />
+            </button>
+          }
+        />
       )}
     </div>
   );
@@ -89,7 +97,7 @@ export function PartyCardSelect({
   value,
   onChange,
   placeholder = "Select a client",
-  editHrefBase = "/clients",
+  partyKind = "client",
 }: {
   locale: Locale;
   label: string;
@@ -97,12 +105,12 @@ export function PartyCardSelect({
   value: string;
   onChange: (v: string) => void;
   placeholder?: string;
-  /** Base path for the "edit" pencil: it links to `${editHrefBase}/${selectedId}` when a party
-   *  is chosen (client or vendor detail). Disabled with a reason when nothing is selected. */
-  editHrefBase?: string;
+  /** Whether the chosen party is a client or a vendor — drives the in-page edit popup + which
+   *  master record it updates. */
+  partyKind?: "client" | "vendor";
 }) {
   const selected = customers.find((c) => String(c.id) === value);
-  const openLabel = t(locale, "Open record");
+  const openLabel = t(locale, "Edit");
   const pickFirst = t(locale, "Select first");
   return (
     <div className="card party-card-v2">
@@ -124,9 +132,18 @@ export function PartyCardSelect({
       {selected?.email && <PcRow icon={<Mail className="size-3.5" />} text={selected.email} />}
       {selected?.phone && <PcRow icon={<Phone className="size-3.5" />} text={selected.phone} />}
       {selected ? (
-        <Link href={`${editHrefBase}/${value}`} className="pc-edit" title={openLabel} aria-label={openLabel} target="_blank" rel="noreferrer">
-          <Pencil className="size-3.5" />
-        </Link>
+        <PartyEditDialog
+          locale={locale}
+          kind={partyKind}
+          partyId={selected.id}
+          initial={{ name: selected.name, email: selected.email ?? "", phone: selected.phone ?? "", address: selected.address ?? "" }}
+          fullSettingsHref={partyKind === "vendor" ? `/purchasing/vendors/${selected.id}` : `/clients/${selected.id}`}
+          trigger={
+            <button type="button" className="pc-edit" title={openLabel} aria-label={openLabel}>
+              <Pencil className="size-3.5" />
+            </button>
+          }
+        />
       ) : (
         <span className="pc-edit opacity-40 cursor-not-allowed" title={pickFirst} aria-disabled>
           <Pencil className="size-3.5" />

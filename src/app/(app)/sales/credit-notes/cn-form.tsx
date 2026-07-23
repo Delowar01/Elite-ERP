@@ -83,7 +83,7 @@ export function CnForm({
       </div>
 
       <div className="doc-header-grid" style={{ gridTemplateColumns: "1fr 1fr" }}>
-        <DocFieldBox label={t(locale, "CN Number")} required gear>
+        <DocFieldBox label={t(locale, "CN Number")} required gear gearDocType="credit_note" locale={locale}>
           {numberPreview}
         </DocFieldBox>
         <DocFieldBox label={t(locale, "Issue Date")} required>
@@ -126,7 +126,7 @@ export function CnForm({
             address={selectedInvoice.customerAddress}
             email={selectedInvoice.customerEmail}
             phone={selectedInvoice.customerPhone}
-            editHref={null}
+            editable={false}
           />
         ) : (
           <div className="card party-card-v2 flex items-center text-[12.5px] text-ink-faint">{t(locale, "Select an invoice to load the client.")}</div>

@@ -83,7 +83,7 @@ export function DnForm({
       </div>
 
       <div className="doc-header-grid" style={{ gridTemplateColumns: "1fr 1fr" }}>
-        <DocFieldBox label={t(locale, "DN Number")} required gear>
+        <DocFieldBox label={t(locale, "DN Number")} required gear gearDocType="debit_note" locale={locale}>
           {numberPreview}
         </DocFieldBox>
         <DocFieldBox label={t(locale, "Issue Date")} required>
@@ -126,7 +126,7 @@ export function DnForm({
             address={selectedPo.vendorAddress}
             email={selectedPo.vendorEmail}
             phone={selectedPo.vendorPhone}
-            editHref={null}
+            editable={false}
           />
         ) : (
           <div className="card party-card-v2 flex items-center text-[12.5px] text-ink-faint">{t(locale, "Select a purchase order to load the vendor.")}</div>

@@ -1008,6 +1008,23 @@ const DICT: Record<string, string> = {
   "Notes are saved as plain text.": "تُحفظ الملاحظات كنص عادي.",
   "Product images are managed in Inventory.": "تُدار صور المنتجات من المخزون.",
   "More options are in the action bar at the bottom.": "توجد خيارات إضافية في شريط الإجراءات بالأسفل.",
+  // Creation-page in-page popups (no redirect)
+  "Edit vendor": "تعديل المورّد",
+  "Edit client": "تعديل العميل",
+  "Open Full Settings": "فتح الإعدادات الكاملة",
+  "Document Numbering": "ترقيم المستندات",
+  "Next document": "المستند التالي",
+  "Set the date in the field.": "حدّد التاريخ في الحقل.",
+  "Choose a file to upload.": "اختر ملفًا للرفع.",
+  "PNG or JPG. Reused on every document.": "PNG أو JPG. يُستخدم في كل مستند.",
+  "Upload Seal": "رفع الختم",
+  "Upload Signature": "رفع التوقيع",
+  Upload: "رفع",
+  "Loading…": "جارٍ التحميل…",
+  Close: "إغلاق",
+  "VAT is applied at your organization's configured rate.": "تُطبَّق ضريبة القيمة المضافة وفق النسبة المحددة في مؤسستك.",
+  "Documents use your organization's base currency.": "تستخدم المستندات العملة الأساسية لمؤسستك.",
+  "Document numbers follow your configured numbering rules.": "تتبع أرقام المستندات قواعد الترقيم المحددة لديك.",
 };
 
 export function t(locale: Locale, en: string): string {

@@ -102,7 +102,7 @@ export function InvoiceForm({
       <div style={{ display: "grid", gridTemplateColumns: "1.7fr 1fr", gap: 20, marginBottom: 18, alignItems: "start" }}>
         <div>
           <div className="doc-header-grid" style={{ gridTemplateColumns: "1fr 1fr" }}>
-            <DocFieldBox label={t(locale, "Invoice Number")} required gear>
+            <DocFieldBox label={t(locale, "Invoice Number")} required gear gearDocType="sales_invoice" locale={locale}>
               {numberPreview}
             </DocFieldBox>
             <DocFieldBox label={t(locale, "Issue Date")} required>

@@ -115,7 +115,7 @@ export function PoForm({
       <div style={{ display: "grid", gridTemplateColumns: "1.7fr 1fr", gap: 20, marginBottom: 18, alignItems: "start" }}>
         <div>
           <div className="doc-header-grid" style={{ gridTemplateColumns: "1fr 1fr" }}>
-            <DocFieldBox label={t(locale, "PO Number")} required gear>
+            <DocFieldBox label={t(locale, "PO Number")} required gear gearDocType="purchase_order" locale={locale}>
               {numberPreview}
             </DocFieldBox>
             <DocFieldBox label={t(locale, "Order Date")} required>
@@ -143,7 +143,7 @@ export function PoForm({
 
       <div className="doc-meta-row" style={{ gridTemplateColumns: "1fr 1fr" }}>
         <PartyCardStatic locale={locale} label={t(locale, "From")} name={org.name} address={org.address} email={org.email} phone={org.phone} />
-        <PartyCardSelect locale={locale} label={t(locale, "To Vendor")} customers={vendors} value={vendorId} onChange={setVendorId} placeholder="Select a vendor" editHrefBase="/purchasing/vendors" />
+        <PartyCardSelect locale={locale} label={t(locale, "To Vendor")} customers={vendors} value={vendorId} onChange={setVendorId} placeholder="Select a vendor" partyKind="vendor" />
       </div>
 
       <DocPillsRow

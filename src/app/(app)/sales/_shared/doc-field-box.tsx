@@ -1,28 +1,27 @@
-import Link from "next/link";
 import { Settings } from "lucide-react";
+import { t, type Locale } from "@/lib/i18n/dict";
+import { NumberSettingsDialog } from "./number-settings-dialog";
 
-// Matches the mockup's doc_field() helper exactly:
-// <div class="doc-field"><label>{label}<span class="req">*</span></label>
-// <div class="doc-field-input-row"><div class="input">{value}</div><div class="doc-gear-btn">...</div></div></div>
-//
-// The gear was decorative in the mockup port; it now opens the settings location where the
-// field's defaults are configured (document numbering + validity/terms defaults live in Presets),
-// so it is a real, working link rather than a dead icon.
+// Matches the mockup's doc_field() helper. The gear was decorative in the mockup port; it now
+// opens an in-page popup (no redirect): the Number gear opens the numbering-settings dialog for
+// this document type. A gear without a documentType (e.g. a date field) stays a clearly-disabled
+// icon with a reason.
 export function DocFieldBox({
   label,
   required,
   plain = false,
   gear = false,
-  gearHref = "/settings/presets",
-  gearTitle = "Configure in Presets",
+  gearDocType,
+  locale,
   children,
 }: {
   label: string;
   required?: boolean;
   plain?: boolean;
   gear?: boolean;
-  gearHref?: string;
-  gearTitle?: string;
+  /** When set, the gear opens the numbering-settings popup for this document type. */
+  gearDocType?: string;
+  locale?: Locale;
   children: React.ReactNode;
 }) {
   return (
@@ -32,11 +31,21 @@ export function DocFieldBox({
       </label>
       <div className="doc-field-input-row">
         <div className={plain ? "input plain" : "input"}>{children}</div>
-        {gear && (
-          <Link href={gearHref} title={gearTitle} aria-label={gearTitle} className="doc-gear-btn">
+        {gear && gearDocType && locale ? (
+          <NumberSettingsDialog
+            locale={locale}
+            documentType={gearDocType}
+            trigger={
+              <button type="button" className="doc-gear-btn" title={t(locale, "Document Numbering")} aria-label={t(locale, "Document Numbering")}>
+                <Settings className="size-[15px]" />
+              </button>
+            }
+          />
+        ) : gear ? (
+          <button type="button" className="doc-gear-btn cursor-not-allowed opacity-60" disabled title={locale ? t(locale, "Set the date in the field.") : "Set the date in the field."}>
             <Settings className="size-[15px]" />
-          </Link>
-        )}
+          </button>
+        ) : null}
       </div>
     </div>
   );

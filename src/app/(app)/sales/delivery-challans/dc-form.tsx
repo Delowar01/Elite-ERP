@@ -76,7 +76,7 @@ export function DcForm({
       </div>
 
       <div className="doc-header-grid" style={{ gridTemplateColumns: "1fr 1fr" }}>
-        <DocFieldBox label={t(locale, "DC Number")} required gear>
+        <DocFieldBox label={t(locale, "DC Number")} required gear gearDocType="delivery_challan" locale={locale}>
           {numberPreview}
         </DocFieldBox>
         <DocFieldBox label={t(locale, "Dispatch Date")} required>
