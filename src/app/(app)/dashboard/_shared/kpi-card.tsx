@@ -1,6 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import { ArrowUp, ArrowDown } from "lucide-react";
-import { RiyalSymbol } from "@/components/ui/riyal-symbol";
+import { CurrencyMark } from "@/components/ui/currency-mark";
 import { t, type Locale } from "@/lib/i18n/dict";
 import { Sparkline } from "./charts";
 
@@ -39,7 +39,7 @@ export function KpiCard({
           <span className="kpi-value-row">
             {isCurrency && (
               <span className="kpi-currency-icon">
-                <RiyalSymbol />
+                <CurrencyMark />
               </span>
             )}
             <span className="kpi-value">{value}</span>

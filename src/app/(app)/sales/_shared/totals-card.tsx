@@ -1,4 +1,7 @@
+"use client";
+
 import { t, type Locale } from "@/lib/i18n/dict";
+import { useCurrency } from "@/components/ui/currency-mark";
 import { Money } from "./money";
 import { fmt, amountInWords } from "./totals";
 
@@ -27,6 +30,7 @@ export function TotalsCard({
   total: string;
   totalLabel?: string;
 }) {
+  const currency = useCurrency();
   return (
     <div className="card totals-strip doc-totals-card">
       <div className="t-row">
@@ -60,7 +64,7 @@ export function TotalsCard({
         </span>
       </div>
       <div className="doc-totals-words">
-        {t(locale, "In Words:")} {amountInWords(total, locale)}
+        {t(locale, "In Words:")} {amountInWords(total, locale, currency)}
       </div>
     </div>
   );

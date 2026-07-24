@@ -28,7 +28,8 @@ import {
 import { requireSession } from "@/lib/session";
 import { getLocale } from "@/lib/i18n/server";
 import { buildZatcaTlv, invoiceHashOf, zatcaQrDataUrl } from "@/lib/zatca";
-import { fmt, amountInWords } from "../../../(app)/sales/_shared/totals";
+import { amountInWords } from "../../../(app)/sales/_shared/totals";
+import { resolveCurrencyMark } from "@/lib/currency/currencies";
 import {
   A4Page,
   PdfHeader,
@@ -39,6 +40,7 @@ import {
   ItemsTableSimple,
   ItemsTableQty,
   TotalsBox,
+  Amount,
   AmountWords,
   BankBlock,
   NotesBlock,
@@ -56,10 +58,6 @@ function fmtDate(iso: string | null): string {
   if (!iso) return "—";
   const [y, m, d] = iso.split("-").map(Number);
   return `${String(d).padStart(2, "0")} ${MONTHS[(m ?? 1) - 1]}, ${y}`;
-}
-
-function sar(v: string | number): string {
-  return `SAR ${fmt(v)}`;
 }
 
 function customerLines(c: { address: string | null; vatNumber: string | null }): PartyLine[] {
@@ -103,6 +101,11 @@ export default async function PrintPage({ params }: { params: Promise<{ type: st
   const { org, bank } = await getOrgAndBank(session.orgId);
   if (!org) notFound();
 
+  // Org base currency: the money() helper renders the symbol (SAR shows the official asset) or the
+  // ISO code, and amountInWords() gets the currency name.
+  const mark = resolveCurrencyMark(org.currency);
+  const money = (v: string | number) => <Amount mark={mark} value={v} />;
+
   const orgParty = (label: string) => <Party label={label} name={org.name} lines={orgPartyLines(org)} tint />;
 
   let backHref = "/dashboard";
@@ -134,10 +137,10 @@ export default async function PrintPage({ params }: { params: Promise<{ type: st
       rate: it.unitPrice,
     }));
 
-    const baseTotals: [string, string][] = [
-      ["Amount", sar(doc.subtotal)],
-      ["VAT", sar(doc.taxTotal)],
-      ["Discounts", sar(doc.discount)],
+    const baseTotals: [string, React.ReactNode][] = [
+      ["Amount", money(doc.subtotal)],
+      ["VAT", money(doc.taxTotal)],
+      ["Discounts", money(doc.discount)],
     ];
 
     if (type === "quotation") {
@@ -150,10 +153,10 @@ export default async function PrintPage({ params }: { params: Promise<{ type: st
           <ItemsTableFull items={fullItems} />
           <div className="pdf-bottom">
             <div>
-              <AmountWords words={amountInWords(q.total, "en")} />
+              <AmountWords words={amountInWords(q.total, "en", mark)} />
               <BankBlock account={bank} />
             </div>
-            <TotalsBox rows={baseTotals} grandLabel="Total (SAR)" grandVal={sar(q.total)} />
+            <TotalsBox rows={baseTotals} grandLabel={`Total (${mark.code})`} grandVal={money(q.total)} />
           </div>
           <NotesBlock notes={richTextToPlain(q.notes) || null} />
           <SealSignature org={org} />
@@ -170,10 +173,10 @@ export default async function PrintPage({ params }: { params: Promise<{ type: st
           <ItemsTableFull items={fullItems} />
           <div className="pdf-bottom">
             <div>
-              <AmountWords words={amountInWords(so.total, "en")} />
+              <AmountWords words={amountInWords(so.total, "en", mark)} />
               <BankBlock account={bank} />
             </div>
-            <TotalsBox rows={baseTotals} grandLabel="Total (SAR)" grandVal={sar(so.total)} />
+            <TotalsBox rows={baseTotals} grandLabel={`Total (${mark.code})`} grandVal={money(so.total)} />
           </div>
           <NotesBlock notes={richTextToPlain(so.notes) || null} />
           <ApprovalBlock />
@@ -191,10 +194,10 @@ export default async function PrintPage({ params }: { params: Promise<{ type: st
           <ItemsTableFull items={fullItems} />
           <div className="pdf-bottom">
             <div>
-              <AmountWords words={amountInWords(pf.total, "en")} />
+              <AmountWords words={amountInWords(pf.total, "en", mark)} />
               <BankBlock account={bank} />
             </div>
-            <TotalsBox rows={baseTotals} grandLabel="Total (SAR)" grandVal={sar(pf.total)} />
+            <TotalsBox rows={baseTotals} grandLabel={`Total (${mark.code})`} grandVal={money(pf.total)} />
           </div>
           <NotesBlock notes={"Non-posting — for client reference only. This is not a tax invoice."} />
           <SealSignature org={org} />
@@ -205,8 +208,8 @@ export default async function PrintPage({ params }: { params: Promise<{ type: st
       backHref = `/sales/invoices/${id}`;
       const inv = doc as typeof salesInvoicesTable.$inferSelect;
       const paid = Number(inv.paidAmount) > 0;
-      const totalsRows: [string, string][] = paid
-        ? [...baseTotals, ["Total (SAR)", sar(inv.total)], ["Amount Paid", sar(inv.paidAmount)]]
+      const totalsRows: [string, React.ReactNode][] = paid
+        ? [...baseTotals, [`Total (${mark.code})`, money(inv.total)], ["Amount Paid", money(inv.paidAmount)]]
         : baseTotals;
       const due = (Number(inv.total) - Number(inv.paidAmount)).toFixed(2);
 
@@ -238,10 +241,10 @@ export default async function PrintPage({ params }: { params: Promise<{ type: st
           <ItemsTableFull items={fullItems} />
           <div className="pdf-bottom">
             <div>
-              <AmountWords words={amountInWords(inv.total, "en")} />
+              <AmountWords words={amountInWords(inv.total, "en", mark)} />
               <BankBlock account={bank} />
             </div>
-            <TotalsBox rows={totalsRows} grandLabel={paid ? "Due Amount" : "Total (SAR)"} grandVal={sar(paid ? due : inv.total)} />
+            <TotalsBox rows={totalsRows} grandLabel={paid ? "Due Amount" : `Total (${mark.code})`} grandVal={money(paid ? due : inv.total)} />
           </div>
           <NotesBlock notes={richTextToPlain(inv.notes) || null} />
           {qrDataUrl && <QrPanel dataUrl={qrDataUrl} />}
@@ -272,9 +275,9 @@ export default async function PrintPage({ params }: { params: Promise<{ type: st
         <ItemsTableFull items={items.map((it) => ({ name: richTextToPlain(it.description) || "—", vatPercent: it.taxRatePercent, quantity: it.quantity, rate: it.unitCost }))} />
         <div className="pdf-bottom">
           <div>
-            <AmountWords words={amountInWords(po.total, "en")} />
+            <AmountWords words={amountInWords(po.total, "en", mark)} />
           </div>
-          <TotalsBox rows={[["Amount", sar(po.subtotal)], ["VAT", sar(po.taxTotal)], ["Discounts", sar(po.discount)]]} grandLabel="Total Payable" grandVal={sar(po.total)} />
+          <TotalsBox rows={[["Amount", money(po.subtotal)], ["VAT", money(po.taxTotal)], ["Discounts", money(po.discount)]]} grandLabel="Total Payable" grandVal={money(po.total)} />
         </div>
         <NotesBlock notes={richTextToPlain(po.notes) || null} />
         <ApprovalBlock />
@@ -340,8 +343,8 @@ export default async function PrintPage({ params }: { params: Promise<{ type: st
           </div>
           <ItemsTableSimple items={items.map((it) => ({ name: richTextToPlain(it.description) || "—", quantity: it.quantity, rate: it.unitPrice }))} />
           <div className="pdf-bottom">
-            <AmountWords words={amountInWords(cn.total, "en")} />
-            <TotalsBox rows={[["VAT", sar(cn.taxTotal)]]} grandLabel="Credit Total" grandVal={sar(cn.total)} />
+            <AmountWords words={amountInWords(cn.total, "en", mark)} />
+            <TotalsBox rows={[["VAT", money(cn.taxTotal)]]} grandLabel="Credit Total" grandVal={money(cn.total)} />
           </div>
           <SealSignature org={org} showSignature={false} />
           <PdfFooter org={org} />
@@ -373,8 +376,8 @@ export default async function PrintPage({ params }: { params: Promise<{ type: st
           </div>
           <ItemsTableSimple items={items.map((it) => ({ name: richTextToPlain(it.description) || "—", quantity: it.quantity, rate: it.unitCost }))} />
           <div className="pdf-bottom">
-            <AmountWords words={amountInWords(dn.total, "en")} />
-            <TotalsBox rows={[["VAT", sar(dn.taxTotal)]]} grandLabel="Debit Total" grandVal={sar(dn.total)} />
+            <AmountWords words={amountInWords(dn.total, "en", mark)} />
+            <TotalsBox rows={[["VAT", money(dn.taxTotal)]]} grandLabel="Debit Total" grandVal={money(dn.total)} />
           </div>
           <SealSignature org={org} showSignature={false} />
           <PdfFooter org={org} />
@@ -452,14 +455,14 @@ export default async function PrintPage({ params }: { params: Promise<{ type: st
               <tr>
                 <td className="item-name">{desc}</td>
                 <td className="num" style={{ fontWeight: 800, fontSize: 15, whiteSpace: "nowrap" }}>
-                  {sar(payment.amount)}
+                  {money(payment.amount)}
                 </td>
               </tr>
             </tbody>
           </table>
         </div>
         <div className="pdf-bottom single">
-          <AmountWords words={amountInWords(payment.amount, "en")} />
+          <AmountWords words={amountInWords(payment.amount, "en", mark)} />
         </div>
         <SealSignature org={org} showSignature={false} />
         <PdfFooter org={org} extraNote="This is a system-generated receipt — no signature required." />

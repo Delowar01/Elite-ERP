@@ -1,5 +1,26 @@
 import { fmt } from "../../(app)/sales/_shared/totals";
+import type { CurrencyMark } from "@/lib/currency/currencies";
 import type { Org } from "@/db";
+
+// A monetary amount for print/PDF: currency mark + space + number. Shows the symbol when available,
+// otherwise the ISO code (never both). Asset symbols (SAR) render from the locally-stored asset via
+// <img> so the official symbol prints correctly even in PDF renderers that only handle images.
+export function Amount({ mark, value }: { mark: CurrencyMark; value: string | number }) {
+  const num = fmt(Number(value) || 0);
+  const formatted = mark.decimalPlaces === 2
+    ? num
+    : (Number(value) || 0).toLocaleString(undefined, { minimumFractionDigits: mark.decimalPlaces, maximumFractionDigits: mark.decimalPlaces });
+  if (mark.type === "asset") {
+    return (
+      <span className="pdf-amount">
+        {/* eslint-disable-next-line @next/next/no-img-element -- static local currency asset in a print/PDF document; next/image is unsuitable here */}
+        <img src={mark.value} alt={mark.fallback} style={{ height: "0.82em", width: "auto", verticalAlign: "-0.05em" }} /> {formatted}
+      </span>
+    );
+  }
+  const sym = mark.value.trim() || mark.fallback;
+  return <span className="pdf-amount">{sym} {formatted}</span>;
+}
 
 // Server-rendered building blocks for the print/PDF documents, mirroring the approved
 // PDF-templates mockup's helpers (pdf_header / party / items_table_* / totals_box / …)
@@ -206,7 +227,7 @@ export function ItemsTableQty({ items }: { items: { name: string; quantity: stri
   );
 }
 
-export function TotalsBox({ rows, grandLabel, grandVal }: { rows: [string, string][]; grandLabel: string; grandVal: string }) {
+export function TotalsBox({ rows, grandLabel, grandVal }: { rows: [string, React.ReactNode][]; grandLabel: string; grandVal: React.ReactNode }) {
   return (
     <div className="totals-box">
       {rows.map(([k, v], i) => (

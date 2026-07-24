@@ -120,16 +120,31 @@ function integerToWordsAr(n: number): string {
   return parts.join(" و");
 }
 
-export function amountInWords(sar: string | number, locale: "en" | "ar"): string {
-  const value = Number(sar) || 0;
+// Amount in words for the document's currency. Defaults to Saudi Riyal (its subunit is the Halala)
+// to preserve the original SAR wording exactly; other currencies use their name + a generic
+// hundredths subunit ("and NN/100"), since subunit names vary per currency.
+export function amountInWords(
+  amount: string | number,
+  locale: "en" | "ar",
+  currency: { code: string; name: string } = { code: "SAR", name: "Saudi Riyal" },
+): string {
+  const value = Number(amount) || 0;
   const whole = Math.floor(value);
-  const halalas = Math.round((value - whole) * 100);
+  const frac = Math.round((value - whole) * 100);
+  const isSar = currency.code.toUpperCase() === "SAR";
   if (locale === "ar") {
     const wholeWords = integerToWordsAr(whole);
-    const base = `فقط ${wholeWords} ريال سعودي`;
-    return halalas > 0 ? `${base} و${integerToWordsAr(halalas)} هللة لا غير` : `${base} لا غير`;
+    const unit = isSar ? "ريال سعودي" : currency.name;
+    const base = `فقط ${wholeWords} ${unit}`;
+    if (frac <= 0) return `${base} لا غير`;
+    return isSar
+      ? `${base} و${integerToWordsAr(frac)} هللة لا غير`
+      : `${base} و${integerToWordsAr(frac)}/100 لا غير`;
   }
   const wholeWords = integerToWordsEn(whole);
-  const base = `${wholeWords} Saudi Riyal`;
-  return halalas > 0 ? `${base} and ${integerToWordsEn(halalas)} Halalas Only` : `${base} Only`;
+  const base = `${wholeWords} ${isSar ? "Saudi Riyal" : currency.name}`;
+  if (frac <= 0) return `${base} Only`;
+  return isSar
+    ? `${base} and ${integerToWordsEn(frac)} Halalas Only`
+    : `${base} and ${integerToWordsEn(frac)}/100 Only`;
 }

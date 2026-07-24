@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { t, type Locale } from "@/lib/i18n/dict";
+import { Money } from "../../sales/_shared/money";
 import { processPayrollAction } from "./actions";
 
 export type PayrollLine = {
@@ -83,19 +84,19 @@ export function PayrollClient({
             </div>
             <div className="payslip-line">
               <span>{t(locale, "Basic salary")}</span>
-              <span className="mono">SAR {fmt(selected.basic)}</span>
+              <span className="mono"><Money amount={selected.basic} /></span>
             </div>
             <div className="payslip-line">
               <span>{t(locale, "Allowances")}</span>
-              <span className="mono">SAR {fmt(selected.allowances)}</span>
+              <span className="mono"><Money amount={selected.allowances} /></span>
             </div>
             <div className="payslip-line">
               <span>{t(locale, "Deductions")}</span>
-              <span className="mono">− SAR {fmt(selected.deductions)}</span>
+              <span className="mono">− <Money amount={selected.deductions} /></span>
             </div>
             <div className="payslip-line final">
               <span>{t(locale, "Net pay")}</span>
-              <span className="mono">SAR {fmt(selected.net)}</span>
+              <span className="mono"><Money amount={selected.net} /></span>
             </div>
           </div>
         )}

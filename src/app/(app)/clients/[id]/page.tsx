@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { ClientForm } from "../client-form";
 import { updateClientAction } from "../actions";
 import { ClientRecordActions } from "../client-record-actions";
+import { Money } from "../../sales/_shared/money";
 
 export default async function ClientDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await requireSession();
@@ -63,7 +64,7 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
                 {invoices.map((inv) => (
                   <div key={inv.id} className="flex justify-between text-[13px] border-b border-line pb-2 last:border-0">
                     <span className="font-mono">{inv.invoiceNumber}</span>
-                    <span className="text-ink-muted">{inv.total} SAR</span>
+                    <span className="text-ink-muted"><Money amount={inv.total} /></span>
                   </div>
                 ))}
               </div>

@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { VendorForm } from "../vendor-form";
 import { updateVendorAction } from "../actions";
 import { VendorRecordActions } from "../vendor-record-actions";
+import { Money } from "../../../sales/_shared/money";
 
 export default async function VendorDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await requireSession();
@@ -68,7 +69,7 @@ export default async function VendorDetailPage({ params }: { params: Promise<{ i
                     className="flex justify-between text-[13px] border-b border-line pb-2 last:border-0 hover:text-brand-orange"
                   >
                     <span className="font-mono">{po.poNumber}</span>
-                    <span className="text-ink-muted">{po.total} SAR</span>
+                    <span className="text-ink-muted"><Money amount={po.total} /></span>
                   </Link>
                 ))}
               </div>

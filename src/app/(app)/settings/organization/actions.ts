@@ -6,6 +6,7 @@ import { db, orgsTable, bankAccountsTable } from "@/db";
 import { requireRole } from "@/lib/session";
 import { logActivity } from "@/lib/activity";
 import { validateUpload, storeBlob, deleteStoredBlob, IMAGE_MAX_BYTES } from "@/lib/storage/blob-storage";
+import { isValidCurrencyCode } from "@/lib/currency/currencies";
 
 export type ActionResult = { error?: string };
 
@@ -16,6 +17,10 @@ export async function updateBusinessDetailsAction(formData: FormData): Promise<A
   const name = String(formData.get("name") ?? "").trim();
   if (!name) return { error: "Business name is required." };
 
+  // Currency must be a known ISO 4217 code from the shared catalog.
+  const currency = String(formData.get("currency") ?? "SAR").trim().toUpperCase() || "SAR";
+  if (!isValidCurrencyCode(currency)) return { error: "Choose a valid currency." };
+
   await db
     .update(orgsTable)
     .set({
@@ -25,7 +30,7 @@ export async function updateBusinessDetailsAction(formData: FormData): Promise<A
       phone: String(formData.get("phone") ?? "").trim() || null,
       taxId: String(formData.get("taxId") ?? "").trim() || null,
       vatNumber: String(formData.get("vatNumber") ?? "").trim() || null,
-      currency: String(formData.get("currency") ?? "SAR").trim() || "SAR",
+      currency,
       country: String(formData.get("country") ?? "").trim() || null,
       defaultLanguage: formData.get("defaultLanguage") === "ar" ? "ar" : "en",
       updatedAt: new Date(),

@@ -7,10 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { latestStructures } from "./queries";
 import { PayrollClient, type PayrollLine } from "./payroll-client";
-
-function fmt(n: number): string {
-  return n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
+import { Money } from "../../sales/_shared/money";
 
 export default async function PayrollPage() {
   const session = await requireRole("owner", "admin");
@@ -116,16 +113,16 @@ export default async function PayrollPage() {
         </div>
         <div className="card" style={{ padding: "16px 18px" }}>
           <div style={{ fontSize: 11.5, color: "var(--ink-muted)" }}>{t(locale, "Gross pay")}</div>
-          <div style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 20, marginTop: 4 }}>SAR {fmt(grossTotal)}</div>
+          <div style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 20, marginTop: 4 }}><Money amount={grossTotal} /></div>
         </div>
         <div className="card" style={{ padding: "16px 18px" }}>
           <div style={{ fontSize: 11.5, color: "var(--ink-muted)" }}>{t(locale, "Deductions")}</div>
-          <div style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 20, marginTop: 4 }}>SAR {fmt(deductionsTotal)}</div>
+          <div style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 20, marginTop: 4 }}><Money amount={deductionsTotal} /></div>
         </div>
         <div className="card" style={{ padding: "16px 18px" }}>
           <div style={{ fontSize: 11.5, color: "var(--ink-muted)" }}>{t(locale, "Net pay")}</div>
           <div style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 20, marginTop: 4, color: "var(--brand-orange)" }}>
-            SAR {fmt(netTotal)}
+            <Money amount={netTotal} />
           </div>
         </div>
       </div>
@@ -167,7 +164,7 @@ export default async function PayrollPage() {
                   <TableCell>
                     <Badge variant={r.status === "processed" ? "success" : "neutral"}>{t(locale, r.status)}</Badge>
                   </TableCell>
-                  <TableCell className="text-right font-mono">SAR {fmt(Number(r.netTotal))}</TableCell>
+                  <TableCell className="text-right font-mono"><Money amount={Number(r.netTotal)} /></TableCell>
                 </TableRow>
               ))}
             </TableBody>

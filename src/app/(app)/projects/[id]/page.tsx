@@ -187,7 +187,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
         <div className="card" style={{ padding: "16px 18px" }}>
           <div style={{ fontSize: 11.5, color: "var(--ink-muted)" }}>{t(locale, "Invoiced")}</div>
           <div style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 20, marginTop: 4, color: "var(--accent-green)" }}>
-            SAR {fmt(invoiced)}
+            <Money amount={invoiced} />
           </div>
         </div>
         <div className="card" style={{ padding: "16px 18px" }}>
@@ -195,7 +195,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
             {t(locale, "Labor cost")} · {laborHours.toFixed(1)} {t(locale, "Hours").toLowerCase()}
           </div>
           <div style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 20, marginTop: 4, color: "var(--warning)" }}>
-            SAR {fmt(laborCost)}
+            <Money amount={laborCost} />
           </div>
         </div>
         <div className="card" style={{ padding: "16px 18px" }}>
@@ -209,7 +209,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
               color: margin >= 0 ? "var(--accent-green)" : "var(--accent-red)",
             }}
           >
-            SAR {fmt(margin)}
+            <Money amount={margin} />
           </div>
         </div>
       </div>

@@ -4,6 +4,8 @@ import { getTheme } from "@/lib/theme";
 import { getNotifications } from "@/lib/notifications";
 import { getFavorites } from "@/lib/favorites";
 import { AppShell } from "@/components/layout/app-shell";
+import { CurrencyProvider } from "@/components/ui/currency-mark";
+import { resolveCurrencyMark } from "@/lib/currency/currencies";
 import "./mockup-parity.css";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -26,7 +28,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       unreadCount={notifications.unreadCount}
       favorites={favorites}
     >
-      {children}
+      <CurrencyProvider mark={resolveCurrencyMark(session.orgCurrency)}>{children}</CurrencyProvider>
     </AppShell>
   );
 }

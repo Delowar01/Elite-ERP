@@ -11,6 +11,8 @@ import { FormField } from "@/components/ui/form-field";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { CropImageUpload } from "@/components/upload/crop-image-upload";
 import { CROP_LOGO } from "@/components/upload/crop-configs";
+import { CurrencyMark } from "@/components/ui/currency-mark";
+import { CURRENCIES, resolveCurrencyMark } from "@/lib/currency/currencies";
 import { t, type Locale } from "@/lib/i18n/dict";
 import type { Org } from "@/db";
 import { updateBusinessDetailsAction, updateColorThemeAction, uploadLogoAction } from "./actions";
@@ -19,10 +21,12 @@ export function BusinessDetailsForm({ locale, org }: { locale: Locale; org: Org 
   const [pending, startTransition] = useTransition();
   const [country, setCountry] = useState(org.country ?? "Saudi Arabia");
   const [language, setLanguage] = useState(org.defaultLanguage);
+  const [currency, setCurrency] = useState(org.currency);
 
   function submit(formData: FormData) {
     formData.set("country", country);
     formData.set("defaultLanguage", language);
+    formData.set("currency", currency);
     startTransition(async () => {
       const result = await updateBusinessDetailsAction(formData);
       if (result.error) toast.error(result.error);
@@ -62,7 +66,23 @@ export function BusinessDetailsForm({ locale, org }: { locale: Locale; org: Org 
           <Input id="org-phone" name="phone" defaultValue={org.phone ?? ""} />
         </FormField>
         <FormField label={t(locale, "Currency")} htmlFor="org-currency">
-          <Input id="org-currency" name="currency" defaultValue={org.currency} className="font-mono" />
+          <Select value={currency} onValueChange={setCurrency}>
+            <SelectTrigger id="org-currency">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {CURRENCIES.map((cur) => (
+                <SelectItem key={cur.currencyCode} value={cur.currencyCode}>
+                  <span className="inline-flex items-center gap-1.5">
+                    <span>{cur.countryName} — {cur.currencyCode}</span>
+                    <span className="text-ink-faint">
+                      — <CurrencyMark mark={resolveCurrencyMark(cur.currencyCode)} />
+                    </span>
+                  </span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </FormField>
         <FormField label={t(locale, "Tax ID")} htmlFor="org-tax-id">
           <Input id="org-tax-id" name="taxId" defaultValue={org.taxId ?? ""} className="font-mono" />
