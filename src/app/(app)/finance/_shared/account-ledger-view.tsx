@@ -6,6 +6,7 @@ import type { LedgerRow } from "@/lib/accounting";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Money } from "../../sales/_shared/money";
+import { formatMoneyNumber } from "@/lib/currency/currencies";
 import { AddAccountDialog } from "./add-account-dialog";
 
 const TYPE_ORDER = ["asset", "liability", "equity", "revenue", "expense"] as const;
@@ -88,7 +89,7 @@ export function AccountLedgerView({
                 <div className="text-[11.5px] text-ink-muted mt-0.5">{t(locale, NORMAL_BALANCE_CAPTION[selectedAccount.type as (typeof TYPE_ORDER)[number]])}</div>
               </div>
               <span className="org-pill">
-                {t(locale, "Balance")}: <Money amount={balances.get(selectedAccount.id) ?? 0} />
+                {t(locale, "Balance")}: <Money amount={balances.get(selectedAccount.id) ?? 0} context="summary" />
               </span>
             </div>
             {ledgerRows.length === 0 ? (
@@ -115,9 +116,9 @@ export function AccountLedgerView({
                         <TableCell>
                           <Badge variant={badge.variant}>{t(locale, badge.label)}</Badge>
                         </TableCell>
-                        <TableCell className="num">{row.debit ? row.debit.toLocaleString(undefined, { minimumFractionDigits: 2 }) : "—"}</TableCell>
-                        <TableCell className="num">{row.credit ? row.credit.toLocaleString(undefined, { minimumFractionDigits: 2 }) : "—"}</TableCell>
-                        <TableCell className="num">{row.runningBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</TableCell>
+                        <TableCell className="num">{row.debit ? formatMoneyNumber(row.debit, "summary") : "—"}</TableCell>
+                        <TableCell className="num">{row.credit ? formatMoneyNumber(row.credit, "summary") : "—"}</TableCell>
+                        <TableCell className="num">{formatMoneyNumber(row.runningBalance, "summary")}</TableCell>
                       </TableRow>
                     );
                   })}

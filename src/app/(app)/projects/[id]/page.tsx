@@ -20,7 +20,7 @@ import { tenantScope } from "@/lib/tenant";
 import { t } from "@/lib/i18n/dict";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
-import { fmt } from "../../sales/_shared/totals";
+import { resolveCurrencyMark, displayCurrency, formatMoneyNumber } from "@/lib/currency/currencies";
 import { KanbanBoard } from "./kanban-board";
 import { LogTimeDialog } from "./log-time-dialog";
 import { ProjectStatusSelect } from "./project-status-select";
@@ -144,8 +144,9 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
     ...linkedInvoices.map((d) => ({ ...d, type: "Invoice", href: `/sales/invoices/${d.id}` })),
   ].sort((a, b) => (a.date < b.date ? 1 : -1));
 
+  const currencyMark = resolveCurrencyMark(session.orgCurrency);
   const pillParts = [t(locale, project.status)];
-  if (project.budget) pillParts.push(`SAR ${fmt(project.budget)} ${t(locale, "budget")}`);
+  if (project.budget) pillParts.push(`${displayCurrency(currencyMark)} ${formatMoneyNumber(project.budget, "summary")} ${t(locale, "budget")}`);
 
   return (
     <div className="max-w-6xl mx-auto">
@@ -181,13 +182,13 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
         <div className="card" style={{ padding: "16px 18px" }}>
           <div style={{ fontSize: 11.5, color: "var(--ink-muted)" }}>{t(locale, "Budget")}</div>
           <div style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 20, marginTop: 4 }}>
-            {project.budget ? `SAR ${fmt(project.budget)}` : "—"}
+            {project.budget ? <Money amount={project.budget} context="summary" /> : "—"}
           </div>
         </div>
         <div className="card" style={{ padding: "16px 18px" }}>
           <div style={{ fontSize: 11.5, color: "var(--ink-muted)" }}>{t(locale, "Invoiced")}</div>
           <div style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 20, marginTop: 4, color: "var(--accent-green)" }}>
-            <Money amount={invoiced} />
+            <Money amount={invoiced} context="summary" />
           </div>
         </div>
         <div className="card" style={{ padding: "16px 18px" }}>
@@ -195,7 +196,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
             {t(locale, "Labor cost")} · {laborHours.toFixed(1)} {t(locale, "Hours").toLowerCase()}
           </div>
           <div style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 20, marginTop: 4, color: "var(--warning)" }}>
-            <Money amount={laborCost} />
+            <Money amount={laborCost} context="summary" />
           </div>
         </div>
         <div className="card" style={{ padding: "16px 18px" }}>
@@ -209,7 +210,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
               color: margin >= 0 ? "var(--accent-green)" : "var(--accent-red)",
             }}
           >
-            <Money amount={margin} />
+            <Money amount={margin} context="summary" />
           </div>
         </div>
       </div>

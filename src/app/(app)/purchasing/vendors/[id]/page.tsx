@@ -69,7 +69,7 @@ export default async function VendorDetailPage({ params }: { params: Promise<{ i
                     className="flex justify-between text-[13px] border-b border-line pb-2 last:border-0 hover:text-brand-orange"
                   >
                     <span className="font-mono">{po.poNumber}</span>
-                    <span className="text-ink-muted"><Money amount={po.total} /></span>
+                    <span className="text-ink-muted"><Money amount={po.total} context="summary" /></span>
                   </Link>
                 ))}
               </div>

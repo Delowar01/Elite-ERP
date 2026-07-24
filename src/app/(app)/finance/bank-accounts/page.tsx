@@ -70,7 +70,7 @@ export default async function BankAccountsPage() {
                   <Badge variant={ba.isActive ? "success" : "neutral"}>{ba.isActive ? t(locale, "Active") : t(locale, "Inactive")}</Badge>
                 </div>
                 <div style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 22, marginTop: 14 }}>
-                  <Money amount={total} />
+                  <Money amount={total} context="summary" />
                 </div>
               </div>
             );
@@ -104,7 +104,7 @@ export default async function BankAccountsPage() {
                 <TableCell>{p.reference ?? "—"}</TableCell>
                 <TableCell>{p.bankAccountName}</TableCell>
                 <TableCell className="num">
-                  <Money amount={p.amount} />
+                  <Money amount={p.amount} context="summary" />
                 </TableCell>
               </TableRow>
             ))}

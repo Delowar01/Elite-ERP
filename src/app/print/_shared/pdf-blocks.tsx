@@ -1,15 +1,13 @@
 import { fmt } from "../../(app)/sales/_shared/totals";
-import type { CurrencyMark } from "@/lib/currency/currencies";
+import { formatMoneyNumber, type CurrencyMark } from "@/lib/currency/currencies";
 import type { Org } from "@/db";
 
 // A monetary amount for print/PDF: currency mark + space + number. Shows the symbol when available,
 // otherwise the ISO code (never both). Asset symbols (SAR) render from the locally-stored asset via
 // <img> so the official symbol prints correctly even in PDF renderers that only handle images.
+// Print/PDF is always a document context → always 2 decimals, regardless of the currency.
 export function Amount({ mark, value }: { mark: CurrencyMark; value: string | number }) {
-  const num = fmt(Number(value) || 0);
-  const formatted = mark.decimalPlaces === 2
-    ? num
-    : (Number(value) || 0).toLocaleString(undefined, { minimumFractionDigits: mark.decimalPlaces, maximumFractionDigits: mark.decimalPlaces });
+  const formatted = formatMoneyNumber(value, "document");
   if (mark.type === "asset") {
     return (
       <span className="pdf-amount">

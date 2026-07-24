@@ -13,7 +13,7 @@ function Line({ label, value, final, positive }: { label: string; value: number;
     <div className={final ? "payslip-line final" : "payslip-line"}>
       <span>{label}</span>
       <span className={positive && final ? "mono text-success" : "mono"}>
-        <Money amount={value} />
+        <Money amount={value} context="summary" />
       </span>
     </div>
   );
@@ -128,8 +128,8 @@ export default async function ReportsPage() {
                   <TableRow key={a.id}>
                     <TableCell className="mono">{a.code}</TableCell>
                     <TableCell>{a.name}</TableCell>
-                    <TableCell className="num">{debit ? <Money amount={debit} /> : "—"}</TableCell>
-                    <TableCell className="num">{credit ? <Money amount={credit} /> : "—"}</TableCell>
+                    <TableCell className="num">{debit ? <Money amount={debit} context="summary" /> : "—"}</TableCell>
+                    <TableCell className="num">{credit ? <Money amount={credit} context="summary" /> : "—"}</TableCell>
                   </TableRow>
                 );
               })}
@@ -139,13 +139,13 @@ export default async function ReportsPage() {
             <div className="card tb-tile">
               <div className="l">{t(locale, "Total debits")}</div>
               <div className="v">
-                <Money amount={totalDebit} />
+                <Money amount={totalDebit} context="summary" />
               </div>
             </div>
             <div className="card tb-tile">
               <div className="l">{t(locale, "Total credits")}</div>
               <div className="v">
-                <Money amount={totalCredit} />
+                <Money amount={totalCredit} context="summary" />
               </div>
             </div>
             <div className={tbBalanced ? "card tb-tile balanced" : "card tb-tile"}>

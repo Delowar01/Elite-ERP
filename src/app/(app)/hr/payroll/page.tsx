@@ -113,16 +113,16 @@ export default async function PayrollPage() {
         </div>
         <div className="card" style={{ padding: "16px 18px" }}>
           <div style={{ fontSize: 11.5, color: "var(--ink-muted)" }}>{t(locale, "Gross pay")}</div>
-          <div style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 20, marginTop: 4 }}><Money amount={grossTotal} /></div>
+          <div style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 20, marginTop: 4 }}><Money amount={grossTotal} context="summary" /></div>
         </div>
         <div className="card" style={{ padding: "16px 18px" }}>
           <div style={{ fontSize: 11.5, color: "var(--ink-muted)" }}>{t(locale, "Deductions")}</div>
-          <div style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 20, marginTop: 4 }}><Money amount={deductionsTotal} /></div>
+          <div style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 20, marginTop: 4 }}><Money amount={deductionsTotal} context="summary" /></div>
         </div>
         <div className="card" style={{ padding: "16px 18px" }}>
           <div style={{ fontSize: 11.5, color: "var(--ink-muted)" }}>{t(locale, "Net pay")}</div>
           <div style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 20, marginTop: 4, color: "var(--brand-orange)" }}>
-            <Money amount={netTotal} />
+            <Money amount={netTotal} context="summary" />
           </div>
         </div>
       </div>
@@ -164,7 +164,7 @@ export default async function PayrollPage() {
                   <TableCell>
                     <Badge variant={r.status === "processed" ? "success" : "neutral"}>{t(locale, r.status)}</Badge>
                   </TableCell>
-                  <TableCell className="text-right font-mono"><Money amount={Number(r.netTotal)} /></TableCell>
+                  <TableCell className="text-right font-mono"><Money amount={Number(r.netTotal)} context="summary" /></TableCell>
                 </TableRow>
               ))}
             </TableBody>

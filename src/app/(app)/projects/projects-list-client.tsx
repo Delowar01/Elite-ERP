@@ -102,7 +102,7 @@ export function ProjectsListClient({ locale, rows }: { locale: Locale; rows: Pro
                   <TableCell className="font-mono text-xs">{r.startDate ?? "—"}</TableCell>
                   <TableCell className="font-mono text-xs">{r.endDate ?? "—"}</TableCell>
                   <TableCell className="text-right font-mono">
-                    {r.budget ? <Money amount={r.budget} /> : <span className="text-ink-faint">—</span>}
+                    {r.budget ? <Money amount={r.budget} context="summary" /> : <span className="text-ink-faint">—</span>}
                   </TableCell>
                   <TableCell className="font-mono text-xs">{r.taskCount}</TableCell>
                   <TableCell>

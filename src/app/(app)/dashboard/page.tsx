@@ -8,6 +8,7 @@ import { getDashboardPrefs } from "@/lib/user-prefs";
 import { isDashboardRange, resolveRange, RANGE_LABELS, type DashboardRange } from "@/lib/dashboard-range";
 import type { DashboardWidgetKey } from "@/lib/dashboard-layout";
 import { Money } from "../sales/_shared/money";
+import { formatMoneyNumber } from "@/lib/currency/currencies";
 import { ComboChart, Donut, Sparkline } from "./_shared/charts";
 import { KpiCard } from "./_shared/kpi-card";
 import { DashboardToolbar } from "./dashboard-toolbar";
@@ -21,8 +22,9 @@ function DashWidget({ col, row, children }: { col: number; row: number; children
   );
 }
 
+// Dashboard KPI figures are a summary context → 0 decimals (rounded), matching <Money context="summary">.
 function fmt(n: number) {
-  return n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return formatMoneyNumber(n, "summary");
 }
 
 export default async function DashboardPage({ searchParams }: { searchParams: Promise<{ range?: string }> }) {
@@ -95,7 +97,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
             </div>
             <div className="fin-profit-label">{t(locale, "Total Profit")} · {rangeLabel}</div>
             <div style={{ display: "flex", alignItems: "baseline", gap: 14 }}>
-              <div className="fin-profit-value"><Money amount={totalProfit} /></div>
+              <div className="fin-profit-value"><Money amount={totalProfit} context="summary" /></div>
             </div>
             <div className="fin-legend" style={{ marginTop: 14 }}>
               <span><span className="dot" style={{ background: "var(--brand-orange)" }} />{t(locale, "Revenue")}</span>
@@ -111,15 +113,15 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
             <div style={{ width: "100%", marginTop: 16 }}>
               <div className="donut-legend-row">
                 <span className="lbl"><span className="dot" style={{ background: "var(--brand-orange)" }} />{t(locale, "Total Revenue")}</span>
-                <span className="val"><Money amount={kpis.totalSalesThisMonth} /></span>
+                <span className="val"><Money amount={kpis.totalSalesThisMonth} context="summary" /></span>
               </div>
               <div className="donut-legend-row">
                 <span className="lbl"><span className="dot" style={{ background: "var(--chart-navy)" }} />{t(locale, "Total Expenses")}</span>
-                <span className="val"><Money amount={0} /></span>
+                <span className="val"><Money amount={0} context="summary" /></span>
               </div>
               <div className="donut-legend-row" style={{ borderTop: "1px solid var(--line)", marginTop: 4, paddingTop: 10 }}>
                 <span className="lbl" style={{ fontWeight: 600, color: "var(--ink)" }}>{t(locale, "Total Profit")}</span>
-                <span className="val" style={{ color: "var(--accent-green)" }}><Money amount={totalProfit} /></span>
+                <span className="val" style={{ color: "var(--accent-green)" }}><Money amount={totalProfit} context="summary" /></span>
               </div>
             </div>
           </div>
@@ -178,15 +180,15 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           <h4>{t(locale, "Cash Flow")} · {rangeLabel}</h4>
           <div className="bc-stat-row">
             <span className="lbl">{t(locale, "Cash Inflow")}</span>
-            <span className="val" style={{ color: "var(--accent-green)" }}><Money amount={cashFlow.inflow} /></span>
+            <span className="val" style={{ color: "var(--accent-green)" }}><Money amount={cashFlow.inflow} context="summary" /></span>
           </div>
           <div className="bc-stat-row">
             <span className="lbl">{t(locale, "Cash Outflow")}</span>
-            <span className="val" style={{ color: "var(--accent-red)" }}><Money amount={cashFlow.outflow} /></span>
+            <span className="val" style={{ color: "var(--accent-red)" }}><Money amount={cashFlow.outflow} context="summary" /></span>
           </div>
           <div className="bc-stat-row">
             <span className="lbl">{t(locale, "Net Cash Flow")}</span>
-            <span className="val"><Money amount={cashFlow.net} /></span>
+            <span className="val"><Money amount={cashFlow.net} context="summary" /></span>
           </div>
           <div style={{ marginTop: 12 }}>
             <Sparkline values={[cashFlow.inflow || 1, cashFlow.outflow || 1, Math.abs(cashFlow.net) || 1]} color="var(--accent-green)" w={180} h={46} />

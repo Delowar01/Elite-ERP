@@ -262,3 +262,20 @@ export function displayCurrency(mark: CurrencyMark): string {
   if (mark.type === "text") return mark.value.trim() || mark.fallback;
   return mark.fallback;
 }
+
+// Elite ERP uses a context-based decimal rule (NOT the currency's ISO minor units):
+//   - "document" — formal commercial/financial documents → ALWAYS 2 decimals (even JPY/BHD/KWD).
+//   - "summary"  — dashboards, reports, analytics, overview cards → ALWAYS 0 decimals (rounded).
+// This is display formatting only; the stored value keeps its two-decimal precision.
+export type MoneyDisplayContext = "document" | "summary";
+
+export function moneyDecimals(context: MoneyDisplayContext): number {
+  return context === "summary" ? 0 : 2;
+}
+
+// The single shared number formatter. Rounds (never truncates) via toLocaleString.
+export function formatMoneyNumber(amount: string | number, context: MoneyDisplayContext = "document"): string {
+  const n = Number(amount) || 0;
+  const d = moneyDecimals(context);
+  return n.toLocaleString(undefined, { minimumFractionDigits: d, maximumFractionDigits: d });
+}

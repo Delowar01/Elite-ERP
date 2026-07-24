@@ -59,7 +59,7 @@ export default async function JournalPage() {
                 <TableCell className="mono">{e.entryDate}</TableCell>
                 <TableCell>{e.memo}</TableCell>
                 <TableCell className="num">
-                  <Money amount={e.total} />
+                  <Money amount={e.total} context="summary" />
                 </TableCell>
               </TableRow>
             ))}

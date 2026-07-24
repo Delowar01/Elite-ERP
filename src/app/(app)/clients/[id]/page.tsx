@@ -64,7 +64,7 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
                 {invoices.map((inv) => (
                   <div key={inv.id} className="flex justify-between text-[13px] border-b border-line pb-2 last:border-0">
                     <span className="font-mono">{inv.invoiceNumber}</span>
-                    <span className="text-ink-muted"><Money amount={inv.total} /></span>
+                    <span className="text-ink-muted"><Money amount={inv.total} context="summary" /></span>
                   </div>
                 ))}
               </div>
