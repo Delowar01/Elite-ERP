@@ -7,6 +7,7 @@ import { requireRole } from "@/lib/session";
 import { logActivity } from "@/lib/activity";
 import { validateUpload, storeBlob, deleteStoredBlob, IMAGE_MAX_BYTES } from "@/lib/storage/blob-storage";
 import { isValidCurrencyCode } from "@/lib/currency/currencies";
+import { isColorThemeMode } from "@/lib/brand-theme";
 
 export type ActionResult = { error?: string };
 
@@ -47,14 +48,20 @@ export async function updateBusinessDetailsAction(formData: FormData): Promise<A
   return {};
 }
 
-export async function updateColorThemeAction(primaryColor: string, accentColor: string): Promise<ActionResult> {
+export async function updateColorThemeAction(
+  mode: string,
+  primaryColor: string,
+  accentColor: string,
+): Promise<ActionResult> {
   const session = await requireRole("owner", "admin");
+  if (!isColorThemeMode(mode)) return { error: "Choose a valid theme mode." };
   const hex = /^#[0-9a-fA-F]{6}$/;
+  // Always validate + persist both colors so they are kept even in gradient mode (restored on switch).
   if (!hex.test(primaryColor) || !hex.test(accentColor)) return { error: "Colors must be valid hex codes (e.g. #1B1B4E)." };
 
   await db
     .update(orgsTable)
-    .set({ primaryColor, accentColor, updatedAt: new Date() })
+    .set({ colorThemeMode: mode, primaryColor, accentColor, updatedAt: new Date() })
     .where(eq(orgsTable.id, session.orgId));
   revalidatePath(PATH);
   revalidatePath("/", "layout");

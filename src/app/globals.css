@@ -7,6 +7,14 @@
   --brand-orange-light: #f5a25c;
   --chart-navy: #1b1b4e;
 
+  /* Color Theme (Business Settings). Defaults render the Elite gradient; Single mode overrides
+     these in the app shell. Foregrounds are auto-contrasted so button text is always readable. */
+  --brand-primary: var(--brand-orange);
+  --brand-primary-foreground: #ffffff;
+  --brand-accent: var(--brand-orange);
+  --brand-accent-foreground: #ffffff;
+  --brand-gradient: linear-gradient(135deg, var(--brand-orange-light), var(--brand-orange));
+
   --canvas: #f3f1ec;
   --surface: #ffffff;
   --surface-raised: #ffffff;

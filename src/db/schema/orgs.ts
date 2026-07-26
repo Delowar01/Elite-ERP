@@ -17,6 +17,8 @@ export const orgsTable = pgTable("orgs", {
 
   // Company branding (Business Settings -> Logo / Color Theme)
   logoUrl: text("logo_url"),
+  // "gradient" (Elite default) or "single" (solid primary + accent). Existing/new orgs default to gradient.
+  colorThemeMode: text("color_theme_mode").notNull().default("gradient"),
   primaryColor: text("primary_color").notNull().default("#1B1B4E"),
   accentColor: text("accent_color").notNull().default("#E87722"),
 

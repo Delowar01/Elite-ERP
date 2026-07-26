@@ -22,6 +22,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       orgLogoUrl={session.orgLogoUrl}
       orgPrimaryColor={session.orgPrimaryColor}
       orgAccentColor={session.orgAccentColor}
+      orgColorThemeMode={session.orgColorThemeMode}
       locale={locale}
       theme={theme}
       notifications={notifications.items}

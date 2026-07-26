@@ -19,6 +19,7 @@ export type Session = {
   orgLogoUrl: string | null;
   orgPrimaryColor: string;
   orgAccentColor: string;
+  orgColorThemeMode: string;
   orgCurrency: string;
   jti?: string;
 };
@@ -45,6 +46,7 @@ const lookupSessionByToken = cache(async (token: string): Promise<Session | null
       orgLogoUrl: orgsTable.logoUrl,
       orgPrimaryColor: orgsTable.primaryColor,
       orgAccentColor: orgsTable.accentColor,
+      orgColorThemeMode: orgsTable.colorThemeMode,
       orgCurrency: orgsTable.currency,
     })
     .from(usersTable)

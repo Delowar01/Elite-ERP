@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { LogOut, Settings } from "lucide-react";
 import { LogoMark } from "@/components/brand/logo-mark";
 import { NAV_GROUPS } from "./nav-config";
+import { buildThemeOverrideCss, isColorThemeMode } from "@/lib/brand-theme";
 import { CommandPalette } from "./command-palette";
 import { NotificationsMenu } from "./notifications-menu";
 import { ThemeToggle } from "./theme-toggle";
@@ -68,14 +69,13 @@ type SessionUser = {
   role: "owner" | "admin" | "staff";
 };
 
-const HEX_COLOR = /^#[0-9a-fA-F]{6}$/;
-
 export function AppShell({
   user,
   orgName,
   orgLogoUrl,
   orgPrimaryColor,
   orgAccentColor,
+  orgColorThemeMode,
   locale,
   theme,
   notifications,
@@ -88,6 +88,7 @@ export function AppShell({
   orgLogoUrl: string | null;
   orgPrimaryColor: string;
   orgAccentColor: string;
+  orgColorThemeMode: string;
   locale: Locale;
   theme: Theme | null;
   notifications: NotificationItem[];
@@ -108,16 +109,14 @@ export function AppShell({
   );
   const pageTitle = t(locale, activeItem?.label ?? "Dashboard");
 
-  // Per-org white-labeling: override the brand tokens everywhere they're used, in both themes —
-  // !important because the built-in dark-mode block redefines --brand-orange with higher
-  // selector specificity ([data-theme="dark"]) than a plain :root override could beat otherwise.
-  const navy = HEX_COLOR.test(orgPrimaryColor) ? orgPrimaryColor : "#1B1B4E";
-  const orange = HEX_COLOR.test(orgAccentColor) ? orgAccentColor : "#E87722";
-  const themeOverrideCss = `
-    :root { --brand-navy: ${navy} !important; --brand-orange: ${orange} !important; }
-    :root[data-theme="dark"] { --brand-orange: ${orange} !important; }
-    @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --brand-orange: ${orange} !important; } }
-  `;
+  // Per-org Color Theme. Gradient mode → no override (the built-in Elite gradient renders as-is).
+  // Single mode → flatten the main gradient to a solid Primary + route secondary highlights to
+  // Accent, with auto-contrast foregrounds. Injected server-side so colors are right before paint.
+  const themeOverrideCss = buildThemeOverrideCss(
+    isColorThemeMode(orgColorThemeMode) ? orgColorThemeMode : "gradient",
+    orgPrimaryColor,
+    orgAccentColor,
+  );
 
   return (
     <div className="flex min-h-screen">
