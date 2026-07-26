@@ -3,6 +3,9 @@ import { and, eq } from "drizzle-orm";
 import { db, customersTable, salesInvoicesTable } from "@/db";
 import { requireSession } from "@/lib/session";
 import { tenantScope } from "@/lib/tenant";
+import { getLocale } from "@/lib/i18n/server";
+import { t } from "@/lib/i18n/dict";
+import { composeAddress } from "@/lib/geo/countries";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -13,6 +16,7 @@ import { Money } from "../../sales/_shared/money";
 
 export default async function ClientDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await requireSession();
+  const locale = await getLocale();
   const { id } = await params;
   const clientId = Number(id);
   if (!Number.isInteger(clientId)) notFound();
@@ -48,13 +52,26 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
       <div className="grid grid-cols-3 gap-5">
         <Card className="col-span-2">
           <CardContent className="pt-6">
-            <ClientForm client={client} action={updateClientAction.bind(null, client.id)} submitLabel="Save changes" />
+            <ClientForm locale={locale} client={client} action={updateClientAction.bind(null, client.id)} submitLabel="Save changes" />
+          </CardContent>
+        </Card>
+
+        <div className="flex flex-col gap-5">
+        <Card>
+          <CardHeader>
+            <CardTitle>{t(locale, "Details")}</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-2 text-[13px]">
+            <div className="flex justify-between"><span className="text-ink-faint">{t(locale, "Client Type")}</span><span>{t(locale, client.clientType === "company" ? "Company" : "Individual")}</span></div>
+            {composeAddress(client) && <div className="text-ink-muted">{composeAddress(client)}</div>}
+            {client.vatNumber && <div className="flex justify-between"><span className="text-ink-faint">{t(locale, "VAT Number")}</span><span className="font-mono">{client.vatNumber}</span></div>}
+            {client.taxId && <div className="flex justify-between"><span className="text-ink-faint">{t(locale, "CR Number")}</span><span className="font-mono">{client.taxId}</span></div>}
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>Invoices</CardTitle>
+            <CardTitle>{t(locale, "Invoices")}</CardTitle>
           </CardHeader>
           <CardContent>
             {invoices.length === 0 ? (
@@ -71,6 +88,7 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
             )}
           </CardContent>
         </Card>
+        </div>
       </div>
     </div>
   );

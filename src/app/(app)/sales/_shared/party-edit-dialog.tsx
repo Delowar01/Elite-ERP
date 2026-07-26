@@ -8,14 +8,28 @@ import { ExternalLink } from "lucide-react";
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogFooter, DialogTitle, DialogClose } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ClientTypeSelect, type ClientType } from "@/components/client/client-type-select";
+import { AddressFields, addressHasError, type AddressValue } from "@/components/client/address-fields";
 import { t, type Locale } from "@/lib/i18n/dict";
 import { updateOrgContactAction, updatePartyContactAction } from "./creation-popup-actions";
 
 type Contact = { name: string; email: string; phone: string; address: string };
+type PartyInitial = Contact & {
+  clientType?: string;
+  countryCode?: string; stateProvince?: string; district?: string;
+  city?: string; buildingNumber?: string; postalCode?: string; streetAddress?: string;
+};
 
-// In-page popup for the party cards' edit pencil. Editing happens in a dialog ON the creation
-// page — no redirect. On save the record is updated and the parent form is refreshed
-// (router.refresh preserves the unsaved form state), so the From/To card updates immediately.
+function readAddress(i: PartyInitial): AddressValue {
+  return {
+    countryCode: i.countryCode ?? "", stateProvince: i.stateProvince ?? "", district: i.district ?? "",
+    city: i.city ?? "", buildingNumber: i.buildingNumber ?? "", postalCode: i.postalCode ?? "", streetAddress: i.streetAddress ?? "",
+  };
+}
+
+// In-page popup for the party cards' edit pencil. Editing happens in a dialog ON the creation page —
+// no redirect. For clients it now includes the Client Type + structured address; on save the record
+// is updated and the parent form is refreshed (router.refresh preserves the unsaved form).
 export function PartyEditDialog({
   locale,
   kind,
@@ -27,7 +41,7 @@ export function PartyEditDialog({
   locale: Locale;
   kind: "from" | "client" | "vendor";
   partyId?: number;
-  initial: Contact;
+  initial: PartyInitial;
   trigger: React.ReactNode;
   /** Optional "Open Full Settings" link inside the popup (does not replace the main control). */
   fullSettingsHref?: string;
@@ -35,13 +49,27 @@ export function PartyEditDialog({
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [c, setC] = useState<Contact>(initial);
+  const [clientType, setClientType] = useState<ClientType>((initial.clientType as ClientType) ?? "individual");
+  const [address, setAddress] = useState<AddressValue>(readAddress(initial));
   const [pending, start] = useTransition();
 
+  const isClient = kind === "client";
   const title = kind === "from" ? t(locale, "Edit business details") : kind === "vendor" ? t(locale, "Edit vendor") : t(locale, "Edit client");
+  const invalid = isClient && addressHasError(address);
+
+  function reset() {
+    setC(initial);
+    setClientType((initial.clientType as ClientType) ?? "individual");
+    setAddress(readAddress(initial));
+  }
 
   function save() {
+    if (invalid) return;
     start(async () => {
-      const res = kind === "from" ? await updateOrgContactAction(c) : await updatePartyContactAction(kind, partyId!, c);
+      const res =
+        kind === "from"
+          ? await updateOrgContactAction(c)
+          : await updatePartyContactAction(kind, partyId!, isClient ? { ...c, clientType, ...address } : c);
       if (res.error) toast.error(res.error);
       else {
         toast.success(t(locale, "Saved"));
@@ -52,15 +80,16 @@ export function PartyEditDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (o) setC(initial); }}>
+    <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (o) reset(); }}>
       <DialogTrigger asChild>{trigger}</DialogTrigger>
-      <DialogContent className="max-w-md">
+      <DialogContent className={isClient ? "max-w-lg max-h-[88vh] overflow-y-auto" : "max-w-md"}>
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
         <div className="flex flex-col gap-3">
+          {isClient && <ClientTypeSelect locale={locale} value={clientType} onChange={setClientType} />}
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="pe-name">{t(locale, "Name")}</Label>
+            <Label htmlFor="pe-name">{t(locale, isClient && clientType === "company" ? "Business Name" : "Name")}</Label>
             <Input id="pe-name" value={c.name} onChange={(e) => setC({ ...c, name: e.target.value })} autoFocus />
           </div>
           <div className="flex flex-col gap-1.5">
@@ -71,10 +100,19 @@ export function PartyEditDialog({
             <Label htmlFor="pe-phone">{t(locale, "Phone")}</Label>
             <Input id="pe-phone" value={c.phone} onChange={(e) => setC({ ...c, phone: e.target.value })} />
           </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="pe-address">{t(locale, "Address")}</Label>
-            <Input id="pe-address" value={c.address} onChange={(e) => setC({ ...c, address: e.target.value })} />
-          </div>
+          {isClient ? (
+            <AddressFields
+              locale={locale}
+              value={address}
+              onChange={(patch) => setAddress((a) => ({ ...a, ...patch }))}
+              defaultOpen={Object.values(address).some((v) => v.trim())}
+            />
+          ) : (
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="pe-address">{t(locale, "Address")}</Label>
+              <Input id="pe-address" value={c.address} onChange={(e) => setC({ ...c, address: e.target.value })} />
+            </div>
+          )}
         </div>
         <DialogFooter className="flex-row items-center justify-between gap-2">
           {fullSettingsHref ? (
@@ -86,7 +124,7 @@ export function PartyEditDialog({
             <DialogClose asChild>
               <button type="button" className="btn btn-glass" disabled={pending}>{t(locale, "Cancel")}</button>
             </DialogClose>
-            <button type="button" className="btn btn-primary" onClick={save} disabled={pending}>{pending ? t(locale, "Saving…") : t(locale, "Save")}</button>
+            <button type="button" className="btn btn-primary" onClick={save} disabled={pending || invalid}>{pending ? t(locale, "Saving…") : t(locale, "Save")}</button>
           </div>
         </DialogFooter>
       </DialogContent>

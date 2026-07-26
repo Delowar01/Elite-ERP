@@ -8,30 +8,60 @@ import { db, customersTable } from "@/db";
 import { requireSession, requireRole } from "@/lib/session";
 import { tenantScope } from "@/lib/tenant";
 import { logActivity } from "@/lib/activity";
+import { buildingNumberError, postalCodeError, composeAddress } from "@/lib/geo/countries";
 
 export type ActionState = { error?: string } | undefined;
 
-function readClientFields(formData: FormData) {
-  const name = String(formData.get("name") ?? "").trim();
+function s(formData: FormData, key: string): string { return String(formData.get(key) ?? "").trim(); }
+
+// Reads client fields including Client Type + the structured address. Server-side validation mirrors
+// the client (SA 4-digit building number; alphanumeric postal). Returns { error } on failure.
+function readClientFields(formData: FormData): { error?: string; fields?: Record<string, string | null> } {
+  const name = s(formData, "name");
+  if (!name) return { error: "Name is required." };
+  const clientType = s(formData, "clientType") === "company" ? "company" : "individual";
+  const countryCode = s(formData, "countryCode").toUpperCase() || null;
+  const buildingNumber = s(formData, "buildingNumber") || null;
+  const postalCode = s(formData, "postalCode") || null;
+  if (buildingNumberError(countryCode, buildingNumber ?? "")) return { error: "Building number must be 4 digits." };
+  if (postalCodeError(postalCode ?? "")) return { error: "Enter a valid postal / zip code." };
+
+  const structured = {
+    countryCode,
+    stateProvince: s(formData, "stateProvince") || null,
+    district: s(formData, "district") || null,
+    city: s(formData, "city") || null,
+    buildingNumber,
+    postalCode,
+    streetAddress: s(formData, "streetAddress") || null,
+  };
+  // Keep the legacy single-line `address` (used by cards/PDFs) in sync when any structured field is
+  // set; leave it untouched otherwise so existing clients never lose their legacy address.
+  const composed = composeAddress(structured);
+
   return {
-    name,
-    email: String(formData.get("email") ?? "").trim() || null,
-    phone: String(formData.get("phone") ?? "").trim() || null,
-    address: String(formData.get("address") ?? "").trim() || null,
-    taxId: String(formData.get("taxId") ?? "").trim() || null,
-    vatNumber: String(formData.get("vatNumber") ?? "").trim() || null,
-    notes: String(formData.get("notes") ?? "").trim() || null,
+    fields: {
+      name,
+      clientType,
+      email: s(formData, "email") || null,
+      phone: s(formData, "phone") || null,
+      taxId: s(formData, "taxId") || null,
+      vatNumber: s(formData, "vatNumber") || null,
+      notes: s(formData, "notes") || null,
+      ...structured,
+      ...(composed ? { address: composed } : {}),
+    },
   };
 }
 
 export async function createClientAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const session = await requireSession();
-  const fields = readClientFields(formData);
-  if (!fields.name) return { error: "Name is required." };
+  const { error, fields } = readClientFields(formData);
+  if (error || !fields) return { error };
 
   const [row] = await db
     .insert(customersTable)
-    .values({ orgId: session.orgId, ...fields })
+    .values({ orgId: session.orgId, ...fields, name: fields.name! })
     .returning({ id: customersTable.id });
 
   await logActivity(session, {
@@ -47,8 +77,8 @@ export async function createClientAction(_prev: ActionState, formData: FormData)
 
 export async function updateClientAction(id: number, _prev: ActionState, formData: FormData): Promise<ActionState> {
   const session = await requireSession();
-  const fields = readClientFields(formData);
-  if (!fields.name) return { error: "Name is required." };
+  const { error, fields } = readClientFields(formData);
+  if (error || !fields) return { error };
 
   const result = await db
     .update(customersTable)

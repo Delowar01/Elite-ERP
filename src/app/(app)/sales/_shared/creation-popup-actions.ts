@@ -5,6 +5,7 @@ import { db, orgsTable, customersTable, vendorsTable, documentSequencesTable } f
 import { requireSession } from "@/lib/session";
 import { logActivity } from "@/lib/activity";
 import { validateUpload, storeBlob, IMAGE_MAX_BYTES, ATTACHMENT_MAX_BYTES, CONTENT_TYPES } from "@/lib/storage/blob-storage";
+import { buildingNumberError, postalCodeError, composeAddress } from "@/lib/geo/countries";
 
 export type UploadResult = { error?: string; url?: string; fileName?: string; contentType?: string; sizeBytes?: number };
 
@@ -52,21 +53,49 @@ export async function updateOrgContactAction(input: { name: string; email: strin
   return { ok: true };
 }
 
-// To-card "Edit" popup for a client (customer). Tenant-scoped partial update.
+// To-card "Edit" popup for a client (customer) or vendor. Tenant-scoped partial update. For clients,
+// the popup also carries the Client Type + structured address (kept in-page, no redirect).
 export async function updatePartyContactAction(
   party: "client" | "vendor",
   id: number,
-  input: { name: string; email: string; phone: string; address: string },
+  input: {
+    name: string; email: string; phone: string; address: string;
+    clientType?: string;
+    countryCode?: string; stateProvince?: string; district?: string; city?: string;
+    buildingNumber?: string; postalCode?: string; streetAddress?: string;
+  },
 ): Promise<PopupResult> {
   const session = await requireSession();
   const name = input.name.trim();
   if (!name) return { error: "Name is required." };
-  const values = { name, email: input.email.trim() || null, phone: input.phone.trim() || null, address: input.address.trim() || null };
+  const base = { name, email: input.email.trim() || null, phone: input.phone.trim() || null };
   if (party === "client") {
+    const countryCode = (input.countryCode ?? "").trim().toUpperCase() || null;
+    const buildingNumber = (input.buildingNumber ?? "").trim() || null;
+    const postalCode = (input.postalCode ?? "").trim() || null;
+    if (buildingNumberError(countryCode, buildingNumber ?? "")) return { error: "Building number must be 4 digits." };
+    if (postalCodeError(postalCode ?? "")) return { error: "Enter a valid postal / zip code." };
+    const structured = {
+      countryCode,
+      stateProvince: (input.stateProvince ?? "").trim() || null,
+      district: (input.district ?? "").trim() || null,
+      city: (input.city ?? "").trim() || null,
+      buildingNumber,
+      postalCode,
+      streetAddress: (input.streetAddress ?? "").trim() || null,
+    };
+    const composed = composeAddress(structured);
+    const values = {
+      ...base,
+      clientType: input.clientType === "company" ? "company" : "individual",
+      ...structured,
+      address: composed || input.address.trim() || null,
+    };
     const res = await db.update(customersTable).set(values).where(and(eq(customersTable.id, id), eq(customersTable.orgId, session.orgId))).returning({ id: customersTable.id });
     if (!res.length) return { error: "Client not found." };
     await logActivity(session, { type: "client.updated", description: `Updated client "${name}"`, entityType: "client", entityId: id });
   } else {
+    const values = { ...base, address: input.address.trim() || null };
     const res = await db.update(vendorsTable).set(values).where(and(eq(vendorsTable.id, id), eq(vendorsTable.orgId, session.orgId))).returning({ id: vendorsTable.id });
     if (!res.length) return { error: "Vendor not found." };
     await logActivity(session, { type: "vendor.updated", description: `Updated vendor "${name}"`, entityType: "vendor", entityId: id });

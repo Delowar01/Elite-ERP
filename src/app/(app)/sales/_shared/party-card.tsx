@@ -1,5 +1,6 @@
-import { MapPin, Mail, Phone, Globe, Pencil, ChevronDown } from "lucide-react";
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { MapPin, Mail, Phone, Globe, Pencil } from "lucide-react";
+import { SearchableSelect } from "@/components/ui/searchable-select";
+import { composeAddress } from "@/lib/geo/countries";
 import { t, type Locale } from "@/lib/i18n/dict";
 import { PartyEditDialog } from "./party-edit-dialog";
 
@@ -101,7 +102,7 @@ export function PartyCardSelect({
 }: {
   locale: Locale;
   label: string;
-  customers: { id: number; name: string; address?: string | null; email?: string | null; phone?: string | null }[];
+  customers: PartySelectCustomer[];
   value: string;
   onChange: (v: string) => void;
   placeholder?: string;
@@ -112,31 +113,42 @@ export function PartyCardSelect({
   const selected = customers.find((c) => String(c.id) === value);
   const openLabel = t(locale, "Edit");
   const pickFirst = t(locale, "Select first");
+  const options = customers.map((c) => ({ value: String(c.id), label: c.name }));
+  const composed = selected ? composeAddress(selected) || selected.address || "" : "";
   return (
     <div className="card party-card-v2">
       <div className="pc-label">{label}</div>
-      <Select value={value} onValueChange={onChange}>
-        <SelectTrigger className="pc-select h-auto border-none bg-transparent p-0 shadow-none hover:bg-transparent focus:ring-0 [&_svg]:hidden">
-          <SelectValue placeholder={t(locale, placeholder)} />
-          <ChevronDown className="size-3.5 text-ink-faint" />
-        </SelectTrigger>
-        <SelectContent>
-          {customers.map((c) => (
-            <SelectItem key={c.id} value={String(c.id)}>
-              {c.name}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-      {selected?.address && <PcRow icon={<MapPin className="size-3.5" />} text={selected.address} />}
+      {/* Searchable client/vendor dropdown; the trigger shows the selected party's name. */}
+      <SearchableSelect
+        options={options}
+        value={value}
+        onChange={onChange}
+        placeholder={t(locale, placeholder)}
+        searchPlaceholder={t(locale, "Search…")}
+        emptyText={t(locale, "No matches.")}
+        aria-label={label}
+        triggerClassName="mt-1 mb-1"
+      />
+      {composed && <PcRow icon={<MapPin className="size-3.5" />} text={composed} />}
       {selected?.email && <PcRow icon={<Mail className="size-3.5" />} text={selected.email} />}
       {selected?.phone && <PcRow icon={<Phone className="size-3.5" />} text={selected.phone} />}
+      {selected?.vatNumber && (
+        <div className="pc-row"><span className="text-ink-faint">{t(locale, "VAT Number")}:</span>&nbsp;<span className="font-mono">{selected.vatNumber}</span></div>
+      )}
+      {selected?.taxId && (
+        <div className="pc-row"><span className="text-ink-faint">{t(locale, "CR Number")}:</span>&nbsp;<span className="font-mono">{selected.taxId}</span></div>
+      )}
       {selected ? (
         <PartyEditDialog
           locale={locale}
           kind={partyKind}
           partyId={selected.id}
-          initial={{ name: selected.name, email: selected.email ?? "", phone: selected.phone ?? "", address: selected.address ?? "" }}
+          initial={{
+            name: selected.name, email: selected.email ?? "", phone: selected.phone ?? "", address: selected.address ?? "",
+            clientType: (selected as { clientType?: string }).clientType ?? "individual",
+            countryCode: selected.countryCode ?? "", stateProvince: selected.stateProvince ?? "", district: selected.district ?? "",
+            city: selected.city ?? "", buildingNumber: selected.buildingNumber ?? "", postalCode: selected.postalCode ?? "", streetAddress: selected.streetAddress ?? "",
+          }}
           fullSettingsHref={partyKind === "vendor" ? `/purchasing/vendors/${selected.id}` : `/clients/${selected.id}`}
           trigger={
             <button type="button" className="pc-edit" title={openLabel} aria-label={openLabel}>
@@ -152,3 +164,14 @@ export function PartyCardSelect({
     </div>
   );
 }
+
+// The shape the document client/vendor selector needs. Full Customer/Vendor records satisfy this;
+// the structured address + VAT/CR fields are optional so vendors (which lack the structured address)
+// still fit.
+export type PartySelectCustomer = {
+  id: number; name: string;
+  address?: string | null; email?: string | null; phone?: string | null;
+  vatNumber?: string | null; taxId?: string | null;
+  countryCode?: string | null; stateProvince?: string | null; district?: string | null;
+  city?: string | null; buildingNumber?: string | null; postalCode?: string | null; streetAddress?: string | null;
+};
