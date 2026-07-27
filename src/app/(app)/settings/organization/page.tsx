@@ -1,6 +1,7 @@
 import { eq, asc } from "drizzle-orm";
 import { db, orgsTable, bankAccountsTable, noteTemplatesTable, usersTable } from "@/db";
 import { requireRole } from "@/lib/session";
+import { getProfileByCountryName, profileHasFeature } from "@/lib/geo/country-profiles";
 import { getLocale } from "@/lib/i18n/server";
 import { t } from "@/lib/i18n/dict";
 import { SettingsNav, SettingsNavList, SettingsNavGroupLabel, SettingsNavItem, SettingsNavContent } from "@/components/ui/settings-nav";
@@ -19,9 +20,13 @@ export default async function OrganizationSettingsPage({ searchParams }: { searc
   const session = await requireRole("owner", "admin");
   const locale = await getLocale();
   const { tab } = await searchParams;
-  const defaultTab = tab && SETTINGS_TABS.has(tab) ? tab : "color-theme";
 
   const [org] = await db.select().from(orgsTable).where(eq(orgsTable.id, session.orgId));
+  // Country-specific settings: ZATCA E-Invoicing only appears for profiles that enable it (Saudi Arabia).
+  const countryProfile = getProfileByCountryName(org.country);
+  const showZatca = profileHasFeature(countryProfile, "zatca_phase1");
+  const requestedTab = tab && SETTINGS_TABS.has(tab) ? tab : "color-theme";
+  const defaultTab = requestedTab === "zatca" && !showZatca ? "color-theme" : requestedTab;
   const bankAccounts = await db
     .select()
     .from(bankAccountsTable)
@@ -56,8 +61,12 @@ export default async function OrganizationSettingsPage({ searchParams }: { searc
           <SettingsNavItem value="team">{t(locale, "Team")}</SettingsNavItem>
           <SettingsNavItem value="roles-permissions">{t(locale, "Roles & Permissions")}</SettingsNavItem>
 
-          <SettingsNavGroupLabel>{t(locale, "Integrations")}</SettingsNavGroupLabel>
-          <SettingsNavItem value="zatca">{t(locale, "ZATCA E-Invoicing")}</SettingsNavItem>
+          {showZatca && (
+            <>
+              <SettingsNavGroupLabel>{t(locale, "Integrations")}</SettingsNavGroupLabel>
+              <SettingsNavItem value="zatca">{t(locale, "ZATCA E-Invoicing")}</SettingsNavItem>
+            </>
+          )}
         </SettingsNavList>
 
         <SettingsNavContent value="business-details">
@@ -93,9 +102,11 @@ export default async function OrganizationSettingsPage({ searchParams }: { searc
         <SettingsNavContent value="roles-permissions">
           <RolesPermissionsPanel locale={locale} />
         </SettingsNavContent>
-        <SettingsNavContent value="zatca">
-          <ZatcaPanel locale={locale} org={org} />
-        </SettingsNavContent>
+        {showZatca && (
+          <SettingsNavContent value="zatca">
+            <ZatcaPanel locale={locale} org={org} />
+          </SettingsNavContent>
+        )}
       </SettingsNav>
     </div>
   );

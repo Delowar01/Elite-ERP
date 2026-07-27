@@ -21,12 +21,13 @@ export type LineItemDraft = {
   customFields: Record<string, string>;
 };
 
-export const emptyLineItem = (): LineItemDraft => ({
+// The default line VAT/tax rate comes from the org's country profile (SA 15, UAE 5, Global 0…).
+export const emptyLineItem = (defaultTaxRate: string = "15"): LineItemDraft => ({
   productId: "",
   description: "",
   quantity: "1",
   unitPrice: "0",
-  taxRatePercent: "15",
+  taxRatePercent: defaultTaxRate,
   imageUrl: "",
   unit: "",
   customFields: {},
@@ -45,6 +46,7 @@ export function LineItemsEditor({
   pricing,
   units = [],
   columns,
+  defaultTaxRate = "15",
 }: {
   locale: Locale;
   products: ProductLite[];
@@ -57,15 +59,17 @@ export function LineItemsEditor({
   units?: string[];
   /** Column configuration (Edit Columns). Only used for the "full" variant. */
   columns?: ColumnDef[];
+  /** Default VAT/tax rate for newly-added lines, from the org's country profile. */
+  defaultTaxRate?: string;
 }) {
   const resolvedVariant = pricing === false ? "simple" : variant;
 
   // Column-driven full variant (Edit Columns applied). Simple/qty variants keep the fixed layout.
   if (resolvedVariant === "full" && columns && columns.length > 0) {
-    return <ColumnDrivenEditor locale={locale} products={products} items={items} onChange={onChange} units={units} columns={columns} />;
+    return <ColumnDrivenEditor locale={locale} products={products} items={items} onChange={onChange} units={units} columns={columns} defaultTaxRate={defaultTaxRate} />;
   }
 
-  return <FixedEditor locale={locale} products={products} items={items} onChange={onChange} resolvedVariant={resolvedVariant} units={units} />;
+  return <FixedEditor locale={locale} products={products} items={items} onChange={onChange} resolvedVariant={resolvedVariant} units={units} defaultTaxRate={defaultTaxRate} />;
 }
 
 // ---------------- Column-driven full editor ----------------
@@ -76,6 +80,7 @@ function ColumnDrivenEditor({
   onChange,
   units,
   columns,
+  defaultTaxRate = "15",
 }: {
   locale: Locale;
   products: ProductLite[];
@@ -83,6 +88,7 @@ function ColumnDrivenEditor({
   onChange: (items: LineItemDraft[]) => void;
   units: string[];
   columns: ColumnDef[];
+  defaultTaxRate?: string;
 }) {
   const unitOptions = Array.from(new Set([...units, ...DEFAULT_UNITS]));
   const visible = columns.filter((c) => c.visible || c.key === ACTIONS_KEY);
@@ -210,7 +216,7 @@ function ColumnDrivenEditor({
           </tbody>
         </table>
       </div>
-      <div className="doc-add-item-btn" onClick={() => onChange([...items, emptyLineItem()])} role="button">
+      <div className="doc-add-item-btn" onClick={() => onChange([...items, emptyLineItem(defaultTaxRate)])} role="button">
         <Plus className="size-3.5" /> {t(locale, "Add New Item")}
       </div>
     </div>
@@ -225,6 +231,7 @@ function FixedEditor({
   onChange,
   resolvedVariant,
   units,
+  defaultTaxRate = "15",
 }: {
   locale: Locale;
   products: ProductLite[];
@@ -232,6 +239,7 @@ function FixedEditor({
   onChange: (items: LineItemDraft[]) => void;
   resolvedVariant: "full" | "simple" | "qty";
   units: string[];
+  defaultTaxRate?: string;
 }) {
   const unitOptions = Array.from(new Set([...units, ...DEFAULT_UNITS]));
 
@@ -319,7 +327,7 @@ function FixedEditor({
           </tbody>
         </table>
       </div>
-      <div className="doc-add-item-btn" onClick={() => onChange([...items, emptyLineItem()])} role="button">
+      <div className="doc-add-item-btn" onClick={() => onChange([...items, emptyLineItem(defaultTaxRate)])} role="button">
         <Plus className="size-3.5" /> {t(locale, "Add New Item")}
       </div>
     </div>

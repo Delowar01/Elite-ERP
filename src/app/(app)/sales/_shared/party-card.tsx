@@ -1,6 +1,7 @@
 import { MapPin, Mail, Phone, Globe, Pencil } from "lucide-react";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { composeAddress } from "@/lib/geo/countries";
+import type { CountryProfile } from "@/lib/geo/country-profiles";
 import { t, type Locale } from "@/lib/i18n/dict";
 import { PartyEditDialog } from "./party-edit-dialog";
 
@@ -99,6 +100,9 @@ export function PartyCardSelect({
   onChange,
   placeholder = "Select a client",
   partyKind = "client",
+  profile,
+  taxNumberLabel = "VAT Number",
+  registrationLabel = "CR Number",
 }: {
   locale: Locale;
   label: string;
@@ -109,6 +113,10 @@ export function PartyCardSelect({
   /** Whether the chosen party is a client or a vendor — drives the in-page edit popup + which
    *  master record it updates. */
   partyKind?: "client" | "vendor";
+  /** The org's country profile — drives the edit popup's address layout + tax/registration labels. */
+  profile?: CountryProfile;
+  taxNumberLabel?: string;
+  registrationLabel?: string;
 }) {
   const selected = customers.find((c) => String(c.id) === value);
   const openLabel = t(locale, "Edit");
@@ -133,21 +141,23 @@ export function PartyCardSelect({
       {selected?.email && <PcRow icon={<Mail className="size-3.5" />} text={selected.email} />}
       {selected?.phone && <PcRow icon={<Phone className="size-3.5" />} text={selected.phone} />}
       {selected?.vatNumber && (
-        <div className="pc-row"><span className="text-ink-faint">{t(locale, "VAT Number")}:</span>&nbsp;<span className="font-mono">{selected.vatNumber}</span></div>
+        <div className="pc-row"><span className="text-ink-faint">{t(locale, taxNumberLabel)}:</span>&nbsp;<span className="font-mono">{selected.vatNumber}</span></div>
       )}
       {selected?.taxId && (
-        <div className="pc-row"><span className="text-ink-faint">{t(locale, "CR Number")}:</span>&nbsp;<span className="font-mono">{selected.taxId}</span></div>
+        <div className="pc-row"><span className="text-ink-faint">{t(locale, registrationLabel)}:</span>&nbsp;<span className="font-mono">{selected.taxId}</span></div>
       )}
       {selected ? (
         <PartyEditDialog
           locale={locale}
           kind={partyKind}
           partyId={selected.id}
+          profile={profile}
           initial={{
             name: selected.name, email: selected.email ?? "", phone: selected.phone ?? "", address: selected.address ?? "",
             clientType: (selected as { clientType?: string }).clientType ?? "individual",
             countryCode: selected.countryCode ?? "", stateProvince: selected.stateProvince ?? "", district: selected.district ?? "",
-            city: selected.city ?? "", buildingNumber: selected.buildingNumber ?? "", postalCode: selected.postalCode ?? "", streetAddress: selected.streetAddress ?? "",
+            city: selected.city ?? "", buildingNumber: selected.buildingNumber ?? "", additionalNumber: selected.additionalNumber ?? "",
+            postalCode: selected.postalCode ?? "", streetAddress: selected.streetAddress ?? "",
           }}
           fullSettingsHref={partyKind === "vendor" ? `/purchasing/vendors/${selected.id}` : `/clients/${selected.id}`}
           trigger={
@@ -173,5 +183,5 @@ export type PartySelectCustomer = {
   address?: string | null; email?: string | null; phone?: string | null;
   vatNumber?: string | null; taxId?: string | null;
   countryCode?: string | null; stateProvince?: string | null; district?: string | null;
-  city?: string | null; buildingNumber?: string | null; postalCode?: string | null; streetAddress?: string | null;
+  city?: string | null; buildingNumber?: string | null; additionalNumber?: string | null; postalCode?: string | null; streetAddress?: string | null;
 };

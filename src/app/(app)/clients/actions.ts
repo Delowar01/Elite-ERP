@@ -32,6 +32,7 @@ function readClientFields(formData: FormData): { error?: string; fields?: Record
     district: s(formData, "district") || null,
     city: s(formData, "city") || null,
     buildingNumber,
+    additionalNumber: s(formData, "additionalNumber") || null,
     postalCode,
     streetAddress: s(formData, "streetAddress") || null,
   };

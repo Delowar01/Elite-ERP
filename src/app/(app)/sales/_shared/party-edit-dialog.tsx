@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ClientTypeSelect, type ClientType } from "@/components/client/client-type-select";
 import { AddressFields, addressHasError, type AddressValue } from "@/components/client/address-fields";
+import type { CountryProfile } from "@/lib/geo/country-profiles";
 import { t, type Locale } from "@/lib/i18n/dict";
 import { updateOrgContactAction, updatePartyContactAction } from "./creation-popup-actions";
 
@@ -17,13 +18,14 @@ type Contact = { name: string; email: string; phone: string; address: string };
 type PartyInitial = Contact & {
   clientType?: string;
   countryCode?: string; stateProvince?: string; district?: string;
-  city?: string; buildingNumber?: string; postalCode?: string; streetAddress?: string;
+  city?: string; buildingNumber?: string; additionalNumber?: string; postalCode?: string; streetAddress?: string;
 };
 
 function readAddress(i: PartyInitial): AddressValue {
   return {
     countryCode: i.countryCode ?? "", stateProvince: i.stateProvince ?? "", district: i.district ?? "",
-    city: i.city ?? "", buildingNumber: i.buildingNumber ?? "", postalCode: i.postalCode ?? "", streetAddress: i.streetAddress ?? "",
+    city: i.city ?? "", buildingNumber: i.buildingNumber ?? "", additionalNumber: i.additionalNumber ?? "",
+    postalCode: i.postalCode ?? "", streetAddress: i.streetAddress ?? "",
   };
 }
 
@@ -37,6 +39,7 @@ export function PartyEditDialog({
   initial,
   trigger,
   fullSettingsHref,
+  profile,
 }: {
   locale: Locale;
   kind: "from" | "client" | "vendor";
@@ -45,6 +48,8 @@ export function PartyEditDialog({
   trigger: React.ReactNode;
   /** Optional "Open Full Settings" link inside the popup (does not replace the main control). */
   fullSettingsHref?: string;
+  /** Org country profile — drives the address layout for clients. */
+  profile?: CountryProfile;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -55,7 +60,7 @@ export function PartyEditDialog({
 
   const isClient = kind === "client";
   const title = kind === "from" ? t(locale, "Edit business details") : kind === "vendor" ? t(locale, "Edit vendor") : t(locale, "Edit client");
-  const invalid = isClient && addressHasError(address);
+  const invalid = isClient && addressHasError(address, profile);
 
   function reset() {
     setC(initial);
@@ -103,6 +108,7 @@ export function PartyEditDialog({
           {isClient ? (
             <AddressFields
               locale={locale}
+              profile={profile}
               value={address}
               onChange={(patch) => setAddress((a) => ({ ...a, ...patch }))}
               defaultOpen={Object.values(address).some((v) => v.trim())}

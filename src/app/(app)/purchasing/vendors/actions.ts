@@ -19,6 +19,7 @@ function readVendorFields(formData: FormData) {
     phone: String(formData.get("phone") ?? "").trim() || null,
     address: String(formData.get("address") ?? "").trim() || null,
     taxId: String(formData.get("taxId") ?? "").trim() || null,
+    vatNumber: String(formData.get("vatNumber") ?? "").trim() || null,
     notes: String(formData.get("notes") ?? "").trim() || null,
   };
 }

@@ -11,6 +11,7 @@ import { DocActionBar } from "../_shared/doc-action-bar";
 import { DocTopActions } from "../_shared/doc-top-actions";
 import { PreviewDialog, type PreviewData } from "../_shared/preview-dialog";
 import { t, type Locale } from "@/lib/i18n/dict";
+import { getProfileByCountryName, resolveTaxLabels } from "@/lib/geo/country-profiles";
 import type { Customer, Product, Org } from "@/db";
 import { createDeliveryChallanAction, updateDeliveryChallanAction } from "./actions";
 
@@ -46,7 +47,10 @@ export function DcForm({
   const [dispatchDate, setDispatchDate] = useState(initial?.dispatchDate ?? new Date().toISOString().slice(0, 10));
   const [carrier, setCarrier] = useState(initial?.carrier ?? "");
   const [vehicleNo, setVehicleNo] = useState(initial?.vehicleNo ?? "");
-  const [items, setItems] = useState<LineItemDraft[]>(initial?.items && initial.items.length > 0 ? initial.items : [emptyLineItem()]);
+  const countryProfile = getProfileByCountryName(org.country);
+  const taxLabels = resolveTaxLabels(countryProfile, org);
+  const defaultTaxRate = String(countryProfile.defaultTaxRate);
+  const [items, setItems] = useState<LineItemDraft[]>(initial?.items && initial.items.length > 0 ? initial.items : [emptyLineItem(defaultTaxRate)]);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [pendingDraft, startDraftTransition] = useTransition();
   const [pendingPrimary, startPrimaryTransition] = useTransition();
@@ -109,10 +113,10 @@ export function DcForm({
 
       <div className="doc-meta-row" style={{ gridTemplateColumns: "1fr 1fr" }}>
         <PartyCardStatic locale={locale} label={t(locale, "From")} name={org.name} address={org.address} email={org.email} phone={org.phone} />
-        <PartyCardSelect locale={locale} label={t(locale, "To Client")} customers={customers} value={customerId} onChange={setCustomerId} />
+        <PartyCardSelect locale={locale} label={t(locale, "To Client")} customers={customers} value={customerId} onChange={setCustomerId} profile={countryProfile} taxNumberLabel={taxLabels.taxNumberLabel} registrationLabel={taxLabels.registrationLabel} />
       </div>
 
-      <LineItemsEditor locale={locale} products={products} items={items} onChange={setItems} variant="qty" />
+      <LineItemsEditor locale={locale} products={products} items={items} onChange={setItems} defaultTaxRate={defaultTaxRate} variant="qty" />
 
       <DocFooterContact locale={locale} email={org.email} phone={org.phone} />
 

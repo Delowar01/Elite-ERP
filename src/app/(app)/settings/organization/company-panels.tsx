@@ -16,10 +16,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FormField } from "@/components/ui/form-field";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { CropImageUpload } from "@/components/upload/crop-image-upload";
 import { CROP_LOGO } from "@/components/upload/crop-configs";
 import { CurrencyMark } from "@/components/ui/currency-mark";
 import { CURRENCIES, resolveCurrencyMark } from "@/lib/currency/currencies";
+import { COUNTRIES } from "@/lib/geo/countries";
+import { getProfileByCountryName, resolveTaxLabels } from "@/lib/geo/country-profiles";
 import { t, type Locale } from "@/lib/i18n/dict";
 import type { Org } from "@/db";
 import { updateBusinessDetailsAction, updateColorThemeAction, uploadLogoAction } from "./actions";
@@ -29,11 +32,29 @@ export function BusinessDetailsForm({ locale, org }: { locale: Locale; org: Org 
   const [country, setCountry] = useState(org.country ?? "Saudi Arabia");
   const [language, setLanguage] = useState(org.defaultLanguage);
   const [currency, setCurrency] = useState(org.currency);
+  // Global-profile overrides (only shown/editable when the resolved profile is configurable).
+  const [customTaxName, setCustomTaxName] = useState(org.customTaxName ?? "");
+  const [customTaxNumberLabel, setCustomTaxNumberLabel] = useState(org.customTaxNumberLabel ?? "");
+  const [customRegistrationLabel, setCustomRegistrationLabel] = useState(org.customRegistrationLabel ?? "");
+
+  // The org's country drives its profile: default currency, tax terminology, registration field.
+  const profile = getProfileByCountryName(country);
+  const labels = resolveTaxLabels(profile, { customTaxName, customTaxNumberLabel, customRegistrationLabel });
+  const countryOptions = COUNTRIES.map((c) => ({ value: c.name, label: c.name, sublabel: c.code }));
+
+  function onCountryChange(name: string) {
+    setCountry(name);
+    // Follow the new country's default currency (user can still change it afterwards).
+    setCurrency(getProfileByCountryName(name).defaultCurrencyCode);
+  }
 
   function submit(formData: FormData) {
     formData.set("country", country);
     formData.set("defaultLanguage", language);
     formData.set("currency", currency);
+    formData.set("customTaxName", profile.configurable ? customTaxName : "");
+    formData.set("customTaxNumberLabel", profile.configurable ? customTaxNumberLabel : "");
+    formData.set("customRegistrationLabel", profile.configurable ? customRegistrationLabel : "");
     startTransition(async () => {
       const result = await updateBusinessDetailsAction(formData);
       if (result.error) toast.error(result.error);
@@ -52,19 +73,16 @@ export function BusinessDetailsForm({ locale, org }: { locale: Locale; org: Org 
           <Input id="org-industry" name="industry" defaultValue={org.industry ?? ""} />
         </FormField>
         <FormField label={t(locale, "Country")} htmlFor="org-country">
-          <Select value={country} onValueChange={setCountry}>
-            <SelectTrigger id="org-country">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Saudi Arabia">🇸🇦 Saudi Arabia</SelectItem>
-              <SelectItem value="United Arab Emirates">🇦🇪 United Arab Emirates</SelectItem>
-              <SelectItem value="Bahrain">🇧🇭 Bahrain</SelectItem>
-              <SelectItem value="Kuwait">🇰🇼 Kuwait</SelectItem>
-              <SelectItem value="Oman">🇴🇲 Oman</SelectItem>
-              <SelectItem value="Qatar">🇶🇦 Qatar</SelectItem>
-            </SelectContent>
-          </Select>
+          <SearchableSelect
+            id="org-country"
+            options={countryOptions}
+            value={country}
+            onChange={onCountryChange}
+            placeholder={t(locale, "Select Country")}
+            searchPlaceholder={t(locale, "Search…")}
+            emptyText={t(locale, "No matches.")}
+            aria-label={t(locale, "Country")}
+          />
         </FormField>
         <FormField label={t(locale, "Address")} htmlFor="org-address" span={2}>
           <Input id="org-address" name="address" defaultValue={org.address ?? ""} />
@@ -91,11 +109,12 @@ export function BusinessDetailsForm({ locale, org }: { locale: Locale; org: Org 
             </SelectContent>
           </Select>
         </FormField>
-        <FormField label={t(locale, "Tax ID")} htmlFor="org-tax-id">
-          <Input id="org-tax-id" name="taxId" defaultValue={org.taxId ?? ""} className="font-mono" />
-        </FormField>
-        <FormField label={t(locale, "VAT Number")} htmlFor="org-vat">
+        {/* Tax-number + registration labels follow the country profile (VAT Number/CR, TRN/Trade License…). */}
+        <FormField label={t(locale, labels.taxNumberLabel)} htmlFor="org-vat">
           <Input id="org-vat" name="vatNumber" defaultValue={org.vatNumber ?? ""} className="font-mono" />
+        </FormField>
+        <FormField label={t(locale, labels.registrationLabel)} htmlFor="org-tax-id">
+          <Input id="org-tax-id" name="taxId" defaultValue={org.taxId ?? ""} className="font-mono" />
         </FormField>
         <FormField label={t(locale, "Default Language")} htmlFor="org-language">
           <Select value={language} onValueChange={setLanguage}>
@@ -109,6 +128,32 @@ export function BusinessDetailsForm({ locale, org }: { locale: Locale; org: Org 
           </Select>
         </FormField>
       </div>
+
+      {/* Country Profile summary — live, driven by the selected country. */}
+      <Card>
+        <CardContent className="p-5 flex flex-col gap-3">
+          <p className="text-[12.5px] font-semibold">{t(locale, "Country Profile")}</p>
+          <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-[12.5px]">
+            <div className="flex justify-between"><span className="text-ink-faint">{t(locale, "Tax System")}</span><span>{profile.taxSystem === "None" ? t(locale, labels.taxName) : profile.taxSystem}</span></div>
+            <div className="flex justify-between"><span className="text-ink-faint">{t(locale, "Default Currency")}</span><span className="font-mono">{profile.defaultCurrencyCode}</span></div>
+            <div className="flex justify-between"><span className="text-ink-faint">{t(locale, "Tax Number Label")}</span><span>{t(locale, labels.taxNumberLabel)}</span></div>
+            <div className="flex justify-between"><span className="text-ink-faint">{t(locale, "Registration Field")}</span><span>{t(locale, labels.registrationLabel)}</span></div>
+            <div className="flex justify-between"><span className="text-ink-faint">{t(locale, "Default VAT Rate")}</span><span>{profile.defaultTaxRate}%</span></div>
+            <div className="flex justify-between"><span className="text-ink-faint">{t(locale, "E-Invoicing")}</span><span>{profile.enabledFeatures.includes("zatca_phase1") ? t(locale, "ZATCA Phase 1") : "—"}</span></div>
+          </div>
+          {profile.configurable && (
+            <div className="border-t border-line pt-3 mt-1 flex flex-col gap-3">
+              <p className="text-[11.5px] text-ink-muted">{t(locale, "This country has no dedicated profile — customize the tax terminology below.")}</p>
+              <div className="grid grid-cols-3 gap-3">
+                <FormField label={t(locale, "Tax Name")} htmlFor="ctn"><Input id="ctn" value={customTaxName} onChange={(e) => setCustomTaxName(e.target.value)} placeholder={profile.taxName} /></FormField>
+                <FormField label={t(locale, "Tax Number Label")} htmlFor="ctnl"><Input id="ctnl" value={customTaxNumberLabel} onChange={(e) => setCustomTaxNumberLabel(e.target.value)} placeholder={profile.taxNumberLabel} /></FormField>
+                <FormField label={t(locale, "Registration Field")} htmlFor="crl"><Input id="crl" value={customRegistrationLabel} onChange={(e) => setCustomRegistrationLabel(e.target.value)} placeholder={profile.registrationFields[0].label} /></FormField>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       <div>
         <Button type="submit" disabled={pending}>
           {pending ? t(locale, "Saving…") : t(locale, "Save changes")}

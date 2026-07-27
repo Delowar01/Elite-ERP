@@ -13,10 +13,15 @@ export function VendorForm({
   vendor,
   action,
   submitLabel = "Save",
+  taxNumberLabel = "VAT Number",
+  registrationLabel = "CR Number",
 }: {
   vendor?: Vendor;
   action: (prev: ActionState, formData: FormData) => Promise<ActionState>;
   submitLabel?: string;
+  // Tax/registration labels follow the org's country profile (VAT Number/CR, TRN/Trade License, …).
+  taxNumberLabel?: string;
+  registrationLabel?: string;
 }) {
   const [state, formAction, pending] = useActionState(action, undefined);
 
@@ -40,8 +45,11 @@ export function VendorForm({
         <FormField label="Address" htmlFor="address" span={2}>
           <Input id="address" name="address" defaultValue={vendor?.address ?? ""} />
         </FormField>
-        <FormField label="Tax ID" htmlFor="taxId">
-          <Input id="taxId" name="taxId" defaultValue={vendor?.taxId ?? ""} />
+        <FormField label={taxNumberLabel} htmlFor="vatNumber">
+          <Input id="vatNumber" name="vatNumber" defaultValue={vendor?.vatNumber ?? ""} className="font-mono" />
+        </FormField>
+        <FormField label={registrationLabel} htmlFor="taxId">
+          <Input id="taxId" name="taxId" defaultValue={vendor?.taxId ?? ""} className="font-mono" />
         </FormField>
         <FormField label="Notes" htmlFor="notes" span={2}>
           <Input id="notes" name="notes" defaultValue={vendor?.notes ?? ""} />

@@ -33,6 +33,10 @@ export async function updateBusinessDetailsAction(formData: FormData): Promise<A
       vatNumber: String(formData.get("vatNumber") ?? "").trim() || null,
       currency,
       country: String(formData.get("country") ?? "").trim() || null,
+      // Country-profile overrides (only meaningful for the configurable Global profile).
+      customTaxName: String(formData.get("customTaxName") ?? "").trim() || null,
+      customTaxNumberLabel: String(formData.get("customTaxNumberLabel") ?? "").trim() || null,
+      customRegistrationLabel: String(formData.get("customRegistrationLabel") ?? "").trim() || null,
       defaultLanguage: formData.get("defaultLanguage") === "ar" ? "ar" : "en",
       updatedAt: new Date(),
     })

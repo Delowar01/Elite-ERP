@@ -133,12 +133,13 @@ export function postalCodeError(value: string): string | null {
 
 // Compose a single-line address from the structured fields (for cards, detail pages, documents).
 export function composeAddress(a: {
-  streetAddress?: string | null; buildingNumber?: string | null; district?: string | null;
-  city?: string | null; stateProvince?: string | null; postalCode?: string | null; countryCode?: string | null;
+  streetAddress?: string | null; buildingNumber?: string | null; additionalNumber?: string | null;
+  district?: string | null; city?: string | null; stateProvince?: string | null;
+  postalCode?: string | null; countryCode?: string | null;
 }): string {
   const parts = [
     a.buildingNumber && a.streetAddress ? `${a.buildingNumber} ${a.streetAddress}` : (a.streetAddress || a.buildingNumber),
-    a.district, a.city, a.stateProvince, a.postalCode, countryName(a.countryCode) || null,
+    a.additionalNumber, a.district, a.city, a.stateProvince, a.postalCode, countryName(a.countryCode) || null,
   ];
   return parts.filter((p) => p && String(p).trim()).join(", ");
 }

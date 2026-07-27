@@ -21,6 +21,7 @@ export type Session = {
   orgAccentColor: string;
   orgColorThemeMode: string;
   orgCurrency: string;
+  orgCountry: string | null;
   jti?: string;
 };
 
@@ -48,6 +49,7 @@ const lookupSessionByToken = cache(async (token: string): Promise<Session | null
       orgAccentColor: orgsTable.accentColor,
       orgColorThemeMode: orgsTable.colorThemeMode,
       orgCurrency: orgsTable.currency,
+      orgCountry: orgsTable.country,
     })
     .from(usersTable)
     .innerJoin(orgsTable, eq(orgsTable.id, usersTable.orgId))

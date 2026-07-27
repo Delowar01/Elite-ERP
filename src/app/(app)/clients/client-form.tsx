@@ -8,6 +8,7 @@ import { RecordImageUpload } from "@/components/upload/record-image-upload";
 import { CROP_PARTY_LOGO } from "@/components/upload/crop-configs";
 import { ClientTypeSelect, type ClientType } from "@/components/client/client-type-select";
 import { AddressFields, addressHasError, type AddressValue } from "@/components/client/address-fields";
+import { getCountryProfile, resolveTaxLabels, type CountryProfile } from "@/lib/geo/country-profiles";
 import { t, type Locale } from "@/lib/i18n/dict";
 import type { Customer } from "@/db";
 import { type ActionState, uploadClientLogoAction } from "./actions";
@@ -18,26 +19,34 @@ export function ClientForm({
   action,
   submitLabel = "Save",
   defaultCountryCode = "",
+  profile,
+  taxLabels,
 }: {
   locale?: Locale;
   client?: Customer;
   action: (prev: ActionState, formData: FormData) => Promise<ActionState>;
   submitLabel?: string;
   defaultCountryCode?: string;
+  // The org's country profile drives address layout + tax/registration labels.
+  profile?: CountryProfile;
+  taxLabels?: { taxNumberLabel: string; registrationLabel: string; registrationPlaceholder?: string };
 }) {
   const [state, formAction, pending] = useActionState(action, undefined);
   const [clientType, setClientType] = useState<ClientType>((client?.clientType as ClientType) ?? "individual");
+  const prof = profile ?? getCountryProfile(defaultCountryCode);
+  const labels = taxLabels ?? resolveTaxLabels(prof);
   const [address, setAddress] = useState<AddressValue>({
     countryCode: client?.countryCode ?? (client ? "" : defaultCountryCode),
     stateProvince: client?.stateProvince ?? "",
     district: client?.district ?? "",
     city: client?.city ?? "",
     buildingNumber: client?.buildingNumber ?? "",
+    additionalNumber: client?.additionalNumber ?? "",
     postalCode: client?.postalCode ?? "",
     streetAddress: client?.streetAddress ?? "",
   });
   const hasAddress = Object.values(address).some((v) => v.trim());
-  const invalidAddress = addressHasError(address);
+  const invalidAddress = addressHasError(address, prof);
   const nameLabel = clientType === "company" ? "Business Name" : "Name";
 
   return (
@@ -49,6 +58,7 @@ export function ClientForm({
       <input type="hidden" name="district" value={address.district} />
       <input type="hidden" name="city" value={address.city} />
       <input type="hidden" name="buildingNumber" value={address.buildingNumber} />
+      <input type="hidden" name="additionalNumber" value={address.additionalNumber} />
       <input type="hidden" name="postalCode" value={address.postalCode} />
       <input type="hidden" name="streetAddress" value={address.streetAddress} />
 
@@ -69,18 +79,18 @@ export function ClientForm({
         <FormField label={t(locale, "Phone")} htmlFor="phone">
           <Input id="phone" name="phone" defaultValue={client?.phone ?? ""} />
         </FormField>
-        <FormField label={t(locale, "VAT Number")} htmlFor="vatNumber">
+        <FormField label={t(locale, labels.taxNumberLabel)} htmlFor="vatNumber">
           <Input id="vatNumber" name="vatNumber" defaultValue={client?.vatNumber ?? ""} placeholder="3000..." className="font-mono" />
         </FormField>
-        <FormField label={t(locale, "CR Number")} htmlFor="taxId">
-          <Input id="taxId" name="taxId" defaultValue={client?.taxId ?? ""} className="font-mono" />
+        <FormField label={t(locale, labels.registrationLabel)} htmlFor="taxId">
+          <Input id="taxId" name="taxId" defaultValue={client?.taxId ?? ""} placeholder={labels.registrationPlaceholder} className="font-mono" />
         </FormField>
         <FormField label={t(locale, "Notes")} htmlFor="notes" span={2}>
           <Input id="notes" name="notes" defaultValue={client?.notes ?? ""} />
         </FormField>
       </div>
 
-      <AddressFields locale={locale} value={address} onChange={(patch) => setAddress((a) => ({ ...a, ...patch }))} defaultOpen={hasAddress} />
+      <AddressFields locale={locale} profile={prof} value={address} onChange={(patch) => setAddress((a) => ({ ...a, ...patch }))} defaultOpen={hasAddress} />
 
       {state?.error && <p className="text-[12.5px] text-danger">{state.error}</p>}
       <div>

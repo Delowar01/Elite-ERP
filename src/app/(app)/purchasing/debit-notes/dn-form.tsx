@@ -14,6 +14,7 @@ import { PreviewDialog, type PreviewData } from "../../sales/_shared/preview-dia
 import { Money } from "../../sales/_shared/money";
 import { computeTotals, fmt } from "../../sales/_shared/totals";
 import { t, type Locale } from "@/lib/i18n/dict";
+import { getProfileByCountryName } from "@/lib/geo/country-profiles";
 import type { Product, Org } from "@/db";
 import { createDebitNoteAction, updateDebitNoteAction } from "./actions";
 
@@ -51,7 +52,9 @@ export function DnForm({
   const [sourcePurchaseOrderId, setSourcePurchaseOrderId] = useState(initial?.sourcePurchaseOrderId ?? defaultPoId ?? "");
   const [issueDate, setIssueDate] = useState(initial?.issueDate ?? new Date().toISOString().slice(0, 10));
   const [reason, setReason] = useState(initial?.reason ?? "");
-  const [items, setItems] = useState<LineItemDraft[]>(initial?.items && initial.items.length > 0 ? initial.items : [emptyLineItem()]);
+  const countryProfile = getProfileByCountryName(org.country);
+  const defaultTaxRate = String(countryProfile.defaultTaxRate);
+  const [items, setItems] = useState<LineItemDraft[]>(initial?.items && initial.items.length > 0 ? initial.items : [emptyLineItem(defaultTaxRate)]);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [pendingDraft, startDraftTransition] = useTransition();
   const [pendingPrimary, startPrimaryTransition] = useTransition();
@@ -147,7 +150,7 @@ export function DnForm({
         )}
       </div>
 
-      <LineItemsEditor locale={locale} products={products} items={items} onChange={setItems} variant="simple" />
+      <LineItemsEditor locale={locale} products={products} items={items} onChange={setItems} defaultTaxRate={defaultTaxRate} variant="simple" />
 
       <div className="card totals-strip" style={{ maxWidth: 340, marginInlineStart: "auto", marginTop: 16 }}>
         <div className="t-row">

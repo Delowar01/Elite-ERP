@@ -62,7 +62,7 @@ export async function updatePartyContactAction(
     name: string; email: string; phone: string; address: string;
     clientType?: string;
     countryCode?: string; stateProvince?: string; district?: string; city?: string;
-    buildingNumber?: string; postalCode?: string; streetAddress?: string;
+    buildingNumber?: string; additionalNumber?: string; postalCode?: string; streetAddress?: string;
   },
 ): Promise<PopupResult> {
   const session = await requireSession();
@@ -81,6 +81,7 @@ export async function updatePartyContactAction(
       district: (input.district ?? "").trim() || null,
       city: (input.city ?? "").trim() || null,
       buildingNumber,
+      additionalNumber: (input.additionalNumber ?? "").trim() || null,
       postalCode,
       streetAddress: (input.streetAddress ?? "").trim() || null,
     };

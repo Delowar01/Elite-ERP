@@ -1,8 +1,9 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { and, eq } from "drizzle-orm";
-import { db, vendorsTable, purchaseOrdersTable } from "@/db";
+import { db, vendorsTable, purchaseOrdersTable, orgsTable } from "@/db";
 import { requireSession } from "@/lib/session";
+import { getProfileByCountryName, resolveTaxLabels } from "@/lib/geo/country-profiles";
 import { tenantScope } from "@/lib/tenant";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,6 +26,12 @@ export default async function VendorDetailPage({ params }: { params: Promise<{ i
     .limit(1);
 
   if (!vendor) notFound();
+
+  const [org] = await db
+    .select({ country: orgsTable.country, customTaxName: orgsTable.customTaxName, customTaxNumberLabel: orgsTable.customTaxNumberLabel, customRegistrationLabel: orgsTable.customRegistrationLabel })
+    .from(orgsTable)
+    .where(eq(orgsTable.id, session.orgId));
+  const labels = resolveTaxLabels(getProfileByCountryName(org?.country), org);
 
   const pos = await db
     .select()
@@ -49,7 +56,7 @@ export default async function VendorDetailPage({ params }: { params: Promise<{ i
       <div className="grid grid-cols-3 gap-5">
         <Card className="col-span-2">
           <CardContent className="pt-6">
-            <VendorForm vendor={vendor} action={updateVendorAction.bind(null, vendor.id)} submitLabel="Save changes" />
+            <VendorForm vendor={vendor} action={updateVendorAction.bind(null, vendor.id)} submitLabel="Save changes" taxNumberLabel={labels.taxNumberLabel} registrationLabel={labels.registrationLabel} />
           </CardContent>
         </Card>
 

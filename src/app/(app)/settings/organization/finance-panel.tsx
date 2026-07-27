@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { FormField } from "@/components/ui/form-field";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { getProfileByCountryName } from "@/lib/geo/country-profiles";
 import { t, type Locale } from "@/lib/i18n/dict";
 import type { Org, BankAccount } from "@/db";
 import { updateDefaultBankAccountAction, updateFiscalYearAction, updateVatConfigAction } from "./actions";
@@ -115,9 +116,14 @@ export function VatConfigurationPanel({ locale, org }: { locale: Locale; org: Or
     });
   }
 
+  const profile = getProfileByCountryName(org.country);
+
   return (
     <div className="flex flex-col gap-4 max-w-lg">
       <h3 className="text-[17px] font-bold">{t(locale, "VAT Configuration")}</h3>
+      <p className="text-[12.5px] text-ink-muted -mt-2">
+        {t(locale, "Default VAT Rate")}: <span className="font-semibold">{profile.defaultTaxRate}%</span> · {t(locale, "from your country profile")} ({profile.countryName})
+      </p>
       <div className="grid grid-cols-1 gap-4">
         <FormField label={t(locale, "Registration Status")} htmlFor="vat-status">
           <Select value={vatStatus} onValueChange={setVatStatus}>

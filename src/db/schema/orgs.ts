@@ -15,6 +15,13 @@ export const orgsTable = pgTable("orgs", {
   country: text("country"),
   defaultLanguage: text("default_language").notNull().default("en"), // en | ar
 
+  // Country-profile overrides — only honored for the configurable Global profile (countries without
+  // a dedicated profile). When null, the resolved country profile's defaults are used. Dedicated
+  // profiles (Saudi Arabia, UAE) ignore these and always use their fixed terminology.
+  customTaxName: text("custom_tax_name"),
+  customTaxNumberLabel: text("custom_tax_number_label"),
+  customRegistrationLabel: text("custom_registration_label"),
+
   // Company branding (Business Settings -> Logo / Color Theme)
   logoUrl: text("logo_url"),
   // "gradient" (Elite default) or "single" (solid primary + accent). Existing/new orgs default to gradient.

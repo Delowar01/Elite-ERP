@@ -23,6 +23,9 @@ export const customersTable = pgTable("customers", {
   district: text("district"),
   city: text("city"),
   buildingNumber: text("building_number"),
+  // Saudi National Address "Additional Number" (secondary building identifier); shown only for
+  // country profiles that support it (currently SA). Nullable/additive.
+  additionalNumber: text("additional_number"),
   postalCode: text("postal_code"),
   streetAddress: text("street_address"),
   taxId: text("tax_id"),
