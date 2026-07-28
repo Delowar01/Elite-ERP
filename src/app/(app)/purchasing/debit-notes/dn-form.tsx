@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { getLineDesc } from "../../sales/_shared/line-item-desc";
 import { toast } from "sonner";
 import { FileMinus2 } from "lucide-react";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
@@ -78,7 +79,7 @@ export function DnForm({
     ],
     from: { label: t(locale, "From"), name: org.name, lines: [org.address, org.email, org.phone] },
     to: selectedPo ? { label: t(locale, "To Vendor"), name: selectedPo.vendorName, lines: [selectedPo.vendorAddress, selectedPo.vendorEmail, selectedPo.vendorPhone] } : undefined,
-    items: items.map((it) => ({ description: it.description, quantity: it.quantity, unitPrice: fmt(Number(it.unitPrice) || 0), lineTotal: fmt((Number(it.quantity) || 0) * (Number(it.unitPrice) || 0)) })),
+    items: items.map((it) => ({ description: it.description, desc: getLineDesc(it.customFields), quantity: it.quantity, unitPrice: fmt(Number(it.unitPrice) || 0), lineTotal: fmt((Number(it.quantity) || 0) * (Number(it.unitPrice) || 0)) })),
     showPricing: true,
     totals: { subtotal: totals.subtotal, discount: totals.discount, taxTotal: totals.taxTotal, total: totals.total },
     terms,

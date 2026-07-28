@@ -756,6 +756,27 @@ table.data-table.line-table td { padding: 9px 14px; }
 .rich-html ul { list-style: disc; padding-inline-start: 1.5em; }
 .rich-html a { color: var(--brand-orange); text-decoration: underline; }
 .rich-html b, .rich-html strong { font-weight: 700; }
+.rich-html i, .rich-html em { font-style: italic; }
+.rich-html u { text-decoration: underline; }
+.rich-html p { margin: 0 0 0.4em; }
+.rich-html p:last-child { margin-bottom: 0; }
+
+/* Full-width line-item description row: a separate row beneath its item, spanning every column so
+   long formatted text (paragraphs, bullet/numbered lists) wraps cleanly and is never clipped. */
+.line-desc-cell {
+  padding-top: 0 !important;
+  padding-bottom: 10px !important;
+  color: var(--ink-muted);
+  font-size: 12px;
+  line-height: 1.55;
+}
+.line-desc-cell .rich-html {
+  display: block;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.line-desc-cell .rich-html ul,
+.line-desc-cell .rich-html ol { margin: 0.2em 0; }
 
 /* ---- In-page Preview & Print modal: print only the preview area ---- */
 @media print {

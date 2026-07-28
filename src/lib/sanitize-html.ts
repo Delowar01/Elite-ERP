@@ -4,7 +4,10 @@
 // href on <a> — so stored rich text can be rendered with dangerouslySetInnerHTML without XSS risk.
 // Runs identically on the server (authoritative, on save) and the client (preview).
 
-const ALLOWED_TAGS = new Set(["b", "strong", "i", "em", "u", "br", "p", "ul", "ol", "li", "a", "span"]);
+// "div" is included because contentEditable (Chrome/Safari) wraps each new line in a <div> when the
+// user presses Enter; keeping it preserves those line breaks through sanitize (on blur/save) instead
+// of collapsing the whole description onto one line.
+const ALLOWED_TAGS = new Set(["b", "strong", "i", "em", "u", "br", "p", "ul", "ol", "li", "a", "span", "div"]);
 const SAFE_URL = /^(https?:\/\/|mailto:)/i;
 
 // Collapse non-breaking spaces (the char, the named/numeric entity, and the legacy double-escaped
@@ -98,13 +101,16 @@ export function richTextToPlain(input: string | null | undefined): string {
   if (!input) return "";
   return normalizeNbsp(input)
     .replace(/<\s*br\s*\/?>/gi, "\n")
-    .replace(/<\/(p|li|ul|ol)>/gi, "\n")
+    // Block-level boundaries (open OR close) become a line break, so a bare first line followed by
+    // <div>/<p> blocks (how contentEditable represents Enter) reads as separate lines in plain text.
+    .replace(/<\/?(p|li|ul|ol|div)(\s[^>]*)?>/gi, "\n")
     .replace(/<[^>]+>/g, "")
     .replace(/&amp;/g, "&")
     .replace(/&lt;/g, "<")
     .replace(/&gt;/g, ">")
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'")
-    .replace(/\n{3,}/g, "\n\n")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{2,}/g, "\n")
     .trim();
 }

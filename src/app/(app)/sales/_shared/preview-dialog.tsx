@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { Printer } from "lucide-react";
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogFooter, DialogTitle, DialogClose } from "@/components/ui/dialog";
 import { t, type Locale } from "@/lib/i18n/dict";
@@ -9,7 +9,7 @@ import { DocumentTermsView } from "./terms-view";
 import type { DocumentTerm } from "./document-terms";
 
 export type PreviewParty = { label: string; name: string; lines: (string | null | undefined)[] };
-export type PreviewItem = { description: string; quantity: string; unitPrice?: string; lineTotal?: string };
+export type PreviewItem = { description: string; desc?: string; quantity: string; unitPrice?: string; lineTotal?: string };
 export type PreviewData = {
   docLabel: string;
   number: string;
@@ -82,14 +82,26 @@ export function PreviewDialog({
               </tr>
             </thead>
             <tbody>
-              {data.items.map((it, i) => (
-                <tr key={i} className="border-b border-[#eee]">
-                  <td className="py-1">{it.description || "—"}</td>
-                  <td className="py-1 text-right">{it.quantity}</td>
-                  {data.showPricing && <td className="py-1 text-right">{it.unitPrice}</td>}
-                  {data.showPricing && <td className="py-1 text-right">{it.lineTotal}</td>}
-                </tr>
-              ))}
+              {data.items.map((it, i) => {
+                const cols = data.showPricing ? 4 : 2;
+                return (
+                  <Fragment key={i}>
+                    <tr className={it.desc && it.desc.trim() ? "" : "border-b border-[#eee]"}>
+                      <td className="py-1">{it.description || "—"}</td>
+                      <td className="py-1 text-right">{it.quantity}</td>
+                      {data.showPricing && <td className="py-1 text-right">{it.unitPrice}</td>}
+                      {data.showPricing && <td className="py-1 text-right">{it.lineTotal}</td>}
+                    </tr>
+                    {it.desc && it.desc.trim() && (
+                      <tr className="border-b border-[#eee]">
+                        <td colSpan={cols} className="pb-1.5 text-[11.5px] text-[#555] line-desc-cell">
+                          <span className="rich-html" dangerouslySetInnerHTML={{ __html: richTextToHtml(it.desc) }} />
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
+                );
+              })}
             </tbody>
           </table>
           {data.showPricing && data.totals && (

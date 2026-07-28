@@ -34,11 +34,13 @@ export function RichTextField({
   const ref = useRef<HTMLDivElement>(null);
   const [collapsed, setCollapsed] = useState(false);
 
-  // Sync external value into the contentEditable only when it diverges from what the user typed
-  // (avoids caret jumps during typing).
+  // Sync external value into the contentEditable only when it diverges from what the user typed,
+  // and never while the editor is focused — rewriting innerHTML during typing collapses the caret
+  // back to the start (the "Enter jumps to the first line" bug). While focused the DOM is already the
+  // source of truth (emit() sanitizes on input/blur), so there's nothing to sync in.
   useEffect(() => {
     const el = ref.current;
-    if (el && el.innerHTML !== value) el.innerHTML = value || "";
+    if (el && document.activeElement !== el && el.innerHTML !== value) el.innerHTML = value || "";
   }, [value]);
 
   function emit() {

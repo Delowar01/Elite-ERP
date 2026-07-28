@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { getLineDesc } from "../_shared/line-item-desc";
 import { toast } from "sonner";
 import { Truck } from "lucide-react";
 import { PartyCardStatic, PartyCardSelect } from "../_shared/party-card";
@@ -72,7 +73,7 @@ export function DcForm({
     ],
     from: { label: t(locale, "From"), name: org.name, lines: [org.address, org.email, org.phone] },
     to: selectedCustomer ? { label: t(locale, "To Client"), name: selectedCustomer.name, lines: [selectedCustomer.address, selectedCustomer.email, selectedCustomer.phone] } : undefined,
-    items: items.map((it) => ({ description: it.description, quantity: it.quantity })),
+    items: items.map((it) => ({ description: it.description, desc: getLineDesc(it.customFields), quantity: it.quantity })),
     showPricing: false,
     terms,
     currency: org.currency,

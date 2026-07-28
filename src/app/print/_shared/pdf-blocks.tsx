@@ -1,6 +1,23 @@
+import { Fragment } from "react";
 import { fmt } from "../../(app)/sales/_shared/totals";
+import { richTextToHtml } from "@/lib/sanitize-html";
 import { formatMoneyNumber, type CurrencyMark } from "@/lib/currency/currencies";
 import type { Org } from "@/db";
+
+// A full-width line-item description row for print/PDF: spans every column of the items table so the
+// saved long-form description (paragraphs, bullet/numbered lists) prints beneath its item, wraps
+// across the full page width, and continues correctly across page breaks. Renders nothing when the
+// line has no description, so empty descriptions never produce a blank row.
+function PdfDescRow({ description, colSpan, zebra }: { description?: string | null; colSpan: number; zebra?: boolean }) {
+  if (!description || !description.trim()) return null;
+  return (
+    <tr className={zebra ? "pdf-item-desc-row pdf-zrow" : "pdf-item-desc-row"}>
+      <td colSpan={colSpan} className="pdf-item-desc">
+        <span className="rich-html" dangerouslySetInnerHTML={{ __html: richTextToHtml(description) }} />
+      </td>
+    </tr>
+  );
+}
 
 // A monetary amount for print/PDF: currency mark + space + number. Shows the symbol when available,
 // otherwise the ISO code (never both). Asset symbols (SAR) render from the locally-stored asset via
@@ -125,6 +142,7 @@ export function orgPartyLines(org: Org): PartyLine[] {
 
 export type FullItemRow = {
   name: string;
+  description?: string | null;
   vatPercent: string;
   quantity: string;
   rate: string;
@@ -149,20 +167,24 @@ export function ItemsTableFull({ items }: { items: FullItemRow[] }) {
           {items.map((it, i) => {
             const amount = (Number(it.quantity) || 0) * (Number(it.rate) || 0);
             const vatAmt = amount * ((Number(it.vatPercent) || 0) / 100);
+            const zebra = i % 2 === 0;
             return (
-              <tr key={i}>
-                <td>
-                  <div className="item-name">{it.name}</div>
-                </td>
-                <td className="num">{Number(it.vatPercent)}%</td>
-                <td className="num">{Number(it.quantity)}</td>
-                <td className="num">{fmt(it.rate)}</td>
-                <td className="num">{fmt(amount)}</td>
-                <td className="num">{fmt(vatAmt)}</td>
-                <td className="num" style={{ fontWeight: 700 }}>
-                  {fmt(amount + vatAmt)}
-                </td>
-              </tr>
+              <Fragment key={i}>
+                <tr className={zebra ? "pdf-zrow" : undefined}>
+                  <td>
+                    <div className="item-name">{it.name}</div>
+                  </td>
+                  <td className="num">{Number(it.vatPercent)}%</td>
+                  <td className="num">{Number(it.quantity)}</td>
+                  <td className="num">{fmt(it.rate)}</td>
+                  <td className="num">{fmt(amount)}</td>
+                  <td className="num">{fmt(vatAmt)}</td>
+                  <td className="num" style={{ fontWeight: 700 }}>
+                    {fmt(amount + vatAmt)}
+                  </td>
+                </tr>
+                <PdfDescRow description={it.description} colSpan={7} zebra={zebra} />
+              </Fragment>
             );
           })}
         </tbody>
@@ -171,7 +193,7 @@ export function ItemsTableFull({ items }: { items: FullItemRow[] }) {
   );
 }
 
-export function ItemsTableSimple({ items }: { items: { name: string; quantity: string; rate: string }[] }) {
+export function ItemsTableSimple({ items }: { items: { name: string; description?: string | null; quantity: string; rate: string }[] }) {
   return (
     <div className="pdf-items-wrap">
       <table className="pdf-items">
@@ -184,23 +206,29 @@ export function ItemsTableSimple({ items }: { items: { name: string; quantity: s
           </tr>
         </thead>
         <tbody>
-          {items.map((it, i) => (
-            <tr key={i}>
-              <td className="item-name">{it.name}</td>
-              <td className="num">{Number(it.quantity)}</td>
-              <td className="num">{fmt(it.rate)}</td>
-              <td className="num" style={{ fontWeight: 700 }}>
-                {fmt((Number(it.quantity) || 0) * (Number(it.rate) || 0))}
-              </td>
-            </tr>
-          ))}
+          {items.map((it, i) => {
+            const zebra = i % 2 === 0;
+            return (
+              <Fragment key={i}>
+                <tr className={zebra ? "pdf-zrow" : undefined}>
+                  <td className="item-name">{it.name}</td>
+                  <td className="num">{Number(it.quantity)}</td>
+                  <td className="num">{fmt(it.rate)}</td>
+                  <td className="num" style={{ fontWeight: 700 }}>
+                    {fmt((Number(it.quantity) || 0) * (Number(it.rate) || 0))}
+                  </td>
+                </tr>
+                <PdfDescRow description={it.description} colSpan={4} zebra={zebra} />
+              </Fragment>
+            );
+          })}
         </tbody>
       </table>
     </div>
   );
 }
 
-export function ItemsTableQty({ items }: { items: { name: string; quantity: string }[] }) {
+export function ItemsTableQty({ items }: { items: { name: string; description?: string | null; quantity: string }[] }) {
   return (
     <div className="pdf-items-wrap">
       <table className="pdf-items qty-table">
@@ -211,14 +239,20 @@ export function ItemsTableQty({ items }: { items: { name: string; quantity: stri
           </tr>
         </thead>
         <tbody>
-          {items.map((it, i) => (
-            <tr key={i}>
-              <td>
-                <div className="item-name">{it.name}</div>
-              </td>
-              <td className="num">{Number(it.quantity)}</td>
-            </tr>
-          ))}
+          {items.map((it, i) => {
+            const zebra = i % 2 === 0;
+            return (
+              <Fragment key={i}>
+                <tr className={zebra ? "pdf-zrow" : undefined}>
+                  <td>
+                    <div className="item-name">{it.name}</div>
+                  </td>
+                  <td className="num">{Number(it.quantity)}</td>
+                </tr>
+                <PdfDescRow description={it.description} colSpan={2} zebra={zebra} />
+              </Fragment>
+            );
+          })}
         </tbody>
       </table>
     </div>

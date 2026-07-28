@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { getLineDesc } from "../../sales/_shared/line-item-desc";
 import { toast } from "sonner";
 import { ShoppingCart, Settings, Columns3 } from "lucide-react";
 import { PartyCardStatic, PartyCardSelect } from "../../sales/_shared/party-card";
@@ -120,7 +121,7 @@ export function PoForm({
     ],
     from: { label: t(locale, "From"), name: org.name, lines: [org.address, org.email, org.phone] },
     to: selectedVendor ? { label: t(locale, "To Vendor"), name: selectedVendor.name, lines: [selectedVendor.address, selectedVendor.email, selectedVendor.phone] } : undefined,
-    items: items.map((it) => ({ description: it.description, quantity: it.quantity, unitPrice: fmt(Number(it.unitPrice) || 0), lineTotal: fmt((Number(it.quantity) || 0) * (Number(it.unitPrice) || 0)) })),
+    items: items.map((it) => ({ description: it.description, desc: getLineDesc(it.customFields), quantity: it.quantity, unitPrice: fmt(Number(it.unitPrice) || 0), lineTotal: fmt((Number(it.quantity) || 0) * (Number(it.unitPrice) || 0)) })),
     showPricing: true,
     totals: { subtotal: totals.subtotal, discount: totals.discount, taxTotal: totals.taxTotal, total: totals.total },
     notes,

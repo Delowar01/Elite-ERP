@@ -58,6 +58,16 @@ async function main() {
   check("keeps bold/italic/underline", /<b>Bold<\/b>/.test(clean) && /<i>/.test(clean) && /<u>/.test(clean));
   check("keeps bullet + numbered lists", /<ul><li>a<\/li><li>b<\/li><\/ul>/.test(clean) && /<ol><li>1<\/li><\/ol>/.test(clean));
   check("keeps safe link, drops <script>/<img>", /<a href="https:\/\/x\.com"/.test(clean) && !/script/i.test(clean) && !/<img/i.test(clean));
+
+  // ---- Enter-key line breaks: contentEditable wraps new lines in <div>; sanitize must keep them ----
+  const multiline = sanitizeRichText("Line one<div>Line two</div><div>Line three</div>");
+  check("keeps <div> line blocks (Enter creates new lines)", /<div>Line two<\/div>/.test(multiline) && /<div>Line three<\/div>/.test(multiline));
+  check("richTextToPlain turns <div> blocks into newlines", richTextToPlain("Line one<div>Line two</div><div>Line three</div>") === "Line one\nLine two\nLine three");
+  check("multiline paragraphs + list survive round-trip", (() => {
+    const src = "<p>Intro paragraph</p><ul><li>bullet a</li><li>bullet b</li></ul><div>closing line</div>";
+    const s = sanitizeRichText(src);
+    return /<p>Intro paragraph<\/p>/.test(s) && /<ul><li>bullet a<\/li><li>bullet b<\/li><\/ul>/.test(s) && /<div>closing line<\/div>/.test(s);
+  })());
   check("server sanitize == same result (client/server parity)", sanitizeIfHtml(dirty) === clean);
 
   // ---- Non-breaking spaces are normalized to normal spaces (never a literal &nbsp;) ----

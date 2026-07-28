@@ -55,11 +55,11 @@ import {
 } from "../../_shared/pdf-blocks";
 import { PrintToolbar } from "../../_shared/print-toolbar";
 
-// Item label for print: the item NAME plus its optional long-form description on one line.
-function itemLabel(it: { description: string | null; customFields?: unknown }): string {
-  const name = richTextToPlain(it.description) || "—";
-  const desc = richTextToPlain(getLineDesc(it.customFields));
-  return desc ? `${name} — ${desc}` : name;
+// The item NAME for print (plain text, single line). The long-form description is rendered
+// separately as a full-width row beneath the item (see ItemsTable* / PdfDescRow), so it keeps its
+// paragraphs and bullet/numbered lists instead of being flattened onto the name line.
+function itemName(it: { description: string | null }): string {
+  return richTextToPlain(it.description) || "—";
 }
 
 
@@ -141,7 +141,8 @@ export default async function PrintPage({ params }: { params: Promise<{ type: st
     if (!customer) notFound();
 
     const fullItems = items.map((it) => ({
-      name: itemLabel(it),
+      name: itemName(it),
+      description: getLineDesc(it.customFields),
       vatPercent: it.taxRatePercent,
       quantity: it.quantity,
       rate: it.unitPrice,
@@ -286,7 +287,7 @@ export default async function PrintPage({ params }: { params: Promise<{ type: st
           {orgParty("DELIVERY TO")}
           <Party label="SUPPLY FROM" name={vendor.name} lines={customerLines(vendor)} />
         </Parties>
-        <ItemsTableFull items={items.map((it) => ({ name: itemLabel(it), vatPercent: it.taxRatePercent, quantity: it.quantity, rate: it.unitCost }))} />
+        <ItemsTableFull items={items.map((it) => ({ name: itemName(it), description: getLineDesc(it.customFields), vatPercent: it.taxRatePercent, quantity: it.quantity, rate: it.unitCost }))} />
         <div className="pdf-bottom">
           <div>
             <AmountWords words={amountInWords(po.total, "en", mark)} />
@@ -320,7 +321,7 @@ export default async function PrintPage({ params }: { params: Promise<{ type: st
           {orgParty("ISSUED BY")}
           <Party label="DELIVERED TO" name={customer.name} lines={customerLines(customer)} />
         </Parties>
-        <ItemsTableQty items={items.map((it) => ({ name: itemLabel(it), quantity: it.quantity }))} />
+        <ItemsTableQty items={items.map((it) => ({ name: itemName(it), description: getLineDesc(it.customFields), quantity: it.quantity }))} />
         <PdfTermsBlock terms={dc.terms} />
         <NotesBlock notes={logistics || null} />
         <ClientComments />
@@ -357,7 +358,7 @@ export default async function PrintPage({ params }: { params: Promise<{ type: st
               </>
             ) : null}
           </div>
-          <ItemsTableSimple items={items.map((it) => ({ name: itemLabel(it), quantity: it.quantity, rate: it.unitPrice }))} />
+          <ItemsTableSimple items={items.map((it) => ({ name: itemName(it), description: getLineDesc(it.customFields), quantity: it.quantity, rate: it.unitPrice }))} />
           <div className="pdf-bottom">
             <AmountWords words={amountInWords(cn.total, "en", mark)} />
             <TotalsBox rows={[["VAT", money(cn.taxTotal)]]} grandLabel="Credit Total" grandVal={money(cn.total)} />
@@ -391,7 +392,7 @@ export default async function PrintPage({ params }: { params: Promise<{ type: st
               </>
             ) : null}
           </div>
-          <ItemsTableSimple items={items.map((it) => ({ name: itemLabel(it), quantity: it.quantity, rate: it.unitCost }))} />
+          <ItemsTableSimple items={items.map((it) => ({ name: itemName(it), description: getLineDesc(it.customFields), quantity: it.quantity, rate: it.unitCost }))} />
           <div className="pdf-bottom">
             <AmountWords words={amountInWords(dn.total, "en", mark)} />
             <TotalsBox rows={[["VAT", money(dn.taxTotal)]]} grandLabel="Debit Total" grandVal={money(dn.total)} />
