@@ -7,12 +7,24 @@
 const ALLOWED_TAGS = new Set(["b", "strong", "i", "em", "u", "br", "p", "ul", "ol", "li", "a", "span"]);
 const SAFE_URL = /^(https?:\/\/|mailto:)/i;
 
+// Collapse non-breaking spaces (the char, the named/numeric entity, and the legacy double-escaped
+// "&amp;nbsp;" that older data may hold) down to a normal space, so the editor never shows or stores
+// a literal "&nbsp;". Runs before tag parsing so the "&" never reaches escapeText to be re-escaped.
+function normalizeNbsp(s: string): string {
+  return s
+    .replace(/&amp;nbsp;/gi, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&#160;/g, " ")
+    .replace(/&#x0*a0;/gi, " ")
+    .replace(/\u00A0/g, " ");
+}
+
 // Strip tags/attributes not in the allowlist. Also caps length to avoid unbounded storage.
 export function sanitizeRichText(input: string, maxLen = 20000): string {
   if (!input) return "";
   let out = "";
   let i = 0;
-  const s = input.slice(0, maxLen);
+  const s = normalizeNbsp(input).slice(0, maxLen);
   while (i < s.length) {
     const lt = s.indexOf("<", i);
     if (lt === -1) {
@@ -77,13 +89,14 @@ export function sanitizeIfHtml(input: string | null | undefined): string {
   if (!input) return "";
   const trimmed = input.trim();
   const looksLikeHtml = /<\/?[a-z][\s\S]*>/i.test(trimmed);
-  return looksLikeHtml ? sanitizeRichText(trimmed) : trimmed;
+  // Normalize nbsp in both branches so a literal "&nbsp;" is never stored, even for plain values.
+  return looksLikeHtml ? sanitizeRichText(trimmed) : normalizeNbsp(trimmed);
 }
 
 // Plain-text projection of rich text (for places that must stay text: PDF layout, list previews).
 export function richTextToPlain(input: string | null | undefined): string {
   if (!input) return "";
-  return input
+  return normalizeNbsp(input)
     .replace(/<\s*br\s*\/?>/gi, "\n")
     .replace(/<\/(p|li|ul|ol)>/gi, "\n")
     .replace(/<[^>]+>/g, "")

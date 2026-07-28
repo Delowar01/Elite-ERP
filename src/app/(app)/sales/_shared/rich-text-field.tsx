@@ -17,6 +17,8 @@ export function RichTextField({
   placeholder,
   rows = 4,
   compact = false,
+  minHeightPx,
+  maxHeightPx,
 }: {
   locale: Locale;
   value: string;
@@ -24,6 +26,10 @@ export function RichTextField({
   placeholder?: string;
   rows?: number;
   compact?: boolean;
+  /** Explicit min height for a larger editor (e.g. the description popup). Overrides rows. */
+  minHeightPx?: number;
+  /** Optional cap; the body scrolls internally past this height. */
+  maxHeightPx?: number;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const [collapsed, setCollapsed] = useState(false);
@@ -97,7 +103,9 @@ export function RichTextField({
           onInput={emit}
           onBlur={emit}
           className="rte-body w-full outline-none bg-transparent overflow-auto rte-editable"
-          style={{ minHeight: compact ? 28 : rows * 20 }}
+          // white-space: pre-wrap makes the browser keep normal spaces instead of inserting
+          // non-breaking spaces (&nbsp;) as you type.
+          style={{ minHeight: minHeightPx ?? (compact ? 28 : rows * 20), maxHeight: maxHeightPx, whiteSpace: "pre-wrap" }}
         />
       )}
     </div>

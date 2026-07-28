@@ -60,6 +60,15 @@ async function main() {
   check("keeps safe link, drops <script>/<img>", /<a href="https:\/\/x\.com"/.test(clean) && !/script/i.test(clean) && !/<img/i.test(clean));
   check("server sanitize == same result (client/server parity)", sanitizeIfHtml(dirty) === clean);
 
+  // ---- Non-breaking spaces are normalized to normal spaces (never a literal &nbsp;) ----
+  const NB = String.fromCharCode(160); // U+00A0
+  check("nbsp char -> normal space", sanitizeRichText(`Test${NB}end`) === "Test end");
+  check("&nbsp; entity -> normal space (not re-escaped)", sanitizeRichText("Test&nbsp;end") === "Test end" && !/nbsp/i.test(sanitizeRichText("Test&nbsp;end")));
+  check("legacy &amp;nbsp; -> normal space", sanitizeRichText("Test&amp;nbsp;end") === "Test end");
+  check("plain value nbsp normalized on save", sanitizeIfHtml("Just&nbsp;text") === "Just text");
+  check("richTextToPlain strips nbsp", richTextToPlain("A&nbsp;B") === "A B");
+
+
   const [org] = await db.select().from(orgsTable).limit(1);
   if (!org) throw new Error("no org");
   const created: number[] = [];
