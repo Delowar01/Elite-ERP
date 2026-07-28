@@ -29,6 +29,7 @@ export const salesInvoicesTable = pgTable("sales_invoices", {
   total: numeric("total", { precision: 14, scale: 2 }).notNull().default("0"),
   paidAmount: numeric("paid_amount", { precision: 14, scale: 2 }).notNull().default("0"),
   notes: text("notes"),
+  terms: jsonb("terms").$type<{ text: string; groupId: number | null; groupName: string | null }[]>(),
   createdById: integer("created_by_id")
     .notNull()
     .references(() => usersTable.id),

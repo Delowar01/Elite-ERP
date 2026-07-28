@@ -59,6 +59,7 @@ export default async function EditInvoicePage({ params }: { params: Promise<{ id
           dueDate: inv.dueDate ?? "",
           discount: inv.discount,
           notes: inv.notes ?? "",
+          terms: inv.terms ?? [],
           items: initialItems,
         }}
       />

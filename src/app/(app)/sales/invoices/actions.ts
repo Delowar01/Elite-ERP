@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { sanitizeIfHtml } from "@/lib/sanitize-html";
+import { normalizeDocumentTerms, type DocumentTerm } from "../_shared/document-terms";
 import { redirect } from "next/navigation";
 import { and, eq, sql } from "drizzle-orm";
 import { db, customersTable, projectsTable, salesInvoicesTable, salesInvoiceItemsTable, productsTable, accountsTable, journalEntriesTable, journalLinesTable, deliveryChallansTable, deliveryChallanItemsTable } from "@/db";
@@ -26,7 +27,7 @@ export async function createInvoiceAction(
     issueDate: string;
     dueDate: string;
     discount: string;
-    notes: string;
+    notes: string; terms?: DocumentTerm[];
     items: LineInput[];
     attachments?: AttachmentInput[];
   },
@@ -67,6 +68,7 @@ export async function createInvoiceAction(
         issueDate: input.issueDate,
         dueDate: input.dueDate || null,
         notes: sanitizeIfHtml(input.notes) || null,
+        terms: normalizeDocumentTerms(input.terms),
         subtotal: totals.subtotal,
         discount: totals.discount,
         taxTotal: totals.taxTotal,
@@ -105,7 +107,7 @@ export async function createInvoiceAction(
 // Batch A2 — draft-only edit. Preserves number/org/status/source links; recomputes totals server-side.
 export async function updateInvoiceAction(
   id: number,
-  input: { title: string; customerId: string; projectId?: string; issueDate: string; dueDate: string; discount: string; notes: string; items: LineInput[]; attachments?: AttachmentInput[] },
+  input: { title: string; customerId: string; projectId?: string; issueDate: string; dueDate: string; discount: string; notes: string; terms?: DocumentTerm[]; items: LineInput[]; attachments?: AttachmentInput[] },
 ): Promise<ActionResult> {
   const session = await requireSession();
   const [existing] = await db.select().from(salesInvoicesTable).where(and(eq(salesInvoicesTable.id, id), eq(salesInvoicesTable.orgId, session.orgId)));
@@ -137,6 +139,7 @@ export async function updateInvoiceAction(
         issueDate: input.issueDate,
         dueDate: input.dueDate || null,
         notes: sanitizeIfHtml(input.notes) || null,
+        terms: normalizeDocumentTerms(input.terms),
         subtotal: totals.subtotal,
         discount: totals.discount,
         taxTotal: totals.taxTotal,

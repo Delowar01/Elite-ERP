@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { eq, and } from "drizzle-orm";
+import { DocumentTermsView } from "../../../sales/_shared/terms-view";
 import { SafeRichText } from "../../../sales/_shared/safe-rich-text";
 import { db, debitNotesTable, debitNoteItemsTable, vendorsTable, purchaseOrdersTable } from "@/db";
 import { requireSession } from "@/lib/session";
@@ -37,6 +38,7 @@ export default async function DebitNoteDetailPage({ params }: { params: Promise<
       status: debitNotesTable.status,
       issueDate: debitNotesTable.issueDate,
       reason: debitNotesTable.reason,
+      terms: debitNotesTable.terms,
       subtotal: debitNotesTable.subtotal,
       taxTotal: debitNotesTable.taxTotal,
       total: debitNotesTable.total,
@@ -120,6 +122,7 @@ export default async function DebitNoteDetailPage({ params }: { params: Promise<
           </span>
         </div>
       </div>
+      <DocumentTermsView locale={locale} terms={dn.terms} className="mt-5" />
     </div>
   );
 }

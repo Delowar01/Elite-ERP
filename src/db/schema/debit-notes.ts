@@ -1,4 +1,4 @@
-import { pgTable, serial, integer, text, numeric, date, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, serial, integer, text, numeric, date, timestamp, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { orgsTable } from "./orgs";
@@ -21,6 +21,7 @@ export const debitNotesTable = pgTable("debit_notes", {
     .notNull()
     .references(() => purchaseOrdersTable.id),
   reason: text("reason"),
+  terms: jsonb("terms").$type<{ text: string; groupId: number | null; groupName: string | null }[]>(),
   status: text("status").notNull().default("draft"), // draft | issued
   issueDate: date("issue_date").notNull(),
   subtotal: numeric("subtotal", { precision: 14, scale: 2 }).notNull().default("0"),

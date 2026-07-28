@@ -1,6 +1,7 @@
 import { and, asc, eq, ne } from "drizzle-orm";
 import { db, salesInvoicesTable, customersTable, productsTable, orgsTable } from "@/db";
 import { requireSession } from "@/lib/session";
+import { getDocumentContentPresets } from "@/lib/document-presets";
 import { getLocale } from "@/lib/i18n/server";
 import { tenantScope } from "@/lib/tenant";
 import { previewNextDocumentNumber } from "@/lib/documents";
@@ -29,10 +30,11 @@ export default async function NewCreditNotePage({ searchParams }: { searchParams
     db.select().from(orgsTable).where(eq(orgsTable.id, session.orgId)),
     previewNextDocumentNumber(session.orgId, "credit_note"),
   ]);
+  const presets = await getDocumentContentPresets(session.orgId, "credit_note");
 
   return (
     <div className="max-w-4xl mx-auto">
-      <CnForm locale={locale} invoices={invoices} products={products} org={org} numberPreview={numberPreview} defaultInvoiceId={invoice} />
+      <CnForm locale={locale} invoices={invoices} products={products} org={org} numberPreview={numberPreview} termsGroups={presets.termsGroups} defaultInvoiceId={invoice} />
     </div>
   );
 }

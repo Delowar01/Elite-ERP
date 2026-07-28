@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { eq, and } from "drizzle-orm";
+import { DocumentTermsView } from "../../_shared/terms-view";
 import { SafeRichText } from "../../_shared/safe-rich-text";
 import { db, creditNotesTable, creditNoteItemsTable, customersTable, salesInvoicesTable } from "@/db";
 import { requireSession } from "@/lib/session";
@@ -37,6 +38,7 @@ export default async function CreditNoteDetailPage({ params }: { params: Promise
       status: creditNotesTable.status,
       issueDate: creditNotesTable.issueDate,
       reason: creditNotesTable.reason,
+      terms: creditNotesTable.terms,
       subtotal: creditNotesTable.subtotal,
       taxTotal: creditNotesTable.taxTotal,
       total: creditNotesTable.total,
@@ -120,6 +122,7 @@ export default async function CreditNoteDetailPage({ params }: { params: Promise
           </span>
         </div>
       </div>
+      <DocumentTermsView locale={locale} terms={cn.terms} className="mt-5" />
     </div>
   );
 }

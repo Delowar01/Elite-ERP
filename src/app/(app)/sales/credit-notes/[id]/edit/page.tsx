@@ -2,6 +2,7 @@ import { and, asc, eq } from "drizzle-orm";
 import { notFound, redirect } from "next/navigation";
 import { db, creditNotesTable, creditNoteItemsTable, salesInvoicesTable, customersTable, productsTable, orgsTable } from "@/db";
 import { requireSession } from "@/lib/session";
+import { getDocumentContentPresets } from "@/lib/document-presets";
 import { getLocale } from "@/lib/i18n/server";
 import { tenantScope } from "@/lib/tenant";
 import { can } from "@/lib/document-lifecycle";
@@ -35,6 +36,7 @@ export default async function EditCreditNotePage({ params }: { params: Promise<{
     db.select().from(productsTable).where(tenantScope(session.orgId, productsTable)).orderBy(asc(productsTable.name)),
     db.select().from(orgsTable).where(eq(orgsTable.id, session.orgId)),
   ]);
+  const presets = await getDocumentContentPresets(session.orgId, "credit_note");
 
   const initialItems: LineItemDraft[] = items.map((it) => ({
     productId: it.productId ? String(it.productId) : "",
@@ -50,6 +52,7 @@ export default async function EditCreditNotePage({ params }: { params: Promise<{
   return (
     <div className="max-w-4xl mx-auto">
       <CnForm
+        termsGroups={presets.termsGroups}
         locale={locale}
         invoices={sourceInvoice ? [sourceInvoice] : []}
         products={products}
@@ -62,6 +65,7 @@ export default async function EditCreditNotePage({ params }: { params: Promise<{
           issueDate: cn.issueDate,
           reason: cn.reason ?? "",
           items: initialItems,
+          terms: cn.terms ?? [],
         }}
       />
     </div>

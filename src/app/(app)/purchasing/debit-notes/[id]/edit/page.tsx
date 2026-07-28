@@ -2,6 +2,7 @@ import { and, asc, eq } from "drizzle-orm";
 import { notFound, redirect } from "next/navigation";
 import { db, debitNotesTable, debitNoteItemsTable, purchaseOrdersTable, vendorsTable, productsTable, orgsTable } from "@/db";
 import { requireSession } from "@/lib/session";
+import { getDocumentContentPresets } from "@/lib/document-presets";
 import { getLocale } from "@/lib/i18n/server";
 import { tenantScope } from "@/lib/tenant";
 import { can } from "@/lib/document-lifecycle";
@@ -35,6 +36,7 @@ export default async function EditDebitNotePage({ params }: { params: Promise<{ 
     db.select().from(productsTable).where(tenantScope(session.orgId, productsTable)).orderBy(asc(productsTable.name)),
     db.select().from(orgsTable).where(eq(orgsTable.id, session.orgId)),
   ]);
+  const presets = await getDocumentContentPresets(session.orgId, "debit_note");
 
   const initialItems: LineItemDraft[] = items.map((it) => ({
     productId: it.productId ? String(it.productId) : "",
@@ -50,6 +52,7 @@ export default async function EditDebitNotePage({ params }: { params: Promise<{ 
   return (
     <div className="max-w-4xl mx-auto">
       <DnForm
+        termsGroups={presets.termsGroups}
         locale={locale}
         purchaseOrders={sourcePo ? [sourcePo] : []}
         products={products}
@@ -62,6 +65,7 @@ export default async function EditDebitNotePage({ params }: { params: Promise<{ 
           issueDate: dn.issueDate,
           reason: dn.reason ?? "",
           items: initialItems,
+          terms: dn.terms ?? [],
         }}
       />
     </div>

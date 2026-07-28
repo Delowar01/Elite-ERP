@@ -11,6 +11,7 @@ import { DocPillsRow } from "../../sales/_shared/doc-pills-row";
 import { LineItemsEditor, emptyLineItem, type LineItemDraft } from "../../sales/_shared/line-items-editor";
 import { TotalsCard } from "../../sales/_shared/totals-card";
 import { TermsBlock, type AttachmentDraft } from "../../sales/_shared/terms-block";
+import type { DocumentTerm } from "../../sales/_shared/document-terms";
 import { SealSignaturePreview } from "../../sales/_shared/seal-signature";
 import { DocFooterContact } from "../../sales/_shared/doc-footer-contact";
 import { DocActionBar } from "../../sales/_shared/doc-action-bar";
@@ -33,6 +34,7 @@ export type PoFormInitial = {
   discount: string;
   notes: string;
   items: LineItemDraft[];
+  terms?: DocumentTerm[];
 };
 
 export function PoForm({
@@ -81,6 +83,7 @@ export function PoForm({
   const [discount, setDiscount] = useState(initial?.discount ?? "0");
   const defaultNote = noteTemplates.find((n) => n.isDefault) ?? noteTemplates[0];
   const [notes, setNotes] = useState(initial?.notes ?? defaultNote?.content ?? "");
+  const [terms, setTerms] = useState<DocumentTerm[]>(initial?.terms ?? []);
   const countryProfile = getProfileByCountryName(org.country);
   const defaultTaxRate = String(countryProfile.defaultTaxRate);
   const [items, setItems] = useState<LineItemDraft[]>(
@@ -98,7 +101,7 @@ export function PoForm({
     const start = andSend ? startPrimaryTransition : startDraftTransition;
     start(async () => {
       const result = isEdit && documentId
-        ? await updatePurchaseOrderAction(documentId, { title, vendorId, orderDate, expectedDate, discount, notes, items, attachments })
+        ? await updatePurchaseOrderAction(documentId, { title, vendorId, orderDate, expectedDate, discount, notes, terms, items, attachments })
         : await createPurchaseOrderAction(
             { title, vendorId, orderDate, expectedDate, discount, notes, items, attachments, sourceQuotationId, sourceSalesOrderId, sourceProformaId, sourceInvoiceId },
             andSend,
@@ -121,6 +124,7 @@ export function PoForm({
     showPricing: true,
     totals: { subtotal: totals.subtotal, discount: totals.discount, taxTotal: totals.taxTotal, total: totals.total },
     notes,
+    terms,
     currency: org.currency,
   };
 
@@ -212,7 +216,7 @@ export function PoForm({
       <LineItemsEditor locale={locale} products={products} items={items} onChange={setItems} defaultTaxRate={defaultTaxRate} variant="full" columns={columns} />
 
       <div className="doc-bottom-grid">
-        <TermsBlock locale={locale} notes={notes} onNotesChange={setNotes} noteTemplates={noteTemplates} termsGroups={termsGroups} attachments={attachments} onAttachmentsChange={setAttachments} />
+        <TermsBlock locale={locale} notes={notes} onNotesChange={setNotes} terms={terms} onTermsChange={setTerms} noteTemplates={noteTemplates} termsGroups={termsGroups} attachments={attachments} onAttachmentsChange={setAttachments} />
         <div className="flex flex-col gap-4">
           <TotalsCard
             locale={locale}

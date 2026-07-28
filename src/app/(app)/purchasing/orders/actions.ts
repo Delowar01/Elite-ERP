@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { sanitizeIfHtml } from "@/lib/sanitize-html";
+import { normalizeDocumentTerms, type DocumentTerm } from "../../sales/_shared/document-terms";
 import { redirect } from "next/navigation";
 import { and, eq, sql } from "drizzle-orm";
 import { db, vendorsTable, purchaseOrdersTable, purchaseOrderItemsTable, productsTable, accountsTable, journalEntriesTable, journalLinesTable } from "@/db";
@@ -25,7 +26,7 @@ export async function createPurchaseOrderAction(
     orderDate: string;
     expectedDate: string;
     discount: string;
-    notes: string;
+    notes: string; terms?: DocumentTerm[];
     items: LineInput[];
     attachments?: AttachmentInput[];
     sourceQuotationId?: string;
@@ -63,6 +64,7 @@ export async function createPurchaseOrderAction(
         orderDate: input.orderDate,
         expectedDate: input.expectedDate || null,
         notes: sanitizeIfHtml(input.notes) || null,
+        terms: normalizeDocumentTerms(input.terms),
         subtotal: totals.subtotal,
         discount: totals.discount,
         taxTotal: totals.taxTotal,
@@ -101,7 +103,7 @@ export async function createPurchaseOrderAction(
 // Batch A2 — draft-only edit. Preserves number/org/status/source links; recomputes totals server-side.
 export async function updatePurchaseOrderAction(
   id: number,
-  input: { title: string; vendorId: string; orderDate: string; expectedDate: string; discount: string; notes: string; items: LineInput[]; attachments?: AttachmentInput[] },
+  input: { title: string; vendorId: string; orderDate: string; expectedDate: string; discount: string; notes: string; terms?: DocumentTerm[]; items: LineInput[]; attachments?: AttachmentInput[] },
 ): Promise<ActionResult> {
   const session = await requireSession();
   const [existing] = await db.select().from(purchaseOrdersTable).where(and(eq(purchaseOrdersTable.id, id), eq(purchaseOrdersTable.orgId, session.orgId)));
@@ -126,6 +128,7 @@ export async function updatePurchaseOrderAction(
         orderDate: input.orderDate,
         expectedDate: input.expectedDate || null,
         notes: sanitizeIfHtml(input.notes) || null,
+        terms: normalizeDocumentTerms(input.terms),
         subtotal: totals.subtotal,
         discount: totals.discount,
         taxTotal: totals.taxTotal,

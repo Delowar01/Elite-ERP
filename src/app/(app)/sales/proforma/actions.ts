@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { sanitizeIfHtml } from "@/lib/sanitize-html";
+import { normalizeDocumentTerms, type DocumentTerm } from "../_shared/document-terms";
 import { redirect } from "next/navigation";
 import { and, eq } from "drizzle-orm";
 import { db, customersTable, proformaInvoicesTable, proformaInvoiceItemsTable, salesInvoicesTable, salesInvoiceItemsTable, deliveryChallansTable, deliveryChallanItemsTable } from "@/db";
@@ -25,7 +26,7 @@ export async function createProformaAction(
     customerId: string;
     issueDate: string;
     discount: string;
-    notes: string;
+    notes: string; terms?: DocumentTerm[];
     items: LineInput[];
     attachments?: AttachmentInput[];
   },
@@ -54,6 +55,7 @@ export async function createProformaAction(
         customerId,
         issueDate: input.issueDate,
         notes: sanitizeIfHtml(input.notes) || null,
+        terms: normalizeDocumentTerms(input.terms),
         subtotal: totals.subtotal,
         discount: totals.discount,
         taxTotal: totals.taxTotal,
@@ -92,7 +94,7 @@ export async function createProformaAction(
 // Batch A2 — draft-only edit. Preserves number/org/status/source links; recomputes totals server-side.
 export async function updateProformaAction(
   id: number,
-  input: { title: string; customerId: string; issueDate: string; discount: string; notes: string; items: LineInput[]; attachments?: AttachmentInput[] },
+  input: { title: string; customerId: string; issueDate: string; discount: string; notes: string; terms?: DocumentTerm[]; items: LineInput[]; attachments?: AttachmentInput[] },
 ): Promise<ActionResult> {
   const session = await requireSession();
   const [existing] = await db.select().from(proformaInvoicesTable).where(and(eq(proformaInvoicesTable.id, id), eq(proformaInvoicesTable.orgId, session.orgId)));
@@ -116,6 +118,7 @@ export async function updateProformaAction(
         customerId,
         issueDate: input.issueDate,
         notes: sanitizeIfHtml(input.notes) || null,
+        terms: normalizeDocumentTerms(input.terms),
         subtotal: totals.subtotal,
         discount: totals.discount,
         taxTotal: totals.taxTotal,

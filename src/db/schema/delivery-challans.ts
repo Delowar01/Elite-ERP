@@ -1,4 +1,4 @@
-import { pgTable, serial, integer, text, numeric, date, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, serial, integer, text, numeric, date, timestamp, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { orgsTable } from "./orgs";
@@ -30,6 +30,7 @@ export const deliveryChallansTable = pgTable("delivery_challans", {
   carrier: text("carrier"),
   vehicleNo: text("vehicle_no"),
   notes: text("notes"),
+  terms: jsonb("terms").$type<{ text: string; groupId: number | null; groupName: string | null }[]>(),
   createdById: integer("created_by_id")
     .notNull()
     .references(() => usersTable.id),

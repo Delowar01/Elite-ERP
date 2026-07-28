@@ -55,6 +55,7 @@ export default async function EditProformaPage({ params }: { params: Promise<{ i
           issueDate: pf.issueDate,
           discount: pf.discount,
           notes: pf.notes ?? "",
+          terms: pf.terms ?? [],
           items: initialItems,
         }}
       />

@@ -2,6 +2,7 @@ import { and, asc, eq } from "drizzle-orm";
 import { notFound, redirect } from "next/navigation";
 import { db, customersTable, productsTable, orgsTable, deliveryChallansTable, deliveryChallanItemsTable } from "@/db";
 import { requireSession } from "@/lib/session";
+import { getDocumentContentPresets } from "@/lib/document-presets";
 import { getLocale } from "@/lib/i18n/server";
 import { tenantScope } from "@/lib/tenant";
 import { can } from "@/lib/document-lifecycle";
@@ -24,6 +25,7 @@ export default async function EditDcPage({ params }: { params: Promise<{ id: str
     db.select().from(productsTable).where(tenantScope(session.orgId, productsTable)).orderBy(asc(productsTable.name)),
     db.select().from(orgsTable).where(eq(orgsTable.id, session.orgId)),
   ]);
+  const presets = await getDocumentContentPresets(session.orgId, "delivery_challan");
 
   const initialItems: LineItemDraft[] = items.map((it) => ({
     productId: it.productId ? String(it.productId) : "",
@@ -39,6 +41,7 @@ export default async function EditDcPage({ params }: { params: Promise<{ id: str
   return (
     <div className="max-w-4xl mx-auto">
       <DcForm
+        termsGroups={presets.termsGroups}
         locale={locale}
         customers={customers}
         products={products}
@@ -52,6 +55,7 @@ export default async function EditDcPage({ params }: { params: Promise<{ id: str
           carrier: dc.carrier ?? "",
           vehicleNo: dc.vehicleNo ?? "",
           items: initialItems,
+          terms: dc.terms ?? [],
         }}
       />
     </div>

@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { eq, and } from "drizzle-orm";
+import { DocumentTermsView } from "../../_shared/terms-view";
 import { SafeRichText } from "../../_shared/safe-rich-text";
 import { Info } from "lucide-react";
 import { db, proformaInvoicesTable, proformaInvoiceItemsTable, customersTable, salesOrdersTable, quotationsTable, orgsTable } from "@/db";
@@ -38,6 +39,7 @@ export default async function ProformaDetailPage({ params }: { params: Promise<{
       taxTotal: proformaInvoicesTable.taxTotal,
       total: proformaInvoicesTable.total,
       notes: proformaInvoicesTable.notes,
+      terms: proformaInvoicesTable.terms,
       customerName: customersTable.name,
       customerVatNumber: customersTable.vatNumber,
       customerAddress: customersTable.address,
@@ -132,6 +134,7 @@ export default async function ProformaDetailPage({ params }: { params: Promise<{
         <TotalsStrip locale={locale} subtotal={pf.subtotal} discount={pf.discount} taxTotal={pf.taxTotal} finalLabel="Total" finalValue={pf.total} />
       </div>
 
+      <DocumentTermsView locale={locale} terms={pf.terms} className="mt-5" />
       {pf.notes && (
         <div className="mt-5">
           <div className="text-[11px] uppercase tracking-wide text-ink-faint mb-1.5">{t(locale, "Notes")}</div>

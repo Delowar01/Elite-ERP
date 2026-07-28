@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { sanitizeIfHtml } from "@/lib/sanitize-html";
+import { normalizeDocumentTerms, type DocumentTerm } from "../_shared/document-terms";
 import { redirect } from "next/navigation";
 import { and, eq } from "drizzle-orm";
 import { db, customersTable, projectsTable, quotationsTable, quotationItemsTable, salesOrdersTable, salesOrderItemsTable, proformaInvoicesTable, proformaInvoiceItemsTable, salesInvoicesTable, salesInvoiceItemsTable, deliveryChallansTable, deliveryChallanItemsTable } from "@/db";
@@ -27,7 +28,7 @@ export async function createQuotationAction(
     issueDate: string;
     validUntil: string;
     discount: string;
-    notes: string;
+    notes: string; terms?: DocumentTerm[];
     items: LineInput[];
     attachments?: AttachmentInput[];
   },
@@ -68,6 +69,7 @@ export async function createQuotationAction(
         issueDate: input.issueDate,
         validUntil: input.validUntil || null,
         notes: sanitizeIfHtml(input.notes) || null,
+        terms: normalizeDocumentTerms(input.terms),
         subtotal: totals.subtotal,
         discount: totals.discount,
         taxTotal: totals.taxTotal,
@@ -114,7 +116,7 @@ export async function updateQuotationAction(
     issueDate: string;
     validUntil: string;
     discount: string;
-    notes: string;
+    notes: string; terms?: DocumentTerm[];
     items: LineInput[];
     attachments?: AttachmentInput[];
   },
@@ -157,6 +159,7 @@ export async function updateQuotationAction(
         issueDate: input.issueDate,
         validUntil: input.validUntil || null,
         notes: sanitizeIfHtml(input.notes) || null,
+        terms: normalizeDocumentTerms(input.terms),
         subtotal: totals.subtotal,
         discount: totals.discount,
         taxTotal: totals.taxTotal,

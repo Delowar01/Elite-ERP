@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { sanitizeIfHtml } from "@/lib/sanitize-html";
+import { normalizeDocumentTerms, type DocumentTerm } from "../_shared/document-terms";
 import { redirect } from "next/navigation";
 import { and, eq, sql } from "drizzle-orm";
 import { db, creditNotesTable, creditNoteItemsTable, salesInvoicesTable, accountsTable, journalEntriesTable, journalLinesTable } from "@/db";
@@ -23,6 +24,7 @@ export async function createCreditNoteAction(
     sourceInvoiceId: string;
     reason: string;
     items: LineInput[];
+    terms?: DocumentTerm[];
   },
   andIssue = false,
 ): Promise<ActionResult> {
@@ -52,6 +54,7 @@ export async function createCreditNoteAction(
         customerId: invoice.customerId,
         sourceInvoiceId: invoice.id,
         reason: input.reason.trim() || null,
+        terms: normalizeDocumentTerms(input.terms),
         issueDate: new Date().toISOString().slice(0, 10),
         subtotal: totals.subtotal,
         taxTotal: totals.taxTotal,
@@ -87,7 +90,7 @@ export async function createCreditNoteAction(
 // Batch A2 — draft-only edit. Preserves number/org/status/customer + source-invoice link; recomputes totals server-side.
 export async function updateCreditNoteAction(
   id: number,
-  input: { reason: string; items: LineInput[] },
+  input: { reason: string; items: LineInput[]; terms?: DocumentTerm[] },
 ): Promise<ActionResult> {
   const session = await requireSession();
   const [existing] = await db.select().from(creditNotesTable).where(and(eq(creditNotesTable.id, id), eq(creditNotesTable.orgId, session.orgId)));
@@ -103,6 +106,7 @@ export async function updateCreditNoteAction(
       .update(creditNotesTable)
       .set({
         reason: input.reason.trim() || null,
+        terms: normalizeDocumentTerms(input.terms),
         subtotal: totals.subtotal,
         taxTotal: totals.taxTotal,
         total: totals.total,

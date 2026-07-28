@@ -1,6 +1,7 @@
 import { and, asc, eq } from "drizzle-orm";
 import { db, purchaseOrdersTable, vendorsTable, productsTable, orgsTable } from "@/db";
 import { requireSession } from "@/lib/session";
+import { getDocumentContentPresets } from "@/lib/document-presets";
 import { getLocale } from "@/lib/i18n/server";
 import { tenantScope } from "@/lib/tenant";
 import { previewNextDocumentNumber } from "@/lib/documents";
@@ -29,10 +30,11 @@ export default async function NewDebitNotePage({ searchParams }: { searchParams:
     db.select().from(orgsTable).where(eq(orgsTable.id, session.orgId)),
     previewNextDocumentNumber(session.orgId, "debit_note"),
   ]);
+  const presets = await getDocumentContentPresets(session.orgId, "debit_note");
 
   return (
     <div className="max-w-4xl mx-auto">
-      <DnForm locale={locale} purchaseOrders={purchaseOrders} products={products} org={org} numberPreview={numberPreview} defaultPoId={po} />
+      <DnForm locale={locale} purchaseOrders={purchaseOrders} products={products} org={org} numberPreview={numberPreview} termsGroups={presets.termsGroups} defaultPoId={po} />
     </div>
   );
 }

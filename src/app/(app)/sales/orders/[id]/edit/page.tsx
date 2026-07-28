@@ -59,6 +59,7 @@ export default async function EditSalesOrderPage({ params }: { params: Promise<{
           expectedDelivery: so.expectedDate ?? "",
           discount: so.discount,
           notes: so.notes ?? "",
+          terms: so.terms ?? [],
           items: initialItems,
         }}
       />

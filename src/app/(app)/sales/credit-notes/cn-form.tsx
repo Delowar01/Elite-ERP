@@ -11,6 +11,9 @@ import { DocFooterContact } from "../_shared/doc-footer-contact";
 import { DocActionBar } from "../_shared/doc-action-bar";
 import { DocTopActions } from "../_shared/doc-top-actions";
 import { PreviewDialog, type PreviewData } from "../_shared/preview-dialog";
+import { DocumentTermsEditor } from "../_shared/terms-editor";
+import type { DocumentTerm } from "../_shared/document-terms";
+import type { ContentPreset } from "@/lib/document-presets";
 import { Money } from "../_shared/money";
 import { computeTotals, fmt } from "../_shared/totals";
 import { t, type Locale } from "@/lib/i18n/dict";
@@ -25,6 +28,7 @@ export type CnFormInitial = {
   issueDate: string;
   reason: string;
   items: LineItemDraft[];
+  terms?: DocumentTerm[];
 };
 
 export function CnForm({
@@ -37,6 +41,7 @@ export function CnForm({
   mode = "create",
   documentId,
   initial,
+  termsGroups = [],
 }: {
   locale: Locale;
   invoices: InvoiceOption[];
@@ -47,11 +52,13 @@ export function CnForm({
   mode?: "create" | "edit";
   documentId?: number;
   initial?: CnFormInitial;
+  termsGroups?: ContentPreset[];
 }) {
   const isEdit = mode === "edit";
   const [sourceInvoiceId, setSourceInvoiceId] = useState(initial?.sourceInvoiceId ?? defaultInvoiceId ?? "");
   const [issueDate, setIssueDate] = useState(initial?.issueDate ?? new Date().toISOString().slice(0, 10));
   const [reason, setReason] = useState(initial?.reason ?? "");
+  const [terms, setTerms] = useState<DocumentTerm[]>(initial?.terms ?? []);
   const countryProfile = getProfileByCountryName(org.country);
   const defaultTaxRate = String(countryProfile.defaultTaxRate);
   const [items, setItems] = useState<LineItemDraft[]>(initial?.items && initial.items.length > 0 ? initial.items : [emptyLineItem(defaultTaxRate)]);
@@ -74,6 +81,7 @@ export function CnForm({
     items: items.map((it) => ({ description: it.description, quantity: it.quantity, unitPrice: fmt(Number(it.unitPrice) || 0), lineTotal: fmt((Number(it.quantity) || 0) * (Number(it.unitPrice) || 0)) })),
     showPricing: true,
     totals: { subtotal: totals.subtotal, discount: totals.discount, taxTotal: totals.taxTotal, total: totals.total },
+    terms,
     currency: org.currency,
   };
 
@@ -81,8 +89,8 @@ export function CnForm({
     const start = andIssue ? startPrimaryTransition : startDraftTransition;
     start(async () => {
       const result = isEdit && documentId
-        ? await updateCreditNoteAction(documentId, { reason, items })
-        : await createCreditNoteAction({ title: "", sourceInvoiceId, reason, items }, andIssue);
+        ? await updateCreditNoteAction(documentId, { reason, items, terms })
+        : await createCreditNoteAction({ title: "", sourceInvoiceId, reason, items, terms }, andIssue);
       if (result?.error) toast.error(result.error);
     });
   }
@@ -165,6 +173,10 @@ export function CnForm({
             <Money amount={totals.total} />
           </span>
         </div>
+      </div>
+
+      <div className="mt-4">
+        <DocumentTermsEditor locale={locale} terms={terms} onChange={setTerms} groups={termsGroups} />
       </div>
 
       <DocFooterContact locale={locale} email={org.email} phone={org.phone} />

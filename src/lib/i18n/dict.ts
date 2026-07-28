@@ -1190,6 +1190,20 @@ const DICT: Record<string, string> = {
   "Change country": "تغيير الدولة",
   "Keep": "الإبقاء على",
   "current country": "الدولة الحالية",
+
+  // ---- Terms Groups (master editor + in-document terms editor) ----
+  Terms: "الشروط",
+  Group: "المجموعة",
+  "Add a group…": "إضافة مجموعة…",
+  "Adds the group's terms to the list.": "يضيف شروط المجموعة إلى القائمة.",
+  "Groups in this document": "المجموعات في هذا المستند",
+  "Remove group": "إزالة المجموعة",
+  "No terms yet — add a group or an individual term.": "لا توجد شروط بعد — أضف مجموعة أو شرطًا فرديًا.",
+  "Add Individual Term": "إضافة شرط فردي",
+  "Choose what to do with this group's terms in this document.": "اختر ما تريد فعله بشروط هذه المجموعة في هذا المستند.",
+  "Remove group and its terms": "إزالة المجموعة وشروطها",
+  "Remove group reference but keep the terms": "إزالة ارتباط المجموعة مع الإبقاء على الشروط",
+  "No terms yet — add the first term.": "لا توجد شروط بعد — أضف الشرط الأول.",
 };
 
 export function t(locale: Locale, en: string): string {

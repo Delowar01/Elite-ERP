@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { eq, and } from "drizzle-orm";
+import { DocumentTermsView } from "../../_shared/terms-view";
 import { SafeRichText } from "../../_shared/safe-rich-text";
 import { db, deliveryChallansTable, deliveryChallanItemsTable, customersTable, salesOrdersTable, salesInvoicesTable, orgsTable } from "@/db";
 import { requireSession } from "@/lib/session";
@@ -27,6 +28,7 @@ export default async function DcDetailPage({ params }: { params: Promise<{ id: s
       id: deliveryChallansTable.id,
       dcNumber: deliveryChallansTable.dcNumber,
       title: deliveryChallansTable.title,
+      terms: deliveryChallansTable.terms,
       status: deliveryChallansTable.status,
       dispatchDate: deliveryChallansTable.dispatchDate,
       deliveredDate: deliveryChallansTable.deliveredDate,
@@ -106,6 +108,7 @@ export default async function DcDetailPage({ params }: { params: Promise<{ id: s
       <div className="note" style={{ marginTop: 20 }}>
         {t(locale, "Logistics-only document — no stock or accounting impact of its own; stock already moved when the source Invoice was sent.")}
       </div>
+      <DocumentTermsView locale={locale} terms={dc.terms} className="mt-5" />
     </div>
   );
 }

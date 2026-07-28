@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { sanitizeIfHtml } from "@/lib/sanitize-html";
+import { normalizeDocumentTerms, type DocumentTerm } from "../_shared/document-terms";
 import { redirect } from "next/navigation";
 import { and, eq } from "drizzle-orm";
 import { db, customersTable, projectsTable, salesOrdersTable, salesOrderItemsTable, proformaInvoicesTable, proformaInvoiceItemsTable, salesInvoicesTable, salesInvoiceItemsTable, deliveryChallansTable, deliveryChallanItemsTable } from "@/db";
@@ -27,7 +28,7 @@ export async function createSalesOrderAction(
     issueDate: string;
     expectedDate: string;
     discount: string;
-    notes: string;
+    notes: string; terms?: DocumentTerm[];
     items: LineInput[];
     attachments?: AttachmentInput[];
   },
@@ -68,6 +69,7 @@ export async function createSalesOrderAction(
         issueDate: input.issueDate,
         expectedDate: input.expectedDate || null,
         notes: sanitizeIfHtml(input.notes) || null,
+        terms: normalizeDocumentTerms(input.terms),
         subtotal: totals.subtotal,
         discount: totals.discount,
         taxTotal: totals.taxTotal,
@@ -106,7 +108,7 @@ export async function createSalesOrderAction(
 // Batch A2 — draft-only edit. Preserves number/org/status/source links; recomputes totals server-side.
 export async function updateSalesOrderAction(
   id: number,
-  input: { title: string; customerId: string; projectId?: string; issueDate: string; expectedDate: string; discount: string; notes: string; items: LineInput[]; attachments?: AttachmentInput[] },
+  input: { title: string; customerId: string; projectId?: string; issueDate: string; expectedDate: string; discount: string; notes: string; terms?: DocumentTerm[]; items: LineInput[]; attachments?: AttachmentInput[] },
 ): Promise<ActionResult> {
   const session = await requireSession();
   const [existing] = await db.select().from(salesOrdersTable).where(and(eq(salesOrdersTable.id, id), eq(salesOrdersTable.orgId, session.orgId)));
@@ -138,6 +140,7 @@ export async function updateSalesOrderAction(
         issueDate: input.issueDate,
         expectedDate: input.expectedDate || null,
         notes: sanitizeIfHtml(input.notes) || null,
+        terms: normalizeDocumentTerms(input.terms),
         subtotal: totals.subtotal,
         discount: totals.discount,
         taxTotal: totals.taxTotal,

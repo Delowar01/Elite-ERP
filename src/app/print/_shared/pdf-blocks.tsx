@@ -278,6 +278,22 @@ export function NotesBlock({ notes }: { notes: string | null }) {
   );
 }
 
+// The document's final Terms & Conditions as one continuously-numbered list (print / PDF).
+export function PdfTermsBlock({ terms }: { terms?: { text: string }[] | null }) {
+  const list = (terms ?? []).filter((t) => t && typeof t.text === "string" && t.text.trim());
+  if (list.length === 0) return null;
+  return (
+    <div className="notes-block">
+      <b>Terms &amp; Conditions:</b>
+      <ol style={{ margin: "4px 0 0", paddingInlineStart: 18 }}>
+        {list.map((t, i) => (
+          <li key={i} style={{ marginBottom: 2 }}>{t.text}</li>
+        ))}
+      </ol>
+    </div>
+  );
+}
+
 export function ApprovalBlock() {
   return (
     <div className="approval-block">

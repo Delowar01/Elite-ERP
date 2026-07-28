@@ -56,6 +56,7 @@ export default async function EditPurchaseOrderPage({ params }: { params: Promis
           expectedDate: po.expectedDate ?? "",
           discount: po.discount,
           notes: po.notes ?? "",
+          terms: po.terms ?? [],
           items: initialItems,
         }}
       />

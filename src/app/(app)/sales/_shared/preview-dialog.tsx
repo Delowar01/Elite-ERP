@@ -5,6 +5,8 @@ import { Printer } from "lucide-react";
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogFooter, DialogTitle, DialogClose } from "@/components/ui/dialog";
 import { t, type Locale } from "@/lib/i18n/dict";
 import { richTextToHtml } from "@/lib/sanitize-html";
+import { DocumentTermsView } from "./terms-view";
+import type { DocumentTerm } from "./document-terms";
 
 export type PreviewParty = { label: string; name: string; lines: (string | null | undefined)[] };
 export type PreviewItem = { description: string; quantity: string; unitPrice?: string; lineTotal?: string };
@@ -19,6 +21,7 @@ export type PreviewData = {
   showPricing: boolean;
   totals?: { subtotal: string; discount: string; taxTotal: string; total: string };
   notes?: string;
+  terms?: DocumentTerm[];
   currency: string;
 };
 
@@ -95,6 +98,11 @@ export function PreviewDialog({
               {Number(data.totals.discount) > 0 && <Row label={t(locale, "Discount")} value={`- ${data.currency} ${data.totals.discount}`} />}
               <Row label={t(locale, "VAT Total")} value={`${data.currency} ${data.totals.taxTotal}`} />
               <Row label={t(locale, "Grand Total")} value={`${data.currency} ${data.totals.total}`} bold />
+            </div>
+          )}
+          {data.terms && data.terms.length > 0 && (
+            <div className="border-t border-[#eee] pt-2">
+              <DocumentTermsView locale={locale} terms={data.terms} />
             </div>
           )}
           {data.notes && (

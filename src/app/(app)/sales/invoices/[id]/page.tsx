@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { eq, and } from "drizzle-orm";
+import { DocumentTermsView } from "../../_shared/terms-view";
 import { SafeRichText } from "../../_shared/safe-rich-text";
 import { db, salesInvoicesTable, salesInvoiceItemsTable, customersTable, salesOrdersTable, quotationsTable, orgsTable, bankAccountsTable } from "@/db";
 import { requireSession } from "@/lib/session";
@@ -44,6 +45,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
       total: salesInvoicesTable.total,
       paidAmount: salesInvoicesTable.paidAmount,
       notes: salesInvoicesTable.notes,
+      terms: salesInvoicesTable.terms,
       customerName: customersTable.name,
       customerVatNumber: customersTable.vatNumber,
       customerAddress: customersTable.address,
@@ -157,7 +159,8 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
             extraRows={showPayments ? [{ label: "Paid", value: invoice.paidAmount, colorClass: "text-success" }] : undefined}
           />
 
-          {invoice.notes && (
+          <DocumentTermsView locale={locale} terms={invoice.terms} className="mt-5" />
+      {invoice.notes && (
             <div className="mt-5">
               <div className="text-[11px] uppercase tracking-wide text-ink-faint mb-1.5">{t(locale, "Notes")}</div>
               <div className="text-[13px] text-ink-muted"><SafeRichText value={invoice.notes} /></div>

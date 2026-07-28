@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { eq, and } from "drizzle-orm";
+import { DocumentTermsView } from "../../../sales/_shared/terms-view";
 import { SafeRichText } from "../../../sales/_shared/safe-rich-text";
 import { db, purchaseOrdersTable, purchaseOrderItemsTable, vendorsTable, bankAccountsTable } from "@/db";
 import { requireSession } from "@/lib/session";
@@ -38,6 +39,7 @@ export default async function PurchaseOrderDetailPage({ params }: { params: Prom
       total: purchaseOrdersTable.total,
       paidAmount: purchaseOrdersTable.paidAmount,
       notes: purchaseOrdersTable.notes,
+      terms: purchaseOrdersTable.terms,
       vendorName: vendorsTable.name,
     })
     .from(purchaseOrdersTable)
@@ -124,6 +126,7 @@ export default async function PurchaseOrderDetailPage({ params }: { params: Prom
         </div>
       )}
 
+      <DocumentTermsView locale={locale} terms={po.terms} className="mt-5" />
       {po.notes && (
         <div className="mt-5">
           <div className="text-[11px] uppercase tracking-wide text-ink-faint mb-1.5">{t(locale, "Notes")}</div>

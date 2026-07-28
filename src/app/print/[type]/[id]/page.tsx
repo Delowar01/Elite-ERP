@@ -44,6 +44,7 @@ import {
   AmountWords,
   BankBlock,
   NotesBlock,
+  PdfTermsBlock,
   ApprovalBlock,
   SealSignature,
   QrPanel,
@@ -158,6 +159,7 @@ export default async function PrintPage({ params }: { params: Promise<{ type: st
             </div>
             <TotalsBox rows={baseTotals} grandLabel={`Total (${mark.code})`} grandVal={money(q.total)} />
           </div>
+          <PdfTermsBlock terms={q.terms} />
           <NotesBlock notes={richTextToPlain(q.notes) || null} />
           <SealSignature org={org} />
           <PdfFooter org={org} />
@@ -178,6 +180,7 @@ export default async function PrintPage({ params }: { params: Promise<{ type: st
             </div>
             <TotalsBox rows={baseTotals} grandLabel={`Total (${mark.code})`} grandVal={money(so.total)} />
           </div>
+          <PdfTermsBlock terms={so.terms} />
           <NotesBlock notes={richTextToPlain(so.notes) || null} />
           <ApprovalBlock />
           <SealSignature org={org} />
@@ -199,6 +202,7 @@ export default async function PrintPage({ params }: { params: Promise<{ type: st
             </div>
             <TotalsBox rows={baseTotals} grandLabel={`Total (${mark.code})`} grandVal={money(pf.total)} />
           </div>
+          <PdfTermsBlock terms={pf.terms} />
           <NotesBlock notes={"Non-posting — for client reference only. This is not a tax invoice."} />
           <SealSignature org={org} />
           <PdfFooter org={org} />
@@ -246,6 +250,7 @@ export default async function PrintPage({ params }: { params: Promise<{ type: st
             </div>
             <TotalsBox rows={totalsRows} grandLabel={paid ? "Due Amount" : `Total (${mark.code})`} grandVal={money(paid ? due : inv.total)} />
           </div>
+          <PdfTermsBlock terms={inv.terms} />
           <NotesBlock notes={richTextToPlain(inv.notes) || null} />
           {qrDataUrl && <QrPanel dataUrl={qrDataUrl} />}
           <SealSignature org={org} />
@@ -279,6 +284,7 @@ export default async function PrintPage({ params }: { params: Promise<{ type: st
           </div>
           <TotalsBox rows={[["Amount", money(po.subtotal)], ["VAT", money(po.taxTotal)], ["Discounts", money(po.discount)]]} grandLabel="Total Payable" grandVal={money(po.total)} />
         </div>
+        <PdfTermsBlock terms={po.terms} />
         <NotesBlock notes={richTextToPlain(po.notes) || null} />
         <ApprovalBlock />
         <SealSignature org={org} />
@@ -306,6 +312,7 @@ export default async function PrintPage({ params }: { params: Promise<{ type: st
           <Party label="DELIVERED TO" name={customer.name} lines={customerLines(customer)} />
         </Parties>
         <ItemsTableQty items={items.map((it) => ({ name: richTextToPlain(it.description) || "—", quantity: it.quantity }))} />
+        <PdfTermsBlock terms={dc.terms} />
         <NotesBlock notes={logistics || null} />
         <ClientComments />
         <ApprovalBlock />
@@ -346,6 +353,7 @@ export default async function PrintPage({ params }: { params: Promise<{ type: st
             <AmountWords words={amountInWords(cn.total, "en", mark)} />
             <TotalsBox rows={[["VAT", money(cn.taxTotal)]]} grandLabel="Credit Total" grandVal={money(cn.total)} />
           </div>
+          <PdfTermsBlock terms={cn.terms} />
           <SealSignature org={org} showSignature={false} />
           <PdfFooter org={org} />
         </A4Page>
@@ -379,6 +387,7 @@ export default async function PrintPage({ params }: { params: Promise<{ type: st
             <AmountWords words={amountInWords(dn.total, "en", mark)} />
             <TotalsBox rows={[["VAT", money(dn.taxTotal)]]} grandLabel="Debit Total" grandVal={money(dn.total)} />
           </div>
+          <PdfTermsBlock terms={dn.terms} />
           <SealSignature org={org} showSignature={false} />
           <PdfFooter org={org} />
         </A4Page>

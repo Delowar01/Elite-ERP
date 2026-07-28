@@ -10,6 +10,7 @@ import { DocPillsRow } from "../_shared/doc-pills-row";
 import { LineItemsEditor, emptyLineItem, type LineItemDraft } from "../_shared/line-items-editor";
 import { TotalsCard } from "../_shared/totals-card";
 import { TermsBlock, type AttachmentDraft } from "../_shared/terms-block";
+import type { DocumentTerm } from "../_shared/document-terms";
 import { SealSignaturePreview } from "../_shared/seal-signature";
 import { DocFooterContact } from "../_shared/doc-footer-contact";
 import { DocActionBar } from "../_shared/doc-action-bar";
@@ -31,6 +32,7 @@ export type ProformaFormInitial = {
   discount: string;
   notes: string;
   items: LineItemDraft[];
+  terms?: DocumentTerm[];
 };
 
 export function ProformaForm({
@@ -66,6 +68,7 @@ export function ProformaForm({
   const [discount, setDiscount] = useState(initial?.discount ?? "0");
   const defaultNote = noteTemplates.find((n) => n.isDefault) ?? noteTemplates[0];
   const [notes, setNotes] = useState(initial?.notes ?? defaultNote?.content ?? "");
+  const [terms, setTerms] = useState<DocumentTerm[]>(initial?.terms ?? []);
   const countryProfile = getProfileByCountryName(org.country);
   const defaultTaxRate = String(countryProfile.defaultTaxRate);
   const [items, setItems] = useState<LineItemDraft[]>(initial?.items && initial.items.length > 0 ? initial.items : [emptyLineItem(defaultTaxRate)]);
@@ -80,7 +83,7 @@ export function ProformaForm({
   function submit(andSend: boolean) {
     const start = andSend ? startPrimaryTransition : startDraftTransition;
     start(async () => {
-      const payload = { title, customerId, issueDate, discount, notes, items, attachments };
+      const payload = { title, customerId, issueDate, discount, notes, terms, items, attachments };
       const result = isEdit && documentId ? await updateProformaAction(documentId, payload) : await createProformaAction(payload, andSend);
       if (result?.error) toast.error(result.error);
     });
@@ -97,6 +100,7 @@ export function ProformaForm({
     showPricing: true,
     totals: { subtotal: totals.subtotal, discount: totals.discount, taxTotal: totals.taxTotal, total: totals.total },
     notes,
+    terms,
     currency: org.currency,
   };
 
@@ -170,7 +174,7 @@ export function ProformaForm({
       <LineItemsEditor locale={locale} products={products} items={items} onChange={setItems} defaultTaxRate={defaultTaxRate} variant="full" columns={columns} />
 
       <div className="doc-bottom-grid">
-        <TermsBlock locale={locale} notes={notes} onNotesChange={setNotes} noteTemplates={noteTemplates} termsGroups={termsGroups} attachments={attachments} onAttachmentsChange={setAttachments} />
+        <TermsBlock locale={locale} notes={notes} onNotesChange={setNotes} terms={terms} onTermsChange={setTerms} noteTemplates={noteTemplates} termsGroups={termsGroups} attachments={attachments} onAttachmentsChange={setAttachments} />
         <div className="flex flex-col gap-4">
           <TotalsCard locale={locale} subtotal={totals.subtotal} discount={discount} onDiscountChange={setDiscount} taxTotal={totals.taxTotal} total={totals.total} />
         </div>

@@ -10,6 +10,9 @@ import { DocFooterContact } from "../_shared/doc-footer-contact";
 import { DocActionBar } from "../_shared/doc-action-bar";
 import { DocTopActions } from "../_shared/doc-top-actions";
 import { PreviewDialog, type PreviewData } from "../_shared/preview-dialog";
+import { DocumentTermsEditor } from "../_shared/terms-editor";
+import type { DocumentTerm } from "../_shared/document-terms";
+import type { ContentPreset } from "@/lib/document-presets";
 import { t, type Locale } from "@/lib/i18n/dict";
 import { getProfileByCountryName } from "@/lib/geo/country-profiles";
 import type { Customer, Product, Org } from "@/db";
@@ -21,6 +24,7 @@ export type DcFormInitial = {
   carrier: string;
   vehicleNo: string;
   items: LineItemDraft[];
+  terms?: DocumentTerm[];
 };
 
 export function DcForm({
@@ -32,6 +36,7 @@ export function DcForm({
   mode = "create",
   documentId,
   initial,
+  termsGroups = [],
 }: {
   locale: Locale;
   customers: Customer[];
@@ -41,12 +46,14 @@ export function DcForm({
   mode?: "create" | "edit";
   documentId?: number;
   initial?: DcFormInitial;
+  termsGroups?: ContentPreset[];
 }) {
   const isEdit = mode === "edit";
   const [customerId, setCustomerId] = useState(initial?.customerId ?? "");
   const [dispatchDate, setDispatchDate] = useState(initial?.dispatchDate ?? new Date().toISOString().slice(0, 10));
   const [carrier, setCarrier] = useState(initial?.carrier ?? "");
   const [vehicleNo, setVehicleNo] = useState(initial?.vehicleNo ?? "");
+  const [terms, setTerms] = useState<DocumentTerm[]>(initial?.terms ?? []);
   const countryProfile = getProfileByCountryName(org.country);
   const defaultTaxRate = String(countryProfile.defaultTaxRate);
   const [items, setItems] = useState<LineItemDraft[]>(initial?.items && initial.items.length > 0 ? initial.items : [emptyLineItem(defaultTaxRate)]);
@@ -67,13 +74,14 @@ export function DcForm({
     to: selectedCustomer ? { label: t(locale, "To Client"), name: selectedCustomer.name, lines: [selectedCustomer.address, selectedCustomer.email, selectedCustomer.phone] } : undefined,
     items: items.map((it) => ({ description: it.description, quantity: it.quantity })),
     showPricing: false,
+    terms,
     currency: org.currency,
   };
 
   function submit(andDispatch: boolean) {
     const start = andDispatch ? startPrimaryTransition : startDraftTransition;
     start(async () => {
-      const payload = { customerId, dispatchDate, carrier, vehicleNo, items };
+      const payload = { customerId, dispatchDate, carrier, vehicleNo, items, terms };
       const result = isEdit && documentId
         ? await updateDeliveryChallanAction(documentId, payload)
         : await createDeliveryChallanAction({ title: "", ...payload }, andDispatch);
@@ -116,6 +124,10 @@ export function DcForm({
       </div>
 
       <LineItemsEditor locale={locale} products={products} items={items} onChange={setItems} defaultTaxRate={defaultTaxRate} variant="qty" />
+
+      <div className="mt-4">
+        <DocumentTermsEditor locale={locale} terms={terms} onChange={setTerms} groups={termsGroups} />
+      </div>
 
       <DocFooterContact locale={locale} email={org.email} phone={org.phone} />
 

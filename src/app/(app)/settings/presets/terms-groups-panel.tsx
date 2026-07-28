@@ -8,13 +8,14 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { FormField } from "@/components/ui/form-field";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { t, type Locale } from "@/lib/i18n/dict";
 import type { TermsConditionsGroup } from "@/db";
+import { splitGroupTerms, joinGroupTerms } from "../../sales/_shared/document-terms";
+import { MasterTermsListEditor } from "../../sales/_shared/terms-editor";
 import { saveTermsGroupAction, deleteTermsGroupAction } from "./actions";
 
 const DOC_TYPE_LABELS: Record<string, string> = {
@@ -31,11 +32,14 @@ export function TermsGroupsPanel({ locale, groups }: { locale: Locale; groups: T
   const [pending, startTransition] = useTransition();
   const [docType, setDocType] = useState<string>("none");
   const [isDefault, setIsDefault] = useState(false);
+  // A group holds multiple terms; edited as a reorderable list, stored as newline-joined content.
+  const [terms, setTerms] = useState<string[]>([]);
 
   function openEdit(group: TermsConditionsGroup | "new") {
     setEditing(group);
     setDocType(group !== "new" ? (group.documentType ?? "none") : "none");
     setIsDefault(group !== "new" ? group.isDefault : false);
+    setTerms(group !== "new" ? splitGroupTerms(group.content) : [""]);
   }
 
   function submit(formData: FormData) {
@@ -136,8 +140,9 @@ export function TermsGroupsPanel({ locale, groups }: { locale: Locale; groups: T
                 </SelectContent>
               </Select>
             </FormField>
-            <FormField label={t(locale, "Content")} htmlFor="tg-content">
-              <Textarea id="tg-content" name="content" required rows={5} defaultValue={editing && editing !== "new" ? editing.content : ""} />
+            <FormField label={t(locale, "Terms")} htmlFor="tg-content">
+              <MasterTermsListEditor locale={locale} terms={terms} onChange={setTerms} />
+              <input type="hidden" name="content" value={joinGroupTerms(terms)} />
             </FormField>
             <label className="flex items-center gap-2 text-[13px] text-ink-muted cursor-pointer">
               <Checkbox checked={isDefault} onCheckedChange={(checked) => setIsDefault(checked === true)} />

@@ -26,6 +26,7 @@ export const quotationsTable = pgTable("quotations", {
   taxTotal: numeric("tax_total", { precision: 14, scale: 2 }).notNull().default("0"),
   total: numeric("total", { precision: 14, scale: 2 }).notNull().default("0"),
   notes: text("notes"),
+  terms: jsonb("terms").$type<{ text: string; groupId: number | null; groupName: string | null }[]>(),
   createdById: integer("created_by_id")
     .notNull()
     .references(() => usersTable.id),

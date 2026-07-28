@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { sanitizeIfHtml } from "@/lib/sanitize-html";
+import { normalizeDocumentTerms, type DocumentTerm } from "../_shared/document-terms";
 import { redirect } from "next/navigation";
 import { and, eq } from "drizzle-orm";
 import { db, customersTable, deliveryChallansTable, deliveryChallanItemsTable } from "@/db";
@@ -25,6 +26,7 @@ export async function createDeliveryChallanAction(
     carrier: string;
     vehicleNo: string;
     items: LineInput[];
+    terms?: DocumentTerm[];
   },
   andDispatch = false,
 ): Promise<ActionResult> {
@@ -48,6 +50,7 @@ export async function createDeliveryChallanAction(
         customerId,
         dispatchDate: input.dispatchDate || null,
         carrier: input.carrier.trim() || null,
+        terms: normalizeDocumentTerms(input.terms),
         vehicleNo: input.vehicleNo.trim() || null,
         createdById: session.userId,
       })
@@ -77,7 +80,7 @@ export async function createDeliveryChallanAction(
 // Batch A2 — draft-only edit. Preserves number/org/status/title/source links (logistics-only: no totals).
 export async function updateDeliveryChallanAction(
   id: number,
-  input: { customerId: string; dispatchDate: string; carrier: string; vehicleNo: string; items: LineInput[] },
+  input: { customerId: string; dispatchDate: string; carrier: string; vehicleNo: string; items: LineInput[]; terms?: DocumentTerm[] },
 ): Promise<ActionResult> {
   const session = await requireSession();
   const [existing] = await db.select().from(deliveryChallansTable).where(and(eq(deliveryChallansTable.id, id), eq(deliveryChallansTable.orgId, session.orgId)));
@@ -98,6 +101,7 @@ export async function updateDeliveryChallanAction(
         customerId,
         dispatchDate: input.dispatchDate || null,
         carrier: input.carrier.trim() || null,
+        terms: normalizeDocumentTerms(input.terms),
         vehicleNo: input.vehicleNo.trim() || null,
         updatedAt: new Date(),
       })

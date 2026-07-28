@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { eq, and } from "drizzle-orm";
+import { DocumentTermsView } from "../../_shared/terms-view";
 import { SafeRichText } from "../../_shared/safe-rich-text";
 import { db, quotationsTable, quotationItemsTable, customersTable, orgsTable } from "@/db";
 import { requireSession } from "@/lib/session";
@@ -40,6 +41,7 @@ export default async function QuotationDetailPage({ params }: { params: Promise<
       taxTotal: quotationsTable.taxTotal,
       total: quotationsTable.total,
       notes: quotationsTable.notes,
+      terms: quotationsTable.terms,
       customerName: customersTable.name,
       customerVatNumber: customersTable.vatNumber,
       customerAddress: customersTable.address,
@@ -118,6 +120,7 @@ export default async function QuotationDetailPage({ params }: { params: Promise<
         />
       </div>
 
+      <DocumentTermsView locale={locale} terms={quotation.terms} className="mt-5" />
       {quotation.notes && (
         <div className="mt-5">
           <div className="text-[11px] uppercase tracking-wide text-ink-faint mb-1.5">{t(locale, "Notes")}</div>

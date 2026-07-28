@@ -60,6 +60,7 @@ export default async function EditQuotationPage({ params }: { params: Promise<{ 
           validUntil: quotation.validUntil ?? "",
           discount: quotation.discount,
           notes: quotation.notes ?? "",
+          terms: quotation.terms ?? [],
           items: initialItems,
         }}
       />
