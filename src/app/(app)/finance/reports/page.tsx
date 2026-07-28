@@ -1,160 +1,76 @@
 import { eq, asc } from "drizzle-orm";
-import { db, accountsTable, type Account } from "@/db";
+import { db, accountsTable, orgsTable } from "@/db";
 import { requireSession } from "@/lib/session";
 import { getLocale } from "@/lib/i18n/server";
-import { t } from "@/lib/i18n/dict";
-import { getAccountBalances } from "@/lib/accounting";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
-import { Money } from "../../sales/_shared/money";
+import {
+  resolveRange, isReportKind, previousPeriod, type ReportKind, type DateRange,
+  getProfitAndLoss, getBalanceSheet, getCashFlow, getTrialBalance, getGeneralLedger,
+  getReceivableAging, getPayableAging, getVatSummary,
+} from "@/lib/finance-reports";
+import { ReportsWorkspace, type ReportPayload } from "./reports-workspace";
 
-function Line({ label, value, final, positive }: { label: string; value: number; final?: boolean; positive?: boolean }) {
-  return (
-    <div className={final ? "payslip-line final" : "payslip-line"}>
-      <span>{label}</span>
-      <span className={positive && final ? "mono text-success" : "mono"}>
-        <Money amount={value} context="summary" />
-      </span>
-    </div>
-  );
-}
-
-function GroupLabel({ top, children }: { top?: boolean; children: React.ReactNode }) {
-  return (
-    <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--ink-faint)", margin: top ? "0 0 14px" : "18px 0 14px" }}>
-      {children}
-    </div>
-  );
-}
-
-export default async function ReportsPage() {
+// Financial Reports workspace. Server component: resolves the date range (defaulting to the org's
+// fiscal year), recomputes ONLY the selected report (+ previous period when comparing), and hands
+// the serializable result to the client workspace for filtering / drill-down / export / print.
+// Tenant-scoped via requireSession; finance is readable by all roles (matches the module's policy).
+export default async function ReportsPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const session = await requireSession();
   const locale = await getLocale();
-  const orgId = session.orgId;
+  const sp = await searchParams;
+  const one = (k: string) => (Array.isArray(sp[k]) ? sp[k][0] : sp[k]) as string | undefined;
 
-  const [accounts, balances] = await Promise.all([
-    db.select().from(accountsTable).where(eq(accountsTable.orgId, orgId)).orderBy(asc(accountsTable.code)),
-    getAccountBalances(orgId),
-  ]);
+  const report: ReportKind = isReportKind(one("report") ?? "") ? (one("report") as ReportKind) : "pl";
+  const [org] = await db.select({ fiscal: orgsTable.fiscalYearStartMonth }).from(orgsTable).where(eq(orgsTable.id, session.orgId));
+  const range = resolveRange(one("from"), one("to"), org?.fiscal ?? 1);
+  const compare = one("compare") === "1";
+  const accountId = Number(one("account")) || undefined;
+  const prev = compare ? previousPeriod(range) : undefined;
 
-  const byType = (type: Account["type"]) => accounts.filter((a) => a.type === type);
-  const sumType = (type: Account["type"]) => byType(type).reduce((s, a) => s + (balances.get(a.id) ?? 0), 0);
+  const accounts = await db
+    .select({ id: accountsTable.id, code: accountsTable.code, name: accountsTable.name })
+    .from(accountsTable).where(eq(accountsTable.orgId, session.orgId)).orderBy(asc(accountsTable.code));
 
-  const revenueTotal = sumType("revenue");
-  const expenseTotal = sumType("expense");
-  const netProfit = revenueTotal - expenseTotal;
-
-  const assetTotal = sumType("asset");
-  const liabilityTotal = sumType("liability");
-  const equityAccountsTotal = sumType("equity");
-  const totalEquity = equityAccountsTotal + netProfit;
-
-  const totalDebit = accounts.reduce((s, a) => {
-    const bal = balances.get(a.id) ?? 0;
-    return s + (a.normalBalance === "debit" ? Math.max(bal, 0) : Math.max(-bal, 0));
-  }, 0);
-  const totalCredit = accounts.reduce((s, a) => {
-    const bal = balances.get(a.id) ?? 0;
-    return s + (a.normalBalance === "credit" ? Math.max(bal, 0) : Math.max(-bal, 0));
-  }, 0);
-  const tbBalanced = Math.round(totalDebit * 100) === Math.round(totalCredit * 100);
+  const payload = await buildPayload(session.orgId, report, range, prev, accountId);
 
   return (
-    <div className="max-w-3xl mx-auto">
-      <div className="main-head">
-        <h3>{t(locale, "Account Reporting")}</h3>
-      </div>
-
-      <Tabs defaultValue="pl">
-        <TabsList>
-          <TabsTrigger value="pl">{t(locale, "Profit & Loss")}</TabsTrigger>
-          <TabsTrigger value="bs">{t(locale, "Balance Sheet")}</TabsTrigger>
-          <TabsTrigger value="tb">{t(locale, "Trial Balance")}</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="pl">
-          <div className="card" style={{ padding: "22px 24px" }}>
-            <GroupLabel top>{t(locale, "Revenue")}</GroupLabel>
-            {byType("revenue").map((a) => (
-              <Line key={a.id} label={a.name} value={balances.get(a.id) ?? 0} />
-            ))}
-            <GroupLabel>{t(locale, "Expenses")}</GroupLabel>
-            {byType("expense").map((a) => (
-              <Line key={a.id} label={a.name} value={balances.get(a.id) ?? 0} />
-            ))}
-            <Line label={t(locale, "Net Profit")} value={netProfit} final positive />
-          </div>
-        </TabsContent>
-
-        <TabsContent value="bs">
-          <div className="card" style={{ padding: "22px 24px" }}>
-            <GroupLabel top>{t(locale, "Assets")}</GroupLabel>
-            {byType("asset").map((a) => (
-              <Line key={a.id} label={a.name} value={balances.get(a.id) ?? 0} />
-            ))}
-            <Line label={t(locale, "Total Assets")} value={assetTotal} final />
-
-            <GroupLabel>{t(locale, "Liabilities")}</GroupLabel>
-            {byType("liability").map((a) => (
-              <Line key={a.id} label={a.name} value={balances.get(a.id) ?? 0} />
-            ))}
-            <Line label={t(locale, "Total Liabilities")} value={liabilityTotal} final />
-
-            <GroupLabel>{t(locale, "Equity")}</GroupLabel>
-            {byType("equity").map((a) => (
-              <Line key={a.id} label={a.name} value={balances.get(a.id) ?? 0} />
-            ))}
-            <Line label={t(locale, "Retained Earnings (Current Period)")} value={netProfit} />
-            <Line label={t(locale, "Total Equity")} value={totalEquity} final />
-          </div>
-        </TabsContent>
-
-        <TabsContent value="tb">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{t(locale, "Code")}</TableHead>
-                <TableHead>{t(locale, "Account")}</TableHead>
-                <TableHead className="num">{t(locale, "Debit")}</TableHead>
-                <TableHead className="num">{t(locale, "Credit")}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {accounts.map((a) => {
-                const bal = balances.get(a.id) ?? 0;
-                const debit = a.normalBalance === "debit" ? Math.max(bal, 0) : Math.max(-bal, 0);
-                const credit = a.normalBalance === "credit" ? Math.max(bal, 0) : Math.max(-bal, 0);
-                return (
-                  <TableRow key={a.id}>
-                    <TableCell className="mono">{a.code}</TableCell>
-                    <TableCell>{a.name}</TableCell>
-                    <TableCell className="num">{debit ? <Money amount={debit} context="summary" /> : "—"}</TableCell>
-                    <TableCell className="num">{credit ? <Money amount={credit} context="summary" /> : "—"}</TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-          <div className="tb-strip">
-            <div className="card tb-tile">
-              <div className="l">{t(locale, "Total debits")}</div>
-              <div className="v">
-                <Money amount={totalDebit} context="summary" />
-              </div>
-            </div>
-            <div className="card tb-tile">
-              <div className="l">{t(locale, "Total credits")}</div>
-              <div className="v">
-                <Money amount={totalCredit} context="summary" />
-              </div>
-            </div>
-            <div className={tbBalanced ? "card tb-tile balanced" : "card tb-tile"}>
-              <div className="l">{t(locale, "Balance check")}</div>
-              <div className="v">{tbBalanced ? `✓ ${t(locale, "Balanced")}` : t(locale, "Not balanced")}</div>
-            </div>
-          </div>
-        </TabsContent>
-      </Tabs>
-    </div>
+    <ReportsWorkspace
+      locale={locale}
+      report={report}
+      range={range}
+      compare={compare}
+      accountId={accountId}
+      fiscalStartMonth={org?.fiscal ?? 1}
+      accounts={accounts}
+      payload={payload}
+    />
   );
+}
+
+async function buildPayload(orgId: number, report: ReportKind, range: DateRange, prev: DateRange | undefined, accountId?: number): Promise<ReportPayload> {
+  switch (report) {
+    case "pl": {
+      const [d, p] = await Promise.all([getProfitAndLoss(orgId, range), prev ? getProfitAndLoss(orgId, prev) : Promise.resolve(undefined)]);
+      return { kind: "pl", pl: d, plPrev: p };
+    }
+    case "bs": {
+      const [d, p] = await Promise.all([getBalanceSheet(orgId, range), prev ? getBalanceSheet(orgId, prev) : Promise.resolve(undefined)]);
+      return { kind: "bs", bs: d, bsPrev: p };
+    }
+    case "cf": {
+      const [d, p] = await Promise.all([getCashFlow(orgId, range), prev ? getCashFlow(orgId, prev) : Promise.resolve(undefined)]);
+      return { kind: "cf", cf: d, cfPrev: p };
+    }
+    case "tb":
+      return { kind: "tb", tb: await getTrialBalance(orgId, range) };
+    case "gl":
+      return { kind: "gl", gl: await getGeneralLedger(orgId, range, accountId) };
+    case "ar":
+      return { kind: "ar", ar: await getReceivableAging(orgId, range.to) };
+    case "ap":
+      return { kind: "ap", ap: await getPayableAging(orgId, range.to) };
+    case "vat": {
+      const [d, p] = await Promise.all([getVatSummary(orgId, range), prev ? getVatSummary(orgId, prev) : Promise.resolve(undefined)]);
+      return { kind: "vat", vat: d, vatPrev: p };
+    }
+  }
 }
