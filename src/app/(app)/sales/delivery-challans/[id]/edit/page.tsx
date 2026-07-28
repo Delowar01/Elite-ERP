@@ -35,7 +35,7 @@ export default async function EditDcPage({ params }: { params: Promise<{ id: str
     taxRatePercent: "0",
     imageUrl: it.imageUrl ?? "",
     unit: it.unit ?? "",
-    customFields: {},
+    customFields: (it.customFields as Record<string, string>) ?? {},
   }));
 
   return (

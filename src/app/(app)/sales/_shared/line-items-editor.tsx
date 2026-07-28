@@ -1,11 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import { toast } from "sonner";
 import { Plus, X } from "lucide-react";
 import { t, type Locale } from "@/lib/i18n/dict";
 import { fmt } from "./totals";
 import { ItemEntryCell } from "./item-entry-cell";
-import type { SavedItem } from "./creation-popup-actions";
+import { LINE_DESC_KEY } from "./line-item-desc";
+import { saveLineItemAsProductAction, updateProductDescriptionAction } from "./creation-popup-actions";
 import { ACTIONS_KEY, evalFormula, lineVars, type ColumnDef } from "@/lib/column-config";
 import type { Product } from "@/db";
 
@@ -39,6 +41,72 @@ const DEFAULT_UNITS = ["pcs", "unit", "box", "kg", "m", "m²", "hour", "day", "s
 // values it fills onto the line when picked (price/tax/unit/image).
 export type ProductLite = Pick<Product, "id" | "name" | "sku" | "unitPrice" | "taxRatePercent" | "description" | "unit" | "imageUrl">;
 
+// Shared item-entry actions for a variant's editor: searchable product list (with items created
+// in-session merged in), linking a picked item, creating a new item from the typed name, per-line
+// description editing (stored on the line), and pushing a description onto the item's master.
+function useItemActions(locale: Locale, items: LineItemDraft[], onChange: (items: LineItemDraft[]) => void, resolvedVariant: "full" | "simple" | "qty", baseProducts: ProductLite[]) {
+  const [created, setCreated] = useState<ProductLite[]>([]);
+  const [createdIds, setCreatedIds] = useState<number[]>([]);
+  const [pendingIdx, setPendingIdx] = useState<number[]>([]);
+  const products = created.length ? [...created, ...baseProducts] : baseProducts;
+
+  const updateLine = (i: number, patch: Partial<LineItemDraft>) => onChange(items.map((it, idx) => (idx === i ? { ...it, ...patch } : it)));
+  const setDesc = (i: number, html: string) => updateLine(i, { customFields: { ...items[i].customFields, [LINE_DESC_KEY]: html } });
+  // Link a picked product: name → the line's name field, its description → the line description
+  // (never pasted into the name), and price/tax/unit/image filled in.
+  const selectProduct = (i: number, p: ProductLite) =>
+    updateLine(i, {
+      productId: String(p.id),
+      description: p.name,
+      unit: p.unit || items[i].unit,
+      imageUrl: p.imageUrl || items[i].imageUrl,
+      customFields: { ...items[i].customFields, [LINE_DESC_KEY]: p.description ?? items[i].customFields[LINE_DESC_KEY] ?? "" },
+      ...(resolvedVariant !== "qty" ? { unitPrice: p.unitPrice, taxRatePercent: p.taxRatePercent } : {}),
+    });
+  // Create a brand-new item from the typed name and link it in place (no dialog / redirect).
+  const createNew = async (i: number, name: string) => {
+    if (!name.trim()) return;
+    setPendingIdx((p) => [...p, i]);
+    const res = await saveLineItemAsProductAction({ name: name.trim(), unit: items[i].unit, unitPrice: items[i].unitPrice, taxRatePercent: items[i].taxRatePercent, imageUrl: items[i].imageUrl });
+    setPendingIdx((p) => p.filter((x) => x !== i));
+    if (res.error || !res.product) { toast.error(res.error ?? t(locale, "Something went wrong.")); return; }
+    const product = res.product;
+    setCreated((prev) => [product, ...prev]);
+    setCreatedIds((prev) => [...prev, product.id]);
+    updateLine(i, { productId: String(product.id), description: product.name });
+  };
+  const saveToMaster = async (productId: number, html: string) => {
+    const res = await updateProductDescriptionAction(productId, html);
+    if (res.error) toast.error(res.error);
+    else toast.success(t(locale, "Description saved to item."));
+  };
+  return {
+    products, updateLine, setDesc, selectProduct, createNew, saveToMaster,
+    isCreated: (productId: number) => createdIds.includes(productId),
+    isPending: (i: number) => pendingIdx.includes(i),
+  };
+}
+
+// Render the shared item-entry cell for line `i` wired to a variant editor's item actions.
+function itemCell(locale: Locale, item: LineItemDraft, i: number, showThumb: boolean, h: ReturnType<typeof useItemActions>) {
+  const linkedId = Number(item.productId) || 0;
+  return (
+    <ItemEntryCell
+      locale={locale}
+      products={h.products}
+      item={item}
+      showThumb={showThumb}
+      justCreated={!!linkedId && h.isCreated(linkedId)}
+      pending={h.isPending(i)}
+      onPatch={(patch) => h.updateLine(i, patch)}
+      onSetDesc={(html) => h.setDesc(i, html)}
+      onSelectProduct={(p) => h.selectProduct(i, p)}
+      onCreateNew={(name) => h.createNew(i, name)}
+      onSaveToMaster={(html) => { if (linkedId) h.saveToMaster(linkedId, html); }}
+    />
+  );
+}
+
 export function LineItemsEditor({
   locale,
   products,
@@ -66,25 +134,18 @@ export function LineItemsEditor({
 }) {
   const resolvedVariant = pricing === false ? "simple" : variant;
 
-  // Items saved via "Save this item" during this session are merged into the searchable list so they
-  // appear immediately in future item searches (without a page reload).
-  const [created, setCreated] = useState<ProductLite[]>([]);
-  const allProducts = created.length ? [...created, ...products] : products;
-  const addCreated = (p: ProductLite) => setCreated((prev) => [p, ...prev]);
-
   // Column-driven full variant (Edit Columns applied). Simple/qty variants keep the fixed layout.
   if (resolvedVariant === "full" && columns && columns.length > 0) {
-    return <ColumnDrivenEditor locale={locale} products={allProducts} onCreateProduct={addCreated} items={items} onChange={onChange} units={units} columns={columns} defaultTaxRate={defaultTaxRate} />;
+    return <ColumnDrivenEditor locale={locale} products={products} items={items} onChange={onChange} units={units} columns={columns} defaultTaxRate={defaultTaxRate} />;
   }
 
-  return <FixedEditor locale={locale} products={allProducts} onCreateProduct={addCreated} items={items} onChange={onChange} resolvedVariant={resolvedVariant} units={units} defaultTaxRate={defaultTaxRate} />;
+  return <FixedEditor locale={locale} products={products} items={items} onChange={onChange} resolvedVariant={resolvedVariant} units={units} defaultTaxRate={defaultTaxRate} />;
 }
 
 // ---------------- Column-driven full editor ----------------
 function ColumnDrivenEditor({
   locale,
   products,
-  onCreateProduct,
   items,
   onChange,
   units,
@@ -93,7 +154,6 @@ function ColumnDrivenEditor({
 }: {
   locale: Locale;
   products: ProductLite[];
-  onCreateProduct: (p: ProductLite) => void;
   items: LineItemDraft[];
   onChange: (items: LineItemDraft[]) => void;
   units: string[];
@@ -102,22 +162,11 @@ function ColumnDrivenEditor({
 }) {
   const unitOptions = Array.from(new Set([...units, ...DEFAULT_UNITS]));
   const visible = columns.filter((c) => c.visible || c.key === ACTIONS_KEY);
+  const h = useItemActions(locale, items, onChange, "full", products);
+  const updateLine = h.updateLine;
 
-  function updateLine(index: number, patch: Partial<LineItemDraft>) {
-    onChange(items.map((it, i) => (i === index ? { ...it, ...patch } : it)));
-  }
   function setCustom(index: number, key: string, value: string) {
     onChange(items.map((it, i) => (i === index ? { ...it, customFields: { ...it.customFields, [key]: value } } : it)));
-  }
-  // Link an existing product to the line and fill its values (matches the pick-from-list behavior).
-  function selectProduct(index: number, product: ProductLite) {
-    updateLine(index, { productId: String(product.id), description: product.name, unitPrice: product.unitPrice, taxRatePercent: product.taxRatePercent, unit: product.unit || items[index].unit, imageUrl: product.imageUrl || items[index].imageUrl });
-  }
-  // A line was just promoted to a saved product: register it for future searches and link the line
-  // (keeping the line's own description so any formatting the user typed is preserved).
-  function productCreated(index: number, product: SavedItem) {
-    onCreateProduct(product);
-    updateLine(index, { productId: String(product.id), unitPrice: product.unitPrice, taxRatePercent: product.taxRatePercent, unit: product.unit || items[index].unit, imageUrl: product.imageUrl || items[index].imageUrl });
   }
   function removeLine(index: number) {
     onChange(items.filter((_, i) => i !== index));
@@ -139,18 +188,7 @@ function ColumnDrivenEditor({
     const cmp = computed(item);
     switch (c.key) {
       case "description":
-        return (
-          <ItemEntryCell
-            locale={locale}
-            products={products}
-            item={item}
-            showThumb
-            showRich
-            onPatch={(patch) => updateLine(i, patch)}
-            onSelectProduct={(p) => selectProduct(i, p)}
-            onProductCreated={(prod) => productCreated(i, prod)}
-          />
-        );
+        return itemCell(locale, item, i, true, h);
       case "taxRatePercent":
         return <input type="number" step="1" value={item.taxRatePercent} onChange={(e) => updateLine(i, { taxRatePercent: e.target.value })} className="item-cell-input" />;
       case "quantity":
@@ -240,7 +278,6 @@ function ColumnDrivenEditor({
 function FixedEditor({
   locale,
   products,
-  onCreateProduct,
   items,
   onChange,
   resolvedVariant,
@@ -249,7 +286,6 @@ function FixedEditor({
 }: {
   locale: Locale;
   products: ProductLite[];
-  onCreateProduct: (p: ProductLite) => void;
   items: LineItemDraft[];
   onChange: (items: LineItemDraft[]) => void;
   resolvedVariant: "full" | "simple" | "qty";
@@ -257,37 +293,15 @@ function FixedEditor({
   defaultTaxRate?: string;
 }) {
   const unitOptions = Array.from(new Set([...units, ...DEFAULT_UNITS]));
+  const h = useItemActions(locale, items, onChange, resolvedVariant, products);
+  const updateLine = h.updateLine;
 
-  function updateLine(index: number, patch: Partial<LineItemDraft>) {
-    onChange(items.map((it, i) => (i === index ? { ...it, ...patch } : it)));
-  }
-  // Link an existing product to the line and fill its values.
-  function selectProduct(index: number, product: ProductLite) {
-    updateLine(index, {
-      productId: String(product.id),
-      description: product.name,
-      unit: product.unit || items[index].unit,
-      imageUrl: product.imageUrl || items[index].imageUrl,
-      ...(resolvedVariant !== "qty" ? { unitPrice: product.unitPrice, taxRatePercent: product.taxRatePercent } : {}),
-    });
-  }
-  // A line was just promoted to a saved product: register it and link the line (keeping its own text).
-  function productCreated(index: number, product: SavedItem) {
-    onCreateProduct(product);
-    updateLine(index, {
-      productId: String(product.id),
-      unit: product.unit || items[index].unit,
-      imageUrl: product.imageUrl || items[index].imageUrl,
-      ...(resolvedVariant !== "qty" ? { unitPrice: product.unitPrice, taxRatePercent: product.taxRatePercent } : {}),
-    });
-  }
   function removeLine(index: number) {
     onChange(items.filter((_, i) => i !== index));
   }
   const lineTotal = (it: LineItemDraft) => (Number(it.quantity) || 0) * (Number(it.unitPrice) || 0);
   const showThumb = resolvedVariant !== "simple";
   const showPricing = resolvedVariant === "full";
-  const showQtyOnly = resolvedVariant === "qty";
 
   return (
     <div className="flex flex-col gap-1">
@@ -309,17 +323,7 @@ function FixedEditor({
             {items.map((item, i) => (
               <tr className="item-row" key={i}>
                 <td>
-                  <ItemEntryCell
-                    locale={locale}
-                    products={products}
-                    item={item}
-                    showThumb={showThumb}
-                    showRich={showPricing}
-                    showPricingInDialog={!showQtyOnly}
-                    onPatch={(patch) => updateLine(i, patch)}
-                    onSelectProduct={(p) => selectProduct(i, p)}
-                    onProductCreated={(prod) => productCreated(i, prod)}
-                  />
+                  {itemCell(locale, item, i, showThumb, h)}
                 </td>
                 {showPricing && (
                   <td className="num"><input type="number" step="1" value={item.taxRatePercent} onChange={(e) => updateLine(i, { taxRatePercent: e.target.value })} className="item-cell-input" /></td>

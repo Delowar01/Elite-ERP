@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { eq, and } from "drizzle-orm";
 import { DocumentTermsView } from "../../_shared/terms-view";
-import { SafeRichText } from "../../_shared/safe-rich-text";
+import { LineItemCell } from "../../_shared/line-item-cell";
 import { db, deliveryChallansTable, deliveryChallanItemsTable, customersTable, salesOrdersTable, salesInvoicesTable, orgsTable } from "@/db";
 import { requireSession } from "@/lib/session";
 import { getLocale } from "@/lib/i18n/server";
@@ -98,7 +98,7 @@ export default async function DcDetailPage({ params }: { params: Promise<{ id: s
         <TableBody>
           {items.map((it) => (
             <TableRow key={it.id}>
-              <TableCell><SafeRichText value={it.description} /></TableCell>
+              <TableCell><LineItemCell description={it.description} customFields={it.customFields} /></TableCell>
               <TableCell className="text-right font-mono">{it.quantity}</TableCell>
             </TableRow>
           ))}

@@ -29,6 +29,7 @@ import { requireSession } from "@/lib/session";
 import { getLocale } from "@/lib/i18n/server";
 import { buildZatcaTlv, invoiceHashOf, zatcaQrDataUrl } from "@/lib/zatca";
 import { amountInWords } from "../../../(app)/sales/_shared/totals";
+import { getLineDesc } from "../../../(app)/sales/_shared/line-item-desc";
 import { resolveCurrencyMark } from "@/lib/currency/currencies";
 import {
   A4Page,
@@ -53,6 +54,14 @@ import {
   type PartyLine,
 } from "../../_shared/pdf-blocks";
 import { PrintToolbar } from "../../_shared/print-toolbar";
+
+// Item label for print: the item NAME plus its optional long-form description on one line.
+function itemLabel(it: { description: string | null; customFields?: unknown }): string {
+  const name = richTextToPlain(it.description) || "—";
+  const desc = richTextToPlain(getLineDesc(it.customFields));
+  return desc ? `${name} — ${desc}` : name;
+}
+
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 function fmtDate(iso: string | null): string {
@@ -132,7 +141,7 @@ export default async function PrintPage({ params }: { params: Promise<{ type: st
     if (!customer) notFound();
 
     const fullItems = items.map((it) => ({
-      name: richTextToPlain(it.description) || "—",
+      name: itemLabel(it),
       vatPercent: it.taxRatePercent,
       quantity: it.quantity,
       rate: it.unitPrice,
@@ -277,7 +286,7 @@ export default async function PrintPage({ params }: { params: Promise<{ type: st
           {orgParty("DELIVERY TO")}
           <Party label="SUPPLY FROM" name={vendor.name} lines={customerLines(vendor)} />
         </Parties>
-        <ItemsTableFull items={items.map((it) => ({ name: richTextToPlain(it.description) || "—", vatPercent: it.taxRatePercent, quantity: it.quantity, rate: it.unitCost }))} />
+        <ItemsTableFull items={items.map((it) => ({ name: itemLabel(it), vatPercent: it.taxRatePercent, quantity: it.quantity, rate: it.unitCost }))} />
         <div className="pdf-bottom">
           <div>
             <AmountWords words={amountInWords(po.total, "en", mark)} />
@@ -311,7 +320,7 @@ export default async function PrintPage({ params }: { params: Promise<{ type: st
           {orgParty("ISSUED BY")}
           <Party label="DELIVERED TO" name={customer.name} lines={customerLines(customer)} />
         </Parties>
-        <ItemsTableQty items={items.map((it) => ({ name: richTextToPlain(it.description) || "—", quantity: it.quantity }))} />
+        <ItemsTableQty items={items.map((it) => ({ name: itemLabel(it), quantity: it.quantity }))} />
         <PdfTermsBlock terms={dc.terms} />
         <NotesBlock notes={logistics || null} />
         <ClientComments />
@@ -348,7 +357,7 @@ export default async function PrintPage({ params }: { params: Promise<{ type: st
               </>
             ) : null}
           </div>
-          <ItemsTableSimple items={items.map((it) => ({ name: richTextToPlain(it.description) || "—", quantity: it.quantity, rate: it.unitPrice }))} />
+          <ItemsTableSimple items={items.map((it) => ({ name: itemLabel(it), quantity: it.quantity, rate: it.unitPrice }))} />
           <div className="pdf-bottom">
             <AmountWords words={amountInWords(cn.total, "en", mark)} />
             <TotalsBox rows={[["VAT", money(cn.taxTotal)]]} grandLabel="Credit Total" grandVal={money(cn.total)} />
@@ -382,7 +391,7 @@ export default async function PrintPage({ params }: { params: Promise<{ type: st
               </>
             ) : null}
           </div>
-          <ItemsTableSimple items={items.map((it) => ({ name: richTextToPlain(it.description) || "—", quantity: it.quantity, rate: it.unitCost }))} />
+          <ItemsTableSimple items={items.map((it) => ({ name: itemLabel(it), quantity: it.quantity, rate: it.unitCost }))} />
           <div className="pdf-bottom">
             <AmountWords words={amountInWords(dn.total, "en", mark)} />
             <TotalsBox rows={[["VAT", money(dn.taxTotal)]]} grandLabel="Debit Total" grandVal={money(dn.total)} />

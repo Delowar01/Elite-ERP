@@ -177,6 +177,22 @@ export async function saveLineItemAsProductAction(input: {
   return { product: row };
 }
 
+// "Save to Item": explicitly push a document line's description onto the linked product's master
+// record. Only called on user request (existing items are never silently updated from a document);
+// for items created in-place we call this automatically since the item is brand-new. Tenant-scoped;
+// description is sanitized server-side.
+export async function updateProductDescriptionAction(productId: number, description: string): Promise<PopupResult> {
+  const session = await requireSession();
+  const res = await db
+    .update(productsTable)
+    .set({ description: sanitizeIfHtml(description) || null, updatedAt: new Date() })
+    .where(and(eq(productsTable.id, productId), eq(productsTable.orgId, session.orgId)))
+    .returning({ id: productsTable.id });
+  if (!res.length) return { error: "Item not found." };
+  await logActivity(session, { type: "product.updated", description: `Updated item description from a document`, entityType: "product", entityId: productId });
+  return { ok: true };
+}
+
 export type SequenceDTO = { id: number; prefix: string; nextNumber: number; padding: number };
 
 // Number gear popup — load the current numbering rule for a document type.

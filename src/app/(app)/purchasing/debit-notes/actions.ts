@@ -16,7 +16,7 @@ export type ActionResult = { error?: string; id?: number };
 
 const PATH = "/purchasing/debit-notes";
 
-type LineInput = { productId: string; description: string; quantity: string; unitPrice: string; taxRatePercent: string; imageUrl?: string; unit?: string };
+type LineInput = { productId: string; description: string; quantity: string; unitPrice: string; taxRatePercent: string; imageUrl?: string; unit?: string; customFields?: Record<string, string> };
 
 export async function createDebitNoteAction(
   input: {
@@ -69,6 +69,7 @@ export async function createDebitNoteAction(
         productId: l.productId ? Number(l.productId) : null,
         imageUrl: l.imageUrl || null,
         unit: l.unit || null,
+        customFields: l.customFields ?? {},
         description: sanitizeIfHtml(l.description),
         quantity: l.quantity,
         unitCost: l.unitPrice,
@@ -119,6 +120,7 @@ export async function updateDebitNoteAction(
         productId: l.productId ? Number(l.productId) : null,
         imageUrl: l.imageUrl || null,
         unit: l.unit || null,
+        customFields: l.customFields ?? {},
         description: sanitizeIfHtml(l.description),
         quantity: l.quantity,
         unitCost: l.unitPrice,

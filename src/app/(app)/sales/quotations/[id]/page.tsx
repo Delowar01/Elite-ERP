@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { eq, and } from "drizzle-orm";
 import { DocumentTermsView } from "../../_shared/terms-view";
 import { SafeRichText } from "../../_shared/safe-rich-text";
+import { LineItemCell } from "../../_shared/line-item-cell";
 import { db, quotationsTable, quotationItemsTable, customersTable, orgsTable } from "@/db";
 import { requireSession } from "@/lib/session";
 import { getLocale } from "@/lib/i18n/server";
@@ -99,7 +100,7 @@ export default async function QuotationDetailPage({ params }: { params: Promise<
         <TableBody>
           {items.map((it) => (
             <TableRow key={it.id}>
-              <TableCell><SafeRichText value={it.description} /></TableCell>
+              <TableCell><LineItemCell description={it.description} customFields={it.customFields} /></TableCell>
               <TableCell className="text-right font-mono">{it.quantity}</TableCell>
               <TableCell className="text-right font-mono">{fmt(it.unitPrice)}</TableCell>
               <TableCell className="text-right font-mono">{it.taxRatePercent}%</TableCell>

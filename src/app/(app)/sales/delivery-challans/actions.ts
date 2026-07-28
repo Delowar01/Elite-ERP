@@ -16,7 +16,7 @@ export type ActionResult = { error?: string; id?: number };
 const PATH = "/sales/delivery-challans";
 const VALID_STATUSES = ["draft", "dispatched", "delivered"];
 
-type LineInput = { productId: string; description: string; quantity: string; imageUrl?: string; unit?: string };
+type LineInput = { productId: string; description: string; quantity: string; imageUrl?: string; unit?: string; customFields?: Record<string, string> };
 
 export async function createDeliveryChallanAction(
   input: {
@@ -62,6 +62,7 @@ export async function createDeliveryChallanAction(
         productId: l.productId ? Number(l.productId) : null,
         imageUrl: l.imageUrl || null,
         unit: l.unit || null,
+        customFields: l.customFields ?? {},
         description: sanitizeIfHtml(l.description),
         quantity: l.quantity,
       })),
@@ -113,6 +114,7 @@ export async function updateDeliveryChallanAction(
         productId: l.productId ? Number(l.productId) : null,
         imageUrl: l.imageUrl || null,
         unit: l.unit || null,
+        customFields: l.customFields ?? {},
         description: sanitizeIfHtml(l.description),
         quantity: l.quantity,
       })),

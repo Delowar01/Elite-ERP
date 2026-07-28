@@ -1224,6 +1224,13 @@ const DICT: Record<string, string> = {
   "Item saved to your product list.": "تم حفظ الصنف في قائمة منتجاتك.",
   "Item name is required.": "اسم الصنف مطلوب.",
   "Something went wrong.": "حدث خطأ ما.",
+  "Create New Item": "إنشاء صنف جديد",
+  "Add Description": "إضافة وصف",
+  "Edit description": "تعديل الوصف",
+  "Write a full description…": "اكتب وصفًا كاملاً…",
+  "Save to Item": "الحفظ في الصنف",
+  "Saved with the new item": "تم الحفظ مع الصنف الجديد",
+  "Description saved to item.": "تم حفظ الوصف في الصنف.",
 
   // ---- Financial Reports workspace ----
   "Financial Reports": "التقارير المالية",
