@@ -1,11 +1,12 @@
 "use server";
 
 import { and, eq } from "drizzle-orm";
-import { db, orgsTable, customersTable, vendorsTable, documentSequencesTable } from "@/db";
+import { db, orgsTable, customersTable, vendorsTable, documentSequencesTable, productsTable } from "@/db";
 import { requireSession } from "@/lib/session";
 import { logActivity } from "@/lib/activity";
 import { validateUpload, storeBlob, IMAGE_MAX_BYTES, ATTACHMENT_MAX_BYTES, CONTENT_TYPES } from "@/lib/storage/blob-storage";
 import { buildingNumberError, postalCodeError, composeAddress } from "@/lib/geo/countries";
+import { sanitizeIfHtml } from "@/lib/sanitize-html";
 
 export type UploadResult = { error?: string; url?: string; fileName?: string; contentType?: string; sizeBytes?: number };
 
@@ -102,6 +103,78 @@ export async function updatePartyContactAction(
     await logActivity(session, { type: "vendor.updated", description: `Updated vendor "${name}"`, entityType: "vendor", entityId: id });
   }
   return { ok: true };
+}
+
+// "Save this item" popup (Line Items). Promotes a typed document line into a saved product in the
+// master, capturing name / description / image / unit / rate / tax, and returns the new product so
+// the editor can auto-link the line and offer it in future searches — all in-page, unsaved document
+// data preserved. Description is sanitized server-side (authoritative). Tenant-scoped, audited.
+export type SavedItem = {
+  id: number;
+  name: string;
+  sku: string;
+  description: string | null;
+  imageUrl: string | null;
+  unit: string;
+  unitPrice: string;
+  taxRatePercent: string;
+};
+export type SaveItemResult = { error?: string; product?: SavedItem };
+
+// Build a unique, human-ish SKU from the item name (falls back to ITEM), scoped to the org.
+async function uniqueSku(orgId: number, name: string): Promise<string> {
+  const base = (name.toUpperCase().replace(/[^A-Z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 12) || "ITEM");
+  for (let n = 1; n <= 9999; n++) {
+    const candidate = `${base}-${String(n).padStart(3, "0")}`;
+    const [hit] = await db
+      .select({ id: productsTable.id })
+      .from(productsTable)
+      .where(and(eq(productsTable.orgId, orgId), eq(productsTable.sku, candidate)))
+      .limit(1);
+    if (!hit) return candidate;
+  }
+  return `${base}-${Date.now()}`;
+}
+
+export async function saveLineItemAsProductAction(input: {
+  name: string;
+  description?: string;
+  imageUrl?: string;
+  unit?: string;
+  unitPrice?: string;
+  taxRatePercent?: string;
+}): Promise<SaveItemResult> {
+  const session = await requireSession();
+  const name = input.name.trim();
+  if (!name) return { error: "Item name is required." };
+  const unit = (input.unit ?? "").trim() || "pcs";
+  const unitPrice = String(input.unitPrice ?? "0").trim() || "0";
+  const taxRatePercent = String(input.taxRatePercent ?? "15").trim() || "15";
+  const description = sanitizeIfHtml(input.description) || null;
+  const imageUrl = (input.imageUrl ?? "").trim() || null;
+
+  const sku = await uniqueSku(session.orgId, name);
+  const [row] = await db
+    .insert(productsTable)
+    .values({ orgId: session.orgId, sku, name, description, imageUrl, unit, unitPrice, taxRatePercent })
+    .returning({
+      id: productsTable.id,
+      name: productsTable.name,
+      sku: productsTable.sku,
+      description: productsTable.description,
+      imageUrl: productsTable.imageUrl,
+      unit: productsTable.unit,
+      unitPrice: productsTable.unitPrice,
+      taxRatePercent: productsTable.taxRatePercent,
+    });
+
+  await logActivity(session, {
+    type: "product.created",
+    description: `Created product "${name}" (${sku}) from a document line`,
+    entityType: "product",
+    entityId: row.id,
+  });
+  return { product: row };
 }
 
 export type SequenceDTO = { id: number; prefix: string; nextNumber: number; padding: number };

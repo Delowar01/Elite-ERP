@@ -14,6 +14,8 @@ export const productsTable = pgTable(
     sku: text("sku").notNull(),
     name: text("name").notNull(),
     description: text("description"),
+    // Item image, saved to the master when a document line is promoted to a product ("Save this item").
+    imageUrl: text("image_url"),
     unit: text("unit").notNull().default("pcs"),
     unitPrice: numeric("unit_price", { precision: 14, scale: 2 }).notNull().default("0"),
     costPrice: numeric("cost_price", { precision: 14, scale: 2 }),

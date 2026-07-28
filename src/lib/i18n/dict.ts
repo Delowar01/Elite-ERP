@@ -1204,6 +1204,26 @@ const DICT: Record<string, string> = {
   "Remove group and its terms": "إزالة المجموعة وشروطها",
   "Remove group reference but keep the terms": "إزالة ارتباط المجموعة مع الإبقاء على الشروط",
   "No terms yet — add the first term.": "لا توجد شروط بعد — أضف الشرط الأول.",
+
+  // ---- Rich-text toolbar (item description + notes) ----
+  "Bullet list": "قائمة نقطية",
+  "Clear formatting": "مسح التنسيق",
+  Undo: "تراجع",
+  Redo: "إعادة",
+
+  // ---- Line-item entry: searchable item combobox + Save this item ----
+  "Search or type an item name…": "ابحث أو اكتب اسم الصنف…",
+  "Saved items": "الأصناف المحفوظة",
+  "No matching items": "لا توجد أصناف مطابقة",
+  "Save this item": "حفظ هذا الصنف",
+  "Save item to your product list": "احفظ الصنف في قائمة منتجاتك",
+  "Add description": "إضافة وصف",
+  "Item name": "اسم الصنف",
+  Rate: "السعر",
+  "Tax %": "الضريبة %",
+  "Item saved to your product list.": "تم حفظ الصنف في قائمة منتجاتك.",
+  "Item name is required.": "اسم الصنف مطلوب.",
+  "Something went wrong.": "حدث خطأ ما.",
 };
 
 export function t(locale: Locale, en: string): string {

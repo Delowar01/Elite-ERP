@@ -1,14 +1,15 @@
 "use client";
 
 import { useRef, useEffect, useState } from "react";
-import { Bold, Italic, Underline, ListOrdered, Link2, X } from "lucide-react";
+import { Bold, Italic, Underline, List, ListOrdered, Link2, RemoveFormatting, Undo2, Redo2, X } from "lucide-react";
 import { t, type Locale } from "@/lib/i18n/dict";
 import { sanitizeRichText } from "@/lib/sanitize-html";
 
-// Sanitized rich-text editor used on the creation pages for the Note body and the item
-// Description. Toolbar: Bold / Italic / Underline / Numbered list / Insert link / Close editor.
-// Produces allowlist-sanitized HTML on every change (server re-sanitizes on save). Stays entirely
-// on the creation page — edits flow straight into form state, so unsaved data is never lost.
+// Sanitized rich-text editor shared by the item Description, the Note body, and any other document
+// rich-text field. Toolbar: Bold / Italic / Underline / Bullet list / Numbered list / Insert link /
+// Clear formatting / Undo / Redo. Produces allowlist-sanitized HTML on every change (the server
+// re-sanitizes on save). Stays entirely on the page — edits flow straight into form state, so
+// unsaved data is never lost.
 export function RichTextField({
   locale,
   value,
@@ -63,11 +64,23 @@ export function RichTextField({
         <button type="button" className={btn} onMouseDown={(e) => e.preventDefault()} onClick={() => exec("underline")} title={t(locale, "Underline")} aria-label={t(locale, "Underline")}>
           <Underline className="size-3.5" />
         </button>
+        <button type="button" className={btn} onMouseDown={(e) => e.preventDefault()} onClick={() => exec("insertUnorderedList")} title={t(locale, "Bullet list")} aria-label={t(locale, "Bullet list")}>
+          <List className="size-3.5" />
+        </button>
         <button type="button" className={btn} onMouseDown={(e) => e.preventDefault()} onClick={() => exec("insertOrderedList")} title={t(locale, "Numbered list")} aria-label={t(locale, "Numbered list")}>
           <ListOrdered className="size-3.5" />
         </button>
         <button type="button" className={btn} onMouseDown={(e) => e.preventDefault()} onClick={insertLink} title={t(locale, "Insert link")} aria-label={t(locale, "Insert link")}>
           <Link2 className="size-3.5" />
+        </button>
+        <button type="button" className={btn} onMouseDown={(e) => e.preventDefault()} onClick={() => exec("removeFormat")} title={t(locale, "Clear formatting")} aria-label={t(locale, "Clear formatting")}>
+          <RemoveFormatting className="size-3.5" />
+        </button>
+        <button type="button" className={btn} onMouseDown={(e) => e.preventDefault()} onClick={() => exec("undo")} title={t(locale, "Undo")} aria-label={t(locale, "Undo")}>
+          <Undo2 className="size-3.5" />
+        </button>
+        <button type="button" className={btn} onMouseDown={(e) => e.preventDefault()} onClick={() => exec("redo")} title={t(locale, "Redo")} aria-label={t(locale, "Redo")}>
+          <Redo2 className="size-3.5" />
         </button>
         <button type="button" className="rte-close cursor-pointer hover:text-danger" onClick={() => setCollapsed((c) => !c)} title={t(locale, "Close editor")} aria-label={t(locale, "Close editor")}>
           <X className="size-3.5" />

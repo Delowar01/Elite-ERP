@@ -1,11 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import { Plus, X } from "lucide-react";
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { t, type Locale } from "@/lib/i18n/dict";
 import { fmt } from "./totals";
-import { ItemImageDialog } from "./item-image-dialog";
-import { RichTextField } from "./rich-text-field";
+import { ItemEntryCell } from "./item-entry-cell";
+import type { SavedItem } from "./creation-popup-actions";
 import { ACTIONS_KEY, evalFormula, lineVars, type ColumnDef } from "@/lib/column-config";
 import type { Product } from "@/db";
 
@@ -35,7 +35,9 @@ export const emptyLineItem = (defaultTaxRate: string = "15"): LineItemDraft => (
 
 const DEFAULT_UNITS = ["pcs", "unit", "box", "kg", "m", "m²", "hour", "day", "set", "lot"];
 
-type ProductLite = Pick<Product, "id" | "name" | "sku" | "unitPrice" | "taxRatePercent">;
+// Fields the line-item entry needs from a product: identity + search (name/sku/description) + the
+// values it fills onto the line when picked (price/tax/unit/image).
+export type ProductLite = Pick<Product, "id" | "name" | "sku" | "unitPrice" | "taxRatePercent" | "description" | "unit" | "imageUrl">;
 
 export function LineItemsEditor({
   locale,
@@ -64,18 +66,25 @@ export function LineItemsEditor({
 }) {
   const resolvedVariant = pricing === false ? "simple" : variant;
 
+  // Items saved via "Save this item" during this session are merged into the searchable list so they
+  // appear immediately in future item searches (without a page reload).
+  const [created, setCreated] = useState<ProductLite[]>([]);
+  const allProducts = created.length ? [...created, ...products] : products;
+  const addCreated = (p: ProductLite) => setCreated((prev) => [p, ...prev]);
+
   // Column-driven full variant (Edit Columns applied). Simple/qty variants keep the fixed layout.
   if (resolvedVariant === "full" && columns && columns.length > 0) {
-    return <ColumnDrivenEditor locale={locale} products={products} items={items} onChange={onChange} units={units} columns={columns} defaultTaxRate={defaultTaxRate} />;
+    return <ColumnDrivenEditor locale={locale} products={allProducts} onCreateProduct={addCreated} items={items} onChange={onChange} units={units} columns={columns} defaultTaxRate={defaultTaxRate} />;
   }
 
-  return <FixedEditor locale={locale} products={products} items={items} onChange={onChange} resolvedVariant={resolvedVariant} units={units} defaultTaxRate={defaultTaxRate} />;
+  return <FixedEditor locale={locale} products={allProducts} onCreateProduct={addCreated} items={items} onChange={onChange} resolvedVariant={resolvedVariant} units={units} defaultTaxRate={defaultTaxRate} />;
 }
 
 // ---------------- Column-driven full editor ----------------
 function ColumnDrivenEditor({
   locale,
   products,
+  onCreateProduct,
   items,
   onChange,
   units,
@@ -84,6 +93,7 @@ function ColumnDrivenEditor({
 }: {
   locale: Locale;
   products: ProductLite[];
+  onCreateProduct: (p: ProductLite) => void;
   items: LineItemDraft[];
   onChange: (items: LineItemDraft[]) => void;
   units: string[];
@@ -99,10 +109,15 @@ function ColumnDrivenEditor({
   function setCustom(index: number, key: string, value: string) {
     onChange(items.map((it, i) => (i === index ? { ...it, customFields: { ...it.customFields, [key]: value } } : it)));
   }
-  function selectProduct(index: number, productId: string) {
-    const product = products.find((p) => String(p.id) === productId);
-    if (!product) { updateLine(index, { productId }); return; }
-    updateLine(index, { productId, description: product.name, unitPrice: product.unitPrice, taxRatePercent: product.taxRatePercent });
+  // Link an existing product to the line and fill its values (matches the pick-from-list behavior).
+  function selectProduct(index: number, product: ProductLite) {
+    updateLine(index, { productId: String(product.id), description: product.name, unitPrice: product.unitPrice, taxRatePercent: product.taxRatePercent, unit: product.unit || items[index].unit, imageUrl: product.imageUrl || items[index].imageUrl });
+  }
+  // A line was just promoted to a saved product: register it for future searches and link the line
+  // (keeping the line's own description so any formatting the user typed is preserved).
+  function productCreated(index: number, product: SavedItem) {
+    onCreateProduct(product);
+    updateLine(index, { productId: String(product.id), unitPrice: product.unitPrice, taxRatePercent: product.taxRatePercent, unit: product.unit || items[index].unit, imageUrl: product.imageUrl || items[index].imageUrl });
   }
   function removeLine(index: number) {
     onChange(items.filter((_, i) => i !== index));
@@ -125,18 +140,16 @@ function ColumnDrivenEditor({
     switch (c.key) {
       case "description":
         return (
-          <div className="item-desc-cell">
-            <ItemImageDialog locale={locale} imageUrl={item.imageUrl || undefined} onUploaded={(url) => updateLine(i, { imageUrl: url })} />
-            <div style={{ flex: 1, minWidth: 0 }} className="flex flex-col gap-1.5">
-              <Select value={item.productId} onValueChange={(v) => selectProduct(i, v)}>
-                <SelectTrigger className="h-8 text-xs"><SelectValue placeholder={t(locale, "Select a product")} /></SelectTrigger>
-                <SelectContent>
-                  {products.map((p) => (<SelectItem key={p.id} value={String(p.id)}>{p.sku} · {p.name}</SelectItem>))}
-                </SelectContent>
-              </Select>
-              <RichTextField locale={locale} value={item.description} onChange={(html) => updateLine(i, { description: html })} placeholder={t(locale, "Description")} compact />
-            </div>
-          </div>
+          <ItemEntryCell
+            locale={locale}
+            products={products}
+            item={item}
+            showThumb
+            showRich
+            onPatch={(patch) => updateLine(i, patch)}
+            onSelectProduct={(p) => selectProduct(i, p)}
+            onProductCreated={(prod) => productCreated(i, prod)}
+          />
         );
       case "taxRatePercent":
         return <input type="number" step="1" value={item.taxRatePercent} onChange={(e) => updateLine(i, { taxRatePercent: e.target.value })} className="item-cell-input" />;
@@ -227,6 +240,7 @@ function ColumnDrivenEditor({
 function FixedEditor({
   locale,
   products,
+  onCreateProduct,
   items,
   onChange,
   resolvedVariant,
@@ -235,6 +249,7 @@ function FixedEditor({
 }: {
   locale: Locale;
   products: ProductLite[];
+  onCreateProduct: (p: ProductLite) => void;
   items: LineItemDraft[];
   onChange: (items: LineItemDraft[]) => void;
   resolvedVariant: "full" | "simple" | "qty";
@@ -246,12 +261,23 @@ function FixedEditor({
   function updateLine(index: number, patch: Partial<LineItemDraft>) {
     onChange(items.map((it, i) => (i === index ? { ...it, ...patch } : it)));
   }
-  function selectProduct(index: number, productId: string) {
-    const product = products.find((p) => String(p.id) === productId);
-    if (!product) { updateLine(index, { productId }); return; }
+  // Link an existing product to the line and fill its values.
+  function selectProduct(index: number, product: ProductLite) {
     updateLine(index, {
-      productId,
+      productId: String(product.id),
       description: product.name,
+      unit: product.unit || items[index].unit,
+      imageUrl: product.imageUrl || items[index].imageUrl,
+      ...(resolvedVariant !== "qty" ? { unitPrice: product.unitPrice, taxRatePercent: product.taxRatePercent } : {}),
+    });
+  }
+  // A line was just promoted to a saved product: register it and link the line (keeping its own text).
+  function productCreated(index: number, product: SavedItem) {
+    onCreateProduct(product);
+    updateLine(index, {
+      productId: String(product.id),
+      unit: product.unit || items[index].unit,
+      imageUrl: product.imageUrl || items[index].imageUrl,
       ...(resolvedVariant !== "qty" ? { unitPrice: product.unitPrice, taxRatePercent: product.taxRatePercent } : {}),
     });
   }
@@ -283,30 +309,17 @@ function FixedEditor({
             {items.map((item, i) => (
               <tr className="item-row" key={i}>
                 <td>
-                  {showThumb ? (
-                    <div className="item-desc-cell">
-                      <ItemImageDialog locale={locale} imageUrl={item.imageUrl || undefined} onUploaded={(url) => updateLine(i, { imageUrl: url })} />
-                      <div style={{ flex: 1, minWidth: 0 }} className="flex flex-col gap-1.5">
-                        <Select value={item.productId} onValueChange={(v) => selectProduct(i, v)}>
-                          <SelectTrigger className="h-8 text-xs"><SelectValue placeholder={t(locale, "Select a product")} /></SelectTrigger>
-                          <SelectContent>{products.map((p) => (<SelectItem key={p.id} value={String(p.id)}>{p.sku} · {p.name}</SelectItem>))}</SelectContent>
-                        </Select>
-                        {showPricing && (
-                          <RichTextField locale={locale} value={item.description} onChange={(html) => updateLine(i, { description: html })} placeholder={t(locale, "Description")} compact />
-                        )}
-                        {showQtyOnly && (
-                          <input value={item.description} onChange={(e) => updateLine(i, { description: e.target.value })} placeholder={t(locale, "Description")} className="item-desc-text w-full h-7 rounded-md border border-line px-2 text-[11.5px] outline-none focus:border-brand-orange bg-transparent" />
-                        )}
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="flex-1 min-w-0 flex flex-col gap-1.5">
-                      <Select value={item.productId} onValueChange={(v) => selectProduct(i, v)}>
-                        <SelectTrigger className="h-8 text-xs"><SelectValue placeholder={t(locale, "Select a product")} /></SelectTrigger>
-                        <SelectContent>{products.map((p) => (<SelectItem key={p.id} value={String(p.id)}>{p.sku} · {p.name}</SelectItem>))}</SelectContent>
-                      </Select>
-                    </div>
-                  )}
+                  <ItemEntryCell
+                    locale={locale}
+                    products={products}
+                    item={item}
+                    showThumb={showThumb}
+                    showRich={showPricing}
+                    showPricingInDialog={!showQtyOnly}
+                    onPatch={(patch) => updateLine(i, patch)}
+                    onSelectProduct={(p) => selectProduct(i, p)}
+                    onProductCreated={(prod) => productCreated(i, prod)}
+                  />
                 </td>
                 {showPricing && (
                   <td className="num"><input type="number" step="1" value={item.taxRatePercent} onChange={(e) => updateLine(i, { taxRatePercent: e.target.value })} className="item-cell-input" /></td>
