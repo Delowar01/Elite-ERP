@@ -8,7 +8,7 @@ import { RecordImageUpload } from "@/components/upload/record-image-upload";
 import { CROP_PARTY_LOGO } from "@/components/upload/crop-configs";
 import { ClientTypeSelect, type ClientType } from "@/components/client/client-type-select";
 import { AddressFields, addressHasError, type AddressValue } from "@/components/client/address-fields";
-import { getCountryProfile, resolveTaxLabels, type CountryProfile } from "@/lib/geo/country-profiles";
+import { getCountryProfile, resolveTaxLabels } from "@/lib/geo/country-profiles";
 import { t, type Locale } from "@/lib/i18n/dict";
 import type { Customer } from "@/db";
 import { type ActionState, uploadClientLogoAction } from "./actions";
@@ -19,8 +19,7 @@ export function ClientForm({
   action,
   submitLabel = "Save",
   defaultCountryCode = "",
-  profile,
-  taxLabels,
+  taxOverrides,
   inDialog = false,
   onSuccess,
   onCancel,
@@ -30,10 +29,11 @@ export function ClientForm({
   client?: Customer;
   action: (prev: ActionState, formData: FormData) => Promise<ActionState>;
   submitLabel?: string;
+  // The organization's country code — used ONLY as the default country for a NEW client.
   defaultCountryCode?: string;
-  // The org's country profile drives address layout + tax/registration labels.
-  profile?: CountryProfile;
-  taxLabels?: { taxNumberLabel: string; registrationLabel: string; registrationPlaceholder?: string };
+  // The org's configured generic tax terminology, applied ONLY to clients on the Global profile
+  // (countries without a dedicated profile). SA/UAE clients always use their fixed labels.
+  taxOverrides?: { customTaxName?: string | null; customTaxNumberLabel?: string | null; customRegistrationLabel?: string | null };
   // Dialog mode: dialog controls width + adds a Cancel button; onSuccess fires with the created
   // client (from the inline action) so the caller can auto-select it without a reload.
   inDialog?: boolean;
@@ -47,8 +47,6 @@ export function ClientForm({
   useEffect(() => {
     if (state?.client) onSuccess?.(state.client);
   }, [state, onSuccess]);
-  const prof = profile ?? getCountryProfile(defaultCountryCode);
-  const labels = taxLabels ?? resolveTaxLabels(prof);
   const [address, setAddress] = useState<AddressValue>({
     countryCode: client?.countryCode ?? (client ? "" : defaultCountryCode),
     stateProvince: client?.stateProvince ?? "",
@@ -59,8 +57,12 @@ export function ClientForm({
     postalCode: client?.postalCode ?? "",
     streetAddress: client?.streetAddress ?? "",
   });
+  // Everything below is driven by the CLIENT's selected country (defaulting to the org country for a
+  // new client) — never by the organization's country once a client country is chosen.
+  const clientProfile = getCountryProfile(address.countryCode || defaultCountryCode);
+  const labels = resolveTaxLabels(clientProfile, taxOverrides);
   const hasAddress = Object.values(address).some((v) => v.trim());
-  const invalidAddress = addressHasError(address, prof);
+  const invalidAddress = addressHasError(address);
   const nameLabel = clientType === "company" ? "Business Name" : "Name";
 
   return (
@@ -104,7 +106,7 @@ export function ClientForm({
         </FormField>
       </div>
 
-      <AddressFields locale={locale} profile={prof} value={address} onChange={(patch) => { setAddress((a) => ({ ...a, ...patch })); onDirty?.(); }} defaultOpen={hasAddress} />
+      <AddressFields locale={locale} value={address} onChange={(patch) => { setAddress((a) => ({ ...a, ...patch })); onDirty?.(); }} defaultOpen={hasAddress} />
 
       {state?.error && <p className="text-[12.5px] text-danger">{state.error}</p>}
       <div className={inDialog ? "flex items-center justify-end gap-2" : ""}>

@@ -3,7 +3,6 @@ import { db, orgsTable } from "@/db";
 import { requireSession } from "@/lib/session";
 import { getLocale } from "@/lib/i18n/server";
 import { countryCodeByName } from "@/lib/geo/countries";
-import { getProfileByCountryName, resolveTaxLabels } from "@/lib/geo/country-profiles";
 import { t } from "@/lib/i18n/dict";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent } from "@/components/ui/card";
@@ -17,16 +16,16 @@ export default async function NewClientPage() {
     .select({ country: orgsTable.country, customTaxName: orgsTable.customTaxName, customTaxNumberLabel: orgsTable.customTaxNumberLabel, customRegistrationLabel: orgsTable.customRegistrationLabel })
     .from(orgsTable)
     .where(eq(orgsTable.id, session.orgId));
+  // Org country is only the DEFAULT country for the new client; the form then follows the client's
+  // chosen country. taxOverrides apply only to Global-profile clients.
   const defaultCountryCode = countryCodeByName(org?.country);
-  const profile = getProfileByCountryName(org?.country);
-  const taxLabels = resolveTaxLabels(profile, org);
 
   return (
     <div className="max-w-6xl mx-auto">
       <PageHeader title={t(locale, "New Client")} description={t(locale, "Add a client to bill and quote against.")} />
       <Card>
         <CardContent className="pt-6">
-          <ClientForm locale={locale} action={createClientAction} submitLabel="Create Client" defaultCountryCode={defaultCountryCode} profile={profile} taxLabels={taxLabels} />
+          <ClientForm locale={locale} action={createClientAction} submitLabel="Create Client" defaultCountryCode={defaultCountryCode} taxOverrides={org} />
         </CardContent>
       </Card>
     </div>

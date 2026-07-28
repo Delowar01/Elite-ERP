@@ -1184,6 +1184,12 @@ const DICT: Record<string, string> = {
   "Discard unsaved client details?": "تجاهل بيانات العميل غير المحفوظة؟",
   "Keep editing": "متابعة التعديل",
   "Discard": "تجاهل",
+
+  // Client-country change confirmation (client form address section)
+  "Changing the client country will update address fields, tax labels, and validation. Existing saved documents will not be changed.": "سيؤدي تغيير دولة العميل إلى تحديث حقول العنوان والمسميات الضريبية وقواعد التحقق. لن تتغير المستندات المحفوظة الحالية.",
+  "Change country": "تغيير الدولة",
+  "Keep": "الإبقاء على",
+  "current country": "الدولة الحالية",
 };
 
 export function t(locale: Locale, en: string): string {

@@ -5,8 +5,8 @@ import { requireSession } from "@/lib/session";
 import { tenantScope } from "@/lib/tenant";
 import { getLocale } from "@/lib/i18n/server";
 import { t } from "@/lib/i18n/dict";
-import { composeAddress } from "@/lib/geo/countries";
-import { getProfileByCountryName, resolveTaxLabels } from "@/lib/geo/country-profiles";
+import { composeAddress, countryCodeByName } from "@/lib/geo/countries";
+import { getCountryProfile, resolveTaxLabels } from "@/lib/geo/country-profiles";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -34,8 +34,9 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
     .select({ country: orgsTable.country, customTaxName: orgsTable.customTaxName, customTaxNumberLabel: orgsTable.customTaxNumberLabel, customRegistrationLabel: orgsTable.customRegistrationLabel })
     .from(orgsTable)
     .where(eq(orgsTable.id, session.orgId));
-  const profile = getProfileByCountryName(org?.country);
-  const taxLabels = resolveTaxLabels(profile, org);
+  // The Details card labels follow THIS client's country (falling back to the org's country only when
+  // the client has none). The edit form does the same, using taxOverrides for Global-profile clients.
+  const taxLabels = resolveTaxLabels(getCountryProfile(client.countryCode || countryCodeByName(org?.country)), org);
 
   const invoices = await db
     .select()
@@ -60,7 +61,7 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
       <div className="grid grid-cols-3 gap-5">
         <Card className="col-span-2">
           <CardContent className="pt-6">
-            <ClientForm locale={locale} client={client} action={updateClientAction.bind(null, client.id)} submitLabel="Save changes" profile={profile} taxLabels={taxLabels} />
+            <ClientForm locale={locale} client={client} action={updateClientAction.bind(null, client.id)} submitLabel="Save changes" taxOverrides={org} />
           </CardContent>
         </Card>
 

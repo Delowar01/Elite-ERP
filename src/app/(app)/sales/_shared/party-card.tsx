@@ -4,7 +4,7 @@ import { useState } from "react";
 import { MapPin, Mail, Phone, Globe, Pencil, UserPlus } from "lucide-react";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { composeAddress } from "@/lib/geo/countries";
-import type { CountryProfile } from "@/lib/geo/country-profiles";
+import { getCountryProfile, resolveTaxLabels } from "@/lib/geo/country-profiles";
 import { t, type Locale } from "@/lib/i18n/dict";
 import type { Customer } from "@/db";
 import { PartyEditDialog } from "./party-edit-dialog";
@@ -105,10 +105,8 @@ export function PartyCardSelect({
   onChange,
   placeholder = "Select a client",
   partyKind = "client",
-  profile,
-  taxNumberLabel = "VAT Number",
-  registrationLabel = "CR Number",
   defaultCountryCode = "",
+  taxOverrides,
 }: {
   locale: Locale;
   label: string;
@@ -119,12 +117,10 @@ export function PartyCardSelect({
   /** Whether the chosen party is a client or a vendor — drives the in-page edit popup + which
    *  master record it updates. */
   partyKind?: "client" | "vendor";
-  /** The org's country profile — drives the edit popup's address layout + tax/registration labels. */
-  profile?: CountryProfile;
-  taxNumberLabel?: string;
-  registrationLabel?: string;
-  /** Default country for a client created in-page (the org's country). */
+  /** Org country — default country for a client created in-page. */
   defaultCountryCode?: string;
+  /** Org's configured generic tax terminology (Global-profile clients only). */
+  taxOverrides?: { customTaxName?: string | null; customTaxNumberLabel?: string | null; customRegistrationLabel?: string | null };
 }) {
   // Clients created via the in-page "Add New Client" popup are held here and merged into the list so
   // the new record is selectable/selected immediately — no page reload, so unsaved document data and
@@ -143,6 +139,8 @@ export function PartyCardSelect({
     keywords: [c.vatNumber, c.taxId, c.phone, c.email, c.city, c.countryCode].filter(Boolean).join(" "),
   }));
   const composed = selected ? composeAddress(selected) || selected.address || "" : "";
+  // The selected client's tax/registration labels follow that CLIENT's country (not the org's).
+  const selLabels = resolveTaxLabels(getCountryProfile(selected?.countryCode || defaultCountryCode), taxOverrides);
 
   function handleCreated(client: Customer) {
     setCreated((c) => [client as PartySelectCustomer, ...c]);
@@ -172,16 +170,15 @@ export function PartyCardSelect({
           {selected.email && <PcRow icon={<Mail className="size-3.5" />} text={selected.email} />}
           {selected.phone && <PcRow icon={<Phone className="size-3.5" />} text={selected.phone} />}
           {selected.vatNumber && (
-            <div className="pc-row"><span className="text-ink-faint">{t(locale, taxNumberLabel)}:</span>&nbsp;<span className="font-mono">{selected.vatNumber}</span></div>
+            <div className="pc-row"><span className="text-ink-faint">{t(locale, selLabels.taxNumberLabel)}:</span>&nbsp;<span className="font-mono">{selected.vatNumber}</span></div>
           )}
           {selected.taxId && (
-            <div className="pc-row"><span className="text-ink-faint">{t(locale, registrationLabel)}:</span>&nbsp;<span className="font-mono">{selected.taxId}</span></div>
+            <div className="pc-row"><span className="text-ink-faint">{t(locale, selLabels.registrationLabel)}:</span>&nbsp;<span className="font-mono">{selected.taxId}</span></div>
           )}
           <PartyEditDialog
             locale={locale}
             kind={partyKind}
             partyId={selected.id}
-            profile={profile}
             initial={{
               name: selected.name, email: selected.email ?? "", phone: selected.phone ?? "", address: selected.address ?? "",
               clientType: (selected as { clientType?: string }).clientType ?? "individual",
@@ -214,9 +211,8 @@ export function PartyCardSelect({
           open={createOpen}
           onOpenChange={setCreateOpen}
           onCreated={handleCreated}
-          profile={profile}
-          taxLabels={{ taxNumberLabel, registrationLabel }}
           defaultCountryCode={defaultCountryCode}
+          taxOverrides={taxOverrides}
         />
       )}
     </div>

@@ -5,7 +5,6 @@ import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { ClientForm } from "@/app/(app)/clients/client-form";
 import { createClientInlineAction } from "@/app/(app)/clients/actions";
-import type { CountryProfile } from "@/lib/geo/country-profiles";
 import { t, type Locale } from "@/lib/i18n/dict";
 import type { Customer } from "@/db";
 
@@ -19,17 +18,18 @@ export function ClientCreateDialog({
   open,
   onOpenChange,
   onCreated,
-  profile,
-  taxLabels,
   defaultCountryCode = "",
+  taxOverrides,
 }: {
   locale: Locale;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onCreated: (client: Customer) => void;
-  profile?: CountryProfile;
-  taxLabels?: { taxNumberLabel: string; registrationLabel: string; registrationPlaceholder?: string };
+  // Org country — default country for the new client. The form's fields/labels/validation then follow
+  // whatever client country is selected.
   defaultCountryCode?: string;
+  // Org's configured generic tax terminology, applied only to Global-profile clients.
+  taxOverrides?: { customTaxName?: string | null; customTaxNumberLabel?: string | null; customRegistrationLabel?: string | null };
 }) {
   const [dirty, setDirty] = useState(false);
   const [confirming, setConfirming] = useState(false);
@@ -58,9 +58,8 @@ export function ClientCreateDialog({
           locale={locale}
           action={createClientInlineAction}
           submitLabel="Save Client"
-          profile={profile}
-          taxLabels={taxLabels}
           defaultCountryCode={defaultCountryCode}
+          taxOverrides={taxOverrides}
           onDirty={() => setDirty(true)}
           onCancel={requestClose}
           onSuccess={(client) => {

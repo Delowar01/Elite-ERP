@@ -4,8 +4,8 @@ import { useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { SearchableSelect } from "@/components/ui/searchable-select";
-import { COUNTRIES, getStates, hasStateDataset } from "@/lib/geo/countries";
-import { getCountryProfile, type AddressFieldConfig, type CountryProfile } from "@/lib/geo/country-profiles";
+import { COUNTRIES, getStates, hasStateDataset, countryName } from "@/lib/geo/countries";
+import { getCountryProfile, type AddressFieldConfig } from "@/lib/geo/country-profiles";
 import { t, type Locale } from "@/lib/i18n/dict";
 import { cn } from "@/lib/utils";
 
@@ -31,8 +31,8 @@ function Label({ children }: { children: React.ReactNode }) {
 }
 
 // Validation for a single address field, driven by its country-profile config (only when a value is
-// entered — every field is optional). The 4-digit building rule bites for Saudi addresses (matches
-// the server's buildingNumberError); "postal" = alphanumeric code.
+// entered — every field is optional). The 4-digit building rule bites for Saudi addresses only;
+// "postal" = alphanumeric code.
 function fieldError(field: AddressFieldConfig, value: string, countryCode: string): string | null {
   const v = value.trim();
   if (!v) return null;
@@ -48,39 +48,64 @@ const ERR_KEY: Record<string, string> = {
   "postal": "Enter a valid postal / zip code.",
 };
 
-// Collapsible "Address (optional)" section. Which fields appear, their labels, order and validation
-// all come from the organization's country profile — so one shared component renders a Saudi National
-// Address, a UAE address, or a generic international address without any per-country form.
+// Address value keys that only appear in some country profiles (so switching country can hide them).
+const VALUE_KEYS: (keyof AddressValue)[] = [
+  "stateProvince", "district", "city", "buildingNumber", "additionalNumber", "postalCode", "streetAddress",
+];
+
+// Which stored address values would no longer be shown (and thus lost) under a new country profile.
+function incompatibleForCountry(value: AddressValue, code: string): (keyof AddressValue)[] {
+  const shown = new Set(getCountryProfile(code).addressFields.map((f) => f.key));
+  return VALUE_KEYS.filter((k) => !shown.has(k as never) && (value[k] ?? "").trim());
+}
+
+// Collapsible "Address (optional)" section. The field set, labels, order and validation are driven by
+// the CLIENT'S selected country (getCountryProfile(value.countryCode)) — not the organization's — so
+// one shared component renders a Saudi National Address, a UAE address, or a generic international
+// address per client. Changing the country preserves compatible values and confirms before clearing
+// values that the new country's layout can't hold.
 export function AddressFields({
   locale,
-  profile,
   value,
   onChange,
   defaultOpen = false,
 }: {
   locale: Locale;
-  // The org's resolved country profile; defaults to Global when omitted.
-  profile?: CountryProfile;
   value: AddressValue;
   onChange: (patch: Partial<AddressValue>) => void;
   defaultOpen?: boolean;
 }) {
   const [open, setOpen] = useState(defaultOpen);
-  const prof = profile ?? getCountryProfile(value.countryCode);
+  // A pending country change awaiting confirmation because it would drop incompatible values.
+  const [pending, setPending] = useState<{ code: string; drop: (keyof AddressValue)[] } | null>(null);
+
+  const prof = getCountryProfile(value.countryCode);
   const countryOptions = COUNTRIES.map((c) => ({ value: c.code, label: c.name, sublabel: c.code }));
   const stateOptions = getStates(value.countryCode).map((s) => ({ value: s.name, label: s.name }));
   const stateHasData = hasStateDataset(value.countryCode);
 
+  function requestCountryChange(code: string) {
+    if (code === value.countryCode) return;
+    const drop = incompatibleForCountry(value, code);
+    // Preserve compatible values; confirm before clearing incompatible ones; never silently delete.
+    if (drop.length) setPending({ code, drop });
+    else onChange({ countryCode: code });
+  }
+  function confirmCountryChange() {
+    if (!pending) return;
+    const cleared = Object.fromEntries(pending.drop.map((k) => [k, ""])) as Partial<AddressValue>;
+    onChange({ countryCode: pending.code, ...cleared });
+    setPending(null);
+  }
+
   function renderField(field: AddressFieldConfig) {
-    const key = field.key;
     if (field.control === "country") {
       return (
         <SearchableSelect
           id="addr-country"
           options={countryOptions}
           value={value.countryCode}
-          // Changing country revalidates/clears the state so a stale state can't persist.
-          onChange={(code) => onChange({ countryCode: code, stateProvince: "" })}
+          onChange={requestCountryChange}
           placeholder={t(locale, field.label)}
           searchPlaceholder={t(locale, "Search…")}
           emptyText={t(locale, "No matches.")}
@@ -108,7 +133,7 @@ export function AddressFields({
       );
     }
     // Plain text field (district / city / building / additional / postal / street).
-    const k = key as keyof AddressValue;
+    const k = field.key as keyof AddressValue;
     const err = fieldError(field, value[k], value.countryCode);
     return (
       <>
@@ -139,6 +164,22 @@ export function AddressFields({
 
       {open && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 pt-0">
+          {/* Confirm before dropping values the newly-selected country's layout can't hold. */}
+          {pending && (
+            <div className="md:col-span-2 rounded-xl border border-warning-bg bg-warning-bg/40 p-3.5">
+              <p className="text-[12.5px] text-ink mb-2.5">
+                {t(locale, "Changing the client country will update address fields, tax labels, and validation. Existing saved documents will not be changed.")}
+              </p>
+              <div className="flex items-center gap-2">
+                <button type="button" className="btn btn-primary" style={{ width: "auto", padding: "0 16px" }} onClick={confirmCountryChange}>
+                  {t(locale, "Change country")}
+                </button>
+                <button type="button" className="btn btn-glass" style={{ width: "auto", padding: "0 16px" }} onClick={() => setPending(null)}>
+                  {t(locale, "Keep")} {countryName(value.countryCode) || t(locale, "current country")}
+                </button>
+              </div>
+            </div>
+          )}
           {prof.addressFields.map((field) => (
             <div key={field.key} className={cn(field.fullWidth && "md:col-span-2")}>
               <Label>{t(locale, field.label)}</Label>
@@ -151,8 +192,8 @@ export function AddressFields({
   );
 }
 
-// Whether the current address has any blocking validation error, per the given profile's field set.
-export function addressHasError(value: AddressValue, profile?: CountryProfile): boolean {
-  const prof = profile ?? getCountryProfile(value.countryCode);
+// Whether the current address has any blocking validation error, per the client's own country profile.
+export function addressHasError(value: AddressValue): boolean {
+  const prof = getCountryProfile(value.countryCode);
   return prof.addressFields.some((f) => f.control === "text" && !!fieldError(f, (value[f.key as keyof AddressValue] as string) ?? "", value.countryCode));
 }

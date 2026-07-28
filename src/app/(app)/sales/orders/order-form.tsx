@@ -20,7 +20,7 @@ import { computeTotals, fmt } from "../_shared/totals";
 import { ConfigureColumnsDialog } from "../_shared/configure-columns-dialog";
 import { resolveColumns, type ColumnDef } from "@/lib/column-config";
 import { t, type Locale } from "@/lib/i18n/dict";
-import { getProfileByCountryName, resolveTaxLabels } from "@/lib/geo/country-profiles";
+import { getProfileByCountryName } from "@/lib/geo/country-profiles";
 import type { ContentPreset } from "@/lib/document-presets";
 import type { Customer, Product, Org } from "@/db";
 import { createSalesOrderAction, updateSalesOrderAction } from "./actions";
@@ -74,7 +74,6 @@ export function OrderForm({
   const defaultNote = noteTemplates.find((n) => n.isDefault) ?? noteTemplates[0];
   const [notes, setNotes] = useState(initial?.notes ?? defaultNote?.content ?? "");
   const countryProfile = getProfileByCountryName(org.country);
-  const taxLabels = resolveTaxLabels(countryProfile, org);
   const defaultTaxRate = String(countryProfile.defaultTaxRate);
   const [items, setItems] = useState<LineItemDraft[]>(initial?.items && initial.items.length > 0 ? initial.items : [emptyLineItem(defaultTaxRate)]);
   const [attachments, setAttachments] = useState<AttachmentDraft[]>([]);
@@ -185,7 +184,7 @@ export function OrderForm({
 
       <div className="doc-meta-row" style={{ gridTemplateColumns: "1fr 1fr" }}>
         <PartyCardStatic locale={locale} label={t(locale, "From")} name={org.name} address={org.address} email={org.email} phone={org.phone} />
-        <PartyCardSelect locale={locale} label={t(locale, "To Client")} customers={customers} value={customerId} onChange={setCustomerId} profile={countryProfile} taxNumberLabel={taxLabels.taxNumberLabel} registrationLabel={taxLabels.registrationLabel} defaultCountryCode={countryProfile.countryCode} />
+        <PartyCardSelect locale={locale} label={t(locale, "To Client")} customers={customers} value={customerId} onChange={setCustomerId} taxOverrides={org} defaultCountryCode={countryProfile.countryCode} />
       </div>
 
       <DocPillsRow
