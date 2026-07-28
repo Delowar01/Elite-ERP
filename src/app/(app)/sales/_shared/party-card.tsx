@@ -1,9 +1,14 @@
-import { MapPin, Mail, Phone, Globe, Pencil } from "lucide-react";
+"use client";
+
+import { useState } from "react";
+import { MapPin, Mail, Phone, Globe, Pencil, UserPlus } from "lucide-react";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { composeAddress } from "@/lib/geo/countries";
 import type { CountryProfile } from "@/lib/geo/country-profiles";
 import { t, type Locale } from "@/lib/i18n/dict";
+import type { Customer } from "@/db";
 import { PartyEditDialog } from "./party-edit-dialog";
+import { ClientCreateDialog } from "./client-create-dialog";
 
 function PcRow({ icon, text }: { icon: React.ReactNode; text: string }) {
   return (
@@ -103,6 +108,7 @@ export function PartyCardSelect({
   profile,
   taxNumberLabel = "VAT Number",
   registrationLabel = "CR Number",
+  defaultCountryCode = "",
 }: {
   locale: Locale;
   label: string;
@@ -117,12 +123,32 @@ export function PartyCardSelect({
   profile?: CountryProfile;
   taxNumberLabel?: string;
   registrationLabel?: string;
+  /** Default country for a client created in-page (the org's country). */
+  defaultCountryCode?: string;
 }) {
-  const selected = customers.find((c) => String(c.id) === value);
+  // Clients created via the in-page "Add New Client" popup are held here and merged into the list so
+  // the new record is selectable/selected immediately — no page reload, so unsaved document data and
+  // line items are preserved.
+  const [created, setCreated] = useState<PartySelectCustomer[]>([]);
+  const [createOpen, setCreateOpen] = useState(false);
+  const isClient = partyKind === "client";
+
+  const allCustomers = [...created, ...customers];
+  const selected = allCustomers.find((c) => String(c.id) === value);
   const openLabel = t(locale, "Edit");
-  const pickFirst = t(locale, "Select first");
-  const options = customers.map((c) => ({ value: String(c.id), label: c.name }));
+  const options = allCustomers.map((c) => ({
+    value: String(c.id),
+    label: c.name,
+    // Searchable by name + VAT / CR / phone / email / city / country (not shown in the row).
+    keywords: [c.vatNumber, c.taxId, c.phone, c.email, c.city, c.countryCode].filter(Boolean).join(" "),
+  }));
   const composed = selected ? composeAddress(selected) || selected.address || "" : "";
+
+  function handleCreated(client: Customer) {
+    setCreated((c) => [client as PartySelectCustomer, ...c]);
+    onChange(String(client.id)); // auto-select the new client
+  }
+
   return (
     <div className="card party-card-v2">
       <div className="pc-label">{label}</div>
@@ -136,40 +162,62 @@ export function PartyCardSelect({
         emptyText={t(locale, "No matches.")}
         aria-label={label}
         triggerClassName="mt-1 mb-1"
+        addNewLabel={isClient ? t(locale, "Add New Client") : undefined}
+        onAddNew={isClient ? () => setCreateOpen(true) : undefined}
       />
-      {composed && <PcRow icon={<MapPin className="size-3.5" />} text={composed} />}
-      {selected?.email && <PcRow icon={<Mail className="size-3.5" />} text={selected.email} />}
-      {selected?.phone && <PcRow icon={<Phone className="size-3.5" />} text={selected.phone} />}
-      {selected?.vatNumber && (
-        <div className="pc-row"><span className="text-ink-faint">{t(locale, taxNumberLabel)}:</span>&nbsp;<span className="font-mono">{selected.vatNumber}</span></div>
-      )}
-      {selected?.taxId && (
-        <div className="pc-row"><span className="text-ink-faint">{t(locale, registrationLabel)}:</span>&nbsp;<span className="font-mono">{selected.taxId}</span></div>
-      )}
+
       {selected ? (
-        <PartyEditDialog
+        <>
+          {composed && <PcRow icon={<MapPin className="size-3.5" />} text={composed} />}
+          {selected.email && <PcRow icon={<Mail className="size-3.5" />} text={selected.email} />}
+          {selected.phone && <PcRow icon={<Phone className="size-3.5" />} text={selected.phone} />}
+          {selected.vatNumber && (
+            <div className="pc-row"><span className="text-ink-faint">{t(locale, taxNumberLabel)}:</span>&nbsp;<span className="font-mono">{selected.vatNumber}</span></div>
+          )}
+          {selected.taxId && (
+            <div className="pc-row"><span className="text-ink-faint">{t(locale, registrationLabel)}:</span>&nbsp;<span className="font-mono">{selected.taxId}</span></div>
+          )}
+          <PartyEditDialog
+            locale={locale}
+            kind={partyKind}
+            partyId={selected.id}
+            profile={profile}
+            initial={{
+              name: selected.name, email: selected.email ?? "", phone: selected.phone ?? "", address: selected.address ?? "",
+              clientType: (selected as { clientType?: string }).clientType ?? "individual",
+              countryCode: selected.countryCode ?? "", stateProvince: selected.stateProvince ?? "", district: selected.district ?? "",
+              city: selected.city ?? "", buildingNumber: selected.buildingNumber ?? "", additionalNumber: selected.additionalNumber ?? "",
+              postalCode: selected.postalCode ?? "", streetAddress: selected.streetAddress ?? "",
+            }}
+            fullSettingsHref={partyKind === "vendor" ? `/purchasing/vendors/${selected.id}` : `/clients/${selected.id}`}
+            trigger={
+              <button type="button" className="pc-edit" title={openLabel} aria-label={openLabel}>
+                <Pencil className="size-3.5" />
+              </button>
+            }
+          />
+        </>
+      ) : isClient ? (
+        // Empty state: a bordered card prompting selection, with an in-page "Add New Client" action.
+        <div className="mt-2 rounded-xl border border-dashed border-line-strong px-4 py-6 text-center">
+          <p className="text-[12.5px] text-ink-muted">{t(locale, "Select Client/Business from the list")}</p>
+          <p className="text-[11.5px] text-ink-faint my-2">{t(locale, "OR")}</p>
+          <button type="button" className="btn btn-primary" style={{ width: "auto", padding: "0 18px" }} onClick={() => setCreateOpen(true)}>
+            <UserPlus className="size-4" /> {t(locale, "Add New Client")}
+          </button>
+        </div>
+      ) : null}
+
+      {isClient && (
+        <ClientCreateDialog
           locale={locale}
-          kind={partyKind}
-          partyId={selected.id}
+          open={createOpen}
+          onOpenChange={setCreateOpen}
+          onCreated={handleCreated}
           profile={profile}
-          initial={{
-            name: selected.name, email: selected.email ?? "", phone: selected.phone ?? "", address: selected.address ?? "",
-            clientType: (selected as { clientType?: string }).clientType ?? "individual",
-            countryCode: selected.countryCode ?? "", stateProvince: selected.stateProvince ?? "", district: selected.district ?? "",
-            city: selected.city ?? "", buildingNumber: selected.buildingNumber ?? "", additionalNumber: selected.additionalNumber ?? "",
-            postalCode: selected.postalCode ?? "", streetAddress: selected.streetAddress ?? "",
-          }}
-          fullSettingsHref={partyKind === "vendor" ? `/purchasing/vendors/${selected.id}` : `/clients/${selected.id}`}
-          trigger={
-            <button type="button" className="pc-edit" title={openLabel} aria-label={openLabel}>
-              <Pencil className="size-3.5" />
-            </button>
-          }
+          taxLabels={{ taxNumberLabel, registrationLabel }}
+          defaultCountryCode={defaultCountryCode}
         />
-      ) : (
-        <span className="pc-edit opacity-40 cursor-not-allowed" title={pickFirst} aria-disabled>
-          <Pencil className="size-3.5" />
-        </span>
       )}
     </div>
   );

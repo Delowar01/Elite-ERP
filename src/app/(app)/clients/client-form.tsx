@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { FormField } from "@/components/ui/form-field";
@@ -21,6 +21,10 @@ export function ClientForm({
   defaultCountryCode = "",
   profile,
   taxLabels,
+  inDialog = false,
+  onSuccess,
+  onCancel,
+  onDirty,
 }: {
   locale?: Locale;
   client?: Customer;
@@ -30,9 +34,19 @@ export function ClientForm({
   // The org's country profile drives address layout + tax/registration labels.
   profile?: CountryProfile;
   taxLabels?: { taxNumberLabel: string; registrationLabel: string; registrationPlaceholder?: string };
+  // Dialog mode: dialog controls width + adds a Cancel button; onSuccess fires with the created
+  // client (from the inline action) so the caller can auto-select it without a reload.
+  inDialog?: boolean;
+  onSuccess?: (client: Customer) => void;
+  onCancel?: () => void;
+  onDirty?: () => void;
 }) {
   const [state, formAction, pending] = useActionState(action, undefined);
   const [clientType, setClientType] = useState<ClientType>((client?.clientType as ClientType) ?? "individual");
+  // Auto-select flow: the inline create action returns the created client on success.
+  useEffect(() => {
+    if (state?.client) onSuccess?.(state.client);
+  }, [state, onSuccess]);
   const prof = profile ?? getCountryProfile(defaultCountryCode);
   const labels = taxLabels ?? resolveTaxLabels(prof);
   const [address, setAddress] = useState<AddressValue>({
@@ -50,7 +64,7 @@ export function ClientForm({
   const nameLabel = clientType === "company" ? "Business Name" : "Name";
 
   return (
-    <form action={formAction} className="flex flex-col gap-5 max-w-2xl">
+    <form action={formAction} onInput={onDirty} className={inDialog ? "flex flex-col gap-5" : "flex flex-col gap-5 max-w-2xl"}>
       {/* Hidden inputs carry the controlled Client Type + structured address into the form submit. */}
       <input type="hidden" name="clientType" value={clientType} />
       <input type="hidden" name="countryCode" value={address.countryCode} />
@@ -62,7 +76,7 @@ export function ClientForm({
       <input type="hidden" name="postalCode" value={address.postalCode} />
       <input type="hidden" name="streetAddress" value={address.streetAddress} />
 
-      <ClientTypeSelect locale={locale} value={clientType} onChange={setClientType} />
+      <ClientTypeSelect locale={locale} value={clientType} onChange={(v) => { setClientType(v); onDirty?.(); }} />
 
       {client && (
         <FormField label={t(locale, "Logo")} htmlFor="logo">
@@ -90,10 +104,15 @@ export function ClientForm({
         </FormField>
       </div>
 
-      <AddressFields locale={locale} profile={prof} value={address} onChange={(patch) => setAddress((a) => ({ ...a, ...patch }))} defaultOpen={hasAddress} />
+      <AddressFields locale={locale} profile={prof} value={address} onChange={(patch) => { setAddress((a) => ({ ...a, ...patch })); onDirty?.(); }} defaultOpen={hasAddress} />
 
       {state?.error && <p className="text-[12.5px] text-danger">{state.error}</p>}
-      <div>
+      <div className={inDialog ? "flex items-center justify-end gap-2" : ""}>
+        {inDialog && onCancel && (
+          <button type="button" className="btn btn-glass" style={{ width: "auto", padding: "0 18px" }} disabled={pending} onClick={onCancel}>
+            {t(locale, "Cancel")}
+          </button>
+        )}
         <Button type="submit" disabled={pending || invalidAddress}>
           {pending ? t(locale, "Saving…") : t(locale, submitLabel)}
         </Button>

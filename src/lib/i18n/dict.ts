@@ -1174,6 +1174,16 @@ const DICT: Record<string, string> = {
   "ZATCA Phase 1": "هيئة الزكاة والضريبة — المرحلة الأولى",
   "from your country profile": "من ملف دولتك",
   "This country has no dedicated profile — customize the tax terminology below.": "لا يوجد ملف مخصص لهذه الدولة — يمكنك تخصيص المصطلحات الضريبية أدناه.",
+
+  // Document client empty-state + in-page "Add New Client" popup
+  "Select Client/Business from the list": "اختر العميل / الجهة من القائمة",
+  "OR": "أو",
+  "Add New Client": "إضافة عميل جديد",
+  "Save Client": "حفظ العميل",
+  "Client created": "تم إنشاء العميل",
+  "Discard unsaved client details?": "تجاهل بيانات العميل غير المحفوظة؟",
+  "Keep editing": "متابعة التعديل",
+  "Discard": "تجاهل",
 };
 
 export function t(locale: Locale, en: string): string {

@@ -181,7 +181,7 @@ export function InvoiceForm({
 
       <div className="doc-meta-row" style={{ gridTemplateColumns: "1fr 1fr" }}>
         <PartyCardStatic locale={locale} label={t(locale, "From")} name={org.name} address={org.address} email={org.email} phone={org.phone} />
-        <PartyCardSelect locale={locale} label={t(locale, "To Client")} customers={customers} value={customerId} onChange={setCustomerId} profile={countryProfile} taxNumberLabel={taxLabels.taxNumberLabel} registrationLabel={taxLabels.registrationLabel} />
+        <PartyCardSelect locale={locale} label={t(locale, "To Client")} customers={customers} value={customerId} onChange={setCustomerId} profile={countryProfile} taxNumberLabel={taxLabels.taxNumberLabel} registrationLabel={taxLabels.registrationLabel} defaultCountryCode={countryProfile.countryCode} />
       </div>
 
       <DocPillsRow

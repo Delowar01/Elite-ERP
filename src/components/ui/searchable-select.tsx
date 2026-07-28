@@ -1,11 +1,13 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
-import { ChevronDown, Search, Check } from "lucide-react";
+import { ChevronDown, Search, Check, Plus } from "lucide-react";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 
-export type SearchOption = { value: string; label: string; sublabel?: string };
+// `keywords` are matched by the filter but never displayed — lets a client be found by VAT / CR /
+// phone / email / city / country in addition to its name.
+export type SearchOption = { value: string; label: string; sublabel?: string; keywords?: string };
 
 // A searchable dropdown (combobox): a trigger showing the selected label, and a popover with a
 // filter input + option list. Solid surface (inherits the Popover fix). Keyboard + click.
@@ -21,6 +23,8 @@ export function SearchableSelect({
   triggerClassName,
   id,
   "aria-label": ariaLabel,
+  addNewLabel,
+  onAddNew,
 }: {
   options: SearchOption[];
   value: string;
@@ -33,6 +37,10 @@ export function SearchableSelect({
   triggerClassName?: string;
   id?: string;
   "aria-label"?: string;
+  // Optional sticky action row at the bottom of the list (e.g. "＋ Add New Client"). Closes the
+  // popover, then runs onAddNew.
+  addNewLabel?: string;
+  onAddNew?: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -42,7 +50,7 @@ export function SearchableSelect({
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return options;
-    return options.filter((o) => o.label.toLowerCase().includes(q) || (o.sublabel ?? "").toLowerCase().includes(q));
+    return options.filter((o) => o.label.toLowerCase().includes(q) || (o.sublabel ?? "").toLowerCase().includes(q) || (o.keywords ?? "").toLowerCase().includes(q));
   }, [options, query]);
 
   return (
@@ -102,6 +110,16 @@ export function SearchableSelect({
             ))
           )}
         </div>
+        {onAddNew && (
+          <button
+            type="button"
+            onClick={() => { setOpen(false); onAddNew(); }}
+            className="flex w-full items-center gap-2 border-t border-line px-3 py-2.5 text-start text-[13px] font-medium text-brand-orange hover:bg-canvas"
+          >
+            <Plus className="size-4 shrink-0" />
+            {addNewLabel ?? "Add New"}
+          </button>
+        )}
       </PopoverContent>
     </Popover>
   );

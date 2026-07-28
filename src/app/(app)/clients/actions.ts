@@ -4,13 +4,16 @@ import { revalidatePath } from "next/cache";
 import { validateUpload, storeBlob, deleteStoredBlob, IMAGE_MAX_BYTES } from "@/lib/storage/blob-storage";
 import { redirect } from "next/navigation";
 import { and, eq } from "drizzle-orm";
-import { db, customersTable } from "@/db";
+import { db, customersTable, type Customer } from "@/db";
 import { requireSession, requireRole } from "@/lib/session";
+import type { Session } from "@/lib/session";
 import { tenantScope } from "@/lib/tenant";
 import { logActivity } from "@/lib/activity";
 import { buildingNumberError, postalCodeError, composeAddress } from "@/lib/geo/countries";
 
-export type ActionState = { error?: string } | undefined;
+// `client` is set only by the inline (popup) create action so the caller can auto-select the new
+// record without a page reload; the full-page create action redirects instead.
+export type ActionState = { error?: string; client?: Customer } | undefined;
 
 function s(formData: FormData, key: string): string { return String(formData.get(key) ?? "").trim(); }
 
@@ -55,15 +58,13 @@ function readClientFields(formData: FormData): { error?: string; fields?: Record
   };
 }
 
-export async function createClientAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const session = await requireSession();
-  const { error, fields } = readClientFields(formData);
-  if (error || !fields) return { error };
-
+// Shared insert used by both the full-page create action and the in-document popup create action, so
+// field handling, tenant scoping and audit logging never diverge between the two entry points.
+async function insertClientRecord(session: Session, fields: Record<string, string | null>): Promise<Customer> {
   const [row] = await db
     .insert(customersTable)
     .values({ orgId: session.orgId, ...fields, name: fields.name! })
-    .returning({ id: customersTable.id });
+    .returning();
 
   await logActivity(session, {
     type: "client.created",
@@ -71,9 +72,29 @@ export async function createClientAction(_prev: ActionState, formData: FormData)
     entityType: "client",
     entityId: row.id,
   });
-
   revalidatePath("/clients");
+  return row;
+}
+
+export async function createClientAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const session = await requireSession();
+  const { error, fields } = readClientFields(formData);
+  if (error || !fields) return { error };
+
+  const row = await insertClientRecord(session, fields);
   redirect(`/clients/${row.id}`);
+}
+
+// In-document popup create action: same validation + insert as the full page, but returns the created
+// (tenant-scoped) client so the document's client selector can auto-select it in place — no redirect,
+// preserving all unsaved document data.
+export async function createClientInlineAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const session = await requireSession();
+  const { error, fields } = readClientFields(formData);
+  if (error || !fields) return { error };
+
+  const client = await insertClientRecord(session, fields);
+  return { client };
 }
 
 export async function updateClientAction(id: number, _prev: ActionState, formData: FormData): Promise<ActionState> {
