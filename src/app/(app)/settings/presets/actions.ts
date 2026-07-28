@@ -300,12 +300,14 @@ export async function saveTermsGroupAction(input: {
   id?: number;
   name: string;
   documentType: string | null;
-  content: string;
+  terms: string[];
   isDefault: boolean;
 }): Promise<ActionResult> {
   const session = await requireRole("owner", "admin");
   if (!input.name.trim()) return { error: "Name is required." };
-  if (!input.content.trim()) return { error: "Content is required." };
+  // Structured storage: keep each term's own multiline text and order; drop empty terms.
+  const terms = (Array.isArray(input.terms) ? input.terms : []).map((s) => s.trim()).filter(Boolean);
+  if (terms.length === 0) return { error: "At least one term is required." };
   if (input.documentType && !TERMS_DOC_TYPE_OPTIONS.includes(input.documentType as (typeof TERMS_DOC_TYPE_OPTIONS)[number])) {
     return { error: "Invalid document type." };
   }
@@ -321,7 +323,7 @@ export async function saveTermsGroupAction(input: {
     if (input.id) {
       const updated = await tx
         .update(termsConditionsGroupsTable)
-        .set({ name: input.name.trim(), documentType: input.documentType, content: input.content.trim(), isDefault: input.isDefault })
+        .set({ name: input.name.trim(), documentType: input.documentType, terms, isDefault: input.isDefault })
         .where(and(eq(termsConditionsGroupsTable.id, input.id), eq(termsConditionsGroupsTable.orgId, session.orgId)))
         .returning({ id: termsConditionsGroupsTable.id });
       if (!updated.length) throw new Error("Not found.");
@@ -330,7 +332,7 @@ export async function saveTermsGroupAction(input: {
         orgId: session.orgId,
         name: input.name.trim(),
         documentType: input.documentType,
-        content: input.content.trim(),
+        terms,
         isDefault: input.isDefault,
       });
     }

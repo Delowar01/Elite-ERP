@@ -58,26 +58,27 @@ async function main() {
 
   const created = { groupA: 0, groupB: 0, quotation: 0 };
   try {
-    // ---- Step 1: Group A with 10 terms (master, stored as newline content) ----
-    const aTerms = Array.from({ length: 10 }, (_, i) => `Group A term ${i + 1}`);
+    // ---- Step 1: Group A with 10 terms (master, stored structured — one includes multiline text) ----
+    const aTerms = Array.from({ length: 10 }, (_, i) => (i === 2 ? "Group A term 3\nsecond line of term 3" : `Group A term ${i + 1}`));
     const [gA] = await db.insert(termsConditionsGroupsTable).values({
-      orgId: org.id, name: "TEST Group A", documentType: null, content: joinGroupTerms(aTerms), isDefault: false,
+      orgId: org.id, name: "TEST Group A", documentType: null, terms: aTerms, isDefault: false,
     }).returning();
     created.groupA = gA.id;
-    check("Group A saved with 10 terms", splitGroupTerms(gA.content).length === 10);
+    check("Group A saved with 10 structured terms", gA.terms.length === 10);
+    check("A multiline term keeps its newline in storage", gA.terms[2].includes("\n"));
 
     // ---- Step 2: Group B with 8 terms ----
     const bTerms = Array.from({ length: 8 }, (_, i) => `Group B term ${i + 1}`);
     const [gB] = await db.insert(termsConditionsGroupsTable).values({
-      orgId: org.id, name: "TEST Group B", documentType: null, content: joinGroupTerms(bTerms), isDefault: false,
+      orgId: org.id, name: "TEST Group B", documentType: null, terms: bTerms, isDefault: false,
     }).returning();
     created.groupB = gB.id;
-    check("Group B saved with 8 terms", splitGroupTerms(gB.content).length === 8);
+    check("Group B saved with 8 structured terms", gB.terms.length === 8);
 
     // ---- Build the document terms by APPENDING each group (never replacing) ----
     let docTerms: DocumentTerm[] = [];
     const appendGroup = (g: typeof gA) => {
-      const added = splitGroupTerms(g.content).map((text) => ({ text, groupId: g.id, groupName: g.name }));
+      const added = g.terms.map((text) => ({ text, groupId: g.id, groupName: g.name }));
       docTerms = [...docTerms, ...added];
     };
     appendGroup(gA);
@@ -115,10 +116,11 @@ async function main() {
     check("Saved document persists 19 terms", persisted.length === 19);
     check("Order/edits persist across reload", persisted[0].text === "Individual document-only term" && persisted[1].text === "EDITED first term");
     check("Group tags persist on snapshot", persisted[1].groupId === gA.id && persisted.filter((t) => t.groupId === gB.id).length === 8);
+    check("Multiline term persists in the saved document", persisted.some((t) => t.text.includes("\n") && t.text.includes("second line of term 3")));
 
     // ---- Step 10: editing the MASTER group must NOT change the saved document ----
     await db.update(termsConditionsGroupsTable)
-      .set({ content: joinGroupTerms(["Group A COMPLETELY REWRITTEN"]) })
+      .set({ terms: ["Group A COMPLETELY REWRITTEN"] })
       .where(eq(termsConditionsGroupsTable.id, gA.id));
     const [afterMasterEdit] = await db.select().from(quotationsTable).where(eq(quotationsTable.id, quo.id));
     const stillPersisted = afterMasterEdit.terms ?? [];

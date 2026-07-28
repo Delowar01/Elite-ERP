@@ -22,7 +22,8 @@ export function DocumentTermsView({
         {list.map((tm, i) => (
           <li key={i} className="text-[12px] flex gap-2">
             <span className="opacity-60 shrink-0">{i + 1}.</span>
-            <span>{tm.text}</span>
+            {/* pre-wrap preserves multiline term text; single-line terms render unchanged. */}
+            <span className="whitespace-pre-wrap">{tm.text}</span>
           </li>
         ))}
       </ol>

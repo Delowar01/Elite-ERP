@@ -287,7 +287,7 @@ export function PdfTermsBlock({ terms }: { terms?: { text: string }[] | null }) 
       <b>Terms &amp; Conditions:</b>
       <ol style={{ margin: "4px 0 0", paddingInlineStart: 18 }}>
         {list.map((t, i) => (
-          <li key={i} style={{ marginBottom: 2 }}>{t.text}</li>
+          <li key={i} style={{ marginBottom: 2, whiteSpace: "pre-wrap" }}>{t.text}</li>
         ))}
       </ol>
     </div>

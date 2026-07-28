@@ -19,7 +19,7 @@ function TermRow({
   const [draggable, setDraggable] = useState(false);
   return (
     <div
-      className="flex items-center gap-1.5 group"
+      className="flex items-start gap-1.5 group"
       draggable={draggable}
       onDragStart={onDragStart}
       onDragOver={onDragOver}
@@ -28,7 +28,7 @@ function TermRow({
     >
       <button
         type="button"
-        className="cursor-grab text-ink-faint hover:text-ink shrink-0"
+        className="cursor-grab text-ink-faint hover:text-ink shrink-0 mt-1.5"
         title={t(locale, "Drag to reorder")}
         aria-label={t(locale, "Drag to reorder")}
         onMouseDown={() => setDraggable(true)}
@@ -36,21 +36,24 @@ function TermRow({
       >
         <GripVertical className="size-3.5" />
       </button>
-      <span className="text-[11.5px] text-ink-faint w-6 text-right shrink-0">{index + 1}.</span>
-      <input
+      <span className="text-[11.5px] text-ink-faint w-6 text-right shrink-0 mt-1.5">{index + 1}.</span>
+      <textarea
         value={text}
         onChange={(e) => onText(e.target.value)}
+        rows={1}
         placeholder={t(locale, "Term text…")}
-        className="flex-1 h-8 rounded-[8px] border border-line px-2 text-[12px] outline-none focus:border-brand-orange bg-surface"
+        // A term may hold multiple lines of text; auto-grow so the whole term stays visible.
+        ref={(el) => { if (el) { el.style.height = "auto"; el.style.height = `${el.scrollHeight}px`; } }}
+        className="flex-1 min-h-8 py-1.5 rounded-[8px] border border-line px-2 text-[12px] leading-snug outline-none focus:border-brand-orange bg-surface resize-none overflow-hidden"
       />
-      {badge && <span className="pill shrink-0" style={{ fontSize: 10 }}>{badge}</span>}
-      <button type="button" className="item-del-btn shrink-0" onClick={onMoveUp} disabled={index === 0} aria-label={t(locale, "Move up")} title={t(locale, "Move up")}>
+      {badge && <span className="pill shrink-0 mt-1" style={{ fontSize: 10 }}>{badge}</span>}
+      <button type="button" className="item-del-btn shrink-0 mt-1" onClick={onMoveUp} disabled={index === 0} aria-label={t(locale, "Move up")} title={t(locale, "Move up")}>
         <ArrowUp className="size-3.5" />
       </button>
-      <button type="button" className="item-del-btn shrink-0" onClick={onMoveDown} aria-label={t(locale, "Move down")} title={t(locale, "Move down")}>
+      <button type="button" className="item-del-btn shrink-0 mt-1" onClick={onMoveDown} aria-label={t(locale, "Move down")} title={t(locale, "Move down")}>
         <ArrowDown className="size-3.5" />
       </button>
-      <button type="button" className="item-del-btn shrink-0" onClick={onDelete} aria-label={t(locale, "Remove Term")} title={t(locale, "Remove Term")}>
+      <button type="button" className="item-del-btn shrink-0 mt-1" onClick={onDelete} aria-label={t(locale, "Remove Term")} title={t(locale, "Remove Term")}>
         <X className="size-3.5" />
       </button>
     </div>
@@ -98,7 +101,10 @@ export function DocumentTermsEditor({
   function appendGroup(id: string) {
     const g = groups.find((x) => String(x.id) === id);
     if (!g) return;
-    const added = splitGroupTerms(g.content).map((text) => ({ text, groupId: g.id, groupName: g.name }));
+    // Append the group's structured terms (falling back to splitting the display content for any
+    // legacy shape). Each term keeps its own multiline text — no splitting on newlines here.
+    const source = g.terms ?? splitGroupTerms(g.content);
+    const added = source.map((text) => text.trim()).filter(Boolean).map((text) => ({ text, groupId: g.id, groupName: g.name }));
     if (added.length) onChange([...terms, ...added]); // append — do not replace
     setAddGroupId("");
   }

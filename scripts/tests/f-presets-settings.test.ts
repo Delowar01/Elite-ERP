@@ -32,16 +32,16 @@ function assert(name: string, cond: boolean) {
 }
 
 // Mirror of saveTermsGroupAction's default-clearing transaction.
-async function saveTermsGroup(orgId: number, input: { id?: number; name: string; documentType: string | null; content: string; isDefault: boolean }) {
+async function saveTermsGroup(orgId: number, input: { id?: number; name: string; documentType: string | null; terms: string[]; isDefault: boolean }) {
   return db.transaction(async (tx) => {
     if (input.isDefault && input.documentType) {
       await tx.update(termsConditionsGroupsTable).set({ isDefault: false }).where(and(eq(termsConditionsGroupsTable.orgId, orgId), eq(termsConditionsGroupsTable.documentType, input.documentType)));
     }
     if (input.id) {
-      await tx.update(termsConditionsGroupsTable).set({ name: input.name, documentType: input.documentType, content: input.content, isDefault: input.isDefault }).where(and(eq(termsConditionsGroupsTable.id, input.id), eq(termsConditionsGroupsTable.orgId, orgId)));
+      await tx.update(termsConditionsGroupsTable).set({ name: input.name, documentType: input.documentType, terms: input.terms, isDefault: input.isDefault }).where(and(eq(termsConditionsGroupsTable.id, input.id), eq(termsConditionsGroupsTable.orgId, orgId)));
       return input.id;
     }
-    const [row] = await tx.insert(termsConditionsGroupsTable).values({ orgId, name: input.name, documentType: input.documentType, content: input.content, isDefault: input.isDefault }).returning({ id: termsConditionsGroupsTable.id });
+    const [row] = await tx.insert(termsConditionsGroupsTable).values({ orgId, name: input.name, documentType: input.documentType, terms: input.terms, isDefault: input.isDefault }).returning({ id: termsConditionsGroupsTable.id });
     return row.id;
   });
 }
@@ -55,24 +55,24 @@ async function main() {
 
   console.log("\n== 1. Terms & Conditions Groups CRUD + set default ==");
   {
-    const g1 = await saveTermsGroup(orgA.id, { name: "Standard Sales", documentType: "quotation", content: "Terms A", isDefault: true });
-    const g2 = await saveTermsGroup(orgA.id, { name: "Promo Terms", documentType: "quotation", content: "Terms B", isDefault: true });
+    const g1 = await saveTermsGroup(orgA.id, { name: "Standard Sales", documentType: "quotation", terms: ["Terms A"], isDefault: true });
+    const g2 = await saveTermsGroup(orgA.id, { name: "Promo Terms", documentType: "quotation", terms: ["Terms B"], isDefault: true });
     // Setting g2 default must have cleared g1's default.
     const defaults = await db.select({ id: termsConditionsGroupsTable.id }).from(termsConditionsGroupsTable).where(and(eq(termsConditionsGroupsTable.orgId, orgA.id), eq(termsConditionsGroupsTable.documentType, "quotation"), eq(termsConditionsGroupsTable.isDefault, true)));
     assert("create two groups", (await db.select({ n: sql<number>`count(*)::int` }).from(termsConditionsGroupsTable).where(eq(termsConditionsGroupsTable.orgId, orgA.id)))[0].n === 2);
     assert("only one default per (org, documentType)", defaults.length === 1 && defaults[0].id === g2);
 
     // edit g1 (rename + content)
-    await saveTermsGroup(orgA.id, { id: g1, name: "Standard Sales v2", documentType: "quotation", content: "Terms A2", isDefault: false });
-    const [edited] = await db.select({ name: termsConditionsGroupsTable.name, content: termsConditionsGroupsTable.content }).from(termsConditionsGroupsTable).where(eq(termsConditionsGroupsTable.id, g1));
-    assert("edit updates name + content", edited.name === "Standard Sales v2" && edited.content === "Terms A2");
+    await saveTermsGroup(orgA.id, { id: g1, name: "Standard Sales v2", documentType: "quotation", terms: ["Terms A2"], isDefault: false });
+    const [edited] = await db.select({ name: termsConditionsGroupsTable.name, terms: termsConditionsGroupsTable.terms }).from(termsConditionsGroupsTable).where(eq(termsConditionsGroupsTable.id, g1));
+    assert("edit updates name + terms", edited.name === "Standard Sales v2" && JSON.stringify(edited.terms) === JSON.stringify(["Terms A2"]));
 
     // delete g2 (scoped)
     await db.delete(termsConditionsGroupsTable).where(and(eq(termsConditionsGroupsTable.id, g2), eq(termsConditionsGroupsTable.orgId, orgA.id)));
     assert("delete removes the group", (await db.select({ n: sql<number>`count(*)::int` }).from(termsConditionsGroupsTable).where(eq(termsConditionsGroupsTable.orgId, orgA.id)))[0].n === 1);
 
     // tenant scope: orgB group invisible to orgA
-    await saveTermsGroup(orgB.id, { name: "Other Org Terms", documentType: "quotation", content: "X", isDefault: true });
+    await saveTermsGroup(orgB.id, { name: "Other Org Terms", documentType: "quotation", terms: ["X"], isDefault: true });
     const orgAGroups = await db.select({ id: termsConditionsGroupsTable.id }).from(termsConditionsGroupsTable).where(eq(termsConditionsGroupsTable.orgId, orgA.id));
     assert("orgA never sees orgB's terms group", orgAGroups.length === 1 && orgAGroups[0].id === g1);
   }
@@ -80,8 +80,8 @@ async function main() {
   console.log("\n== 2. Document content presets loader (docType OR any) ==");
   {
     // groups: one for quotation, one "any" (null), one for sales_invoice
-    await saveTermsGroup(orgA.id, { name: "Any Terms", documentType: null, content: "Any", isDefault: false });
-    await saveTermsGroup(orgA.id, { name: "Invoice Terms", documentType: "sales_invoice", content: "Inv", isDefault: true });
+    await saveTermsGroup(orgA.id, { name: "Any Terms", documentType: null, terms: ["Any"], isDefault: false });
+    await saveTermsGroup(orgA.id, { name: "Invoice Terms", documentType: "sales_invoice", terms: ["Inv"], isDefault: true });
     // note templates: default for quotation + an "any" template
     await db.insert(noteTemplatesTable).values({ orgId: orgA.id, name: "Quote Note", documentType: "quotation", content: "Thanks for your quote", isDefault: true });
     await db.insert(noteTemplatesTable).values({ orgId: orgA.id, name: "Any Note", documentType: null, content: "Generic", isDefault: false });

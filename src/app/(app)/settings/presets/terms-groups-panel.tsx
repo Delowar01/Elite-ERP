@@ -14,7 +14,6 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { t, type Locale } from "@/lib/i18n/dict";
 import type { TermsConditionsGroup } from "@/db";
-import { splitGroupTerms, joinGroupTerms } from "../../sales/_shared/document-terms";
 import { MasterTermsListEditor } from "../../sales/_shared/terms-editor";
 import { saveTermsGroupAction, deleteTermsGroupAction } from "./actions";
 
@@ -32,25 +31,24 @@ export function TermsGroupsPanel({ locale, groups }: { locale: Locale; groups: T
   const [pending, startTransition] = useTransition();
   const [docType, setDocType] = useState<string>("none");
   const [isDefault, setIsDefault] = useState(false);
-  // A group holds multiple terms; edited as a reorderable list, stored as newline-joined content.
+  // A group holds multiple terms; edited as a reorderable list and stored structured (jsonb array).
   const [terms, setTerms] = useState<string[]>([]);
 
   function openEdit(group: TermsConditionsGroup | "new") {
     setEditing(group);
     setDocType(group !== "new" ? (group.documentType ?? "none") : "none");
     setIsDefault(group !== "new" ? group.isDefault : false);
-    setTerms(group !== "new" ? splitGroupTerms(group.content) : [""]);
+    setTerms(group !== "new" && group.terms.length ? group.terms : [""]);
   }
 
   function submit(formData: FormData) {
     const name = String(formData.get("name") ?? "");
-    const content = String(formData.get("content") ?? "");
     startTransition(async () => {
       const result = await saveTermsGroupAction({
         id: editing !== "new" && editing ? editing.id : undefined,
         name,
         documentType: docType === "none" ? null : docType,
-        content,
+        terms,
         isDefault,
       });
       if (result.error) toast.error(result.error);
@@ -97,7 +95,7 @@ export function TermsGroupsPanel({ locale, groups }: { locale: Locale; groups: T
                     {group.isDefault && <Badge variant="success">{t(locale, "Default")}</Badge>}
                   </div>
                 </TableCell>
-                <TableCell className="text-ink-muted text-xs max-w-xs truncate">{group.content}</TableCell>
+                <TableCell className="text-ink-muted text-xs max-w-xs truncate">{group.terms.join(" · ")}</TableCell>
                 <TableCell className="text-right whitespace-nowrap">
                   <Button variant="ghost" size="icon" disabled={pending} onClick={() => openEdit(group)} aria-label={t(locale, "Edit")}>
                     <Pencil className="size-3.5" />
@@ -142,7 +140,6 @@ export function TermsGroupsPanel({ locale, groups }: { locale: Locale; groups: T
             </FormField>
             <FormField label={t(locale, "Terms")} htmlFor="tg-content">
               <MasterTermsListEditor locale={locale} terms={terms} onChange={setTerms} />
-              <input type="hidden" name="content" value={joinGroupTerms(terms)} />
             </FormField>
             <label className="flex items-center gap-2 text-[13px] text-ink-muted cursor-pointer">
               <Checkbox checked={isDefault} onCheckedChange={(checked) => setIsDefault(checked === true)} />
