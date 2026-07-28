@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { GripVertical, ArrowUp, ArrowDown, X, Plus, Layers } from "lucide-react";
+import { GripVertical, X, Plus, Layers } from "lucide-react";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { t, type Locale } from "@/lib/i18n/dict";
@@ -9,11 +9,13 @@ import type { ContentPreset } from "@/lib/document-presets";
 import { type DocumentTerm, splitGroupTerms } from "./document-terms";
 
 // A single editable, reorderable term row. Shared by the document editor and the master group editor.
+// Reordering is drag-only, via the six-dot grip handle on the left; numbering is derived from the
+// row's position so it stays correct automatically after any drag or delete.
 function TermRow({
-  locale, index, text, badge, onText, onMoveUp, onMoveDown, onDelete, onDragStart, onDragOver, onDrop, onDragEnd,
+  locale, index, text, badge, onText, onDelete, onDragStart, onDragOver, onDrop, onDragEnd,
 }: {
   locale: Locale; index: number; text: string; badge?: string;
-  onText: (v: string) => void; onMoveUp: () => void; onMoveDown: () => void; onDelete: () => void;
+  onText: (v: string) => void; onDelete: () => void;
   onDragStart: () => void; onDragOver: (e: React.DragEvent) => void; onDrop: () => void; onDragEnd: () => void;
 }) {
   const [draggable, setDraggable] = useState(false);
@@ -47,13 +49,15 @@ function TermRow({
         className="flex-1 min-h-8 py-1.5 rounded-[8px] border border-line px-2 text-[12px] leading-snug outline-none focus:border-brand-orange bg-surface resize-none overflow-hidden"
       />
       {badge && <span className="pill shrink-0 mt-1" style={{ fontSize: 10 }}>{badge}</span>}
-      <button type="button" className="item-del-btn shrink-0 mt-1" onClick={onMoveUp} disabled={index === 0} aria-label={t(locale, "Move up")} title={t(locale, "Move up")}>
-        <ArrowUp className="size-3.5" />
-      </button>
-      <button type="button" className="item-del-btn shrink-0 mt-1" onClick={onMoveDown} aria-label={t(locale, "Move down")} title={t(locale, "Move down")}>
-        <ArrowDown className="size-3.5" />
-      </button>
-      <button type="button" className="item-del-btn shrink-0 mt-1" onClick={onDelete} aria-label={t(locale, "Remove Term")} title={t(locale, "Remove Term")}>
+      {/* Red delete: uses the theme-aware destructive token (light + dark) with a clear red hover
+          (from .item-del-btn:hover) and a red focus ring. */}
+      <button
+        type="button"
+        className="item-del-btn shrink-0 mt-1 text-danger hover:text-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger focus-visible:bg-danger-bg"
+        onClick={onDelete}
+        aria-label={t(locale, "Remove Term")}
+        title={t(locale, "Remove Term")}
+      >
         <X className="size-3.5" />
       </button>
     </div>
@@ -65,13 +69,6 @@ function reorder<T>(arr: T[], from: number, to: number): T[] {
   const next = [...arr];
   const [m] = next.splice(from, 1);
   next.splice(to, 0, m);
-  return next;
-}
-function swap<T>(arr: T[], i: number, dir: number): T[] {
-  const j = i + dir;
-  if (j < 0 || j >= arr.length) return arr;
-  const next = [...arr];
-  [next[i], next[j]] = [next[j], next[i]];
   return next;
 }
 
@@ -158,8 +155,6 @@ export function DocumentTermsEditor({
             text={tm.text}
             badge={tm.groupName || undefined}
             onText={(v) => onChange(terms.map((x, idx) => (idx === i ? { ...x, text: v } : x)))}
-            onMoveUp={() => onChange(swap(terms, i, -1))}
-            onMoveDown={() => onChange(swap(terms, i, 1))}
             onDelete={() => onChange(terms.filter((_, idx) => idx !== i))}
             onDragStart={() => setDragIdx(i)}
             onDragOver={(e) => e.preventDefault()}
@@ -214,8 +209,6 @@ export function MasterTermsListEditor({
             index={i}
             text={term}
             onText={(v) => onChange(terms.map((x, idx) => (idx === i ? v : x)))}
-            onMoveUp={() => onChange(swap(terms, i, -1))}
-            onMoveDown={() => onChange(swap(terms, i, 1))}
             onDelete={() => onChange(terms.filter((_, idx) => idx !== i))}
             onDragStart={() => setDragIdx(i)}
             onDragOver={(e) => e.preventDefault()}
