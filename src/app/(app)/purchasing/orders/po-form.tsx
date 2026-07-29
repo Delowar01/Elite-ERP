@@ -194,6 +194,7 @@ export function PoForm({
 
       <DocPillsRow
         locale={locale}
+        org={org}
         pills={[
           { icon: "percent", label: "VAT Settings" },
           { icon: "wallet", label: "Currency", value: org.currency },

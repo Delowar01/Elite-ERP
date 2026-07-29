@@ -192,6 +192,7 @@ export function QuotationForm({
 
       <DocPillsRow
         locale={locale}
+        org={org}
         pills={[
           { icon: "percent", label: "VAT Settings" },
           { icon: "wallet", label: "Currency", value: org.currency },

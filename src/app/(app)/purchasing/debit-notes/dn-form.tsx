@@ -8,6 +8,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import { PartyCardStatic } from "../../sales/_shared/party-card";
 import { DocFieldBox } from "../../sales/_shared/doc-field-box";
 import { LineItemsEditor, emptyLineItem, type LineItemDraft } from "../../sales/_shared/line-items-editor";
+import { DocPillsRow } from "../../sales/_shared/doc-pills-row";
 import { DocFooterContact } from "../../sales/_shared/doc-footer-contact";
 import { DocActionBar } from "../../sales/_shared/doc-action-bar";
 import { DocTopActions } from "../../sales/_shared/doc-top-actions";
@@ -158,6 +159,8 @@ export function DnForm({
           <div className="card party-card-v2 flex items-center text-[12.5px] text-ink-faint">{t(locale, "Select a purchase order to load the vendor.")}</div>
         )}
       </div>
+
+      <DocPillsRow locale={locale} org={org} pills={[{ icon: "info", label: "Number Format" }]} />
 
       <LineItemsEditor locale={locale} products={products} items={items} onChange={setItems} defaultTaxRate={defaultTaxRate} variant="simple" />
 

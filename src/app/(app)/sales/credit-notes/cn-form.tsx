@@ -8,6 +8,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import { PartyCardStatic } from "../_shared/party-card";
 import { DocFieldBox } from "../_shared/doc-field-box";
 import { LineItemsEditor, emptyLineItem, type LineItemDraft } from "../_shared/line-items-editor";
+import { DocPillsRow } from "../_shared/doc-pills-row";
 import { DocFooterContact } from "../_shared/doc-footer-contact";
 import { DocActionBar } from "../_shared/doc-action-bar";
 import { DocTopActions } from "../_shared/doc-top-actions";
@@ -158,6 +159,8 @@ export function CnForm({
           <div className="card party-card-v2 flex items-center text-[12.5px] text-ink-faint">{t(locale, "Select an invoice to load the client.")}</div>
         )}
       </div>
+
+      <DocPillsRow locale={locale} org={org} pills={[{ icon: "info", label: "Number Format" }]} />
 
       <LineItemsEditor locale={locale} products={products} items={items} onChange={setItems} defaultTaxRate={defaultTaxRate} variant="simple" />
 
