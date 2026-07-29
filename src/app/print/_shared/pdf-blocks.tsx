@@ -1,7 +1,6 @@
 import { Fragment } from "react";
-import { fmt } from "../../(app)/sales/_shared/totals";
 import { richTextToHtml } from "@/lib/sanitize-html";
-import { formatMoneyNumber, type CurrencyMark } from "@/lib/currency/currencies";
+import { formatAmount, formatRate, formatQuantity, markFormat, DEFAULT_NUMBER_FORMAT, type CurrencyMark, type NumberFormatConfig } from "@/lib/currency/currencies";
 import type { Org } from "@/db";
 
 // A full-width line-item description row for print/PDF: spans every column of the items table so the
@@ -19,12 +18,14 @@ function PdfDescRow({ description, colSpan, zebra }: { description?: string | nu
   );
 }
 
-// A monetary amount for print/PDF: currency mark + space + number. Shows the symbol when available,
-// otherwise the ISO code (never both). Asset symbols (SAR) render from the locally-stored asset via
-// <img> so the official symbol prints correctly even in PDF renderers that only handle images.
-// Print/PDF is always a document context → always 2 decimals, regardless of the currency.
+// A monetary amount for print/PDF: currency mark + space + number, using the org's Number Format
+// (grouping + decimals). Symbol display priority: (1) configured custom symbol, (2) official symbol
+// (the SAR asset renders from the locally-stored image so it prints even in image-only PDF renderers,
+// or a text symbol), (3) the ISO code.
 export function Amount({ mark, value }: { mark: CurrencyMark; value: string | number }) {
-  const formatted = formatMoneyNumber(value, "document");
+  const formatted = formatAmount(value, markFormat(mark));
+  const custom = mark.format?.customCurrencySymbol?.trim();
+  if (custom) return <span className="pdf-amount">{custom} {formatted}</span>;
   if (mark.type === "asset") {
     return (
       <span className="pdf-amount">
@@ -148,7 +149,7 @@ export type FullItemRow = {
   rate: string;
 };
 
-export function ItemsTableFull({ items }: { items: FullItemRow[] }) {
+export function ItemsTableFull({ items, format = DEFAULT_NUMBER_FORMAT }: { items: FullItemRow[]; format?: NumberFormatConfig }) {
   return (
     <div className="pdf-items-wrap">
       <table className="pdf-items">
@@ -175,12 +176,12 @@ export function ItemsTableFull({ items }: { items: FullItemRow[] }) {
                     <div className="item-name">{it.name}</div>
                   </td>
                   <td className="num">{Number(it.vatPercent)}%</td>
-                  <td className="num">{Number(it.quantity)}</td>
-                  <td className="num">{fmt(it.rate)}</td>
-                  <td className="num">{fmt(amount)}</td>
-                  <td className="num">{fmt(vatAmt)}</td>
+                  <td className="num">{formatQuantity(it.quantity, format)}</td>
+                  <td className="num">{formatRate(it.rate, format)}</td>
+                  <td className="num">{formatAmount(amount, format)}</td>
+                  <td className="num">{formatAmount(vatAmt, format)}</td>
                   <td className="num" style={{ fontWeight: 700 }}>
-                    {fmt(amount + vatAmt)}
+                    {formatAmount(amount + vatAmt, format)}
                   </td>
                 </tr>
                 <PdfDescRow description={it.description} colSpan={7} zebra={zebra} />
@@ -193,7 +194,7 @@ export function ItemsTableFull({ items }: { items: FullItemRow[] }) {
   );
 }
 
-export function ItemsTableSimple({ items }: { items: { name: string; description?: string | null; quantity: string; rate: string }[] }) {
+export function ItemsTableSimple({ items, format = DEFAULT_NUMBER_FORMAT }: { items: { name: string; description?: string | null; quantity: string; rate: string }[]; format?: NumberFormatConfig }) {
   return (
     <div className="pdf-items-wrap">
       <table className="pdf-items">
@@ -212,10 +213,10 @@ export function ItemsTableSimple({ items }: { items: { name: string; description
               <Fragment key={i}>
                 <tr className={zebra ? "pdf-zrow" : undefined}>
                   <td className="item-name">{it.name}</td>
-                  <td className="num">{Number(it.quantity)}</td>
-                  <td className="num">{fmt(it.rate)}</td>
+                  <td className="num">{formatQuantity(it.quantity, format)}</td>
+                  <td className="num">{formatRate(it.rate, format)}</td>
                   <td className="num" style={{ fontWeight: 700 }}>
-                    {fmt((Number(it.quantity) || 0) * (Number(it.rate) || 0))}
+                    {formatAmount((Number(it.quantity) || 0) * (Number(it.rate) || 0), format)}
                   </td>
                 </tr>
                 <PdfDescRow description={it.description} colSpan={4} zebra={zebra} />
@@ -228,7 +229,7 @@ export function ItemsTableSimple({ items }: { items: { name: string; description
   );
 }
 
-export function ItemsTableQty({ items }: { items: { name: string; description?: string | null; quantity: string }[] }) {
+export function ItemsTableQty({ items, format = DEFAULT_NUMBER_FORMAT }: { items: { name: string; description?: string | null; quantity: string }[]; format?: NumberFormatConfig }) {
   return (
     <div className="pdf-items-wrap">
       <table className="pdf-items qty-table">
@@ -247,7 +248,7 @@ export function ItemsTableQty({ items }: { items: { name: string; description?: 
                   <td>
                     <div className="item-name">{it.name}</div>
                   </td>
-                  <td className="num">{Number(it.quantity)}</td>
+                  <td className="num">{formatQuantity(it.quantity, format)}</td>
                 </tr>
                 <PdfDescRow description={it.description} colSpan={2} zebra={zebra} />
               </Fragment>

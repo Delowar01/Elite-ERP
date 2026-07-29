@@ -9,8 +9,7 @@ import { getLocale } from "@/lib/i18n/server";
 import { t } from "@/lib/i18n/dict";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
-import { Money } from "../../_shared/money";
-import { fmt } from "../../_shared/totals";
+import { Money, DocNum } from "../../_shared/money";
 import { CnDetailActions } from "../cn-detail-actions";
 import { PrintButton } from "../../_shared/print-button";
 
@@ -100,9 +99,9 @@ export default async function CreditNoteDetailPage({ params }: { params: Promise
             <Fragment key={it.id}>
             <TableRow>
               <TableCell><LineItemCell description={it.description} /></TableCell>
-              <TableCell className="text-right font-mono">{it.quantity}</TableCell>
-              <TableCell className="text-right font-mono">{fmt(it.unitPrice)}</TableCell>
-              <TableCell className="text-right font-mono">{fmt(it.lineTotal)}</TableCell>
+              <TableCell className="text-right font-mono"><DocNum value={it.quantity} kind="quantity" /></TableCell>
+              <TableCell className="text-right font-mono"><DocNum value={it.unitPrice} kind="rate" /></TableCell>
+              <TableCell className="text-right font-mono"><DocNum value={it.lineTotal} kind="amount" /></TableCell>
             </TableRow>
               <LineDescRow customFields={it.customFields} />
             </Fragment>

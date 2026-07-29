@@ -16,7 +16,7 @@ import { DocumentTermsEditor } from "../_shared/terms-editor";
 import type { DocumentTerm } from "../_shared/document-terms";
 import type { ContentPreset } from "@/lib/document-presets";
 import { Money } from "../_shared/money";
-import { computeTotals, fmt } from "../_shared/totals";
+import { computeTotals } from "../_shared/totals";
 import { t, type Locale } from "@/lib/i18n/dict";
 import { getProfileByCountryName } from "@/lib/geo/country-profiles";
 import type { Product, Org } from "@/db";
@@ -79,7 +79,7 @@ export function CnForm({
     ],
     from: { label: t(locale, "From"), name: org.name, lines: [org.address, org.email, org.phone] },
     to: selectedInvoice ? { label: t(locale, "To Client"), name: selectedInvoice.customerName, lines: [selectedInvoice.customerAddress, selectedInvoice.customerEmail, selectedInvoice.customerPhone] } : undefined,
-    items: items.map((it) => ({ description: it.description, desc: getLineDesc(it.customFields), quantity: it.quantity, unitPrice: fmt(Number(it.unitPrice) || 0), lineTotal: fmt((Number(it.quantity) || 0) * (Number(it.unitPrice) || 0)) })),
+    items: items.map((it) => ({ description: it.description, desc: getLineDesc(it.customFields), quantity: it.quantity, unitPrice: String(Number(it.unitPrice) || 0), lineTotal: String((Number(it.quantity) || 0) * (Number(it.unitPrice) || 0)) })),
     showPricing: true,
     totals: { subtotal: totals.subtotal, discount: totals.discount, taxTotal: totals.taxTotal, total: totals.total },
     terms,

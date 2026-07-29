@@ -18,7 +18,7 @@ import { DocFooterContact } from "../../sales/_shared/doc-footer-contact";
 import { DocActionBar } from "../../sales/_shared/doc-action-bar";
 import { DocTopActions } from "../../sales/_shared/doc-top-actions";
 import { PreviewDialog, type PreviewData } from "../../sales/_shared/preview-dialog";
-import { computeTotals, fmt } from "../../sales/_shared/totals";
+import { computeTotals } from "../../sales/_shared/totals";
 import { ConfigureColumnsDialog } from "../../sales/_shared/configure-columns-dialog";
 import { resolveColumns, type ColumnDef } from "@/lib/column-config";
 import { t, type Locale } from "@/lib/i18n/dict";
@@ -121,7 +121,7 @@ export function PoForm({
     ],
     from: { label: t(locale, "From"), name: org.name, lines: [org.address, org.email, org.phone] },
     to: selectedVendor ? { label: t(locale, "To Vendor"), name: selectedVendor.name, lines: [selectedVendor.address, selectedVendor.email, selectedVendor.phone] } : undefined,
-    items: items.map((it) => ({ description: it.description, desc: getLineDesc(it.customFields), quantity: it.quantity, unitPrice: fmt(Number(it.unitPrice) || 0), lineTotal: fmt((Number(it.quantity) || 0) * (Number(it.unitPrice) || 0)) })),
+    items: items.map((it) => ({ description: it.description, desc: getLineDesc(it.customFields), quantity: it.quantity, unitPrice: String(Number(it.unitPrice) || 0), lineTotal: String((Number(it.quantity) || 0) * (Number(it.unitPrice) || 0)) })),
     showPricing: true,
     totals: { subtotal: totals.subtotal, discount: totals.discount, taxTotal: totals.taxTotal, total: totals.total },
     notes,

@@ -1,0 +1,80 @@
+// Unit tests for the shared Number Format utility (src/lib/currency/currencies.ts). Covers digit
+// grouping (international vs Indian), decimal places (0–3), quantity/rate rounding, custom-symbol
+// priority, and currency-code fallback. Pure functions — no DB, no server-only imports.
+// Run: npx tsx scripts/tests/number-format.test.ts
+import {
+  formatAmount,
+  formatRate,
+  formatQuantity,
+  displayCurrency,
+  buildMoneyMark,
+  type NumberFormatConfig,
+} from "../../src/lib/currency/currencies";
+
+let pass = 0,
+  fail = 0;
+function check(name: string, got: unknown, want: unknown) {
+  if (got === want) {
+    pass++;
+    console.log(`  ✓ ${name}`);
+  } else {
+    fail++;
+    console.log(`  ✗ ${name} — got ${JSON.stringify(got)}, want ${JSON.stringify(want)}`);
+  }
+}
+
+const cfg = (o: Partial<NumberFormatConfig>): NumberFormatConfig => ({
+  digitGrouping: "international",
+  decimalPlaces: 2,
+  roundQuantities: false,
+  roundRates: false,
+  customCurrencySymbol: null,
+  ...o,
+});
+
+console.log("Number Format utility\n");
+
+// 1. International grouping
+check("international grouping 12,345,679", formatAmount(12345679, cfg({ digitGrouping: "international", decimalPlaces: 0 })), "12,345,679");
+// 2. Indian grouping
+check("indian grouping 1,23,45,679", formatAmount(12345679, cfg({ digitGrouping: "indian", decimalPlaces: 0 })), "1,23,45,679");
+
+// 3. Every decimal option
+check("0 decimals", formatAmount(1234.5, cfg({ decimalPlaces: 0 })), "1,235"); // rounds
+check("1 decimal", formatAmount(1234.56, cfg({ decimalPlaces: 1 })), "1,234.6");
+check("2 decimals", formatAmount(1234.5, cfg({ decimalPlaces: 2 })), "1,234.50");
+check("3 decimals", formatAmount(1234.5, cfg({ decimalPlaces: 3 })), "1,234.500");
+
+// 4. Quantity rounding
+check("quantity not rounded", formatQuantity(12.5, cfg({})), "12.5");
+check("quantity rounded to whole", formatQuantity(12.5, cfg({ roundQuantities: true })), "13");
+check("quantity grouping (indian)", formatQuantity(1234567, cfg({ digitGrouping: "indian", roundQuantities: true })), "12,34,567");
+
+// 5. Rate rounding
+check("rate not rounded (2 dp)", formatRate(1234.56, cfg({ decimalPlaces: 2 })), "1,234.56");
+check("rate rounded to whole", formatRate(1234.56, cfg({ roundRates: true, decimalPlaces: 2 })), "1,235");
+
+// 6. Custom symbol display priority (over the SAR asset, and over an official text symbol)
+check("custom symbol wins for SAR", displayCurrency(buildMoneyMark({ currencyCode: "SAR", customCurrencySymbol: "R$" })), "R$");
+check("custom symbol wins for USD", displayCurrency(buildMoneyMark({ currencyCode: "USD", customCurrencySymbol: "US$" })), "US$");
+
+// 7. Currency-code fallback (no symbol available), and SAR never falls back to the old ﷼ glyph
+check("BHD has no symbol → code", displayCurrency(buildMoneyMark({ currencyCode: "BHD" })), "BHD");
+check("unknown code → itself", displayCurrency(buildMoneyMark({ currencyCode: "XYZ" })), "XYZ");
+const sar = buildMoneyMark({ currencyCode: "SAR" });
+check("SAR text projection is the code (asset renders visually)", displayCurrency(sar), "SAR");
+check("SAR is an asset symbol (official new symbol, not ﷼)", sar.type, "asset");
+check("SAR asset value is the official new symbol asset", sar.value.includes("sar-symbol"), true);
+
+// 8. USD official symbol still shows when no custom set
+check("USD official symbol", displayCurrency(buildMoneyMark({ currencyCode: "USD" })), "$");
+
+// 9. buildMoneyMark clamps + normalizes the config
+const m = buildMoneyMark({ currencyCode: "SAR", decimalPlaces: 9, digitGrouping: "indian", roundQuantities: true });
+check("decimals clamped to 3", m.format?.decimalPlaces, 3);
+check("grouping carried", m.format?.digitGrouping, "indian");
+check("roundQuantities carried", m.format?.roundQuantities, true);
+check("empty custom symbol → null", buildMoneyMark({ currencyCode: "SAR", customCurrencySymbol: "  " }).format?.customCurrencySymbol, null);
+
+console.log(`\n${pass} passed, ${fail} failed`);
+process.exit(fail === 0 ? 0 : 1);

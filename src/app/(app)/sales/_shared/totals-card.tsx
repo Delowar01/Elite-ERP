@@ -2,8 +2,9 @@
 
 import { t, type Locale } from "@/lib/i18n/dict";
 import { useCurrency } from "@/components/ui/currency-mark";
+import { formatAmount, markFormat } from "@/lib/currency/currencies";
 import { Money } from "./money";
-import { fmt, amountInWords } from "./totals";
+import { amountInWords } from "./totals";
 
 function vatPercent(subtotal: string, taxTotal: string): string {
   const sub = Number(subtotal);
@@ -45,7 +46,7 @@ export function TotalsCard({
           {onDiscountChange ? (
             <input type="number" step="0.01" min="0" value={discount} onChange={(e) => onDiscountChange(e.target.value)} />
           ) : (
-            fmt(discount)
+            formatAmount(discount, markFormat(currency))
           )}
         </span>
       </div>

@@ -4,7 +4,8 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Plus, X } from "lucide-react";
 import { t, type Locale } from "@/lib/i18n/dict";
-import { fmt } from "./totals";
+import { useCurrency } from "@/components/ui/currency-mark";
+import { formatAmount, markFormat } from "@/lib/currency/currencies";
 import { ItemEntryCell } from "./item-entry-cell";
 import { LINE_DESC_KEY } from "./line-item-desc";
 import { saveLineItemAsProductAction, updateProductDescriptionAction } from "./creation-popup-actions";
@@ -164,6 +165,7 @@ function ColumnDrivenEditor({
   const visible = columns.filter((c) => c.visible || c.key === ACTIONS_KEY);
   const h = useItemActions(locale, items, onChange, "full", products);
   const updateLine = h.updateLine;
+  const cfg = markFormat(useCurrency());
 
   function setCustom(index: number, key: string, value: string) {
     onChange(items.map((it, i) => (i === index ? { ...it, customFields: { ...it.customFields, [key]: value } } : it)));
@@ -198,19 +200,19 @@ function ColumnDrivenEditor({
       case "unitPrice":
         return <input type="number" step="0.01" value={item.unitPrice} onChange={(e) => updateLine(i, { unitPrice: e.target.value })} className="item-cell-input" />;
       case "amount":
-        return <span className="cellval">{fmt(cmp.amount)}</span>;
+        return <span className="cellval">{formatAmount(cmp.amount, cfg)}</span>;
       case "vatAmount":
-        return <span className="cellval">{fmt(cmp.vatAmount)}</span>;
+        return <span className="cellval">{formatAmount(cmp.vatAmount, cfg)}</span>;
       case "discPercent":
         return <input type="number" step="0.01" value={item.customFields?.discPercent ?? ""} onChange={(e) => setCustom(i, "discPercent", e.target.value)} className="item-cell-input" />;
       case "discAmount":
-        return <span className="cellval">{fmt(cmp.discAmount)}</span>;
+        return <span className="cellval">{formatAmount(cmp.discAmount, cfg)}</span>;
       case "total":
-        return <span className="cellval" style={{ fontWeight: 600 }}>{fmt(cmp.total)}</span>;
+        return <span className="cellval" style={{ fontWeight: 600 }}>{formatAmount(cmp.total, cfg)}</span>;
       default:
         if (c.custom && c.fieldType === "formula") {
           const val = evalFormula(c.formula || "", lineVars(cmp.qty, cmp.price, cmp.vat, cmp.disc));
-          return <span className="cellval">{val === null ? "—" : fmt(val)}</span>;
+          return <span className="cellval">{val === null ? "—" : formatAmount(val, cfg)}</span>;
         }
         if (c.custom) {
           return (
@@ -295,6 +297,7 @@ function FixedEditor({
   const unitOptions = Array.from(new Set([...units, ...DEFAULT_UNITS]));
   const h = useItemActions(locale, items, onChange, resolvedVariant, products);
   const updateLine = h.updateLine;
+  const cfg = markFormat(useCurrency());
 
   function removeLine(index: number) {
     onChange(items.filter((_, i) => i !== index));
@@ -335,7 +338,7 @@ function FixedEditor({
                 {(showPricing || resolvedVariant === "simple") && (
                   <>
                     <td className="num"><input type="number" step="0.01" value={item.unitPrice} onChange={(e) => updateLine(i, { unitPrice: e.target.value })} className="item-cell-input" /></td>
-                    <td className="num cellval" style={{ fontWeight: 600, whiteSpace: "nowrap" }}>{fmt(lineTotal(item))}</td>
+                    <td className="num cellval" style={{ fontWeight: 600, whiteSpace: "nowrap" }}>{formatAmount(lineTotal(item), cfg)}</td>
                   </>
                 )}
                 <td>{items.length > 1 && (<div className="item-del-btn" onClick={() => removeLine(i)} role="button" aria-label={t(locale, "Remove")}><X className="size-4" /></div>)}</td>

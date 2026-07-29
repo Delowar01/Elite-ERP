@@ -30,7 +30,7 @@ import { getLocale } from "@/lib/i18n/server";
 import { buildZatcaTlv, invoiceHashOf, zatcaQrDataUrl } from "@/lib/zatca";
 import { amountInWords } from "../../../(app)/sales/_shared/totals";
 import { getLineDesc } from "../../../(app)/sales/_shared/line-item-desc";
-import { resolveCurrencyMark } from "@/lib/currency/currencies";
+import { buildMoneyMark, markFormat } from "@/lib/currency/currencies";
 import {
   A4Page,
   PdfHeader,
@@ -111,9 +111,18 @@ export default async function PrintPage({ params }: { params: Promise<{ type: st
   const { org, bank } = await getOrgAndBank(session.orgId);
   if (!org) notFound();
 
-  // Org base currency: the money() helper renders the symbol (SAR shows the official asset) or the
-  // ISO code, and amountInWords() gets the currency name.
-  const mark = resolveCurrencyMark(org.currency);
+  // Org base currency + Number Format: one mark drives the symbol (SAR shows the official asset, a
+  // configured custom symbol wins), plus grouping / decimals / rounding for every amount, rate and
+  // quantity in the printed document. amountInWords() still uses the currency name.
+  const mark = buildMoneyMark({
+    currencyCode: org.currency,
+    customCurrencySymbol: org.customCurrencySymbol,
+    digitGrouping: org.numberDigitGrouping,
+    decimalPlaces: org.numberDecimalPlaces,
+    roundQuantities: org.roundQuantities,
+    roundRates: org.roundRates,
+  });
+  const numFmt = markFormat(mark);
   const money = (v: string | number) => <Amount mark={mark} value={v} />;
 
   const orgParty = (label: string) => <Party label={label} name={org.name} lines={orgPartyLines(org)} tint />;
@@ -161,7 +170,7 @@ export default async function PrintPage({ params }: { params: Promise<{ type: st
         <A4Page>
           <PdfHeader docLabel="QUOTATION" numberLabel="Quotation No" numberVal={q.quotationNumber} dateVal={fmtDate(q.issueDate)} extraLabel="Valid Till" extraVal={q.validUntil ? fmtDate(q.validUntil) : null} org={org} />
           <Parties>{orgParty("FROM")}<Party label="TO" name={customer.name} lines={customerLines(customer)} /></Parties>
-          <ItemsTableFull items={fullItems} />
+          <ItemsTableFull items={fullItems} format={numFmt} />
           <div className="pdf-bottom">
             <div>
               <AmountWords words={amountInWords(q.total, "en", mark)} />
@@ -182,7 +191,7 @@ export default async function PrintPage({ params }: { params: Promise<{ type: st
         <A4Page>
           <PdfHeader docLabel="SALES ORDER" numberLabel="Sales Order No" numberVal={so.soNumber} dateVal={fmtDate(so.issueDate)} org={org} />
           <Parties>{orgParty("FROM")}<Party label="TO" name={customer.name} lines={customerLines(customer)} /></Parties>
-          <ItemsTableFull items={fullItems} />
+          <ItemsTableFull items={fullItems} format={numFmt} />
           <div className="pdf-bottom">
             <div>
               <AmountWords words={amountInWords(so.total, "en", mark)} />
@@ -204,7 +213,7 @@ export default async function PrintPage({ params }: { params: Promise<{ type: st
         <A4Page>
           <PdfHeader docLabel="PROFORMA INVOICE" numberLabel="P.I. No" numberVal={pf.proformaNumber} dateVal={fmtDate(pf.issueDate)} org={org} />
           <Parties>{orgParty("FROM")}<Party label="TO" name={customer.name} lines={customerLines(customer)} /></Parties>
-          <ItemsTableFull items={fullItems} />
+          <ItemsTableFull items={fullItems} format={numFmt} />
           <div className="pdf-bottom">
             <div>
               <AmountWords words={amountInWords(pf.total, "en", mark)} />
@@ -252,7 +261,7 @@ export default async function PrintPage({ params }: { params: Promise<{ type: st
         <A4Page>
           <PdfHeader docLabel="INVOICE" numberLabel="Invoice No" numberVal={inv.invoiceNumber} dateVal={fmtDate(inv.issueDate)} extraLabel="Due Date" extraVal={inv.dueDate ? fmtDate(inv.dueDate) : null} org={org} />
           <Parties>{orgParty("FROM")}<Party label="TO" name={customer.name} lines={customerLines(customer)} /></Parties>
-          <ItemsTableFull items={fullItems} />
+          <ItemsTableFull items={fullItems} format={numFmt} />
           <div className="pdf-bottom">
             <div>
               <AmountWords words={amountInWords(inv.total, "en", mark)} />
@@ -287,7 +296,7 @@ export default async function PrintPage({ params }: { params: Promise<{ type: st
           {orgParty("DELIVERY TO")}
           <Party label="SUPPLY FROM" name={vendor.name} lines={customerLines(vendor)} />
         </Parties>
-        <ItemsTableFull items={items.map((it) => ({ name: itemName(it), description: getLineDesc(it.customFields), vatPercent: it.taxRatePercent, quantity: it.quantity, rate: it.unitCost }))} />
+        <ItemsTableFull items={items.map((it) => ({ name: itemName(it), description: getLineDesc(it.customFields), vatPercent: it.taxRatePercent, quantity: it.quantity, rate: it.unitCost }))} format={numFmt} />
         <div className="pdf-bottom">
           <div>
             <AmountWords words={amountInWords(po.total, "en", mark)} />
@@ -321,7 +330,7 @@ export default async function PrintPage({ params }: { params: Promise<{ type: st
           {orgParty("ISSUED BY")}
           <Party label="DELIVERED TO" name={customer.name} lines={customerLines(customer)} />
         </Parties>
-        <ItemsTableQty items={items.map((it) => ({ name: itemName(it), description: getLineDesc(it.customFields), quantity: it.quantity }))} />
+        <ItemsTableQty items={items.map((it) => ({ name: itemName(it), description: getLineDesc(it.customFields), quantity: it.quantity }))} format={numFmt} />
         <PdfTermsBlock terms={dc.terms} />
         <NotesBlock notes={logistics || null} />
         <ClientComments />
@@ -358,7 +367,7 @@ export default async function PrintPage({ params }: { params: Promise<{ type: st
               </>
             ) : null}
           </div>
-          <ItemsTableSimple items={items.map((it) => ({ name: itemName(it), description: getLineDesc(it.customFields), quantity: it.quantity, rate: it.unitPrice }))} />
+          <ItemsTableSimple items={items.map((it) => ({ name: itemName(it), description: getLineDesc(it.customFields), quantity: it.quantity, rate: it.unitPrice }))} format={numFmt} />
           <div className="pdf-bottom">
             <AmountWords words={amountInWords(cn.total, "en", mark)} />
             <TotalsBox rows={[["VAT", money(cn.taxTotal)]]} grandLabel="Credit Total" grandVal={money(cn.total)} />
@@ -392,7 +401,7 @@ export default async function PrintPage({ params }: { params: Promise<{ type: st
               </>
             ) : null}
           </div>
-          <ItemsTableSimple items={items.map((it) => ({ name: itemName(it), description: getLineDesc(it.customFields), quantity: it.quantity, rate: it.unitCost }))} />
+          <ItemsTableSimple items={items.map((it) => ({ name: itemName(it), description: getLineDesc(it.customFields), quantity: it.quantity, rate: it.unitCost }))} format={numFmt} />
           <div className="pdf-bottom">
             <AmountWords words={amountInWords(dn.total, "en", mark)} />
             <TotalsBox rows={[["VAT", money(dn.taxTotal)]]} grandLabel="Debit Total" grandVal={money(dn.total)} />

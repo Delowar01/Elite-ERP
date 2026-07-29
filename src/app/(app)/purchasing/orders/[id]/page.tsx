@@ -11,7 +11,7 @@ import { t } from "@/lib/i18n/dict";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { TotalsStrip } from "../../../sales/_shared/totals-strip";
-import { fmt } from "../../../sales/_shared/totals";
+import { DocNum } from "../../../sales/_shared/money";
 import { PoDetailActions } from "../po-detail-actions";
 import { PrintButton } from "../../../sales/_shared/print-button";
 
@@ -102,10 +102,10 @@ export default async function PurchaseOrderDetailPage({ params }: { params: Prom
             <Fragment key={it.id}>
             <TableRow>
               <TableCell><LineItemCell description={it.description} /></TableCell>
-              <TableCell className="text-right font-mono">{it.quantity}</TableCell>
-              <TableCell className="text-right font-mono">{fmt(it.unitCost)}</TableCell>
+              <TableCell className="text-right font-mono"><DocNum value={it.quantity} kind="quantity" /></TableCell>
+              <TableCell className="text-right font-mono"><DocNum value={it.unitCost} kind="rate" /></TableCell>
               <TableCell className="text-right font-mono">{it.taxRatePercent}%</TableCell>
-              <TableCell className="text-right font-mono">{fmt(it.lineTotal)}</TableCell>
+              <TableCell className="text-right font-mono"><DocNum value={it.lineTotal} kind="amount" /></TableCell>
             </TableRow>
               <LineDescRow customFields={it.customFields} />
             </Fragment>

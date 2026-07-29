@@ -8,12 +8,13 @@ import { SettingsNav, SettingsNavList, SettingsNavGroupLabel, SettingsNavItem, S
 import { BusinessDetailsForm, LogoPanel, ColorThemePanel } from "./company-panels";
 import { SealSignaturePanel, PrintLayoutPanel, DefaultTermsSummary } from "./documents-panels";
 import { DefaultBankAccountPanel, FiscalYearPanel, VatConfigurationPanel } from "./finance-panel";
+import { NumberFormatPanel } from "./number-format-panel";
 import { RolesPermissionsPanel, ZatcaPanel } from "./reference-panels";
 import { TeamPanel } from "../team/team-panel";
 
 const SETTINGS_TABS = new Set([
   "business-details", "logo", "color-theme", "default-terms", "seal-signature", "print-layout",
-  "default-bank", "fiscal-year", "vat-config", "team", "roles-permissions", "zatca",
+  "default-bank", "fiscal-year", "vat-config", "number-format", "team", "roles-permissions", "zatca",
 ]);
 
 export default async function OrganizationSettingsPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
@@ -56,6 +57,7 @@ export default async function OrganizationSettingsPage({ searchParams }: { searc
           <SettingsNavItem value="default-bank">{t(locale, "Default Bank Account")}</SettingsNavItem>
           <SettingsNavItem value="fiscal-year">{t(locale, "Fiscal Year")}</SettingsNavItem>
           <SettingsNavItem value="vat-config">{t(locale, "VAT Configuration")}</SettingsNavItem>
+          <SettingsNavItem value="number-format">{t(locale, "Number Format")}</SettingsNavItem>
 
           <SettingsNavGroupLabel>{t(locale, "Users")}</SettingsNavGroupLabel>
           <SettingsNavItem value="team">{t(locale, "Team")}</SettingsNavItem>
@@ -95,6 +97,9 @@ export default async function OrganizationSettingsPage({ searchParams }: { searc
         </SettingsNavContent>
         <SettingsNavContent value="vat-config">
           <VatConfigurationPanel locale={locale} org={org} />
+        </SettingsNavContent>
+        <SettingsNavContent value="number-format">
+          <NumberFormatPanel locale={locale} org={org} />
         </SettingsNavContent>
         <SettingsNavContent value="team">
           <TeamPanel locale={locale} members={members} currentUserId={session.userId} currentUserRole={session.role} />

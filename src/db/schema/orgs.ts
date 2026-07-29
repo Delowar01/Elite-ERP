@@ -46,6 +46,15 @@ export const orgsTable = pgTable("orgs", {
   defaultTaxTreatment: text("default_tax_treatment").notNull().default("exclusive"), // inclusive | exclusive
   vatRounding: text("vat_rounding").notNull().default("nearest_0_01"),
 
+  // Number Format (Business Settings -> Number Format). Display formatting for documents only — it
+  // never changes stored accounting values. Existing orgs default to 2 decimals + international
+  // grouping + no rounding + no custom symbol (so historical documents render exactly as before).
+  numberDigitGrouping: text("number_digit_grouping").notNull().default("international"), // international | indian
+  numberDecimalPlaces: integer("number_decimal_places").notNull().default(2), // 0 | 1 | 2 | 3
+  roundQuantities: boolean("round_quantities").notNull().default(false),
+  roundRates: boolean("round_rates").notNull().default(false),
+  customCurrencySymbol: text("custom_currency_symbol"), // optional override; null = use official symbol/code
+
   // Integrations (Business Settings -> ZATCA E-Invoicing) — connection status/reference fields
   // only; the actual e-invoice generation/signing pipeline is built alongside the Invoice module.
   zatcaEnvironment: text("zatca_environment").notNull().default("sandbox"), // sandbox | production

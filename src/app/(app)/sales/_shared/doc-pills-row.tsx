@@ -10,7 +10,7 @@ const PILL_ICONS: Record<string, LucideIcon> = { percent: Percent, wallet: Walle
 const PILL_SETTINGS: Record<string, { href: string; description: string }> = {
   "VAT Settings": { href: "/settings/organization?tab=vat-config", description: "VAT is applied at your organization's configured rate." },
   Currency: { href: "/settings/organization?tab=business-details", description: "Documents use your organization's base currency." },
-  "Number Format": { href: "/settings/presets", description: "Document numbers follow your configured numbering rules." },
+  "Number Format": { href: "/settings/organization?tab=number-format", description: "Amounts follow your organization's Number Format — digit grouping, decimal places and currency symbol." },
 };
 
 // Matches the mockup's doc_pills() exactly: <div class="doc-pills-row"><div class="doc-pill-btn">...

@@ -1,6 +1,5 @@
 import { t, type Locale } from "@/lib/i18n/dict";
-import { Money } from "./money";
-import { fmt } from "./totals";
+import { Money, DocNum } from "./money";
 
 function vatPercent(subtotal: string, taxTotal: string): string {
   const sub = Number(subtotal);
@@ -39,7 +38,7 @@ export function TotalsStrip({
       {discount && Number(discount) > 0 && (
         <div className="t-row">
           <span>{t(locale, "Discount")}</span>
-          <span className="v">{fmt(discount)}</span>
+          <span className="v"><DocNum value={discount} /></span>
         </div>
       )}
       <div className="t-row">

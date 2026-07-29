@@ -22,6 +22,12 @@ export type Session = {
   orgColorThemeMode: string;
   orgCurrency: string;
   orgCountry: string | null;
+  // Number Format (Business Settings → Number Format) — display config for documents.
+  orgCustomCurrencySymbol: string | null;
+  orgNumberDigitGrouping: string;
+  orgNumberDecimalPlaces: number;
+  orgRoundQuantities: boolean;
+  orgRoundRates: boolean;
   jti?: string;
 };
 
@@ -50,6 +56,11 @@ const lookupSessionByToken = cache(async (token: string): Promise<Session | null
       orgColorThemeMode: orgsTable.colorThemeMode,
       orgCurrency: orgsTable.currency,
       orgCountry: orgsTable.country,
+      orgCustomCurrencySymbol: orgsTable.customCurrencySymbol,
+      orgNumberDigitGrouping: orgsTable.numberDigitGrouping,
+      orgNumberDecimalPlaces: orgsTable.numberDecimalPlaces,
+      orgRoundQuantities: orgsTable.roundQuantities,
+      orgRoundRates: orgsTable.roundRates,
     })
     .from(usersTable)
     .innerJoin(orgsTable, eq(orgsTable.id, usersTable.orgId))

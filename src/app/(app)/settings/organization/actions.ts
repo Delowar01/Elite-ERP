@@ -187,3 +187,23 @@ export async function updateVatConfigAction(formData: FormData): Promise<ActionR
   revalidatePath(PATH);
   return {};
 }
+
+export async function updateNumberFormatAction(formData: FormData): Promise<ActionResult> {
+  const session = await requireRole("owner", "admin");
+
+  // Digit grouping + decimal places are display-only settings, validated to the supported values.
+  const numberDigitGrouping = String(formData.get("numberDigitGrouping") ?? "international") === "indian" ? "indian" : "international";
+  const rawDecimals = Number(formData.get("numberDecimalPlaces") ?? 2);
+  const numberDecimalPlaces = [0, 1, 2, 3].includes(rawDecimals) ? rawDecimals : 2;
+  const roundQuantities = String(formData.get("roundQuantities") ?? "0") === "1";
+  const roundRates = String(formData.get("roundRates") ?? "0") === "1";
+  // Custom symbol: trimmed, capped; empty clears it (falls back to the official symbol / code).
+  const customCurrencySymbol = String(formData.get("customCurrencySymbol") ?? "").trim().slice(0, 8) || null;
+
+  await db
+    .update(orgsTable)
+    .set({ numberDigitGrouping, numberDecimalPlaces, roundQuantities, roundRates, customCurrencySymbol, updatedAt: new Date() })
+    .where(eq(orgsTable.id, session.orgId));
+  revalidatePath(PATH);
+  return {};
+}

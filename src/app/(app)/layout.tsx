@@ -6,7 +6,7 @@ import { getNotifications } from "@/lib/notifications";
 import { getFavorites } from "@/lib/favorites";
 import { AppShell } from "@/components/layout/app-shell";
 import { CurrencyProvider } from "@/components/ui/currency-mark";
-import { resolveCurrencyMark } from "@/lib/currency/currencies";
+import { buildMoneyMark } from "@/lib/currency/currencies";
 import "./mockup-parity.css";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -32,7 +32,18 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       favorites={favorites}
       sidebarPrefs={sidebarPrefs}
     >
-      <CurrencyProvider mark={resolveCurrencyMark(session.orgCurrency)}>{children}</CurrencyProvider>
+      <CurrencyProvider
+        mark={buildMoneyMark({
+          currencyCode: session.orgCurrency,
+          customCurrencySymbol: session.orgCustomCurrencySymbol,
+          digitGrouping: session.orgNumberDigitGrouping,
+          decimalPlaces: session.orgNumberDecimalPlaces,
+          roundQuantities: session.orgRoundQuantities,
+          roundRates: session.orgRoundRates,
+        })}
+      >
+        {children}
+      </CurrencyProvider>
     </AppShell>
   );
 }

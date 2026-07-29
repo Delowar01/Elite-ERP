@@ -5,10 +5,14 @@ import { Printer } from "lucide-react";
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogFooter, DialogTitle, DialogClose } from "@/components/ui/dialog";
 import { t, type Locale } from "@/lib/i18n/dict";
 import { richTextToHtml } from "@/lib/sanitize-html";
+import { CurrencyMark, useCurrency } from "@/components/ui/currency-mark";
+import { formatAmount, formatRate, formatQuantity, markFormat } from "@/lib/currency/currencies";
 import { DocumentTermsView } from "./terms-view";
 import type { DocumentTerm } from "./document-terms";
 
 export type PreviewParty = { label: string; name: string; lines: (string | null | undefined)[] };
+// unitPrice / lineTotal / quantity are RAW numeric strings; the preview formats them with the org's
+// Number Format (grouping + decimals + rounding), so Preview matches the detail page, print and PDF.
 export type PreviewItem = { description: string; desc?: string; quantity: string; unitPrice?: string; lineTotal?: string };
 export type PreviewData = {
   docLabel: string;
@@ -45,6 +49,9 @@ export function PreviewDialog({
   const [uncontrolled, setUncontrolled] = useState(false);
   const open = controlledOpen ?? uncontrolled;
   const setOpen = onOpenChange ?? setUncontrolled;
+  const mark = useCurrency();
+  const cfg = markFormat(mark);
+  const sym = <CurrencyMark mark={mark} />;
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
@@ -88,9 +95,9 @@ export function PreviewDialog({
                   <Fragment key={i}>
                     <tr className={it.desc && it.desc.trim() ? "" : "border-b border-[#eee]"}>
                       <td className="py-1">{it.description || "—"}</td>
-                      <td className="py-1 text-right">{it.quantity}</td>
-                      {data.showPricing && <td className="py-1 text-right">{it.unitPrice}</td>}
-                      {data.showPricing && <td className="py-1 text-right">{it.lineTotal}</td>}
+                      <td className="py-1 text-right">{formatQuantity(it.quantity, cfg)}</td>
+                      {data.showPricing && <td className="py-1 text-right">{it.unitPrice !== undefined ? formatRate(it.unitPrice, cfg) : ""}</td>}
+                      {data.showPricing && <td className="py-1 text-right">{it.lineTotal !== undefined ? formatAmount(it.lineTotal, cfg) : ""}</td>}
                     </tr>
                     {it.desc && it.desc.trim() && (
                       <tr className="border-b border-[#eee]">
@@ -106,10 +113,10 @@ export function PreviewDialog({
           </table>
           {data.showPricing && data.totals && (
             <div className="flex flex-col items-end gap-0.5 text-[12px] mb-3">
-              <Row label={t(locale, "Sub Total")} value={`${data.currency} ${data.totals.subtotal}`} />
-              {Number(data.totals.discount) > 0 && <Row label={t(locale, "Discount")} value={`- ${data.currency} ${data.totals.discount}`} />}
-              <Row label={t(locale, "VAT Total")} value={`${data.currency} ${data.totals.taxTotal}`} />
-              <Row label={t(locale, "Grand Total")} value={`${data.currency} ${data.totals.total}`} bold />
+              <Row label={t(locale, "Sub Total")} value={<>{sym} {formatAmount(data.totals.subtotal, cfg)}</>} />
+              {Number(data.totals.discount) > 0 && <Row label={t(locale, "Discount")} value={<>- {sym} {formatAmount(data.totals.discount, cfg)}</>} />}
+              <Row label={t(locale, "VAT Total")} value={<>{sym} {formatAmount(data.totals.taxTotal, cfg)}</>} />
+              <Row label={t(locale, "Grand Total")} value={<>{sym} {formatAmount(data.totals.total, cfg)}</>} bold />
             </div>
           )}
           {data.terms && data.terms.length > 0 && (
@@ -149,7 +156,7 @@ function PartyBlock({ party }: { party: PreviewParty }) {
   );
 }
 
-function Row({ label, value, bold }: { label: string; value: string; bold?: boolean }) {
+function Row({ label, value, bold }: { label: string; value: React.ReactNode; bold?: boolean }) {
   return (
     <div className={`flex justify-between gap-8 w-52 ${bold ? "font-bold border-t border-[#ddd] pt-1" : ""}`}>
       <span className="text-[#777]">{label}</span>

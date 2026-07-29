@@ -15,7 +15,7 @@ import { PartyCardSimple } from "../../_shared/party-card";
 import { TotalsStrip } from "../../_shared/totals-strip";
 import { EInvoicePreviewPanel } from "../../_shared/einvoice-preview-panel";
 import { DocRelationships } from "../../_shared/doc-relationships";
-import { fmt } from "../../_shared/totals";
+import { DocNum } from "../../_shared/money";
 import { InvoiceDetailActions } from "../invoice-detail-actions";
 import { PrintButton } from "../../_shared/print-button";
 
@@ -143,10 +143,10 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
                 <Fragment key={it.id}>
             <TableRow>
                   <TableCell><LineItemCell description={it.description} /></TableCell>
-                  <TableCell className="text-right font-mono">{it.quantity}</TableCell>
-                  <TableCell className="text-right font-mono">{fmt(it.unitPrice)}</TableCell>
+                  <TableCell className="text-right font-mono"><DocNum value={it.quantity} kind="quantity" /></TableCell>
+                  <TableCell className="text-right font-mono"><DocNum value={it.unitPrice} kind="rate" /></TableCell>
                   <TableCell className="text-right font-mono">{it.taxRatePercent}%</TableCell>
-                  <TableCell className="text-right font-mono">{fmt(it.lineTotal)}</TableCell>
+                  <TableCell className="text-right font-mono"><DocNum value={it.lineTotal} kind="amount" /></TableCell>
                 </TableRow>
               <LineDescRow customFields={it.customFields} />
             </Fragment>

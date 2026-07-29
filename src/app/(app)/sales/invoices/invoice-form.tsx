@@ -19,7 +19,7 @@ import { DocActionBar } from "../_shared/doc-action-bar";
 import { DocTopActions } from "../_shared/doc-top-actions";
 import { PreviewDialog, type PreviewData } from "../_shared/preview-dialog";
 import { EInvoicePreviewPanel } from "../_shared/einvoice-preview-panel";
-import { computeTotals, fmt } from "../_shared/totals";
+import { computeTotals } from "../_shared/totals";
 import { ConfigureColumnsDialog } from "../_shared/configure-columns-dialog";
 import { resolveColumns, type ColumnDef } from "@/lib/column-config";
 import { t, type Locale } from "@/lib/i18n/dict";
@@ -108,7 +108,7 @@ export function InvoiceForm({
     ],
     from: { label: t(locale, "From"), name: org.name, lines: [org.address, org.email, org.phone] },
     to: selectedCustomer ? { label: t(locale, "To Client"), name: selectedCustomer.name, lines: [selectedCustomer.address, selectedCustomer.email, selectedCustomer.phone] } : undefined,
-    items: items.map((it) => ({ description: it.description, desc: getLineDesc(it.customFields), quantity: it.quantity, unitPrice: fmt(Number(it.unitPrice) || 0), lineTotal: fmt((Number(it.quantity) || 0) * (Number(it.unitPrice) || 0)) })),
+    items: items.map((it) => ({ description: it.description, desc: getLineDesc(it.customFields), quantity: it.quantity, unitPrice: String(Number(it.unitPrice) || 0), lineTotal: String((Number(it.quantity) || 0) * (Number(it.unitPrice) || 0)) })),
     showPricing: true,
     totals: { subtotal: totals.subtotal, discount: totals.discount, taxTotal: totals.taxTotal, total: totals.total },
     notes,

@@ -1,4 +1,5 @@
 import { Fragment } from "react";
+import { DocNum } from "../../_shared/money";
 import { notFound } from "next/navigation";
 import { eq, and } from "drizzle-orm";
 import { DocumentTermsView } from "../../_shared/terms-view";
@@ -101,7 +102,7 @@ export default async function DcDetailPage({ params }: { params: Promise<{ id: s
             <Fragment key={it.id}>
             <TableRow>
               <TableCell><LineItemCell description={it.description} /></TableCell>
-              <TableCell className="text-right font-mono">{it.quantity}</TableCell>
+              <TableCell className="text-right font-mono"><DocNum value={it.quantity} kind="quantity" /></TableCell>
             </TableRow>
               <LineDescRow customFields={it.customFields} />
             </Fragment>

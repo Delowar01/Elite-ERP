@@ -25,10 +25,13 @@ export function useCurrency(): Mark {
   return useContext(CurrencyContext);
 }
 
-// Renders just the currency mark (symbol or code fallback). Pass `mark` to override the org currency
-// (e.g. a settings preview); otherwise it uses the org currency from context.
+// Renders just the currency mark. Display priority: (1) a configured custom symbol, (2) the official
+// currency symbol (the SAR asset, or a text symbol), (3) the currency code. Pass `mark` to override
+// the org currency (e.g. a settings preview); otherwise it uses the org currency from context.
 export function CurrencyMark({ mark, className }: { mark?: Mark; className?: string }) {
   const m = mark ?? useContext(CurrencyContext); // eslint-disable-line react-hooks/rules-of-hooks
+  const custom = m.format?.customCurrencySymbol?.trim();
+  if (custom) return <span className={className}>{custom}</span>;
   if (m.type === "asset") {
     // Our only asset currency is SAR; the official symbol renders inline so it inherits the text
     // colour (correct in light and dark). The same vector is also stored at m.value for PDF/img use.

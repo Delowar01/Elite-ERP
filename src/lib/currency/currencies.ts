@@ -23,7 +23,31 @@ export type Currency = {
   isActive: boolean;
 };
 
+// ---- Number Format (per-org display configuration, Business Settings → Number Format) ----
+// Applies to DOCUMENT display only (forms / detail / preview / print / PDF). It never changes stored
+// accounting values and never re-computes server totals — those always run on the raw stored numbers.
+export type DigitGrouping = "international" | "indian";
+
+export type NumberFormatConfig = {
+  digitGrouping: DigitGrouping; // international 12,345,679  |  indian 1,23,45,679
+  decimalPlaces: number;        // 0 | 1 | 2 | 3 — how many decimals money amounts show in documents
+  roundQuantities: boolean;     // display quantities rounded to whole numbers
+  roundRates: boolean;          // display rates rounded to whole numbers
+  customCurrencySymbol: string | null; // optional symbol override (highest display priority)
+};
+
+// Existing orgs default here: 2 decimals, international grouping, no rounding, no custom symbol.
+export const DEFAULT_NUMBER_FORMAT: NumberFormatConfig = {
+  digitGrouping: "international",
+  decimalPlaces: 2,
+  roundQuantities: false,
+  roundRates: false,
+  customCurrencySymbol: null,
+};
+
 // A resolved, render-ready mark. Kept small so it can cross the server→client boundary cheaply.
+// `format` carries the org's Number Format config so a single mark drives symbol + grouping +
+// decimals everywhere it flows (context on the client, explicit prop on the print route).
 export type CurrencyMark = {
   type: CurrencySymbolType;
   value: string;
@@ -31,6 +55,7 @@ export type CurrencyMark = {
   decimalPlaces: number;
   code: string;
   name: string;
+  format?: NumberFormatConfig;
 };
 
 export const SAR_SYMBOL_ASSET = "/assets/currencies/sar-symbol.svg";
@@ -255,10 +280,13 @@ export function resolveCurrencyMark(code: string | null | undefined): CurrencyMa
   };
 }
 
-// The one shared string helper: a text symbol when available, otherwise the code. Asset symbols
-// have no plain-text form, so they resolve to the code for text-only contexts (aria labels, plain
-// exports); the <CurrencyMark> component renders the actual asset visually.
+// The one shared string helper: display priority is (1) custom symbol, (2) official text symbol,
+// (3) currency code. Asset symbols (SAR) have no plain-text form, so they resolve to the code for
+// text-only contexts (aria labels, plain exports); the <CurrencyMark> component renders the actual
+// asset visually. A configured custom symbol always wins, even over the SAR asset, in text contexts.
 export function displayCurrency(mark: CurrencyMark): string {
+  const custom = mark.format?.customCurrencySymbol?.trim();
+  if (custom) return custom;
   if (mark.type === "text") return mark.value.trim() || mark.fallback;
   return mark.fallback;
 }
@@ -273,9 +301,75 @@ export function moneyDecimals(context: MoneyDisplayContext): number {
   return context === "summary" ? 0 : 2;
 }
 
-// The single shared number formatter. Rounds (never truncates) via toLocaleString.
+// The single shared number formatter for SUMMARY-context money (dashboards / reports / overview
+// cards — always 0 decimals) and any legacy caller. Documents use the Number-Format-aware helpers
+// below (formatAmount / formatRate / formatQuantity) so the org's grouping + decimals + rounding
+// apply. Both round (never truncate) via toLocaleString.
 export function formatMoneyNumber(amount: string | number, context: MoneyDisplayContext = "document"): string {
   const n = Number(amount) || 0;
   const d = moneyDecimals(context);
   return n.toLocaleString(undefined, { minimumFractionDigits: d, maximumFractionDigits: d });
+}
+
+// ---- Number Format helpers (document display only; the shared formatting utility) ----
+
+// Clamp the decimal-places setting to the supported 0..3 range.
+export function clampDecimals(d: number | null | undefined): number {
+  const n = Math.trunc(Number(d));
+  if (!Number.isFinite(n) || n < 0) return 0;
+  return n > 3 ? 3 : n;
+}
+
+// International grouping renders 12,345,679; Indian grouping renders 1,23,45,679. Achieved via the
+// locale's own grouping rules (en-US vs en-IN) rather than hand-rolled digit chunking.
+function groupingLocale(g: DigitGrouping): string {
+  return g === "indian" ? "en-IN" : "en-US";
+}
+
+export function markFormat(mark?: CurrencyMark | null): NumberFormatConfig {
+  return mark?.format ?? DEFAULT_NUMBER_FORMAT;
+}
+
+// A money amount (line amount, VAT, subtotal, total, discount) — grouping + configured decimals.
+export function formatAmount(value: string | number, cfg: NumberFormatConfig = DEFAULT_NUMBER_FORMAT): string {
+  const n = Number(value) || 0;
+  const d = clampDecimals(cfg.decimalPlaces);
+  return n.toLocaleString(groupingLocale(cfg.digitGrouping), { minimumFractionDigits: d, maximumFractionDigits: d });
+}
+
+// A unit rate — like an amount, but rounded to a whole number when "Round rates" is enabled.
+export function formatRate(value: string | number, cfg: NumberFormatConfig = DEFAULT_NUMBER_FORMAT): string {
+  const n = Number(value) || 0;
+  const d = cfg.roundRates ? 0 : clampDecimals(cfg.decimalPlaces);
+  return n.toLocaleString(groupingLocale(cfg.digitGrouping), { minimumFractionDigits: d, maximumFractionDigits: d });
+}
+
+// A quantity — grouped; rounded to a whole number when "Round quantities" is enabled, otherwise
+// shown with up to 3 trailing decimals (trailing zeros trimmed).
+export function formatQuantity(value: string | number, cfg: NumberFormatConfig = DEFAULT_NUMBER_FORMAT): string {
+  const n = Number(value) || 0;
+  if (cfg.roundQuantities) return Math.round(n).toLocaleString(groupingLocale(cfg.digitGrouping));
+  return n.toLocaleString(groupingLocale(cfg.digitGrouping), { minimumFractionDigits: 0, maximumFractionDigits: 3 });
+}
+
+// Build the org's render-ready money mark: the official currency mark with the Number Format config
+// attached. One mark then drives symbol + grouping + decimals + rounding everywhere it flows.
+export function buildMoneyMark(opts: {
+  currencyCode: string | null | undefined;
+  customCurrencySymbol?: string | null;
+  digitGrouping?: string | null;
+  decimalPlaces?: number | null;
+  roundQuantities?: boolean | null;
+  roundRates?: boolean | null;
+}): CurrencyMark {
+  const base = resolveCurrencyMark(opts.currencyCode);
+  const custom = (opts.customCurrencySymbol ?? "").trim();
+  const format: NumberFormatConfig = {
+    digitGrouping: opts.digitGrouping === "indian" ? "indian" : "international",
+    decimalPlaces: clampDecimals(opts.decimalPlaces ?? 2),
+    roundQuantities: !!opts.roundQuantities,
+    roundRates: !!opts.roundRates,
+    customCurrencySymbol: custom || null,
+  };
+  return { ...base, format };
 }

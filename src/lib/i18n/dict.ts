@@ -57,6 +57,22 @@ const DICT: Record<string, string> = {
   "Collapse sidebar": "طيّ الشريط الجانبي",
   "Expand sidebar": "توسيع الشريط الجانبي",
 
+  // ---- Number Format (Business Settings → Number Format) ----
+  "Number Format": "تنسيق الأرقام",
+  "Controls how numbers appear on documents. This never changes stored accounting values or recalculates past transactions.":
+    "يتحكم في طريقة ظهور الأرقام على المستندات. لا يغيّر هذا القيم المحاسبية المخزّنة ولا يعيد احتساب المعاملات السابقة.",
+  "Live Preview": "معاينة مباشرة",
+  "Digit Grouping": "تجميع الأرقام",
+  International: "دولي",
+  Indian: "هندي",
+  "Decimal Places": "المنازل العشرية",
+  "Round quantities to whole numbers": "تقريب الكميات إلى أرقام صحيحة",
+  "Round rates to whole numbers": "تقريب الأسعار إلى أرقام صحيحة",
+  "Custom Currency Symbol": "رمز عملة مخصّص",
+  "Leave empty to use the official symbol": "اتركه فارغًا لاستخدام الرمز الرسمي",
+  "When set, this symbol is shown instead of the official currency symbol. Leave empty to keep the official symbol (or the currency code when none exists).":
+    "عند تعيينه، يُعرض هذا الرمز بدلًا من رمز العملة الرسمي. اتركه فارغًا للإبقاء على الرمز الرسمي (أو رمز العملة عند عدم وجود رمز).",
+
   // ---- Main Search (ERP records) + ⌘K Command palette ----
   "Search records": "بحث السجلات",
   "Search records…": "بحث السجلات…",
