@@ -3,9 +3,9 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LogOut, Settings } from "lucide-react";
-import { LogoMark } from "@/components/brand/logo-mark";
 import { NAV_GROUPS } from "./nav-config";
 import { buildThemeOverrideCss, isColorThemeMode } from "@/lib/brand-theme";
+import { Sidebar } from "./sidebar";
 import { TopbarSearch } from "./topbar-search";
 import { NotificationsMenu } from "./notifications-menu";
 import { ThemeToggle } from "./theme-toggle";
@@ -13,6 +13,7 @@ import { FavoritesMenu } from "./favorites-menu";
 import type { NotificationItem } from "@/lib/notifications";
 import type { FavoriteItem } from "@/lib/favorites";
 import type { Theme } from "@/lib/theme";
+import type { SidebarPrefs } from "@/lib/sidebar-prefs";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -22,44 +23,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
-import { cn } from "@/lib/utils";
 import { logoutAction } from "@/app/(app)/actions";
 import { LanguageSwitcher } from "./language-switcher";
 import { t, type Locale } from "@/lib/i18n/dict";
-
-// Routes with a built page — the rest are planned nav items for sections not yet implemented.
-// Prefetching those 404s on every render since Section 1, keep this in sync as sections ship.
-const BUILT_ROUTES = new Set([
-  "/dashboard",
-  "/clients",
-  "/purchasing/vendors",
-  "/inventory/products",
-  "/settings/presets",
-  "/settings/organization",
-  "/finance/bank-accounts",
-  "/finance/journal",
-  "/finance/chart-of-accounts",
-  "/finance/ledger",
-  "/finance/reports",
-  "/sales/quotations",
-  "/sales/orders",
-  "/sales/proforma",
-  "/sales/invoices",
-  "/sales/delivery-challans",
-  "/sales/credit-notes",
-  "/purchasing/orders",
-  "/purchasing/debit-notes",
-  "/finance/payments",
-  "/projects",
-  "/hr/employees",
-  "/hr/departments",
-  "/hr/attendance",
-  "/hr/leave",
-  "/hr/payroll",
-  "/settings/security",
-  "/settings/compliance",
-  "/recycle-bin",
-]);
 
 const ROLE_LABELS: Record<SessionUser["role"], string> = { owner: "Owner", admin: "Admin", staff: "Staff" };
 
@@ -81,6 +47,7 @@ export function AppShell({
   notifications,
   unreadCount,
   favorites,
+  sidebarPrefs,
   children,
 }: {
   user: SessionUser;
@@ -94,6 +61,7 @@ export function AppShell({
   notifications: NotificationItem[];
   unreadCount: number;
   favorites: FavoriteItem[];
+  sidebarPrefs: SidebarPrefs;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -121,49 +89,14 @@ export function AppShell({
   return (
     <div className="flex min-h-screen">
       <style>{themeOverrideCss}</style>
-      <aside className="sidebar">
-        {orgLogoUrl ? (
-          <div className="sidebar-brand">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={orgLogoUrl} alt={orgName} className="h-9 max-w-full object-contain" />
-          </div>
-        ) : (
-          <>
-            <div className="sidebar-brand">
-              <LogoMark size={30} color="var(--brand-orange)" />
-              <div className="sidebar-brand-text">
-                <div className="word1">ELITE</div>
-                <div className="word2">INNOVATION SOLUTIONS</div>
-              </div>
-            </div>
-            <div className="sidebar-product">Elite ERP</div>
-          </>
-        )}
-        {NAV_GROUPS.map((group, gi) => {
-          const items = group.items.filter((it) => !it.roles || it.roles.includes(user.role));
-          if (items.length === 0) return null;
-          return (
-            <div key={gi} className="nav-group">
-              {group.label && <div className="nav-divider">{t(locale, group.label)}</div>}
-              {items.map((item) => {
-                const active = pathname === item.href || pathname.startsWith(item.href + "/");
-                const Icon = item.icon;
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    prefetch={BUILT_ROUTES.has(item.href) ? undefined : false}
-                    className={cn("nav-item", active && "active")}
-                  >
-                    <Icon className="size-4" />
-                    {t(locale, item.label)}
-                  </Link>
-                );
-              })}
-            </div>
-          );
-        })}
-      </aside>
+      <Sidebar
+        role={user.role}
+        locale={locale}
+        orgName={orgName}
+        orgLogoUrl={orgLogoUrl}
+        initialCollapsed={sidebarPrefs.collapsed}
+        initialCollapsedGroups={sidebarPrefs.collapsedGroups}
+      />
 
       <div className="flex-1 flex flex-col min-w-0">
         <header className="topbar sticky top-0 z-30">

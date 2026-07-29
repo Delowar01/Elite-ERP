@@ -1,6 +1,7 @@
 import { requireSession } from "@/lib/session";
 import { getLocale } from "@/lib/i18n/server";
 import { getTheme } from "@/lib/theme";
+import { getSidebarPrefs } from "@/lib/sidebar-prefs";
 import { getNotifications } from "@/lib/notifications";
 import { getFavorites } from "@/lib/favorites";
 import { AppShell } from "@/components/layout/app-shell";
@@ -12,6 +13,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const session = await requireSession();
   const locale = await getLocale();
   const theme = await getTheme();
+  const sidebarPrefs = await getSidebarPrefs();
   const notifications = await getNotifications(session.orgId, session.userId);
   const favorites = await getFavorites(session.orgId, session.userId);
 
@@ -28,6 +30,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       notifications={notifications.items}
       unreadCount={notifications.unreadCount}
       favorites={favorites}
+      sidebarPrefs={sidebarPrefs}
     >
       <CurrencyProvider mark={resolveCurrencyMark(session.orgCurrency)}>{children}</CurrencyProvider>
     </AppShell>

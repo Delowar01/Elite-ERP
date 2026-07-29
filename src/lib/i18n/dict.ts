@@ -54,6 +54,8 @@ const DICT: Record<string, string> = {
   "Search anything…": "ابحث عن أي شيء…",
   Favorites: "المفضلة",
   Notifications: "الإشعارات",
+  "Collapse sidebar": "طيّ الشريط الجانبي",
+  "Expand sidebar": "توسيع الشريط الجانبي",
 
   // ---- Main Search (ERP records) + ⌘K Command palette ----
   "Search records": "بحث السجلات",
