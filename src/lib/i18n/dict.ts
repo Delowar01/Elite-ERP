@@ -55,6 +55,27 @@ const DICT: Record<string, string> = {
   Favorites: "المفضلة",
   Notifications: "الإشعارات",
 
+  // ---- Main Search (ERP records) + ⌘K Command palette ----
+  "Search records": "بحث السجلات",
+  "Search records…": "بحث السجلات…",
+  "Search ERP records…": "ابحث في سجلات النظام…",
+  "Find clients, documents, products, employees and more": "ابحث عن العملاء والمستندات والمنتجات والموظفين والمزيد",
+  "Type at least 2 characters to search.": "اكتب حرفين على الأقل للبحث.",
+  "No records found.": "لم يتم العثور على سجلات.",
+  "Search failed. Please try again.": "فشل البحث. يرجى المحاولة مرة أخرى.",
+  "Command menu": "قائمة الأوامر",
+  "Jump to a page or run a quick action": "انتقل إلى صفحة أو نفّذ إجراءً سريعًا",
+  "Type a command or search a page…": "اكتب أمرًا أو ابحث عن صفحة…",
+  Pages: "الصفحات",
+  "Add Client": "إضافة عميل",
+  "Add Vendor": "إضافة مورّد",
+  "Add Product": "إضافة منتج",
+  "Add Project": "إضافة مشروع",
+  "Switch language to Arabic": "التبديل إلى العربية",
+  "Switch language to English": "التبديل إلى الإنجليزية",
+  "Switch appearance": "تبديل المظهر",
+  "Journal Entries": "قيود اليومية",
+
   // ---- shared form/table actions ----
   Saved: "تم الحفظ",
   Deleted: "تم الحذف",

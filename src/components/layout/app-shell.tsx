@@ -6,7 +6,7 @@ import { LogOut, Settings } from "lucide-react";
 import { LogoMark } from "@/components/brand/logo-mark";
 import { NAV_GROUPS } from "./nav-config";
 import { buildThemeOverrideCss, isColorThemeMode } from "@/lib/brand-theme";
-import { CommandPalette } from "./command-palette";
+import { TopbarSearch } from "./topbar-search";
 import { NotificationsMenu } from "./notifications-menu";
 import { ThemeToggle } from "./theme-toggle";
 import { FavoritesMenu } from "./favorites-menu";
@@ -172,7 +172,7 @@ export function AppShell({
             <p>{orgName}</p>
           </div>
           <div className="topbar-actions">
-            <CommandPalette locale={locale} />
+            <TopbarSearch locale={locale} role={user.role} />
             <LanguageSwitcher locale={locale} />
             <ThemeToggle locale={locale} initial={theme} />
             <FavoritesMenu locale={locale} favorites={favorites} currentLabel={pageTitle} />
