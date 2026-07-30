@@ -5,10 +5,10 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { FormField } from "@/components/ui/form-field";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
-import { getProfileByCountryName } from "@/lib/geo/country-profiles";
 import { t, type Locale } from "@/lib/i18n/dict";
 import type { Org, BankAccount } from "@/db";
-import { updateDefaultBankAccountAction, updateFiscalYearAction, updateVatConfigAction } from "./actions";
+import { updateDefaultBankAccountAction, updateFiscalYearAction } from "./actions";
+import { VatSettingsForm } from "./vat-settings-form";
 
 const MONTHS = [
   "January", "February", "March", "April", "May", "June",
@@ -98,72 +98,8 @@ export function FiscalYearPanel({ locale, org }: { locale: Locale; org: Org }) {
   );
 }
 
+// Business Settings → VAT Configuration reuses the shared VatSettingsForm (same form + save action
+// as the in-document VAT Settings popup — one implementation, no duplication).
 export function VatConfigurationPanel({ locale, org }: { locale: Locale; org: Org }) {
-  const [pending, startTransition] = useTransition();
-  const [vatStatus, setVatStatus] = useState(org.vatRegistrationStatus);
-  const [taxTreatment, setTaxTreatment] = useState(org.defaultTaxTreatment);
-  const [rounding, setRounding] = useState(org.vatRounding);
-
-  function submit() {
-    const formData = new FormData();
-    formData.set("vatRegistrationStatus", vatStatus);
-    formData.set("defaultTaxTreatment", taxTreatment);
-    formData.set("vatRounding", rounding);
-    startTransition(async () => {
-      const result = await updateVatConfigAction(formData);
-      if (result.error) toast.error(result.error);
-      else toast.success(t(locale, "Saved"));
-    });
-  }
-
-  const profile = getProfileByCountryName(org.country);
-
-  return (
-    <div className="flex flex-col gap-4 max-w-lg">
-      <h3 className="text-[17px] font-bold">{t(locale, "VAT Configuration")}</h3>
-      <p className="text-[12.5px] text-ink-muted -mt-2">
-        {t(locale, "Default VAT Rate")}: <span className="font-semibold">{profile.defaultTaxRate}%</span> · {t(locale, "from your country profile")} ({profile.countryName})
-      </p>
-      <div className="grid grid-cols-1 gap-4">
-        <FormField label={t(locale, "Registration Status")} htmlFor="vat-status">
-          <Select value={vatStatus} onValueChange={setVatStatus}>
-            <SelectTrigger id="vat-status">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="registered">{t(locale, "Registered")}</SelectItem>
-              <SelectItem value="not_registered">{t(locale, "Not Registered")}</SelectItem>
-            </SelectContent>
-          </Select>
-        </FormField>
-        <FormField label={t(locale, "Default Tax Treatment")} htmlFor="tax-treatment">
-          <Select value={taxTreatment} onValueChange={setTaxTreatment}>
-            <SelectTrigger id="tax-treatment">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="exclusive">{t(locale, "Exclusive of VAT")}</SelectItem>
-              <SelectItem value="inclusive">{t(locale, "Inclusive of VAT")}</SelectItem>
-            </SelectContent>
-          </Select>
-        </FormField>
-        <FormField label={t(locale, "Rounding Rule")} htmlFor="vat-rounding">
-          <Select value={rounding} onValueChange={setRounding}>
-            <SelectTrigger id="vat-rounding">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="nearest_0_01">{t(locale, "Round to nearest 0.01 (Halala)")}</SelectItem>
-              <SelectItem value="nearest_1">{t(locale, "Round to nearest 1")}</SelectItem>
-            </SelectContent>
-          </Select>
-        </FormField>
-      </div>
-      <div>
-        <Button onClick={submit} disabled={pending}>
-          {pending ? t(locale, "Saving…") : t(locale, "Save")}
-        </Button>
-      </div>
-    </div>
-  );
+  return <VatSettingsForm locale={locale} org={org} />;
 }

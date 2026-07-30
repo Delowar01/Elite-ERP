@@ -61,12 +61,12 @@ export default async function EditInvoicePage({ params }: { params: Promise<{ id
           customerId: String(inv.customerId),
           projectId: inv.projectId ? String(inv.projectId) : "",
           issueDate: inv.issueDate,
-          dueDate: inv.dueDate ?? "",
           discount: inv.discount,
           notes: inv.notes ?? "",
           terms: inv.terms ?? [],
           items: initialItems,
           bankAccountIds: initialSelectedIds(inv.bankAccounts, bankData.bankAccounts),
+          currency: inv.currency ?? undefined,
         }}
       />
     </div>

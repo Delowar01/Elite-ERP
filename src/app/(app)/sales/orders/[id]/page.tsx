@@ -12,6 +12,8 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { PartyCardSimple } from "../../_shared/party-card";
 import { BankAccountBlocks } from "../../_shared/bank-account-blocks";
+import { CurrencyProvider } from "@/components/ui/currency-mark";
+import { docMoneyMark } from "../../_shared/doc-currency";
 import { TotalsStrip } from "../../_shared/totals-strip";
 import { DocNum } from "../../_shared/money";
 import { OrderDetailActions } from "../order-detail-actions";
@@ -45,6 +47,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
       notes: salesOrdersTable.notes,
       terms: salesOrdersTable.terms,
       bankAccounts: salesOrdersTable.bankAccounts,
+      currency: salesOrdersTable.currency,
       customerName: customersTable.name,
       customerVatNumber: customersTable.vatNumber,
       customerAddress: customersTable.address,
@@ -64,6 +67,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
   ]);
 
   return (
+    <CurrencyProvider mark={docMoneyMark(org, order.currency)}>
     <div className="max-w-4xl mx-auto">
       <div className="inv-head">
         <div>
@@ -143,5 +147,6 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
         </div>
       )}
     </div>
+    </CurrencyProvider>
   );
 }

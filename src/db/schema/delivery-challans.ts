@@ -33,6 +33,7 @@ export const deliveryChallansTable = pgTable("delivery_challans", {
   notes: text("notes"),
   terms: jsonb("terms").$type<{ text: string; groupId: number | null; groupName: string | null }[]>(),
   bankAccounts: jsonb("bank_accounts").$type<DocBankAccount[]>(),
+  currency: text("currency"), // per-document currency code (ISO); null = org base currency
   createdById: integer("created_by_id")
     .notNull()
     .references(() => usersTable.id),

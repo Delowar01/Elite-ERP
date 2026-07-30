@@ -19,6 +19,7 @@ export function RichTextField({
   compact = false,
   minHeightPx,
   maxHeightPx,
+  onRemove,
 }: {
   locale: Locale;
   value: string;
@@ -30,6 +31,12 @@ export function RichTextField({
   minHeightPx?: number;
   /** Optional cap; the body scrolls internally past this height. */
   maxHeightPx?: number;
+  /**
+   * When provided, the toolbar's X becomes a REMOVE action (calls onRemove) instead of a
+   * collapse toggle — the parent is expected to clear the value and unmount this whole editor
+   * (toolbar included). Used by the Note editor so removing a note also hides its toolbar.
+   */
+  onRemove?: () => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const [collapsed, setCollapsed] = useState(false);
@@ -90,7 +97,13 @@ export function RichTextField({
         <button type="button" className={btn} onMouseDown={(e) => e.preventDefault()} onClick={() => exec("redo")} title={t(locale, "Redo")} aria-label={t(locale, "Redo")}>
           <Redo2 className="size-3.5" />
         </button>
-        <button type="button" className="rte-close cursor-pointer hover:text-danger" onClick={() => setCollapsed((c) => !c)} title={t(locale, "Close editor")} aria-label={t(locale, "Close editor")}>
+        <button
+          type="button"
+          className="rte-close cursor-pointer hover:text-danger"
+          onClick={() => (onRemove ? onRemove() : setCollapsed((c) => !c))}
+          title={t(locale, onRemove ? "Remove note" : "Close editor")}
+          aria-label={t(locale, onRemove ? "Remove note" : "Close editor")}
+        >
           <X className="size-3.5" />
         </button>
       </div>

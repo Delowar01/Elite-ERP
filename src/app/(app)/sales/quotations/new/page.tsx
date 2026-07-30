@@ -27,7 +27,8 @@ export default async function NewQuotationPage() {
   return (
     <div className="max-w-5xl mx-auto">
       <QuotationForm locale={locale} customers={customers} products={products} org={org} numberPreview={numberPreview} projects={projects} noteTemplates={presets.noteTemplates} termsGroups={presets.termsGroups}
-        columnConfig={columnConfig} bankAccounts={bankData.bankAccounts} glAccounts={bankData.glAccounts} defaultBankAccountIds={bankData.defaultBankAccountIds} />
+        columnConfig={columnConfig} bankAccounts={bankData.bankAccounts} glAccounts={bankData.glAccounts} defaultBankAccountIds={bankData.defaultBankAccountIds}
+        defaultValidityDays={org.defaultValidityDays} />
     </div>
   );
 }

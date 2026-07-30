@@ -3,10 +3,9 @@
 import { useState, useTransition } from "react";
 import { getLineDesc } from "../_shared/line-item-desc";
 import { toast } from "sonner";
-import { Receipt, Settings, Columns3 } from "lucide-react";
+import { Receipt, Columns3 } from "lucide-react";
 import { PartyCardStatic, PartyCardSelect } from "../_shared/party-card";
 import { DocFieldBox } from "../_shared/doc-field-box";
-import { DateSettingsDialog } from "../_shared/date-settings-dialog";
 import { DocBrandPanel } from "../_shared/doc-brand-panel";
 import { DocPillsRow } from "../_shared/doc-pills-row";
 import { LineItemsEditor, emptyLineItem, type LineItemDraft } from "../_shared/line-items-editor";
@@ -23,6 +22,8 @@ import { BankAccountsField } from "../_shared/bank-accounts-field";
 import { snapshotSelectedBankAccounts } from "@/lib/document-bank-accounts";
 import type { EditableBankAccount, GlAccountOption } from "../../finance/bank-accounts/bank-account-form-dialog";
 import { computeTotals } from "../_shared/totals";
+import { CurrencyProvider } from "@/components/ui/currency-mark";
+import { docMoneyMark } from "../_shared/doc-currency";
 import { ConfigureColumnsDialog } from "../_shared/configure-columns-dialog";
 import { resolveColumns, type ColumnDef } from "@/lib/column-config";
 import { t, type Locale } from "@/lib/i18n/dict";
@@ -36,12 +37,12 @@ export type InvoiceFormInitial = {
   customerId: string;
   projectId: string;
   issueDate: string;
-  dueDate: string;
   discount: string;
   notes: string;
   items: LineItemDraft[];
   terms?: DocumentTerm[];
   bankAccountIds?: number[];
+  currency?: string;
 };
 
 export function InvoiceForm({
@@ -83,12 +84,13 @@ export function InvoiceForm({
   const [customerId, setCustomerId] = useState(initial?.customerId ?? "");
   const [projectId, setProjectId] = useState(initial?.projectId ?? "");
   const [issueDate, setIssueDate] = useState(initial?.issueDate ?? new Date().toISOString().slice(0, 10));
-  const [dueDate, setDueDate] = useState(initial?.dueDate ?? "");
   const [discount, setDiscount] = useState(initial?.discount ?? "0");
   const defaultNote = noteTemplates.find((n) => n.isDefault) ?? noteTemplates[0];
   const [notes, setNotes] = useState(initial?.notes ?? defaultNote?.content ?? "");
   const [terms, setTerms] = useState<DocumentTerm[]>(initial?.terms ?? []);
   const [bankAccountIds, setBankAccountIds] = useState<number[]>(initial?.bankAccountIds ?? (mode === "create" ? defaultBankAccountIds : []));
+  const [currency, setCurrency] = useState<string>(initial?.currency ?? org.currency);
+  const docMark = docMoneyMark(org, currency);
   const countryProfile = getProfileByCountryName(org.country);
   const defaultTaxRate = String(countryProfile.defaultTaxRate);
   const [items, setItems] = useState<LineItemDraft[]>(initial?.items && initial.items.length > 0 ? initial.items : [emptyLineItem(defaultTaxRate)]);
@@ -103,7 +105,7 @@ export function InvoiceForm({
   function submit(andSend: boolean) {
     const start = andSend ? startPrimaryTransition : startDraftTransition;
     start(async () => {
-      const payload = { title, customerId, projectId, issueDate, dueDate, discount, notes, terms, items, attachments, bankAccountIds };
+      const payload = { title, customerId, projectId, issueDate, discount, notes, terms, items, attachments, bankAccountIds, currency };
       const result = isEdit && documentId ? await updateInvoiceAction(documentId, payload) : await createInvoiceAction(payload, andSend);
       if (result?.error) toast.error(result.error);
     });
@@ -113,10 +115,7 @@ export function InvoiceForm({
     docLabel: t(locale, "Invoice"),
     number: numberPreview,
     title,
-    fields: [
-      { label: t(locale, "Issue Date"), value: issueDate },
-      { label: t(locale, "Due Date"), value: dueDate },
-    ],
+    fields: [{ label: t(locale, "Issue Date"), value: issueDate }],
     from: { label: t(locale, "From"), name: org.name, lines: [org.address, org.email, org.phone] },
     to: selectedCustomer ? { label: t(locale, "To Client"), name: selectedCustomer.name, lines: [selectedCustomer.address, selectedCustomer.email, selectedCustomer.phone] } : undefined,
     items: items.map((it) => ({ description: it.description, desc: getLineDesc(it.customFields), quantity: it.quantity, unitPrice: String(Number(it.unitPrice) || 0), lineTotal: String((Number(it.quantity) || 0) * (Number(it.unitPrice) || 0)) })),
@@ -124,11 +123,12 @@ export function InvoiceForm({
     totals: { subtotal: totals.subtotal, discount: totals.discount, taxTotal: totals.taxTotal, total: totals.total },
     notes,
     terms,
-    currency: org.currency,
+    currency,
     bankAccounts: snapshotSelectedBankAccounts(bankAccountIds, bankAccounts),
   };
 
   return (
+    <CurrencyProvider mark={docMark}>
     <div className="max-w-6xl mx-auto">
       <div className="doc-titlebar">
         <div>
@@ -151,26 +151,6 @@ export function InvoiceForm({
             </DocFieldBox>
           </div>
           <div className="doc-header-grid" style={{ gridTemplateColumns: "1fr 1fr" }}>
-            <DocFieldBox
-              label={t(locale, "Due Date")}
-              required
-              gearDialog={
-                <DateSettingsDialog
-                  locale={locale}
-                  title={t(locale, "Due Date")}
-                  baseDate={issueDate}
-                  baseLabel={t(locale, "Issue Date")}
-                  onApply={setDueDate}
-                  trigger={
-                    <button type="button" className="doc-gear-btn" title={t(locale, "Set payment term")} aria-label={t(locale, "Set payment term")}>
-                      <Settings className="size-[15px]" />
-                    </button>
-                  }
-                />
-              }
-            >
-              <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className="w-full bg-transparent outline-none" />
-            </DocFieldBox>
             <DocFieldBox label={t(locale, "Project")}>
               <select value={projectId} onChange={(e) => setProjectId(e.target.value)} className="w-full bg-transparent outline-none">
                 <option value="">—</option>
@@ -181,6 +161,7 @@ export function InvoiceForm({
                 ))}
               </select>
             </DocFieldBox>
+            <div />
           </div>
           <div className="field">
             <label>{t(locale, "Invoice Title")}</label>
@@ -203,9 +184,11 @@ export function InvoiceForm({
       <DocPillsRow
         locale={locale}
         org={org}
+        currency={currency}
+        onCurrencyChange={setCurrency}
         pills={[
           { icon: "percent", label: "VAT Settings" },
-          { icon: "wallet", label: "Currency", value: org.currency },
+          { icon: "wallet", label: "Currency", value: currency },
           { icon: "info", label: "Number Format", value: "123,456.78" },
         ]}
         trailing={
@@ -255,5 +238,6 @@ export function InvoiceForm({
 
       <PreviewDialog locale={locale} data={previewData} open={previewOpen} onOpenChange={setPreviewOpen} />
     </div>
+    </CurrencyProvider>
   );
 }

@@ -22,6 +22,8 @@ import { BankAccountsField } from "../_shared/bank-accounts-field";
 import { snapshotSelectedBankAccounts } from "@/lib/document-bank-accounts";
 import type { EditableBankAccount, GlAccountOption } from "../../finance/bank-accounts/bank-account-form-dialog";
 import { computeTotals } from "../_shared/totals";
+import { CurrencyProvider } from "@/components/ui/currency-mark";
+import { docMoneyMark } from "../_shared/doc-currency";
 import { ConfigureColumnsDialog } from "../_shared/configure-columns-dialog";
 import { resolveColumns, type ColumnDef } from "@/lib/column-config";
 import { t, type Locale } from "@/lib/i18n/dict";
@@ -41,6 +43,7 @@ export type OrderFormInitial = {
   items: LineItemDraft[];
   terms?: DocumentTerm[];
   bankAccountIds?: number[];
+  currency?: string;
 };
 
 export function OrderForm({
@@ -88,6 +91,8 @@ export function OrderForm({
   const [notes, setNotes] = useState(initial?.notes ?? defaultNote?.content ?? "");
   const [terms, setTerms] = useState<DocumentTerm[]>(initial?.terms ?? []);
   const [bankAccountIds, setBankAccountIds] = useState<number[]>(initial?.bankAccountIds ?? (mode === "create" ? defaultBankAccountIds : []));
+  const [currency, setCurrency] = useState<string>(initial?.currency ?? org.currency);
+  const docMark = docMoneyMark(org, currency);
   const countryProfile = getProfileByCountryName(org.country);
   const defaultTaxRate = String(countryProfile.defaultTaxRate);
   const [items, setItems] = useState<LineItemDraft[]>(initial?.items && initial.items.length > 0 ? initial.items : [emptyLineItem(defaultTaxRate)]);
@@ -102,7 +107,7 @@ export function OrderForm({
   function submit(andConfirm: boolean) {
     const start = andConfirm ? startPrimaryTransition : startDraftTransition;
     start(async () => {
-      const payload = { title, customerId, projectId, issueDate, expectedDate: expectedDelivery, discount, notes, terms, items, attachments, bankAccountIds };
+      const payload = { title, customerId, projectId, issueDate, expectedDate: expectedDelivery, discount, notes, terms, items, attachments, bankAccountIds, currency };
       const result = isEdit && documentId ? await updateSalesOrderAction(documentId, payload) : await createSalesOrderAction(payload, andConfirm);
       if (result?.error) toast.error(result.error);
     });
@@ -123,11 +128,12 @@ export function OrderForm({
     totals: { subtotal: totals.subtotal, discount: totals.discount, taxTotal: totals.taxTotal, total: totals.total },
     notes,
     terms,
-    currency: org.currency,
+    currency,
     bankAccounts: snapshotSelectedBankAccounts(bankAccountIds, bankAccounts),
   };
 
   return (
+    <CurrencyProvider mark={docMark}>
     <div className="max-w-5xl mx-auto">
       <div className="doc-titlebar">
         <div>
@@ -207,9 +213,11 @@ export function OrderForm({
       <DocPillsRow
         locale={locale}
         org={org}
+        currency={currency}
+        onCurrencyChange={setCurrency}
         pills={[
           { icon: "percent", label: "VAT Settings" },
-          { icon: "wallet", label: "Currency", value: org.currency },
+          { icon: "wallet", label: "Currency", value: currency },
           { icon: "info", label: "Number Format", value: "123,456.78" },
         ]}
         trailing={
@@ -258,5 +266,6 @@ export function OrderForm({
 
       <PreviewDialog locale={locale} data={previewData} open={previewOpen} onOpenChange={setPreviewOpen} />
     </div>
+    </CurrencyProvider>
   );
 }

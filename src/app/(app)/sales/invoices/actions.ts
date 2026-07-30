@@ -13,6 +13,7 @@ import { can, evaluate } from "@/lib/document-lifecycle";
 import { computeTotals, type LineItemInput } from "../_shared/totals";
 import { persistDocumentAttachments, type AttachmentInput } from "../_shared/attachment-persist";
 import { snapshotDocumentBankAccounts } from "@/lib/document-bank-data";
+import { normalizeDocCurrency } from "@/lib/currency/currencies";
 
 export type ActionResult = { error?: string; id?: number };
 
@@ -26,12 +27,12 @@ export async function createInvoiceAction(
     customerId: string;
     projectId?: string;
     issueDate: string;
-    dueDate: string;
     discount: string;
     notes: string; terms?: DocumentTerm[];
     items: LineInput[];
     attachments?: AttachmentInput[];
     bankAccountIds?: number[];
+    currency?: string;
   },
   andSend = false,
 ): Promise<ActionResult> {
@@ -69,10 +70,10 @@ export async function createInvoiceAction(
         customerId,
         projectId,
         issueDate: input.issueDate,
-        dueDate: input.dueDate || null,
         notes: sanitizeIfHtml(input.notes) || null,
         terms: normalizeDocumentTerms(input.terms),
         bankAccounts,
+        currency: normalizeDocCurrency(input.currency),
         subtotal: totals.subtotal,
         discount: totals.discount,
         taxTotal: totals.taxTotal,
@@ -111,7 +112,7 @@ export async function createInvoiceAction(
 // Batch A2 — draft-only edit. Preserves number/org/status/source links; recomputes totals server-side.
 export async function updateInvoiceAction(
   id: number,
-  input: { title: string; customerId: string; projectId?: string; issueDate: string; dueDate: string; discount: string; notes: string; terms?: DocumentTerm[]; items: LineInput[]; attachments?: AttachmentInput[]; bankAccountIds?: number[] },
+  input: { title: string; customerId: string; projectId?: string; issueDate: string; discount: string; notes: string; terms?: DocumentTerm[]; items: LineInput[]; attachments?: AttachmentInput[]; bankAccountIds?: number[]; currency?: string },
 ): Promise<ActionResult> {
   const session = await requireSession();
   const [existing] = await db.select().from(salesInvoicesTable).where(and(eq(salesInvoicesTable.id, id), eq(salesInvoicesTable.orgId, session.orgId)));
@@ -142,10 +143,10 @@ export async function updateInvoiceAction(
         customerId,
         projectId,
         issueDate: input.issueDate,
-        dueDate: input.dueDate || null,
         notes: sanitizeIfHtml(input.notes) || null,
         terms: normalizeDocumentTerms(input.terms),
         bankAccounts,
+        currency: normalizeDocCurrency(input.currency),
         subtotal: totals.subtotal,
         discount: totals.discount,
         taxTotal: totals.taxTotal,

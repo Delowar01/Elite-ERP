@@ -13,6 +13,7 @@ import { can, evaluate } from "@/lib/document-lifecycle";
 import { computeTotals, type LineItemInput } from "../_shared/totals";
 import { persistDocumentAttachments, type AttachmentInput } from "../_shared/attachment-persist";
 import { snapshotDocumentBankAccounts } from "@/lib/document-bank-data";
+import { normalizeDocCurrency } from "@/lib/currency/currencies";
 
 export type ActionResult = { error?: string; id?: number };
 
@@ -33,6 +34,7 @@ export async function createSalesOrderAction(
     items: LineInput[];
     attachments?: AttachmentInput[];
     bankAccountIds?: number[];
+    currency?: string;
   },
   andConfirm = false,
 ): Promise<ActionResult> {
@@ -72,6 +74,7 @@ export async function createSalesOrderAction(
         issueDate: input.issueDate,
         expectedDate: input.expectedDate || null,
         bankAccounts,
+        currency: normalizeDocCurrency(input.currency),
         notes: sanitizeIfHtml(input.notes) || null,
         terms: normalizeDocumentTerms(input.terms),
         subtotal: totals.subtotal,
@@ -112,7 +115,7 @@ export async function createSalesOrderAction(
 // Batch A2 — draft-only edit. Preserves number/org/status/source links; recomputes totals server-side.
 export async function updateSalesOrderAction(
   id: number,
-  input: { title: string; customerId: string; projectId?: string; issueDate: string; expectedDate: string; discount: string; notes: string; terms?: DocumentTerm[]; items: LineInput[]; attachments?: AttachmentInput[]; bankAccountIds?: number[] },
+  input: { title: string; customerId: string; projectId?: string; issueDate: string; expectedDate: string; discount: string; notes: string; terms?: DocumentTerm[]; items: LineInput[]; attachments?: AttachmentInput[]; bankAccountIds?: number[]; currency?: string },
 ): Promise<ActionResult> {
   const session = await requireSession();
   const [existing] = await db.select().from(salesOrdersTable).where(and(eq(salesOrdersTable.id, id), eq(salesOrdersTable.orgId, session.orgId)));
@@ -145,6 +148,7 @@ export async function updateSalesOrderAction(
         issueDate: input.issueDate,
         expectedDate: input.expectedDate || null,
         bankAccounts,
+        currency: normalizeDocCurrency(input.currency),
         notes: sanitizeIfHtml(input.notes) || null,
         terms: normalizeDocumentTerms(input.terms),
         subtotal: totals.subtotal,

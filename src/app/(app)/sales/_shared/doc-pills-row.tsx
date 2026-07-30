@@ -3,6 +3,8 @@ import { t, type Locale } from "@/lib/i18n/dict";
 import type { Org } from "@/db";
 import { PillSettingsDialog } from "./pill-settings-dialog";
 import { NumberFormatPillDialog } from "./number-format-pill-dialog";
+import { CurrencyPillDialog } from "./currency-pill-dialog";
+import { VatSettingsPillDialog } from "./vat-settings-pill-dialog";
 
 const PILL_ICONS: Record<string, LucideIcon> = { percent: Percent, wallet: Wallet, info: Info, columns: Columns3 };
 
@@ -23,11 +25,16 @@ export function DocPillsRow({
   pills,
   org,
   trailing,
+  currency,
+  onCurrencyChange,
 }: {
   locale: Locale;
   pills: { icon: keyof typeof PILL_ICONS; label: string; value?: string }[];
   org?: Org;
   trailing?: React.ReactNode;
+  // When provided, the "Currency" pill becomes a live in-document currency picker (Issue #3).
+  currency?: string;
+  onCurrencyChange?: (code: string) => void;
 }) {
   return (
     <div className="doc-pills-row">
@@ -50,6 +57,14 @@ export function DocPillsRow({
         // Number Format opens the full editable form in-place (no redirect).
         if (p.label === "Number Format" && org) {
           return <NumberFormatPillDialog key={p.label} locale={locale} org={org} trigger={triggerBtn} />;
+        }
+        // VAT Settings opens the full editable VAT form in-place (no redirect).
+        if (p.label === "VAT Settings" && org) {
+          return <VatSettingsPillDialog key={p.label} locale={locale} org={org} trigger={triggerBtn} />;
+        }
+        // Currency opens the searchable currency catalog in-place, updating this document only.
+        if (p.label === "Currency" && currency !== undefined && onCurrencyChange) {
+          return <CurrencyPillDialog key={p.label} locale={locale} value={currency} onChange={onCurrencyChange} trigger={triggerBtn} />;
         }
         if (settings) {
           return (

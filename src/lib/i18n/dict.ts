@@ -372,6 +372,17 @@ const DICT: Record<string, string> = {
   "No bank accounts yet. Add one from Finance → Bank Accounts or the New Bank Account button below.":
     "لا توجد حسابات بنكية بعد. أضف حسابًا من المالية ← الحسابات البنكية أو عبر زر «حساب بنكي جديد» أدناه.",
 
+  // ---- Four Document Issues: VAT popup / note remove / currency / valid till ----
+  "Remove note": "إزالة الملاحظة",
+  "VAT Settings": "إعدادات ضريبة القيمة المضافة",
+  "Tax registration number": "الرقم الضريبي للتسجيل",
+  "Select a currency": "اختر عملة",
+  "Search country, name or code…": "ابحث بالدولة أو الاسم أو الرمز…",
+  "Amounts on this document display in the selected currency. No exchange rate or conversion is applied.":
+    "تظهر مبالغ هذا المستند بالعملة المختارة. لا يُطبَّق أي سعر صرف أو تحويل.",
+  "Remembered for future documents and recalculated when the Issue Date changes.":
+    "يُحفَظ للمستندات المستقبلية ويُعاد احتسابه عند تغيير تاريخ الإصدار.",
+
   // ---- Finance: Journal Entry ----
   "New Journal Entry": "قيد يومية جديد",
   Manual: "يدوي",

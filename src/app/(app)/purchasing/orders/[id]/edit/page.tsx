@@ -64,6 +64,7 @@ export default async function EditPurchaseOrderPage({ params }: { params: Promis
           terms: po.terms ?? [],
           items: initialItems,
           bankAccountIds: initialSelectedIds(po.bankAccounts, bankData.bankAccounts),
+          currency: po.currency ?? undefined,
         }}
       />
     </div>

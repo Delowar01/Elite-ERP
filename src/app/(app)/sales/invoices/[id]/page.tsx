@@ -13,6 +13,8 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { PartyCardSimple } from "../../_shared/party-card";
 import { BankAccountBlocks } from "../../_shared/bank-account-blocks";
+import { CurrencyProvider } from "@/components/ui/currency-mark";
+import { docMoneyMark } from "../../_shared/doc-currency";
 import { TotalsStrip } from "../../_shared/totals-strip";
 import { EInvoicePreviewPanel } from "../../_shared/einvoice-preview-panel";
 import { DocRelationships } from "../../_shared/doc-relationships";
@@ -41,7 +43,6 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
       title: salesInvoicesTable.title,
       status: salesInvoicesTable.status,
       issueDate: salesInvoicesTable.issueDate,
-      dueDate: salesInvoicesTable.dueDate,
       subtotal: salesInvoicesTable.subtotal,
       discount: salesInvoicesTable.discount,
       taxTotal: salesInvoicesTable.taxTotal,
@@ -50,6 +51,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
       notes: salesInvoicesTable.notes,
       terms: salesInvoicesTable.terms,
       bankAccounts: salesInvoicesTable.bankAccounts,
+      currency: salesInvoicesTable.currency,
       customerName: customersTable.name,
       customerVatNumber: customersTable.vatNumber,
       customerAddress: customersTable.address,
@@ -84,6 +86,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
   relNodes.push({ label: "Invoice", sub: "Current" });
 
   return (
+    <CurrencyProvider mark={docMoneyMark(org, invoice.currency)}>
     <div className="max-w-6xl mx-auto">
       {relNodes.length > 1 && <DocRelationships locale={locale} nodes={relNodes} currentLabel="Invoice" />}
       <div className="inv-head">
@@ -91,7 +94,6 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
           <h3 className="mono">{invoice.invoiceNumber}</h3>
           <div className="inv-sub">
             {t(locale, "Issue Date")} {invoice.issueDate}
-            {invoice.dueDate ? ` · ${t(locale, "Due Date")} ${invoice.dueDate}` : ""}
             {invoice.title ? ` · ${invoice.title}` : ""}
             {invoice.sourceSoNumber && (
               <>
@@ -180,5 +182,6 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
         <EInvoicePreviewPanel locale={locale} vatNumber={org.vatNumber} taxTotal={invoice.taxTotal} />
       </div>
     </div>
+    </CurrencyProvider>
   );
 }

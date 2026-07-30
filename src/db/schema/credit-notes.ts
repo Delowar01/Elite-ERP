@@ -24,6 +24,7 @@ export const creditNotesTable = pgTable("credit_notes", {
   reason: text("reason"),
   terms: jsonb("terms").$type<{ text: string; groupId: number | null; groupName: string | null }[]>(),
   bankAccounts: jsonb("bank_accounts").$type<DocBankAccount[]>(),
+  currency: text("currency"), // per-document currency code (ISO); null = org base currency
   status: text("status").notNull().default("draft"), // draft | issued
   issueDate: date("issue_date").notNull(),
   subtotal: numeric("subtotal", { precision: 14, scale: 2 }).notNull().default("0"),

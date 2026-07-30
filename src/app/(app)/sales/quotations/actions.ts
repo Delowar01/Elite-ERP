@@ -13,6 +13,7 @@ import { can } from "@/lib/document-lifecycle";
 import { computeTotals, type LineItemInput } from "../_shared/totals";
 import { persistDocumentAttachments, type AttachmentInput } from "../_shared/attachment-persist";
 import { snapshotDocumentBankAccounts } from "@/lib/document-bank-data";
+import { normalizeDocCurrency } from "@/lib/currency/currencies";
 
 export type ActionResult = { error?: string; id?: number };
 
@@ -33,6 +34,7 @@ export async function createQuotationAction(
     items: LineInput[];
     attachments?: AttachmentInput[];
     bankAccountIds?: number[];
+    currency?: string;
   },
   andSend = false,
 ): Promise<ActionResult> {
@@ -74,6 +76,7 @@ export async function createQuotationAction(
         notes: sanitizeIfHtml(input.notes) || null,
         terms: normalizeDocumentTerms(input.terms),
         bankAccounts,
+        currency: normalizeDocCurrency(input.currency),
         subtotal: totals.subtotal,
         discount: totals.discount,
         taxTotal: totals.taxTotal,
@@ -124,6 +127,7 @@ export async function updateQuotationAction(
     items: LineInput[];
     attachments?: AttachmentInput[];
     bankAccountIds?: number[];
+    currency?: string;
   },
 ): Promise<ActionResult> {
   const session = await requireSession();
@@ -167,6 +171,7 @@ export async function updateQuotationAction(
         notes: sanitizeIfHtml(input.notes) || null,
         terms: normalizeDocumentTerms(input.terms),
         bankAccounts,
+        currency: normalizeDocCurrency(input.currency),
         subtotal: totals.subtotal,
         discount: totals.discount,
         taxTotal: totals.taxTotal,

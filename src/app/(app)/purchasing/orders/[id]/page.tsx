@@ -3,9 +3,11 @@ import { notFound } from "next/navigation";
 import { eq, and } from "drizzle-orm";
 import { DocumentTermsView } from "../../../sales/_shared/terms-view";
 import { BankAccountBlocks } from "../../../sales/_shared/bank-account-blocks";
+import { CurrencyProvider } from "@/components/ui/currency-mark";
+import { docMoneyMark } from "../../../sales/_shared/doc-currency";
 import { SafeRichText } from "../../../sales/_shared/safe-rich-text";
 import { LineItemCell, LineDescRow } from "../../../sales/_shared/line-item-cell";
-import { db, purchaseOrdersTable, purchaseOrderItemsTable, vendorsTable, bankAccountsTable } from "@/db";
+import { db, purchaseOrdersTable, purchaseOrderItemsTable, vendorsTable, bankAccountsTable, orgsTable } from "@/db";
 import { requireSession } from "@/lib/session";
 import { getLocale } from "@/lib/i18n/server";
 import { t } from "@/lib/i18n/dict";
@@ -44,6 +46,7 @@ export default async function PurchaseOrderDetailPage({ params }: { params: Prom
       notes: purchaseOrdersTable.notes,
       terms: purchaseOrdersTable.terms,
       bankAccounts: purchaseOrdersTable.bankAccounts,
+      currency: purchaseOrdersTable.currency,
       vendorName: vendorsTable.name,
     })
     .from(purchaseOrdersTable)
@@ -52,17 +55,19 @@ export default async function PurchaseOrderDetailPage({ params }: { params: Prom
 
   if (!po) notFound();
 
-  const [items, bankAccounts] = await Promise.all([
+  const [items, bankAccounts, [org]] = await Promise.all([
     db.select().from(purchaseOrderItemsTable).where(eq(purchaseOrderItemsTable.purchaseOrderId, poId)),
     db
       .select({ id: bankAccountsTable.id, name: bankAccountsTable.name })
       .from(bankAccountsTable)
       .where(and(eq(bankAccountsTable.orgId, session.orgId), eq(bankAccountsTable.isActive, true))),
+    db.select().from(orgsTable).where(eq(orgsTable.id, session.orgId)),
   ]);
   const balanceDue = Number(po.total) - Number(po.paidAmount);
   const showPayments = po.status === "received";
 
   return (
+    <CurrencyProvider mark={docMoneyMark(org, po.currency)}>
     <div className="max-w-4xl mx-auto">
       <div className="inv-head">
         <div>
@@ -143,5 +148,6 @@ export default async function PurchaseOrderDetailPage({ params }: { params: Prom
         </div>
       )}
     </div>
+    </CurrencyProvider>
   );
 }

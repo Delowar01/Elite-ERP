@@ -31,7 +31,6 @@ export type InvoiceRow = {
   title: string | null;
   customerName: string;
   issueDate: string;
-  dueDate: string | null;
   total: string;
   status: string;
   creatorName: string;
@@ -117,7 +116,6 @@ export function InvoicesListClient({
             <TableHead>{t(locale, "Converted From")}</TableHead>
             <TableHead>{t(locale, "Client")}</TableHead>
             <TableHead>{t(locale, "Issue Date")}</TableHead>
-            <TableHead>{t(locale, "Due Date")}</TableHead>
             <TableHead className="text-right">{t(locale, "Amount")}</TableHead>
             <TableHead>{t(locale, "Created By")}</TableHead>
             <TableHead>{t(locale, "Status")}</TableHead>
@@ -157,7 +155,6 @@ export function InvoicesListClient({
                 <TableCell className="text-ink-muted font-mono text-xs">{r.sourceSoNumber ?? "—"}</TableCell>
                 <TableCell>{r.customerName}</TableCell>
                 <TableCell className="font-mono text-xs">{r.issueDate}</TableCell>
-                <TableCell className="font-mono text-xs">{r.dueDate ?? "—"}</TableCell>
                 <TableCell className="text-right font-mono">
                   <Money amount={r.total} />
                 </TableCell>

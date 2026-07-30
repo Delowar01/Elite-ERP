@@ -2,7 +2,7 @@
 
 import { useState, useRef, useTransition } from "react";
 import { toast } from "sonner";
-import { FileSignature, FileText, Paperclip, Check, Upload, Trash2, FileIcon } from "lucide-react";
+import { FileSignature, FileText, Paperclip, Check, Upload, Trash2, FileIcon, Plus } from "lucide-react";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { t, type Locale } from "@/lib/i18n/dict";
 import { RichTextField } from "./rich-text-field";
@@ -46,6 +46,9 @@ export function TermsBlock({
   const defaultNote = noteTemplates.find((n) => n.isDefault) ?? noteTemplates[0];
   const [tab, setTab] = useState<Tab>("terms");
   const [noteId, setNoteId] = useState<string>(defaultNote ? String(defaultNote.id) : "");
+  // The note editor is shown only once a note exists / has been added. Removing a note hides the
+  // whole editor (toolbar included) and returns to the "Add Note" affordance.
+  const [noteOpen, setNoteOpen] = useState<boolean>(() => !!(notes && notes.trim()));
   const [pending, start] = useTransition();
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -54,8 +57,14 @@ export function TermsBlock({
   function applyNote() {
     if (!selectedNote) return;
     onNotesChange(selectedNote.content);
+    setNoteOpen(true);
     toast.success(t(locale, "Applied to notes."));
     setTab("note");
+  }
+
+  function removeNote() {
+    onNotesChange("");
+    setNoteOpen(false);
   }
 
   function uploadAttachment() {
@@ -100,7 +109,7 @@ export function TermsBlock({
 
       {tab === "note" && (
         <div className="flex flex-col gap-2">
-          {noteTemplates.length > 0 && (
+          {noteOpen && noteTemplates.length > 0 && (
             <div className="flex items-center gap-2 flex-wrap">
               <div className="text-[12.5px] font-bold text-ink">{t(locale, "Note Template")}</div>
               <Select value={noteId} onValueChange={setNoteId}>
@@ -121,7 +130,13 @@ export function TermsBlock({
               </button>
             </div>
           )}
-          <RichTextField locale={locale} value={notes} onChange={onNotesChange} placeholder={t(locale, "Write a note…")} rows={5} />
+          {noteOpen ? (
+            <RichTextField locale={locale} value={notes} onChange={onNotesChange} placeholder={t(locale, "Write a note…")} rows={5} onRemove={removeNote} />
+          ) : (
+            <button type="button" className="doc-pill-btn self-start" style={{ height: 32 }} onClick={() => setNoteOpen(true)}>
+              <Plus className="size-3.5" /> {t(locale, "Add Note")}
+            </button>
+          )}
         </div>
       )}
 

@@ -13,6 +13,7 @@ import { can } from "@/lib/document-lifecycle";
 import { computeTotals, type LineItemInput } from "../_shared/totals";
 import { persistDocumentAttachments, type AttachmentInput } from "../_shared/attachment-persist";
 import { snapshotDocumentBankAccounts } from "@/lib/document-bank-data";
+import { normalizeDocCurrency } from "@/lib/currency/currencies";
 
 export type ActionResult = { error?: string; id?: number };
 
@@ -31,6 +32,7 @@ export async function createProformaAction(
     items: LineInput[];
     attachments?: AttachmentInput[];
     bankAccountIds?: number[];
+    currency?: string;
   },
   andSend = false,
 ): Promise<ActionResult> {
@@ -60,6 +62,7 @@ export async function createProformaAction(
         notes: sanitizeIfHtml(input.notes) || null,
         terms: normalizeDocumentTerms(input.terms),
         bankAccounts,
+        currency: normalizeDocCurrency(input.currency),
         subtotal: totals.subtotal,
         discount: totals.discount,
         taxTotal: totals.taxTotal,
@@ -98,7 +101,7 @@ export async function createProformaAction(
 // Batch A2 — draft-only edit. Preserves number/org/status/source links; recomputes totals server-side.
 export async function updateProformaAction(
   id: number,
-  input: { title: string; customerId: string; issueDate: string; discount: string; notes: string; terms?: DocumentTerm[]; items: LineInput[]; attachments?: AttachmentInput[]; bankAccountIds?: number[] },
+  input: { title: string; customerId: string; issueDate: string; discount: string; notes: string; terms?: DocumentTerm[]; items: LineInput[]; attachments?: AttachmentInput[]; bankAccountIds?: number[]; currency?: string },
 ): Promise<ActionResult> {
   const session = await requireSession();
   const [existing] = await db.select().from(proformaInvoicesTable).where(and(eq(proformaInvoicesTable.id, id), eq(proformaInvoicesTable.orgId, session.orgId)));
@@ -125,6 +128,7 @@ export async function updateProformaAction(
         notes: sanitizeIfHtml(input.notes) || null,
         terms: normalizeDocumentTerms(input.terms),
         bankAccounts,
+        currency: normalizeDocCurrency(input.currency),
         subtotal: totals.subtotal,
         discount: totals.discount,
         taxTotal: totals.taxTotal,

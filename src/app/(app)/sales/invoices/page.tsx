@@ -19,7 +19,6 @@ export default async function InvoicesPage() {
       title: salesInvoicesTable.title,
       customerName: customersTable.name,
       issueDate: salesInvoicesTable.issueDate,
-      dueDate: salesInvoicesTable.dueDate,
       total: salesInvoicesTable.total,
       status: salesInvoicesTable.status,
       creatorName: usersTable.name,

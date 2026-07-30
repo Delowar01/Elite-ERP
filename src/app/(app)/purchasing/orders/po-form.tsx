@@ -22,6 +22,8 @@ import { BankAccountsField } from "../../sales/_shared/bank-accounts-field";
 import { snapshotSelectedBankAccounts } from "@/lib/document-bank-accounts";
 import type { EditableBankAccount, GlAccountOption } from "../../finance/bank-accounts/bank-account-form-dialog";
 import { computeTotals } from "../../sales/_shared/totals";
+import { CurrencyProvider } from "@/components/ui/currency-mark";
+import { docMoneyMark } from "../../sales/_shared/doc-currency";
 import { ConfigureColumnsDialog } from "../../sales/_shared/configure-columns-dialog";
 import { resolveColumns, type ColumnDef } from "@/lib/column-config";
 import { t, type Locale } from "@/lib/i18n/dict";
@@ -40,6 +42,7 @@ export type PoFormInitial = {
   items: LineItemDraft[];
   terms?: DocumentTerm[];
   bankAccountIds?: number[];
+  currency?: string;
 };
 
 export function PoForm({
@@ -96,6 +99,8 @@ export function PoForm({
   const [notes, setNotes] = useState(initial?.notes ?? defaultNote?.content ?? "");
   const [terms, setTerms] = useState<DocumentTerm[]>(initial?.terms ?? []);
   const [bankAccountIds, setBankAccountIds] = useState<number[]>(initial?.bankAccountIds ?? (mode === "create" ? defaultBankAccountIds : []));
+  const [currency, setCurrency] = useState<string>(initial?.currency ?? org.currency);
+  const docMark = docMoneyMark(org, currency);
   const countryProfile = getProfileByCountryName(org.country);
   const defaultTaxRate = String(countryProfile.defaultTaxRate);
   const [items, setItems] = useState<LineItemDraft[]>(
@@ -113,9 +118,9 @@ export function PoForm({
     const start = andSend ? startPrimaryTransition : startDraftTransition;
     start(async () => {
       const result = isEdit && documentId
-        ? await updatePurchaseOrderAction(documentId, { title, vendorId, orderDate, expectedDate, discount, notes, terms, items, attachments, bankAccountIds })
+        ? await updatePurchaseOrderAction(documentId, { title, vendorId, orderDate, expectedDate, discount, notes, terms, items, attachments, bankAccountIds, currency })
         : await createPurchaseOrderAction(
-            { title, vendorId, orderDate, expectedDate, discount, notes, items, attachments, sourceQuotationId, sourceSalesOrderId, sourceProformaId, sourceInvoiceId, bankAccountIds },
+            { title, vendorId, orderDate, expectedDate, discount, notes, items, attachments, sourceQuotationId, sourceSalesOrderId, sourceProformaId, sourceInvoiceId, bankAccountIds, currency },
             andSend,
           );
       if (result?.error) toast.error(result.error);
@@ -137,11 +142,12 @@ export function PoForm({
     totals: { subtotal: totals.subtotal, discount: totals.discount, taxTotal: totals.taxTotal, total: totals.total },
     notes,
     terms,
-    currency: org.currency,
+    currency,
     bankAccounts: snapshotSelectedBankAccounts(bankAccountIds, bankAccounts),
   };
 
   return (
+    <CurrencyProvider mark={docMark}>
     <div className="max-w-5xl mx-auto">
       <div className="doc-titlebar">
         <div>
@@ -207,9 +213,11 @@ export function PoForm({
       <DocPillsRow
         locale={locale}
         org={org}
+        currency={currency}
+        onCurrencyChange={setCurrency}
         pills={[
           { icon: "percent", label: "VAT Settings" },
-          { icon: "wallet", label: "Currency", value: org.currency },
+          { icon: "wallet", label: "Currency", value: currency },
           { icon: "info", label: "Number Format", value: "123,456.78" },
         ]}
         trailing={
@@ -266,5 +274,6 @@ export function PoForm({
 
       <PreviewDialog locale={locale} data={previewData} open={previewOpen} onOpenChange={setPreviewOpen} />
     </div>
+    </CurrencyProvider>
   );
 }

@@ -57,6 +57,7 @@ export default async function EditQuotationPage({ params }: { params: Promise<{ 
         documentId={quotationId}
         bankAccounts={bankData.bankAccounts}
         glAccounts={bankData.glAccounts}
+        defaultValidityDays={org.defaultValidityDays}
         initial={{
           title: quotation.title ?? "",
           customerId: String(quotation.customerId),
@@ -68,6 +69,7 @@ export default async function EditQuotationPage({ params }: { params: Promise<{ 
           terms: quotation.terms ?? [],
           items: initialItems,
           bankAccountIds: initialSelectedIds(quotation.bankAccounts, bankData.bankAccounts),
+          currency: quotation.currency ?? undefined,
         }}
       />
     </div>

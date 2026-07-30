@@ -13,6 +13,8 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { PartyCardSimple } from "../../_shared/party-card";
 import { BankAccountBlocks } from "../../_shared/bank-account-blocks";
+import { CurrencyProvider } from "@/components/ui/currency-mark";
+import { docMoneyMark } from "../../_shared/doc-currency";
 import { TotalsStrip } from "../../_shared/totals-strip";
 import { DocRelationships } from "../../_shared/doc-relationships";
 import { DocNum } from "../../_shared/money";
@@ -44,6 +46,7 @@ export default async function ProformaDetailPage({ params }: { params: Promise<{
       notes: proformaInvoicesTable.notes,
       terms: proformaInvoicesTable.terms,
       bankAccounts: proformaInvoicesTable.bankAccounts,
+      currency: proformaInvoicesTable.currency,
       customerName: customersTable.name,
       customerVatNumber: customersTable.vatNumber,
       customerAddress: customersTable.address,
@@ -72,6 +75,7 @@ export default async function ProformaDetailPage({ params }: { params: Promise<{
   relNodes.push({ label: "Proforma Invoice", sub: "Current" });
 
   return (
+    <CurrencyProvider mark={docMoneyMark(org, pf.currency)}>
     <div className="max-w-4xl mx-auto">
       {relNodes.length > 1 && <DocRelationships locale={locale} nodes={relNodes} currentLabel="Proforma Invoice" />}
       <div className="inv-head">
@@ -151,5 +155,6 @@ export default async function ProformaDetailPage({ params }: { params: Promise<{
         </div>
       )}
     </div>
+    </CurrencyProvider>
   );
 }

@@ -14,6 +14,8 @@ import { PartyCardSimple } from "../../_shared/party-card";
 import { BankAccountBlocks } from "../../_shared/bank-account-blocks";
 import { TotalsStrip } from "../../_shared/totals-strip";
 import { DocNum } from "../../_shared/money";
+import { CurrencyProvider } from "@/components/ui/currency-mark";
+import { docMoneyMark } from "../../_shared/doc-currency";
 import { QuotationDetailActions } from "../quotation-detail-actions";
 import { PrintButton } from "../../_shared/print-button";
 
@@ -46,6 +48,7 @@ export default async function QuotationDetailPage({ params }: { params: Promise<
       notes: quotationsTable.notes,
       terms: quotationsTable.terms,
       bankAccounts: quotationsTable.bankAccounts,
+      currency: quotationsTable.currency,
       customerName: customersTable.name,
       customerVatNumber: customersTable.vatNumber,
       customerAddress: customersTable.address,
@@ -62,6 +65,7 @@ export default async function QuotationDetailPage({ params }: { params: Promise<
   ]);
 
   return (
+    <CurrencyProvider mark={docMoneyMark(org, quotation.currency)}>
     <div className="max-w-4xl mx-auto">
       <div className="inv-head">
         <div>
@@ -137,5 +141,6 @@ export default async function QuotationDetailPage({ params }: { params: Promise<
         </div>
       )}
     </div>
+    </CurrencyProvider>
   );
 }

@@ -262,6 +262,14 @@ export function isValidCurrencyCode(code: string): boolean {
   return CURRENCY_BY_CODE.has(code.toUpperCase());
 }
 
+// Normalize a document's selected currency for storage: uppercased ISO code when valid, else null
+// (null means "use the org base currency" on read). Shared by every document create/update action.
+export function normalizeDocCurrency(code: string | null | undefined): string | null {
+  if (!code) return null;
+  const up = code.trim().toUpperCase();
+  return isValidCurrencyCode(up) ? up : null;
+}
+
 // Resolve a currency code to a render-ready mark. Unknown codes degrade gracefully to a
 // code-only mark (2 decimals), so a document never renders blank.
 export function resolveCurrencyMark(code: string | null | undefined): CurrencyMark {
@@ -372,4 +380,30 @@ export function buildMoneyMark(opts: {
     customCurrencySymbol: custom || null,
   };
   return { ...base, format };
+}
+
+// A plain-text symbol for a currency, or its code when the symbol is an asset (SAR) or absent — used
+// in compact text UIs like the currency-picker option label. The document itself renders the real
+// symbol (incl. the SAR asset) via <CurrencyMark>.
+export function currencyLabelSymbol(cur: Currency): string {
+  if (cur.symbolType === "text") {
+    const s = cur.symbolValue.trim();
+    return s || cur.currencyCode;
+  }
+  return cur.currencyCode; // asset symbols (SAR) show the code in text-only pickers
+}
+
+// Options for the in-document currency picker: value = ISO code, label shows the code + symbol, the
+// sublabel shows country + currency name, and `keywords` lets the search match on country, currency
+// name, code, and symbol (per the requirement to search by country, name, and code).
+export function currencySelectOptions(): { value: string; label: string; sublabel: string; keywords: string }[] {
+  return CURRENCIES.filter((c) => c.isActive).map((c) => {
+    const sym = currencyLabelSymbol(c);
+    return {
+      value: c.currencyCode,
+      label: sym === c.currencyCode ? c.currencyCode : `${c.currencyCode} · ${sym}`,
+      sublabel: `${c.countryName} — ${c.currencyName}`,
+      keywords: `${c.countryName} ${c.currencyName} ${c.currencyCode} ${sym}`,
+    };
+  });
 }

@@ -45,6 +45,10 @@ export const orgsTable = pgTable("orgs", {
   // Bank Account section on NEW documents (display-only payment instructions). Stored as an ordered
   // id array; document snapshots are taken at save so changing this never alters saved documents.
   defaultBankAccountIds: jsonb("default_bank_account_ids").$type<number[]>(),
+  // Remembered "Valid Till = Issue Date + N days" offset for documents with a Valid Till (Quotation).
+  // Set from the Valid Till gear popup; new documents auto-compute Valid Till from this, and it is
+  // recalculated whenever the Issue Date changes.
+  defaultValidityDays: integer("default_validity_days").notNull().default(30),
   fiscalYearStartMonth: integer("fiscal_year_start_month").notNull().default(1), // 1-12
   vatRegistrationStatus: text("vat_registration_status").notNull().default("registered"), // registered | not_registered
   defaultTaxTreatment: text("default_tax_treatment").notNull().default("exclusive"), // inclusive | exclusive

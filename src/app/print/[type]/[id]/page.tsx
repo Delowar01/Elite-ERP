@@ -31,6 +31,7 @@ import { buildZatcaTlv, invoiceHashOf, zatcaQrDataUrl } from "@/lib/zatca";
 import { amountInWords } from "../../../(app)/sales/_shared/totals";
 import { getLineDesc } from "../../../(app)/sales/_shared/line-item-desc";
 import { buildMoneyMark, markFormat } from "@/lib/currency/currencies";
+import { docMoneyMark } from "../../../(app)/sales/_shared/doc-currency";
 import {
   A4Page,
   PdfHeader,
@@ -115,7 +116,10 @@ export default async function PrintPage({ params }: { params: Promise<{ type: st
   // Org base currency + Number Format: one mark drives the symbol (SAR shows the official asset, a
   // configured custom symbol wins), plus grouping / decimals / rounding for every amount, rate and
   // quantity in the printed document. amountInWords() still uses the currency name.
-  const mark = buildMoneyMark({
+  // Base mark from the org; each document below overrides currencyCode with its OWN saved currency
+  // (Issue #3) so a document billed in another currency prints in that currency. `mark`/`numFmt` are
+  // reassigned per document type before its JSX is built; `money` reads the current `mark` at call.
+  let mark = buildMoneyMark({
     currencyCode: org.currency,
     customCurrencySymbol: org.customCurrencySymbol,
     digitGrouping: org.numberDigitGrouping,
@@ -123,7 +127,7 @@ export default async function PrintPage({ params }: { params: Promise<{ type: st
     roundQuantities: org.roundQuantities,
     roundRates: org.roundRates,
   });
-  const numFmt = markFormat(mark);
+  let numFmt = markFormat(mark);
   const money = (v: string | number) => <Amount mark={mark} value={v} />;
 
   const orgParty = (label: string) => <Party label={label} name={org.name} lines={orgPartyLines(org)} tint />;
@@ -144,6 +148,8 @@ export default async function PrintPage({ params }: { params: Promise<{ type: st
       .from(cfg.table)
       .where(and(eq(cfg.table.id, id), eq(cfg.table.orgId, session.orgId)));
     if (!doc) notFound();
+    mark = docMoneyMark(org, doc.currency);
+    numFmt = markFormat(mark);
     const [[customer], items] = await Promise.all([
       db.select().from(customersTable).where(eq(customersTable.id, doc.customerId)),
       db.select().from(cfg.items).where(eq(cfg.fk, id)),
@@ -260,7 +266,7 @@ export default async function PrintPage({ params }: { params: Promise<{ type: st
 
       body = (
         <A4Page>
-          <PdfHeader docLabel="INVOICE" numberLabel="Invoice No" numberVal={inv.invoiceNumber} dateVal={fmtDate(inv.issueDate)} extraLabel="Due Date" extraVal={inv.dueDate ? fmtDate(inv.dueDate) : null} org={org} />
+          <PdfHeader docLabel="INVOICE" numberLabel="Invoice No" numberVal={inv.invoiceNumber} dateVal={fmtDate(inv.issueDate)} org={org} />
           <Parties>{orgParty("FROM")}<Party label="TO" name={customer.name} lines={customerLines(customer)} /></Parties>
           <ItemsTableFull items={fullItems} format={numFmt} />
           <div className="pdf-bottom">
@@ -285,6 +291,8 @@ export default async function PrintPage({ params }: { params: Promise<{ type: st
       .from(purchaseOrdersTable)
       .where(and(eq(purchaseOrdersTable.id, id), eq(purchaseOrdersTable.orgId, session.orgId)));
     if (!po) notFound();
+    mark = docMoneyMark(org, po.currency);
+    numFmt = markFormat(mark);
     const [[vendor], items] = await Promise.all([
       db.select().from(vendorsTable).where(eq(vendorsTable.id, po.vendorId)),
       db.select().from(purchaseOrderItemsTable).where(eq(purchaseOrderItemsTable.purchaseOrderId, id)),

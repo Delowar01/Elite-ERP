@@ -63,6 +63,7 @@ export default async function EditProformaPage({ params }: { params: Promise<{ i
           terms: pf.terms ?? [],
           items: initialItems,
           bankAccountIds: initialSelectedIds(pf.bankAccounts, bankData.bankAccounts),
+          currency: pf.currency ?? undefined,
         }}
       />
     </div>

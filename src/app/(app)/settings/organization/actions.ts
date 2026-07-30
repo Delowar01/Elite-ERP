@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { and, eq } from "drizzle-orm";
 import { db, orgsTable, bankAccountsTable } from "@/db";
-import { requireRole } from "@/lib/session";
+import { requireRole, requireSession } from "@/lib/session";
 import { logActivity } from "@/lib/activity";
 import { validateUpload, storeBlob, deleteStoredBlob, IMAGE_MAX_BYTES } from "@/lib/storage/blob-storage";
 import { isValidCurrencyCode } from "@/lib/currency/currencies";
@@ -179,11 +179,23 @@ export async function updateVatConfigAction(formData: FormData): Promise<ActionR
   const vatRegistrationStatus = String(formData.get("vatRegistrationStatus") ?? "registered");
   const defaultTaxTreatment = String(formData.get("defaultTaxTreatment") ?? "exclusive");
   const vatRounding = String(formData.get("vatRounding") ?? "nearest_0_01");
+  // Tax/VAT registration number (the org's "tax-number" setting). Trimmed; empty clears it.
+  const vatNumber = String(formData.get("vatNumber") ?? "").trim().slice(0, 40) || null;
 
   await db
     .update(orgsTable)
-    .set({ vatRegistrationStatus, defaultTaxTreatment, vatRounding, updatedAt: new Date() })
+    .set({ vatRegistrationStatus, defaultTaxTreatment, vatRounding, vatNumber, updatedAt: new Date() })
     .where(eq(orgsTable.id, session.orgId));
+  revalidatePath(PATH);
+  return {};
+}
+
+// Remembers the "Valid Till = Issue Date + N days" offset (Issue #4). Called from the Valid Till
+// gear popup on a document so the last-used number of days persists for future documents.
+export async function updateValidityDaysAction(days: number): Promise<ActionResult> {
+  const session = await requireSession();
+  const n = Number.isFinite(days) ? Math.min(3650, Math.max(0, Math.round(days))) : 30;
+  await db.update(orgsTable).set({ defaultValidityDays: n, updatedAt: new Date() }).where(eq(orgsTable.id, session.orgId));
   revalidatePath(PATH);
   return {};
 }

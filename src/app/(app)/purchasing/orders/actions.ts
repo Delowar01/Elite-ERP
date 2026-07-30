@@ -11,6 +11,7 @@ import { logActivity } from "@/lib/activity";
 import { nextDocumentNumber } from "@/lib/documents";
 import { can, evaluate } from "@/lib/document-lifecycle";
 import { snapshotDocumentBankAccounts } from "@/lib/document-bank-data";
+import { normalizeDocCurrency } from "@/lib/currency/currencies";
 import { computeTotals, type LineItemInput } from "../../sales/_shared/totals";
 import { persistDocumentAttachments, type AttachmentInput } from "../../sales/_shared/attachment-persist";
 
@@ -35,6 +36,7 @@ export async function createPurchaseOrderAction(
     sourceProformaId?: string;
     sourceInvoiceId?: string;
     bankAccountIds?: number[];
+    currency?: string;
   },
   andSend = false,
 ): Promise<ActionResult> {
@@ -67,6 +69,7 @@ export async function createPurchaseOrderAction(
         orderDate: input.orderDate,
         expectedDate: input.expectedDate || null,
         bankAccounts,
+        currency: normalizeDocCurrency(input.currency),
         notes: sanitizeIfHtml(input.notes) || null,
         terms: normalizeDocumentTerms(input.terms),
         subtotal: totals.subtotal,
@@ -107,7 +110,7 @@ export async function createPurchaseOrderAction(
 // Batch A2 — draft-only edit. Preserves number/org/status/source links; recomputes totals server-side.
 export async function updatePurchaseOrderAction(
   id: number,
-  input: { title: string; vendorId: string; orderDate: string; expectedDate: string; discount: string; notes: string; terms?: DocumentTerm[]; items: LineInput[]; attachments?: AttachmentInput[]; bankAccountIds?: number[] },
+  input: { title: string; vendorId: string; orderDate: string; expectedDate: string; discount: string; notes: string; terms?: DocumentTerm[]; items: LineInput[]; attachments?: AttachmentInput[]; bankAccountIds?: number[]; currency?: string },
 ): Promise<ActionResult> {
   const session = await requireSession();
   const [existing] = await db.select().from(purchaseOrdersTable).where(and(eq(purchaseOrdersTable.id, id), eq(purchaseOrdersTable.orgId, session.orgId)));
@@ -133,6 +136,7 @@ export async function updatePurchaseOrderAction(
         orderDate: input.orderDate,
         expectedDate: input.expectedDate || null,
         bankAccounts,
+        currency: normalizeDocCurrency(input.currency),
         notes: sanitizeIfHtml(input.notes) || null,
         terms: normalizeDocumentTerms(input.terms),
         subtotal: totals.subtotal,

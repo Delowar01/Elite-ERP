@@ -67,6 +67,7 @@ export default async function EditSalesOrderPage({ params }: { params: Promise<{
           terms: so.terms ?? [],
           items: initialItems,
           bankAccountIds: initialSelectedIds(so.bankAccounts, bankData.bankAccounts),
+          currency: so.currency ?? undefined,
         }}
       />
     </div>

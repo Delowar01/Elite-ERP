@@ -4,9 +4,11 @@ import { useState, useTransition } from "react";
 import { getLineDesc } from "../_shared/line-item-desc";
 import { toast } from "sonner";
 import { FileText } from "lucide-react";
+import { CurrencyProvider } from "@/components/ui/currency-mark";
+import { docMoneyMark } from "../_shared/doc-currency";
 import { PartyCardStatic, PartyCardSelect } from "../_shared/party-card";
 import { DocFieldBox } from "../_shared/doc-field-box";
-import { DateSettingsDialog } from "../_shared/date-settings-dialog";
+import { ValidityDaysDialog, addDays } from "../_shared/validity-days-dialog";
 import { DocBrandPanel } from "../_shared/doc-brand-panel";
 import { DocPillsRow } from "../_shared/doc-pills-row";
 import { LineItemsEditor, emptyLineItem, type LineItemDraft } from "../_shared/line-items-editor";
@@ -42,6 +44,7 @@ export type QuotationFormInitial = {
   items: LineItemDraft[];
   terms?: DocumentTerm[];
   bankAccountIds?: number[];
+  currency?: string;
 };
 
 export function QuotationForm({
@@ -60,6 +63,7 @@ export function QuotationForm({
   bankAccounts = [],
   glAccounts = [],
   defaultBankAccountIds = [],
+  defaultValidityDays = 30,
 }: {
   locale: Locale;
   customers: Customer[];
@@ -76,6 +80,7 @@ export function QuotationForm({
   bankAccounts?: EditableBankAccount[];
   glAccounts?: GlAccountOption[];
   defaultBankAccountIds?: number[];
+  defaultValidityDays?: number;
 }) {
   const isEdit = mode === "edit";
   const [columns, setColumns] = useState<ColumnDef[]>(columnConfig ?? resolveColumns(null));
@@ -85,10 +90,16 @@ export function QuotationForm({
   const [projectId, setProjectId] = useState(initial?.projectId ?? "");
   const [issueDate, setIssueDate] = useState(initial?.issueDate ?? new Date().toISOString().slice(0, 10));
   const [validUntil, setValidUntil] = useState(initial?.validUntil ?? "");
+  // Valid Till = Issue Date + N remembered days (Issue #4). New documents auto-compute and recompute
+  // when the Issue Date changes; a manual date edit switches off auto-calc for this document.
+  const [validityDays, setValidityDays] = useState<number>(defaultValidityDays);
+  const [autoValidity, setAutoValidity] = useState<boolean>(!isEdit);
   const [discount, setDiscount] = useState(initial?.discount ?? "0");
   const [notes, setNotes] = useState(initial?.notes ?? defaultNote?.content ?? "");
   const [terms, setTerms] = useState<DocumentTerm[]>(initial?.terms ?? []);
   const [bankAccountIds, setBankAccountIds] = useState<number[]>(initial?.bankAccountIds ?? (mode === "create" ? defaultBankAccountIds : []));
+  const [currency, setCurrency] = useState<string>(initial?.currency ?? org.currency);
+  const docMark = docMoneyMark(org, currency);
   const countryProfile = getProfileByCountryName(org.country);
   const defaultTaxRate = String(countryProfile.defaultTaxRate);
   const [items, setItems] = useState<LineItemDraft[]>(initial?.items && initial.items.length > 0 ? initial.items : [emptyLineItem(defaultTaxRate)]);
@@ -100,10 +111,15 @@ export function QuotationForm({
   const totals = computeTotals(items, discount);
   const selectedCustomer = customers.find((c) => String(c.id) === customerId);
 
+  // Valid Till: while auto-calc is on it's derived as Issue Date + N days (recomputes whenever either
+  // changes); a manual date edit turns auto off and uses the entered value. Derived at render (no
+  // effect) so there are no cascading state updates.
+  const effectiveValidUntil = autoValidity ? addDays(issueDate, validityDays) : validUntil;
+
   function submit(andSend: boolean) {
     const start = andSend ? startPrimaryTransition : startDraftTransition;
     start(async () => {
-      const payload = { title, customerId, projectId, issueDate, validUntil, discount, notes, terms, items, attachments, bankAccountIds };
+      const payload = { title, customerId, projectId, issueDate, validUntil: effectiveValidUntil, discount, notes, terms, items, attachments, bankAccountIds, currency };
       const result = isEdit && documentId ? await updateQuotationAction(documentId, payload) : await createQuotationAction(payload, andSend);
       if (result?.error) toast.error(result.error);
     });
@@ -115,7 +131,7 @@ export function QuotationForm({
     title,
     fields: [
       { label: t(locale, "Quotation Date"), value: issueDate },
-      { label: t(locale, "Valid Till Date"), value: validUntil },
+      { label: t(locale, "Valid Till Date"), value: effectiveValidUntil },
     ],
     from: { label: t(locale, "From"), name: org.name, lines: [org.address, org.email, org.phone] },
     to: selectedCustomer
@@ -126,11 +142,12 @@ export function QuotationForm({
     totals: { subtotal: totals.subtotal, discount: totals.discount, taxTotal: totals.taxTotal, total: totals.total },
     notes,
     terms,
-    currency: org.currency,
+    currency,
     bankAccounts: snapshotSelectedBankAccounts(bankAccountIds, bankAccounts),
   };
 
   return (
+    <CurrencyProvider mark={docMark}>
     <div className="max-w-5xl mx-auto">
       <div className="doc-titlebar">
         <div>
@@ -157,12 +174,16 @@ export function QuotationForm({
               label={t(locale, "Valid Till Date")}
               required
               gearDialog={
-                <DateSettingsDialog
+                <ValidityDaysDialog
                   locale={locale}
                   title={t(locale, "Valid Till Date")}
                   baseDate={issueDate}
                   baseLabel={t(locale, "Quotation Date")}
-                  onApply={setValidUntil}
+                  initialDays={validityDays}
+                  onApply={(d) => {
+                    setValidityDays(d);
+                    setAutoValidity(true);
+                  }}
                   trigger={
                     <button type="button" className="doc-gear-btn" title={t(locale, "Set validity period")} aria-label={t(locale, "Set validity period")}>
                       <Settings className="size-[15px]" />
@@ -171,7 +192,15 @@ export function QuotationForm({
                 />
               }
             >
-              <input type="date" value={validUntil} onChange={(e) => setValidUntil(e.target.value)} className="w-full bg-transparent outline-none" />
+              <input
+                type="date"
+                value={effectiveValidUntil}
+                onChange={(e) => {
+                  setValidUntil(e.target.value);
+                  setAutoValidity(false);
+                }}
+                className="w-full bg-transparent outline-none"
+              />
             </DocFieldBox>
             <DocFieldBox label={t(locale, "Project")}>
               <select value={projectId} onChange={(e) => setProjectId(e.target.value)} className="w-full bg-transparent outline-none">
@@ -205,9 +234,11 @@ export function QuotationForm({
       <DocPillsRow
         locale={locale}
         org={org}
+        currency={currency}
+        onCurrencyChange={setCurrency}
         pills={[
           { icon: "percent", label: "VAT Settings" },
-          { icon: "wallet", label: "Currency", value: org.currency },
+          { icon: "wallet", label: "Currency", value: currency },
           { icon: "info", label: "Number Format", value: "123,456.78" },
         ]}
         trailing={
@@ -256,5 +287,6 @@ export function QuotationForm({
 
       <PreviewDialog locale={locale} data={previewData} open={previewOpen} onOpenChange={setPreviewOpen} />
     </div>
+    </CurrencyProvider>
   );
 }
