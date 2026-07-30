@@ -7,9 +7,9 @@ import type { DocBankAccount } from "@/lib/document-bank-accounts";
 function Row({ label, value }: { label: string; value: string | null | undefined }) {
   if (!value || !value.trim()) return null;
   return (
-    <div className="flex justify-between gap-4 text-[12px]">
-      <span className="text-ink-faint">{label}</span>
-      <span className="font-medium text-ink text-end break-words">{value}</span>
+    <div className="flex gap-3 text-[12px]">
+      <span className="text-ink-faint w-40 shrink-0">{label}</span>
+      <span className="min-w-0 flex-1 font-medium text-ink break-words">{value}</span>
     </div>
   );
 }

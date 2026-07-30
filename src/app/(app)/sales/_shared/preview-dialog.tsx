@@ -183,9 +183,9 @@ function PreviewBankBlock({ locale, account }: { locale: Locale; account: DocBan
       <div className="font-semibold text-[12px] mb-0.5">{account.name}</div>
       {rows.map(([k, v], i) =>
         v && v.trim() ? (
-          <div key={i} className="flex justify-between gap-3 text-[11px]">
-            <span className="text-[#777]">{k}</span>
-            <span className="text-end break-words">{v}</span>
+          <div key={i} className="flex gap-3 text-[11px]">
+            <span className="w-36 shrink-0 text-[#777]">{k}</span>
+            <span className="min-w-0 flex-1 break-words">{v}</span>
           </div>
         ) : null,
       )}
