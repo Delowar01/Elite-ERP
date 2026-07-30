@@ -174,3 +174,30 @@ table.pdf-items .pdf-item-desc .rich-html u { text-decoration: underline; }
   .a4-page { width: auto; min-height: 0; box-shadow: none; border-radius: 0; padding: 0; }
   @page { size: A4; margin: 14mm; }
 }
+
+/* ===== Print Layout preset (Preset Management → Print Layout) =====
+   One color theme is applied to all documents by mapping the accent (--pdf-orange) to the org's
+   chosen --doc-accent; the default "orange" theme keeps the existing #E87722 accent, so existing
+   documents render unchanged. data-layout switches the built-in layouts; "custom" renders the
+   org's uploaded letterhead as a page background. All outputs (on-screen preview, browser print,
+   PDF, downloaded/shared copy) go through this one route, so the preset applies everywhere. */
+.a4-page { --pdf-orange: var(--doc-accent, #E87722); }
+.a4-letterhead {
+  position: absolute; inset: 0 0 auto 0; width: 100%; height: auto; object-fit: contain;
+  opacity: 0.12; pointer-events: none; z-index: 0;
+}
+.a4-page[data-layout] .a4-body { position: relative; z-index: 1; }
+
+/* Modern — minimal rules, accent-only color: drop the party tint fill, lighten table lines. */
+.a4-page[data-layout="modern"] .pdf-party.tint { background: transparent; border: 1px solid var(--pdf-line); }
+.a4-page[data-layout="modern"] table.pdf-items tbody td { border-bottom: 1px solid var(--pdf-line); }
+.a4-page[data-layout="modern"] table.pdf-items tbody tr.pdf-zrow { background: transparent; }
+
+/* Minimal — letterhead style, no fills: outline the badge instead of filling it, no party tint. */
+.a4-page[data-layout="minimal"] .pdf-badge { background: transparent; color: var(--pdf-orange); border: 1.5px solid var(--pdf-orange); }
+.a4-page[data-layout="minimal"] .pdf-party.tint { background: transparent; }
+.a4-page[data-layout="minimal"] table.pdf-items thead th { background: transparent; color: var(--pdf-ink); border-bottom: 2px solid var(--pdf-orange); }
+.a4-page[data-layout="minimal"] table.pdf-items tbody tr.pdf-zrow { background: transparent; }
+
+/* Custom — keep the classic frame but sit content above the uploaded letterhead background. */
+.a4-page[data-layout="custom"] .pdf-party.tint { background: transparent; }

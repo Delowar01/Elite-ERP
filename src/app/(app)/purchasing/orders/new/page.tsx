@@ -12,6 +12,7 @@ import {
   proformaInvoiceItemsTable,
   salesInvoicesTable,
   salesInvoiceItemsTable,
+  sealSignatureAssetsTable,
 } from "@/db";
 import { getColumnConfig } from "@/lib/column-config-server";
 import { requireSession } from "@/lib/session";
@@ -98,6 +99,7 @@ export default async function NewPurchaseOrderPage({
     getDocumentContentPresets(session.orgId, "purchase_order"),
     getDocumentBankData(session.orgId),
   ]);
+  const sealAssets = await db.select().from(sealSignatureAssetsTable).where(eq(sealSignatureAssetsTable.orgId, session.orgId)).orderBy(sealSignatureAssetsTable.id);
 
   return (
     <div className="max-w-5xl mx-auto">
@@ -106,6 +108,7 @@ export default async function NewPurchaseOrderPage({
         vendors={vendors}
         products={products}
         org={org}
+        sealAssets={sealAssets}
         numberPreview={numberPreview}
         initialTitle={initialTitle}
         initialItems={initialItems}

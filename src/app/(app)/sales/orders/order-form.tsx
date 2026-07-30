@@ -13,7 +13,7 @@ import { LineItemsEditor, emptyLineItem, type LineItemDraft } from "../_shared/l
 import { TotalsCard } from "../_shared/totals-card";
 import { TermsBlock, type AttachmentDraft } from "../_shared/terms-block";
 import type { DocumentTerm } from "../_shared/document-terms";
-import { SealSignaturePreview } from "../_shared/seal-signature";
+import { SealSignaturePreview, type SealAsset } from "../_shared/seal-signature";
 import { DocFooterContact } from "../_shared/doc-footer-contact";
 import { DocActionBar } from "../_shared/doc-action-bar";
 import { DocTopActions } from "../_shared/doc-top-actions";
@@ -62,7 +62,9 @@ export function OrderForm({
   bankAccounts = [],
   glAccounts = [],
   defaultBankAccountIds = [],
+  sealAssets = [],
 }: {
+  sealAssets?: SealAsset[];
   locale: Locale;
   customers: Customer[];
   products: Product[];
@@ -92,6 +94,8 @@ export function OrderForm({
   const [terms, setTerms] = useState<DocumentTerm[]>(initial?.terms ?? []);
   const [bankAccountIds, setBankAccountIds] = useState<number[]>(initial?.bankAccountIds ?? (mode === "create" ? defaultBankAccountIds : []));
   const [currency, setCurrency] = useState<string>(initial?.currency ?? org.currency);
+  const [sealOverride, setSealOverride] = useState<string | undefined>(undefined);
+  const [signatureOverride, setSignatureOverride] = useState<string | undefined>(undefined);
   const docMark = docMoneyMark(org, currency);
   const countryProfile = getProfileByCountryName(org.country);
   const defaultTaxRate = String(countryProfile.defaultTaxRate);
@@ -107,7 +111,7 @@ export function OrderForm({
   function submit(andConfirm: boolean) {
     const start = andConfirm ? startPrimaryTransition : startDraftTransition;
     start(async () => {
-      const payload = { title, customerId, projectId, issueDate, expectedDate: expectedDelivery, discount, notes, terms, items, attachments, bankAccountIds, currency };
+      const payload = { title, customerId, projectId, issueDate, expectedDate: expectedDelivery, discount, notes, terms, items, attachments, bankAccountIds, currency, sealUrl: sealOverride, signatureUrl: signatureOverride };
       const result = isEdit && documentId ? await updateSalesOrderAction(documentId, payload) : await createSalesOrderAction(payload, andConfirm);
       if (result?.error) toast.error(result.error);
     });
@@ -248,7 +252,7 @@ export function OrderForm({
         <BankAccountsField locale={locale} accounts={bankAccounts} glAccounts={glAccounts} value={bankAccountIds} onChange={setBankAccountIds} />
       </div>
 
-      <SealSignaturePreview locale={locale} sealUrl={org.sealUrl} signatureUrl={org.signatureUrl} />
+      <SealSignaturePreview locale={locale} sealUrl={org.sealUrl} signatureUrl={org.signatureUrl} sealAssets={sealAssets} sealOverride={sealOverride} signatureOverride={signatureOverride} onSealOverride={setSealOverride} onSignatureOverride={setSignatureOverride} />
 
       <DocFooterContact locale={locale} email={org.email} phone={org.phone} />
 

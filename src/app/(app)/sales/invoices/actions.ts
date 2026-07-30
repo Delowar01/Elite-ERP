@@ -13,6 +13,7 @@ import { can, evaluate } from "@/lib/document-lifecycle";
 import { computeTotals, type LineItemInput } from "../_shared/totals";
 import { persistDocumentAttachments, type AttachmentInput } from "../_shared/attachment-persist";
 import { snapshotDocumentBankAccounts } from "@/lib/document-bank-data";
+import { snapshotSealForDoc, applySealOverride } from "@/lib/doc-seal";
 import { normalizeDocCurrency } from "@/lib/currency/currencies";
 
 export type ActionResult = { error?: string; id?: number };
@@ -33,6 +34,8 @@ export async function createInvoiceAction(
     attachments?: AttachmentInput[];
     bankAccountIds?: number[];
     currency?: string;
+    sealUrl?: string;
+    signatureUrl?: string;
   },
   andSend = false,
 ): Promise<ActionResult> {
@@ -58,6 +61,7 @@ export async function createInvoiceAction(
 
   const totals = computeTotals(items as LineItemInput[], input.discount);
   const bankAccounts = await snapshotDocumentBankAccounts(session.orgId, input.bankAccountIds);
+  const seal = applySealOverride(await snapshotSealForDoc(db, session.orgId, "sales_invoice"), { sealUrl: input.sealUrl, signatureUrl: input.signatureUrl });
 
   const id = await db.transaction(async (tx) => {
     const invoiceNumber = await nextDocumentNumber(tx, session.orgId, "sales_invoice");
@@ -78,6 +82,8 @@ export async function createInvoiceAction(
         discount: totals.discount,
         taxTotal: totals.taxTotal,
         total: totals.total,
+        sealUrl: seal.sealUrl,
+        signatureUrl: seal.signatureUrl,
         createdById: session.userId,
       })
       .returning({ id: salesInvoicesTable.id });
@@ -112,7 +118,7 @@ export async function createInvoiceAction(
 // Batch A2 — draft-only edit. Preserves number/org/status/source links; recomputes totals server-side.
 export async function updateInvoiceAction(
   id: number,
-  input: { title: string; customerId: string; projectId?: string; issueDate: string; discount: string; notes: string; terms?: DocumentTerm[]; items: LineInput[]; attachments?: AttachmentInput[]; bankAccountIds?: number[]; currency?: string },
+  input: { title: string; customerId: string; projectId?: string; issueDate: string; discount: string; notes: string; terms?: DocumentTerm[]; items: LineInput[]; attachments?: AttachmentInput[]; bankAccountIds?: number[]; currency?: string; sealUrl?: string; signatureUrl?: string },
 ): Promise<ActionResult> {
   const session = await requireSession();
   const [existing] = await db.select().from(salesInvoicesTable).where(and(eq(salesInvoicesTable.id, id), eq(salesInvoicesTable.orgId, session.orgId)));
@@ -134,6 +140,7 @@ export async function updateInvoiceAction(
   if (items.length === 0) return { error: "Add at least one line item." };
   const totals = computeTotals(items as LineItemInput[], input.discount);
   const bankAccounts = await snapshotDocumentBankAccounts(session.orgId, input.bankAccountIds);
+  const seal = applySealOverride(await snapshotSealForDoc(db, session.orgId, "sales_invoice"), { sealUrl: input.sealUrl, signatureUrl: input.signatureUrl });
 
   await db.transaction(async (tx) => {
     await tx
@@ -151,6 +158,8 @@ export async function updateInvoiceAction(
         discount: totals.discount,
         taxTotal: totals.taxTotal,
         total: totals.total,
+        sealUrl: seal.sealUrl,
+        signatureUrl: seal.signatureUrl,
         updatedAt: new Date(),
       })
       .where(and(eq(salesInvoicesTable.id, id), eq(salesInvoicesTable.orgId, session.orgId)));

@@ -1,19 +1,21 @@
 import { eq, asc } from "drizzle-orm";
-import { db, orgsTable, bankAccountsTable, noteTemplatesTable, usersTable } from "@/db";
+import { db, orgsTable, bankAccountsTable, usersTable } from "@/db";
 import { requireRole } from "@/lib/session";
 import { getProfileByCountryName, profileHasFeature } from "@/lib/geo/country-profiles";
 import { getLocale } from "@/lib/i18n/server";
 import { t } from "@/lib/i18n/dict";
 import { SettingsNav, SettingsNavList, SettingsNavGroupLabel, SettingsNavItem, SettingsNavContent } from "@/components/ui/settings-nav";
 import { BusinessDetailsForm, LogoPanel, ColorThemePanel } from "./company-panels";
-import { SealSignaturePanel, PrintLayoutPanel, DefaultTermsSummary } from "./documents-panels";
 import { DefaultBankAccountPanel, FiscalYearPanel, VatConfigurationPanel } from "./finance-panel";
 import { NumberFormatPanel } from "./number-format-panel";
-import { RolesPermissionsPanel, ZatcaPanel } from "./reference-panels";
+import { RolesPermissionsPanel } from "./reference-panels";
+import { ZatcaPanel } from "./zatca-panel";
 import { TeamPanel } from "../team/team-panel";
 
+// Print Layout, Seal & Signature, and Terms & Conditions are managed under Preset Management,
+// not Business Settings (they are per-document presets, not company profile fields).
 const SETTINGS_TABS = new Set([
-  "business-details", "logo", "color-theme", "default-terms", "seal-signature", "print-layout",
+  "business-details", "logo", "color-theme",
   "default-bank", "fiscal-year", "vat-config", "number-format", "team", "roles-permissions", "zatca",
 ]);
 
@@ -33,10 +35,6 @@ export default async function OrganizationSettingsPage({ searchParams }: { searc
     .from(bankAccountsTable)
     .where(eq(bankAccountsTable.orgId, session.orgId))
     .orderBy(asc(bankAccountsTable.name));
-  const noteTemplates = await db
-    .select()
-    .from(noteTemplatesTable)
-    .where(eq(noteTemplatesTable.orgId, session.orgId));
   const members = await db.select().from(usersTable).where(eq(usersTable.orgId, session.orgId)).orderBy(asc(usersTable.name));
 
   return (
@@ -47,11 +45,6 @@ export default async function OrganizationSettingsPage({ searchParams }: { searc
           <SettingsNavItem value="business-details">{t(locale, "Business Details")}</SettingsNavItem>
           <SettingsNavItem value="logo">{t(locale, "Logo")}</SettingsNavItem>
           <SettingsNavItem value="color-theme">{t(locale, "Color Theme")}</SettingsNavItem>
-
-          <SettingsNavGroupLabel>{t(locale, "Documents")}</SettingsNavGroupLabel>
-          <SettingsNavItem value="default-terms">{t(locale, "Default Terms & Conditions")}</SettingsNavItem>
-          <SettingsNavItem value="seal-signature">{t(locale, "Seal & Signature")}</SettingsNavItem>
-          <SettingsNavItem value="print-layout">{t(locale, "Print Layout")}</SettingsNavItem>
 
           <SettingsNavGroupLabel>{t(locale, "Finance")}</SettingsNavGroupLabel>
           <SettingsNavItem value="default-bank">{t(locale, "Default Bank Account")}</SettingsNavItem>
@@ -79,15 +72,6 @@ export default async function OrganizationSettingsPage({ searchParams }: { searc
         </SettingsNavContent>
         <SettingsNavContent value="color-theme">
           <ColorThemePanel locale={locale} org={org} />
-        </SettingsNavContent>
-        <SettingsNavContent value="default-terms">
-          <DefaultTermsSummary locale={locale} templates={noteTemplates} />
-        </SettingsNavContent>
-        <SettingsNavContent value="seal-signature">
-          <SealSignaturePanel locale={locale} org={org} />
-        </SettingsNavContent>
-        <SettingsNavContent value="print-layout">
-          <PrintLayoutPanel locale={locale} org={org} />
         </SettingsNavContent>
         <SettingsNavContent value="default-bank">
           <DefaultBankAccountPanel locale={locale} org={org} bankAccounts={bankAccounts} />

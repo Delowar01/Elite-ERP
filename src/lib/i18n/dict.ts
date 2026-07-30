@@ -624,6 +624,61 @@ const DICT: Record<string, string> = {
   "Preview & Print": "معاينة وطباعة",
   "Print Preview": "معاينة الطباعة",
 
+  // ---- Fix Preset & ZATCA Settings (Print Layout / Seal & Signature / ZATCA Phase 1) ----
+  "Uploaded": "تم الرفع",
+  // Print Layout
+  "Choose how your documents look when previewed, printed, exported to PDF, downloaded and shared. Settings are saved for your whole organization.":
+    "اختر شكل مستنداتك عند المعاينة والطباعة والتصدير إلى PDF والتنزيل والمشاركة. تُحفظ الإعدادات لمؤسستك بالكامل.",
+  "Default layout": "التخطيط الافتراضي",
+  "Custom": "مخصص",
+  "Your uploaded design": "تصميمك المرفوع",
+  "Upload a design below": "ارفع تصميمًا أدناه",
+  "Document color theme": "نظام ألوان المستند",
+  "Navy": "كحلي",
+  "Graphite": "رمادي داكن",
+  "Emerald": "زمردي",
+  "Royal Blue": "أزرق ملكي",
+  "Burgundy": "خمري",
+  "Elite Orange": "برتقالي إيليت",
+  "One color theme is applied to all your documents.": "يُطبَّق نظام لون واحد على جميع مستنداتك.",
+  "Document-specific layout": "تخطيط خاص بالمستند",
+  "Override the default layout for specific document types. Leave as Default to use the layout above.":
+    "تجاوز التخطيط الافتراضي لأنواع مستندات محددة. اترك الخيار افتراضيًا لاستخدام التخطيط أعلاه.",
+  "Upload custom design": "رفع تصميم مخصص",
+  "Replace custom design": "استبدال التصميم المخصص",
+  "Custom design ready": "التصميم المخصص جاهز",
+  "Custom design uploaded.": "تم رفع التصميم المخصص.",
+  // Seal & Signature preset
+  "Upload seals and signatures, then choose a default for each document type. Changing a default only affects new documents — already-saved documents keep the seal and signature they were saved with.":
+    "ارفع الأختام والتوقيعات، ثم اختر افتراضيًا لكل نوع مستند. تغيير الافتراضي يؤثر فقط على المستندات الجديدة — تحتفظ المستندات المحفوظة بالختم والتوقيع اللذين حُفظت بهما.",
+  "Seals": "الأختام",
+  "Signatures": "التوقيعات",
+  "Seal": "ختم",
+  "Signature": "توقيع",
+  "Seal name": "اسم الختم",
+  "Signature name": "اسم التوقيع",
+  "No seals yet.": "لا توجد أختام بعد.",
+  "No signatures yet.": "لا توجد توقيعات بعد.",
+  "No seal": "بدون ختم",
+  "No signature": "بدون توقيع",
+  "Default per document type": "الافتراضي لكل نوع مستند",
+  "Save defaults": "حفظ الإعدادات الافتراضية",
+  // ZATCA Phase 1
+  "ZATCA Phase 1 (Generation) e-invoicing for eligible Saudi organizations. The QR code and hash shown on every Tax Invoice come from this integration.":
+    "فوترة المرحلة الأولى (الإصدار) من هيئة الزكاة والضريبة للمؤسسات السعودية المؤهلة. يأتي رمز الاستجابة السريعة والتجزئة الظاهران على كل فاتورة ضريبية من هذا التكامل.",
+  "Enabled — Locked": "مُفعّل — مقفل",
+  "ZATCA Phase 1 is enabled for this organization and cannot be turned off from here. To comply with Saudi e-invoicing regulations, only a backend administrator or the Elite Marcom Platform Owner can disable it.":
+    "المرحلة الأولى من هيئة الزكاة والضريبة مُفعّلة لهذه المؤسسة ولا يمكن إيقافها من هنا. للامتثال للوائح الفوترة الإلكترونية السعودية، يستطيع فقط مسؤول النظام أو مالك منصة إيليت ماركوم إيقافها.",
+  "Not Enabled": "غير مُفعّل",
+  "Enable ZATCA Phase 1 to activate compliant e-invoicing for this organization. Enabling is permanent for organization users — once on, it can only be turned off by a backend administrator.":
+    "فعّل المرحلة الأولى من هيئة الزكاة والضريبة لتشغيل الفوترة الإلكترونية المتوافقة لهذه المؤسسة. التفعيل دائم لمستخدمي المؤسسة — بمجرد تفعيله لا يمكن إيقافه إلا بواسطة مسؤول النظام.",
+  "Enable ZATCA Phase 1": "تفعيل المرحلة الأولى من هيئة الزكاة والضريبة",
+  "Enable ZATCA Phase 1?": "تفعيل المرحلة الأولى من هيئة الزكاة والضريبة؟",
+  "This activates ZATCA Phase 1 e-invoicing for your organization. After enabling, you will not be able to disable it yourself — only a backend administrator or the Elite Marcom Platform Owner can. Do you want to continue?":
+    "يؤدي هذا إلى تفعيل فوترة المرحلة الأولى من هيئة الزكاة والضريبة لمؤسستك. بعد التفعيل، لن تتمكن من إيقافه بنفسك — يستطيع ذلك فقط مسؤول النظام أو مالك منصة إيليت ماركوم. هل تريد المتابعة؟",
+  "Enabling…": "جارٍ التفعيل…",
+  "ZATCA Phase 1 enabled.": "تم تفعيل المرحلة الأولى من هيئة الزكاة والضريبة.",
+
   // ---- terms & conditions block (document create screens) ----
   "Terms & Conditions": "الشروط والأحكام",
   "Add Attachment": "إضافة مرفق",

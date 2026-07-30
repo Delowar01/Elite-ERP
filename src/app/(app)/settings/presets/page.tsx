@@ -17,6 +17,7 @@ import {
   bankAccountsTable,
   accountsTable,
   orgsTable,
+  sealSignatureAssetsTable,
   DOCUMENT_TYPES,
 } from "@/db";
 import { requireRole } from "@/lib/session";
@@ -30,6 +31,8 @@ import { TermsGroupsPanel } from "./terms-groups-panel";
 import { BundlesPanel } from "./bundles-panel";
 import { NumberingPanel } from "./numbering-panel";
 import { DefaultBankAccountsPanel } from "./default-bank-accounts-panel";
+import { PrintLayoutPanel } from "./print-layout-panel";
+import { SealSignaturePresetPanel } from "./seal-signature-panel";
 import {
   createTaxPresetAction,
   updateTaxPresetAction,
@@ -103,10 +106,11 @@ export default async function PresetsPage() {
     db.select().from(documentSequencesTable).where(eq(documentSequencesTable.orgId, orgId)),
   ]);
 
-  const [bankAccounts, glAccounts, [org]] = await Promise.all([
+  const [bankAccounts, glAccounts, [org], sealAssets] = await Promise.all([
     db.select().from(bankAccountsTable).where(eq(bankAccountsTable.orgId, orgId)).orderBy(asc(bankAccountsTable.name)),
     db.select({ id: accountsTable.id, code: accountsTable.code, name: accountsTable.name }).from(accountsTable).where(eq(accountsTable.orgId, orgId)).orderBy(asc(accountsTable.code)),
-    db.select({ defaultBankAccountIds: orgsTable.defaultBankAccountIds }).from(orgsTable).where(eq(orgsTable.id, orgId)),
+    db.select().from(orgsTable).where(eq(orgsTable.id, orgId)),
+    db.select().from(sealSignatureAssetsTable).where(eq(sealSignatureAssetsTable.orgId, orgId)).orderBy(asc(sealSignatureAssetsTable.id)),
   ]);
   const bankAccountOptions = bankAccounts.map((b) => ({
     id: b.id,
@@ -147,6 +151,8 @@ export default async function PresetsPage() {
           <TabsTrigger value="terms-groups">{t(locale, "Terms & Conditions Groups")}</TabsTrigger>
           <TabsTrigger value="bundles">{t(locale, "Bundles")}</TabsTrigger>
           <TabsTrigger value="numbering">{t(locale, "Numbering")}</TabsTrigger>
+          <TabsTrigger value="print-layout">{t(locale, "Print Layout")}</TabsTrigger>
+          <TabsTrigger value="seal-signature">{t(locale, "Seal & Signature")}</TabsTrigger>
           <TabsTrigger value="default-bank-accounts">{t(locale, "Default Bank Accounts")}</TabsTrigger>
           <TabsTrigger value="departments">{t(locale, "Departments")}</TabsTrigger>
           <TabsTrigger value="product-categories">{t(locale, "Product Categories")}</TabsTrigger>
@@ -209,6 +215,14 @@ export default async function PresetsPage() {
 
         <TabsContent value="numbering">
           <NumberingPanel locale={locale} sequences={sequences} />
+        </TabsContent>
+
+        <TabsContent value="print-layout">
+          <PrintLayoutPanel locale={locale} org={org} />
+        </TabsContent>
+
+        <TabsContent value="seal-signature">
+          <SealSignaturePresetPanel locale={locale} org={org} assets={sealAssets} />
         </TabsContent>
 
         <TabsContent value="default-bank-accounts">

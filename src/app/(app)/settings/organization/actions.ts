@@ -5,6 +5,8 @@ import { and, eq } from "drizzle-orm";
 import { db, orgsTable, bankAccountsTable } from "@/db";
 import { requireRole, requireSession } from "@/lib/session";
 import { logActivity } from "@/lib/activity";
+import { recordAudit } from "@/lib/security/audit";
+import { getProfileByCountryName, profileHasFeature } from "@/lib/geo/country-profiles";
 import { validateUpload, storeBlob, deleteStoredBlob, IMAGE_MAX_BYTES } from "@/lib/storage/blob-storage";
 import { isValidCurrencyCode } from "@/lib/currency/currencies";
 import { isColorThemeMode } from "@/lib/brand-theme";
@@ -132,6 +134,37 @@ export async function updatePrintLayoutAction(formData: FormData): Promise<Actio
     .update(orgsTable)
     .set({ printLayout, paperSize, printMarginMm: margin, updatedAt: new Date() })
     .where(eq(orgsTable.id, session.orgId));
+  revalidatePath(PATH);
+  return {};
+}
+
+// ZATCA Phase 1 — enable only. Eligible Saudi organizations may turn Phase 1 on (after an
+// explicit confirmation in the UI). Once on, organization users can NOT turn it off: there is
+// deliberately no org-facing disable action. Only a backend administrator / Elite Marcom Platform
+// Owner may disable it, via disableZatcaPhase1Backend() below. Both events are audit-logged.
+export async function enableZatcaPhase1Action(): Promise<ActionResult> {
+  const session = await requireRole("owner", "admin");
+  const [org] = await db.select().from(orgsTable).where(eq(orgsTable.id, session.orgId));
+  if (!org) return { error: "Organization not found." };
+  // Eligibility: only countries whose profile enables ZATCA Phase 1 (Saudi Arabia today).
+  const profile = getProfileByCountryName(org.country);
+  if (!profileHasFeature(profile, "zatca_phase1")) {
+    return { error: "ZATCA Phase 1 is only available for eligible Saudi Arabian organizations." };
+  }
+  if (org.zatcaPhase1Enabled) return {}; // already on — idempotent, stays locked
+
+  await db.update(orgsTable).set({ zatcaPhase1Enabled: true, updatedAt: new Date() }).where(eq(orgsTable.id, session.orgId));
+  await recordAudit(
+    { orgId: session.orgId, userId: session.userId, userName: session.name },
+    {
+      action: "zatca.phase1_enabled",
+      entityType: "org",
+      entityId: session.orgId,
+      previousValue: { zatcaPhase1Enabled: false },
+      newValue: { zatcaPhase1Enabled: true },
+    },
+  );
+  await logActivity(session, { type: "org.zatca_phase1_enabled", description: "Enabled ZATCA Phase 1 e-invoicing", entityType: "org", entityId: session.orgId });
   revalidatePath(PATH);
   return {};
 }

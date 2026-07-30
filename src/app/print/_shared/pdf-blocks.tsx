@@ -3,6 +3,7 @@ import { richTextToHtml } from "@/lib/sanitize-html";
 import { formatAmount, formatRate, formatQuantity, markFormat, DEFAULT_NUMBER_FORMAT, type CurrencyMark, type NumberFormatConfig } from "@/lib/currency/currencies";
 import type { Org } from "@/db";
 import type { DocBankAccount } from "@/lib/document-bank-accounts";
+import { resolveDocLayout, colorForTheme } from "@/lib/doc-print";
 
 // A full-width line-item description row for print/PDF: spans every column of the items table so the
 // saved long-form description (paragraphs, bullet/numbered lists) prints beneath its item, wraps
@@ -44,10 +45,36 @@ export function Amount({ mark, value }: { mark: CurrencyMark; value: string | nu
 // one-for-one. English-only by design: formal outbound documents follow the approved
 // mockup, which was designed in English (bilingual PDFs are future scope).
 
-export function A4Page({ children }: { children: React.ReactNode }) {
+// The document page shell. When `org`/`documentType` are supplied it applies the org's Print
+// Layout preset: the resolved layout (per-type override or org default) via data-layout, the one
+// document color theme via the --doc-accent CSS var, the configured margin, and — for the "custom"
+// layout — the org's uploaded letterhead image as a page background. This is the single place every
+// output (on-screen preview, browser print, PDF, downloaded/shared copy) is rendered, so applying
+// it here covers all of them.
+export function A4Page({
+  children,
+  org,
+  documentType,
+}: {
+  children: React.ReactNode;
+  org?: Org;
+  documentType?: string;
+}) {
+  const layout = org && documentType ? resolveDocLayout(org, documentType) : "classic";
+  const accent = colorForTheme(org?.documentColorTheme);
+  const marginMm = org?.printMarginMm ?? 20;
+  const letterhead = layout === "custom" ? org?.customLayoutUrl ?? null : null;
+  const style = {
+    ["--doc-accent" as string]: accent,
+    ["--doc-margin" as string]: `${marginMm}mm`,
+  } as React.CSSProperties;
   return (
     <div className="page-wrap">
-      <div className="a4-page">
+      <div className="a4-page" data-layout={layout} style={style}>
+        {letterhead ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={letterhead} alt="" className="a4-letterhead" aria-hidden />
+        ) : null}
         <div className="a4-body">{children}</div>
       </div>
     </div>
@@ -383,24 +410,39 @@ export function ApprovalBlock() {
   );
 }
 
-export function SealSignature({ org, showSignature = true }: { org: Org; showSignature?: boolean }) {
+// The seal / signature use the document's saved snapshot (sealUrl / signatureUrl props) when
+// present, falling back to the org-wide default. Because each document snapshots its resolved
+// seal/signature at save time, later preset changes never alter an already-saved document.
+export function SealSignature({
+  org,
+  showSignature = true,
+  sealUrl,
+  signatureUrl,
+}: {
+  org: Org;
+  showSignature?: boolean;
+  sealUrl?: string | null;
+  signatureUrl?: string | null;
+}) {
+  const effSeal = sealUrl ?? org.sealUrl;
+  const effSignature = signatureUrl ?? org.signatureUrl;
   return (
     <div className="seal-sig-row">
       {showSignature && (
         <div className="sig-slot">
           <div className="box">
-            {org.signatureUrl ? (
+            {effSignature ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={org.signatureUrl} alt="Signature" />
+              <img src={effSignature} alt="Signature" />
             ) : null}
           </div>
           <div className="cap">Authorized Signature</div>
         </div>
       )}
       <div className="seal-mark">
-        {org.sealUrl ? (
+        {effSeal ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={org.sealUrl} alt="Seal" />
+          <img src={effSeal} alt="Seal" />
         ) : (
           <div className="seal-ring-outer">
             <div className="seal-ring-inner">

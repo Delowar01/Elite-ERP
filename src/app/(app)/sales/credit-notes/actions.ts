@@ -10,6 +10,7 @@ import { requireSession } from "@/lib/session";
 import { logActivity } from "@/lib/activity";
 import { nextDocumentNumber } from "@/lib/documents";
 import { can, evaluate } from "@/lib/document-lifecycle";
+import { snapshotSealForDoc } from "@/lib/doc-seal";
 import { snapshotDocumentBankAccounts } from "@/lib/document-bank-data";
 import { computeTotals, type LineItemInput } from "../_shared/totals";
 
@@ -45,6 +46,7 @@ export async function createCreditNoteAction(
 
   const totals = computeTotals(items as LineItemInput[]);
   const bankAccounts = await snapshotDocumentBankAccounts(session.orgId, input.bankAccountIds);
+  const seal = await snapshotSealForDoc(db, session.orgId, "credit_note");
 
   const id = await db.transaction(async (tx) => {
     const creditNoteNumber = await nextDocumentNumber(tx, session.orgId, "credit_note");
@@ -63,6 +65,8 @@ export async function createCreditNoteAction(
         subtotal: totals.subtotal,
         taxTotal: totals.taxTotal,
         total: totals.total,
+        sealUrl: seal.sealUrl,
+        signatureUrl: seal.signatureUrl,
         createdById: session.userId,
       })
       .returning({ id: creditNotesTable.id });

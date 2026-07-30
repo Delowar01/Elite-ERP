@@ -31,6 +31,10 @@ export const creditNotesTable = pgTable("credit_notes", {
   discount: numeric("discount", { precision: 14, scale: 2 }).notNull().default("0"),
   taxTotal: numeric("tax_total", { precision: 14, scale: 2 }).notNull().default("0"),
   total: numeric("total", { precision: 14, scale: 2 }).notNull().default("0"),
+  // Seal/signature snapshot (Preset Management → Seal & Signature). Captured at save so editing a
+  // preset never changes already-saved documents; null on legacy rows falls back to the org default.
+  sealUrl: text("seal_url"),
+  signatureUrl: text("signature_url"),
   createdById: integer("created_by_id")
     .notNull()
     .references(() => usersTable.id),

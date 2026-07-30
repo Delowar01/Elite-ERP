@@ -10,6 +10,7 @@ import { requireSession } from "@/lib/session";
 import { logActivity } from "@/lib/activity";
 import { nextDocumentNumber } from "@/lib/documents";
 import { can } from "@/lib/document-lifecycle";
+import { snapshotSealForDoc } from "@/lib/doc-seal";
 import { snapshotDocumentBankAccounts } from "@/lib/document-bank-data";
 
 export type ActionResult = { error?: string; id?: number };
@@ -41,6 +42,7 @@ export async function createDeliveryChallanAction(
   const items = input.items.filter((l) => l.description.trim() && Number(l.quantity) > 0);
   if (items.length === 0) return { error: "Add at least one line item." };
   const bankAccounts = await snapshotDocumentBankAccounts(session.orgId, input.bankAccountIds);
+  const seal = await snapshotSealForDoc(db, session.orgId, "delivery_challan");
 
   const id = await db.transaction(async (tx) => {
     const dcNumber = await nextDocumentNumber(tx, session.orgId, "delivery_challan");
@@ -56,6 +58,8 @@ export async function createDeliveryChallanAction(
         terms: normalizeDocumentTerms(input.terms),
         bankAccounts,
         vehicleNo: input.vehicleNo.trim() || null,
+        sealUrl: seal.sealUrl,
+        signatureUrl: seal.signatureUrl,
         createdById: session.userId,
       })
       .returning({ id: deliveryChallansTable.id });

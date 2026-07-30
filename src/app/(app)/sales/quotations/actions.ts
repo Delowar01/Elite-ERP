@@ -13,6 +13,7 @@ import { can } from "@/lib/document-lifecycle";
 import { computeTotals, type LineItemInput } from "../_shared/totals";
 import { persistDocumentAttachments, type AttachmentInput } from "../_shared/attachment-persist";
 import { snapshotDocumentBankAccounts } from "@/lib/document-bank-data";
+import { snapshotSealForDoc, applySealOverride } from "@/lib/doc-seal";
 import { normalizeDocCurrency } from "@/lib/currency/currencies";
 
 export type ActionResult = { error?: string; id?: number };
@@ -35,6 +36,8 @@ export async function createQuotationAction(
     attachments?: AttachmentInput[];
     bankAccountIds?: number[];
     currency?: string;
+    sealUrl?: string;
+    signatureUrl?: string;
   },
   andSend = false,
 ): Promise<ActionResult> {
@@ -60,6 +63,7 @@ export async function createQuotationAction(
 
   const totals = computeTotals(items as LineItemInput[], input.discount);
   const bankAccounts = await snapshotDocumentBankAccounts(session.orgId, input.bankAccountIds);
+  const seal = applySealOverride(await snapshotSealForDoc(db, session.orgId, "quotation"), { sealUrl: input.sealUrl, signatureUrl: input.signatureUrl });
 
   const id = await db.transaction(async (tx) => {
     const quotationNumber = await nextDocumentNumber(tx, session.orgId, "quotation");
@@ -81,6 +85,8 @@ export async function createQuotationAction(
         discount: totals.discount,
         taxTotal: totals.taxTotal,
         total: totals.total,
+        sealUrl: seal.sealUrl,
+        signatureUrl: seal.signatureUrl,
         createdById: session.userId,
       })
       .returning({ id: quotationsTable.id });
@@ -128,6 +134,8 @@ export async function updateQuotationAction(
     attachments?: AttachmentInput[];
     bankAccountIds?: number[];
     currency?: string;
+    sealUrl?: string;
+    signatureUrl?: string;
   },
 ): Promise<ActionResult> {
   const session = await requireSession();
@@ -157,6 +165,7 @@ export async function updateQuotationAction(
 
   const totals = computeTotals(items as LineItemInput[], input.discount);
   const bankAccounts = await snapshotDocumentBankAccounts(session.orgId, input.bankAccountIds);
+  const seal = applySealOverride(await snapshotSealForDoc(db, session.orgId, "quotation"), { sealUrl: input.sealUrl, signatureUrl: input.signatureUrl });
 
   await db.transaction(async (tx) => {
     // Update only editable header fields; quotationNumber, orgId, status, createdById, source links are preserved.
@@ -176,6 +185,8 @@ export async function updateQuotationAction(
         discount: totals.discount,
         taxTotal: totals.taxTotal,
         total: totals.total,
+        sealUrl: seal.sealUrl,
+        signatureUrl: seal.signatureUrl,
         updatedAt: new Date(),
       })
       .where(and(eq(quotationsTable.id, id), eq(quotationsTable.orgId, session.orgId)));

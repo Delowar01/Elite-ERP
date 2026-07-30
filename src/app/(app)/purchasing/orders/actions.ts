@@ -11,6 +11,7 @@ import { logActivity } from "@/lib/activity";
 import { nextDocumentNumber } from "@/lib/documents";
 import { can, evaluate } from "@/lib/document-lifecycle";
 import { snapshotDocumentBankAccounts } from "@/lib/document-bank-data";
+import { snapshotSealForDoc, applySealOverride } from "@/lib/doc-seal";
 import { normalizeDocCurrency } from "@/lib/currency/currencies";
 import { computeTotals, type LineItemInput } from "../../sales/_shared/totals";
 import { persistDocumentAttachments, type AttachmentInput } from "../../sales/_shared/attachment-persist";
@@ -37,6 +38,8 @@ export async function createPurchaseOrderAction(
     sourceInvoiceId?: string;
     bankAccountIds?: number[];
     currency?: string;
+    sealUrl?: string;
+    signatureUrl?: string;
   },
   andSend = false,
 ): Promise<ActionResult> {
@@ -52,6 +55,7 @@ export async function createPurchaseOrderAction(
 
   const totals = computeTotals(items as LineItemInput[], input.discount);
   const bankAccounts = await snapshotDocumentBankAccounts(session.orgId, input.bankAccountIds);
+  const seal = applySealOverride(await snapshotSealForDoc(db, session.orgId, "purchase_order"), { sealUrl: input.sealUrl, signatureUrl: input.signatureUrl });
 
   const id = await db.transaction(async (tx) => {
     const poNumber = await nextDocumentNumber(tx, session.orgId, "purchase_order");
@@ -76,6 +80,8 @@ export async function createPurchaseOrderAction(
         discount: totals.discount,
         taxTotal: totals.taxTotal,
         total: totals.total,
+        sealUrl: seal.sealUrl,
+        signatureUrl: seal.signatureUrl,
         createdById: session.userId,
       })
       .returning({ id: purchaseOrdersTable.id });
@@ -110,7 +116,7 @@ export async function createPurchaseOrderAction(
 // Batch A2 — draft-only edit. Preserves number/org/status/source links; recomputes totals server-side.
 export async function updatePurchaseOrderAction(
   id: number,
-  input: { title: string; vendorId: string; orderDate: string; expectedDate: string; discount: string; notes: string; terms?: DocumentTerm[]; items: LineInput[]; attachments?: AttachmentInput[]; bankAccountIds?: number[]; currency?: string },
+  input: { title: string; vendorId: string; orderDate: string; expectedDate: string; discount: string; notes: string; terms?: DocumentTerm[]; items: LineInput[]; attachments?: AttachmentInput[]; bankAccountIds?: number[]; currency?: string; sealUrl?: string; signatureUrl?: string },
 ): Promise<ActionResult> {
   const session = await requireSession();
   const [existing] = await db.select().from(purchaseOrdersTable).where(and(eq(purchaseOrdersTable.id, id), eq(purchaseOrdersTable.orgId, session.orgId)));
@@ -126,6 +132,7 @@ export async function updatePurchaseOrderAction(
   if (items.length === 0) return { error: "Add at least one line item." };
   const totals = computeTotals(items as LineItemInput[], input.discount);
   const bankAccounts = await snapshotDocumentBankAccounts(session.orgId, input.bankAccountIds);
+  const seal = applySealOverride(await snapshotSealForDoc(db, session.orgId, "purchase_order"), { sealUrl: input.sealUrl, signatureUrl: input.signatureUrl });
 
   await db.transaction(async (tx) => {
     await tx
@@ -143,6 +150,8 @@ export async function updatePurchaseOrderAction(
         discount: totals.discount,
         taxTotal: totals.taxTotal,
         total: totals.total,
+        sealUrl: seal.sealUrl,
+        signatureUrl: seal.signatureUrl,
         updatedAt: new Date(),
       })
       .where(and(eq(purchaseOrdersTable.id, id), eq(purchaseOrdersTable.orgId, session.orgId)));

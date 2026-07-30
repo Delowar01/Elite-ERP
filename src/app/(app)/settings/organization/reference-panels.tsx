@@ -1,8 +1,6 @@
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
 import { t, type Locale } from "@/lib/i18n/dict";
-import type { Org } from "@/db";
 
 // Reflects what's actually enforced in code today (requireRole() call sites + nav-config.ts
 // role gates), not an editable/configurable matrix — there's no dynamic permissions engine yet,
@@ -57,44 +55,3 @@ export function RolesPermissionsPanel({ locale }: { locale: Locale }) {
   );
 }
 
-export function ZatcaPanel({ locale, org }: { locale: Locale; org: Org }) {
-  const connected = Boolean(org.zatcaCsid);
-  return (
-    <div className="max-w-xl">
-      <h3 className="text-[17px] font-bold mb-3">{t(locale, "ZATCA E-Invoicing")}</h3>
-      <p className="text-[12.5px] text-ink-muted mb-4">
-        {t(
-          locale,
-          "The connection this organization uses to comply with ZATCA Phase 1/2 e-invoicing. The QR code and hash shown on every Tax Invoice come from this integration.",
-        )}
-      </p>
-      <Card>
-        <CardContent className="p-5 flex flex-col gap-3">
-          <div className="flex items-center justify-between">
-            <p className="text-[12.5px] font-semibold">{t(locale, "Integration Status")}</p>
-            <Badge variant={connected ? "success" : "neutral"}>{connected ? t(locale, "Connected") : t(locale, "Not Connected")}</Badge>
-          </div>
-          <div className="flex flex-col gap-2 text-[12.5px]">
-            <div className="flex justify-between border-b border-line pb-2">
-              <span className="text-ink-faint">CSID</span>
-              <span className="font-mono text-xs">{org.zatcaCsid ?? "—"}</span>
-            </div>
-            <div className="flex justify-between border-b border-line pb-2">
-              <span className="text-ink-faint">{t(locale, "Environment")}</span>
-              <span>{org.zatcaEnvironment === "production" ? t(locale, "Production") : t(locale, "Sandbox")}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-ink-faint">{t(locale, "Certificate expires")}</span>
-              <span>{org.zatcaCertExpiresAt ? new Date(org.zatcaCertExpiresAt).toLocaleDateString() : "—"}</span>
-            </div>
-          </div>
-          {!connected && (
-            <p className="text-[11px] text-ink-faint">
-              {t(locale, "Not connected yet — ZATCA onboarding is built alongside the Invoice module.")}
-            </p>
-          )}
-        </CardContent>
-      </Card>
-    </div>
-  );
-}

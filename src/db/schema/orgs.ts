@@ -29,12 +29,29 @@ export const orgsTable = pgTable("orgs", {
   primaryColor: text("primary_color").notNull().default("#1B1B4E"),
   accentColor: text("accent_color").notNull().default("#E87722"),
 
-  // Documents (Business Settings -> Seal & Signature / Print Layout)
+  // Documents — org-wide seal/signature (the fallback default; per-document-type defaults live in
+  // orgs.sealDefaults + seal_signature_assets, managed under Preset Management → Seal & Signature).
   sealUrl: text("seal_url"),
   signatureUrl: text("signature_url"),
-  printLayout: text("print_layout").notNull().default("classic"), // classic | modern | minimal
+  // Per-document-type default seal/signature (Preset Management → Seal & Signature). Maps a
+  // document type (e.g. "sales_invoice") to the chosen asset ids; unset types fall back to the
+  // org-wide sealUrl/signatureUrl. Snapshots are taken at document save, so editing this only
+  // affects NEW documents.
+  sealDefaults: jsonb("seal_defaults").$type<Record<string, { sealAssetId?: number | null; signatureAssetId?: number | null }>>(),
+
+  // Print Layout (Preset Management → Print Layout). Applied to every rendered document
+  // (preview, browser print, PDF, download/share) since all go through the one /print route.
+  printLayout: text("print_layout").notNull().default("classic"), // classic | modern | minimal | custom
   paperSize: text("paper_size").notNull().default("A4"),
   printMarginMm: integer("print_margin_mm").notNull().default(20),
+  // One color theme applied to all documents (named preset → header/accent color in print.css).
+  // Default "orange" == the existing PDF accent (#E87722), so current documents look unchanged.
+  documentColorTheme: text("document_color_theme").notNull().default("orange"),
+  // Per-document-type layout override; unset types use printLayout (the default layout).
+  documentLayoutOverrides: jsonb("document_layout_overrides").$type<Record<string, string>>(),
+  // Optional custom letterhead/background uploaded by the org (validated, org-scoped). Used when a
+  // document's resolved layout is "custom".
+  customLayoutUrl: text("custom_layout_url"),
 
   // Finance (Business Settings -> Default Bank Account / Fiscal Year / VAT Configuration)
   // No FK constraint on defaultBankAccountId: bank_accounts.org_id already references orgs.id,
@@ -63,8 +80,11 @@ export const orgsTable = pgTable("orgs", {
   roundRates: boolean("round_rates").notNull().default(false),
   customCurrencySymbol: text("custom_currency_symbol"), // optional override; null = use official symbol/code
 
-  // Integrations (Business Settings -> ZATCA E-Invoicing) — connection status/reference fields
-  // only; the actual e-invoice generation/signing pipeline is built alongside the Invoice module.
+  // Integrations (Business Settings -> ZATCA E-Invoicing) — ZATCA Phase 1 only.
+  // Once an eligible Saudi org enables Phase 1 it is locked ON for organization users: only a
+  // backend administrator / Elite Marcom Platform Owner may turn it off. Enabling and any backend
+  // disabling are both recorded in the immutable audit log.
+  zatcaPhase1Enabled: boolean("zatca_phase1_enabled").notNull().default(false),
   zatcaEnvironment: text("zatca_environment").notNull().default("sandbox"), // sandbox | production
   zatcaCsid: text("zatca_csid"),
   zatcaCertExpiresAt: timestamp("zatca_cert_expires_at"),

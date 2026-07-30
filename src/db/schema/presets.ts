@@ -104,6 +104,19 @@ export const insertLeaveTypeSchema = createInsertSchema(leaveTypesTable).omit({ 
 export type InsertLeaveType = z.infer<typeof insertLeaveTypeSchema>;
 export type LeaveType = typeof leaveTypesTable.$inferSelect;
 
+// Preset Management → Seal & Signature. A library of uploaded (and cropped) seal / signature
+// images the org can pick per document type. Files are org-scoped in the private uploads store.
+export const sealSignatureAssetsTable = pgTable("seal_signature_assets", {
+  id: serial("id").primaryKey(),
+  orgId: integer("org_id")
+    .notNull()
+    .references(() => orgsTable.id, { onDelete: "cascade" }),
+  kind: text("kind").notNull(), // "seal" | "signature"
+  name: text("name").notNull(),
+  url: text("url").notNull(),
+});
+export type SealSignatureAsset = typeof sealSignatureAssetsTable.$inferSelect;
+
 export const expenseCategoriesTable = pgTable("expense_categories", {
   id: serial("id").primaryKey(),
   orgId: integer("org_id")

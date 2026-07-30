@@ -17,7 +17,7 @@ export const CONTENT_TYPES: Record<FileExt, string> = { png: "image/png", jpg: "
 
 // Folders map 1:1 to asset kinds. All are tenant-scoped under organizations/{orgId}/.
 export const BLOB_FOLDERS = [
-  "logos", "seals", "signatures", "item-images", "attachments", "employee-photos", "client-logos", "vendor-logos",
+  "logos", "seals", "signatures", "item-images", "attachments", "employee-photos", "client-logos", "vendor-logos", "layouts",
 ] as const;
 export type BlobFolder = (typeof BLOB_FOLDERS)[number];
 export const BLOB_FOLDER_SET = new Set<string>(BLOB_FOLDERS);

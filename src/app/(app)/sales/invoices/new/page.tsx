@@ -1,5 +1,5 @@
 import { asc, eq } from "drizzle-orm";
-import { db, customersTable, productsTable, orgsTable, projectsTable } from "@/db";
+import { db, customersTable, productsTable, orgsTable, projectsTable, sealSignatureAssetsTable } from "@/db";
 import { getColumnConfig } from "@/lib/column-config-server";
 import { requireSession } from "@/lib/session";
 import { getLocale } from "@/lib/i18n/server";
@@ -24,9 +24,11 @@ export default async function NewInvoicePage() {
     getDocumentBankData(session.orgId),
   ]);
 
+  const sealAssets = await db.select().from(sealSignatureAssetsTable).where(eq(sealSignatureAssetsTable.orgId, session.orgId)).orderBy(sealSignatureAssetsTable.id);
+
   return (
     <div className="max-w-6xl mx-auto">
-      <InvoiceForm locale={locale} customers={customers} products={products} org={org} numberPreview={numberPreview} projects={projects} noteTemplates={presets.noteTemplates} termsGroups={presets.termsGroups}
+      <InvoiceForm locale={locale} customers={customers} products={products} org={org} sealAssets={sealAssets} numberPreview={numberPreview} projects={projects} noteTemplates={presets.noteTemplates} termsGroups={presets.termsGroups}
         columnConfig={columnConfig} bankAccounts={bankData.bankAccounts} glAccounts={bankData.glAccounts} defaultBankAccountIds={bankData.defaultBankAccountIds} />
     </div>
   );

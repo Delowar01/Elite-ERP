@@ -174,7 +174,7 @@ export default async function PrintPage({ params }: { params: Promise<{ type: st
       backHref = `/sales/quotations/${id}`;
       const q = doc as typeof quotationsTable.$inferSelect;
       body = (
-        <A4Page>
+        <A4Page org={org} documentType="quotation">
           <PdfHeader docLabel="QUOTATION" numberLabel="Quotation No" numberVal={q.quotationNumber} dateVal={fmtDate(q.issueDate)} extraLabel="Valid Till" extraVal={q.validUntil ? fmtDate(q.validUntil) : null} org={org} />
           <Parties>{orgParty("FROM")}<Party label="TO" name={customer.name} lines={customerLines(customer)} /></Parties>
           <ItemsTableFull items={fullItems} format={numFmt} />
@@ -187,7 +187,7 @@ export default async function PrintPage({ params }: { params: Promise<{ type: st
           </div>
           <PdfTermsBlock terms={q.terms} />
           <NotesBlock notes={richTextToPlain(q.notes) || null} />
-          <SealSignature org={org} />
+          <SealSignature org={org} sealUrl={q.sealUrl} signatureUrl={q.signatureUrl} />
           <PdfFooter org={org} />
         </A4Page>
       );
@@ -195,7 +195,7 @@ export default async function PrintPage({ params }: { params: Promise<{ type: st
       backHref = `/sales/orders/${id}`;
       const so = doc as typeof salesOrdersTable.$inferSelect;
       body = (
-        <A4Page>
+        <A4Page org={org} documentType="sales_order">
           <PdfHeader docLabel="SALES ORDER" numberLabel="Sales Order No" numberVal={so.soNumber} dateVal={fmtDate(so.issueDate)} org={org} />
           <Parties>{orgParty("FROM")}<Party label="TO" name={customer.name} lines={customerLines(customer)} /></Parties>
           <ItemsTableFull items={fullItems} format={numFmt} />
@@ -209,7 +209,7 @@ export default async function PrintPage({ params }: { params: Promise<{ type: st
           <PdfTermsBlock terms={so.terms} />
           <NotesBlock notes={richTextToPlain(so.notes) || null} />
           <ApprovalBlock />
-          <SealSignature org={org} />
+          <SealSignature org={org} sealUrl={so.sealUrl} signatureUrl={so.signatureUrl} />
           <PdfFooter org={org} />
         </A4Page>
       );
@@ -217,7 +217,7 @@ export default async function PrintPage({ params }: { params: Promise<{ type: st
       backHref = `/sales/proforma/${id}`;
       const pf = doc as typeof proformaInvoicesTable.$inferSelect;
       body = (
-        <A4Page>
+        <A4Page org={org} documentType="proforma_invoice">
           <PdfHeader docLabel="PROFORMA INVOICE" numberLabel="P.I. No" numberVal={pf.proformaNumber} dateVal={fmtDate(pf.issueDate)} org={org} />
           <Parties>{orgParty("FROM")}<Party label="TO" name={customer.name} lines={customerLines(customer)} /></Parties>
           <ItemsTableFull items={fullItems} format={numFmt} />
@@ -230,7 +230,7 @@ export default async function PrintPage({ params }: { params: Promise<{ type: st
           </div>
           <PdfTermsBlock terms={pf.terms} />
           <NotesBlock notes={"Non-posting — for client reference only. This is not a tax invoice."} />
-          <SealSignature org={org} />
+          <SealSignature org={org} sealUrl={pf.sealUrl} signatureUrl={pf.signatureUrl} />
           <PdfFooter org={org} />
         </A4Page>
       );
@@ -265,7 +265,7 @@ export default async function PrintPage({ params }: { params: Promise<{ type: st
       }
 
       body = (
-        <A4Page>
+        <A4Page org={org} documentType="sales_invoice">
           <PdfHeader docLabel="INVOICE" numberLabel="Invoice No" numberVal={inv.invoiceNumber} dateVal={fmtDate(inv.issueDate)} org={org} />
           <Parties>{orgParty("FROM")}<Party label="TO" name={customer.name} lines={customerLines(customer)} /></Parties>
           <ItemsTableFull items={fullItems} format={numFmt} />
@@ -279,7 +279,7 @@ export default async function PrintPage({ params }: { params: Promise<{ type: st
           <PdfTermsBlock terms={inv.terms} />
           <NotesBlock notes={richTextToPlain(inv.notes) || null} />
           {qrDataUrl && <QrPanel dataUrl={qrDataUrl} />}
-          <SealSignature org={org} />
+          <SealSignature org={org} sealUrl={inv.sealUrl} signatureUrl={inv.signatureUrl} />
           <PdfFooter org={org} />
         </A4Page>
       );
@@ -299,7 +299,7 @@ export default async function PrintPage({ params }: { params: Promise<{ type: st
     ]);
     if (!vendor) notFound();
     body = (
-      <A4Page>
+      <A4Page org={org} documentType="purchase_order">
         <PdfHeader docLabel="PURCHASE ORDER" numberLabel="P.O. No" numberVal={po.poNumber} dateVal={fmtDate(po.orderDate)} extraLabel="Expected" extraVal={po.expectedDate ? fmtDate(po.expectedDate) : null} org={org} />
         <Parties>
           {orgParty("DELIVERY TO")}
@@ -316,7 +316,7 @@ export default async function PrintPage({ params }: { params: Promise<{ type: st
         <PdfTermsBlock terms={po.terms} />
         <NotesBlock notes={richTextToPlain(po.notes) || null} />
         <ApprovalBlock />
-        <SealSignature org={org} />
+        <SealSignature org={org} sealUrl={po.sealUrl} signatureUrl={po.signatureUrl} />
         <PdfFooter org={org} />
       </A4Page>
     );
@@ -334,7 +334,7 @@ export default async function PrintPage({ params }: { params: Promise<{ type: st
     if (!customer) notFound();
     const logistics = [dc.carrier ? `Carrier: ${dc.carrier}` : null, dc.vehicleNo ? `Vehicle No: ${dc.vehicleNo}` : null].filter(Boolean).join(" · ");
     body = (
-      <A4Page>
+      <A4Page org={org} documentType="delivery_challan">
         <PdfHeader docLabel="DELIVERY CHALLAN" numberLabel="Challan No" numberVal={dc.dcNumber} dateVal={fmtDate(dc.dispatchDate)} org={org} />
         <Parties>
           {orgParty("ISSUED BY")}
@@ -346,7 +346,7 @@ export default async function PrintPage({ params }: { params: Promise<{ type: st
         <DocBankBlocks accounts={dc.bankAccounts} />
         <ClientComments />
         <ApprovalBlock />
-        <SealSignature org={org} showSignature={false} />
+        <SealSignature org={org} showSignature={false} sealUrl={dc.sealUrl} signatureUrl={dc.signatureUrl} />
         <PdfFooter org={org} />
       </A4Page>
     );
@@ -367,7 +367,7 @@ export default async function PrintPage({ params }: { params: Promise<{ type: st
       ]);
       if (!customer) notFound();
       body = (
-        <A4Page>
+        <A4Page org={org} documentType="credit_note">
           <PdfHeader docLabel="CREDIT NOTE" numberLabel="Credit Note No" numberVal={cn.creditNoteNumber} dateVal={fmtDate(cn.issueDate)} org={org} />
           <Parties>{orgParty("FROM")}<Party label="TO" name={customer.name} lines={customerLines(customer)} /></Parties>
           <div className="notes-block" style={{ marginTop: 0, marginBottom: 16 }}>
@@ -385,7 +385,7 @@ export default async function PrintPage({ params }: { params: Promise<{ type: st
           </div>
           <DocBankBlocks accounts={cn.bankAccounts} />
           <PdfTermsBlock terms={cn.terms} />
-          <SealSignature org={org} showSignature={false} />
+          <SealSignature org={org} showSignature={false} sealUrl={cn.sealUrl} signatureUrl={cn.signatureUrl} />
           <PdfFooter org={org} />
         </A4Page>
       );
@@ -402,7 +402,7 @@ export default async function PrintPage({ params }: { params: Promise<{ type: st
       ]);
       if (!vendor) notFound();
       body = (
-        <A4Page>
+        <A4Page org={org} documentType="debit_note">
           <PdfHeader docLabel="DEBIT NOTE" numberLabel="Debit Note No" numberVal={dn.debitNoteNumber} dateVal={fmtDate(dn.issueDate)} org={org} />
           <Parties>{orgParty("FROM")}<Party label="SUPPLY FROM" name={vendor.name} lines={customerLines(vendor)} /></Parties>
           <div className="notes-block" style={{ marginTop: 0, marginBottom: 16 }}>
@@ -420,7 +420,7 @@ export default async function PrintPage({ params }: { params: Promise<{ type: st
           </div>
           <DocBankBlocks accounts={dn.bankAccounts} />
           <PdfTermsBlock terms={dn.terms} />
-          <SealSignature org={org} showSignature={false} />
+          <SealSignature org={org} showSignature={false} sealUrl={dn.sealUrl} signatureUrl={dn.signatureUrl} />
           <PdfFooter org={org} />
         </A4Page>
       );

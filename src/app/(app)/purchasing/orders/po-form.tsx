@@ -13,7 +13,7 @@ import { LineItemsEditor, emptyLineItem, type LineItemDraft } from "../../sales/
 import { TotalsCard } from "../../sales/_shared/totals-card";
 import { TermsBlock, type AttachmentDraft } from "../../sales/_shared/terms-block";
 import type { DocumentTerm } from "../../sales/_shared/document-terms";
-import { SealSignaturePreview } from "../../sales/_shared/seal-signature";
+import { SealSignaturePreview, type SealAsset } from "../../sales/_shared/seal-signature";
 import { DocFooterContact } from "../../sales/_shared/doc-footer-contact";
 import { DocActionBar } from "../../sales/_shared/doc-action-bar";
 import { DocTopActions } from "../../sales/_shared/doc-top-actions";
@@ -66,7 +66,9 @@ export function PoForm({
   bankAccounts = [],
   glAccounts = [],
   defaultBankAccountIds = [],
+  sealAssets = [],
 }: {
+  sealAssets?: SealAsset[];
   locale: Locale;
   vendors: Vendor[];
   products: Product[];
@@ -100,6 +102,8 @@ export function PoForm({
   const [terms, setTerms] = useState<DocumentTerm[]>(initial?.terms ?? []);
   const [bankAccountIds, setBankAccountIds] = useState<number[]>(initial?.bankAccountIds ?? (mode === "create" ? defaultBankAccountIds : []));
   const [currency, setCurrency] = useState<string>(initial?.currency ?? org.currency);
+  const [sealOverride, setSealOverride] = useState<string | undefined>(undefined);
+  const [signatureOverride, setSignatureOverride] = useState<string | undefined>(undefined);
   const docMark = docMoneyMark(org, currency);
   const countryProfile = getProfileByCountryName(org.country);
   const defaultTaxRate = String(countryProfile.defaultTaxRate);
@@ -118,9 +122,9 @@ export function PoForm({
     const start = andSend ? startPrimaryTransition : startDraftTransition;
     start(async () => {
       const result = isEdit && documentId
-        ? await updatePurchaseOrderAction(documentId, { title, vendorId, orderDate, expectedDate, discount, notes, terms, items, attachments, bankAccountIds, currency })
+        ? await updatePurchaseOrderAction(documentId, { title, vendorId, orderDate, expectedDate, discount, notes, terms, items, attachments, bankAccountIds, currency, sealUrl: sealOverride, signatureUrl: signatureOverride })
         : await createPurchaseOrderAction(
-            { title, vendorId, orderDate, expectedDate, discount, notes, items, attachments, sourceQuotationId, sourceSalesOrderId, sourceProformaId, sourceInvoiceId, bankAccountIds, currency },
+            { title, vendorId, orderDate, expectedDate, discount, notes, items, attachments, sourceQuotationId, sourceSalesOrderId, sourceProformaId, sourceInvoiceId, bankAccountIds, currency, sealUrl: sealOverride, signatureUrl: signatureOverride },
             andSend,
           );
       if (result?.error) toast.error(result.error);
@@ -256,7 +260,7 @@ export function PoForm({
         <BankAccountsField locale={locale} accounts={bankAccounts} glAccounts={glAccounts} value={bankAccountIds} onChange={setBankAccountIds} />
       </div>
 
-      <SealSignaturePreview locale={locale} sealUrl={org.sealUrl} signatureUrl={org.signatureUrl} />
+      <SealSignaturePreview locale={locale} sealUrl={org.sealUrl} signatureUrl={org.signatureUrl} sealAssets={sealAssets} sealOverride={sealOverride} signatureOverride={signatureOverride} onSealOverride={setSealOverride} onSignatureOverride={setSignatureOverride} />
 
       <DocFooterContact locale={locale} email={org.email} phone={org.phone} />
 
