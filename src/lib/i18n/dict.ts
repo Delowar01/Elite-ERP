@@ -354,6 +354,24 @@ const DICT: Record<string, string> = {
   In: "وارد",
   Out: "صادر",
 
+  // ---- Bank Account Selection in Documents (Issue #6) ----
+  "Bank Details": "التفاصيل البنكية",
+  "Account Holder Name": "اسم صاحب الحساب",
+  IBAN: "رقم الآيبان",
+  "SWIFT / BIC": "سويفت / بيك",
+  Branch: "الفرع",
+  "New Bank Account": "حساب بنكي جديد",
+  "Edit Bank Account": "تعديل الحساب البنكي",
+  "Add a bank account…": "أضف حسابًا بنكيًا…",
+  "All accounts added": "تمت إضافة جميع الحسابات",
+  "Default Bank Accounts": "الحسابات البنكية الافتراضية",
+  "Shown on the document as payment instructions. This does not record a payment or change any balance.":
+    "تظهر في المستند كتعليمات للدفع. هذا لا يسجّل أي دفعة ولا يغيّر أي رصيد.",
+  "These accounts appear automatically on new documents. You can still add, remove or reorder accounts on a single document without changing this default.":
+    "تظهر هذه الحسابات تلقائيًا في المستندات الجديدة. لا يزال بإمكانك إضافة الحسابات أو إزالتها أو إعادة ترتيبها في مستند واحد دون تغيير هذا الإعداد الافتراضي.",
+  "No bank accounts yet. Add one from Finance → Bank Accounts or the New Bank Account button below.":
+    "لا توجد حسابات بنكية بعد. أضف حسابًا من المالية ← الحسابات البنكية أو عبر زر «حساب بنكي جديد» أدناه.",
+
   // ---- Finance: Journal Entry ----
   "New Journal Entry": "قيد يومية جديد",
   Manual: "يدوي",

@@ -19,6 +19,9 @@ import { DocActionBar } from "../_shared/doc-action-bar";
 import { DocTopActions } from "../_shared/doc-top-actions";
 import { PreviewDialog, type PreviewData } from "../_shared/preview-dialog";
 import { EInvoicePreviewPanel } from "../_shared/einvoice-preview-panel";
+import { BankAccountsField } from "../_shared/bank-accounts-field";
+import { snapshotSelectedBankAccounts } from "@/lib/document-bank-accounts";
+import type { EditableBankAccount, GlAccountOption } from "../../finance/bank-accounts/bank-account-form-dialog";
 import { computeTotals } from "../_shared/totals";
 import { ConfigureColumnsDialog } from "../_shared/configure-columns-dialog";
 import { resolveColumns, type ColumnDef } from "@/lib/column-config";
@@ -38,6 +41,7 @@ export type InvoiceFormInitial = {
   notes: string;
   items: LineItemDraft[];
   terms?: DocumentTerm[];
+  bankAccountIds?: number[];
 };
 
 export function InvoiceForm({
@@ -53,6 +57,9 @@ export function InvoiceForm({
   noteTemplates = [],
   termsGroups = [],
   columnConfig,
+  bankAccounts = [],
+  glAccounts = [],
+  defaultBankAccountIds = [],
 }: {
   locale: Locale;
   customers: Customer[];
@@ -66,6 +73,9 @@ export function InvoiceForm({
   noteTemplates?: ContentPreset[];
   termsGroups?: ContentPreset[];
   columnConfig?: ColumnDef[];
+  bankAccounts?: EditableBankAccount[];
+  glAccounts?: GlAccountOption[];
+  defaultBankAccountIds?: number[];
 }) {
   const isEdit = mode === "edit";
   const [columns, setColumns] = useState<ColumnDef[]>(columnConfig ?? resolveColumns(null));
@@ -78,6 +88,7 @@ export function InvoiceForm({
   const defaultNote = noteTemplates.find((n) => n.isDefault) ?? noteTemplates[0];
   const [notes, setNotes] = useState(initial?.notes ?? defaultNote?.content ?? "");
   const [terms, setTerms] = useState<DocumentTerm[]>(initial?.terms ?? []);
+  const [bankAccountIds, setBankAccountIds] = useState<number[]>(initial?.bankAccountIds ?? (mode === "create" ? defaultBankAccountIds : []));
   const countryProfile = getProfileByCountryName(org.country);
   const defaultTaxRate = String(countryProfile.defaultTaxRate);
   const [items, setItems] = useState<LineItemDraft[]>(initial?.items && initial.items.length > 0 ? initial.items : [emptyLineItem(defaultTaxRate)]);
@@ -92,7 +103,7 @@ export function InvoiceForm({
   function submit(andSend: boolean) {
     const start = andSend ? startPrimaryTransition : startDraftTransition;
     start(async () => {
-      const payload = { title, customerId, projectId, issueDate, dueDate, discount, notes, terms, items, attachments };
+      const payload = { title, customerId, projectId, issueDate, dueDate, discount, notes, terms, items, attachments, bankAccountIds };
       const result = isEdit && documentId ? await updateInvoiceAction(documentId, payload) : await createInvoiceAction(payload, andSend);
       if (result?.error) toast.error(result.error);
     });
@@ -114,6 +125,7 @@ export function InvoiceForm({
     notes,
     terms,
     currency: org.currency,
+    bankAccounts: snapshotSelectedBankAccounts(bankAccountIds, bankAccounts),
   };
 
   return (
@@ -219,6 +231,10 @@ export function InvoiceForm({
           <TotalsCard locale={locale} subtotal={totals.subtotal} discount={discount} onDiscountChange={setDiscount} taxTotal={totals.taxTotal} total={totals.total} />
           <EInvoicePreviewPanel locale={locale} vatNumber={org.vatNumber} taxTotal={totals.taxTotal} variant="create" />
         </div>
+      </div>
+
+      <div className="mt-4">
+        <BankAccountsField locale={locale} accounts={bankAccounts} glAccounts={glAccounts} value={bankAccountIds} onChange={setBankAccountIds} />
       </div>
 
       <SealSignaturePreview locale={locale} sealUrl={org.sealUrl} signatureUrl={org.signatureUrl} />

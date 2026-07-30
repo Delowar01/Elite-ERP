@@ -10,6 +10,7 @@ import { requireSession } from "@/lib/session";
 import { logActivity } from "@/lib/activity";
 import { nextDocumentNumber } from "@/lib/documents";
 import { can, evaluate } from "@/lib/document-lifecycle";
+import { snapshotDocumentBankAccounts } from "@/lib/document-bank-data";
 import { computeTotals, type LineItemInput } from "../_shared/totals";
 
 export type ActionResult = { error?: string; id?: number };
@@ -25,6 +26,7 @@ export async function createCreditNoteAction(
     reason: string;
     items: LineInput[];
     terms?: DocumentTerm[];
+    bankAccountIds?: number[];
   },
   andIssue = false,
 ): Promise<ActionResult> {
@@ -42,6 +44,7 @@ export async function createCreditNoteAction(
   if (items.length === 0) return { error: "Add at least one line item." };
 
   const totals = computeTotals(items as LineItemInput[]);
+  const bankAccounts = await snapshotDocumentBankAccounts(session.orgId, input.bankAccountIds);
 
   const id = await db.transaction(async (tx) => {
     const creditNoteNumber = await nextDocumentNumber(tx, session.orgId, "credit_note");
@@ -55,6 +58,7 @@ export async function createCreditNoteAction(
         sourceInvoiceId: invoice.id,
         reason: input.reason.trim() || null,
         terms: normalizeDocumentTerms(input.terms),
+        bankAccounts,
         issueDate: new Date().toISOString().slice(0, 10),
         subtotal: totals.subtotal,
         taxTotal: totals.taxTotal,
@@ -91,7 +95,7 @@ export async function createCreditNoteAction(
 // Batch A2 — draft-only edit. Preserves number/org/status/customer + source-invoice link; recomputes totals server-side.
 export async function updateCreditNoteAction(
   id: number,
-  input: { reason: string; items: LineInput[]; terms?: DocumentTerm[] },
+  input: { reason: string; items: LineInput[]; terms?: DocumentTerm[]; bankAccountIds?: number[] },
 ): Promise<ActionResult> {
   const session = await requireSession();
   const [existing] = await db.select().from(creditNotesTable).where(and(eq(creditNotesTable.id, id), eq(creditNotesTable.orgId, session.orgId)));
@@ -101,6 +105,7 @@ export async function updateCreditNoteAction(
   const items = input.items.filter((l) => l.description.trim() && Number(l.quantity) > 0);
   if (items.length === 0) return { error: "Add at least one line item." };
   const totals = computeTotals(items as LineItemInput[]);
+  const bankAccounts = await snapshotDocumentBankAccounts(session.orgId, input.bankAccountIds);
 
   await db.transaction(async (tx) => {
     await tx
@@ -108,6 +113,7 @@ export async function updateCreditNoteAction(
       .set({
         reason: input.reason.trim() || null,
         terms: normalizeDocumentTerms(input.terms),
+        bankAccounts,
         subtotal: totals.subtotal,
         taxTotal: totals.taxTotal,
         total: totals.total,

@@ -18,6 +18,9 @@ import { DocFooterContact } from "../../sales/_shared/doc-footer-contact";
 import { DocActionBar } from "../../sales/_shared/doc-action-bar";
 import { DocTopActions } from "../../sales/_shared/doc-top-actions";
 import { PreviewDialog, type PreviewData } from "../../sales/_shared/preview-dialog";
+import { BankAccountsField } from "../../sales/_shared/bank-accounts-field";
+import { snapshotSelectedBankAccounts } from "@/lib/document-bank-accounts";
+import type { EditableBankAccount, GlAccountOption } from "../../finance/bank-accounts/bank-account-form-dialog";
 import { computeTotals } from "../../sales/_shared/totals";
 import { ConfigureColumnsDialog } from "../../sales/_shared/configure-columns-dialog";
 import { resolveColumns, type ColumnDef } from "@/lib/column-config";
@@ -36,6 +39,7 @@ export type PoFormInitial = {
   notes: string;
   items: LineItemDraft[];
   terms?: DocumentTerm[];
+  bankAccountIds?: number[];
 };
 
 export function PoForm({
@@ -56,6 +60,9 @@ export function PoForm({
   noteTemplates = [],
   termsGroups = [],
   columnConfig,
+  bankAccounts = [],
+  glAccounts = [],
+  defaultBankAccountIds = [],
 }: {
   locale: Locale;
   vendors: Vendor[];
@@ -74,6 +81,9 @@ export function PoForm({
   noteTemplates?: ContentPreset[];
   termsGroups?: ContentPreset[];
   columnConfig?: ColumnDef[];
+  bankAccounts?: EditableBankAccount[];
+  glAccounts?: GlAccountOption[];
+  defaultBankAccountIds?: number[];
 }) {
   const isEdit = mode === "edit";
   const [columns, setColumns] = useState<ColumnDef[]>(columnConfig ?? resolveColumns(null));
@@ -85,6 +95,7 @@ export function PoForm({
   const defaultNote = noteTemplates.find((n) => n.isDefault) ?? noteTemplates[0];
   const [notes, setNotes] = useState(initial?.notes ?? defaultNote?.content ?? "");
   const [terms, setTerms] = useState<DocumentTerm[]>(initial?.terms ?? []);
+  const [bankAccountIds, setBankAccountIds] = useState<number[]>(initial?.bankAccountIds ?? (mode === "create" ? defaultBankAccountIds : []));
   const countryProfile = getProfileByCountryName(org.country);
   const defaultTaxRate = String(countryProfile.defaultTaxRate);
   const [items, setItems] = useState<LineItemDraft[]>(
@@ -102,9 +113,9 @@ export function PoForm({
     const start = andSend ? startPrimaryTransition : startDraftTransition;
     start(async () => {
       const result = isEdit && documentId
-        ? await updatePurchaseOrderAction(documentId, { title, vendorId, orderDate, expectedDate, discount, notes, terms, items, attachments })
+        ? await updatePurchaseOrderAction(documentId, { title, vendorId, orderDate, expectedDate, discount, notes, terms, items, attachments, bankAccountIds })
         : await createPurchaseOrderAction(
-            { title, vendorId, orderDate, expectedDate, discount, notes, items, attachments, sourceQuotationId, sourceSalesOrderId, sourceProformaId, sourceInvoiceId },
+            { title, vendorId, orderDate, expectedDate, discount, notes, items, attachments, sourceQuotationId, sourceSalesOrderId, sourceProformaId, sourceInvoiceId, bankAccountIds },
             andSend,
           );
       if (result?.error) toast.error(result.error);
@@ -127,6 +138,7 @@ export function PoForm({
     notes,
     terms,
     currency: org.currency,
+    bankAccounts: snapshotSelectedBankAccounts(bankAccountIds, bankAccounts),
   };
 
   return (
@@ -230,6 +242,10 @@ export function PoForm({
             totalLabel="Total Payable"
           />
         </div>
+      </div>
+
+      <div className="mt-4">
+        <BankAccountsField locale={locale} accounts={bankAccounts} glAccounts={glAccounts} value={bankAccountIds} onChange={setBankAccountIds} />
       </div>
 
       <SealSignaturePreview locale={locale} sealUrl={org.sealUrl} signatureUrl={org.signatureUrl} />

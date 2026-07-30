@@ -11,6 +11,7 @@ import { t } from "@/lib/i18n/dict";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { PartyCardSimple } from "../../_shared/party-card";
+import { BankAccountBlocks } from "../../_shared/bank-account-blocks";
 import { TotalsStrip } from "../../_shared/totals-strip";
 import { DocNum } from "../../_shared/money";
 import { OrderDetailActions } from "../order-detail-actions";
@@ -43,6 +44,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
       total: salesOrdersTable.total,
       notes: salesOrdersTable.notes,
       terms: salesOrdersTable.terms,
+      bankAccounts: salesOrdersTable.bankAccounts,
       customerName: customersTable.name,
       customerVatNumber: customersTable.vatNumber,
       customerAddress: customersTable.address,
@@ -130,6 +132,8 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
       <div className="mt-4 max-w-sm ms-auto">
         <TotalsStrip locale={locale} subtotal={order.subtotal} discount={order.discount} taxTotal={order.taxTotal} finalLabel="Total" finalValue={order.total} />
       </div>
+
+      <BankAccountBlocks locale={locale} accounts={order.bankAccounts} className="mt-5" />
 
       <DocumentTermsView locale={locale} terms={order.terms} className="mt-5" />
       {order.notes && (

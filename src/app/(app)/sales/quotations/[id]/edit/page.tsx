@@ -6,6 +6,8 @@ import { requireSession } from "@/lib/session";
 import { getLocale } from "@/lib/i18n/server";
 import { tenantScope } from "@/lib/tenant";
 import { can } from "@/lib/document-lifecycle";
+import { getDocumentBankData } from "@/lib/document-bank-data";
+import { initialSelectedIds } from "@/lib/document-bank-accounts";
 import type { LineItemDraft } from "../../../_shared/line-items-editor";
 import { QuotationForm } from "../../quotation-form";
 
@@ -21,12 +23,13 @@ export default async function EditQuotationPage({ params }: { params: Promise<{ 
   // Server-side draft-only enforcement — direct access to a non-draft edit URL redirects to the detail page.
   if (!can("quotation", quotation.status, "edit")) redirect(`/sales/quotations/${quotationId}`);
 
-  const [items, customers, products, [org], projects] = await Promise.all([
+  const [items, customers, products, [org], projects, bankData] = await Promise.all([
     db.select().from(quotationItemsTable).where(eq(quotationItemsTable.quotationId, quotationId)),
     db.select().from(customersTable).where(tenantScope(session.orgId, customersTable)).orderBy(asc(customersTable.name)),
     db.select().from(productsTable).where(tenantScope(session.orgId, productsTable)).orderBy(asc(productsTable.name)),
     db.select().from(orgsTable).where(eq(orgsTable.id, session.orgId)),
     db.select({ id: projectsTable.id, name: projectsTable.name }).from(projectsTable).where(eq(projectsTable.orgId, session.orgId)).orderBy(asc(projectsTable.name)),
+    getDocumentBankData(session.orgId),
   ]);
 
   const initialItems: LineItemDraft[] = items.map((it) => ({
@@ -52,6 +55,8 @@ export default async function EditQuotationPage({ params }: { params: Promise<{ 
         mode="edit"
         columnConfig={columnConfig}
         documentId={quotationId}
+        bankAccounts={bankData.bankAccounts}
+        glAccounts={bankData.glAccounts}
         initial={{
           title: quotation.title ?? "",
           customerId: String(quotation.customerId),
@@ -62,6 +67,7 @@ export default async function EditQuotationPage({ params }: { params: Promise<{ 
           notes: quotation.notes ?? "",
           terms: quotation.terms ?? [],
           items: initialItems,
+          bankAccountIds: initialSelectedIds(quotation.bankAccounts, bankData.bankAccounts),
         }}
       />
     </div>

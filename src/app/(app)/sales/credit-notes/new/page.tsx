@@ -5,6 +5,7 @@ import { getDocumentContentPresets } from "@/lib/document-presets";
 import { getLocale } from "@/lib/i18n/server";
 import { tenantScope } from "@/lib/tenant";
 import { previewNextDocumentNumber } from "@/lib/documents";
+import { getDocumentBankData } from "@/lib/document-bank-data";
 import { CnForm } from "../cn-form";
 
 export default async function NewCreditNotePage({ searchParams }: { searchParams: Promise<{ invoice?: string }> }) {
@@ -12,7 +13,7 @@ export default async function NewCreditNotePage({ searchParams }: { searchParams
   const locale = await getLocale();
   const { invoice } = await searchParams;
 
-  const [invoices, products, [org], numberPreview] = await Promise.all([
+  const [invoices, products, [org], numberPreview, bankData] = await Promise.all([
     db
       .select({
         id: salesInvoicesTable.id,
@@ -29,12 +30,14 @@ export default async function NewCreditNotePage({ searchParams }: { searchParams
     db.select().from(productsTable).where(tenantScope(session.orgId, productsTable)).orderBy(asc(productsTable.name)),
     db.select().from(orgsTable).where(eq(orgsTable.id, session.orgId)),
     previewNextDocumentNumber(session.orgId, "credit_note"),
+    getDocumentBankData(session.orgId),
   ]);
   const presets = await getDocumentContentPresets(session.orgId, "credit_note");
 
   return (
     <div className="max-w-4xl mx-auto">
-      <CnForm locale={locale} invoices={invoices} products={products} org={org} numberPreview={numberPreview} termsGroups={presets.termsGroups} defaultInvoiceId={invoice} />
+      <CnForm locale={locale} invoices={invoices} products={products} org={org} numberPreview={numberPreview} termsGroups={presets.termsGroups} defaultInvoiceId={invoice}
+        bankAccounts={bankData.bankAccounts} glAccounts={bankData.glAccounts} defaultBankAccountIds={bankData.defaultBankAccountIds} />
     </div>
   );
 }

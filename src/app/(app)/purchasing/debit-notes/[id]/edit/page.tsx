@@ -6,6 +6,8 @@ import { getDocumentContentPresets } from "@/lib/document-presets";
 import { getLocale } from "@/lib/i18n/server";
 import { tenantScope } from "@/lib/tenant";
 import { can } from "@/lib/document-lifecycle";
+import { getDocumentBankData } from "@/lib/document-bank-data";
+import { initialSelectedIds } from "@/lib/document-bank-accounts";
 import type { LineItemDraft } from "../../../../sales/_shared/line-items-editor";
 import { DnForm } from "../../dn-form";
 
@@ -36,7 +38,7 @@ export default async function EditDebitNotePage({ params }: { params: Promise<{ 
     db.select().from(productsTable).where(tenantScope(session.orgId, productsTable)).orderBy(asc(productsTable.name)),
     db.select().from(orgsTable).where(eq(orgsTable.id, session.orgId)),
   ]);
-  const presets = await getDocumentContentPresets(session.orgId, "debit_note");
+  const [presets, bankData] = await Promise.all([getDocumentContentPresets(session.orgId, "debit_note"), getDocumentBankData(session.orgId)]);
 
   const initialItems: LineItemDraft[] = items.map((it) => ({
     productId: it.productId ? String(it.productId) : "",
@@ -60,12 +62,15 @@ export default async function EditDebitNotePage({ params }: { params: Promise<{ 
         numberPreview={dn.debitNoteNumber}
         mode="edit"
         documentId={dnId}
+        bankAccounts={bankData.bankAccounts}
+        glAccounts={bankData.glAccounts}
         initial={{
           sourcePurchaseOrderId: String(dn.sourcePurchaseOrderId),
           issueDate: dn.issueDate,
           reason: dn.reason ?? "",
           items: initialItems,
           terms: dn.terms ?? [],
+          bankAccountIds: initialSelectedIds(dn.bankAccounts, bankData.bankAccounts),
         }}
       />
     </div>

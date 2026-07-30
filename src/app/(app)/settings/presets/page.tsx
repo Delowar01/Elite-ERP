@@ -14,6 +14,9 @@ import {
   productBundleItemsTable,
   productsTable,
   documentSequencesTable,
+  bankAccountsTable,
+  accountsTable,
+  orgsTable,
   DOCUMENT_TYPES,
 } from "@/db";
 import { requireRole } from "@/lib/session";
@@ -26,6 +29,7 @@ import { NoteTemplatesPanel } from "./note-templates-panel";
 import { TermsGroupsPanel } from "./terms-groups-panel";
 import { BundlesPanel } from "./bundles-panel";
 import { NumberingPanel } from "./numbering-panel";
+import { DefaultBankAccountsPanel } from "./default-bank-accounts-panel";
 import {
   createTaxPresetAction,
   updateTaxPresetAction,
@@ -99,6 +103,25 @@ export default async function PresetsPage() {
     db.select().from(documentSequencesTable).where(eq(documentSequencesTable.orgId, orgId)),
   ]);
 
+  const [bankAccounts, glAccounts, [org]] = await Promise.all([
+    db.select().from(bankAccountsTable).where(eq(bankAccountsTable.orgId, orgId)).orderBy(asc(bankAccountsTable.name)),
+    db.select({ id: accountsTable.id, code: accountsTable.code, name: accountsTable.name }).from(accountsTable).where(eq(accountsTable.orgId, orgId)).orderBy(asc(accountsTable.code)),
+    db.select({ defaultBankAccountIds: orgsTable.defaultBankAccountIds }).from(orgsTable).where(eq(orgsTable.id, orgId)),
+  ]);
+  const bankAccountOptions = bankAccounts.map((b) => ({
+    id: b.id,
+    name: b.name,
+    bankName: b.bankName,
+    accountNumberMasked: b.accountNumberMasked,
+    accountHolder: b.accountHolder,
+    iban: b.iban,
+    swift: b.swift,
+    currency: b.currency,
+    branch: b.branch,
+    glAccountId: b.glAccountId,
+  }));
+  const defaultBankAccountIds = (org?.defaultBankAccountIds ?? []).filter((id) => bankAccountOptions.some((b) => b.id === id));
+
   const bundlesWithItems = bundles.map((bundle) => ({
     ...bundle,
     items: bundleItems.filter((item) => item.bundleId === bundle.id),
@@ -124,6 +147,7 @@ export default async function PresetsPage() {
           <TabsTrigger value="terms-groups">{t(locale, "Terms & Conditions Groups")}</TabsTrigger>
           <TabsTrigger value="bundles">{t(locale, "Bundles")}</TabsTrigger>
           <TabsTrigger value="numbering">{t(locale, "Numbering")}</TabsTrigger>
+          <TabsTrigger value="default-bank-accounts">{t(locale, "Default Bank Accounts")}</TabsTrigger>
           <TabsTrigger value="departments">{t(locale, "Departments")}</TabsTrigger>
           <TabsTrigger value="product-categories">{t(locale, "Product Categories")}</TabsTrigger>
           <TabsTrigger value="leave-types">{t(locale, "Leave Types")}</TabsTrigger>
@@ -185,6 +209,10 @@ export default async function PresetsPage() {
 
         <TabsContent value="numbering">
           <NumberingPanel locale={locale} sequences={sequences} />
+        </TabsContent>
+
+        <TabsContent value="default-bank-accounts">
+          <DefaultBankAccountsPanel locale={locale} accounts={bankAccountOptions} glAccounts={glAccounts} initialIds={defaultBankAccountIds} />
         </TabsContent>
 
         <TabsContent value="departments">

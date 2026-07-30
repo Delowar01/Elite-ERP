@@ -6,6 +6,8 @@ import { requireSession } from "@/lib/session";
 import { getLocale } from "@/lib/i18n/server";
 import { tenantScope } from "@/lib/tenant";
 import { can } from "@/lib/document-lifecycle";
+import { getDocumentBankData } from "@/lib/document-bank-data";
+import { initialSelectedIds } from "@/lib/document-bank-accounts";
 import type { LineItemDraft } from "../../../_shared/line-items-editor";
 import { ProformaForm } from "../../proforma-form";
 
@@ -20,11 +22,12 @@ export default async function EditProformaPage({ params }: { params: Promise<{ i
   if (!pf) notFound();
   if (!can("proforma_invoice", pf.status, "edit")) redirect(`/sales/proforma/${pfId}`);
 
-  const [items, customers, products, [org]] = await Promise.all([
+  const [items, customers, products, [org], bankData] = await Promise.all([
     db.select().from(proformaInvoiceItemsTable).where(eq(proformaInvoiceItemsTable.proformaInvoiceId, pfId)),
     db.select().from(customersTable).where(tenantScope(session.orgId, customersTable)).orderBy(asc(customersTable.name)),
     db.select().from(productsTable).where(tenantScope(session.orgId, productsTable)).orderBy(asc(productsTable.name)),
     db.select().from(orgsTable).where(eq(orgsTable.id, session.orgId)),
+    getDocumentBankData(session.orgId),
   ]);
 
   const initialItems: LineItemDraft[] = items.map((it) => ({
@@ -49,6 +52,8 @@ export default async function EditProformaPage({ params }: { params: Promise<{ i
         mode="edit"
         columnConfig={columnConfig}
         documentId={pfId}
+        bankAccounts={bankData.bankAccounts}
+        glAccounts={bankData.glAccounts}
         initial={{
           title: pf.title ?? "",
           customerId: String(pf.customerId),
@@ -57,6 +62,7 @@ export default async function EditProformaPage({ params }: { params: Promise<{ i
           notes: pf.notes ?? "",
           terms: pf.terms ?? [],
           items: initialItems,
+          bankAccountIds: initialSelectedIds(pf.bankAccounts, bankData.bankAccounts),
         }}
       />
     </div>

@@ -17,6 +17,12 @@ export const bankAccountsTable = pgTable("bank_accounts", {
   name: text("name").notNull(),
   bankName: text("bank_name"),
   accountNumberMasked: text("account_number_masked"),
+  // Payment-instruction details shown on documents (all optional; empty fields are never displayed).
+  accountHolder: text("account_holder"),
+  iban: text("iban"),
+  swift: text("swift"),
+  currency: text("currency"),
+  branch: text("branch"),
   glAccountId: integer("gl_account_id")
     .notNull()
     .references(() => accountsTable.id),

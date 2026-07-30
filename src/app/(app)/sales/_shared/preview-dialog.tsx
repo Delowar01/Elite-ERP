@@ -9,6 +9,7 @@ import { CurrencyMark, useCurrency } from "@/components/ui/currency-mark";
 import { formatAmount, formatRate, formatQuantity, markFormat } from "@/lib/currency/currencies";
 import { DocumentTermsView } from "./terms-view";
 import type { DocumentTerm } from "./document-terms";
+import type { DocBankAccount } from "@/lib/document-bank-accounts";
 
 export type PreviewParty = { label: string; name: string; lines: (string | null | undefined)[] };
 // unitPrice / lineTotal / quantity are RAW numeric strings; the preview formats them with the org's
@@ -27,6 +28,7 @@ export type PreviewData = {
   notes?: string;
   terms?: DocumentTerm[];
   currency: string;
+  bankAccounts?: DocBankAccount[];
 };
 
 // In-page Preview & Print modal built from the CURRENT unsaved form state (passed as `data`). The
@@ -119,6 +121,16 @@ export function PreviewDialog({
               <Row label={t(locale, "Grand Total")} value={<>{sym} {formatAmount(data.totals.total, cfg)}</>} bold />
             </div>
           )}
+          {data.bankAccounts && data.bankAccounts.length > 0 && (
+            <div className="border-t border-[#eee] pt-2 mb-3">
+              <div className="font-semibold text-[11px] uppercase tracking-wide text-[#777] mb-1.5">{t(locale, "Bank Details")}</div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                {data.bankAccounts.map((a, i) => (
+                  <PreviewBankBlock key={a.id ?? i} locale={locale} account={a} />
+                ))}
+              </div>
+            </div>
+          )}
           {data.terms && data.terms.length > 0 && (
             <div className="border-t border-[#eee] pt-2">
               <DocumentTermsView locale={locale} terms={data.terms} />
@@ -152,6 +164,31 @@ function PartyBlock({ party }: { party: PreviewParty }) {
       {party.lines.filter(Boolean).map((l, i) => (
         <div key={i} className="text-[#555]">{l}</div>
       ))}
+    </div>
+  );
+}
+
+function PreviewBankBlock({ locale, account }: { locale: Locale; account: DocBankAccount }) {
+  const rows: [string, string | null | undefined][] = [
+    [t(locale, "Bank Name"), account.bankName],
+    [t(locale, "Account Holder Name"), account.accountHolder],
+    [t(locale, "Account Number"), account.accountNumber],
+    [t(locale, "IBAN"), account.iban],
+    [t(locale, "SWIFT / BIC"), account.swift],
+    [t(locale, "Currency"), account.currency],
+    [t(locale, "Branch"), account.branch],
+  ];
+  return (
+    <div className="rounded-[8px] border border-[#ddd] p-2.5">
+      <div className="font-semibold text-[12px] mb-0.5">{account.name}</div>
+      {rows.map(([k, v], i) =>
+        v && v.trim() ? (
+          <div key={i} className="flex justify-between gap-3 text-[11px]">
+            <span className="text-[#777]">{k}</span>
+            <span className="text-end break-words">{v}</span>
+          </div>
+        ) : null,
+      )}
     </div>
   );
 }

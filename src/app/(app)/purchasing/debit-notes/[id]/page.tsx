@@ -2,6 +2,7 @@ import { Fragment } from "react";
 import { notFound } from "next/navigation";
 import { eq, and } from "drizzle-orm";
 import { DocumentTermsView } from "../../../sales/_shared/terms-view";
+import { BankAccountBlocks } from "../../../sales/_shared/bank-account-blocks";
 import { LineItemCell, LineDescRow } from "../../../sales/_shared/line-item-cell";
 import { db, debitNotesTable, debitNoteItemsTable, vendorsTable, purchaseOrdersTable } from "@/db";
 import { requireSession } from "@/lib/session";
@@ -39,6 +40,7 @@ export default async function DebitNoteDetailPage({ params }: { params: Promise<
       issueDate: debitNotesTable.issueDate,
       reason: debitNotesTable.reason,
       terms: debitNotesTable.terms,
+      bankAccounts: debitNotesTable.bankAccounts,
       subtotal: debitNotesTable.subtotal,
       taxTotal: debitNotesTable.taxTotal,
       total: debitNotesTable.total,
@@ -125,6 +127,8 @@ export default async function DebitNoteDetailPage({ params }: { params: Promise<
           </span>
         </div>
       </div>
+      <BankAccountBlocks locale={locale} accounts={dn.bankAccounts} className="mt-5" />
+
       <DocumentTermsView locale={locale} terms={dn.terms} className="mt-5" />
     </div>
   );

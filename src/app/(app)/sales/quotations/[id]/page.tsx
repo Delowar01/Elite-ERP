@@ -11,6 +11,7 @@ import { t } from "@/lib/i18n/dict";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { PartyCardSimple } from "../../_shared/party-card";
+import { BankAccountBlocks } from "../../_shared/bank-account-blocks";
 import { TotalsStrip } from "../../_shared/totals-strip";
 import { DocNum } from "../../_shared/money";
 import { QuotationDetailActions } from "../quotation-detail-actions";
@@ -44,6 +45,7 @@ export default async function QuotationDetailPage({ params }: { params: Promise<
       total: quotationsTable.total,
       notes: quotationsTable.notes,
       terms: quotationsTable.terms,
+      bankAccounts: quotationsTable.bankAccounts,
       customerName: customersTable.name,
       customerVatNumber: customersTable.vatNumber,
       customerAddress: customersTable.address,
@@ -124,6 +126,8 @@ export default async function QuotationDetailPage({ params }: { params: Promise<
           finalValue={quotation.total}
         />
       </div>
+
+      <BankAccountBlocks locale={locale} accounts={quotation.bankAccounts} className="mt-5" />
 
       <DocumentTermsView locale={locale} terms={quotation.terms} className="mt-5" />
       {quotation.notes && (

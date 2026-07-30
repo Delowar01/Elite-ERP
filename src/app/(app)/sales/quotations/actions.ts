@@ -12,6 +12,7 @@ import { nextDocumentNumber } from "@/lib/documents";
 import { can } from "@/lib/document-lifecycle";
 import { computeTotals, type LineItemInput } from "../_shared/totals";
 import { persistDocumentAttachments, type AttachmentInput } from "../_shared/attachment-persist";
+import { snapshotDocumentBankAccounts } from "@/lib/document-bank-data";
 
 export type ActionResult = { error?: string; id?: number };
 
@@ -31,6 +32,7 @@ export async function createQuotationAction(
     notes: string; terms?: DocumentTerm[];
     items: LineInput[];
     attachments?: AttachmentInput[];
+    bankAccountIds?: number[];
   },
   andSend = false,
 ): Promise<ActionResult> {
@@ -55,6 +57,7 @@ export async function createQuotationAction(
   if (items.length === 0) return { error: "Add at least one line item." };
 
   const totals = computeTotals(items as LineItemInput[], input.discount);
+  const bankAccounts = await snapshotDocumentBankAccounts(session.orgId, input.bankAccountIds);
 
   const id = await db.transaction(async (tx) => {
     const quotationNumber = await nextDocumentNumber(tx, session.orgId, "quotation");
@@ -70,6 +73,7 @@ export async function createQuotationAction(
         validUntil: input.validUntil || null,
         notes: sanitizeIfHtml(input.notes) || null,
         terms: normalizeDocumentTerms(input.terms),
+        bankAccounts,
         subtotal: totals.subtotal,
         discount: totals.discount,
         taxTotal: totals.taxTotal,
@@ -119,6 +123,7 @@ export async function updateQuotationAction(
     notes: string; terms?: DocumentTerm[];
     items: LineInput[];
     attachments?: AttachmentInput[];
+    bankAccountIds?: number[];
   },
 ): Promise<ActionResult> {
   const session = await requireSession();
@@ -147,6 +152,7 @@ export async function updateQuotationAction(
   if (items.length === 0) return { error: "Add at least one line item." };
 
   const totals = computeTotals(items as LineItemInput[], input.discount);
+  const bankAccounts = await snapshotDocumentBankAccounts(session.orgId, input.bankAccountIds);
 
   await db.transaction(async (tx) => {
     // Update only editable header fields; quotationNumber, orgId, status, createdById, source links are preserved.
@@ -160,6 +166,7 @@ export async function updateQuotationAction(
         validUntil: input.validUntil || null,
         notes: sanitizeIfHtml(input.notes) || null,
         terms: normalizeDocumentTerms(input.terms),
+        bankAccounts,
         subtotal: totals.subtotal,
         discount: totals.discount,
         taxTotal: totals.taxTotal,

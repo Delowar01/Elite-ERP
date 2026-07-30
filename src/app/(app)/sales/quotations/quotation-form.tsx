@@ -18,6 +18,9 @@ import { DocFooterContact } from "../_shared/doc-footer-contact";
 import { DocActionBar } from "../_shared/doc-action-bar";
 import { DocTopActions } from "../_shared/doc-top-actions";
 import { PreviewDialog, type PreviewData } from "../_shared/preview-dialog";
+import { BankAccountsField } from "../_shared/bank-accounts-field";
+import { snapshotSelectedBankAccounts } from "@/lib/document-bank-accounts";
+import type { EditableBankAccount, GlAccountOption } from "../../finance/bank-accounts/bank-account-form-dialog";
 import { computeTotals } from "../_shared/totals";
 import { ConfigureColumnsDialog } from "../_shared/configure-columns-dialog";
 import { resolveColumns, type ColumnDef } from "@/lib/column-config";
@@ -38,6 +41,7 @@ export type QuotationFormInitial = {
   notes: string;
   items: LineItemDraft[];
   terms?: DocumentTerm[];
+  bankAccountIds?: number[];
 };
 
 export function QuotationForm({
@@ -53,6 +57,9 @@ export function QuotationForm({
   noteTemplates = [],
   termsGroups = [],
   columnConfig,
+  bankAccounts = [],
+  glAccounts = [],
+  defaultBankAccountIds = [],
 }: {
   locale: Locale;
   customers: Customer[];
@@ -66,6 +73,9 @@ export function QuotationForm({
   noteTemplates?: ContentPreset[];
   termsGroups?: ContentPreset[];
   columnConfig?: ColumnDef[];
+  bankAccounts?: EditableBankAccount[];
+  glAccounts?: GlAccountOption[];
+  defaultBankAccountIds?: number[];
 }) {
   const isEdit = mode === "edit";
   const [columns, setColumns] = useState<ColumnDef[]>(columnConfig ?? resolveColumns(null));
@@ -78,6 +88,7 @@ export function QuotationForm({
   const [discount, setDiscount] = useState(initial?.discount ?? "0");
   const [notes, setNotes] = useState(initial?.notes ?? defaultNote?.content ?? "");
   const [terms, setTerms] = useState<DocumentTerm[]>(initial?.terms ?? []);
+  const [bankAccountIds, setBankAccountIds] = useState<number[]>(initial?.bankAccountIds ?? (mode === "create" ? defaultBankAccountIds : []));
   const countryProfile = getProfileByCountryName(org.country);
   const defaultTaxRate = String(countryProfile.defaultTaxRate);
   const [items, setItems] = useState<LineItemDraft[]>(initial?.items && initial.items.length > 0 ? initial.items : [emptyLineItem(defaultTaxRate)]);
@@ -92,7 +103,7 @@ export function QuotationForm({
   function submit(andSend: boolean) {
     const start = andSend ? startPrimaryTransition : startDraftTransition;
     start(async () => {
-      const payload = { title, customerId, projectId, issueDate, validUntil, discount, notes, terms, items, attachments };
+      const payload = { title, customerId, projectId, issueDate, validUntil, discount, notes, terms, items, attachments, bankAccountIds };
       const result = isEdit && documentId ? await updateQuotationAction(documentId, payload) : await createQuotationAction(payload, andSend);
       if (result?.error) toast.error(result.error);
     });
@@ -116,6 +127,7 @@ export function QuotationForm({
     notes,
     terms,
     currency: org.currency,
+    bankAccounts: snapshotSelectedBankAccounts(bankAccountIds, bankAccounts),
   };
 
   return (
@@ -220,6 +232,10 @@ export function QuotationForm({
         <div className="flex flex-col gap-4">
           <TotalsCard locale={locale} subtotal={totals.subtotal} discount={discount} onDiscountChange={setDiscount} taxTotal={totals.taxTotal} total={totals.total} />
         </div>
+      </div>
+
+      <div className="mt-4">
+        <BankAccountsField locale={locale} accounts={bankAccounts} glAccounts={glAccounts} value={bankAccountIds} onChange={setBankAccountIds} />
       </div>
 
       <SealSignaturePreview locale={locale} sealUrl={org.sealUrl} signatureUrl={org.signatureUrl} />

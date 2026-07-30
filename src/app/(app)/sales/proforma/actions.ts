@@ -12,6 +12,7 @@ import { nextDocumentNumber } from "@/lib/documents";
 import { can } from "@/lib/document-lifecycle";
 import { computeTotals, type LineItemInput } from "../_shared/totals";
 import { persistDocumentAttachments, type AttachmentInput } from "../_shared/attachment-persist";
+import { snapshotDocumentBankAccounts } from "@/lib/document-bank-data";
 
 export type ActionResult = { error?: string; id?: number };
 
@@ -29,6 +30,7 @@ export async function createProformaAction(
     notes: string; terms?: DocumentTerm[];
     items: LineInput[];
     attachments?: AttachmentInput[];
+    bankAccountIds?: number[];
   },
   andSend = false,
 ): Promise<ActionResult> {
@@ -43,6 +45,7 @@ export async function createProformaAction(
   if (items.length === 0) return { error: "Add at least one line item." };
 
   const totals = computeTotals(items as LineItemInput[], input.discount);
+  const bankAccounts = await snapshotDocumentBankAccounts(session.orgId, input.bankAccountIds);
 
   const id = await db.transaction(async (tx) => {
     const proformaNumber = await nextDocumentNumber(tx, session.orgId, "proforma_invoice");
@@ -56,6 +59,7 @@ export async function createProformaAction(
         issueDate: input.issueDate,
         notes: sanitizeIfHtml(input.notes) || null,
         terms: normalizeDocumentTerms(input.terms),
+        bankAccounts,
         subtotal: totals.subtotal,
         discount: totals.discount,
         taxTotal: totals.taxTotal,
@@ -94,7 +98,7 @@ export async function createProformaAction(
 // Batch A2 — draft-only edit. Preserves number/org/status/source links; recomputes totals server-side.
 export async function updateProformaAction(
   id: number,
-  input: { title: string; customerId: string; issueDate: string; discount: string; notes: string; terms?: DocumentTerm[]; items: LineInput[]; attachments?: AttachmentInput[] },
+  input: { title: string; customerId: string; issueDate: string; discount: string; notes: string; terms?: DocumentTerm[]; items: LineInput[]; attachments?: AttachmentInput[]; bankAccountIds?: number[] },
 ): Promise<ActionResult> {
   const session = await requireSession();
   const [existing] = await db.select().from(proformaInvoicesTable).where(and(eq(proformaInvoicesTable.id, id), eq(proformaInvoicesTable.orgId, session.orgId)));
@@ -109,6 +113,7 @@ export async function updateProformaAction(
   const items = input.items.filter((l) => l.description.trim() && Number(l.quantity) > 0);
   if (items.length === 0) return { error: "Add at least one line item." };
   const totals = computeTotals(items as LineItemInput[], input.discount);
+  const bankAccounts = await snapshotDocumentBankAccounts(session.orgId, input.bankAccountIds);
 
   await db.transaction(async (tx) => {
     await tx
@@ -119,6 +124,7 @@ export async function updateProformaAction(
         issueDate: input.issueDate,
         notes: sanitizeIfHtml(input.notes) || null,
         terms: normalizeDocumentTerms(input.terms),
+        bankAccounts,
         subtotal: totals.subtotal,
         discount: totals.discount,
         taxTotal: totals.taxTotal,

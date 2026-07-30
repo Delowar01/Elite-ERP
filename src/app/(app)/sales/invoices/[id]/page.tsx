@@ -12,6 +12,7 @@ import { can } from "@/lib/document-lifecycle";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { PartyCardSimple } from "../../_shared/party-card";
+import { BankAccountBlocks } from "../../_shared/bank-account-blocks";
 import { TotalsStrip } from "../../_shared/totals-strip";
 import { EInvoicePreviewPanel } from "../../_shared/einvoice-preview-panel";
 import { DocRelationships } from "../../_shared/doc-relationships";
@@ -48,6 +49,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
       paidAmount: salesInvoicesTable.paidAmount,
       notes: salesInvoicesTable.notes,
       terms: salesInvoicesTable.terms,
+      bankAccounts: salesInvoicesTable.bankAccounts,
       customerName: customersTable.name,
       customerVatNumber: customersTable.vatNumber,
       customerAddress: customersTable.address,
@@ -163,6 +165,8 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
             finalValue={showPayments ? String(balanceDue) : invoice.total}
             extraRows={showPayments ? [{ label: "Paid", value: invoice.paidAmount, colorClass: "text-success" }] : undefined}
           />
+
+          <BankAccountBlocks locale={locale} accounts={invoice.bankAccounts} className="mt-5" />
 
           <DocumentTermsView locale={locale} terms={invoice.terms} className="mt-5" />
       {invoice.notes && (

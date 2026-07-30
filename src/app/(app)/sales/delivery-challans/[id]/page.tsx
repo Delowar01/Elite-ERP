@@ -3,6 +3,7 @@ import { DocNum } from "../../_shared/money";
 import { notFound } from "next/navigation";
 import { eq, and } from "drizzle-orm";
 import { DocumentTermsView } from "../../_shared/terms-view";
+import { BankAccountBlocks } from "../../_shared/bank-account-blocks";
 import { LineItemCell, LineDescRow } from "../../_shared/line-item-cell";
 import { db, deliveryChallansTable, deliveryChallanItemsTable, customersTable, salesOrdersTable, salesInvoicesTable, orgsTable } from "@/db";
 import { requireSession } from "@/lib/session";
@@ -31,6 +32,7 @@ export default async function DcDetailPage({ params }: { params: Promise<{ id: s
       dcNumber: deliveryChallansTable.dcNumber,
       title: deliveryChallansTable.title,
       terms: deliveryChallansTable.terms,
+      bankAccounts: deliveryChallansTable.bankAccounts,
       status: deliveryChallansTable.status,
       dispatchDate: deliveryChallansTable.dispatchDate,
       deliveredDate: deliveryChallansTable.deliveredDate,
@@ -113,6 +115,8 @@ export default async function DcDetailPage({ params }: { params: Promise<{ id: s
       <div className="note" style={{ marginTop: 20 }}>
         {t(locale, "Logistics-only document — no stock or accounting impact of its own; stock already moved when the source Invoice was sent.")}
       </div>
+      <BankAccountBlocks locale={locale} accounts={dc.bankAccounts} className="mt-5" />
+
       <DocumentTermsView locale={locale} terms={dc.terms} className="mt-5" />
     </div>
   );

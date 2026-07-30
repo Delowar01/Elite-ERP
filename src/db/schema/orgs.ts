@@ -1,4 +1,4 @@
-import { pgTable, serial, text, integer, boolean, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, integer, boolean, timestamp, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -41,6 +41,10 @@ export const orgsTable = pgTable("orgs", {
   // so a reverse reference here would create a circular module import between orgs.ts and
   // finance.ts. Validated at the action layer instead (the row must belong to the same org).
   defaultBankAccountId: integer("default_bank_account_id"),
+  // Preset Management → Default Bank Accounts. Ordered list of bank_accounts.id that pre-fill the
+  // Bank Account section on NEW documents (display-only payment instructions). Stored as an ordered
+  // id array; document snapshots are taken at save so changing this never alters saved documents.
+  defaultBankAccountIds: jsonb("default_bank_account_ids").$type<number[]>(),
   fiscalYearStartMonth: integer("fiscal_year_start_month").notNull().default(1), // 1-12
   vatRegistrationStatus: text("vat_registration_status").notNull().default("registered"), // registered | not_registered
   defaultTaxTreatment: text("default_tax_treatment").notNull().default("exclusive"), // inclusive | exclusive

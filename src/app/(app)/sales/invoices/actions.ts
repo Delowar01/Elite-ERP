@@ -12,6 +12,7 @@ import { nextDocumentNumber } from "@/lib/documents";
 import { can, evaluate } from "@/lib/document-lifecycle";
 import { computeTotals, type LineItemInput } from "../_shared/totals";
 import { persistDocumentAttachments, type AttachmentInput } from "../_shared/attachment-persist";
+import { snapshotDocumentBankAccounts } from "@/lib/document-bank-data";
 
 export type ActionResult = { error?: string; id?: number };
 
@@ -30,6 +31,7 @@ export async function createInvoiceAction(
     notes: string; terms?: DocumentTerm[];
     items: LineInput[];
     attachments?: AttachmentInput[];
+    bankAccountIds?: number[];
   },
   andSend = false,
 ): Promise<ActionResult> {
@@ -54,6 +56,7 @@ export async function createInvoiceAction(
   if (items.length === 0) return { error: "Add at least one line item." };
 
   const totals = computeTotals(items as LineItemInput[], input.discount);
+  const bankAccounts = await snapshotDocumentBankAccounts(session.orgId, input.bankAccountIds);
 
   const id = await db.transaction(async (tx) => {
     const invoiceNumber = await nextDocumentNumber(tx, session.orgId, "sales_invoice");
@@ -69,6 +72,7 @@ export async function createInvoiceAction(
         dueDate: input.dueDate || null,
         notes: sanitizeIfHtml(input.notes) || null,
         terms: normalizeDocumentTerms(input.terms),
+        bankAccounts,
         subtotal: totals.subtotal,
         discount: totals.discount,
         taxTotal: totals.taxTotal,
@@ -107,7 +111,7 @@ export async function createInvoiceAction(
 // Batch A2 — draft-only edit. Preserves number/org/status/source links; recomputes totals server-side.
 export async function updateInvoiceAction(
   id: number,
-  input: { title: string; customerId: string; projectId?: string; issueDate: string; dueDate: string; discount: string; notes: string; terms?: DocumentTerm[]; items: LineInput[]; attachments?: AttachmentInput[] },
+  input: { title: string; customerId: string; projectId?: string; issueDate: string; dueDate: string; discount: string; notes: string; terms?: DocumentTerm[]; items: LineInput[]; attachments?: AttachmentInput[]; bankAccountIds?: number[] },
 ): Promise<ActionResult> {
   const session = await requireSession();
   const [existing] = await db.select().from(salesInvoicesTable).where(and(eq(salesInvoicesTable.id, id), eq(salesInvoicesTable.orgId, session.orgId)));
@@ -128,6 +132,7 @@ export async function updateInvoiceAction(
   const items = input.items.filter((l) => l.description.trim() && Number(l.quantity) > 0);
   if (items.length === 0) return { error: "Add at least one line item." };
   const totals = computeTotals(items as LineItemInput[], input.discount);
+  const bankAccounts = await snapshotDocumentBankAccounts(session.orgId, input.bankAccountIds);
 
   await db.transaction(async (tx) => {
     await tx
@@ -140,6 +145,7 @@ export async function updateInvoiceAction(
         dueDate: input.dueDate || null,
         notes: sanitizeIfHtml(input.notes) || null,
         terms: normalizeDocumentTerms(input.terms),
+        bankAccounts,
         subtotal: totals.subtotal,
         discount: totals.discount,
         taxTotal: totals.taxTotal,

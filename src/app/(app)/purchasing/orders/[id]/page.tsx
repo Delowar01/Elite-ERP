@@ -2,6 +2,7 @@ import { Fragment } from "react";
 import { notFound } from "next/navigation";
 import { eq, and } from "drizzle-orm";
 import { DocumentTermsView } from "../../../sales/_shared/terms-view";
+import { BankAccountBlocks } from "../../../sales/_shared/bank-account-blocks";
 import { SafeRichText } from "../../../sales/_shared/safe-rich-text";
 import { LineItemCell, LineDescRow } from "../../../sales/_shared/line-item-cell";
 import { db, purchaseOrdersTable, purchaseOrderItemsTable, vendorsTable, bankAccountsTable } from "@/db";
@@ -42,6 +43,7 @@ export default async function PurchaseOrderDetailPage({ params }: { params: Prom
       paidAmount: purchaseOrdersTable.paidAmount,
       notes: purchaseOrdersTable.notes,
       terms: purchaseOrdersTable.terms,
+      bankAccounts: purchaseOrdersTable.bankAccounts,
       vendorName: vendorsTable.name,
     })
     .from(purchaseOrdersTable)
@@ -130,6 +132,8 @@ export default async function PurchaseOrderDetailPage({ params }: { params: Prom
           {t(locale, "Receiving posts Dr Inventory, Cr Accounts Payable in a transaction alongside the stock increment.")}
         </div>
       )}
+
+      <BankAccountBlocks locale={locale} accounts={po.bankAccounts} className="mt-5" />
 
       <DocumentTermsView locale={locale} terms={po.terms} className="mt-5" />
       {po.notes && (

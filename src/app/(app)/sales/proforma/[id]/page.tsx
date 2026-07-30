@@ -12,6 +12,7 @@ import { t } from "@/lib/i18n/dict";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { PartyCardSimple } from "../../_shared/party-card";
+import { BankAccountBlocks } from "../../_shared/bank-account-blocks";
 import { TotalsStrip } from "../../_shared/totals-strip";
 import { DocRelationships } from "../../_shared/doc-relationships";
 import { DocNum } from "../../_shared/money";
@@ -42,6 +43,7 @@ export default async function ProformaDetailPage({ params }: { params: Promise<{
       total: proformaInvoicesTable.total,
       notes: proformaInvoicesTable.notes,
       terms: proformaInvoicesTable.terms,
+      bankAccounts: proformaInvoicesTable.bankAccounts,
       customerName: customersTable.name,
       customerVatNumber: customersTable.vatNumber,
       customerAddress: customersTable.address,
@@ -138,6 +140,8 @@ export default async function ProformaDetailPage({ params }: { params: Promise<{
       <div className="mt-4 max-w-sm ms-auto">
         <TotalsStrip locale={locale} subtotal={pf.subtotal} discount={pf.discount} taxTotal={pf.taxTotal} finalLabel="Total" finalValue={pf.total} />
       </div>
+
+      <BankAccountBlocks locale={locale} accounts={pf.bankAccounts} className="mt-5" />
 
       <DocumentTermsView locale={locale} terms={pf.terms} className="mt-5" />
       {pf.notes && (

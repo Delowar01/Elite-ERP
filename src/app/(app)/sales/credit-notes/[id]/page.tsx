@@ -2,6 +2,7 @@ import { Fragment } from "react";
 import { notFound } from "next/navigation";
 import { eq, and } from "drizzle-orm";
 import { DocumentTermsView } from "../../_shared/terms-view";
+import { BankAccountBlocks } from "../../_shared/bank-account-blocks";
 import { LineItemCell, LineDescRow } from "../../_shared/line-item-cell";
 import { db, creditNotesTable, creditNoteItemsTable, customersTable, salesInvoicesTable } from "@/db";
 import { requireSession } from "@/lib/session";
@@ -39,6 +40,7 @@ export default async function CreditNoteDetailPage({ params }: { params: Promise
       issueDate: creditNotesTable.issueDate,
       reason: creditNotesTable.reason,
       terms: creditNotesTable.terms,
+      bankAccounts: creditNotesTable.bankAccounts,
       subtotal: creditNotesTable.subtotal,
       taxTotal: creditNotesTable.taxTotal,
       total: creditNotesTable.total,
@@ -125,6 +127,8 @@ export default async function CreditNoteDetailPage({ params }: { params: Promise
           </span>
         </div>
       </div>
+      <BankAccountBlocks locale={locale} accounts={cn.bankAccounts} className="mt-5" />
+
       <DocumentTermsView locale={locale} terms={cn.terms} className="mt-5" />
     </div>
   );

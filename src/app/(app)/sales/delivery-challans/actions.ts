@@ -10,6 +10,7 @@ import { requireSession } from "@/lib/session";
 import { logActivity } from "@/lib/activity";
 import { nextDocumentNumber } from "@/lib/documents";
 import { can } from "@/lib/document-lifecycle";
+import { snapshotDocumentBankAccounts } from "@/lib/document-bank-data";
 
 export type ActionResult = { error?: string; id?: number };
 
@@ -27,6 +28,7 @@ export async function createDeliveryChallanAction(
     vehicleNo: string;
     items: LineInput[];
     terms?: DocumentTerm[];
+    bankAccountIds?: number[];
   },
   andDispatch = false,
 ): Promise<ActionResult> {
@@ -38,6 +40,7 @@ export async function createDeliveryChallanAction(
 
   const items = input.items.filter((l) => l.description.trim() && Number(l.quantity) > 0);
   if (items.length === 0) return { error: "Add at least one line item." };
+  const bankAccounts = await snapshotDocumentBankAccounts(session.orgId, input.bankAccountIds);
 
   const id = await db.transaction(async (tx) => {
     const dcNumber = await nextDocumentNumber(tx, session.orgId, "delivery_challan");
@@ -51,6 +54,7 @@ export async function createDeliveryChallanAction(
         dispatchDate: input.dispatchDate || null,
         carrier: input.carrier.trim() || null,
         terms: normalizeDocumentTerms(input.terms),
+        bankAccounts,
         vehicleNo: input.vehicleNo.trim() || null,
         createdById: session.userId,
       })
@@ -81,7 +85,7 @@ export async function createDeliveryChallanAction(
 // Batch A2 — draft-only edit. Preserves number/org/status/title/source links (logistics-only: no totals).
 export async function updateDeliveryChallanAction(
   id: number,
-  input: { customerId: string; dispatchDate: string; carrier: string; vehicleNo: string; items: LineInput[]; terms?: DocumentTerm[] },
+  input: { customerId: string; dispatchDate: string; carrier: string; vehicleNo: string; items: LineInput[]; terms?: DocumentTerm[]; bankAccountIds?: number[] },
 ): Promise<ActionResult> {
   const session = await requireSession();
   const [existing] = await db.select().from(deliveryChallansTable).where(and(eq(deliveryChallansTable.id, id), eq(deliveryChallansTable.orgId, session.orgId)));
@@ -94,6 +98,7 @@ export async function updateDeliveryChallanAction(
   if (!customerOwned) return { error: "Client not found." };
   const items = input.items.filter((l) => l.description.trim() && Number(l.quantity) > 0);
   if (items.length === 0) return { error: "Add at least one line item." };
+  const bankAccounts = await snapshotDocumentBankAccounts(session.orgId, input.bankAccountIds);
 
   await db.transaction(async (tx) => {
     await tx
@@ -103,6 +108,7 @@ export async function updateDeliveryChallanAction(
         dispatchDate: input.dispatchDate || null,
         carrier: input.carrier.trim() || null,
         terms: normalizeDocumentTerms(input.terms),
+        bankAccounts,
         vehicleNo: input.vehicleNo.trim() || null,
         updatedAt: new Date(),
       })

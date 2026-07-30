@@ -17,6 +17,9 @@ import { DocFooterContact } from "../_shared/doc-footer-contact";
 import { DocActionBar } from "../_shared/doc-action-bar";
 import { DocTopActions } from "../_shared/doc-top-actions";
 import { PreviewDialog, type PreviewData } from "../_shared/preview-dialog";
+import { BankAccountsField } from "../_shared/bank-accounts-field";
+import { snapshotSelectedBankAccounts } from "@/lib/document-bank-accounts";
+import type { EditableBankAccount, GlAccountOption } from "../../finance/bank-accounts/bank-account-form-dialog";
 import { computeTotals } from "../_shared/totals";
 import { ConfigureColumnsDialog } from "../_shared/configure-columns-dialog";
 import { resolveColumns, type ColumnDef } from "@/lib/column-config";
@@ -34,6 +37,7 @@ export type ProformaFormInitial = {
   notes: string;
   items: LineItemDraft[];
   terms?: DocumentTerm[];
+  bankAccountIds?: number[];
 };
 
 export function ProformaForm({
@@ -48,6 +52,9 @@ export function ProformaForm({
   noteTemplates = [],
   termsGroups = [],
   columnConfig,
+  bankAccounts = [],
+  glAccounts = [],
+  defaultBankAccountIds = [],
 }: {
   locale: Locale;
   customers: Customer[];
@@ -60,6 +67,9 @@ export function ProformaForm({
   noteTemplates?: ContentPreset[];
   termsGroups?: ContentPreset[];
   columnConfig?: ColumnDef[];
+  bankAccounts?: EditableBankAccount[];
+  glAccounts?: GlAccountOption[];
+  defaultBankAccountIds?: number[];
 }) {
   const isEdit = mode === "edit";
   const [columns, setColumns] = useState<ColumnDef[]>(columnConfig ?? resolveColumns(null));
@@ -70,6 +80,7 @@ export function ProformaForm({
   const defaultNote = noteTemplates.find((n) => n.isDefault) ?? noteTemplates[0];
   const [notes, setNotes] = useState(initial?.notes ?? defaultNote?.content ?? "");
   const [terms, setTerms] = useState<DocumentTerm[]>(initial?.terms ?? []);
+  const [bankAccountIds, setBankAccountIds] = useState<number[]>(initial?.bankAccountIds ?? (mode === "create" ? defaultBankAccountIds : []));
   const countryProfile = getProfileByCountryName(org.country);
   const defaultTaxRate = String(countryProfile.defaultTaxRate);
   const [items, setItems] = useState<LineItemDraft[]>(initial?.items && initial.items.length > 0 ? initial.items : [emptyLineItem(defaultTaxRate)]);
@@ -84,7 +95,7 @@ export function ProformaForm({
   function submit(andSend: boolean) {
     const start = andSend ? startPrimaryTransition : startDraftTransition;
     start(async () => {
-      const payload = { title, customerId, issueDate, discount, notes, terms, items, attachments };
+      const payload = { title, customerId, issueDate, discount, notes, terms, items, attachments, bankAccountIds };
       const result = isEdit && documentId ? await updateProformaAction(documentId, payload) : await createProformaAction(payload, andSend);
       if (result?.error) toast.error(result.error);
     });
@@ -103,6 +114,7 @@ export function ProformaForm({
     notes,
     terms,
     currency: org.currency,
+    bankAccounts: snapshotSelectedBankAccounts(bankAccountIds, bankAccounts),
   };
 
   return (
@@ -180,6 +192,10 @@ export function ProformaForm({
         <div className="flex flex-col gap-4">
           <TotalsCard locale={locale} subtotal={totals.subtotal} discount={discount} onDiscountChange={setDiscount} taxTotal={totals.taxTotal} total={totals.total} />
         </div>
+      </div>
+
+      <div className="mt-4">
+        <BankAccountsField locale={locale} accounts={bankAccounts} glAccounts={glAccounts} value={bankAccountIds} onChange={setBankAccountIds} />
       </div>
 
       <SealSignaturePreview locale={locale} sealUrl={org.sealUrl} signatureUrl={org.signatureUrl} />

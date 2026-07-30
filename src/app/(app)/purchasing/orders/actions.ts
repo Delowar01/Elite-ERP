@@ -10,6 +10,7 @@ import { requireSession } from "@/lib/session";
 import { logActivity } from "@/lib/activity";
 import { nextDocumentNumber } from "@/lib/documents";
 import { can, evaluate } from "@/lib/document-lifecycle";
+import { snapshotDocumentBankAccounts } from "@/lib/document-bank-data";
 import { computeTotals, type LineItemInput } from "../../sales/_shared/totals";
 import { persistDocumentAttachments, type AttachmentInput } from "../../sales/_shared/attachment-persist";
 
@@ -33,6 +34,7 @@ export async function createPurchaseOrderAction(
     sourceSalesOrderId?: string;
     sourceProformaId?: string;
     sourceInvoiceId?: string;
+    bankAccountIds?: number[];
   },
   andSend = false,
 ): Promise<ActionResult> {
@@ -47,6 +49,7 @@ export async function createPurchaseOrderAction(
   if (items.length === 0) return { error: "Add at least one line item." };
 
   const totals = computeTotals(items as LineItemInput[], input.discount);
+  const bankAccounts = await snapshotDocumentBankAccounts(session.orgId, input.bankAccountIds);
 
   const id = await db.transaction(async (tx) => {
     const poNumber = await nextDocumentNumber(tx, session.orgId, "purchase_order");
@@ -63,6 +66,7 @@ export async function createPurchaseOrderAction(
         sourceInvoiceId: input.sourceInvoiceId ? Number(input.sourceInvoiceId) : null,
         orderDate: input.orderDate,
         expectedDate: input.expectedDate || null,
+        bankAccounts,
         notes: sanitizeIfHtml(input.notes) || null,
         terms: normalizeDocumentTerms(input.terms),
         subtotal: totals.subtotal,
@@ -103,7 +107,7 @@ export async function createPurchaseOrderAction(
 // Batch A2 — draft-only edit. Preserves number/org/status/source links; recomputes totals server-side.
 export async function updatePurchaseOrderAction(
   id: number,
-  input: { title: string; vendorId: string; orderDate: string; expectedDate: string; discount: string; notes: string; terms?: DocumentTerm[]; items: LineInput[]; attachments?: AttachmentInput[] },
+  input: { title: string; vendorId: string; orderDate: string; expectedDate: string; discount: string; notes: string; terms?: DocumentTerm[]; items: LineInput[]; attachments?: AttachmentInput[]; bankAccountIds?: number[] },
 ): Promise<ActionResult> {
   const session = await requireSession();
   const [existing] = await db.select().from(purchaseOrdersTable).where(and(eq(purchaseOrdersTable.id, id), eq(purchaseOrdersTable.orgId, session.orgId)));
@@ -118,6 +122,7 @@ export async function updatePurchaseOrderAction(
   const items = input.items.filter((l) => l.description.trim() && Number(l.quantity) > 0);
   if (items.length === 0) return { error: "Add at least one line item." };
   const totals = computeTotals(items as LineItemInput[], input.discount);
+  const bankAccounts = await snapshotDocumentBankAccounts(session.orgId, input.bankAccountIds);
 
   await db.transaction(async (tx) => {
     await tx
@@ -127,6 +132,7 @@ export async function updatePurchaseOrderAction(
         vendorId,
         orderDate: input.orderDate,
         expectedDate: input.expectedDate || null,
+        bankAccounts,
         notes: sanitizeIfHtml(input.notes) || null,
         terms: normalizeDocumentTerms(input.terms),
         subtotal: totals.subtotal,

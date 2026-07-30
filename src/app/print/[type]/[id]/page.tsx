@@ -44,6 +44,7 @@ import {
   Amount,
   AmountWords,
   BankBlock,
+  DocBankBlocks,
   NotesBlock,
   PdfTermsBlock,
   ApprovalBlock,
@@ -174,7 +175,7 @@ export default async function PrintPage({ params }: { params: Promise<{ type: st
           <div className="pdf-bottom">
             <div>
               <AmountWords words={amountInWords(q.total, "en", mark)} />
-              <BankBlock account={bank} />
+              {q.bankAccounts && q.bankAccounts.length ? <DocBankBlocks accounts={q.bankAccounts} /> : <BankBlock account={bank} />}
             </div>
             <TotalsBox rows={baseTotals} grandLabel={`Total (${mark.code})`} grandVal={money(q.total)} />
           </div>
@@ -195,7 +196,7 @@ export default async function PrintPage({ params }: { params: Promise<{ type: st
           <div className="pdf-bottom">
             <div>
               <AmountWords words={amountInWords(so.total, "en", mark)} />
-              <BankBlock account={bank} />
+              {so.bankAccounts && so.bankAccounts.length ? <DocBankBlocks accounts={so.bankAccounts} /> : <BankBlock account={bank} />}
             </div>
             <TotalsBox rows={baseTotals} grandLabel={`Total (${mark.code})`} grandVal={money(so.total)} />
           </div>
@@ -217,7 +218,7 @@ export default async function PrintPage({ params }: { params: Promise<{ type: st
           <div className="pdf-bottom">
             <div>
               <AmountWords words={amountInWords(pf.total, "en", mark)} />
-              <BankBlock account={bank} />
+              {pf.bankAccounts && pf.bankAccounts.length ? <DocBankBlocks accounts={pf.bankAccounts} /> : <BankBlock account={bank} />}
             </div>
             <TotalsBox rows={baseTotals} grandLabel={`Total (${mark.code})`} grandVal={money(pf.total)} />
           </div>
@@ -265,7 +266,7 @@ export default async function PrintPage({ params }: { params: Promise<{ type: st
           <div className="pdf-bottom">
             <div>
               <AmountWords words={amountInWords(inv.total, "en", mark)} />
-              <BankBlock account={bank} />
+              {inv.bankAccounts && inv.bankAccounts.length ? <DocBankBlocks accounts={inv.bankAccounts} /> : <BankBlock account={bank} />}
             </div>
             <TotalsBox rows={totalsRows} grandLabel={paid ? "Due Amount" : `Total (${mark.code})`} grandVal={money(paid ? due : inv.total)} />
           </div>
@@ -300,6 +301,7 @@ export default async function PrintPage({ params }: { params: Promise<{ type: st
         <div className="pdf-bottom">
           <div>
             <AmountWords words={amountInWords(po.total, "en", mark)} />
+            <DocBankBlocks accounts={po.bankAccounts} />
           </div>
           <TotalsBox rows={[["Amount", money(po.subtotal)], ["VAT", money(po.taxTotal)], ["Discounts", money(po.discount)]]} grandLabel="Total Payable" grandVal={money(po.total)} />
         </div>
@@ -333,6 +335,7 @@ export default async function PrintPage({ params }: { params: Promise<{ type: st
         <ItemsTableQty items={items.map((it) => ({ name: itemName(it), description: getLineDesc(it.customFields), quantity: it.quantity }))} format={numFmt} />
         <PdfTermsBlock terms={dc.terms} />
         <NotesBlock notes={logistics || null} />
+        <DocBankBlocks accounts={dc.bankAccounts} />
         <ClientComments />
         <ApprovalBlock />
         <SealSignature org={org} showSignature={false} />
@@ -372,6 +375,7 @@ export default async function PrintPage({ params }: { params: Promise<{ type: st
             <AmountWords words={amountInWords(cn.total, "en", mark)} />
             <TotalsBox rows={[["VAT", money(cn.taxTotal)]]} grandLabel="Credit Total" grandVal={money(cn.total)} />
           </div>
+          <DocBankBlocks accounts={cn.bankAccounts} />
           <PdfTermsBlock terms={cn.terms} />
           <SealSignature org={org} showSignature={false} />
           <PdfFooter org={org} />
@@ -406,6 +410,7 @@ export default async function PrintPage({ params }: { params: Promise<{ type: st
             <AmountWords words={amountInWords(dn.total, "en", mark)} />
             <TotalsBox rows={[["VAT", money(dn.taxTotal)]]} grandLabel="Debit Total" grandVal={money(dn.total)} />
           </div>
+          <DocBankBlocks accounts={dn.bankAccounts} />
           <PdfTermsBlock terms={dn.terms} />
           <SealSignature org={org} showSignature={false} />
           <PdfFooter org={org} />

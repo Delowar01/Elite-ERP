@@ -16,6 +16,8 @@ import {
   productBundlesTable,
   productBundleItemsTable,
   documentSequencesTable,
+  bankAccountsTable,
+  orgsTable,
 } from "@/db";
 import { requireRole } from "@/lib/session";
 import { logActivity } from "@/lib/activity";
@@ -433,5 +435,30 @@ export async function updateSequenceAction(
     entityId: id,
   });
   revalidatePath(PATH);
+  return {};
+}
+
+// ---- Default Bank Accounts (Preset Management) ----
+// Stores an ordered list of bank_accounts.id on the org. These pre-fill the Bank Account section of
+// NEW documents. Changing them never alters documents already saved (those hold their own snapshot).
+export async function updateDefaultBankAccountsAction(ids: number[]): Promise<{ error?: string }> {
+  const session = await requireRole("owner", "admin");
+  const clean = Array.isArray(ids) ? ids.filter((x) => Number.isInteger(x)) : [];
+  // Keep only accounts that belong to this org (tenant isolation), preserving the given order.
+  const owned = clean.length
+    ? await db
+        .select({ id: bankAccountsTable.id })
+        .from(bankAccountsTable)
+        .where(and(eq(bankAccountsTable.orgId, session.orgId)))
+    : [];
+  const ownedSet = new Set(owned.map((r) => r.id));
+  const ordered: number[] = [];
+  for (const id of clean) if (ownedSet.has(id) && !ordered.includes(id)) ordered.push(id);
+
+  await db
+    .update(orgsTable)
+    .set({ defaultBankAccountIds: ordered, updatedAt: new Date() })
+    .where(eq(orgsTable.id, session.orgId));
+  revalidatePath("/settings/presets");
   return {};
 }

@@ -1,4 +1,5 @@
 import { pgTable, serial, integer, text, numeric, date, timestamp, jsonb } from "drizzle-orm/pg-core";
+import type { DocBankAccount } from "@/lib/document-bank-accounts";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { orgsTable } from "./orgs";
@@ -29,6 +30,7 @@ export const salesOrdersTable = pgTable("sales_orders", {
   total: numeric("total", { precision: 14, scale: 2 }).notNull().default("0"),
   notes: text("notes"),
   terms: jsonb("terms").$type<{ text: string; groupId: number | null; groupName: string | null }[]>(),
+  bankAccounts: jsonb("bank_accounts").$type<DocBankAccount[]>(),
   createdById: integer("created_by_id")
     .notNull()
     .references(() => usersTable.id),

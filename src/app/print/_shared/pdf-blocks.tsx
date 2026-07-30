@@ -2,6 +2,7 @@ import { Fragment } from "react";
 import { richTextToHtml } from "@/lib/sanitize-html";
 import { formatAmount, formatRate, formatQuantity, markFormat, DEFAULT_NUMBER_FORMAT, type CurrencyMark, type NumberFormatConfig } from "@/lib/currency/currencies";
 import type { Org } from "@/db";
+import type { DocBankAccount } from "@/lib/document-bank-accounts";
 
 // A full-width line-item description row for print/PDF: spans every column of the items table so the
 // saved long-form description (paragraphs, bullet/numbered lists) prints beneath its item, wraps
@@ -301,6 +302,45 @@ export function BankBlock({ account }: { account: { name: string; bankName: stri
         </div>
       ))}
     </div>
+  );
+}
+
+// The document's SELECTED bank accounts (payment instructions), rendered from the saved snapshot on
+// the document header — never the live bank record — so a printed/exported document is immutable.
+// Multiple accounts render as separate blocks; empty fields are hidden. Selecting a bank account is
+// display-only: it records no payment and changes no balance.
+export function DocBankBlocks({ accounts }: { accounts: DocBankAccount[] | null | undefined }) {
+  const list = (accounts ?? []).filter((a) => a && typeof a.name === "string" && a.name.trim());
+  if (list.length === 0) return null;
+  return (
+    <>
+      {list.map((account, idx) => {
+        const rows: [string, string | null | undefined][] = [
+          ["Account Name", account.name],
+          ["Bank Name", account.bankName],
+          ["Account Holder", account.accountHolder],
+          ["Account Number", account.accountNumber],
+          ["IBAN", account.iban],
+          ["SWIFT / BIC", account.swift],
+          ["Currency", account.currency],
+          ["Branch", account.branch],
+        ];
+        return (
+          <div key={account.id ?? idx} className="bank-block">
+            <div className="lbl">Bank Details</div>
+            {rows.map(([k, v], i) =>
+              v && v.trim() ? (
+                <div key={i} className="row">
+                  <span className="k">{k}</span>
+                  <span className="sep">:</span>
+                  <span className="v">{v}</span>
+                </div>
+              ) : null,
+            )}
+          </div>
+        );
+      })}
+    </>
   );
 }
 

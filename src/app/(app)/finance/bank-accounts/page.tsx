@@ -4,11 +4,12 @@ import { requireSession } from "@/lib/session";
 import { getLocale } from "@/lib/i18n/server";
 import { t } from "@/lib/i18n/dict";
 import { getAccountBalances } from "@/lib/accounting";
-import { Landmark } from "lucide-react";
+import { Landmark, Pencil } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { Money } from "../../sales/_shared/money";
-import { BankAccountDialog } from "./bank-account-dialog";
+import { BankAccountFormDialog } from "./bank-account-form-dialog";
 
 export default async function BankAccountsPage() {
   const session = await requireSession();
@@ -41,7 +42,15 @@ export default async function BankAccountsPage() {
     <div className="max-w-5xl mx-auto">
       <div className="main-head">
         <h3>{t(locale, "Bank Accounts")}</h3>
-        <BankAccountDialog locale={locale} accounts={accounts} />
+        <BankAccountFormDialog
+          locale={locale}
+          glAccounts={accounts}
+          trigger={
+            <Button style={{ width: "auto" }}>
+              <Landmark className="size-4" /> {t(locale, "New Account")}
+            </Button>
+          }
+        />
       </div>
 
       {bankAccounts.length === 0 ? (
@@ -67,7 +76,30 @@ export default async function BankAccountsPage() {
                       </div>
                     </div>
                   </div>
-                  <Badge variant={ba.isActive ? "success" : "neutral"}>{ba.isActive ? t(locale, "Active") : t(locale, "Inactive")}</Badge>
+                  <div className="flex items-center gap-2">
+                    <Badge variant={ba.isActive ? "success" : "neutral"}>{ba.isActive ? t(locale, "Active") : t(locale, "Inactive")}</Badge>
+                    <BankAccountFormDialog
+                      locale={locale}
+                      glAccounts={accounts}
+                      account={{
+                        id: ba.id,
+                        name: ba.name,
+                        bankName: ba.bankName,
+                        accountNumberMasked: ba.accountNumberMasked,
+                        accountHolder: ba.accountHolder,
+                        iban: ba.iban,
+                        swift: ba.swift,
+                        currency: ba.currency,
+                        branch: ba.branch,
+                        glAccountId: ba.glAccountId,
+                      }}
+                      trigger={
+                        <button type="button" className="text-ink-faint hover:text-brand-orange" title={t(locale, "Edit")} aria-label={t(locale, "Edit")}>
+                          <Pencil className="size-3.5" />
+                        </button>
+                      }
+                    />
+                  </div>
                 </div>
                 <div style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 22, marginTop: 14 }}>
                   <Money amount={total} context="summary" />

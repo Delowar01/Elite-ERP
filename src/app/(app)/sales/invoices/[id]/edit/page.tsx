@@ -6,6 +6,8 @@ import { requireSession } from "@/lib/session";
 import { getLocale } from "@/lib/i18n/server";
 import { tenantScope } from "@/lib/tenant";
 import { can } from "@/lib/document-lifecycle";
+import { getDocumentBankData } from "@/lib/document-bank-data";
+import { initialSelectedIds } from "@/lib/document-bank-accounts";
 import type { LineItemDraft } from "../../../_shared/line-items-editor";
 import { InvoiceForm } from "../../invoice-form";
 
@@ -20,12 +22,13 @@ export default async function EditInvoicePage({ params }: { params: Promise<{ id
   if (!inv) notFound();
   if (!can("sales_invoice", inv.status, "edit")) redirect(`/sales/invoices/${invId}`);
 
-  const [items, customers, products, [org], projects] = await Promise.all([
+  const [items, customers, products, [org], projects, bankData] = await Promise.all([
     db.select().from(salesInvoiceItemsTable).where(eq(salesInvoiceItemsTable.invoiceId, invId)),
     db.select().from(customersTable).where(tenantScope(session.orgId, customersTable)).orderBy(asc(customersTable.name)),
     db.select().from(productsTable).where(tenantScope(session.orgId, productsTable)).orderBy(asc(productsTable.name)),
     db.select().from(orgsTable).where(eq(orgsTable.id, session.orgId)),
     db.select({ id: projectsTable.id, name: projectsTable.name }).from(projectsTable).where(eq(projectsTable.orgId, session.orgId)).orderBy(asc(projectsTable.name)),
+    getDocumentBankData(session.orgId),
   ]);
 
   const initialItems: LineItemDraft[] = items.map((it) => ({
@@ -51,6 +54,8 @@ export default async function EditInvoicePage({ params }: { params: Promise<{ id
         mode="edit"
         columnConfig={columnConfig}
         documentId={invId}
+        bankAccounts={bankData.bankAccounts}
+        glAccounts={bankData.glAccounts}
         initial={{
           title: inv.title ?? "",
           customerId: String(inv.customerId),
@@ -61,6 +66,7 @@ export default async function EditInvoicePage({ params }: { params: Promise<{ id
           notes: inv.notes ?? "",
           terms: inv.terms ?? [],
           items: initialItems,
+          bankAccountIds: initialSelectedIds(inv.bankAccounts, bankData.bankAccounts),
         }}
       />
     </div>

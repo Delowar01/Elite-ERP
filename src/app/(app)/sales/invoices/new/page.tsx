@@ -6,6 +6,7 @@ import { getLocale } from "@/lib/i18n/server";
 import { tenantScope } from "@/lib/tenant";
 import { previewNextDocumentNumber } from "@/lib/documents";
 import { getDocumentContentPresets } from "@/lib/document-presets";
+import { getDocumentBankData } from "@/lib/document-bank-data";
 import { InvoiceForm } from "../invoice-form";
 
 export default async function NewInvoicePage() {
@@ -13,19 +14,20 @@ export default async function NewInvoicePage() {
   const columnConfig = await getColumnConfig(session.orgId, session.userId, "sales_invoice");
   const locale = await getLocale();
 
-  const [customers, products, [org], numberPreview, projects, presets] = await Promise.all([
+  const [customers, products, [org], numberPreview, projects, presets, bankData] = await Promise.all([
     db.select().from(customersTable).where(tenantScope(session.orgId, customersTable)).orderBy(asc(customersTable.name)),
     db.select().from(productsTable).where(tenantScope(session.orgId, productsTable)).orderBy(asc(productsTable.name)),
     db.select().from(orgsTable).where(eq(orgsTable.id, session.orgId)),
     previewNextDocumentNumber(session.orgId, "sales_invoice"),
     db.select({ id: projectsTable.id, name: projectsTable.name }).from(projectsTable).where(eq(projectsTable.orgId, session.orgId)).orderBy(asc(projectsTable.name)),
     getDocumentContentPresets(session.orgId, "sales_invoice"),
+    getDocumentBankData(session.orgId),
   ]);
 
   return (
     <div className="max-w-6xl mx-auto">
       <InvoiceForm locale={locale} customers={customers} products={products} org={org} numberPreview={numberPreview} projects={projects} noteTemplates={presets.noteTemplates} termsGroups={presets.termsGroups}
-        columnConfig={columnConfig} />
+        columnConfig={columnConfig} bankAccounts={bankData.bankAccounts} glAccounts={bankData.glAccounts} defaultBankAccountIds={bankData.defaultBankAccountIds} />
     </div>
   );
 }

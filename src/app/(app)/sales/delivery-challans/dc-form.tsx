@@ -12,6 +12,9 @@ import { DocFooterContact } from "../_shared/doc-footer-contact";
 import { DocActionBar } from "../_shared/doc-action-bar";
 import { DocTopActions } from "../_shared/doc-top-actions";
 import { PreviewDialog, type PreviewData } from "../_shared/preview-dialog";
+import { BankAccountsField } from "../_shared/bank-accounts-field";
+import { snapshotSelectedBankAccounts } from "@/lib/document-bank-accounts";
+import type { EditableBankAccount, GlAccountOption } from "../../finance/bank-accounts/bank-account-form-dialog";
 import { DocumentTermsEditor } from "../_shared/terms-editor";
 import type { DocumentTerm } from "../_shared/document-terms";
 import type { ContentPreset } from "@/lib/document-presets";
@@ -27,6 +30,7 @@ export type DcFormInitial = {
   vehicleNo: string;
   items: LineItemDraft[];
   terms?: DocumentTerm[];
+  bankAccountIds?: number[];
 };
 
 export function DcForm({
@@ -39,6 +43,9 @@ export function DcForm({
   documentId,
   initial,
   termsGroups = [],
+  bankAccounts = [],
+  glAccounts = [],
+  defaultBankAccountIds = [],
 }: {
   locale: Locale;
   customers: Customer[];
@@ -49,6 +56,9 @@ export function DcForm({
   documentId?: number;
   initial?: DcFormInitial;
   termsGroups?: ContentPreset[];
+  bankAccounts?: EditableBankAccount[];
+  glAccounts?: GlAccountOption[];
+  defaultBankAccountIds?: number[];
 }) {
   const isEdit = mode === "edit";
   const [customerId, setCustomerId] = useState(initial?.customerId ?? "");
@@ -56,6 +66,7 @@ export function DcForm({
   const [carrier, setCarrier] = useState(initial?.carrier ?? "");
   const [vehicleNo, setVehicleNo] = useState(initial?.vehicleNo ?? "");
   const [terms, setTerms] = useState<DocumentTerm[]>(initial?.terms ?? []);
+  const [bankAccountIds, setBankAccountIds] = useState<number[]>(initial?.bankAccountIds ?? (mode === "create" ? defaultBankAccountIds : []));
   const countryProfile = getProfileByCountryName(org.country);
   const defaultTaxRate = String(countryProfile.defaultTaxRate);
   const [items, setItems] = useState<LineItemDraft[]>(initial?.items && initial.items.length > 0 ? initial.items : [emptyLineItem(defaultTaxRate)]);
@@ -78,12 +89,13 @@ export function DcForm({
     showPricing: false,
     terms,
     currency: org.currency,
+    bankAccounts: snapshotSelectedBankAccounts(bankAccountIds, bankAccounts),
   };
 
   function submit(andDispatch: boolean) {
     const start = andDispatch ? startPrimaryTransition : startDraftTransition;
     start(async () => {
-      const payload = { customerId, dispatchDate, carrier, vehicleNo, items, terms };
+      const payload = { customerId, dispatchDate, carrier, vehicleNo, items, terms, bankAccountIds };
       const result = isEdit && documentId
         ? await updateDeliveryChallanAction(documentId, payload)
         : await createDeliveryChallanAction({ title: "", ...payload }, andDispatch);
@@ -131,6 +143,10 @@ export function DcForm({
 
       <div className="mt-4">
         <DocumentTermsEditor locale={locale} terms={terms} onChange={setTerms} groups={termsGroups} />
+      </div>
+
+      <div className="mt-4">
+        <BankAccountsField locale={locale} accounts={bankAccounts} glAccounts={glAccounts} value={bankAccountIds} onChange={setBankAccountIds} />
       </div>
 
       <DocFooterContact locale={locale} email={org.email} phone={org.phone} />
