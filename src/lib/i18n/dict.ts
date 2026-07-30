@@ -622,6 +622,7 @@ const DICT: Record<string, string> = {
   "Add New Item": "إضافة صنف جديد",
   "Write a note…": "اكتب ملاحظة…",
   "Preview & Print": "معاينة وطباعة",
+  "Print Preview": "معاينة الطباعة",
 
   // ---- terms & conditions block (document create screens) ----
   "Terms & Conditions": "الشروط والأحكام",

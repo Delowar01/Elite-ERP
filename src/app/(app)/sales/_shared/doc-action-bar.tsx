@@ -1,16 +1,17 @@
 "use client";
 
-import { FileText, ChevronDown } from "lucide-react";
-import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import { FileText } from "lucide-react";
 import { t, type Locale } from "@/lib/i18n/dict";
 
-// Matches the mockup's doc_action_bar(): Preview & Print / Save as Draft / primary.
+// The document action bar: Save as Draft / Print Preview / primary submit — three separate,
+// always-visible buttons, in that order. No "More Actions" dropdown and no duplicated Save as
+// Draft (it lives only in its own button here).
 //
-// - Preview & Print: opens the real print view when the document exists (edit mode, `printHref`).
+// - Save as Draft: saves the complete document with draft status.
+// - Print Preview: opens the in-page preview modal (create) or the print view (edit, `printHref`).
 //   On a brand-new document there's nothing to print yet, so it's disabled with a clear reason.
-// - Primary: the split button — the main click creates the document AND performs the real next
-//   transition (send/confirm/issue/dispatch); the chevron opens a "More Actions" menu with the
-//   alternative "Save as Draft" path, so the chevron is functional rather than decorative.
+// - Primary: performs the document's real final action (send/confirm/issue/dispatch). `busy`
+//   disables every button while a save is in flight, preventing duplicate submission.
 export function DocActionBar({
   locale,
   pendingDraft,
@@ -30,7 +31,7 @@ export function DocActionBar({
   primaryLabel?: string;
   /** Edit mode (Batch A2): a single "Save Changes" button — no create/send split. */
   editMode?: boolean;
-  /** When the document already exists, the print route to open; enables Preview & Print. */
+  /** When the document already exists, the print route to open; enables Print Preview. */
   printHref?: string;
   /** Create mode: opens the in-page preview modal built from the current unsaved form data. */
   onPreview?: () => void;
@@ -39,15 +40,15 @@ export function DocActionBar({
 
   const previewButton = printHref ? (
     <a className="btn btn-glass" href={printHref} target="_blank" rel="noreferrer">
-      <FileText className="size-3.5" /> {t(locale, "Preview & Print")}
+      <FileText className="size-3.5" /> {t(locale, "Print Preview")}
     </a>
   ) : onPreview ? (
     <button type="button" className="btn btn-glass" onClick={onPreview}>
-      <FileText className="size-3.5" /> {t(locale, "Preview & Print")}
+      <FileText className="size-3.5" /> {t(locale, "Print Preview")}
     </button>
   ) : (
     <button type="button" className="btn btn-glass cursor-not-allowed" disabled title={t(locale, "Save the document first to preview & print.")}>
-      <FileText className="size-3.5" /> {t(locale, "Preview & Print")}
+      <FileText className="size-3.5" /> {t(locale, "Print Preview")}
     </button>
   );
 
@@ -63,7 +64,6 @@ export function DocActionBar({
   }
   return (
     <div className="doc-action-bar">
-      {previewButton}
       <button
         type="button"
         className="btn btn-glass"
@@ -73,27 +73,10 @@ export function DocActionBar({
       >
         {pendingDraft ? t(locale, "Saving…") : t(locale, "Save as Draft")}
       </button>
-      <div className="btn-split inline-flex">
-        <button type="button" className="btn btn-primary" style={{ borderTopRightRadius: 0, borderBottomRightRadius: 0 }} disabled={busy} onClick={onPrimary}>
-          {pendingPrimary ? t(locale, "Saving…") : t(locale, primaryLabel)}
-        </button>
-        <DropdownMenu>
-          <DropdownMenuTrigger
-            className="btn btn-primary outline-none"
-            style={{ borderTopLeftRadius: 0, borderBottomLeftRadius: 0, borderInlineStart: "1px solid rgba(255,255,255,0.25)", paddingInline: 8, minWidth: 0 }}
-            disabled={busy}
-            aria-label={t(locale, "More Actions")}
-            title={t(locale, "More Actions")}
-          >
-            <ChevronDown className="size-3.5" />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem className="cursor-pointer" onSelect={onSaveDraft} disabled={busy}>
-              {t(locale, "Save as Draft")}
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
+      {previewButton}
+      <button type="button" className="btn btn-primary" disabled={busy} onClick={onPrimary}>
+        {pendingPrimary ? t(locale, "Saving…") : t(locale, primaryLabel)}
+      </button>
     </div>
   );
 }
