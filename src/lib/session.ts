@@ -20,6 +20,9 @@ export type Session = {
   orgPrimaryColor: string;
   orgAccentColor: string;
   orgColorThemeMode: string;
+  orgGradientFrom: string;
+  orgGradientTo: string;
+  orgThemeOverrides: Record<string, { bg?: string; fg?: string }> | null;
   orgCurrency: string;
   orgCountry: string | null;
   // Number Format (Business Settings → Number Format) — display config for documents.
@@ -54,6 +57,9 @@ const lookupSessionByToken = cache(async (token: string): Promise<Session | null
       orgPrimaryColor: orgsTable.primaryColor,
       orgAccentColor: orgsTable.accentColor,
       orgColorThemeMode: orgsTable.colorThemeMode,
+      orgGradientFrom: orgsTable.gradientFrom,
+      orgGradientTo: orgsTable.gradientTo,
+      orgThemeOverrides: orgsTable.themeOverrides,
       orgCurrency: orgsTable.currency,
       orgCountry: orgsTable.country,
       orgCustomCurrencySymbol: orgsTable.customCurrencySymbol,

@@ -7,9 +7,17 @@ import { Upload, Check, RotateCcw } from "lucide-react";
 import {
   DEFAULT_PRIMARY,
   DEFAULT_ACCENT,
+  DEFAULT_GRADIENT_FROM,
+  DEFAULT_GRADIENT_TO,
   HEX_COLOR,
-  readableForeground,
+  THEME_COMPONENTS,
+  generateComponentColors,
+  resolveComponentColors,
+  isReadable,
+  suggestReadableFg,
   type ColorThemeMode,
+  type ThemeComponent,
+  type ThemeOverrides,
 } from "@/lib/brand-theme";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -208,9 +216,6 @@ export function LogoPanel({ locale, org }: { locale: Locale; org: Org }) {
   );
 }
 
-const ELITE_GRADIENT = "linear-gradient(135deg, #f5a25c, #e87722)";
-const ELITE_ORANGE = "#e87722";
-
 function ColorField({ locale, label, value, onChange, valid, onReset }: {
   locale: Locale; label: string; value: string; onChange: (v: string) => void; valid: boolean; onReset: () => void;
 }) {
@@ -234,36 +239,93 @@ function ColorField({ locale, label, value, onChange, valid, onReset }: {
   );
 }
 
-// Business Settings → Color Theme. Two modes: Gradient (existing Elite branding, default) and
-// Single (solid Primary + Accent). Live preview reflects the current picks without saving; the
-// whole app re-themes on Save (the app shell re-reads the org's mode/colors via router.refresh).
+// One overridable channel (background OR font) for a component. Shows the auto value as a
+// placeholder; typing / picking a color sets a manual override, and "Auto" clears it back.
+function MiniColor({ locale, label, value, auto, overridden, onChange, onAuto }: {
+  locale: Locale; label: string; value: string | undefined; auto: string; overridden: boolean; onChange: (v: string) => void; onAuto: () => void;
+}) {
+  const swatch = overridden && value && HEX_COLOR.test(value) ? value : (HEX_COLOR.test(auto) ? auto : "#000000");
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="flex items-center justify-between">
+        <span className="text-[10.5px] text-ink-muted">{t(locale, label)}</span>
+        {overridden ? (
+          <button type="button" onClick={onAuto} className="inline-flex items-center gap-0.5 text-[10px] text-ink-faint hover:text-brand-orange">
+            <RotateCcw className="size-2.5" /> {t(locale, "Auto")}
+          </button>
+        ) : (
+          <span className="text-[10px] text-ink-faint">{t(locale, "Auto")}</span>
+        )}
+      </div>
+      <div className="flex items-center gap-1.5">
+        <input type="color" value={swatch} onChange={(e) => onChange(e.target.value)} className="size-7 rounded-md border border-line-strong cursor-pointer shrink-0" aria-label={t(locale, label)} />
+        <Input value={overridden ? (value ?? "") : ""} placeholder={auto} onChange={(e) => onChange(e.target.value)} className="h-7 font-mono text-[11px] uppercase" spellCheck={false} />
+      </div>
+    </div>
+  );
+}
+
+const COMPONENT_LABELS: Record<ThemeComponent, string> = {
+  primaryButton: "Primary button",
+  accentButton: "Accent button",
+  activeTab: "Active tab",
+  selectedItem: "Selected item",
+  badge: "Badge",
+};
+
+// Business Settings → Color Theme (Issue #16). Editable gradient (start/end) and single (primary/
+// accent); auto-generated + manually-overridable background/font per component with contrast
+// validation; live preview matching the saved appearance. The whole app re-themes on Save via the
+// shared injected stylesheet (router.refresh re-reads the org's colors — no full page reload).
 export function ColorThemePanel({ locale, org }: { locale: Locale; org: Org }) {
   const router = useRouter();
   const [mode, setMode] = useState<ColorThemeMode>(org.colorThemeMode === "single" ? "single" : "gradient");
   const [primary, setPrimary] = useState(org.primaryColor);
   const [accent, setAccent] = useState(org.accentColor);
+  const [gradientFrom, setGradientFrom] = useState(org.gradientFrom);
+  const [gradientTo, setGradientTo] = useState(org.gradientTo);
+  const [overrides, setOverrides] = useState<ThemeOverrides>((org.themeOverrides as ThemeOverrides | null) ?? {});
   const [pending, startTransition] = useTransition();
 
+  const single = mode === "single";
   const primaryValid = HEX_COLOR.test(primary);
   const accentValid = HEX_COLOR.test(accent);
-  const canSave = mode === "gradient" || (primaryValid && accentValid);
+  const fromValid = HEX_COLOR.test(gradientFrom);
+  const toValid = HEX_COLOR.test(gradientTo);
+  const canSave = single ? primaryValid && accentValid : fromValid && toValid;
 
-  const isSingle = mode === "single";
-  const pv = primaryValid ? primary : DEFAULT_PRIMARY;
-  const av = accentValid ? accent : DEFAULT_ACCENT;
-  // Preview colors derive from the *current* form state, independent of what is saved.
-  const primaryBtnBg = isSingle ? pv : ELITE_GRADIENT;
-  const primarySolid = isSingle ? pv : ELITE_ORANGE;
-  const primaryFg = isSingle ? readableForeground(pv) : "#ffffff";
-  const accentBg = isSingle ? av : ELITE_ORANGE;
-  const accentFg = isSingle ? readableForeground(av) : "#ffffff";
-  const linkColor = isSingle ? pv : ELITE_ORANGE;
-  const accentTint = `color-mix(in srgb, ${accentBg} 14%, transparent)`;
+  const input = { mode, primaryColor: primary, accentColor: accent, gradientFrom, gradientTo, overrides };
+  const generated = generateComponentColors(input);
+  const resolved = resolveComponentColors(input);
+  const themeGradient = `linear-gradient(135deg, ${fromValid ? gradientFrom : DEFAULT_GRADIENT_FROM}, ${toValid ? gradientTo : DEFAULT_GRADIENT_TO})`;
+
+  function setOv(comp: ThemeComponent, key: "bg" | "fg", val: string) {
+    setOverrides((prev) => ({ ...prev, [comp]: { ...prev[comp], [key]: val } }));
+  }
+  function clearOv(comp: ThemeComponent, key: "bg" | "fg") {
+    setOverrides((prev) => {
+      const entry: { bg?: string; fg?: string } = { ...(prev[comp] ?? {}) };
+      delete entry[key];
+      const next = { ...prev };
+      if (entry.bg || entry.fg) next[comp] = entry; else delete next[comp];
+      return next;
+    });
+  }
+  // Solid background used for contrast checks (the primary button's gradient isn't a single hex).
+  function bgSolid(comp: ThemeComponent): string {
+    const bg = overrides[comp]?.bg ?? generated[comp].bg;
+    if (HEX_COLOR.test(bg)) return bg;
+    return single ? (primaryValid ? primary : DEFAULT_PRIMARY) : (toValid ? gradientTo : DEFAULT_GRADIENT_TO);
+  }
+  function autoBg(comp: ThemeComponent): string {
+    const bg = generated[comp].bg;
+    return HEX_COLOR.test(bg) ? bg : bgSolid(comp);
+  }
 
   function save() {
     if (!canSave) return;
     startTransition(async () => {
-      const result = await updateColorThemeAction(mode, primary, accent);
+      const result = await updateColorThemeAction({ mode, primaryColor: primary, accentColor: accent, gradientFrom, gradientTo, overrides });
       if (result.error) toast.error(result.error);
       else {
         toast.success(t(locale, "Saved"));
@@ -277,27 +339,21 @@ export function ColorThemePanel({ locale, org }: { locale: Locale; org: Org }) {
       <h3 className="text-[17px] font-bold">{t(locale, "Color Theme")}</h3>
       <p className="text-[12.5px] text-ink-muted -mt-3">{t(locale, "Choose how your organization's brand colors are applied. This is separate from light/dark appearance.")}</p>
 
-      {/* Mode selector — radio cards with a filled state + checkmark on the selected one */}
+      {/* Mode selector */}
       <div role="radiogroup" aria-label={t(locale, "Color mode")} className="grid grid-cols-2 gap-4">
         {([
-          { key: "gradient", title: "Gradient Color", desc: "Use the classic Elite gradient branding.", sample: <div className="h-8 rounded-lg" style={{ background: ELITE_GRADIENT }} /> },
+          { key: "gradient", title: "Gradient Color", desc: "Use an editable two-color brand gradient.", sample: <div className="h-8 rounded-lg" style={{ background: themeGradient }} /> },
           { key: "single", title: "Single Color", desc: "Use your own solid primary and accent colors.", sample: (
             <div className="flex gap-2">
-              <div className="h-8 flex-1 rounded-lg" style={{ backgroundColor: pv }} />
-              <div className="h-8 flex-1 rounded-lg" style={{ backgroundColor: av }} />
+              <div className="h-8 flex-1 rounded-lg" style={{ backgroundColor: primaryValid ? primary : DEFAULT_PRIMARY }} />
+              <div className="h-8 flex-1 rounded-lg" style={{ backgroundColor: accentValid ? accent : DEFAULT_ACCENT }} />
             </div>
           ) },
         ] as const).map((opt) => {
           const selected = mode === opt.key;
           return (
-            <button
-              key={opt.key}
-              type="button"
-              role="radio"
-              aria-checked={selected}
-              onClick={() => setMode(opt.key)}
-              className={`relative text-left rounded-2xl border p-4 transition-colors ${selected ? "border-brand-orange bg-brand-orange/10" : "border-line-strong hover:bg-canvas"}`}
-            >
+            <button key={opt.key} type="button" role="radio" aria-checked={selected} onClick={() => setMode(opt.key)}
+              className={`relative text-left rounded-2xl border p-4 transition-colors ${selected ? "border-brand-orange bg-brand-orange/10" : "border-line-strong hover:bg-canvas"}`}>
               {selected && (
                 <span className="absolute top-3 right-3 inline-flex size-5 items-center justify-center rounded-full bg-brand-orange text-[color:var(--brand-primary-foreground)]">
                   <Check className="size-3.5" />
@@ -311,48 +367,89 @@ export function ColorThemePanel({ locale, org }: { locale: Locale; org: Org }) {
         })}
       </div>
 
-      {/* Single-color pickers */}
-      {isSingle && (
+      {/* Main color pickers per mode */}
+      {single ? (
         <div className="grid grid-cols-2 gap-4">
           <ColorField locale={locale} label="Primary color" value={primary} onChange={setPrimary} valid={primaryValid} onReset={() => setPrimary(DEFAULT_PRIMARY)} />
           <ColorField locale={locale} label="Accent color" value={accent} onChange={setAccent} valid={accentValid} onReset={() => setAccent(DEFAULT_ACCENT)} />
         </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-4">
+          <ColorField locale={locale} label="Gradient start color" value={gradientFrom} onChange={setGradientFrom} valid={fromValid} onReset={() => setGradientFrom(DEFAULT_GRADIENT_FROM)} />
+          <ColorField locale={locale} label="Gradient end color" value={gradientTo} onChange={setGradientTo} valid={toValid} onReset={() => setGradientTo(DEFAULT_GRADIENT_TO)} />
+        </div>
       )}
 
-      {/* Live preview — updates immediately, applied to the app only on Save */}
+      {/* Component colors — auto-generated, individually overridable, contrast-validated */}
+      <div className="flex flex-col gap-3">
+        <div>
+          <p className="text-[12.5px] font-semibold">{t(locale, "Component colors")}</p>
+          <p className="text-[11px] text-ink-faint">{t(locale, "Generated automatically from your theme colors. Override any background or font; overrides are kept until you change them.")}</p>
+        </div>
+        <div className="grid sm:grid-cols-2 gap-3">
+          {THEME_COMPONENTS.map((comp) => {
+            const rBg = resolved[comp].bg;
+            const rFg = resolved[comp].fg;
+            const readable = isReadable(rFg, bgSolid(comp));
+            const ov = overrides[comp];
+            return (
+              <div key={comp} className="rounded-xl border border-line p-3 flex flex-col gap-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[12.5px] font-semibold">{t(locale, COMPONENT_LABELS[comp])}</span>
+                  <span className="inline-flex items-center gap-2">
+                    <span className="inline-flex items-center justify-center rounded px-2 py-0.5 text-[11px] font-semibold" style={{ background: rBg, color: rFg }}>Aa</span>
+                    {readable ? <span className="text-[10.5px] text-success">{t(locale, "Readable")}</span> : <span className="text-[10.5px] text-danger">{t(locale, "Low contrast")}</span>}
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <MiniColor locale={locale} label="Background" value={ov?.bg} auto={autoBg(comp)} overridden={Boolean(ov?.bg)} onChange={(v) => setOv(comp, "bg", v)} onAuto={() => clearOv(comp, "bg")} />
+                  <MiniColor locale={locale} label="Font" value={ov?.fg} auto={generated[comp].fg} overridden={Boolean(ov?.fg)} onChange={(v) => setOv(comp, "fg", v)} onAuto={() => clearOv(comp, "fg")} />
+                </div>
+                {!readable && (
+                  <div className="flex items-center justify-between gap-2 text-[11px]">
+                    <span className="text-danger">{t(locale, "Font color is hard to read on this background.")}</span>
+                    <button type="button" className="text-brand-orange underline shrink-0" onClick={() => setOv(comp, "fg", suggestReadableFg(bgSolid(comp), rFg))}>
+                      {t(locale, "Fix automatically")}
+                    </button>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Live preview — updates immediately; applied to the app on Save */}
       <Card>
         <CardContent className="p-5 flex flex-col gap-4">
           <p className="text-[12.5px] font-semibold">{t(locale, "Live preview")}</p>
-          <div className="flex flex-wrap items-center gap-3">
-            <button type="button" className="btn" style={{ background: primaryBtnBg, color: primaryFg, width: "auto", padding: "0 18px" }}>
-              {t(locale, "Primary button")}
-            </button>
-            <button type="button" className="btn" style={{ backgroundColor: accentBg, color: accentFg, width: "auto", padding: "0 18px" }}>
-              {t(locale, "Accent button")}
-            </button>
-            <span className="tab" style={{ background: primarySolid, color: primaryFg, borderRadius: 999, padding: "7px 16px", fontSize: 12.5, fontWeight: 600 }}>
-              {t(locale, "Active tab")}
-            </span>
-            <span style={{ background: primarySolid, color: primaryFg, borderRadius: 10, padding: "8px 14px", fontSize: 13, fontWeight: 600, boxShadow: "0 4px 12px -3px color-mix(in srgb, " + primarySolid + " 50%, transparent)" }}>
-              {t(locale, "Selected item")}
-            </span>
-            <span className="pill" style={{ backgroundColor: accentTint, color: accentBg }}>
-              {t(locale, "Badge")}
-            </span>
-            <a href="#" onClick={(e) => e.preventDefault()} style={{ color: linkColor, fontSize: 13, fontWeight: 600 }}>
-              {t(locale, "Primary link")}
-            </a>
-          </div>
           <div>
-            <div className="text-[11px] text-ink-faint mb-1.5">{t(locale, "Sample")}</div>
-            {isSingle ? (
+            <div className="text-[11px] text-ink-faint mb-1.5">{single ? t(locale, "Primary / Accent") : t(locale, "Gradient")}</div>
+            {single ? (
               <div className="flex gap-2 max-w-[240px]">
-                <div className="h-7 flex-1 rounded-lg" style={{ backgroundColor: pv }} title={t(locale, "Primary color")} />
-                <div className="h-7 flex-1 rounded-lg" style={{ backgroundColor: av }} title={t(locale, "Accent color")} />
+                <div className="h-7 flex-1 rounded-lg" style={{ backgroundColor: primaryValid ? primary : DEFAULT_PRIMARY }} title={t(locale, "Primary color")} />
+                <div className="h-7 flex-1 rounded-lg" style={{ backgroundColor: accentValid ? accent : DEFAULT_ACCENT }} title={t(locale, "Accent color")} />
               </div>
             ) : (
-              <div className="h-7 max-w-[240px] rounded-lg" style={{ background: ELITE_GRADIENT }} />
+              <div className="h-7 max-w-[240px] rounded-lg" style={{ background: themeGradient }} />
             )}
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <button type="button" className="btn" style={{ background: resolved.primaryButton.bg, color: resolved.primaryButton.fg, width: "auto", padding: "0 18px" }}>
+              {t(locale, "Primary button")}
+            </button>
+            <button type="button" className="btn" style={{ background: resolved.accentButton.bg, color: resolved.accentButton.fg, width: "auto", padding: "0 18px" }}>
+              {t(locale, "Accent button")}
+            </button>
+            <span style={{ background: resolved.activeTab.bg, color: resolved.activeTab.fg, borderRadius: 999, padding: "7px 16px", fontSize: 12.5, fontWeight: 600 }}>
+              {t(locale, "Active tab")}
+            </span>
+            <span style={{ background: resolved.selectedItem.bg, color: resolved.selectedItem.fg, borderRadius: 10, padding: "8px 14px", fontSize: 13, fontWeight: 600 }}>
+              {t(locale, "Selected item")}
+            </span>
+            <span style={{ background: resolved.badge.bg, color: resolved.badge.fg, borderRadius: 999, padding: "4px 12px", fontSize: 11.5, fontWeight: 600 }}>
+              {t(locale, "Badge")}
+            </span>
           </div>
         </CardContent>
       </Card>

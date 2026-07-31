@@ -624,6 +624,22 @@ const DICT: Record<string, string> = {
   "Preview & Print": "معاينة وطباعة",
   "Print Preview": "معاينة الطباعة",
 
+  // ---- Color Theme (Issue #16) ----
+  "Auto": "تلقائي",
+  "Background": "الخلفية",
+  "Font": "الخط",
+  "Gradient": "تدرّج",
+  "Gradient start color": "لون بداية التدرّج",
+  "Gradient end color": "لون نهاية التدرّج",
+  "Primary / Accent": "الأساسي / التمييزي",
+  "Component colors": "ألوان المكوّنات",
+  "Generated automatically from your theme colors. Override any background or font; overrides are kept until you change them.":
+    "يتم توليدها تلقائيًا من ألوان السمة لديك. تجاوز أي خلفية أو خط؛ تبقى التجاوزات حتى تغيّرها.",
+  "Readable": "مقروء",
+  "Low contrast": "تباين منخفض",
+  "Font color is hard to read on this background.": "لون الخط يصعب قراءته على هذه الخلفية.",
+  "Fix automatically": "إصلاح تلقائي",
+
   // ---- Fix Preset & ZATCA Settings (Print Layout / Seal & Signature / ZATCA Phase 1) ----
   "Uploaded": "تم الرفع",
   // Print Layout

@@ -9,7 +9,7 @@ import { recordAudit } from "@/lib/security/audit";
 import { getProfileByCountryName, profileHasFeature } from "@/lib/geo/country-profiles";
 import { validateUpload, storeBlob, deleteStoredBlob, IMAGE_MAX_BYTES } from "@/lib/storage/blob-storage";
 import { isValidCurrencyCode } from "@/lib/currency/currencies";
-import { isColorThemeMode } from "@/lib/brand-theme";
+import { isColorThemeMode, HEX_COLOR, THEME_COMPONENTS, generateComponentColors, isReadable, suggestReadableFg, type ThemeOverrides } from "@/lib/brand-theme";
 
 export type ActionResult = { error?: string };
 
@@ -54,20 +54,56 @@ export async function updateBusinessDetailsAction(formData: FormData): Promise<A
   return {};
 }
 
-export async function updateColorThemeAction(
-  mode: string,
-  primaryColor: string,
-  accentColor: string,
-): Promise<ActionResult> {
+export async function updateColorThemeAction(payload: {
+  mode: string;
+  primaryColor: string;
+  accentColor: string;
+  gradientFrom: string;
+  gradientTo: string;
+  overrides?: ThemeOverrides | null;
+}): Promise<ActionResult> {
   const session = await requireRole("owner", "admin");
-  if (!isColorThemeMode(mode)) return { error: "Choose a valid theme mode." };
-  const hex = /^#[0-9a-fA-F]{6}$/;
-  // Always validate + persist both colors so they are kept even in gradient mode (restored on switch).
-  if (!hex.test(primaryColor) || !hex.test(accentColor)) return { error: "Colors must be valid hex codes (e.g. #1B1B4E)." };
+  if (!isColorThemeMode(payload.mode)) return { error: "Choose a valid theme mode." };
+  const cols = [payload.primaryColor, payload.accentColor, payload.gradientFrom, payload.gradientTo];
+  // Validate + persist every main color so all four are kept regardless of the active mode.
+  if (!cols.every((c) => HEX_COLOR.test(c))) return { error: "Colors must be valid hex codes (e.g. #1B1B4E)." };
+
+  // Sanitize manual overrides: keep only valid hex; never persist an unreadable font color — replace
+  // it with a readable one derived from its (effective) background. This is the server-side safety
+  // net behind the panel's live contrast warnings, so unreadable text can never be saved.
+  const generated = generateComponentColors({
+    mode: payload.mode,
+    primaryColor: payload.primaryColor,
+    accentColor: payload.accentColor,
+    gradientFrom: payload.gradientFrom,
+    gradientTo: payload.gradientTo,
+  });
+  const cleaned: ThemeOverrides = {};
+  for (const c of THEME_COMPONENTS) {
+    const o = payload.overrides?.[c];
+    if (!o) continue;
+    const entry: { bg?: string; fg?: string } = {};
+    if (o.bg && HEX_COLOR.test(o.bg)) entry.bg = o.bg;
+    if (o.fg && HEX_COLOR.test(o.fg)) {
+      const effectiveBg = entry.bg ?? generated[c].bg;
+      // gradient bg (primary button) isn't a single hex — contrast-check against its solid stop.
+      const bgSolid = HEX_COLOR.test(effectiveBg) ? effectiveBg : (payload.mode === "single" ? payload.primaryColor : payload.gradientTo);
+      entry.fg = isReadable(o.fg, bgSolid) ? o.fg : suggestReadableFg(bgSolid, o.fg);
+    }
+    if (entry.bg || entry.fg) cleaned[c] = entry;
+  }
 
   await db
     .update(orgsTable)
-    .set({ colorThemeMode: mode, primaryColor, accentColor, updatedAt: new Date() })
+    .set({
+      colorThemeMode: payload.mode,
+      primaryColor: payload.primaryColor,
+      accentColor: payload.accentColor,
+      gradientFrom: payload.gradientFrom,
+      gradientTo: payload.gradientTo,
+      themeOverrides: Object.keys(cleaned).length ? cleaned : null,
+      updatedAt: new Date(),
+    })
     .where(eq(orgsTable.id, session.orgId));
   revalidatePath(PATH);
   revalidatePath("/", "layout");

@@ -28,6 +28,13 @@ export const orgsTable = pgTable("orgs", {
   colorThemeMode: text("color_theme_mode").notNull().default("gradient"),
   primaryColor: text("primary_color").notNull().default("#1B1B4E"),
   accentColor: text("accent_color").notNull().default("#E87722"),
+  // Editable brand gradient stops (Color Theme, Issue #16). Defaults = the classic Elite gradient,
+  // so an org that never customizes renders exactly as before.
+  gradientFrom: text("gradient_from").notNull().default("#F5A25C"),
+  gradientTo: text("gradient_to").notNull().default("#E87722"),
+  // Manual per-component color overrides: { primaryButton?: {bg?,fg?}, accentButton?, activeTab?,
+  // selectedItem?, badge? }. Anything not overridden is auto-generated from the main colors.
+  themeOverrides: jsonb("theme_overrides").$type<Record<string, { bg?: string; fg?: string }>>(),
 
   // Documents — org-wide seal/signature (the fallback default; per-document-type defaults live in
   // orgs.sealDefaults + seal_signature_assets, managed under Preset Management → Seal & Signature).

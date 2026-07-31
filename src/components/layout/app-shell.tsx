@@ -42,6 +42,9 @@ export function AppShell({
   orgPrimaryColor,
   orgAccentColor,
   orgColorThemeMode,
+  orgGradientFrom,
+  orgGradientTo,
+  orgThemeOverrides,
   locale,
   theme,
   notifications,
@@ -56,6 +59,9 @@ export function AppShell({
   orgPrimaryColor: string;
   orgAccentColor: string;
   orgColorThemeMode: string;
+  orgGradientFrom: string;
+  orgGradientTo: string;
+  orgThemeOverrides: Record<string, { bg?: string; fg?: string }> | null;
   locale: Locale;
   theme: Theme | null;
   notifications: NotificationItem[];
@@ -80,11 +86,14 @@ export function AppShell({
   // Per-org Color Theme. Gradient mode → no override (the built-in Elite gradient renders as-is).
   // Single mode → flatten the main gradient to a solid Primary + route secondary highlights to
   // Accent, with auto-contrast foregrounds. Injected server-side so colors are right before paint.
-  const themeOverrideCss = buildThemeOverrideCss(
-    isColorThemeMode(orgColorThemeMode) ? orgColorThemeMode : "gradient",
-    orgPrimaryColor,
-    orgAccentColor,
-  );
+  const themeOverrideCss = buildThemeOverrideCss({
+    mode: isColorThemeMode(orgColorThemeMode) ? orgColorThemeMode : "gradient",
+    primaryColor: orgPrimaryColor,
+    accentColor: orgAccentColor,
+    gradientFrom: orgGradientFrom,
+    gradientTo: orgGradientTo,
+    overrides: orgThemeOverrides,
+  });
 
   return (
     <div className="flex min-h-screen">
