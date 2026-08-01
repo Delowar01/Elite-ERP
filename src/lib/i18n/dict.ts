@@ -624,6 +624,18 @@ const DICT: Record<string, string> = {
   "Preview & Print": "معاينة وطباعة",
   "Print Preview": "معاينة الطباعة",
 
+  // ---- Proforma Payment Records (Issue #14) ----
+  "Payment History": "سجل المدفوعات",
+  "No payments recorded yet.": "لا توجد مدفوعات مسجلة بعد.",
+  "Paid Amount": "المبلغ المدفوع",
+  "Note": "ملاحظة",
+  "from Proforma": "من الفاتورة المبدئية",
+  "Converted to Sales Invoice": "تم التحويل إلى فاتورة مبيعات",
+  "Payment history below is read-only.": "سجل المدفوعات أدناه للعرض فقط.",
+  "View Sales Invoice": "عرض فاتورة المبيعات",
+  "Delete this payment? Its ledger posting will be reversed.": "حذف هذه الدفعة؟ سيتم عكس قيدها في دفتر الأستاذ.",
+  "Payment deleted.": "تم حذف الدفعة.",
+
   // ---- Color Theme (Issue #16) ----
   "Auto": "تلقائي",
   "Background": "الخلفية",

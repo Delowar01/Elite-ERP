@@ -5,7 +5,8 @@ import { DocumentTermsView } from "../../_shared/terms-view";
 import { SafeRichText } from "../../_shared/safe-rich-text";
 import { LineItemCell, LineDescRow } from "../../_shared/line-item-cell";
 import { Info } from "lucide-react";
-import { db, proformaInvoicesTable, proformaInvoiceItemsTable, customersTable, salesOrdersTable, quotationsTable, orgsTable } from "@/db";
+import { db, proformaInvoicesTable, proformaInvoiceItemsTable, customersTable, salesOrdersTable, quotationsTable, orgsTable, bankAccountsTable, salesInvoicesTable } from "@/db";
+import { PaymentHistory } from "../../../finance/_shared/payment-history";
 import { requireSession } from "@/lib/session";
 import { getLocale } from "@/lib/i18n/server";
 import { t } from "@/lib/i18n/dict";
@@ -43,6 +44,8 @@ export default async function ProformaDetailPage({ params }: { params: Promise<{
       discount: proformaInvoicesTable.discount,
       taxTotal: proformaInvoicesTable.taxTotal,
       total: proformaInvoicesTable.total,
+      paidAmount: proformaInvoicesTable.paidAmount,
+      convertedInvoiceId: proformaInvoicesTable.convertedInvoiceId,
       notes: proformaInvoicesTable.notes,
       terms: proformaInvoicesTable.terms,
       bankAccounts: proformaInvoicesTable.bankAccounts,
@@ -61,13 +64,24 @@ export default async function ProformaDetailPage({ params }: { params: Promise<{
 
   if (!pf) notFound();
 
-  const [items, [org], [sourceQuotation]] = await Promise.all([
+  const [items, [org], [sourceQuotation], bankAccounts, [convertedInvoice]] = await Promise.all([
     db.select().from(proformaInvoiceItemsTable).where(eq(proformaInvoiceItemsTable.proformaInvoiceId, proformaId)),
     db.select().from(orgsTable).where(eq(orgsTable.id, session.orgId)),
     pf.sourceSoQuotationId
       ? db.select({ quotationNumber: quotationsTable.quotationNumber }).from(quotationsTable).where(eq(quotationsTable.id, pf.sourceSoQuotationId))
       : Promise.resolve([]),
+    db
+      .select({ id: bankAccountsTable.id, name: bankAccountsTable.name })
+      .from(bankAccountsTable)
+      .where(and(eq(bankAccountsTable.orgId, session.orgId), eq(bankAccountsTable.isActive, true))),
+    pf.convertedInvoiceId
+      ? db.select({ invoiceNumber: salesInvoicesTable.invoiceNumber }).from(salesInvoicesTable).where(eq(salesInvoicesTable.id, pf.convertedInvoiceId))
+      : Promise.resolve([]),
   ]);
+  const paidAmount = Number(pf.paidAmount);
+  const balanceDue = Number(pf.total) - paidAmount;
+  const showPayments = paidAmount > 0 || pf.status === "sent";
+  const canDeletePayments = (session.role === "owner" || session.role === "admin") && pf.convertedInvoiceId == null;
 
   const relNodes: { label: string; sub?: string }[] = [];
   if (sourceQuotation) relNodes.push({ label: "Quotation", sub: sourceQuotation.quotationNumber });
@@ -97,9 +111,29 @@ export default async function ProformaDetailPage({ params }: { params: Promise<{
         </div>
         <div className="flex items-center gap-2.5">
           <PrintButton locale={locale} href={`/print/proforma/${pf.id}`} />
-          <ProformaDetailActions locale={locale} proformaId={pf.id} status={pf.status} />
+          <ProformaDetailActions
+            locale={locale}
+            proformaId={pf.id}
+            proformaNumber={pf.proformaNumber}
+            customerName={pf.customerName}
+            status={pf.status}
+            balance={balanceDue}
+            convertedInvoiceId={pf.convertedInvoiceId}
+            bankAccounts={bankAccounts}
+          />
         </div>
       </div>
+
+      {pf.convertedInvoiceId && convertedInvoice && (
+        <div className="mt-2 text-[12.5px] text-ink-muted">
+          {t(locale, "Converted to Sales Invoice")}{" "}
+          <a href={`/sales/invoices/${pf.convertedInvoiceId}`} className="text-brand-orange font-semibold hover:underline">
+            {convertedInvoice.invoiceNumber}
+          </a>
+          {" · "}
+          {t(locale, "Payment history below is read-only.")}
+        </div>
+      )}
 
       <div className="doc-badge-noninvoicing">
         <Info className="size-3.5" />
@@ -142,8 +176,18 @@ export default async function ProformaDetailPage({ params }: { params: Promise<{
       </Table>
 
       <div className="mt-4 max-w-sm ms-auto">
-        <TotalsStrip locale={locale} subtotal={pf.subtotal} discount={pf.discount} taxTotal={pf.taxTotal} finalLabel="Total" finalValue={pf.total} />
+        <TotalsStrip
+          locale={locale}
+          subtotal={pf.subtotal}
+          discount={pf.discount}
+          taxTotal={pf.taxTotal}
+          finalLabel={paidAmount > 0 ? "Balance Due" : "Total"}
+          finalValue={paidAmount > 0 ? String(balanceDue) : pf.total}
+          extraRows={paidAmount > 0 ? [{ label: "Paid Amount", value: pf.paidAmount, colorClass: "text-success" }] : undefined}
+        />
       </div>
+
+      {showPayments && <PaymentHistory locale={locale} orgId={session.orgId} source={{ type: "proforma", id: pf.id }} canDelete={canDeletePayments} />}
 
       <BankAccountBlocks locale={locale} accounts={pf.bankAccounts} className="mt-5" />
 

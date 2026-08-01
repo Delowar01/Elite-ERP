@@ -6,14 +6,16 @@ import {
   db,
   paymentsTable,
   salesInvoicesTable,
+  proformaInvoicesTable,
   purchaseOrdersTable,
   bankAccountsTable,
   accountsTable,
   journalEntriesTable,
   journalLinesTable,
 } from "@/db";
-import { requireSession } from "@/lib/session";
+import { requireSession, requireRole } from "@/lib/session";
 import { logActivity } from "@/lib/activity";
+import { recordAudit } from "@/lib/security/audit";
 
 export type ActionResult = { error?: string };
 
@@ -31,6 +33,9 @@ export async function recordPaymentAction(formData: FormData): Promise<ActionRes
   const paymentDate = String(formData.get("paymentDate") ?? "");
   const method = String(formData.get("method") ?? "") || null;
   const reference = String(formData.get("reference") ?? "").trim() || null;
+  const notes = String(formData.get("notes") ?? "").trim() || null;
+  // "invoice" | "proforma" | "po". Defaulted from direction for backward compatibility.
+  const sourceType = String(formData.get("sourceType") ?? "") || (direction === "in" ? "invoice" : "po");
 
   if (direction !== "in" && direction !== "out") return { error: "Invalid payment direction." };
   if (!sourceId) return { error: direction === "in" ? "Choose an invoice." : "Choose a purchase order." };
@@ -46,6 +51,77 @@ export async function recordPaymentAction(formData: FormData): Promise<ActionRes
 
   const accounts = await db.select().from(accountsTable).where(eq(accountsTable.orgId, session.orgId));
   const byCode = new Map(accounts.map((a) => [a.code, a]));
+
+  // Payment against a Proforma Invoice (Issue #14) — same accounting shape as an invoice payment
+  // (Dr bank / Cr Accounts Receivable), a single journal entry, updating the proforma's paidAmount.
+  if (direction === "in" && sourceType === "proforma") {
+    const [pf] = await db
+      .select()
+      .from(proformaInvoicesTable)
+      .where(and(eq(proformaInvoicesTable.id, sourceId), eq(proformaInvoicesTable.orgId, session.orgId)));
+    if (!pf) return { error: "Proforma invoice not found." };
+    if (pf.convertedInvoiceId) return { error: "This proforma has been converted — record payments on the sales invoice instead." };
+    if (pf.status !== "sent") return { error: "Only sent proforma invoices can receive a payment." };
+    const balance = Number(pf.total) - Number(pf.paidAmount);
+    if (amount > balance + 0.005) return { error: "Amount cannot exceed the remaining balance." };
+
+    const ar = byCode.get("1100");
+    if (!ar) return { error: "Chart of accounts is missing a required system account (1100)." };
+
+    const newPaid = (Number(pf.paidAmount) + amount).toFixed(2);
+    const paymentId = await db.transaction(async (tx) => {
+      const [payment] = await tx
+        .insert(paymentsTable)
+        .values({
+          orgId: session.orgId,
+          direction: "in",
+          bankAccountId,
+          amount: amount.toFixed(2),
+          paymentDate,
+          method,
+          reference,
+          notes,
+          proformaInvoiceId: pf.id,
+          createdById: session.userId,
+        })
+        .returning({ id: paymentsTable.id });
+
+      const [entry] = await tx
+        .insert(journalEntriesTable)
+        .values({
+          orgId: session.orgId,
+          entryDate: paymentDate,
+          memo: `Payment received for proforma ${pf.proformaNumber}`,
+          sourceType: "payment",
+          sourceId: payment.id,
+          createdById: session.userId,
+        })
+        .returning({ id: journalEntriesTable.id });
+
+      await tx.insert(journalLinesTable).values([
+        { journalEntryId: entry.id, accountId: bankAccount.glAccountId, debit: amount.toFixed(2), credit: "0" },
+        { journalEntryId: entry.id, accountId: ar.id, debit: "0", credit: amount.toFixed(2) },
+      ]);
+
+      await tx.update(proformaInvoicesTable).set({ paidAmount: newPaid, updatedAt: new Date() }).where(eq(proformaInvoicesTable.id, pf.id));
+      return payment.id;
+    });
+
+    await logActivity(session, { type: "payment.recorded", description: `Recorded a payment of ${amount.toFixed(2)} for proforma ${pf.proformaNumber}`, entityType: "payment", entityId: paymentId });
+    await recordAudit({ orgId: session.orgId, userId: session.userId, userName: session.name }, {
+      action: "payment.created", entityType: "payment", entityId: paymentId,
+      newValue: { amount: amount.toFixed(2), proformaInvoiceId: pf.id, bankAccountId, method },
+    });
+    revalidatePath(PATH);
+    revalidatePath("/finance/bank-accounts");
+    revalidatePath("/finance/chart-of-accounts");
+    revalidatePath("/finance/ledger");
+    revalidatePath("/finance/reports");
+    revalidatePath("/sales/proforma");
+    revalidatePath(`/sales/proforma/${pf.id}`);
+    revalidatePath("/dashboard");
+    return {};
+  }
 
   if (direction === "in") {
     const [invoice] = await db
@@ -65,7 +141,7 @@ export async function recordPaymentAction(formData: FormData): Promise<ActionRes
     const newPaid = (Number(invoice.paidAmount) + amount).toFixed(2);
     const newStatus = Number(newPaid) >= Number(invoice.total) - 0.005 ? "paid" : "partially_paid";
 
-    await db.transaction(async (tx) => {
+    const invPaymentId = await db.transaction(async (tx) => {
       const [payment] = await tx
         .insert(paymentsTable)
         .values({
@@ -76,6 +152,7 @@ export async function recordPaymentAction(formData: FormData): Promise<ActionRes
           paymentDate,
           method,
           reference,
+          notes,
           salesInvoiceId: invoice.id,
           createdById: session.userId,
         })
@@ -102,13 +179,18 @@ export async function recordPaymentAction(formData: FormData): Promise<ActionRes
         .update(salesInvoicesTable)
         .set({ paidAmount: newPaid, status: newStatus, updatedAt: new Date() })
         .where(eq(salesInvoicesTable.id, invoice.id));
+      return payment.id;
     });
 
     await logActivity(session, {
       type: "payment.recorded",
       description: `Recorded a payment of ${amount.toFixed(2)} for invoice ${invoice.invoiceNumber}`,
       entityType: "payment",
-      entityId: invoice.id,
+      entityId: invPaymentId,
+    });
+    await recordAudit({ orgId: session.orgId, userId: session.userId, userName: session.name }, {
+      action: "payment.created", entityType: "payment", entityId: invPaymentId,
+      newValue: { amount: amount.toFixed(2), salesInvoiceId: invoice.id, bankAccountId, method },
     });
     revalidatePath(PATH);
     revalidatePath("/finance/bank-accounts");
@@ -135,7 +217,7 @@ export async function recordPaymentAction(formData: FormData): Promise<ActionRes
 
   const newPaid = (Number(po.paidAmount) + amount).toFixed(2);
 
-  await db.transaction(async (tx) => {
+  const poPaymentId = await db.transaction(async (tx) => {
     const [payment] = await tx
       .insert(paymentsTable)
       .values({
@@ -146,6 +228,7 @@ export async function recordPaymentAction(formData: FormData): Promise<ActionRes
         paymentDate,
         method,
         reference,
+        notes,
         purchaseOrderId: po.id,
         createdById: session.userId,
       })
@@ -169,13 +252,18 @@ export async function recordPaymentAction(formData: FormData): Promise<ActionRes
     ]);
 
     await tx.update(purchaseOrdersTable).set({ paidAmount: newPaid, updatedAt: new Date() }).where(eq(purchaseOrdersTable.id, po.id));
+    return payment.id;
   });
 
   await logActivity(session, {
     type: "payment.recorded",
     description: `Recorded a payment of ${amount.toFixed(2)} for purchase order ${po.poNumber}`,
     entityType: "payment",
-    entityId: po.id,
+    entityId: poPaymentId,
+  });
+  await recordAudit({ orgId: session.orgId, userId: session.userId, userName: session.name }, {
+    action: "payment.created", entityType: "payment", entityId: poPaymentId,
+    newValue: { amount: amount.toFixed(2), purchaseOrderId: po.id, bankAccountId, method },
   });
   revalidatePath(PATH);
   revalidatePath("/finance/bank-accounts");
@@ -184,6 +272,71 @@ export async function recordPaymentAction(formData: FormData): Promise<ActionRes
   revalidatePath("/finance/reports");
   revalidatePath("/purchasing/orders");
   revalidatePath(`/purchasing/orders/${po.id}`);
+  revalidatePath("/dashboard");
+  return {};
+}
+
+// Delete a payment and reverse its accounting in one transaction: remove the payment's journal
+// entry + lines, decrement the source document's paidAmount (recomputing an invoice's status), then
+// delete the payment. Gated to owner/admin (deleting financial records) and audit-logged.
+export async function deletePaymentAction(paymentId: number): Promise<ActionResult> {
+  const session = await requireRole("owner", "admin");
+  const [payment] = await db
+    .select()
+    .from(paymentsTable)
+    .where(and(eq(paymentsTable.id, paymentId), eq(paymentsTable.orgId, session.orgId)));
+  if (!payment) return { error: "Payment not found." };
+
+  const amt = Number(payment.amount);
+
+  await db.transaction(async (tx) => {
+    // Remove the single journal posting for this payment.
+    const entries = await tx
+      .select({ id: journalEntriesTable.id })
+      .from(journalEntriesTable)
+      .where(and(eq(journalEntriesTable.orgId, session.orgId), eq(journalEntriesTable.sourceType, "payment"), eq(journalEntriesTable.sourceId, payment.id)));
+    for (const e of entries) {
+      await tx.delete(journalLinesTable).where(eq(journalLinesTable.journalEntryId, e.id));
+      await tx.delete(journalEntriesTable).where(eq(journalEntriesTable.id, e.id));
+    }
+
+    if (payment.salesInvoiceId) {
+      const [inv] = await tx.select().from(salesInvoicesTable).where(eq(salesInvoicesTable.id, payment.salesInvoiceId));
+      if (inv) {
+        const newPaid = Math.max(0, Number(inv.paidAmount) - amt).toFixed(2);
+        const newStatus = Number(newPaid) <= 0.005 ? "sent" : Number(newPaid) >= Number(inv.total) - 0.005 ? "paid" : "partially_paid";
+        await tx.update(salesInvoicesTable).set({ paidAmount: newPaid, status: newStatus, updatedAt: new Date() }).where(eq(salesInvoicesTable.id, inv.id));
+      }
+    } else if (payment.proformaInvoiceId) {
+      const [pf] = await tx.select().from(proformaInvoicesTable).where(eq(proformaInvoicesTable.id, payment.proformaInvoiceId));
+      if (pf) {
+        const newPaid = Math.max(0, Number(pf.paidAmount) - amt).toFixed(2);
+        await tx.update(proformaInvoicesTable).set({ paidAmount: newPaid, updatedAt: new Date() }).where(eq(proformaInvoicesTable.id, pf.id));
+      }
+    } else if (payment.purchaseOrderId) {
+      const [po] = await tx.select().from(purchaseOrdersTable).where(eq(purchaseOrdersTable.id, payment.purchaseOrderId));
+      if (po) {
+        const newPaid = Math.max(0, Number(po.paidAmount) - amt).toFixed(2);
+        await tx.update(purchaseOrdersTable).set({ paidAmount: newPaid, updatedAt: new Date() }).where(eq(purchaseOrdersTable.id, po.id));
+      }
+    }
+
+    await tx.delete(paymentsTable).where(eq(paymentsTable.id, payment.id));
+  });
+
+  await logActivity(session, { type: "payment.deleted", description: `Deleted a payment of ${amt.toFixed(2)}`, entityType: "payment", entityId: payment.id });
+  await recordAudit({ orgId: session.orgId, userId: session.userId, userName: session.name }, {
+    action: "payment.deleted", entityType: "payment", entityId: payment.id,
+    previousValue: { amount: payment.amount, salesInvoiceId: payment.salesInvoiceId, proformaInvoiceId: payment.proformaInvoiceId, purchaseOrderId: payment.purchaseOrderId },
+  });
+  revalidatePath(PATH);
+  revalidatePath("/finance/bank-accounts");
+  revalidatePath("/finance/chart-of-accounts");
+  revalidatePath("/finance/ledger");
+  revalidatePath("/finance/reports");
+  revalidatePath("/sales/invoices");
+  revalidatePath("/sales/proforma");
+  revalidatePath("/purchasing/orders");
   revalidatePath("/dashboard");
   return {};
 }

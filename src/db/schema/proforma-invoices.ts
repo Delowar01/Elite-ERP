@@ -20,6 +20,11 @@ export const proformaInvoicesTable = pgTable("proforma_invoices", {
     .references(() => customersTable.id),
   sourceSalesOrderId: integer("source_sales_order_id").references(() => salesOrdersTable.id),
   status: text("status").notNull().default("draft"), // draft | sent — non-posting, never affects accounting/stock
+  // Payments recorded against this proforma (Issue #14). paidAmount is the running total; on
+  // conversion to a Sales Invoice the payments transfer and convertedInvoiceId links to it (after
+  // which the proforma's payment history is shown read-only).
+  paidAmount: numeric("paid_amount", { precision: 14, scale: 2 }).notNull().default("0"),
+  convertedInvoiceId: integer("converted_invoice_id"),
   issueDate: date("issue_date").notNull(),
   subtotal: numeric("subtotal", { precision: 14, scale: 2 }).notNull().default("0"),
   discount: numeric("discount", { precision: 14, scale: 2 }).notNull().default("0"),

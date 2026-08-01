@@ -216,6 +216,12 @@ export default async function PrintPage({ params }: { params: Promise<{ type: st
     } else if (type === "proforma") {
       backHref = `/sales/proforma/${id}`;
       const pf = doc as typeof proformaInvoicesTable.$inferSelect;
+      // Payment summary only (Paid Amount / Balance Due) — no internal accounting fields.
+      const pfPaid = Number(pf.paidAmount) > 0;
+      const pfDue = (Number(pf.total) - Number(pf.paidAmount)).toFixed(2);
+      const pfTotalsRows: [string, React.ReactNode][] = pfPaid
+        ? [...baseTotals, [`Total (${mark.code})`, money(pf.total)], ["Paid Amount", money(pf.paidAmount)]]
+        : baseTotals;
       body = (
         <A4Page org={org} documentType="proforma_invoice">
           <PdfHeader docLabel="PROFORMA INVOICE" numberLabel="P.I. No" numberVal={pf.proformaNumber} dateVal={fmtDate(pf.issueDate)} org={org} />
@@ -226,7 +232,7 @@ export default async function PrintPage({ params }: { params: Promise<{ type: st
               <AmountWords words={amountInWords(pf.total, "en", mark)} />
               {pf.bankAccounts && pf.bankAccounts.length ? <DocBankBlocks accounts={pf.bankAccounts} /> : <BankBlock account={bank} />}
             </div>
-            <TotalsBox rows={baseTotals} grandLabel={`Total (${mark.code})`} grandVal={money(pf.total)} />
+            <TotalsBox rows={pfTotalsRows} grandLabel={pfPaid ? "Balance Due" : `Total (${mark.code})`} grandVal={money(pfPaid ? pfDue : pf.total)} />
           </div>
           <PdfTermsBlock terms={pf.terms} />
           <NotesBlock notes={"Non-posting — for client reference only. This is not a tax invoice."} />

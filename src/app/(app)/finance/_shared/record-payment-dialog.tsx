@@ -13,30 +13,41 @@ import { fmt } from "../../sales/_shared/totals";
 import { recordPaymentAction } from "../payments/actions";
 
 export type OutstandingInvoice = { id: number; invoiceNumber: string; customerName: string; balance: number };
+export type OutstandingProforma = { id: number; proformaNumber: string; customerName: string; balance: number };
 export type OutstandingPo = { id: number; poNumber: string; vendorName: string; balance: number };
 export type BankAccountOption = { id: number; name: string };
+export type PaymentSourceType = "invoice" | "proforma" | "po";
 
-// Reused from three places (Payment Records page, Invoice detail, PO detail) rather than
-// three separate UIs — locked* props pre-select and disable the source-document choice
-// when launched from that document's own detail page.
+// Reused from every payment entry point (Payment Records page, Invoice/Proforma/PO detail) rather
+// than separate UIs — locked* props pre-select and disable the source-document choice when launched
+// from a document's own detail page. lockedSourceType targets a proforma (Issue #14) or invoice/PO.
 export function RecordPaymentDialog({
   locale,
   bankAccounts,
   invoices,
   purchaseOrders,
+  proformas = [],
   trigger,
   lockedDirection,
   lockedSourceId,
+  lockedSourceType,
 }: {
   locale: Locale;
   bankAccounts: BankAccountOption[];
   invoices: OutstandingInvoice[];
   purchaseOrders: OutstandingPo[];
+  proformas?: OutstandingProforma[];
   trigger: React.ReactNode;
   lockedDirection?: "in" | "out";
   lockedSourceId?: number;
+  lockedSourceType?: PaymentSourceType;
 }) {
+  // The source type: locked value wins; otherwise derived from the direction (Payment Records page
+  // records against invoices when receiving and POs when paying).
+  const sourceType: PaymentSourceType = lockedSourceType ?? (lockedDirection === "out" ? "po" : "invoice");
+
   function findBalance(dir: "in" | "out", id: string): number | undefined {
+    if (sourceType === "proforma") return proformas.find((p) => String(p.id) === id)?.balance;
     return dir === "in" ? invoices.find((i) => String(i.id) === id)?.balance : purchaseOrders.find((p) => String(p.id) === id)?.balance;
   }
 
@@ -54,8 +65,13 @@ export function RecordPaymentDialog({
 
   const locked = !!lockedDirection;
   const selected = useMemo(
-    () => (direction === "in" ? invoices.find((i) => String(i.id) === sourceId) : purchaseOrders.find((p) => String(p.id) === sourceId)),
-    [direction, sourceId, invoices, purchaseOrders],
+    () =>
+      sourceType === "proforma"
+        ? proformas.find((p) => String(p.id) === sourceId)
+        : direction === "in"
+          ? invoices.find((i) => String(i.id) === sourceId)
+          : purchaseOrders.find((p) => String(p.id) === sourceId),
+    [sourceType, direction, sourceId, invoices, purchaseOrders, proformas],
   );
 
   function selectSource(id: string) {
@@ -77,6 +93,7 @@ export function RecordPaymentDialog({
 
   function submit(formData: FormData) {
     formData.set("direction", direction);
+    formData.set("sourceType", sourceType);
     formData.set("sourceId", sourceId);
     formData.set("bankAccountId", bankAccountId);
     formData.set("method", method);
@@ -131,11 +148,16 @@ export function RecordPaymentDialog({
             )}
 
             {locked ? (
-              <FormField label={direction === "in" ? t(locale, "Invoice") : t(locale, "Purchase Order")} htmlFor="pay-source-locked">
+              <FormField
+                label={sourceType === "proforma" ? t(locale, "Proforma Invoice") : direction === "in" ? t(locale, "Invoice") : t(locale, "Purchase Order")}
+                htmlFor="pay-source-locked"
+              >
                 <div id="pay-source-locked" className="input plain">
-                  {direction === "in"
-                    ? invoices[0] && `${invoices[0].invoiceNumber} · ${invoices[0].customerName}`
-                    : purchaseOrders[0] && `${purchaseOrders[0].poNumber} · ${purchaseOrders[0].vendorName}`}
+                  {sourceType === "proforma"
+                    ? proformas[0] && `${proformas[0].proformaNumber} · ${proformas[0].customerName}`
+                    : direction === "in"
+                      ? invoices[0] && `${invoices[0].invoiceNumber} · ${invoices[0].customerName}`
+                      : purchaseOrders[0] && `${purchaseOrders[0].poNumber} · ${purchaseOrders[0].vendorName}`}
                 </div>
               </FormField>
             ) : (
@@ -209,6 +231,10 @@ export function RecordPaymentDialog({
 
             <FormField label={t(locale, "Reference")} htmlFor="pay-reference">
               <Input id="pay-reference" name="reference" />
+            </FormField>
+
+            <FormField label={t(locale, "Note")} htmlFor="pay-notes">
+              <textarea id="pay-notes" name="notes" rows={2} className="input" style={{ height: "auto", paddingTop: 8, paddingBottom: 8, resize: "vertical" }} />
             </FormField>
 
             <DialogFooter>

@@ -21,6 +21,7 @@ import { DocRelationships } from "../../_shared/doc-relationships";
 import { DocNum } from "../../_shared/money";
 import { InvoiceDetailActions } from "../invoice-detail-actions";
 import { PrintButton } from "../../_shared/print-button";
+import { PaymentHistory } from "../../../finance/_shared/payment-history";
 
 const STATUS_VARIANT: Record<string, "success" | "warning" | "danger" | "info" | "neutral"> = {
   draft: "neutral",
@@ -79,6 +80,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
   ]);
   const balanceDue = Number(invoice.total) - Number(invoice.paidAmount);
   const showPayments = invoice.status !== "draft" && invoice.status !== "void";
+  const canDeletePayments = (session.role === "owner" || session.role === "admin") && invoice.status !== "void";
 
   const relNodes: { label: string; sub?: string }[] = [];
   if (sourceQuotation) relNodes.push({ label: "Quotation", sub: sourceQuotation.quotationNumber });
@@ -167,6 +169,8 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
             finalValue={showPayments ? String(balanceDue) : invoice.total}
             extraRows={showPayments ? [{ label: "Paid", value: invoice.paidAmount, colorClass: "text-success" }] : undefined}
           />
+
+          {showPayments && <PaymentHistory locale={locale} orgId={session.orgId} source={{ type: "invoice", id: invoice.id }} canDelete={canDeletePayments} />}
 
           <BankAccountBlocks locale={locale} accounts={invoice.bankAccounts} className="mt-5" />
 

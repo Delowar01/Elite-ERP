@@ -6,6 +6,7 @@ import { usersTable } from "./users";
 import { vendorsTable } from "./vendors";
 import { accountsTable } from "./accounting";
 import { salesInvoicesTable } from "./sales-invoices";
+import { proformaInvoicesTable } from "./proforma-invoices";
 import { purchaseOrdersTable } from "./purchase-orders";
 import { projectsTable } from "./projects";
 
@@ -48,6 +49,10 @@ export const paymentsTable = pgTable("payments", {
   method: text("method"), // cash | bank_transfer | card | cheque
   reference: text("reference"),
   salesInvoiceId: integer("sales_invoice_id").references(() => salesInvoicesTable.id),
+  // A payment can be recorded against a Proforma Invoice (Issue #14). On conversion to a Sales
+  // Invoice the payment is re-pointed (salesInvoiceId set) while this stays set as the origin
+  // reference — the same payment row, keeping its single journal posting.
+  proformaInvoiceId: integer("proforma_invoice_id").references(() => proformaInvoicesTable.id),
   purchaseOrderId: integer("purchase_order_id").references(() => purchaseOrdersTable.id),
   notes: text("notes"),
   createdById: integer("created_by_id")

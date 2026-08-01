@@ -5,9 +5,10 @@ import { sanitizeIfHtml } from "@/lib/sanitize-html";
 import { normalizeDocumentTerms, type DocumentTerm } from "../_shared/document-terms";
 import { redirect } from "next/navigation";
 import { and, eq } from "drizzle-orm";
-import { db, customersTable, proformaInvoicesTable, proformaInvoiceItemsTable, salesInvoicesTable, salesInvoiceItemsTable, deliveryChallansTable, deliveryChallanItemsTable } from "@/db";
+import { db, customersTable, proformaInvoicesTable, proformaInvoiceItemsTable, salesInvoicesTable, salesInvoiceItemsTable, deliveryChallansTable, deliveryChallanItemsTable, paymentsTable } from "@/db";
 import { requireSession } from "@/lib/session";
 import { logActivity } from "@/lib/activity";
+import { recordAudit } from "@/lib/security/audit";
 import { nextDocumentNumber } from "@/lib/documents";
 import { can } from "@/lib/document-lifecycle";
 import { computeTotals, type LineItemInput } from "../_shared/totals";
@@ -190,7 +191,20 @@ export async function convertProformaToInvoiceAction(proformaId: number): Promis
   const session = await requireSession();
   const [pf] = await db.select().from(proformaInvoicesTable).where(and(eq(proformaInvoicesTable.id, proformaId), eq(proformaInvoicesTable.orgId, session.orgId)));
   if (!pf) return { error: "Proforma invoice not found." };
+  if (pf.convertedInvoiceId) return { error: "This proforma has already been converted to a sales invoice." };
   const items = await db.select().from(proformaInvoiceItemsTable).where(eq(proformaInvoiceItemsTable.proformaInvoiceId, proformaId));
+
+  // Payments recorded against the proforma, to be transferred to the new invoice (Issue #14).
+  const proformaPayments = await db.select().from(paymentsTable).where(and(eq(paymentsTable.orgId, session.orgId), eq(paymentsTable.proformaInvoiceId, proformaId)));
+  const transferredTotal = proformaPayments.reduce((s, p) => s + Number(p.amount), 0);
+  // The final Sales Invoice total drives the remaining balance. Transferred payments may not exceed
+  // it (the payment system doesn't allow overpayments), so block conversion if they somehow would.
+  if (transferredTotal > Number(pf.total) + 0.005) {
+    return { error: "Transferred payments exceed the sales invoice total. Conversion blocked." };
+  }
+  const paidStr = transferredTotal.toFixed(2);
+  // Reflect the transferred payments' status immediately (no payments → normal draft, unchanged).
+  const invoiceStatus = transferredTotal <= 0.005 ? "draft" : transferredTotal >= Number(pf.total) - 0.005 ? "paid" : "partially_paid";
 
   const id = await db.transaction(async (tx) => {
     const invoiceNumber = await nextDocumentNumber(tx, session.orgId, "sales_invoice");
@@ -202,34 +216,60 @@ export async function convertProformaToInvoiceAction(proformaId: number): Promis
         title: pf.title,
         customerId: pf.customerId,
         sourceSalesOrderId: pf.sourceSalesOrderId,
+        status: invoiceStatus,
         issueDate: new Date().toISOString().slice(0, 10),
         subtotal: pf.subtotal,
         discount: pf.discount,
         taxTotal: pf.taxTotal,
         total: pf.total,
+        paidAmount: paidStr,
         notes: pf.notes,
         createdById: session.userId,
       })
       .returning({ id: salesInvoicesTable.id });
 
-    await tx.insert(salesInvoiceItemsTable).values(
-      items.map((it) => ({
-        invoiceId: inv.id,
-        productId: it.productId,
-        imageUrl: it.imageUrl,
-        unit: it.unit,
-        description: it.description,
-        quantity: it.quantity,
-        unitPrice: it.unitPrice,
-        taxRatePercent: it.taxRatePercent,
-        lineTotal: it.lineTotal,
-      })),
-    );
+    if (items.length > 0) {
+      await tx.insert(salesInvoiceItemsTable).values(
+        items.map((it) => ({
+          invoiceId: inv.id,
+          productId: it.productId,
+          imageUrl: it.imageUrl,
+          unit: it.unit,
+          description: it.description,
+          quantity: it.quantity,
+          unitPrice: it.unitPrice,
+          taxRatePercent: it.taxRatePercent,
+          lineTotal: it.lineTotal,
+        })),
+      );
+    }
+
+    // Transfer the payments: re-point each to the new invoice while keeping proformaInvoiceId as
+    // the origin reference. No new payment rows and no new journal entries are created — each
+    // payment keeps its single existing accounting posting.
+    if (proformaPayments.length > 0) {
+      await tx
+        .update(paymentsTable)
+        .set({ salesInvoiceId: inv.id })
+        .where(and(eq(paymentsTable.orgId, session.orgId), eq(paymentsTable.proformaInvoiceId, proformaId)));
+    }
+
+    // Link the proforma to the invoice; its payment history stays visible read-only.
+    await tx.update(proformaInvoicesTable).set({ convertedInvoiceId: inv.id, updatedAt: new Date() }).where(eq(proformaInvoicesTable.id, proformaId));
     return inv.id;
   });
 
   await logActivity(session, { type: "sales_invoice.created", description: `Converted from proforma ${pf.proformaNumber}`, entityType: "sales_invoice", entityId: id });
+  if (proformaPayments.length > 0) {
+    await recordAudit({ orgId: session.orgId, userId: session.userId, userName: session.name }, {
+      action: "payment.transferred", entityType: "sales_invoice", entityId: id,
+      previousValue: { proformaInvoiceId: proformaId, paymentIds: proformaPayments.map((p) => p.id) },
+      newValue: { salesInvoiceId: id, transferredTotal: paidStr },
+    });
+  }
   revalidatePath("/sales/invoices");
+  revalidatePath("/sales/proforma");
+  revalidatePath(`/sales/proforma/${proformaId}`);
   redirect(`/sales/invoices/${id}`);
 }
 
