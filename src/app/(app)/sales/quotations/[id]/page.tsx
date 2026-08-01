@@ -17,7 +17,7 @@ import { DocNum } from "../../_shared/money";
 import { CurrencyProvider } from "@/components/ui/currency-mark";
 import { docMoneyMark } from "../../_shared/doc-currency";
 import { QuotationDetailActions } from "../quotation-detail-actions";
-import { PrintButton } from "../../_shared/print-button";
+import { DownloadPdfButton } from "../../_shared/download-pdf-button";
 
 const STATUS_VARIANT: Record<string, "success" | "warning" | "danger" | "info" | "neutral"> = {
   draft: "neutral",
@@ -80,7 +80,7 @@ export default async function QuotationDetailPage({ params }: { params: Promise<
           </div>
         </div>
         <div className="flex items-center gap-2.5">
-          <PrintButton locale={locale} href={`/print/quotation/${quotation.id}`} />
+          <DownloadPdfButton locale={locale} type="quotation" docId={quotation.id} number={quotation.quotationNumber} />
           <QuotationDetailActions locale={locale} quotationId={quotation.id} status={quotation.status} />
         </div>
       </div>

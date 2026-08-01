@@ -20,7 +20,7 @@ import { EInvoicePreviewPanel } from "../../_shared/einvoice-preview-panel";
 import { DocRelationships } from "../../_shared/doc-relationships";
 import { DocNum } from "../../_shared/money";
 import { InvoiceDetailActions } from "../invoice-detail-actions";
-import { PrintButton } from "../../_shared/print-button";
+import { DownloadPdfButton } from "../../_shared/download-pdf-button";
 import { PaymentHistory } from "../../../finance/_shared/payment-history";
 
 const STATUS_VARIANT: Record<string, "success" | "warning" | "danger" | "info" | "neutral"> = {
@@ -109,7 +109,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
           </div>
         </div>
         <div className="flex items-center gap-2.5">
-          <PrintButton locale={locale} href={`/print/invoice/${invoice.id}`} />
+          <DownloadPdfButton locale={locale} type="invoice" docId={invoice.id} number={invoice.invoiceNumber} />
           <InvoiceDetailActions
             locale={locale}
             invoiceId={invoice.id}

@@ -17,7 +17,7 @@ import { docMoneyMark } from "../../_shared/doc-currency";
 import { TotalsStrip } from "../../_shared/totals-strip";
 import { DocNum } from "../../_shared/money";
 import { OrderDetailActions } from "../order-detail-actions";
-import { PrintButton } from "../../_shared/print-button";
+import { DownloadPdfButton } from "../../_shared/download-pdf-button";
 
 const STATUS_VARIANT: Record<string, "success" | "warning" | "danger" | "info" | "neutral"> = {
   draft: "neutral",
@@ -93,7 +93,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
           </div>
         </div>
         <div className="flex items-center gap-2.5">
-          <PrintButton locale={locale} href={`/print/sales-order/${order.id}`} />
+          <DownloadPdfButton locale={locale} type="sales-order" docId={order.id} number={order.soNumber} />
           <OrderDetailActions locale={locale} orderId={order.id} status={order.status} />
         </div>
       </div>

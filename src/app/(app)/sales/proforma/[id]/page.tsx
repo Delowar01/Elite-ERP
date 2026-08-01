@@ -20,7 +20,7 @@ import { TotalsStrip } from "../../_shared/totals-strip";
 import { DocRelationships } from "../../_shared/doc-relationships";
 import { DocNum } from "../../_shared/money";
 import { ProformaDetailActions } from "../proforma-detail-actions";
-import { PrintButton } from "../../_shared/print-button";
+import { DownloadPdfButton } from "../../_shared/download-pdf-button";
 
 const STATUS_VARIANT: Record<string, "success" | "warning" | "danger" | "info" | "neutral"> = {
   draft: "neutral",
@@ -110,7 +110,7 @@ export default async function ProformaDetailPage({ params }: { params: Promise<{
           </div>
         </div>
         <div className="flex items-center gap-2.5">
-          <PrintButton locale={locale} href={`/print/proforma/${pf.id}`} />
+          <DownloadPdfButton locale={locale} type="proforma" docId={pf.id} number={pf.proformaNumber} />
           <ProformaDetailActions
             locale={locale}
             proformaId={pf.id}

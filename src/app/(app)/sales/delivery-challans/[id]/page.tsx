@@ -12,7 +12,7 @@ import { t } from "@/lib/i18n/dict";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { DcDetailActions } from "../dc-detail-actions";
-import { PrintButton } from "../../_shared/print-button";
+import { DownloadPdfButton } from "../../_shared/download-pdf-button";
 
 const STATUS_VARIANT: Record<string, "success" | "warning" | "danger" | "info" | "neutral"> = {
   draft: "neutral",
@@ -72,7 +72,7 @@ export default async function DcDetailPage({ params }: { params: Promise<{ id: s
           </div>
         </div>
         <div className="flex items-center gap-2.5">
-          <PrintButton locale={locale} href={`/print/delivery-challan/${dc.id}`} />
+          <DownloadPdfButton locale={locale} type="delivery-challan" docId={dc.id} number={dc.dcNumber} />
           <DcDetailActions locale={locale} dcId={dc.id} status={dc.status} />
         </div>
       </div>

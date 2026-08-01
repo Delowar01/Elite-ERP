@@ -2,7 +2,9 @@
 
 import { useMemo } from "react";
 import Link from "next/link";
-import { Eye, Printer } from "lucide-react";
+import { Eye, Download } from "lucide-react";
+import { toast } from "sonner";
+import { downloadDocumentPdf } from "../_shared/download-pdf-button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { StatRow } from "../_shared/stat-row";
@@ -127,7 +129,7 @@ export function CnListClient({
             {filtered.map((r) => {
               const entries: RowMenuEntry[] = [
                 { kind: "item", icon: Eye, label: t(locale, "View"), href: `/sales/credit-notes/${r.id}` },
-                { kind: "item", icon: Printer, label: t(locale, "Print"), href: `/print/credit-note/${r.id}` },
+                { kind: "item", icon: Download, label: t(locale, "Download PDF"), onSelect: () => { void downloadDocumentPdf("credit-note", r.id).catch(() => toast.error(t(locale, "PDF download failed. Please try again."))); } },
                 { kind: "separator" },
                 ...rowActions("credit_note", r.id, r.status, r.isArchived),
               ];

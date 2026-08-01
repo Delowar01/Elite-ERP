@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { Money, DocNum } from "../../_shared/money";
 import { CnDetailActions } from "../cn-detail-actions";
-import { PrintButton } from "../../_shared/print-button";
+import { DownloadPdfButton } from "../../_shared/download-pdf-button";
 
 const STATUS_VARIANT: Record<string, "success" | "warning" | "danger" | "info" | "neutral"> = {
   draft: "neutral",
@@ -71,7 +71,7 @@ export default async function CreditNoteDetailPage({ params }: { params: Promise
           </div>
         </div>
         <div className="flex items-center gap-2.5">
-          <PrintButton locale={locale} href={`/print/credit-note/${cn.id}`} />
+          <DownloadPdfButton locale={locale} type="credit-note" docId={cn.id} number={cn.creditNoteNumber} />
           <CnDetailActions locale={locale} creditNoteId={cn.id} status={cn.status} />
         </div>
       </div>

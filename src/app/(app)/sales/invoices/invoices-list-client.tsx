@@ -3,7 +3,8 @@
 import { useMemo, useTransition } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Eye, Star, Printer, Wallet, Send } from "lucide-react";
+import { downloadDocumentPdf } from "../_shared/download-pdf-button";
+import { Eye, Star, Wallet, Send, Download } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { StatRow } from "../_shared/stat-row";
@@ -127,7 +128,7 @@ export function InvoicesListClient({
             const entries: RowMenuEntry[] = [
               { kind: "item", icon: Eye, label: t(locale, "View"), href: `/sales/invoices/${r.id}` },
               { kind: "item", icon: Star, label: t(locale, "Add to Favorites") },
-              { kind: "item", icon: Printer, label: t(locale, "Print / Download PDF"), href: `/print/invoice/${r.id}` },
+              { kind: "item", icon: Download, label: t(locale, "Download PDF"), onSelect: () => { void downloadDocumentPdf("invoice", r.id).catch(() => toast.error(t(locale, "PDF download failed. Please try again."))); } },
               { kind: "item", icon: Wallet, label: t(locale, "Record Payment") },
               {
                 kind: "convert",

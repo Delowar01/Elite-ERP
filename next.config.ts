@@ -32,6 +32,9 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  // Playwright (used to render document PDFs from the existing print layout) must stay external —
+  // never bundled into the server build.
+  serverExternalPackages: ["playwright", "playwright-core"],
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },

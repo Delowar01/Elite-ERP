@@ -3,7 +3,8 @@
 import { useMemo, useTransition } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Eye, Star, Pencil, Printer, Copy } from "lucide-react";
+import { downloadDocumentPdf } from "../_shared/download-pdf-button";
+import { Eye, Star, Pencil, Copy, Download } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { StatRow } from "../_shared/stat-row";
@@ -130,7 +131,7 @@ export function OrdersListClient({
               { kind: "item", icon: Eye, label: t(locale, "View"), href: `/sales/orders/${r.id}` },
               { kind: "item", icon: Star, label: t(locale, "Add to Favorites") },
               { kind: "item", icon: Pencil, label: t(locale, "Edit"), href: can("sales_order", r.status, "edit") ? `/sales/orders/${r.id}/edit` : undefined },
-              { kind: "item", icon: Printer, label: t(locale, "Print / Download PDF"), href: `/print/sales-order/${r.id}` },
+              { kind: "item", icon: Download, label: t(locale, "Download PDF"), onSelect: () => { void downloadDocumentPdf("sales-order", r.id).catch(() => toast.error(t(locale, "PDF download failed. Please try again."))); } },
               {
                 kind: "convert",
                 label: t(locale, "Convert to…"),

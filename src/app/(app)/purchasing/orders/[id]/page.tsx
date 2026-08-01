@@ -16,7 +16,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@
 import { TotalsStrip } from "../../../sales/_shared/totals-strip";
 import { DocNum } from "../../../sales/_shared/money";
 import { PoDetailActions } from "../po-detail-actions";
-import { PrintButton } from "../../../sales/_shared/print-button";
+import { DownloadPdfButton } from "../../../sales/_shared/download-pdf-button";
 
 const STATUS_VARIANT: Record<string, "success" | "warning" | "danger" | "info" | "neutral"> = {
   draft: "neutral",
@@ -81,7 +81,7 @@ export default async function PurchaseOrderDetailPage({ params }: { params: Prom
           </div>
         </div>
         <div className="flex items-center gap-2.5">
-          <PrintButton locale={locale} href={`/print/purchase-order/${po.id}`} />
+          <DownloadPdfButton locale={locale} type="purchase-order" docId={po.id} number={po.poNumber} />
           <PoDetailActions
             locale={locale}
             poId={po.id}
