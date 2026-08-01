@@ -21,6 +21,7 @@ export default async function ProformaPage() {
       issueDate: proformaInvoicesTable.issueDate,
       total: proformaInvoicesTable.total,
       status: proformaInvoicesTable.status,
+      convertedInvoiceId: proformaInvoicesTable.convertedInvoiceId,
       creatorName: usersTable.name,
       isArchived: sql<boolean>`${proformaInvoicesTable.archivedAt} is not null`,
       sourceSoNumber: salesOrdersTable.soNumber,

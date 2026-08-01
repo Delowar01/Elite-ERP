@@ -6,7 +6,8 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { RecordPaymentDialog, type BankAccountOption } from "../../finance/_shared/record-payment-dialog";
 import { t, type Locale } from "@/lib/i18n/dict";
-import { sendInvoiceAction, voidInvoiceAction, convertInvoiceToDeliveryChallanAction } from "./actions";
+import { sendInvoiceAction, voidInvoiceAction } from "./actions";
+import { ConvertMenu } from "../_shared/convert-menu";
 
 export function InvoiceDetailActions({
   locale,
@@ -45,13 +46,6 @@ export function InvoiceDetailActions({
     });
   }
 
-  function createDc() {
-    startTransition(async () => {
-      const result = await convertInvoiceToDeliveryChallanAction(invoiceId);
-      if (result?.error) toast.error(result.error);
-    });
-  }
-
   if (status === "draft") {
     return (
       <div className="flex items-center gap-2.5">
@@ -76,9 +70,6 @@ export function InvoiceDetailActions({
           {t(locale, "Void")}
         </Button>
       )}
-      <Button variant="glass" style={{ width: "auto" }} disabled={pending} onClick={createDc}>
-        {t(locale, "Create Delivery Challan")}
-      </Button>
       {canRecordPayment && (
         <RecordPaymentDialog
           locale={locale}
@@ -92,9 +83,7 @@ export function InvoiceDetailActions({
           }
         />
       )}
-      <Button variant="glass" style={{ width: "auto" }} asChild>
-        <Link href={`/sales/credit-notes/new?invoice=${invoiceId}`}>{t(locale, "Create Credit Note")}</Link>
-      </Button>
+      <ConvertMenu locale={locale} source="invoice" id={invoiceId} ctx={{ status }} disabled={pending} />
     </div>
   );
 }

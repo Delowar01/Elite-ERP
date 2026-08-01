@@ -2,11 +2,11 @@
 
 import { useTransition } from "react";
 import { toast } from "sonner";
-import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { RecordPaymentDialog, type BankAccountOption } from "../../finance/_shared/record-payment-dialog";
 import { t, type Locale } from "@/lib/i18n/dict";
 import { sendPurchaseOrderAction, receivePurchaseOrderAction, cancelPurchaseOrderAction } from "./actions";
+import { ConvertMenu } from "../../sales/_shared/convert-menu";
 
 export function PoDetailActions({
   locale,
@@ -79,9 +79,7 @@ export function PoDetailActions({
   if (status === "received") {
     return (
       <div className="flex items-center gap-2.5">
-        <Button variant="glass" style={{ width: "auto" }} asChild>
-          <Link href={`/purchasing/debit-notes/new?po=${poId}`}>{t(locale, "Create Debit Note")}</Link>
-        </Button>
+        <ConvertMenu locale={locale} source="purchase_order" id={poId} ctx={{ status }} disabled={pending} />
         {balance > 0 && (
           <RecordPaymentDialog
             locale={locale}

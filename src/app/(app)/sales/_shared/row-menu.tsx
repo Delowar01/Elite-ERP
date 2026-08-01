@@ -9,7 +9,7 @@ import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuIte
 
 export type RowMenuEntry =
   | { kind: "item"; icon: LucideIcon; label: string; onSelect?: () => void; href?: string; danger?: boolean }
-  | { kind: "convert"; label: string; targets: { label: string; onSelect: () => void }[] }
+  | { kind: "convert"; label: string; targets: { label: string; icon?: LucideIcon; onSelect: () => void }[] }
   | { kind: "separator" };
 
 export function RowMenu({ entries }: { entries: RowMenuEntry[] }) {
@@ -36,11 +36,14 @@ export function RowMenu({ entries }: { entries: RowMenuEntry[] }) {
                   <ChevronRight className="size-3.5" />
                 </DropdownMenuItem>
                 <div className={cn("row-menu-submenu", convertOpen && "open")}>
-                  {e.targets.map((target) => (
-                    <DropdownMenuItem key={target.label} className="cursor-pointer" onSelect={target.onSelect}>
-                      {target.label}
-                    </DropdownMenuItem>
-                  ))}
+                  {e.targets.map((target) => {
+                    const TIcon = target.icon;
+                    return (
+                      <DropdownMenuItem key={target.label} className="cursor-pointer" onSelect={target.onSelect}>
+                        {TIcon && <TIcon className="size-3.5 me-2.5 opacity-80" />} {target.label}
+                      </DropdownMenuItem>
+                    );
+                  })}
                 </div>
               </div>
             );

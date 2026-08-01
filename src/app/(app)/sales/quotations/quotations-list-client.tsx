@@ -17,13 +17,8 @@ import { ListWorkspaceToolbar } from "../../documents/_workspace/list-workspace-
 import { useListFilters } from "../../documents/_workspace/use-list-filters";
 import type { SavedViewDTO } from "../../documents/_workspace/saved-view-actions";
 import type { ImportColumn } from "@/lib/document-list-workspace";
-import {
-  convertToSalesOrderAction,
-  convertToProformaAction,
-  convertToInvoiceAction,
-  convertToDeliveryChallanAction,
-  updateQuotationStatusAction,
-} from "./actions";
+import { updateQuotationStatusAction } from "./actions";
+import { getConvertTargets, runConvertTarget } from "../_shared/convert-config";
 
 const STATUS_VARIANT: Record<string, "success" | "warning" | "danger" | "info" | "neutral"> = {
   draft: "neutral",
@@ -132,23 +127,24 @@ export function QuotationsListClient({
         </TableHeader>
         <TableBody>
           {filtered.map((r) => {
+            const convertTargets = getConvertTargets("quotation", { status: r.status });
             const entries: RowMenuEntry[] = [
               { kind: "item", icon: Eye, label: t(locale, "View"), href: `/sales/quotations/${r.id}` },
               { kind: "item", icon: Star, label: t(locale, "Add to Favorites") },
               { kind: "item", icon: Pencil, label: t(locale, "Edit"), href: can("quotation", r.status, "edit") ? `/sales/quotations/${r.id}/edit` : undefined },
               { kind: "item", icon: Copy, label: t(locale, "Duplicate") },
               { kind: "item", icon: Download, label: t(locale, "Download PDF"), onSelect: () => { void downloadDocumentPdf("quotation", r.id).catch(() => toast.error(t(locale, "PDF download failed. Please try again."))); } },
-              {
-                kind: "convert",
-                label: t(locale, "Convert to…"),
-                targets: [
-                  { label: t(locale, "Sales Order"), onSelect: () => convert(r.id, convertToSalesOrderAction) },
-                  { label: t(locale, "Proforma Invoice"), onSelect: () => convert(r.id, convertToProformaAction) },
-                  { label: t(locale, "Invoice"), onSelect: () => convert(r.id, convertToInvoiceAction) },
-                  { label: t(locale, "Delivery Challan"), onSelect: () => convert(r.id, convertToDeliveryChallanAction) },
-                  { label: t(locale, "Purchase Order"), onSelect: () => window.location.assign(`/purchasing/orders/new?fromQuotation=${r.id}`) },
-                ],
-              },
+              ...(convertTargets.length
+                ? [{
+                    kind: "convert" as const,
+                    label: t(locale, "Convert to…"),
+                    targets: convertTargets.map((tgt) => ({
+                      label: t(locale, tgt.labelKey),
+                      icon: tgt.icon,
+                      onSelect: () => runConvertTarget(tgt, r.id, startTransition, (m: string) => toast.error(m)),
+                    })),
+                  }]
+                : []),
               { kind: "item", icon: Send, label: t(locale, "Send to Client"), onSelect: () => convert(r.id, (id) => updateQuotationStatusAction(id, "sent")) },
               { kind: "separator" },
               ...rowActions("quotation", r.id, r.status, r.isArchived),

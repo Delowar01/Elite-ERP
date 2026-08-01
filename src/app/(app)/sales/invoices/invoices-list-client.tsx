@@ -16,7 +16,7 @@ import { RowMenu, type RowMenuEntry } from "../_shared/row-menu";
 import { Money } from "../_shared/money";
 import { t, type Locale } from "@/lib/i18n/dict";
 import { useDocumentRowActions } from "../../_shared/document-row-actions";
-import { convertInvoiceToDeliveryChallanAction } from "./actions";
+import { getConvertTargets, runConvertTarget } from "../_shared/convert-config";
 
 const STATUS_VARIANT: Record<string, "success" | "warning" | "danger" | "info" | "neutral"> = {
   draft: "neutral",
@@ -57,12 +57,6 @@ export function InvoicesListClient({
   const rowActions = useDocumentRowActions(locale);
   const [, startTransition] = useTransition();
 
-  function createDc(id: number) {
-    startTransition(async () => {
-      const result = await convertInvoiceToDeliveryChallanAction(id);
-      if (result?.error) toast.error(result.error);
-    });
-  }
 
   const { filters, setFilters, filtered } = useListFilters(rows, {
     search: (r) => [r.invoiceNumber, r.customerName, r.title ?? ""],
@@ -125,20 +119,23 @@ export function InvoicesListClient({
         </TableHeader>
         <TableBody>
           {filtered.map((r) => {
+            const convertTargets = getConvertTargets("invoice", { status: r.status });
             const entries: RowMenuEntry[] = [
               { kind: "item", icon: Eye, label: t(locale, "View"), href: `/sales/invoices/${r.id}` },
               { kind: "item", icon: Star, label: t(locale, "Add to Favorites") },
               { kind: "item", icon: Download, label: t(locale, "Download PDF"), onSelect: () => { void downloadDocumentPdf("invoice", r.id).catch(() => toast.error(t(locale, "PDF download failed. Please try again."))); } },
               { kind: "item", icon: Wallet, label: t(locale, "Record Payment") },
-              {
-                kind: "convert",
-                label: t(locale, "Convert to…"),
-                targets: [
-                  { label: t(locale, "Credit Note"), onSelect: () => window.location.assign(`/sales/credit-notes/new?invoice=${r.id}`) },
-                  { label: t(locale, "Delivery Challan"), onSelect: () => createDc(r.id) },
-                  { label: t(locale, "Purchase Order"), onSelect: () => window.location.assign(`/purchasing/orders/new?fromInvoice=${r.id}`) },
-                ],
-              },
+              ...(convertTargets.length
+                ? [{
+                    kind: "convert" as const,
+                    label: t(locale, "Convert to…"),
+                    targets: convertTargets.map((tgt) => ({
+                      label: t(locale, tgt.labelKey),
+                      icon: tgt.icon,
+                      onSelect: () => runConvertTarget(tgt, r.id, startTransition, (m: string) => toast.error(m)),
+                    })),
+                  }]
+                : []),
               { kind: "item", icon: Send, label: t(locale, "Send Reminder") },
               { kind: "separator" },
               ...rowActions("sales_invoice", r.id, r.status, r.isArchived),

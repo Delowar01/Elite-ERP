@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { RecordPaymentDialog, type BankAccountOption } from "../../finance/_shared/record-payment-dialog";
 import { t, type Locale } from "@/lib/i18n/dict";
-import { updateProformaStatusAction, convertProformaToInvoiceAction } from "./actions";
+import { updateProformaStatusAction } from "./actions";
+import { ConvertMenu } from "../_shared/convert-menu";
 
 const STATUSES = ["draft", "sent"];
 
@@ -38,13 +39,6 @@ export function ProformaDetailActions({
       const result = await updateProformaStatusAction(proformaId, value);
       if (result?.error) toast.error(result.error);
       else toast.success(t(locale, "Saved"));
-    });
-  }
-
-  function convertToInvoice() {
-    startTransition(async () => {
-      const result = await convertProformaToInvoiceAction(proformaId);
-      if (result?.error) toast.error(result.error);
     });
   }
 
@@ -86,9 +80,7 @@ export function ProformaDetailActions({
           trigger={<Button style={{ width: "auto" }}>{t(locale, "Record Payment")}</Button>}
         />
       )}
-      <Button variant="glass" style={{ width: "auto" }} disabled={pending} onClick={convertToInvoice}>
-        {t(locale, "Convert to Invoice")}
-      </Button>
+      <ConvertMenu locale={locale} source="proforma" id={proformaId} ctx={{ status, converted }} disabled={pending} />
     </div>
   );
 }

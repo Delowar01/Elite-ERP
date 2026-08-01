@@ -17,7 +17,7 @@ import { Money } from "../_shared/money";
 import { t, type Locale } from "@/lib/i18n/dict";
 import { useDocumentRowActions } from "../../_shared/document-row-actions";
 import { can } from "@/lib/document-lifecycle";
-import { convertProformaToInvoiceAction, convertProformaToDeliveryChallanAction } from "./actions";
+import { getConvertTargets, runConvertTarget } from "../_shared/convert-config";
 
 const STATUS_VARIANT: Record<string, "success" | "warning" | "danger" | "info" | "neutral"> = {
   draft: "neutral",
@@ -32,6 +32,7 @@ export type ProformaRow = {
   issueDate: string;
   total: string;
   status: string;
+  convertedInvoiceId: number | null;
   creatorName: string;
   isArchived: boolean;
   sourceSoNumber: string | null;
@@ -70,12 +71,6 @@ export function ProformaListClient({
     return counts;
   }, [rows]);
 
-  function convert(id: number, action: (id: number) => Promise<{ error?: string }>) {
-    startTransition(async () => {
-      const result = await action(id);
-      if (result?.error) toast.error(result.error);
-    });
-  }
 
   return (
     <div className="max-w-6xl mx-auto">
@@ -122,21 +117,24 @@ export function ProformaListClient({
         </TableHeader>
         <TableBody>
           {filtered.map((r) => {
+            const convertTargets = getConvertTargets("proforma", { status: r.status, converted: r.convertedInvoiceId != null });
             const entries: RowMenuEntry[] = [
               { kind: "item", icon: Eye, label: t(locale, "View"), href: `/sales/proforma/${r.id}` },
               { kind: "item", icon: Star, label: t(locale, "Add to Favorites") },
               { kind: "item", icon: Pencil, label: t(locale, "Edit"), href: can("proforma_invoice", r.status, "edit") ? `/sales/proforma/${r.id}/edit` : undefined },
               { kind: "item", icon: Download, label: t(locale, "Download PDF"), onSelect: () => { void downloadDocumentPdf("proforma", r.id).catch(() => toast.error(t(locale, "PDF download failed. Please try again."))); } },
               { kind: "item", icon: Wallet, label: t(locale, "Record Payment") },
-              {
-                kind: "convert",
-                label: t(locale, "Convert to…"),
-                targets: [
-                  { label: t(locale, "Invoice"), onSelect: () => convert(r.id, convertProformaToInvoiceAction) },
-                  { label: t(locale, "Delivery Challan"), onSelect: () => convert(r.id, convertProformaToDeliveryChallanAction) },
-                  { label: t(locale, "Purchase Order"), onSelect: () => window.location.assign(`/purchasing/orders/new?fromProforma=${r.id}`) },
-                ],
-              },
+              ...(convertTargets.length
+                ? [{
+                    kind: "convert" as const,
+                    label: t(locale, "Convert to…"),
+                    targets: convertTargets.map((tgt) => ({
+                      label: t(locale, tgt.labelKey),
+                      icon: tgt.icon,
+                      onSelect: () => runConvertTarget(tgt, r.id, startTransition, (m: string) => toast.error(m)),
+                    })),
+                  }]
+                : []),
               { kind: "separator" },
               ...rowActions("proforma_invoice", r.id, r.status, r.isArchived),
             ];

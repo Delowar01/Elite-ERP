@@ -17,7 +17,7 @@ import { Money } from "../_shared/money";
 import { t, type Locale } from "@/lib/i18n/dict";
 import { useDocumentRowActions } from "../../_shared/document-row-actions";
 import { can } from "@/lib/document-lifecycle";
-import { convertSoToProformaAction, convertSoToInvoiceAction, convertSoToDeliveryChallanAction } from "./actions";
+import { getConvertTargets, runConvertTarget } from "../_shared/convert-config";
 
 const STATUS_VARIANT: Record<string, "success" | "warning" | "danger" | "info" | "neutral"> = {
   draft: "neutral",
@@ -73,12 +73,6 @@ export function OrdersListClient({
     return counts;
   }, [rows]);
 
-  function convert(id: number, action: (id: number) => Promise<{ error?: string }>) {
-    startTransition(async () => {
-      const result = await action(id);
-      if (result?.error) toast.error(result.error);
-    });
-  }
 
   return (
     <div className="max-w-6xl mx-auto">
@@ -127,21 +121,23 @@ export function OrdersListClient({
         </TableHeader>
         <TableBody>
           {filtered.map((r) => {
+            const convertTargets = getConvertTargets("sales_order", { status: r.status });
             const entries: RowMenuEntry[] = [
               { kind: "item", icon: Eye, label: t(locale, "View"), href: `/sales/orders/${r.id}` },
               { kind: "item", icon: Star, label: t(locale, "Add to Favorites") },
               { kind: "item", icon: Pencil, label: t(locale, "Edit"), href: can("sales_order", r.status, "edit") ? `/sales/orders/${r.id}/edit` : undefined },
               { kind: "item", icon: Download, label: t(locale, "Download PDF"), onSelect: () => { void downloadDocumentPdf("sales-order", r.id).catch(() => toast.error(t(locale, "PDF download failed. Please try again."))); } },
-              {
-                kind: "convert",
-                label: t(locale, "Convert to…"),
-                targets: [
-                  { label: t(locale, "Proforma Invoice"), onSelect: () => convert(r.id, convertSoToProformaAction) },
-                  { label: t(locale, "Invoice"), onSelect: () => convert(r.id, convertSoToInvoiceAction) },
-                  { label: t(locale, "Delivery Challan"), onSelect: () => convert(r.id, convertSoToDeliveryChallanAction) },
-                  { label: t(locale, "Purchase Order"), onSelect: () => window.location.assign(`/purchasing/orders/new?fromSalesOrder=${r.id}`) },
-                ],
-              },
+              ...(convertTargets.length
+                ? [{
+                    kind: "convert" as const,
+                    label: t(locale, "Convert to…"),
+                    targets: convertTargets.map((tgt) => ({
+                      label: t(locale, tgt.labelKey),
+                      icon: tgt.icon,
+                      onSelect: () => runConvertTarget(tgt, r.id, startTransition, (m: string) => toast.error(m)),
+                    })),
+                  }]
+                : []),
               { kind: "item", icon: Copy, label: t(locale, "Duplicate") },
               { kind: "separator" },
               ...rowActions("sales_order", r.id, r.status, r.isArchived),
