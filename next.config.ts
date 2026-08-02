@@ -32,9 +32,10 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
-  // Playwright (used to render document PDFs from the existing print layout) must stay external —
-  // never bundled into the server build.
-  serverExternalPackages: ["playwright", "playwright-core"],
+  // The headless-Chromium PDF renderer (puppeteer-core + @sparticuz/chromium, used to render
+  // document PDFs from the existing print layout) must stay external — never bundled into the
+  // server build; @sparticuz/chromium ships a binary the bundler must not touch.
+  serverExternalPackages: ["puppeteer-core", "@sparticuz/chromium"],
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },

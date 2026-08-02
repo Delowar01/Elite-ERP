@@ -1,13 +1,47 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
-import { Plus, Printer } from "lucide-react";
+import { toast } from "sonner";
+import { Plus, Download, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { RecordPaymentDialog, type OutstandingInvoice, type OutstandingPo, type BankAccountOption } from "../_shared/record-payment-dialog";
 import { Money } from "../../sales/_shared/money";
+import { downloadDocumentPdf } from "../../sales/_shared/download-pdf-button";
 import { t, type Locale } from "@/lib/i18n/dict";
+
+// Payment-receipt "Download PDF" icon action: generates and downloads the receipt PDF in place,
+// with a per-row loading state, no navigation and no print page (Issue #10).
+function ReceiptDownload({ locale, paymentId }: { locale: Locale; paymentId: number }) {
+  const [busy, setBusy] = useState(false);
+  async function onClick() {
+    if (busy) return;
+    setBusy(true);
+    try {
+      await downloadDocumentPdf("payment", paymentId);
+    } catch (err) {
+      const detail = err instanceof Error ? err.message : "";
+      toast.error(detail || t(locale, "PDF download failed. Please try again."));
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={busy}
+      aria-busy={busy}
+      title={t(locale, "Download PDF")}
+      aria-label={t(locale, "Download PDF")}
+      className="text-ink-faint hover:text-brand-orange inline-flex disabled:opacity-50"
+    >
+      {busy ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
+    </button>
+  );
+}
 
 const METHOD_LABELS: Record<string, string> = {
   bank_transfer: "Bank Transfer",
@@ -107,15 +141,7 @@ export function PaymentsListClient({
                   <Money amount={p.amount} />
                 </TableCell>
                 <TableCell>
-                  <a
-                    href={`/print/payment/${p.id}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-ink-faint hover:text-brand-orange inline-flex"
-                    title={t(locale, "Payment Receipt")}
-                  >
-                    <Printer className="size-4" />
-                  </a>
+                  <ReceiptDownload locale={locale} paymentId={p.id} />
                 </TableCell>
               </TableRow>
             ))}

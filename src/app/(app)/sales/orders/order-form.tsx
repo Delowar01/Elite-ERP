@@ -257,7 +257,6 @@ export function OrderForm({
       <DocFooterContact locale={locale} email={org.email} phone={org.phone} />
 
       <DocActionBar
-        printHref={documentId ? `/print/sales-order/${documentId}` : undefined}
         locale={locale}
         pendingDraft={pendingDraft}
         pendingPrimary={pendingPrimary}
@@ -265,7 +264,7 @@ export function OrderForm({
         onPrimary={() => submit(isEdit ? false : true)}
         primaryLabel="Confirm Order"
         editMode={isEdit}
-        onPreview={documentId ? undefined : () => setPreviewOpen(true)}
+        onPreview={() => setPreviewOpen(true)}
       />
 
       <PreviewDialog locale={locale} data={previewData} open={previewOpen} onOpenChange={setPreviewOpen} />

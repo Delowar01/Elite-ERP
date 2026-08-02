@@ -1196,6 +1196,7 @@ const DICT: Record<string, string> = {
   "Open settings": "فتح الإعدادات",
   "Not configurable yet": "غير قابل للتهيئة بعد",
   "Save the document first to preview & print.": "احفظ المستند أولاً للمعاينة والطباعة.",
+  "Save the document first to preview.": "احفظ المستند أولاً للمعاينة.",
   "Current tab": "علامة التبويب الحالية",
   "Type your note in the box below.": "اكتب ملاحظتك في المربع أدناه.",
   "File attachments are not supported on documents.": "المرفقات غير مدعومة على المستندات.",

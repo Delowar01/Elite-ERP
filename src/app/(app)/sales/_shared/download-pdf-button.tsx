@@ -30,7 +30,18 @@ function fallbackName(type: string, number?: string): string {
 // server-side). Throws on any failure so callers surface an error and never save an empty file.
 export async function downloadDocumentPdf(type: string, id: number, number?: string): Promise<void> {
   const res = await fetch(`/api/document-pdf/${type}/${id}`, { headers: { Accept: "application/pdf" } });
-  if (!res.ok) throw new Error(`PDF request failed (${res.status})`);
+  if (!res.ok) {
+    // Surface the real server message (the route includes `detail` in dev / when PDF_DEBUG_ERRORS=1)
+    // instead of a generic failure, so a broken PDF pipeline can actually be diagnosed.
+    let message = `PDF request failed (${res.status})`;
+    try {
+      const body = await res.json();
+      message = body?.detail || body?.error || message;
+    } catch {
+      /* non-JSON body */
+    }
+    throw new Error(message);
+  }
   const blob = await res.blob();
   // Guard against an error body slipping through as a "download" (empty/corrupt file protection).
   if (blob.type !== "application/pdf" || blob.size < 1000) throw new Error("Empty or invalid PDF");
@@ -70,8 +81,9 @@ export function DownloadPdfButton({
     setBusy(true);
     try {
       await downloadDocumentPdf(type, docId, number);
-    } catch {
-      toast.error(t(locale, "PDF download failed. Please try again."));
+    } catch (err) {
+      const detail = err instanceof Error ? err.message : "";
+      toast.error(detail || t(locale, "PDF download failed. Please try again."));
     } finally {
       setBusy(false);
     }

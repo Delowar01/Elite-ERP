@@ -1,7 +1,6 @@
 "use client";
 
 import { Fragment, useState } from "react";
-import { Printer } from "lucide-react";
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogFooter, DialogTitle, DialogClose } from "@/components/ui/dialog";
 import { t, type Locale } from "@/lib/i18n/dict";
 import { richTextToHtml } from "@/lib/sanitize-html";
@@ -147,9 +146,6 @@ export function PreviewDialog({
           <DialogClose asChild>
             <button type="button" className="btn btn-glass">{t(locale, "Close")}</button>
           </DialogClose>
-          <button type="button" className="btn btn-primary" onClick={() => window.print()}>
-            <Printer className="size-3.5" /> {t(locale, "Print")}
-          </button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

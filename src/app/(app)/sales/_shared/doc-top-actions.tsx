@@ -14,7 +14,7 @@ export function DocTopActions({ locale, busy, onSaveDraft, onPreview }: { locale
         {t(locale, "Save as Draft")}
       </button>
       <button type="button" className="btn btn-glass" onClick={onPreview}>
-        <FileText className="size-3.5" /> {t(locale, "Print Preview")}
+        <FileText className="size-3.5" /> {t(locale, "Preview")}
       </button>
     </div>
   );

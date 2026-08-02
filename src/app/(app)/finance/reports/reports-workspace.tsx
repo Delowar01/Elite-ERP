@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { Printer, Download, Search, Loader2, ChevronRight } from "lucide-react";
+import { Download, Search, Loader2, ChevronRight } from "lucide-react";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -128,11 +128,8 @@ export function ReportsWorkspace({
           <div className="doc-pill-btn-group flex items-center gap-1">
             <a href={exportUrl("csv")} className="doc-pill-btn" style={{ height: 32, fontSize: 12 }}><Download className="size-3.5" /> CSV</a>
             <a href={exportUrl("xlsx")} className="doc-pill-btn" style={{ height: 32, fontSize: 12 }}>Excel</a>
-            <a href={exportUrl("pdf")} className="doc-pill-btn" style={{ height: 32, fontSize: 12 }}>PDF</a>
+            <a href={exportUrl("pdf")} className="doc-pill-btn" style={{ height: 32, fontSize: 12 }}><Download className="size-3.5" /> PDF</a>
           </div>
-          <button type="button" className="btn btn-primary" style={{ height: 34 }} onClick={() => window.print()}>
-            <Printer className="size-3.5" /> {t(locale, "Print")}
-          </button>
         </div>
       </div>
 

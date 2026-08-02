@@ -202,7 +202,6 @@ export function DnForm({
       <DocFooterContact locale={locale} email={org.email} phone={org.phone} />
 
       <DocActionBar
-        printHref={documentId ? `/print/debit-note/${documentId}` : undefined}
         locale={locale}
         pendingDraft={pendingDraft}
         pendingPrimary={pendingPrimary}
@@ -210,7 +209,7 @@ export function DnForm({
         onPrimary={() => submit(isEdit ? false : true)}
         primaryLabel="Issue Debit Note"
         editMode={isEdit}
-        onPreview={documentId ? undefined : () => setPreviewOpen(true)}
+        onPreview={() => setPreviewOpen(true)}
       />
 
       <PreviewDialog locale={locale} data={previewData} open={previewOpen} onOpenChange={setPreviewOpen} />

@@ -278,7 +278,6 @@ export function QuotationForm({
       <DocFooterContact locale={locale} email={org.email} phone={org.phone} />
 
       <DocActionBar
-        printHref={documentId ? `/print/quotation/${documentId}` : undefined}
         locale={locale}
         pendingDraft={pendingDraft}
         pendingPrimary={pendingPrimary}
@@ -286,7 +285,7 @@ export function QuotationForm({
         onPrimary={() => submit(isEdit ? false : true)}
         primaryLabel="Save & Submit"
         editMode={isEdit}
-        onPreview={documentId ? undefined : () => setPreviewOpen(true)}
+        onPreview={() => setPreviewOpen(true)}
       />
 
       <PreviewDialog locale={locale} data={previewData} open={previewOpen} onOpenChange={setPreviewOpen} />
