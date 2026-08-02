@@ -113,7 +113,7 @@ export function DcListClient({
           {filtered.map((r) => {
             const entries: RowMenuEntry[] = [
               { kind: "item", icon: Eye, label: t(locale, "View"), href: `/sales/delivery-challans/${r.id}` },
-              { kind: "item", icon: Download, label: t(locale, "Download PDF"), onSelect: () => { void downloadDocumentPdf("delivery-challan", r.id).catch(() => toast.error(t(locale, "PDF download failed. Please try again."))); } },
+              { kind: "item", icon: Download, label: t(locale, "Download PDF"), onSelect: () => { void downloadDocumentPdf("delivery-challan", r.id).catch((e) => toast.error(e instanceof Error && e.message ? e.message : t(locale, "PDF download failed. Please try again."))); } },
               { kind: "item", icon: TruckIcon, label: t(locale, "Mark Delivered") },
               { kind: "separator" },
               ...rowActions("delivery_challan", r.id, r.status, r.isArchived),

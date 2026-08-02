@@ -36,6 +36,12 @@ const nextConfig: NextConfig = {
   // document PDFs from the existing print layout) must stay external — never bundled into the
   // server build; @sparticuz/chromium ships a binary the bundler must not touch.
   serverExternalPackages: ["puppeteer-core", "@sparticuz/chromium"],
+  // On Vercel, Next's output file tracing does not automatically include @sparticuz/chromium's
+  // compressed browser binary (it is read from disk at runtime, not `import`ed), so the PDF
+  // function would fail with "Could not find Chromium". Force the whole package into the function.
+  outputFileTracingIncludes: {
+    "/api/document-pdf/[type]/[id]": ["./node_modules/@sparticuz/chromium/**"],
+  },
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },

@@ -133,7 +133,7 @@ export function QuotationsListClient({
               { kind: "item", icon: Star, label: t(locale, "Add to Favorites") },
               { kind: "item", icon: Pencil, label: t(locale, "Edit"), href: can("quotation", r.status, "edit") ? `/sales/quotations/${r.id}/edit` : undefined },
               { kind: "item", icon: Copy, label: t(locale, "Duplicate") },
-              { kind: "item", icon: Download, label: t(locale, "Download PDF"), onSelect: () => { void downloadDocumentPdf("quotation", r.id).catch(() => toast.error(t(locale, "PDF download failed. Please try again."))); } },
+              { kind: "item", icon: Download, label: t(locale, "Download PDF"), onSelect: () => { void downloadDocumentPdf("quotation", r.id).catch((e) => toast.error(e instanceof Error && e.message ? e.message : t(locale, "PDF download failed. Please try again."))); } },
               ...(convertTargets.length
                 ? [{
                     kind: "convert" as const,

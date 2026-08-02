@@ -129,7 +129,7 @@ export function DnListClient({
             {filtered.map((r) => {
               const entries: RowMenuEntry[] = [
                 { kind: "item", icon: Eye, label: t(locale, "View"), href: `/purchasing/debit-notes/${r.id}` },
-                { kind: "item", icon: Download, label: t(locale, "Download PDF"), onSelect: () => { void downloadDocumentPdf("debit-note", r.id).catch(() => toast.error(t(locale, "PDF download failed. Please try again."))); } },
+                { kind: "item", icon: Download, label: t(locale, "Download PDF"), onSelect: () => { void downloadDocumentPdf("debit-note", r.id).catch((e) => toast.error(e instanceof Error && e.message ? e.message : t(locale, "PDF download failed. Please try again."))); } },
                 { kind: "separator" },
                 ...rowActions("debit_note", r.id, r.status, r.isArchived),
               ];

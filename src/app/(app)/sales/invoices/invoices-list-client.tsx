@@ -123,7 +123,7 @@ export function InvoicesListClient({
             const entries: RowMenuEntry[] = [
               { kind: "item", icon: Eye, label: t(locale, "View"), href: `/sales/invoices/${r.id}` },
               { kind: "item", icon: Star, label: t(locale, "Add to Favorites") },
-              { kind: "item", icon: Download, label: t(locale, "Download PDF"), onSelect: () => { void downloadDocumentPdf("invoice", r.id).catch(() => toast.error(t(locale, "PDF download failed. Please try again."))); } },
+              { kind: "item", icon: Download, label: t(locale, "Download PDF"), onSelect: () => { void downloadDocumentPdf("invoice", r.id).catch((e) => toast.error(e instanceof Error && e.message ? e.message : t(locale, "PDF download failed. Please try again."))); } },
               { kind: "item", icon: Wallet, label: t(locale, "Record Payment") },
               ...(convertTargets.length
                 ? [{

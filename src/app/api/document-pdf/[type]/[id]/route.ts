@@ -85,9 +85,10 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     });
   } catch (err) {
     console.error("PDF generation failed", err);
-    // Surface the real cause in development (or when PDF_DEBUG_ERRORS=1, e.g. to debug on Vercel);
-    // production hides internals behind a generic message but still logs the full error above.
-    const showDetail = process.env.NODE_ENV !== "production" || process.env.PDF_DEBUG_ERRORS === "1";
+    // Surface the real cause (chromium launch / print-page fetch / timeout) in the response so a
+    // broken PDF pipeline is diagnosable from the UI toast — the failure text is not sensitive.
+    // Set PDF_DEBUG_ERRORS=0 to hide it behind the generic message once the pipeline is healthy.
+    const showDetail = process.env.PDF_DEBUG_ERRORS !== "0";
     const detail = err instanceof Error ? err.message : String(err);
     return NextResponse.json({ error: "PDF generation failed.", ...(showDetail ? { detail } : {}) }, { status: 500 });
   }

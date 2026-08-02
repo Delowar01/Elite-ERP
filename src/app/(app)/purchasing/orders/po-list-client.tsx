@@ -129,7 +129,7 @@ export function PoListClient({
                 { kind: "item", icon: Eye, label: t(locale, "View"), href: `/purchasing/orders/${r.id}` },
                 { kind: "item", icon: Star, label: t(locale, "Add to Favorites") },
                 { kind: "item", icon: Pencil, label: t(locale, "Edit"), href: can("purchase_order", r.status, "edit") ? `/purchasing/orders/${r.id}/edit` : undefined },
-                { kind: "item", icon: Download, label: t(locale, "Download PDF"), onSelect: () => { void downloadDocumentPdf("purchase-order", r.id).catch(() => toast.error(t(locale, "PDF download failed. Please try again."))); } },
+                { kind: "item", icon: Download, label: t(locale, "Download PDF"), onSelect: () => { void downloadDocumentPdf("purchase-order", r.id).catch((e) => toast.error(e instanceof Error && e.message ? e.message : t(locale, "PDF download failed. Please try again."))); } },
                 ...(convertTargets.length
                   ? [{
                       kind: "convert" as const,

@@ -122,7 +122,7 @@ export function ProformaListClient({
               { kind: "item", icon: Eye, label: t(locale, "View"), href: `/sales/proforma/${r.id}` },
               { kind: "item", icon: Star, label: t(locale, "Add to Favorites") },
               { kind: "item", icon: Pencil, label: t(locale, "Edit"), href: can("proforma_invoice", r.status, "edit") ? `/sales/proforma/${r.id}/edit` : undefined },
-              { kind: "item", icon: Download, label: t(locale, "Download PDF"), onSelect: () => { void downloadDocumentPdf("proforma", r.id).catch(() => toast.error(t(locale, "PDF download failed. Please try again."))); } },
+              { kind: "item", icon: Download, label: t(locale, "Download PDF"), onSelect: () => { void downloadDocumentPdf("proforma", r.id).catch((e) => toast.error(e instanceof Error && e.message ? e.message : t(locale, "PDF download failed. Please try again."))); } },
               { kind: "item", icon: Wallet, label: t(locale, "Record Payment") },
               ...(convertTargets.length
                 ? [{
