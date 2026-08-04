@@ -27,8 +27,12 @@ async function launchBrowser(): Promise<PdfBrowser> {
   // Serverless (Vercel/Lambda): use the bundled, size-optimized @sparticuz/chromium binary.
   if (!explicitPath && isServerless) {
     const chromium = ((await import("@sparticuz/chromium")) as unknown as {
-      default: { args: string[]; defaultViewport: unknown; executablePath: () => Promise<string> };
+      default: { args: string[]; defaultViewport: unknown; executablePath: () => Promise<string>; setGraphicsMode: boolean };
     }).default;
+    // PDF rendering needs no WebGL/GPU stack, so skip the swiftshader graphics libs — this cuts the
+    // extracted size and memory footprint on constrained functions and speeds up cold starts. The
+    // browser (chromium.br) and system libs (al2023.tar.br, which carries libnss3.so) still extract.
+    chromium.setGraphicsMode = false;
     return puppeteer.launch({
       args: chromium.args,
       defaultViewport: chromium.defaultViewport,
