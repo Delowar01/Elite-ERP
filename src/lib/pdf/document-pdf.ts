@@ -30,6 +30,14 @@ async function launchBrowser(): Promise<PdfBrowser> {
   // producing "libnss3.so: cannot open shared object file". The pack URL is a pinned @sparticuz
   // GitHub release; override with CHROMIUM_PACK_URL (e.g. a self-hosted copy) if GitHub is blocked.
   if (!explicitPath && isServerless) {
+    // CRITICAL for Vercel: @sparticuz/chromium-min gates BOTH extracting the AL2023 system libraries
+    // (which contain libnss3.so) AND setting LD_LIBRARY_PATH behind an AWS-Lambda check that reads
+    // AWS_EXECUTION_ENV / AWS_LAMBDA_JS_RUNTIME. Vercel sets neither, so Chromium launches without its
+    // libraries → "libnss3.so: cannot open shared object file". Force the AL2023/Node20 path BEFORE
+    // the module is imported (its library setup runs at module-load time).
+    if (!process.env.AWS_EXECUTION_ENV && !process.env.AWS_LAMBDA_JS_RUNTIME) {
+      process.env.AWS_LAMBDA_JS_RUNTIME = "nodejs20.x";
+    }
     const chromium = ((await import("@sparticuz/chromium-min")) as unknown as {
       default: { args: string[]; defaultViewport: unknown; executablePath: (pack?: string) => Promise<string>; setGraphicsMode: boolean };
     }).default;
@@ -38,10 +46,17 @@ async function launchBrowser(): Promise<PdfBrowser> {
     const packUrl =
       process.env.CHROMIUM_PACK_URL ||
       "https://github.com/Sparticuz/chromium/releases/download/v131.0.1/chromium-v131.0.1-pack.tar";
+    const executablePath = await chromium.executablePath(packUrl);
+    // Defensive: guarantee the extracted lib directory is on LD_LIBRARY_PATH for the spawned browser
+    // (covers a warm container whose module-load setup ran before the flag above was in effect).
+    const libDir = "/tmp/al2023/lib";
+    if (!(process.env.LD_LIBRARY_PATH ?? "").split(":").includes(libDir)) {
+      process.env.LD_LIBRARY_PATH = [libDir, process.env.LD_LIBRARY_PATH].filter(Boolean).join(":");
+    }
     return puppeteer.launch({
       args: chromium.args,
       defaultViewport: chromium.defaultViewport,
-      executablePath: await chromium.executablePath(packUrl),
+      executablePath,
       headless: true,
     });
   }
