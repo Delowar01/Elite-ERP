@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LogOut, Settings } from "lucide-react";
 import { NAV_GROUPS } from "./nav-config";
-import { buildThemeOverrideCss, isColorThemeMode } from "@/lib/brand-theme";
+import { buildThemeOverrideCss, isColorThemeMode, type ThemeOverrides, type ThemeOverridesByMode } from "@/lib/brand-theme";
 import { Sidebar } from "./sidebar";
 import { TopbarSearch } from "./topbar-search";
 import { NotificationsMenu } from "./notifications-menu";
@@ -61,7 +61,8 @@ export function AppShell({
   orgColorThemeMode: string;
   orgGradientFrom: string;
   orgGradientTo: string;
-  orgThemeOverrides: Record<string, { bg?: string; fg?: string }> | null;
+  // Per-appearance overrides ({ light?: {...}, dark?: {...} }); legacy flat rows migrate on read.
+  orgThemeOverrides: ThemeOverridesByMode | ThemeOverrides | null;
   locale: Locale;
   theme: Theme | null;
   notifications: NotificationItem[];

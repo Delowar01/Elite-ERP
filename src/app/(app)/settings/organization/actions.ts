@@ -9,7 +9,11 @@ import { recordAudit } from "@/lib/security/audit";
 import { getProfileByCountryName, profileHasFeature } from "@/lib/geo/country-profiles";
 import { validateUpload, storeBlob, deleteStoredBlob, IMAGE_MAX_BYTES } from "@/lib/storage/blob-storage";
 import { isValidCurrencyCode } from "@/lib/currency/currencies";
-import { isColorThemeMode, HEX_COLOR, THEME_COMPONENTS, generateComponentColors, isReadable, suggestReadableFg, type ThemeOverrides } from "@/lib/brand-theme";
+import {
+  isColorThemeMode, HEX_COLOR, THEME_COMPONENTS, APPEARANCES, generateComponentColors, isReadable,
+  suggestReadableFg, normalizeOverrides, brandForAppearance,
+  type ThemeOverrides, type ThemeOverridesByMode, type Appearance,
+} from "@/lib/brand-theme";
 
 export type ActionResult = { error?: string };
 
@@ -60,7 +64,7 @@ export async function updateColorThemeAction(payload: {
   accentColor: string;
   gradientFrom: string;
   gradientTo: string;
-  overrides?: ThemeOverrides | null;
+  overrides?: ThemeOverridesByMode | ThemeOverrides | null;
 }): Promise<ActionResult> {
   const session = await requireRole("owner", "admin");
   if (!isColorThemeMode(payload.mode)) return { error: "Choose a valid theme mode." };
@@ -71,27 +75,39 @@ export async function updateColorThemeAction(payload: {
   // Sanitize manual overrides: keep only valid hex; never persist an unreadable font color — replace
   // it with a readable one derived from its (effective) background. This is the server-side safety
   // net behind the panel's live contrast warnings, so unreadable text can never be saved.
-  const generated = generateComponentColors({
+  const themeInput = {
     mode: payload.mode,
     primaryColor: payload.primaryColor,
     accentColor: payload.accentColor,
     gradientFrom: payload.gradientFrom,
     gradientTo: payload.gradientTo,
-  });
-  const cleaned: ThemeOverrides = {};
-  for (const c of THEME_COMPONENTS) {
-    const o = payload.overrides?.[c];
-    if (!o) continue;
-    const entry: { bg?: string; fg?: string } = {};
-    if (o.bg && HEX_COLOR.test(o.bg)) entry.bg = o.bg;
-    if (o.fg && HEX_COLOR.test(o.fg)) {
-      const effectiveBg = entry.bg ?? generated[c].bg;
-      // gradient bg (primary button) isn't a single hex — contrast-check against its solid stop.
-      const bgSolid = HEX_COLOR.test(effectiveBg) ? effectiveBg : (payload.mode === "single" ? payload.primaryColor : payload.gradientTo);
-      entry.fg = isReadable(o.fg, bgSolid) ? o.fg : suggestReadableFg(bgSolid, o.fg);
+  };
+  // Clean each appearance INDEPENDENTLY: a light-mode override never touches the dark-mode value
+  // (and vice versa). An unreadable font colour is replaced with a readable one derived from its own
+  // mode's effective background — the server-side net behind the panel's live contrast warnings.
+  const incoming = normalizeOverrides(payload.overrides ?? null);
+  const cleanedByMode: ThemeOverridesByMode = {};
+  for (const appearance of APPEARANCES as Appearance[]) {
+    const generated = generateComponentColors(themeInput, appearance);
+    const brand = brandForAppearance(themeInput, appearance);
+    const src = incoming[appearance] ?? {};
+    const cleaned: ThemeOverrides = {};
+    for (const c of THEME_COMPONENTS) {
+      const o = src[c];
+      if (!o) continue;
+      const entry: { bg?: string; fg?: string } = {};
+      if (o.bg && HEX_COLOR.test(o.bg)) entry.bg = o.bg;
+      if (o.fg && HEX_COLOR.test(o.fg)) {
+        const effectiveBg = entry.bg ?? generated[c].bg;
+        // A gradient bg (primary button) isn't a single hex — check against its solid stop.
+        const bgSolid = HEX_COLOR.test(effectiveBg) ? effectiveBg : brand.primarySolid;
+        entry.fg = isReadable(o.fg, bgSolid) ? o.fg : suggestReadableFg(bgSolid, o.fg);
+      }
+      if (entry.bg || entry.fg) cleaned[c] = entry;
     }
-    if (entry.bg || entry.fg) cleaned[c] = entry;
+    if (Object.keys(cleaned).length) cleanedByMode[appearance] = cleaned;
   }
+  const hasOverrides = Boolean(cleanedByMode.light || cleanedByMode.dark);
 
   await db
     .update(orgsTable)
@@ -101,7 +117,7 @@ export async function updateColorThemeAction(payload: {
       accentColor: payload.accentColor,
       gradientFrom: payload.gradientFrom,
       gradientTo: payload.gradientTo,
-      themeOverrides: Object.keys(cleaned).length ? cleaned : null,
+      themeOverrides: hasOverrides ? cleanedByMode : null,
       updatedAt: new Date(),
     })
     .where(eq(orgsTable.id, session.orgId));

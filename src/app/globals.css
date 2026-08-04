@@ -22,7 +22,7 @@
 
   --ink: #17173f;
   --ink-muted: #5c5d82;
-  --ink-faint: #8b8cad;
+  --ink-faint: #6a6b8d; /* AA on white (5.12) and canvas (4.54); was #8b8cad = 3.25 */
 
   --line: #e5e2d9;
   --line-strong: #d2cec0;
@@ -45,7 +45,7 @@
 
   --sidebar-bg: #ffffff;
   --sidebar-ink: #2a2b57;
-  --sidebar-ink-muted: #8587ac;
+  --sidebar-ink-muted: #6a6b8d; /* AA on the white sidebar (5.12); was #8587ac = 3.47 */
   --sidebar-active-bg: var(--brand-orange);
   --sidebar-border: #efeff5;
 
@@ -58,6 +58,36 @@
   --ring-orange: 0 0 0 3px rgba(232, 119, 34, 0.18);
 
   --radius: 0.75rem;
+
+  /* Semantic interface tokens (light). Components style themselves from THESE, never from raw
+     brand colors or hardcoded hexes, so an org's Color Theme can re-map them per appearance.
+     The per-org theme (lib/brand-theme.ts) recalculates the brand-derived ones for light and dark
+     separately; these defaults keep the stock Elite look when no theme is customized. */
+  --background: var(--canvas);
+  --surface-elevated: var(--surface-raised);
+  --text-primary: var(--ink);
+  --text-secondary: var(--ink-muted);
+  --text-muted: #6f7093;
+  --border: var(--line);
+  --input-background: var(--surface);
+  /* Foregrounds are the CONTRAST-CORRECT choice, not the prettiest guess: white on the brand
+     orange is only 2.96:1 (fails AA and even the 3:1 UI floor), while the dark ink is 5.76:1. */
+  --primary-background: var(--brand-gradient);
+  --primary-text: var(--ink);
+  --primary-hover: #cf6414;
+  --accent-background: var(--brand-orange);
+  --accent-text: var(--ink);
+  --accent-hover: #cf6414;
+  --active-tab-background: var(--brand-orange);
+  --active-tab-text: var(--ink);
+  --selected-item-background: var(--brand-orange);
+  --selected-item-text: var(--ink);
+  --badge-background: #fdeee1;
+  --badge-text: #8a4410;
+  --focus-ring: rgba(232, 119, 34, 0.4);
+  --disabled-background: #eceade;
+  --disabled-text: #6b6c8d;
+  --danger-text: #ffffff; /* 5.17:1 on the light danger red */
 }
 
 :root[data-theme="dark"] {
@@ -67,7 +97,7 @@
   --surface-glass: rgba(27, 26, 56, 0.72);
   --ink: #eeeef7;
   --ink-muted: #ababd1;
-  --ink-faint: #74749d;
+  --ink-faint: #9a9ac2; /* AA on dark surfaces (6.58); was #74749d = 4.00 */
   --line: #2a2952;
   --line-strong: #363564;
   --brand-orange: #f0924a;
@@ -90,12 +120,38 @@
   --accent-red-bg: rgba(226, 112, 105, 0.16);
   --sidebar-bg: #12112a;
   --sidebar-ink: #ededf8;
-  --sidebar-ink-muted: #7a7aa8;
+  --sidebar-ink-muted: #9a9ac2; /* AA on the dark sidebar (6.82); was #7a7aa8 = 4.54 */
   --sidebar-active-bg: var(--brand-orange);
   --sidebar-border: #232152;
   --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3), 0 10px 30px -8px rgba(0, 0, 0, 0.5);
   --shadow-card-hover: 0 2px 4px rgba(0, 0, 0, 0.35), 0 20px 46px -10px rgba(0, 0, 0, 0.6);
   --shadow-glass: 0 8px 44px -8px rgba(0, 0, 0, 0.6);
+
+  /* Semantic interface tokens (dark) — calculated SEPARATELY from light. Foregrounds are chosen by
+     contrast against the dark-mode brand orange (#f0924a): white would be 2.36:1, the ink is 7.24:1. */
+  --background: var(--canvas);
+  --surface-elevated: var(--surface-raised);
+  --text-primary: var(--ink);
+  --text-secondary: #b9b9db;
+  --text-muted: #9a9ac2;
+  --border: var(--line);
+  --input-background: #1b1a38;
+  --primary-background: var(--brand-gradient);
+  --primary-text: #17173f;
+  --primary-hover: #f4a76b;
+  --accent-background: var(--brand-orange);
+  --accent-text: #17173f;
+  --accent-hover: #f4a76b;
+  --active-tab-background: var(--brand-orange);
+  --active-tab-text: #17173f;
+  --selected-item-background: var(--brand-orange);
+  --selected-item-text: #17173f;
+  --badge-background: #52393d;
+  --badge-text: #f29d5c;
+  --focus-ring: rgba(240, 146, 74, 0.55);
+  --disabled-background: #232247;
+  --disabled-text: #9a9ac2;
+  --danger-text: #17173f; /* white is only 3.11:1 on the dark-mode danger red */
 }
 
 @media (prefers-color-scheme: dark) {
@@ -106,7 +162,7 @@
     --surface-glass: rgba(27, 26, 56, 0.72);
     --ink: #eeeef7;
     --ink-muted: #ababd1;
-    --ink-faint: #74749d;
+    --ink-faint: #9a9ac2; /* AA on dark surfaces (6.58); was #74749d = 4.00 */
     --line: #2a2952;
     --line-strong: #363564;
     --brand-orange: #f0924a;
@@ -129,12 +185,38 @@
     --accent-red-bg: rgba(226, 112, 105, 0.16);
     --sidebar-bg: #12112a;
     --sidebar-ink: #ededf8;
-    --sidebar-ink-muted: #7a7aa8;
+    --sidebar-ink-muted: #9a9ac2; /* AA on the dark sidebar (6.82); was #7a7aa8 = 4.54 */
     --sidebar-active-bg: var(--brand-orange);
     --sidebar-border: #232152;
     --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3), 0 10px 30px -8px rgba(0, 0, 0, 0.5);
     --shadow-card-hover: 0 2px 4px rgba(0, 0, 0, 0.35), 0 20px 46px -10px rgba(0, 0, 0, 0.6);
     --shadow-glass: 0 8px 44px -8px rgba(0, 0, 0, 0.6);
+
+  /* Semantic interface tokens (dark) — calculated SEPARATELY from light. Foregrounds are chosen by
+     contrast against the dark-mode brand orange (#f0924a): white would be 2.36:1, the ink is 7.24:1. */
+  --background: var(--canvas);
+  --surface-elevated: var(--surface-raised);
+  --text-primary: var(--ink);
+  --text-secondary: #b9b9db;
+  --text-muted: #9a9ac2;
+  --border: var(--line);
+  --input-background: #1b1a38;
+  --primary-background: var(--brand-gradient);
+  --primary-text: #17173f;
+  --primary-hover: #f4a76b;
+  --accent-background: var(--brand-orange);
+  --accent-text: #17173f;
+  --accent-hover: #f4a76b;
+  --active-tab-background: var(--brand-orange);
+  --active-tab-text: #17173f;
+  --selected-item-background: var(--brand-orange);
+  --selected-item-text: #17173f;
+  --badge-background: #52393d;
+  --badge-text: #f29d5c;
+  --focus-ring: rgba(240, 146, 74, 0.55);
+  --disabled-background: #232247;
+  --disabled-text: #9a9ac2;
+  --danger-text: #17173f; /* white is only 3.11:1 on the dark-mode danger red */
   }
 }
 

@@ -11,13 +11,19 @@ import {
   DEFAULT_GRADIENT_TO,
   HEX_COLOR,
   THEME_COMPONENTS,
+  APPEARANCES,
+  NEUTRALS,
   generateComponentColors,
   resolveComponentColors,
+  componentBgSolid,
+  normalizeOverrides,
   isReadable,
   suggestReadableFg,
   type ColorThemeMode,
   type ThemeComponent,
   type ThemeOverrides,
+  type ThemeOverridesByMode,
+  type Appearance,
 } from "@/lib/brand-theme";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -277,6 +283,45 @@ const COMPONENT_LABELS: Record<ThemeComponent, string> = {
 // accent); auto-generated + manually-overridable background/font per component with contrast
 // validation; live preview matching the saved appearance. The whole app re-themes on Save via the
 // shared injected stylesheet (router.refresh re-reads the org's colors — no full page reload).
+/** A preview of the five themed components rendered with ONE appearance's calculated colors, on
+    that appearance's own surfaces — so light and dark can be compared side by side. */
+function ModePreview({ locale, input, appearance }: { locale: Locale; input: Parameters<typeof resolveComponentColors>[0]; appearance: Appearance }) {
+  const r = resolveComponentColors(input, appearance);
+  const n = NEUTRALS[appearance];
+  return (
+    <div className="rounded-xl border p-4 flex flex-col gap-3" style={{ background: n.background, borderColor: n.border }}>
+      <div className="flex items-center justify-between">
+        <span className="text-[11.5px] font-bold" style={{ color: n.textPrimary }}>
+          {t(locale, appearance === "light" ? "Light mode" : "Dark mode")}
+        </span>
+        <span className="text-[10.5px]" style={{ color: n.textMuted }}>{t(locale, "Preview")}</span>
+      </div>
+      <div className="rounded-lg p-3 flex flex-col gap-2.5" style={{ background: n.surface, border: `1px solid ${n.border}` }}>
+        <div className="text-[11.5px]" style={{ color: n.textSecondary }}>{t(locale, "Sample interface text")}</div>
+        <div className="flex flex-wrap items-center gap-2">
+          <span style={{ background: r.primaryButton.bg, color: r.primaryButton.fg, borderRadius: 9, padding: "6px 12px", fontSize: 11.5, fontWeight: 600 }}>
+            {t(locale, "Primary button")}
+          </span>
+          <span style={{ background: r.accentButton.bg, color: r.accentButton.fg, borderRadius: 9, padding: "6px 12px", fontSize: 11.5, fontWeight: 600 }}>
+            {t(locale, "Accent button")}
+          </span>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <span style={{ background: r.activeTab.bg, color: r.activeTab.fg, borderRadius: 999, padding: "5px 12px", fontSize: 11, fontWeight: 600 }}>
+            {t(locale, "Active tab")}
+          </span>
+          <span style={{ background: r.selectedItem.bg, color: r.selectedItem.fg, borderRadius: 8, padding: "5px 12px", fontSize: 11, fontWeight: 600 }}>
+            {t(locale, "Selected item")}
+          </span>
+          <span style={{ background: r.badge.bg, color: r.badge.fg, borderRadius: 999, padding: "3px 10px", fontSize: 10.5, fontWeight: 600 }}>
+            {t(locale, "Badge")}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function ColorThemePanel({ locale, org }: { locale: Locale; org: Org }) {
   const router = useRouter();
   const [mode, setMode] = useState<ColorThemeMode>(org.colorThemeMode === "single" ? "single" : "gradient");
@@ -284,7 +329,9 @@ export function ColorThemePanel({ locale, org }: { locale: Locale; org: Org }) {
   const [accent, setAccent] = useState(org.accentColor);
   const [gradientFrom, setGradientFrom] = useState(org.gradientFrom);
   const [gradientTo, setGradientTo] = useState(org.gradientTo);
-  const [overrides, setOverrides] = useState<ThemeOverrides>((org.themeOverrides as ThemeOverrides | null) ?? {});
+  // Overrides are stored per appearance, so editing light never changes dark (and vice versa).
+  const [overrides, setOverrides] = useState<ThemeOverridesByMode>(() => normalizeOverrides(org.themeOverrides ?? null));
+  const [editMode, setEditMode] = useState<Appearance>("light");
   const [pending, startTransition] = useTransition();
 
   const single = mode === "single";
@@ -292,34 +339,46 @@ export function ColorThemePanel({ locale, org }: { locale: Locale; org: Org }) {
   const accentValid = HEX_COLOR.test(accent);
   const fromValid = HEX_COLOR.test(gradientFrom);
   const toValid = HEX_COLOR.test(gradientTo);
-  const canSave = single ? primaryValid && accentValid : fromValid && toValid;
+  const colorsValid = single ? primaryValid && accentValid : fromValid && toValid;
 
   const input = { mode, primaryColor: primary, accentColor: accent, gradientFrom, gradientTo, overrides };
-  const generated = generateComponentColors(input);
-  const resolved = resolveComponentColors(input);
+  // Everything below is computed for the appearance currently being edited.
+  const generated = generateComponentColors(input, editMode);
+  const resolved = resolveComponentColors(input, editMode);
+  const modeOverrides: ThemeOverrides = overrides[editMode] ?? {};
   const themeGradient = `linear-gradient(135deg, ${fromValid ? gradientFrom : DEFAULT_GRADIENT_FROM}, ${toValid ? gradientTo : DEFAULT_GRADIENT_TO})`;
 
+  // An unreadable override must not be saveable (in EITHER appearance), per the contrast rules.
+  const unreadable = APPEARANCES.flatMap((ap) =>
+    THEME_COMPONENTS.filter((c) => !isReadable(resolveComponentColors(input, ap)[c].fg, componentBgSolid(input, ap, c))).map((c) => ({ ap, c })),
+  );
+  const canSave = colorsValid && unreadable.length === 0;
+
   function setOv(comp: ThemeComponent, key: "bg" | "fg", val: string) {
-    setOverrides((prev) => ({ ...prev, [comp]: { ...prev[comp], [key]: val } }));
+    setOverrides((prev) => ({ ...prev, [editMode]: { ...(prev[editMode] ?? {}), [comp]: { ...(prev[editMode]?.[comp] ?? {}), [key]: val } } }));
   }
   function clearOv(comp: ThemeComponent, key: "bg" | "fg") {
     setOverrides((prev) => {
-      const entry: { bg?: string; fg?: string } = { ...(prev[comp] ?? {}) };
+      const forMode: ThemeOverrides = { ...(prev[editMode] ?? {}) };
+      const entry: { bg?: string; fg?: string } = { ...(forMode[comp] ?? {}) };
       delete entry[key];
+      if (entry.bg || entry.fg) forMode[comp] = entry; else delete forMode[comp];
       const next = { ...prev };
-      if (entry.bg || entry.fg) next[comp] = entry; else delete next[comp];
+      if (Object.keys(forMode).length) next[editMode] = forMode; else delete next[editMode];
       return next;
     });
   }
-  // Solid background used for contrast checks (the primary button's gradient isn't a single hex).
-  function bgSolid(comp: ThemeComponent): string {
-    const bg = overrides[comp]?.bg ?? generated[comp].bg;
-    if (HEX_COLOR.test(bg)) return bg;
-    return single ? (primaryValid ? primary : DEFAULT_PRIMARY) : (toValid ? gradientTo : DEFAULT_GRADIENT_TO);
+  /** Reset THIS appearance back to fully automatic colors (leaves the other appearance untouched). */
+  function resetModeToAuto() {
+    setOverrides((prev) => {
+      const next = { ...prev };
+      delete next[editMode];
+      return next;
+    });
   }
   function autoBg(comp: ThemeComponent): string {
     const bg = generated[comp].bg;
-    return HEX_COLOR.test(bg) ? bg : bgSolid(comp);
+    return HEX_COLOR.test(bg) ? bg : componentBgSolid({ ...input, overrides: {} }, editMode, comp);
   }
 
   function save() {
@@ -329,7 +388,7 @@ export function ColorThemePanel({ locale, org }: { locale: Locale; org: Org }) {
       if (result.error) toast.error(result.error);
       else {
         toast.success(t(locale, "Saved"));
-        router.refresh(); // re-theme the whole app immediately
+        router.refresh(); // re-theme the whole app immediately, no reload needed
       }
     });
   }
@@ -337,7 +396,7 @@ export function ColorThemePanel({ locale, org }: { locale: Locale; org: Org }) {
   return (
     <div className="flex flex-col gap-5 max-w-2xl">
       <h3 className="text-[17px] font-bold">{t(locale, "Color Theme")}</h3>
-      <p className="text-[12.5px] text-ink-muted -mt-3">{t(locale, "Choose how your organization's brand colors are applied. This is separate from light/dark appearance.")}</p>
+      <p className="text-[12.5px] text-ink-muted -mt-3">{t(locale, "Choose how your organization's brand colors are applied. Interface colors are calculated separately for light and dark mode so text stays readable in both.")}</p>
 
       {/* Mode selector */}
       <div role="radiogroup" aria-label={t(locale, "Color mode")} className="grid grid-cols-2 gap-4">
@@ -355,7 +414,7 @@ export function ColorThemePanel({ locale, org }: { locale: Locale; org: Org }) {
             <button key={opt.key} type="button" role="radio" aria-checked={selected} onClick={() => setMode(opt.key)}
               className={`relative text-left rounded-2xl border p-4 transition-colors ${selected ? "border-brand-orange bg-brand-orange/10" : "border-line-strong hover:bg-canvas"}`}>
               {selected && (
-                <span className="absolute top-3 right-3 inline-flex size-5 items-center justify-center rounded-full bg-brand-orange text-[color:var(--brand-primary-foreground)]">
+                <span className="absolute top-3 right-3 inline-flex size-5 items-center justify-center rounded-full bg-brand-orange text-[color:var(--primary-text)]">
                   <Check className="size-3.5" />
                 </span>
               )}
@@ -367,7 +426,7 @@ export function ColorThemePanel({ locale, org }: { locale: Locale; org: Org }) {
         })}
       </div>
 
-      {/* Main color pickers per mode */}
+      {/* Main brand colors (shared by both appearances; each mode adapts them for contrast) */}
       {single ? (
         <div className="grid grid-cols-2 gap-4">
           <ColorField locale={locale} label="Primary color" value={primary} onChange={setPrimary} valid={primaryValid} onReset={() => setPrimary(DEFAULT_PRIMARY)} />
@@ -380,18 +439,42 @@ export function ColorThemePanel({ locale, org }: { locale: Locale; org: Org }) {
         </div>
       )}
 
-      {/* Component colors — auto-generated, individually overridable, contrast-validated */}
+      {/* Light + dark previews, always both visible */}
+      <div className="grid sm:grid-cols-2 gap-3">
+        <ModePreview locale={locale} input={input} appearance="light" />
+        <ModePreview locale={locale} input={input} appearance="dark" />
+      </div>
+
+      {/* Per-appearance component overrides */}
       <div className="flex flex-col gap-3">
-        <div>
-          <p className="text-[12.5px] font-semibold">{t(locale, "Component colors")}</p>
-          <p className="text-[11px] text-ink-faint">{t(locale, "Generated automatically from your theme colors. Override any background or font; overrides are kept until you change them.")}</p>
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div>
+            <p className="text-[12.5px] font-semibold">{t(locale, "Component colors")}</p>
+            <p className="text-[11px] text-ink-faint">{t(locale, "Generated automatically from your brand colors. Overrides apply only to the mode you are editing.")}</p>
+          </div>
+          <button type="button" onClick={resetModeToAuto} disabled={!Object.keys(modeOverrides).length}
+            className="inline-flex items-center gap-1 text-[11.5px] text-ink-muted hover:text-brand-orange disabled:opacity-40 disabled:pointer-events-none">
+            <RotateCcw className="size-3" /> {t(locale, "Reset to Automatic")}
+          </button>
         </div>
+
+        {/* Which appearance the overrides below belong to */}
+        <div role="tablist" aria-label={t(locale, "Edit mode")} className="tab-row inline-flex gap-1 rounded-2xl p-1 bg-canvas w-fit">
+          {APPEARANCES.map((ap) => (
+            <button key={ap} type="button" role="tab" aria-selected={editMode === ap} onClick={() => setEditMode(ap)}
+              className={`tab px-3 py-1.5 rounded-xl text-[12px] font-semibold ${editMode === ap ? "active" : "text-ink-muted"}`}>
+              {t(locale, ap === "light" ? "Light mode" : "Dark mode")}
+            </button>
+          ))}
+        </div>
+
         <div className="grid sm:grid-cols-2 gap-3">
           {THEME_COMPONENTS.map((comp) => {
             const rBg = resolved[comp].bg;
             const rFg = resolved[comp].fg;
-            const readable = isReadable(rFg, bgSolid(comp));
-            const ov = overrides[comp];
+            const solid = componentBgSolid(input, editMode, comp);
+            const readable = isReadable(rFg, solid);
+            const ov = modeOverrides[comp];
             return (
               <div key={comp} className="rounded-xl border border-line p-3 flex flex-col gap-2">
                 <div className="flex items-center justify-between">
@@ -408,7 +491,7 @@ export function ColorThemePanel({ locale, org }: { locale: Locale; org: Org }) {
                 {!readable && (
                   <div className="flex items-center justify-between gap-2 text-[11px]">
                     <span className="text-danger">{t(locale, "Font color is hard to read on this background.")}</span>
-                    <button type="button" className="text-brand-orange underline shrink-0" onClick={() => setOv(comp, "fg", suggestReadableFg(bgSolid(comp), rFg))}>
+                    <button type="button" className="text-brand-orange underline shrink-0" onClick={() => setOv(comp, "fg", suggestReadableFg(solid, rFg))}>
                       {t(locale, "Fix automatically")}
                     </button>
                   </div>
@@ -419,45 +502,15 @@ export function ColorThemePanel({ locale, org }: { locale: Locale; org: Org }) {
         </div>
       </div>
 
-      {/* Live preview — updates immediately; applied to the app on Save */}
-      <Card>
-        <CardContent className="p-5 flex flex-col gap-4">
-          <p className="text-[12.5px] font-semibold">{t(locale, "Live preview")}</p>
-          <div>
-            <div className="text-[11px] text-ink-faint mb-1.5">{single ? t(locale, "Primary / Accent") : t(locale, "Gradient")}</div>
-            {single ? (
-              <div className="flex gap-2 max-w-[240px]">
-                <div className="h-7 flex-1 rounded-lg" style={{ backgroundColor: primaryValid ? primary : DEFAULT_PRIMARY }} title={t(locale, "Primary color")} />
-                <div className="h-7 flex-1 rounded-lg" style={{ backgroundColor: accentValid ? accent : DEFAULT_ACCENT }} title={t(locale, "Accent color")} />
-              </div>
-            ) : (
-              <div className="h-7 max-w-[240px] rounded-lg" style={{ background: themeGradient }} />
-            )}
-          </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <button type="button" className="btn" style={{ background: resolved.primaryButton.bg, color: resolved.primaryButton.fg, width: "auto", padding: "0 18px" }}>
-              {t(locale, "Primary button")}
-            </button>
-            <button type="button" className="btn" style={{ background: resolved.accentButton.bg, color: resolved.accentButton.fg, width: "auto", padding: "0 18px" }}>
-              {t(locale, "Accent button")}
-            </button>
-            <span style={{ background: resolved.activeTab.bg, color: resolved.activeTab.fg, borderRadius: 999, padding: "7px 16px", fontSize: 12.5, fontWeight: 600 }}>
-              {t(locale, "Active tab")}
-            </span>
-            <span style={{ background: resolved.selectedItem.bg, color: resolved.selectedItem.fg, borderRadius: 10, padding: "8px 14px", fontSize: 13, fontWeight: 600 }}>
-              {t(locale, "Selected item")}
-            </span>
-            <span style={{ background: resolved.badge.bg, color: resolved.badge.fg, borderRadius: 999, padding: "4px 12px", fontSize: 11.5, fontWeight: 600 }}>
-              {t(locale, "Badge")}
-            </span>
-          </div>
-        </CardContent>
-      </Card>
-
-      <div>
+      <div className="flex items-center gap-3 flex-wrap">
         <Button onClick={save} disabled={pending || !canSave}>
           {pending ? t(locale, "Saving…") : t(locale, "Save theme")}
         </Button>
+        {unreadable.length > 0 && (
+          <span className="text-[11.5px] text-danger">
+            {t(locale, "Fix the low-contrast colors before saving.")}
+          </span>
+        )}
       </div>
     </div>
   );

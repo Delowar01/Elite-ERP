@@ -8,14 +8,18 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
+        // Backgrounds/foregrounds come from the semantic tokens, which are calculated separately for
+        // light and dark (and per org theme) — never a hardcoded white that fails on a light fill.
         primary:
-          "text-[color:var(--brand-primary-foreground)] shadow-[0_6px_18px_-4px_rgba(232,119,34,0.55)] bg-linear-to-br from-brand-orange-light to-brand-orange hover:brightness-105 hover:-translate-y-px active:translate-y-0 active:brightness-95",
+          // `background` shorthand (not bg-image) so it accepts BOTH a gradient (gradient mode) and a
+          // solid hex (single mode) — bg-image with a plain colour would render nothing.
+          "text-[color:var(--primary-text)] [background:var(--primary-background)] shadow-[0_6px_18px_-4px_var(--focus-ring)] hover:brightness-105 hover:-translate-y-px active:translate-y-0 active:brightness-95",
         secondary:
           "bg-brand-navy text-white shadow-elevated hover:-translate-y-px hover:shadow-elevated-hover active:translate-y-0 active:brightness-95",
         glass:
           "bg-surface/80 backdrop-blur-md border border-line-strong text-ink hover:bg-surface active:bg-canvas",
         ghost: "text-ink-muted border border-line-strong bg-transparent hover:bg-surface active:bg-canvas",
-        destructive: "bg-danger text-white hover:brightness-105 active:brightness-95",
+        destructive: "bg-danger text-[color:var(--danger-text)] hover:brightness-105 active:brightness-95",
         link: "text-brand-orange underline-offset-4 hover:underline p-0 h-auto",
       },
       size: {
