@@ -32,16 +32,11 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
-  // The headless-Chromium PDF renderer (puppeteer-core + @sparticuz/chromium, used to render
-  // document PDFs from the existing print layout) must stay external — never bundled into the
-  // server build; @sparticuz/chromium ships a binary the bundler must not touch.
-  serverExternalPackages: ["puppeteer-core", "@sparticuz/chromium"],
-  // On Vercel, Next's output file tracing does not automatically include @sparticuz/chromium's
-  // compressed browser binary (it is read from disk at runtime, not `import`ed), so the PDF
-  // function would fail with "Could not find Chromium". Force the whole package into the function.
-  outputFileTracingIncludes: {
-    "/api/document-pdf/[type]/[id]": ["./node_modules/@sparticuz/chromium/**"],
-  },
+  // The headless-Chromium PDF renderer (puppeteer-core + @sparticuz/chromium-min) must stay
+  // external — never bundled into the server build. chromium-min downloads the browser at runtime,
+  // so there is no binary for the bundler to trace (which is exactly why the bundled variant failed
+  // on Vercel with "libnss3.so: cannot open shared object file").
+  serverExternalPackages: ["puppeteer-core", "@sparticuz/chromium-min"],
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },

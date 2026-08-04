@@ -24,19 +24,24 @@ async function launchBrowser(): Promise<PdfBrowser> {
   const isServerless =
     !!process.env.AWS_LAMBDA_FUNCTION_NAME || !!process.env.AWS_EXECUTION_ENV || !!process.env.VERCEL;
 
-  // Serverless (Vercel/Lambda): use the bundled, size-optimized @sparticuz/chromium binary.
+  // Serverless (Vercel/Lambda): use @sparticuz/chromium-min, which bundles NO binary — it downloads
+  // the Chromium + system-library pack (including libnss3.so) at runtime and extracts it to /tmp.
+  // This sidesteps Vercel's output file tracing, which was dropping the bundled binary/lib packs and
+  // producing "libnss3.so: cannot open shared object file". The pack URL is a pinned @sparticuz
+  // GitHub release; override with CHROMIUM_PACK_URL (e.g. a self-hosted copy) if GitHub is blocked.
   if (!explicitPath && isServerless) {
-    const chromium = ((await import("@sparticuz/chromium")) as unknown as {
-      default: { args: string[]; defaultViewport: unknown; executablePath: () => Promise<string>; setGraphicsMode: boolean };
+    const chromium = ((await import("@sparticuz/chromium-min")) as unknown as {
+      default: { args: string[]; defaultViewport: unknown; executablePath: (pack?: string) => Promise<string>; setGraphicsMode: boolean };
     }).default;
-    // PDF rendering needs no WebGL/GPU stack, so skip the swiftshader graphics libs — this cuts the
-    // extracted size and memory footprint on constrained functions and speeds up cold starts. The
-    // browser (chromium.br) and system libs (al2023.tar.br, which carries libnss3.so) still extract.
+    // PDF rendering needs no WebGL/GPU, so skip the swiftshader graphics stack (smaller, faster).
     chromium.setGraphicsMode = false;
+    const packUrl =
+      process.env.CHROMIUM_PACK_URL ||
+      "https://github.com/Sparticuz/chromium/releases/download/v131.0.1/chromium-v131.0.1-pack.tar";
     return puppeteer.launch({
       args: chromium.args,
       defaultViewport: chromium.defaultViewport,
-      executablePath: await chromium.executablePath(),
+      executablePath: await chromium.executablePath(packUrl),
       headless: true,
     });
   }
