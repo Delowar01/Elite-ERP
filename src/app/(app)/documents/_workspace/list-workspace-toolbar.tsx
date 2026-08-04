@@ -10,6 +10,8 @@ import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuIte
 import { t, type Locale } from "@/lib/i18n/dict";
 import type { ImportColumn } from "@/lib/document-list-workspace";
 import { ImportDialog } from "./import-dialog";
+import { ImportV2Dialog } from "./import-v2-dialog";
+import { importSpec } from "@/lib/import/spec";
 import { EMPTY_FILTERS, filtersActive, filtersToParams, type ListFilterState } from "./filter-types";
 import { saveViewAction, renameViewAction, deleteViewAction, type SavedViewDTO } from "./saved-view-actions";
 
@@ -187,8 +189,18 @@ export function ListWorkspaceToolbar({
           </DropdownMenuContent>
         </DropdownMenu>
 
-        {/* Import */}
-        <ImportDialog locale={locale} module={module} importColumns={importColumns} />
+        {/* Import — modules with a full import spec use the v2 modal (template / mapping /
+            validation preview / per-document transaction); the rest keep the simple CSV dialog. */}
+        {importSpec(module) ? (
+          <ImportV2Dialog
+            locale={locale}
+            module={module}
+            moduleLabel={importSpec(module)!.label}
+            fields={importSpec(module)!.fields}
+          />
+        ) : (
+          <ImportDialog locale={locale} module={module} importColumns={importColumns} />
+        )}
 
         {recycleBinHref ? (
           <Link href={recycleBinHref} className="btn btn-glass">
