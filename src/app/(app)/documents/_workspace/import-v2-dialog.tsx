@@ -22,9 +22,10 @@ const NONE = "__none__"; // Select needs a non-empty value for "ignore this fiel
 type PreviewData = {
   summary: {
     totalRows: number; documents: number; validDocuments: number; invalidDocuments: number;
-    duplicateNumbers: string[]; willCreate: number; lineItems: number; invalidRows: number;
+    duplicateNumbers: string[]; willCreate: number; lineItems: number; totalLineItems: number;
+    conflictingDocuments: number; invalidRows: number;
   };
-  documents: { key: string; number: string; client: string; lineCount: number; rows: number[]; ok: boolean; errors: string[] }[];
+  documents: { key: string; number: string; client: string; lineCount: number; rows: number[]; ok: boolean; errors: string[]; conflicts: string[] }[];
   rowErrors: [number, string[]][];
 };
 
@@ -214,10 +215,11 @@ export function ImportV2Dialog({ locale, module, moduleLabel, fields }: {
         {/* ---------- Step 3: validation preview ---------- */}
         {step === "preview" && s && (
           <div className="flex flex-col gap-3">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
               {[
                 { label: "Total rows", value: s.totalRows },
                 { label: "Documents detected", value: s.documents },
+                { label: "Line items detected", value: s.totalLineItems },
                 { label: "Will be created", value: s.willCreate, tone: "text-success" },
                 { label: "Invalid", value: s.invalidDocuments, tone: s.invalidDocuments ? "text-danger" : "" },
               ].map((k) => (
@@ -231,6 +233,9 @@ export function ImportV2Dialog({ locale, module, moduleLabel, fields }: {
               {t(locale, "Line items to create:")} {s.lineItems}
               {s.duplicateNumbers.length > 0 && (
                 <> · <span className="text-danger">{t(locale, "Duplicate document numbers:")} {s.duplicateNumbers.join(", ")}</span></>
+              )}
+              {s.conflictingDocuments > 0 && (
+                <> · <span className="text-danger">{t(locale, "Documents with conflicting values:")} {s.conflictingDocuments}</span></>
               )}
             </p>
 

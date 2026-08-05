@@ -28,6 +28,11 @@ export type ImportSpec = {
   /** The column that groups multiple rows into one document (repeat it per line item). */
   groupKey: string;
   fields: FieldSpec[];
+  /**
+   * Example rows written into the template — ONE ROW PER LINE ITEM. Includes a multi-line document
+   * (same number repeated) plus a second document, so the grouping rule is obvious from the file.
+   */
+  exampleRows: Record<string, string>[];
 };
 
 /** Normalize a header for tolerant matching: lowercase, strip punctuation/spaces. */
@@ -168,6 +173,32 @@ export const QUOTATION_IMPORT_SPEC: ImportSpec = {
       aliases: ["image", "itemimage", "imagelink", "itemimagereference"],
       guide: "Optional link to a line-item image.",
       example: "",
+    },
+  ],
+  // QT-1001 has THREE line items (same number repeated, document values echoed on each row);
+  // QT-1002 is a separate quotation with one line item.
+  exampleRows: [
+    {
+      number: "QT-1001", client: "ABC Company", issueDate: "2026-08-05", validUntil: "2026-09-05",
+      title: "Exhibition package", currency: "SAR", discount: "0", notes: "Delivery within 4 weeks.",
+      terms: "Payment 50% advance, balance on delivery.",
+      itemName: "Exhibition Stand", itemDescription: "6x4 custom stand", quantity: "1", unitPrice: "15000", unit: "pcs", taxRate: "15",
+    },
+    {
+      number: "QT-1001", client: "ABC Company", issueDate: "2026-08-05", validUntil: "2026-09-05",
+      title: "Exhibition package", currency: "SAR", discount: "0", notes: "Delivery within 4 weeks.",
+      terms: "Payment 50% advance, balance on delivery.",
+      itemName: "LED Screen", itemDescription: "4x2 metre screen", quantity: "2", unitPrice: "2500", unit: "pcs", taxRate: "15",
+    },
+    {
+      number: "QT-1001", client: "ABC Company", issueDate: "2026-08-05", validUntil: "2026-09-05",
+      title: "Exhibition package", currency: "SAR", discount: "0", notes: "Delivery within 4 weeks.",
+      terms: "Payment 50% advance, balance on delivery.",
+      itemName: "Furniture", itemDescription: "Sofa and table set", quantity: "3", unitPrice: "800", unit: "set", taxRate: "15",
+    },
+    {
+      number: "QT-1002", client: "XYZ Company", issueDate: "2026-08-05", currency: "SAR",
+      itemName: "Branding", itemDescription: "Vinyl branding", quantity: "10", unitPrice: "120", unit: "m2", taxRate: "15",
     },
   ],
 };

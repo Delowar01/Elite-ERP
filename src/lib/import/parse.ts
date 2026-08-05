@@ -86,7 +86,8 @@ export async function buildTemplateXlsx(spec: ImportSpec): Promise<Buffer> {
 
   const ws = wb.addWorksheet(spec.label);
   ws.addRow(spec.fields.map((f) => f.header));
-  ws.addRow(spec.fields.map((f) => f.example ?? ""));
+  // One row per LINE ITEM: the example set contains a multi-line document plus a second document.
+  for (const ex of spec.exampleRows) ws.addRow(spec.fields.map((f) => ex[f.key] ?? ""));
   const head = ws.getRow(1);
   head.font = { bold: true, color: { argb: "FFFFFFFF" } };
   head.eachCell((cell, col) => {
@@ -107,7 +108,18 @@ export async function buildTemplateXlsx(spec: ImportSpec): Promise<Buffer> {
   guide.getColumn(1).width = 26; guide.getColumn(2).width = 12; guide.getColumn(3).width = 12; guide.getColumn(4).width = 90;
   guide.getColumn(4).alignment = { wrapText: true, vertical: "top" };
   guide.addRow([]);
-  guide.addRow(["How multiple line items work", "", "", `Repeat the same "${spec.fields.find((f) => f.key === spec.groupKey)?.header}" on each row to add several line items to ONE document. Header values are taken from the first row of each group.`]);
+  guide.addRow([
+    "How multiple line items work", "", "",
+    "Use one row per line item. Repeat the same quotation number and document-level values for all items belonging to the same quotation.",
+  ]);
+  guide.addRow([
+    "Conflicting values", "", "",
+    "If two rows with the same quotation number carry different document-level values (client, dates, currency, terms, notes, discount…), that quotation is blocked during preview with a clear error.",
+  ]);
+  guide.addRow([
+    "Blank numbers", "", "",
+    "A row with a blank quotation number becomes its own auto-numbered quotation. Blank-number rows are never grouped together.",
+  ]);
   guide.addRow(["Status", "", "", "Imported documents are always created as Draft. Nothing is posted to the ledger or stock by import."]);
 
   const out = await wb.xlsx.writeBuffer();
@@ -118,8 +130,9 @@ export async function buildTemplateXlsx(spec: ImportSpec): Promise<Buffer> {
 export function buildTemplateCsv(spec: ImportSpec): string {
   const esc = (v: string) => (/[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
   const header = spec.fields.map((f) => esc(f.header)).join(",");
-  const example = spec.fields.map((f) => esc(f.example ?? "")).join(",");
-  return "﻿" + header + "\r\n" + example + "\r\n";
+  // One row per LINE ITEM — the examples show a document with several items plus a second document.
+  const examples = spec.exampleRows.map((ex) => spec.fields.map((f) => esc(ex[f.key] ?? "")).join(","));
+  return "﻿" + [header, ...examples].join("\r\n") + "\r\n";
 }
 
 /** Build the failed-rows CSV the user downloads after a preview/import (original cells + errors). */

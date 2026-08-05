@@ -29,6 +29,8 @@ export type DocDraft = {
   sourceRows: number[];        // all data-row indexes contributing to this document
   errors: string[];            // document-level errors
   rowErrors: Map<number, string[]>; // per-source-row errors
+  /** Document-level values that disagree between rows of the same document number. */
+  conflicts: { field: string; values: [string, string]; row: number }[];
 };
 
 const isBlank = (v: string | undefined) => !v || !v.trim();
@@ -61,9 +63,26 @@ function hasLineData(r: MappedRow): boolean {
   return !isBlank(r.itemName) || !isBlank(r.quantity) || !isBlank(r.unitPrice) || !isBlank(r.sku) || !isBlank(r.itemDescription);
 }
 
+/** Document-level (header) fields, excluding the grouping key itself. */
+const HEADER_KEYS = QUOTATION_IMPORT_SPEC.fields
+  .filter((f) => f.scope === "header" && f.key !== QUOTATION_IMPORT_SPEC.groupKey)
+  .map((f) => f.key);
+const HEADER_LABEL = new Map(QUOTATION_IMPORT_SPEC.fields.map((f) => [f.key, f.header]));
+
+/** Two header values conflict only when both are filled in and differ (blank = "same as above"). */
+function conflicts(a: string, b: string): boolean {
+  const x = (a ?? "").trim(), y = (b ?? "").trim();
+  if (!x || !y) return false;
+  return x.localeCompare(y, undefined, { sensitivity: "accent" }) !== 0;
+}
+
 /**
- * Group mapped rows into documents. Rows sharing a non-empty document number form ONE document
- * (header taken from its first row); rows with a blank number each become their own document.
+ * Group mapped rows into documents — ONE ROW PER LINE ITEM. Rows sharing a non-empty document
+ * number form ONE document with one line item per row; the header is merged from the group's rows
+ * (first non-blank value per field, so document values may be repeated on every row or written
+ * once on the first). Rows with a blank number each become their own auto-numbered document and
+ * are never grouped together. Document-level values that genuinely disagree within a group are
+ * recorded in `conflicts` and block that document during preview.
  */
 export function groupRows(rows: MappedRow[]): DocDraft[] {
   const byKey = new Map<string, DocDraft>();
@@ -73,9 +92,23 @@ export function groupRows(rows: MappedRow[]): DocDraft[] {
     const key = number ? `n:${number.toLowerCase()}` : `r:${i}`;
     let doc = byKey.get(key);
     if (!doc) {
-      doc = { key, number, header: r, lines: [], sourceRows: [], errors: [], rowErrors: new Map() };
+      doc = { key, number, header: { ...r }, lines: [], sourceRows: [], errors: [], rowErrors: new Map(), conflicts: [] };
       byKey.set(key, doc);
       out.push(doc);
+    } else {
+      // Merge this row's document-level values into the group header, flagging real disagreements.
+      for (const k of HEADER_KEYS) {
+        const existing = (doc.header[k] ?? "").trim();
+        const incoming = (r[k] ?? "").trim();
+        if (!incoming) continue;
+        if (!existing) { doc.header[k] = incoming; continue; }
+        if (conflicts(existing, incoming)) {
+          const label = HEADER_LABEL.get(k) ?? k;
+          if (!doc.conflicts.some((c) => c.field === label)) {
+            doc.conflicts.push({ field: label, values: [existing, incoming], row: i });
+          }
+        }
+      }
     }
     doc.sourceRows.push(i);
     if (hasLineData(r)) {
@@ -132,13 +165,20 @@ export type PreviewSummary = {
   invalidDocuments: number;
   duplicateNumbers: string[];
   willCreate: number;
+  /** Line items that will actually be created (valid documents only). */
   lineItems: number;
+  /** Every line item detected in the file, valid or not. */
+  totalLineItems: number;
+  /** Documents blocked because their document-level values disagree across rows. */
+  conflictingDocuments: number;
   invalidRows: number;
 };
 
 export type DocPreview = {
   key: string; number: string; client: string; lineCount: number;
   rows: number[]; ok: boolean; errors: string[];
+  /** Human-readable description of any document-level value conflicts. */
+  conflicts: string[];
 };
 
 export type PreviewResult = {
@@ -163,6 +203,11 @@ export async function validateQuotationImport(orgId: number, rows: MappedRow[]):
       doc.rowErrors.set(row, cur);
     };
     const firstRow = doc.sourceRows[0];
+
+    // --- document-level value conflicts across the group's rows ---
+    for (const c of doc.conflicts) {
+      doc.errors.push(`${c.field} differs between rows of quotation "${doc.number}" ("${c.values[0]}" vs "${c.values[1]}"). Document-level values must match on every row.`);
+    }
 
     // --- header ---
     if (isBlank(h.client)) doc.errors.push("Client is required.");
@@ -211,6 +256,7 @@ export async function validateQuotationImport(orgId: number, rows: MappedRow[]):
     rows: d.sourceRows.map((r) => r + 2), // +2 = 1-based data row under the header row
     ok: d.errors.length === 0 && d.rowErrors.size === 0,
     errors: [...d.errors, ...[...d.rowErrors.values()].flat()].filter((v, i, a) => a.indexOf(v) === i),
+    conflicts: d.conflicts.map((c) => `${c.field}: "${c.values[0]}" vs "${c.values[1]}"`),
   }));
 
   const rowErrorMap = new Map<number, string[]>();
@@ -226,6 +272,8 @@ export async function validateQuotationImport(orgId: number, rows: MappedRow[]):
       duplicateNumbers: [...new Set(duplicateNumbers)],
       willCreate: validDocs.length,
       lineItems: validDocs.reduce((n, d) => n + d.lines.length, 0),
+      totalLineItems: docs.reduce((n, d) => n + d.lines.length, 0),
+      conflictingDocuments: docs.filter((d) => d.conflicts.length > 0).length,
       invalidRows: rowErrorMap.size,
     },
     documents,
