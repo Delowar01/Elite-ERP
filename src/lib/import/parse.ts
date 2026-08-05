@@ -96,7 +96,13 @@ export async function buildTemplateXlsx(spec: ImportSpec): Promise<Buffer> {
     cell.alignment = { vertical: "middle" };
   });
   head.height = 22;
-  spec.fields.forEach((f, i) => { ws.getColumn(i + 1).width = Math.max(14, Math.min(38, f.header.length + 6)); });
+  spec.fields.forEach((f, i) => {
+    const col = ws.getColumn(i + 1);
+    col.width = Math.max(14, Math.min(38, f.header.length + 6));
+    // The Terms column holds several terms in one cell, one per line — wrap it so the example is
+    // readable in Excel instead of showing as a single clipped line.
+    if (f.key === "terms") { col.width = 46; col.alignment = { wrapText: true, vertical: "top" }; }
+  });
   ws.views = [{ state: "frozen", ySplit: 1 }];
 
   const guide = wb.addWorksheet("Field Guide");
@@ -110,11 +116,23 @@ export async function buildTemplateXlsx(spec: ImportSpec): Promise<Buffer> {
   guide.addRow([]);
   guide.addRow([
     "How multiple line items work", "", "",
-    "Use one row per line item. Repeat the same quotation number and document-level values for all items belonging to the same quotation.",
+    "Use one row per line item. Repeat the quotation number for all items belonging to the same quotation.",
+  ]);
+  guide.addRow([
+    "Multiple Terms & Conditions", "", "",
+    "Enter multiple Terms & Conditions in one cell using a new line or || between each term.",
+  ]);
+  guide.addRow([
+    "Date format", "", "",
+    "During column mapping, select the date format used in your uploaded file.",
+  ]);
+  guide.addRow([
+    "Document-level values", "", "",
+    "Client, dates, currency, terms, notes and discount belong to the whole quotation. Fill them on the first row of the quotation and leave them blank on its other rows, or repeat the same values on every row.",
   ]);
   guide.addRow([
     "Conflicting values", "", "",
-    "If two rows with the same quotation number carry different document-level values (client, dates, currency, terms, notes, discount…), that quotation is blocked during preview with a clear error.",
+    "If two rows with the same quotation number carry different document-level values, that quotation is blocked during preview with a clear error. Blank cells never conflict.",
   ]);
   guide.addRow([
     "Blank numbers", "", "",

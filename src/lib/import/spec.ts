@@ -8,12 +8,17 @@
 /** Where a column belongs: the document header, or one of its line items. */
 export type FieldScope = "header" | "line";
 
+/** Value shape of a column, where it changes how the column is read. */
+export type FieldKind = "text" | "date";
+
 export type FieldSpec = {
   key: string;
   /** Template column header (also the primary auto-mapping match). */
   header: string;
   scope: FieldScope;
   required: boolean;
+  /** "date" columns get a date-format selector in the mapping step. Defaults to "text". */
+  kind?: FieldKind;
   /** Extra header spellings accepted by auto-mapping (lowercased, compared loosely). */
   aliases?: string[];
   /** Shown in the template's field-guide sheet. */
@@ -59,15 +64,15 @@ export const QUOTATION_IMPORT_SPEC: ImportSpec = {
       example: "Acme Trading Co.",
     },
     {
-      key: "issueDate", header: "Issue Date", scope: "header", required: true,
+      key: "issueDate", header: "Issue Date", scope: "header", required: true, kind: "date",
       aliases: ["date", "documentdate", "docdate", "quotationdate"],
-      guide: "REQUIRED. Format YYYY-MM-DD (Excel date cells are also accepted).",
+      guide: "REQUIRED. Choose this column's date format during column mapping. Excel date cells are read directly.",
       example: "2026-01-15",
     },
     {
-      key: "validUntil", header: "Valid Till", scope: "header", required: false,
+      key: "validUntil", header: "Valid Till", scope: "header", required: false, kind: "date",
       aliases: ["validuntil", "validtilldate", "expirydate", "duedate"],
-      guide: "Optional. Format YYYY-MM-DD.",
+      guide: "Optional. Same date format as Issue Date; leave blank if the quotation has no expiry.",
       example: "2026-02-15",
     },
     {
@@ -101,10 +106,10 @@ export const QUOTATION_IMPORT_SPEC: ImportSpec = {
       example: "Delivery within 4 weeks of approval.",
     },
     {
-      key: "terms", header: "Terms and Conditions", scope: "header", required: false,
-      aliases: ["terms", "termsconditions", "tc"],
-      guide: "Optional plain-text terms. Imported as a single custom terms block.",
-      example: "Payment 50% advance, balance on delivery.",
+      key: "terms", header: "Terms & Conditions", scope: "header", required: false,
+      aliases: ["terms", "termsandconditions", "termsconditions", "tc"],
+      guide: "Optional. Put several terms in ONE cell, separated by a new line or by ||. Each becomes its own numbered term on the quotation. For a multi-line quotation, fill this on the first row only.",
+      example: "Payment must be made within 30 days.\nPrices are valid for 15 days.",
     },
     // ---- migration (optional) ----
     {
@@ -175,29 +180,28 @@ export const QUOTATION_IMPORT_SPEC: ImportSpec = {
       example: "",
     },
   ],
-  // QT-1001 has THREE line items (same number repeated, document values echoed on each row);
-  // QT-1002 is a separate quotation with one line item.
+  // QT-1001 has THREE line items (same number repeated on each row). Document-level values —
+  // including the multi-term Terms & Conditions cell — are written on the FIRST row only and left
+  // blank on the rest, which is the shortest correct way to fill the sheet in. QT-1002 is a separate
+  // quotation with one line item.
   exampleRows: [
     {
       number: "QT-1001", client: "ABC Company", issueDate: "2026-08-05", validUntil: "2026-09-05",
       title: "Exhibition package", currency: "SAR", discount: "0", notes: "Delivery within 4 weeks.",
-      terms: "Payment 50% advance, balance on delivery.",
+      terms: "Payment must be made within 30 days.\nPrices are valid for 15 days.\nAdditional work will be charged separately.",
       itemName: "Exhibition Stand", itemDescription: "6x4 custom stand", quantity: "1", unitPrice: "15000", unit: "pcs", taxRate: "15",
     },
     {
-      number: "QT-1001", client: "ABC Company", issueDate: "2026-08-05", validUntil: "2026-09-05",
-      title: "Exhibition package", currency: "SAR", discount: "0", notes: "Delivery within 4 weeks.",
-      terms: "Payment 50% advance, balance on delivery.",
+      number: "QT-1001",
       itemName: "LED Screen", itemDescription: "4x2 metre screen", quantity: "2", unitPrice: "2500", unit: "pcs", taxRate: "15",
     },
     {
-      number: "QT-1001", client: "ABC Company", issueDate: "2026-08-05", validUntil: "2026-09-05",
-      title: "Exhibition package", currency: "SAR", discount: "0", notes: "Delivery within 4 weeks.",
-      terms: "Payment 50% advance, balance on delivery.",
+      number: "QT-1001",
       itemName: "Furniture", itemDescription: "Sofa and table set", quantity: "3", unitPrice: "800", unit: "set", taxRate: "15",
     },
     {
-      number: "QT-1002", client: "XYZ Company", issueDate: "2026-08-05", currency: "SAR",
+      number: "QT-1002", client: "XYZ Company", issueDate: "2026-08-12", validUntil: "2026-09-12", currency: "SAR",
+      terms: "Payment must be made within 30 days. || Prices are valid for 15 days.",
       itemName: "Branding", itemDescription: "Vinyl branding", quantity: "10", unitPrice: "120", unit: "m2", taxRate: "15",
     },
   ],

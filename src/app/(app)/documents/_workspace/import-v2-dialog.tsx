@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { t, type Locale } from "@/lib/i18n/dict";
 import type { FieldSpec } from "@/lib/import/spec";
+import { DATE_FORMATS, DATE_FORMAT_LABELS, DEFAULT_DATE_FORMAT, type DateFormat } from "@/lib/import/dates";
 import {
   parseImportFileAction, previewImportAction, commitImportV2Action, previewErrorCsvAction,
 } from "./import-v2-actions";
@@ -23,9 +24,13 @@ type PreviewData = {
   summary: {
     totalRows: number; documents: number; validDocuments: number; invalidDocuments: number;
     duplicateNumbers: string[]; willCreate: number; lineItems: number; totalLineItems: number;
-    conflictingDocuments: number; invalidRows: number;
+    conflictingDocuments: number; invalidRows: number; totalTerms: number;
   };
-  documents: { key: string; number: string; client: string; lineCount: number; rows: number[]; ok: boolean; errors: string[]; conflicts: string[] }[];
+  documents: {
+    key: string; number: string; client: string; lineCount: number;
+    issueDate: string; validUntil: string; termCount: number;
+    rows: number[]; ok: boolean; errors: string[]; conflicts: string[];
+  }[];
   rowErrors: [number, string[]][];
 };
 
@@ -51,6 +56,9 @@ export function ImportV2Dialog({ locale, module, moduleLabel, fields }: {
   const [headers, setHeaders] = useState<string[]>([]);
   const [rows, setRows] = useState<string[][]>([]);      // preserved while mapping changes
   const [mapping, setMapping] = useState<Record<string, number>>({});
+  // Per-date-column format, chosen during mapping. Kept in dialog state so it survives moving
+  // between the mapping and preview steps, and is sent with every validate/import call.
+  const [dateFormats, setDateFormats] = useState<Record<string, DateFormat>>({});
   const [preview, setPreview] = useState<PreviewData | null>(null);
   const [result, setResult] = useState<Result | null>(null);
   const [dragging, setDragging] = useState(false);
@@ -61,8 +69,10 @@ export function ImportV2Dialog({ locale, module, moduleLabel, fields }: {
 
   function reset() {
     setStep("upload"); setFileName(""); setHeaders([]); setRows([]);
-    setMapping({}); setPreview(null); setResult(null); setDragging(false);
+    setMapping({}); setDateFormats({}); setPreview(null); setResult(null); setDragging(false);
   }
+
+  const dateFormatOf = (key: string): DateFormat => dateFormats[key] ?? DEFAULT_DATE_FORMAT;
 
   function handleFile(file: File) {
     setFileName(file.name);
@@ -80,7 +90,7 @@ export function ImportV2Dialog({ locale, module, moduleLabel, fields }: {
 
   function runPreview() {
     startTransition(async () => {
-      const res = await previewImportAction(module, rows, mapping);
+      const res = await previewImportAction(module, rows, mapping, dateFormats);
       if (res.error) { toast.error(res.error); return; }
       if (res.missingRequired?.length) { toast.error(`${t(locale, "Map the required columns first:")} ${res.missingRequired.join(", ")}`); return; }
       setPreview(res.preview as PreviewData);
@@ -90,7 +100,7 @@ export function ImportV2Dialog({ locale, module, moduleLabel, fields }: {
 
   function confirmImport() {
     startTransition(async () => {
-      const res = await commitImportV2Action(module, headers, rows, mapping);
+      const res = await commitImportV2Action(module, headers, rows, mapping, dateFormats);
       if (res.error) { toast.error(res.error); return; }
       setResult(res as Result);
       setStep("done");
@@ -100,7 +110,7 @@ export function ImportV2Dialog({ locale, module, moduleLabel, fields }: {
 
   function downloadErrors() {
     startTransition(async () => {
-      const res = await previewErrorCsvAction(module, headers, rows, mapping);
+      const res = await previewErrorCsvAction(module, headers, rows, mapping, dateFormats);
       if (res.error) { toast.error(res.error); return; }
       if (!res.csv) { toast.success(t(locale, "No invalid rows.")); return; }
       downloadText(`${module}-import-errors.csv`, res.csv);
@@ -197,6 +207,24 @@ export function ImportV2Dialog({ locale, module, moduleLabel, fields }: {
                             {headers.map((h, i) => (<SelectItem key={i} value={String(i)}>{h || `#${i + 1}`}</SelectItem>))}
                           </SelectContent>
                         </Select>
+                        {/* A mapped date column gets its own format picker — the importer never guesses
+                            between DD/MM and MM/DD. */}
+                        {f.kind === "date" && (mapping[f.key] ?? -1) >= 0 && (
+                          <div className="mt-1.5 flex items-center gap-1.5">
+                            <span className="text-[11px] text-ink-faint shrink-0">{t(locale, "Date format")}</span>
+                            <Select
+                              value={dateFormatOf(f.key)}
+                              onValueChange={(v) => setDateFormats((d) => ({ ...d, [f.key]: v as DateFormat }))}
+                            >
+                              <SelectTrigger className="h-7 text-[11.5px]"><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                {DATE_FORMATS.map((df) => (
+                                  <SelectItem key={df} value={df}>{t(locale, DATE_FORMAT_LABELS[df])}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -231,6 +259,7 @@ export function ImportV2Dialog({ locale, module, moduleLabel, fields }: {
             </div>
             <p className="text-[11.5px] text-ink-muted">
               {t(locale, "Line items to create:")} {s.lineItems}
+              {" · "}{t(locale, "Terms detected:")} {s.totalTerms}
               {s.duplicateNumbers.length > 0 && (
                 <> · <span className="text-danger">{t(locale, "Duplicate document numbers:")} {s.duplicateNumbers.join(", ")}</span></>
               )}
@@ -247,6 +276,9 @@ export function ImportV2Dialog({ locale, module, moduleLabel, fields }: {
                     <th className="text-start p-2">{t(locale, "Number")}</th>
                     <th className="text-start p-2">{t(locale, "Client")}</th>
                     <th className="text-start p-2">{t(locale, "Items")}</th>
+                    <th className="text-start p-2">{t(locale, "Issue Date")}</th>
+                    <th className="text-start p-2">{t(locale, "Valid Till")}</th>
+                    <th className="text-start p-2">{t(locale, "Terms")}</th>
                     <th className="text-start p-2">{t(locale, "Rows")}</th>
                     <th className="text-start p-2">{t(locale, "Errors")}</th>
                   </tr>
@@ -258,6 +290,9 @@ export function ImportV2Dialog({ locale, module, moduleLabel, fields }: {
                       <td className="p-2 font-mono">{d.number}</td>
                       <td className="p-2">{d.client || "—"}</td>
                       <td className="p-2">{d.lineCount}</td>
+                      <td className="p-2 font-mono">{d.issueDate || "—"}</td>
+                      <td className="p-2 font-mono">{d.validUntil || "—"}</td>
+                      <td className="p-2">{d.termCount}</td>
                       <td className="p-2 text-ink-faint font-mono">{d.rows.join(", ")}</td>
                       <td className="p-2 text-danger">{d.errors.join(" ")}</td>
                     </tr>

@@ -11,6 +11,7 @@ import {
   validateQuotationImport, commitQuotationImport, MAX_IMPORT_ROWS,
   type PreviewResult, type MappedRow,
 } from "@/lib/import/quotation-import";
+import { sanitizeDateFormats } from "@/lib/import/dates";
 
 // Import pipeline (parse -> map -> preview -> commit). Every step is tenant-scoped via the session
 // and re-validated server-side; the client's preview is never trusted at commit time.
@@ -72,6 +73,7 @@ export async function previewImportAction(
   module: string,
   rows: string[][],
   mapping: Record<string, number>,
+  dateFormats?: Record<string, string>,
 ): Promise<PreviewResponse> {
   const session = await requireSession();
   const spec = specOrNull(module);
@@ -83,7 +85,7 @@ export async function previewImportAction(
   if (missingRequired.length) return { missingRequired };
 
   const mapped = applyMapping(spec, rows, mapping);
-  const { result } = await validateQuotationImport(session.orgId, mapped);
+  const { result } = await validateQuotationImport(session.orgId, mapped, sanitizeDateFormats(dateFormats));
   return { preview: result };
 }
 
@@ -99,6 +101,7 @@ export async function commitImportV2Action(
   headers: string[],
   rows: string[][],
   mapping: Record<string, number>,
+  dateFormats?: Record<string, string>,
 ): Promise<CommitResponse> {
   const session = await requireSession();
   const spec = specOrNull(module);
@@ -110,7 +113,7 @@ export async function commitImportV2Action(
   if (missingRequired.length) return { error: `Map the required column(s) first: ${missingRequired.join(", ")}.` };
 
   const mapped = applyMapping(spec, rows, mapping);
-  const outcome = await commitQuotationImport(session.orgId, session.userId, mapped);
+  const outcome = await commitQuotationImport(session.orgId, session.userId, mapped, sanitizeDateFormats(dateFormats));
 
   if (outcome.imported > 0) {
     await logActivity(session, {
@@ -146,12 +149,13 @@ export async function previewErrorCsvAction(
   headers: string[],
   rows: string[][],
   mapping: Record<string, number>,
+  dateFormats?: Record<string, string>,
 ): Promise<{ error?: string; csv?: string }> {
   const session = await requireSession();
   const spec = specOrNull(module);
   if (!spec) return { error: "Import is not available for this module yet." };
   const mapped = applyMapping(spec, rows, mapping);
-  const { result } = await validateQuotationImport(session.orgId, mapped);
+  const { result } = await validateQuotationImport(session.orgId, mapped, sanitizeDateFormats(dateFormats));
   if (!result.rowErrors.length) return { csv: undefined };
   return { csv: buildErrorCsv(headers, rows, new Map(result.rowErrors)) };
 }

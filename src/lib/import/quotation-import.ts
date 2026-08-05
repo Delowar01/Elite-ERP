@@ -8,6 +8,7 @@ import { computeTotals } from "@/app/(app)/sales/_shared/totals";
 import { LINE_DESC_KEY } from "@/app/(app)/sales/_shared/line-item-desc";
 import { isValidCurrencyCode } from "@/lib/currency/currencies";
 import { QUOTATION_IMPORT_SPEC } from "./spec";
+import { parseDateCell, DEFAULT_DATE_FORMAT, type DateFormat } from "./dates";
 
 // Quotation import: turns the mapped grid into grouped documents, validates every group against the
 // organization's real data, then inserts each quotation + its line items in ONE transaction per
@@ -37,26 +38,42 @@ const isBlank = (v: string | undefined) => !v || !v.trim();
 const num = (v: string) => Number(String(v ?? "").replace(/[,\s]/g, ""));
 const isNum = (v: string) => v.trim() !== "" && Number.isFinite(num(v));
 
-/** Accepts YYYY-MM-DD, plus common DD/MM/YYYY and MM/DD/YYYY-ish inputs from legacy exports. */
-export function normalizeDate(v: string): string | null {
-  const s = (v ?? "").trim();
-  if (!s) return null;
-  let m = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(s);
-  if (m) {
-    const [, y, mo, d] = m;
-    const iso = `${y}-${mo.padStart(2, "0")}-${d.padStart(2, "0")}`;
-    return Number.isNaN(Date.parse(iso)) ? null : iso;
-  }
-  m = /^(\d{1,2})[/.](\d{1,2})[/.](\d{4})$/.exec(s);
-  if (m) {
-    // Ambiguous D/M vs M/D: treat >12 in the first slot as a day, otherwise assume D/M (ISO-region default).
-    const a = Number(m[1]), b = Number(m[2]), y = m[3];
-    const day = a > 12 ? a : a, mon = a > 12 ? b : b;
-    const iso = `${y}-${String(mon).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-    return Number.isNaN(Date.parse(iso)) ? null : iso;
-  }
-  return null;
+/** The date format chosen per mapped date column during column mapping. */
+export type DateFormats = Record<string, DateFormat>;
+
+const fmtFor = (formats: DateFormats | undefined, key: string): DateFormat =>
+  formats?.[key] ?? DEFAULT_DATE_FORMAT;
+
+/** Parse a date cell with the column's selected format; null when it cannot be read safely. */
+export function normalizeDate(v: string, format: DateFormat = DEFAULT_DATE_FORMAT): string | null {
+  const r = parseDateCell(v, format);
+  return r.ok ? r.iso : null;
 }
+
+/** Message explaining exactly why a date cell was rejected, so the user knows what to change. */
+function dateError(label: string, raw: string, reason: "ambiguous" | "impossible" | "unrecognized"): string {
+  const v = (raw ?? "").trim();
+  if (reason === "ambiguous") {
+    return `${label} "${v}" could be read more than one way. Select the date format for this column during column mapping.`;
+  }
+  if (reason === "impossible") return `${label} "${v}" is not a real calendar date.`;
+  return `${label} "${v}" is not a date the importer recognizes (use DD/MM/YYYY, MM/DD/YYYY or YYYY-MM-DD).`;
+}
+
+/**
+ * Split one Terms & Conditions cell into individual terms. Terms may be separated by a new line or
+ * by `||`; blank entries and surrounding whitespace are dropped, a leading "1." / "2)" numbering
+ * marker is stripped (the document re-numbers terms itself), and the original order is preserved.
+ */
+export function splitTerms(raw: string): string[] {
+  return (raw ?? "")
+    .split(/\r?\n|\|\|/)
+    .map((s) => s.replace(/^\s*\d+[.)]\s*/, "").trim())
+    .filter(Boolean);
+}
+
+/** Comparable form of a terms cell, so the same terms written with different separators still match. */
+const termsKey = (raw: string) => splitTerms(raw).join("\n");
 
 /** Does this row carry any line-item data at all? (an empty line block is allowed) */
 function hasLineData(r: MappedRow): boolean {
@@ -69,10 +86,22 @@ const HEADER_KEYS = QUOTATION_IMPORT_SPEC.fields
   .map((f) => f.key);
 const HEADER_LABEL = new Map(QUOTATION_IMPORT_SPEC.fields.map((f) => [f.key, f.header]));
 
-/** Two header values conflict only when both are filled in and differ (blank = "same as above"). */
-function conflicts(a: string, b: string): boolean {
-  const x = (a ?? "").trim(), y = (b ?? "").trim();
+const DATE_KEYS = new Set(QUOTATION_IMPORT_SPEC.fields.filter((f) => f.kind === "date").map((f) => f.key));
+
+/**
+ * Two header values conflict only when both are filled in and mean different things — a blank cell
+ * reads as "same as above". Comparison is per field: terms are compared as their split term list (so
+ * the same terms written with `||` on one row and new lines on another are NOT a conflict), and dates
+ * are compared as the date they resolve to (so 05/08/2026 and 2026-08-05 are the same day).
+ */
+function valuesConflict(key: string, a: string, b: string, formats?: DateFormats): boolean {
+  let x = (a ?? "").trim(), y = (b ?? "").trim();
   if (!x || !y) return false;
+  if (key === "terms") { x = termsKey(x); y = termsKey(y); }
+  else if (DATE_KEYS.has(key)) {
+    const da = normalizeDate(x, fmtFor(formats, key)), dbv = normalizeDate(y, fmtFor(formats, key));
+    if (da && dbv) return da !== dbv;
+  }
   return x.localeCompare(y, undefined, { sensitivity: "accent" }) !== 0;
 }
 
@@ -84,7 +113,7 @@ function conflicts(a: string, b: string): boolean {
  * are never grouped together. Document-level values that genuinely disagree within a group are
  * recorded in `conflicts` and block that document during preview.
  */
-export function groupRows(rows: MappedRow[]): DocDraft[] {
+export function groupRows(rows: MappedRow[], formats?: DateFormats): DocDraft[] {
   const byKey = new Map<string, DocDraft>();
   const out: DocDraft[] = [];
   rows.forEach((r, i) => {
@@ -102,7 +131,7 @@ export function groupRows(rows: MappedRow[]): DocDraft[] {
         const incoming = (r[k] ?? "").trim();
         if (!incoming) continue;
         if (!existing) { doc.header[k] = incoming; continue; }
-        if (conflicts(existing, incoming)) {
+        if (valuesConflict(k, existing, incoming, formats)) {
           const label = HEADER_LABEL.get(k) ?? k;
           if (!doc.conflicts.some((c) => c.field === label)) {
             doc.conflicts.push({ field: label, values: [existing, incoming], row: i });
@@ -172,10 +201,16 @@ export type PreviewSummary = {
   /** Documents blocked because their document-level values disagree across rows. */
   conflictingDocuments: number;
   invalidRows: number;
+  /** Terms & Conditions entries detected across every document in the file. */
+  totalTerms: number;
 };
 
 export type DocPreview = {
   key: string; number: string; client: string; lineCount: number;
+  /** Parsed Issue Date / Valid Till (ISO), or "" when blank or unreadable. */
+  issueDate: string; validUntil: string;
+  /** How many individual terms this document's Terms & Conditions cell produced. */
+  termCount: number;
   rows: number[]; ok: boolean; errors: string[];
   /** Human-readable description of any document-level value conflicts. */
   conflicts: string[];
@@ -189,8 +224,12 @@ export type PreviewResult = {
 };
 
 /** Validate every grouped document against org data + the module's real rules. */
-export async function validateQuotationImport(orgId: number, rows: MappedRow[]): Promise<{ docs: DocDraft[]; result: PreviewResult }> {
-  const docs = groupRows(rows);
+export async function validateQuotationImport(
+  orgId: number,
+  rows: MappedRow[],
+  formats?: DateFormats,
+): Promise<{ docs: DocDraft[]; result: PreviewResult }> {
+  const docs = groupRows(rows, formats);
   const look = await loadLookups(orgId, docs);
   const seenNumbers = new Set<string>();
   const duplicateNumbers: string[] = [];
@@ -213,10 +252,17 @@ export async function validateQuotationImport(orgId: number, rows: MappedRow[]):
     if (isBlank(h.client)) doc.errors.push("Client is required.");
     else if (!look.customers.has(h.client.trim().toLowerCase())) doc.errors.push(`Client "${h.client.trim()}" not found.`);
 
+    // Dates are read with the format the user picked for that column during mapping. Issue Date is
+    // mandatory; Valid Till is optional, and a blank cell is never an error.
     if (isBlank(h.issueDate)) doc.errors.push("Issue Date is required.");
-    else if (!normalizeDate(h.issueDate)) doc.errors.push(`Issue Date "${h.issueDate}" is not a valid date (use YYYY-MM-DD).`);
-
-    if (!isBlank(h.validUntil) && !normalizeDate(h.validUntil)) doc.errors.push(`Valid Till "${h.validUntil}" is not a valid date.`);
+    else {
+      const r = parseDateCell(h.issueDate, fmtFor(formats, "issueDate"));
+      if (!r.ok) doc.errors.push(dateError("Issue Date", h.issueDate, r.reason));
+    }
+    if (!isBlank(h.validUntil)) {
+      const r = parseDateCell(h.validUntil, fmtFor(formats, "validUntil"));
+      if (!r.ok) doc.errors.push(dateError("Valid Till", h.validUntil, r.reason));
+    }
     if (!isBlank(h.currency) && !isValidCurrencyCode(h.currency.trim().toUpperCase())) doc.errors.push(`Currency "${h.currency.trim()}" is not a supported code.`);
     if (!isBlank(h.discount) && (!isNum(h.discount) || num(h.discount) < 0)) doc.errors.push("Discount must be a non-negative number.");
     if (!isBlank(h.project) && !look.projects.has(h.project.trim().toLowerCase())) doc.errors.push(`Project "${h.project.trim()}" not found.`);
@@ -253,6 +299,9 @@ export async function validateQuotationImport(orgId: number, rows: MappedRow[]):
     number: d.number || "(auto)",
     client: (d.header.client ?? "").trim(),
     lineCount: d.lines.length,
+    issueDate: normalizeDate(d.header.issueDate ?? "", fmtFor(formats, "issueDate")) ?? "",
+    validUntil: normalizeDate(d.header.validUntil ?? "", fmtFor(formats, "validUntil")) ?? "",
+    termCount: splitTerms(d.header.terms ?? "").length,
     rows: d.sourceRows.map((r) => r + 2), // +2 = 1-based data row under the header row
     ok: d.errors.length === 0 && d.rowErrors.size === 0,
     errors: [...d.errors, ...[...d.rowErrors.values()].flat()].filter((v, i, a) => a.indexOf(v) === i),
@@ -275,6 +324,7 @@ export async function validateQuotationImport(orgId: number, rows: MappedRow[]):
       totalLineItems: docs.reduce((n, d) => n + d.lines.length, 0),
       conflictingDocuments: docs.filter((d) => d.conflicts.length > 0).length,
       invalidRows: rowErrorMap.size,
+      totalTerms: documents.reduce((n, d) => n + d.termCount, 0),
     },
     documents,
     rowErrors: [...rowErrorMap.entries()],
@@ -288,9 +338,14 @@ export type CommitOutcome = { imported: number; failed: number; skipped: number;
  * Insert the valid documents. Each quotation + its lines are written in their OWN transaction, so a
  * failure can never leave a header without its items, and one bad document cannot roll back the rest.
  */
-export async function commitQuotationImport(orgId: number, userId: number, rows: MappedRow[]): Promise<CommitOutcome> {
+export async function commitQuotationImport(
+  orgId: number,
+  userId: number,
+  rows: MappedRow[],
+  formats?: DateFormats,
+): Promise<CommitOutcome> {
   // Re-validate server-side: the client's preview is never trusted.
-  const { docs, result } = await validateQuotationImport(orgId, rows);
+  const { docs, result } = await validateQuotationImport(orgId, rows, formats);
   const look = await loadLookups(orgId, docs);
   const valid = docs.filter((d) => d.errors.length === 0 && d.rowErrors.size === 0);
 
@@ -321,6 +376,8 @@ export async function commitQuotationImport(orgId: number, userId: number, rows:
         if (!isBlank(h.migrationNote)) migration.push(h.migrationNote.trim());
         if (migration.length) noteParts.push(`— Imported —\n${migration.join("\n")}`);
 
+        const importedTerms = splitTerms(h.terms ?? "").map((text) => ({ text, groupId: null, groupName: null }));
+
         const [q] = await tx
           .insert(quotationsTable)
           .values({
@@ -328,14 +385,15 @@ export async function commitQuotationImport(orgId: number, userId: number, rows:
             quotationNumber: number,
             customerId: look.customers.get(h.client.trim().toLowerCase())!,
             projectId: isBlank(h.project) ? null : (look.projects.get(h.project.trim().toLowerCase()) ?? null),
-            issueDate: normalizeDate(h.issueDate)!,
-            validUntil: isBlank(h.validUntil) ? null : normalizeDate(h.validUntil),
+            issueDate: normalizeDate(h.issueDate, fmtFor(formats, "issueDate"))!,
+            validUntil: isBlank(h.validUntil) ? null : normalizeDate(h.validUntil, fmtFor(formats, "validUntil")),
             title: isBlank(h.title) ? null : h.title.trim(),
             currency: isBlank(h.currency) ? null : h.currency.trim().toUpperCase(),
             notes: noteParts.length ? noteParts.join("\n\n") : null,
-            // Terms use the document terms shape ({ text, groupId, groupName }); an imported block is a
-            // free-text term with no preset group.
-            terms: isBlank(h.terms) ? null : [{ text: h.terms.trim(), groupId: null, groupName: null }],
+            // Terms use the document terms shape ({ text, groupId, groupName }). One cell can carry
+            // several terms (new line or ||) — each becomes its own numbered, group-less term, in the
+            // order written. Terms are never folded into the notes field.
+            terms: importedTerms.length ? importedTerms : null,
             status: "draft", // imports are always drafts — never posted
             subtotal: totals.subtotal,
             discount: totals.discount,
