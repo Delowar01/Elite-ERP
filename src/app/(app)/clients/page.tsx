@@ -9,6 +9,9 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { Card, CardContent } from "@/components/ui/card";
 import { Plus, Trash2 } from "lucide-react";
+import { getLocale } from "@/lib/i18n/server";
+import { CLIENT_IMPORT_SPEC } from "@/lib/import/spec";
+import { ImportV2Dialog } from "../documents/_workspace/import-v2-dialog";
 import { ClientsToolbar } from "./clients-toolbar";
 import { ClientRecordActions } from "./client-record-actions";
 
@@ -18,6 +21,7 @@ export default async function ClientsPage({
   searchParams: Promise<{ q?: string; archived?: string }>;
 }) {
   const session = await requireSession();
+  const locale = await getLocale();
   const { q, archived } = await searchParams;
   const includeArchived = archived === "1";
 
@@ -39,6 +43,16 @@ export default async function ClientsPage({
         description="Customer directory used across quotations, orders, and invoices."
         actions={
           <>
+            {/* Batch client upload — same Import v2 modal (template / mapping / preview / confirm)
+                the document modules use, in its record mode. */}
+            <ImportV2Dialog
+              locale={locale}
+              module={CLIENT_IMPORT_SPEC.module}
+              moduleLabel={CLIENT_IMPORT_SPEC.label}
+              fields={CLIENT_IMPORT_SPEC.fields}
+              entity={CLIENT_IMPORT_SPEC.entity}
+              duplicateHandling={CLIENT_IMPORT_SPEC.duplicateHandling}
+            />
             <Button variant="ghost" asChild>
               <Link href="/clients/recycle-bin">
                 <Trash2 className="size-4" /> Recycle Bin

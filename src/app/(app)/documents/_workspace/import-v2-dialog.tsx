@@ -20,6 +20,26 @@ import {
 type Step = "upload" | "mapping" | "preview" | "done";
 const NONE = "__none__"; // Select needs a non-empty value for "ignore this field"
 
+/** What to do with rows that match a record the organization already has. */
+type DuplicateMode = "skip" | "update";
+
+type ClientPreviewData = {
+  summary: {
+    totalRows: number; validRows: number; invalidRows: number; newClients: number;
+    matchingClients: number; willCreate: number; willUpdate: number; willSkip: number;
+  };
+  rows: {
+    row: number; name: string; email: string; phone: string;
+    action: "create" | "update" | "skip" | "error";
+    matchedOn: string; matchName: string; ok: boolean; errors: string[];
+  }[];
+  rowErrors: [number, string[]][];
+};
+
+const ACTION_LABEL: Record<ClientPreviewData["rows"][number]["action"], string> = {
+  create: "New", update: "Update", skip: "Skip", error: "Error",
+};
+
 type PreviewData = {
   summary: {
     totalRows: number; documents: number; validDocuments: number; invalidDocuments: number;
@@ -34,7 +54,10 @@ type PreviewData = {
   rowErrors: [number, string[]][];
 };
 
-type Result = { imported: number; updated: number; skipped: number; failed: number; total: number; lineItems: number; errorCsv?: string };
+type Result = {
+  imported: number; updated: number; skipped: number; failed: number; total: number;
+  lineItems?: number; duplicates?: number; errorCsv?: string;
+};
 
 function downloadText(name: string, text: string, mime = "text/csv;charset=utf-8") {
   const a = document.createElement("a");
@@ -46,8 +69,11 @@ function downloadText(name: string, text: string, mime = "text/csv;charset=utf-8
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
 
-export function ImportV2Dialog({ locale, module, moduleLabel, fields }: {
+export function ImportV2Dialog({ locale, module, moduleLabel, fields, entity = "document", duplicateHandling = false }: {
   locale: Locale; module: string; moduleLabel: string; fields: FieldSpec[];
+  /** "record" modules (Clients) import one row per record instead of grouping rows into documents. */
+  entity?: "document" | "record";
+  duplicateHandling?: boolean;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -60,6 +86,10 @@ export function ImportV2Dialog({ locale, module, moduleLabel, fields }: {
   // between the mapping and preview steps, and is sent with every validate/import call.
   const [dateFormats, setDateFormats] = useState<Record<string, DateFormat>>({});
   const [preview, setPreview] = useState<PreviewData | null>(null);
+  const [clientPreview, setClientPreview] = useState<ClientPreviewData | null>(null);
+  // Existing records that an uploaded row matches are skipped by default — an import never
+  // overwrites a saved record unless the user asks for it here.
+  const [duplicateMode, setDuplicateMode] = useState<DuplicateMode>("skip");
   const [result, setResult] = useState<Result | null>(null);
   const [dragging, setDragging] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -69,7 +99,8 @@ export function ImportV2Dialog({ locale, module, moduleLabel, fields }: {
 
   function reset() {
     setStep("upload"); setFileName(""); setHeaders([]); setRows([]);
-    setMapping({}); setDateFormats({}); setPreview(null); setResult(null); setDragging(false);
+    setMapping({}); setDateFormats({}); setPreview(null); setClientPreview(null);
+    setDuplicateMode("skip"); setResult(null); setDragging(false);
   }
 
   const dateFormatOf = (key: string): DateFormat => dateFormats[key] ?? DEFAULT_DATE_FORMAT;
@@ -88,19 +119,20 @@ export function ImportV2Dialog({ locale, module, moduleLabel, fields }: {
     });
   }
 
-  function runPreview() {
+  function runPreview(mode: DuplicateMode = duplicateMode) {
     startTransition(async () => {
-      const res = await previewImportAction(module, rows, mapping, dateFormats);
+      const res = await previewImportAction(module, rows, mapping, dateFormats, mode);
       if (res.error) { toast.error(res.error); return; }
       if (res.missingRequired?.length) { toast.error(`${t(locale, "Map the required columns first:")} ${res.missingRequired.join(", ")}`); return; }
-      setPreview(res.preview as PreviewData);
+      if (res.clientPreview) setClientPreview(res.clientPreview as ClientPreviewData);
+      else setPreview(res.preview as PreviewData);
       setStep("preview");
     });
   }
 
   function confirmImport() {
     startTransition(async () => {
-      const res = await commitImportV2Action(module, headers, rows, mapping, dateFormats);
+      const res = await commitImportV2Action(module, headers, rows, mapping, dateFormats, duplicateMode);
       if (res.error) { toast.error(res.error); return; }
       setResult(res as Result);
       setStep("done");
@@ -110,7 +142,7 @@ export function ImportV2Dialog({ locale, module, moduleLabel, fields }: {
 
   function downloadErrors() {
     startTransition(async () => {
-      const res = await previewErrorCsvAction(module, headers, rows, mapping, dateFormats);
+      const res = await previewErrorCsvAction(module, headers, rows, mapping, dateFormats, duplicateMode);
       if (res.error) { toast.error(res.error); return; }
       if (!res.csv) { toast.success(t(locale, "No invalid rows.")); return; }
       downloadText(`${module}-import-errors.csv`, res.csv);
@@ -118,6 +150,7 @@ export function ImportV2Dialog({ locale, module, moduleLabel, fields }: {
   }
 
   const s = preview?.summary;
+  const cs = clientPreview?.summary;
 
   return (
     <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) reset(); }}>
@@ -135,7 +168,9 @@ export function ImportV2Dialog({ locale, module, moduleLabel, fields }: {
         {step === "upload" && (
           <div className="flex flex-col gap-4">
             <p className="text-[12.5px] text-ink-muted">
-              {t(locale, "Imported documents are created as Draft only — nothing is posted to the ledger or stock. Download the template, fill it in, then upload it to preview before anything is saved.")}
+              {entity === "record"
+                ? t(locale, "Download the template, fill it in, then upload it to preview before anything is saved. Clients you already have are never overwritten without your say-so.")
+                : t(locale, "Imported documents are created as Draft only — nothing is posted to the ledger or stock. Download the template, fill it in, then upload it to preview before anything is saved.")}
             </p>
             <div className="flex flex-wrap items-center gap-2">
               <a className="btn btn-glass" style={{ width: "auto" }} href={`/api/import-template/${module}?format=xlsx`}>
@@ -194,7 +229,9 @@ export function ImportV2Dialog({ locale, module, moduleLabel, fields }: {
                         <div className="font-semibold">
                           {f.header} {f.required && <span className="text-danger">*</span>}
                         </div>
-                        <div className="text-[11px] text-ink-faint">{f.scope === "line" ? t(locale, "Line item") : t(locale, "Document")}</div>
+                        {entity === "document" && (
+                          <div className="text-[11px] text-ink-faint">{f.scope === "line" ? t(locale, "Line item") : t(locale, "Document")}</div>
+                        )}
                       </td>
                       <td className="p-2">
                         <Select
@@ -233,9 +270,109 @@ export function ImportV2Dialog({ locale, module, moduleLabel, fields }: {
             </div>
             <div className="flex items-center justify-end gap-2">
               <Button variant="ghost" style={{ width: "auto" }} onClick={reset}>{t(locale, "Cancel")}</Button>
-              <Button style={{ width: "auto" }} disabled={pending || missingRequired.length > 0} onClick={runPreview}>
+              <Button style={{ width: "auto" }} disabled={pending || missingRequired.length > 0} onClick={() => runPreview()}>
                 {pending ? t(locale, "Validating…") : t(locale, "Validate")}
               </Button>
+            </div>
+          </div>
+        )}
+
+        {/* ---------- Step 3a: validation preview — record modules (Clients) ---------- */}
+        {step === "preview" && cs && (
+          <div className="flex flex-col gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {[
+                { label: "Total rows", value: cs.totalRows },
+                { label: "Valid rows", value: cs.validRows },
+                { label: "Invalid rows", value: cs.invalidRows, tone: cs.invalidRows ? "text-danger" : "" },
+                { label: "New clients", value: cs.newClients, tone: "text-success" },
+                { label: "Matching clients", value: cs.matchingClients },
+                { label: "Will be created", value: cs.willCreate, tone: "text-success" },
+                { label: "Will be updated", value: cs.willUpdate },
+                { label: "Will be skipped", value: cs.willSkip },
+              ].map((k) => (
+                <div key={k.label} className="rounded-xl border border-line p-2.5">
+                  <div className="text-[10.5px] text-ink-faint uppercase tracking-wide">{t(locale, k.label)}</div>
+                  <div className={`text-[17px] font-bold ${k.tone ?? ""}`}>{k.value}</div>
+                </div>
+              ))}
+            </div>
+
+            {duplicateHandling && (
+              <div className="rounded-xl border border-line p-3">
+                <div className="text-[12px] font-semibold mb-2">{t(locale, "Clients that already exist")}</div>
+                <div className="flex flex-col gap-1.5">
+                  {([
+                    ["skip", "Import new clients and skip matching clients"],
+                    ["update", "Import new clients and update matching clients"],
+                  ] as [DuplicateMode, string][]).map(([mode, label]) => (
+                    <label key={mode} className="flex items-start gap-2 text-[12.5px] cursor-pointer">
+                      <input
+                        type="radio"
+                        name="duplicate-mode"
+                        className="mt-0.5 accent-brand-orange"
+                        checked={duplicateMode === mode}
+                        disabled={pending}
+                        onChange={() => { setDuplicateMode(mode); runPreview(mode); }}
+                      />
+                      <span>{t(locale, label)}</span>
+                    </label>
+                  ))}
+                </div>
+                <p className="text-[11.5px] text-ink-muted mt-2">
+                  {t(locale, "Updating changes only the columns your file filled in — a blank cell never erases an existing value.")}
+                </p>
+              </div>
+            )}
+
+            <div className="max-h-[38vh] overflow-auto rounded-[10px] border border-line">
+              <table className="w-full text-[12px]">
+                <thead className="bg-canvas sticky top-0">
+                  <tr>
+                    <th className="text-start p-2 w-8" />
+                    <th className="text-start p-2">{t(locale, "Row")}</th>
+                    <th className="text-start p-2">{t(locale, "Client Name")}</th>
+                    <th className="text-start p-2">{t(locale, "Email")}</th>
+                    <th className="text-start p-2">{t(locale, "Phone")}</th>
+                    <th className="text-start p-2">{t(locale, "Action")}</th>
+                    <th className="text-start p-2">{t(locale, "Matched on")}</th>
+                    <th className="text-start p-2">{t(locale, "Errors")}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {clientPreview.rows.map((r) => (
+                    <tr key={r.row} className="border-t border-line align-top">
+                      <td className="p-2">{r.ok ? <CheckCircle2 className="size-4 text-success" /> : <XCircle className="size-4 text-danger" />}</td>
+                      <td className="p-2 text-ink-faint font-mono">{r.row}</td>
+                      <td className="p-2 font-semibold">{r.name || "—"}</td>
+                      <td className="p-2">{r.email || "—"}</td>
+                      <td className="p-2 font-mono">{r.phone || "—"}</td>
+                      <td className="p-2">{t(locale, ACTION_LABEL[r.action])}</td>
+                      <td className="p-2 text-ink-muted">{r.matchedOn ? `${t(locale, r.matchedOn)} — ${r.matchName}` : "—"}</td>
+                      <td className="p-2 text-danger">{r.errors.join(" ")}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <div className="flex items-center gap-2">
+                <button type="button" className="text-[12px] text-ink-muted hover:text-brand-orange inline-flex items-center gap-1" onClick={() => setStep("mapping")}>
+                  <ArrowLeft className="size-3" /> {t(locale, "Back to mapping")}
+                </button>
+                {cs.invalidRows > 0 && (
+                  <Button variant="glass" style={{ width: "auto" }} onClick={downloadErrors} disabled={pending}>
+                    <Download className="size-3.5" /> {t(locale, "Download invalid rows")}
+                  </Button>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" style={{ width: "auto" }} onClick={() => { setOpen(false); reset(); }}>{t(locale, "Cancel")}</Button>
+                <Button style={{ width: "auto" }} disabled={pending || cs.willCreate + cs.willUpdate === 0} onClick={confirmImport}>
+                  {pending ? t(locale, "Importing…") : `${t(locale, "Confirm Import")} (${cs.willCreate + cs.willUpdate})`}
+                </Button>
+              </div>
             </div>
           </div>
         )}
@@ -326,13 +463,23 @@ export function ImportV2Dialog({ locale, module, moduleLabel, fields }: {
         {step === "done" && result && (
           <div className="flex flex-col gap-3">
             <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-              {[
-                { label: "Imported", value: result.imported, tone: "text-success" },
-                { label: "Updated", value: result.updated },
-                { label: "Skipped", value: result.skipped },
-                { label: "Failed", value: result.failed, tone: result.failed ? "text-danger" : "" },
-                { label: "Total processed", value: result.total },
-              ].map((k) => (
+              {(entity === "record"
+                ? [
+                    { label: "Created", value: result.imported, tone: "text-success" },
+                    { label: "Updated", value: result.updated },
+                    { label: "Skipped", value: result.skipped },
+                    { label: "Duplicate", value: result.duplicates ?? 0 },
+                    { label: "Failed", value: result.failed, tone: result.failed ? "text-danger" : "" },
+                    { label: "Total processed", value: result.total },
+                  ]
+                : [
+                    { label: "Imported", value: result.imported, tone: "text-success" },
+                    { label: "Updated", value: result.updated },
+                    { label: "Skipped", value: result.skipped },
+                    { label: "Failed", value: result.failed, tone: result.failed ? "text-danger" : "" },
+                    { label: "Total processed", value: result.total },
+                  ]
+              ).map((k) => (
                 <div key={k.label} className="rounded-xl border border-line p-2.5">
                   <div className="text-[10.5px] text-ink-faint uppercase tracking-wide">{t(locale, k.label)}</div>
                   <div className={`text-[17px] font-bold ${k.tone ?? ""}`}>{k.value}</div>
@@ -340,7 +487,9 @@ export function ImportV2Dialog({ locale, module, moduleLabel, fields }: {
               ))}
             </div>
             <p className="text-[12px] text-ink-muted">
-              {t(locale, "Line items created:")} {result.lineItems} · {t(locale, "Imported documents are Drafts and were not posted.")}
+              {entity === "record"
+                ? t(locale, "Imported clients are available immediately when creating documents.")
+                : `${t(locale, "Line items created:")} ${result.lineItems ?? 0} · ${t(locale, "Imported documents are Drafts and were not posted.")}`}
             </p>
             <div className="flex items-center justify-end gap-2">
               {result.errorCsv && (

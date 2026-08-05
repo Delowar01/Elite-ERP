@@ -27,11 +27,21 @@ export type FieldSpec = {
   example?: string;
 };
 
+/**
+ * What one spreadsheet row means:
+ *  - "document": several rows can build one document (one row per line item) — the sales-chain shape.
+ *  - "record":   one row is one record, with no line items — the master-data shape.
+ */
+export type ImportEntity = "document" | "record";
+
 export type ImportSpec = {
   module: string;
   label: string;
-  /** The column that groups multiple rows into one document (repeat it per line item). */
-  groupKey: string;
+  entity: ImportEntity;
+  /** Document specs only: the column that groups multiple rows into one document. */
+  groupKey?: string;
+  /** Record specs only: offer the "skip vs. update matching records" choice in the preview step. */
+  duplicateHandling?: boolean;
   fields: FieldSpec[];
   /**
    * Example rows written into the template — ONE ROW PER LINE ITEM. Includes a multi-line document
@@ -48,6 +58,7 @@ export function normalizeHeader(h: string): string {
 export const QUOTATION_IMPORT_SPEC: ImportSpec = {
   module: "quotation",
   label: "Quotations",
+  entity: "document",
   groupKey: "number",
   fields: [
     // ---- document header ----
@@ -207,8 +218,132 @@ export const QUOTATION_IMPORT_SPEC: ImportSpec = {
   ],
 };
 
+/**
+ * Clients — one row per client. Every column maps to a column that already exists on `customers`;
+ * nothing here invents a field the create/edit form cannot also set. Only Client Name is mandatory.
+ */
+export const CLIENT_IMPORT_SPEC: ImportSpec = {
+  module: "client",
+  label: "Clients",
+  entity: "record",
+  duplicateHandling: true,
+  fields: [
+    {
+      key: "name", header: "Client Name", scope: "header", required: true,
+      aliases: ["name", "customer", "customername", "clientname", "company", "companyname", "party"],
+      guide: "REQUIRED. The client's business or personal name, exactly as it should appear on documents.",
+      example: "ABC Trading Co.",
+    },
+    {
+      key: "clientType", header: "Client Type", scope: "header", required: false,
+      aliases: ["type", "customertype", "partytype"],
+      guide: "Optional. Either \"company\" or \"individual\". Defaults to individual.",
+      example: "company",
+    },
+    {
+      key: "email", header: "Email", scope: "header", required: false,
+      aliases: ["emailaddress", "mail", "contactemail"],
+      guide: "Optional. Must be a valid email address if provided. Also used to match existing clients.",
+      example: "accounts@abctrading.com",
+    },
+    {
+      key: "phone", header: "Phone", scope: "header", required: false,
+      aliases: ["phonenumber", "mobile", "mobilenumber", "telephone", "tel", "contactnumber"],
+      guide: "Optional. Digits with optional + ( ) - and spaces. Also used to match existing clients.",
+      example: "+966 11 234 5678",
+    },
+    {
+      key: "vatNumber", header: "VAT Number", scope: "header", required: false,
+      aliases: ["vat", "vatno", "taxnumber", "trn", "vatregistrationnumber"],
+      guide: "Optional. The client's tax/VAT registration number. Strongest identifier for matching an existing client.",
+      example: "300012345600003",
+    },
+    {
+      key: "taxId", header: "Commercial Registration Number", scope: "header", required: false,
+      aliases: ["cr", "crnumber", "commercialregistration", "registrationnumber", "taxid", "companyregistrationnumber"],
+      guide: "Optional. The client's commercial registration (CR) number. Used to match an existing client.",
+      example: "1010123456",
+    },
+    {
+      key: "country", header: "Country", scope: "header", required: false,
+      aliases: ["countrycode", "countryname"],
+      guide: "Optional. An ISO country code (SA) or a country name (Saudi Arabia).",
+      example: "SA",
+    },
+    {
+      key: "stateProvince", header: "State / Province", scope: "header", required: false,
+      aliases: ["state", "province", "region"],
+      guide: "Optional. State, province or region.",
+      example: "Riyadh Province",
+    },
+    {
+      key: "city", header: "City", scope: "header", required: false,
+      aliases: ["town"],
+      guide: "Optional. City or town.",
+      example: "Riyadh",
+    },
+    {
+      key: "district", header: "District", scope: "header", required: false,
+      aliases: ["area", "neighbourhood", "neighborhood"],
+      guide: "Optional. District / neighbourhood.",
+      example: "Al Olaya",
+    },
+    {
+      key: "streetAddress", header: "Street Address", scope: "header", required: false,
+      aliases: ["street", "addressline1", "road"],
+      guide: "Optional. Street name and number.",
+      example: "King Fahd Road",
+    },
+    {
+      key: "buildingNumber", header: "Building Number", scope: "header", required: false,
+      aliases: ["building", "buildingno", "housenumber"],
+      guide: "Optional. For Saudi addresses this must be exactly 4 digits (the app's existing rule).",
+      example: "3521",
+    },
+    {
+      key: "additionalNumber", header: "Additional Number", scope: "header", required: false,
+      aliases: ["additionalno", "secondarynumber"],
+      guide: "Optional. Saudi National Address additional number.",
+      example: "8452",
+    },
+    {
+      key: "postalCode", header: "Postal Code", scope: "header", required: false,
+      aliases: ["zip", "zipcode", "postcode"],
+      guide: "Optional. Letters, digits, spaces and hyphens, up to 12 characters.",
+      example: "12214",
+    },
+    {
+      key: "address", header: "Address", scope: "header", required: false,
+      aliases: ["fulladdress", "addressline", "billingaddress", "postaladdress"],
+      guide: "Optional single-line address, for migrating clients whose address was never split into parts. Ignored when the structured address columns above are filled in.",
+      example: "",
+    },
+    {
+      key: "notes", header: "Notes", scope: "header", required: false,
+      aliases: ["note", "remarks", "comment", "description"],
+      guide: "Optional free-text notes kept on the client record.",
+      example: "Key account — invoices go to the finance team.",
+    },
+  ],
+  exampleRows: [
+    {
+      name: "ABC Trading Co.", clientType: "company", email: "accounts@abctrading.com", phone: "+966 11 234 5678",
+      vatNumber: "300012345600003", taxId: "1010123456", country: "SA", stateProvince: "Riyadh Province",
+      city: "Riyadh", district: "Al Olaya", streetAddress: "King Fahd Road", buildingNumber: "3521",
+      additionalNumber: "8452", postalCode: "12214", notes: "Key account — invoices go to the finance team.",
+    },
+    {
+      name: "XYZ Exhibitions LLC", clientType: "company", email: "hello@xyzexhibitions.com", phone: "+971 4 555 0110",
+      vatNumber: "100123456700003", country: "AE", city: "Dubai", streetAddress: "Sheikh Zayed Road",
+    },
+    // Only Client Name is mandatory — this row shows the minimum a client can be imported with.
+    { name: "Layla Khan" },
+  ],
+};
+
 export const IMPORT_SPECS: Record<string, ImportSpec> = {
   quotation: QUOTATION_IMPORT_SPEC,
+  client: CLIENT_IMPORT_SPEC,
 };
 
 export function importSpec(module: string): ImportSpec | null {

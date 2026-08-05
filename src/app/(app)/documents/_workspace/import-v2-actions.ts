@@ -12,6 +12,10 @@ import {
   type PreviewResult, type MappedRow,
 } from "@/lib/import/quotation-import";
 import { sanitizeDateFormats } from "@/lib/import/dates";
+import {
+  validateClientImport, commitClientImport, isDuplicateMode, DEFAULT_DUPLICATE_MODE,
+  type ClientPreviewResult, type DuplicateMode,
+} from "@/lib/import/client-import";
 
 // Import pipeline (parse -> map -> preview -> commit). Every step is tenant-scoped via the session
 // and re-validated server-side; the client's preview is never trusted at commit time.
@@ -24,11 +28,18 @@ export type ParseResult = {
   fileName?: string;
 };
 
-const SUPPORTED = new Set(["quotation"]);
+const SUPPORTED = new Set(["quotation", "client"]);
 
 function specOrNull(module: string): ImportSpec | null {
   return SUPPORTED.has(module) ? importSpec(module) : null;
 }
+
+/** Where a module's imported records live, for revalidation after a commit. */
+function listPathFor(module: string): string {
+  return module === "client" ? "/clients" : docAdmin(module as never).listPath;
+}
+
+const duplicateModeOf = (v: unknown): DuplicateMode => (isDuplicateMode(v) ? v : DEFAULT_DUPLICATE_MODE);
 
 /** Step 1 — upload: parse a .csv/.xlsx into a grid and propose an automatic column mapping. */
 export async function parseImportFileAction(module: string, form: FormData): Promise<ParseResult> {
@@ -66,7 +77,12 @@ function applyMapping(spec: ImportSpec, rows: string[][], mapping: Record<string
   });
 }
 
-export type PreviewResponse = { error?: string; preview?: PreviewResult; missingRequired?: string[] };
+export type PreviewResponse = {
+  error?: string;
+  preview?: PreviewResult;
+  clientPreview?: ClientPreviewResult;
+  missingRequired?: string[];
+};
 
 /** Step 2 — preview: validate everything, save nothing. */
 export async function previewImportAction(
@@ -74,6 +90,7 @@ export async function previewImportAction(
   rows: string[][],
   mapping: Record<string, number>,
   dateFormats?: Record<string, string>,
+  duplicateMode?: string,
 ): Promise<PreviewResponse> {
   const session = await requireSession();
   const spec = specOrNull(module);
@@ -85,6 +102,10 @@ export async function previewImportAction(
   if (missingRequired.length) return { missingRequired };
 
   const mapped = applyMapping(spec, rows, mapping);
+  if (spec.entity === "record") {
+    const { result } = await validateClientImport(session.orgId, mapped, duplicateModeOf(duplicateMode));
+    return { clientPreview: result };
+  }
   const { result } = await validateQuotationImport(session.orgId, mapped, sanitizeDateFormats(dateFormats));
   return { preview: result };
 }
@@ -92,6 +113,8 @@ export async function previewImportAction(
 export type CommitResponse = {
   error?: string;
   imported?: number; updated?: number; skipped?: number; failed?: number; total?: number; lineItems?: number;
+  /** Record imports only: how many rows matched a client the organization already had. */
+  duplicates?: number;
   errorCsv?: string;
 };
 
@@ -102,6 +125,7 @@ export async function commitImportV2Action(
   rows: string[][],
   mapping: Record<string, number>,
   dateFormats?: Record<string, string>,
+  duplicateMode?: string,
 ): Promise<CommitResponse> {
   const session = await requireSession();
   const spec = specOrNull(module);
@@ -113,6 +137,43 @@ export async function commitImportV2Action(
   if (missingRequired.length) return { error: `Map the required column(s) first: ${missingRequired.join(", ")}.` };
 
   const mapped = applyMapping(spec, rows, mapping);
+
+  // Record modules (Clients) — one row per record, with skip/update handling for existing matches.
+  if (spec.entity === "record") {
+    const mode = duplicateModeOf(duplicateMode);
+    const res = await commitClientImport(session.orgId, mapped, mode);
+
+    if (res.created > 0 || res.updated > 0) {
+      await logActivity(session, {
+        type: `${module}.imported`,
+        description: `Imported ${res.created} new client(s) and updated ${res.updated} existing client(s) from a file`,
+        entityType: module,
+        entityId: 0,
+      });
+      await recordAudit(session, {
+        action: "import",
+        entityType: module,
+        entityId: 0,
+        newValue: {
+          created: res.created, updated: res.updated, skipped: res.skipped,
+          duplicates: res.duplicates, failed: res.failed, duplicateMode: mode,
+          clientIds: res.touchedIds,
+        },
+      }).catch(() => {});
+      revalidatePath(listPathFor(module));
+    }
+
+    return {
+      imported: res.created,
+      updated: res.updated,
+      skipped: res.skipped,
+      duplicates: res.duplicates,
+      failed: res.failed,
+      total: res.total,
+      errorCsv: res.errors.length ? buildErrorCsv(headers, rows, new Map(res.errors)) : undefined,
+    };
+  }
+
   const outcome = await commitQuotationImport(session.orgId, session.userId, mapped, sanitizeDateFormats(dateFormats));
 
   if (outcome.imported > 0) {
@@ -128,7 +189,7 @@ export async function commitImportV2Action(
       entityId: 0,
       newValue: { imported: outcome.imported, skipped: outcome.skipped, failed: outcome.failed, lineItems: outcome.lineItems },
     }).catch(() => {});
-    revalidatePath(docAdmin(module as never).listPath);
+    revalidatePath(listPathFor(module));
   }
 
   const errorCsv = outcome.errors.length ? buildErrorCsv(headers, rows, new Map(outcome.errors)) : undefined;
@@ -150,11 +211,19 @@ export async function previewErrorCsvAction(
   rows: string[][],
   mapping: Record<string, number>,
   dateFormats?: Record<string, string>,
+  duplicateMode?: string,
 ): Promise<{ error?: string; csv?: string }> {
   const session = await requireSession();
   const spec = specOrNull(module);
   if (!spec) return { error: "Import is not available for this module yet." };
   const mapped = applyMapping(spec, rows, mapping);
+
+  if (spec.entity === "record") {
+    const { result } = await validateClientImport(session.orgId, mapped, duplicateModeOf(duplicateMode));
+    if (!result.rowErrors.length) return { csv: undefined };
+    return { csv: buildErrorCsv(headers, rows, new Map(result.rowErrors)) };
+  }
+
   const { result } = await validateQuotationImport(session.orgId, mapped, sanitizeDateFormats(dateFormats));
   if (!result.rowErrors.length) return { csv: undefined };
   return { csv: buildErrorCsv(headers, rows, new Map(result.rowErrors)) };

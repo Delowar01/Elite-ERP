@@ -9,7 +9,7 @@ import { requireSession, requireRole } from "@/lib/session";
 import type { Session } from "@/lib/session";
 import { tenantScope } from "@/lib/tenant";
 import { logActivity } from "@/lib/activity";
-import { buildingNumberError, postalCodeError, composeAddress } from "@/lib/geo/countries";
+import { normalizeClientFields } from "@/lib/clients/client-fields";
 
 // `client` is set only by the inline (popup) create action so the caller can auto-select the new
 // record without a page reload; the full-page create action redirects instead.
@@ -17,45 +17,23 @@ export type ActionState = { error?: string; client?: Customer } | undefined;
 
 function s(formData: FormData, key: string): string { return String(formData.get(key) ?? "").trim(); }
 
-// Reads client fields including Client Type + the structured address. Server-side validation mirrors
-// the client (SA 4-digit building number; alphanumeric postal). Returns { error } on failure.
+// Reads client fields including Client Type + the structured address. Field shaping and validation
+// live in `normalizeClientFields`, shared with the batch importer so the two entry points can never
+// accept different data. Returns { error } on failure.
 function readClientFields(formData: FormData): { error?: string; fields?: Record<string, string | null> } {
-  const name = s(formData, "name");
-  if (!name) return { error: "Name is required." };
-  const clientType = s(formData, "clientType") === "company" ? "company" : "individual";
-  const countryCode = s(formData, "countryCode").toUpperCase() || null;
-  const buildingNumber = s(formData, "buildingNumber") || null;
-  const postalCode = s(formData, "postalCode") || null;
-  if (buildingNumberError(countryCode, buildingNumber ?? "")) return { error: "Building number must be 4 digits." };
-  if (postalCodeError(postalCode ?? "")) return { error: "Enter a valid postal / zip code." };
+  const keys = [
+    "name", "clientType", "email", "phone", "taxId", "vatNumber", "notes",
+    "countryCode", "stateProvince", "district", "city", "buildingNumber", "additionalNumber",
+    "postalCode", "streetAddress",
+  ];
+  const input: Record<string, string> = {};
+  for (const k of keys) input[k] = s(formData, k);
 
-  const structured = {
-    countryCode,
-    stateProvince: s(formData, "stateProvince") || null,
-    district: s(formData, "district") || null,
-    city: s(formData, "city") || null,
-    buildingNumber,
-    additionalNumber: s(formData, "additionalNumber") || null,
-    postalCode,
-    streetAddress: s(formData, "streetAddress") || null,
-  };
-  // Keep the legacy single-line `address` (used by cards/PDFs) in sync when any structured field is
-  // set; leave it untouched otherwise so existing clients never lose their legacy address.
-  const composed = composeAddress(structured);
-
-  return {
-    fields: {
-      name,
-      clientType,
-      email: s(formData, "email") || null,
-      phone: s(formData, "phone") || null,
-      taxId: s(formData, "taxId") || null,
-      vatNumber: s(formData, "vatNumber") || null,
-      notes: s(formData, "notes") || null,
-      ...structured,
-      ...(composed ? { address: composed } : {}),
-    },
-  };
+  // strictCountry: false keeps the form's long-standing behaviour of accepting whatever country
+  // value it was given; the importer uses the strict default.
+  const { errors, fields } = normalizeClientFields(input, { strictCountry: false });
+  if (!fields) return { error: errors[0] ?? "Please check the client details." };
+  return { fields };
 }
 
 // Shared insert used by both the full-page create action and the in-document popup create action, so

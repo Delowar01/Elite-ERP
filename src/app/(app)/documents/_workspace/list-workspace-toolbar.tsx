@@ -197,6 +197,8 @@ export function ListWorkspaceToolbar({
             module={module}
             moduleLabel={importSpec(module)!.label}
             fields={importSpec(module)!.fields}
+            entity={importSpec(module)!.entity}
+            duplicateHandling={importSpec(module)!.duplicateHandling}
           />
         ) : (
           <ImportDialog locale={locale} module={module} importColumns={importColumns} />
