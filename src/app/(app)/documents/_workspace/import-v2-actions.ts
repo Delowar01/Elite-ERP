@@ -5,12 +5,14 @@ import { requireSession } from "@/lib/session";
 import { logActivity } from "@/lib/activity";
 import { recordAudit } from "@/lib/security/audit";
 import { docAdmin } from "@/lib/document-registry";
+import { DOCUMENT_TYPES } from "@/db/schema/document-sequences";
 import { importSpec, autoMap, type ImportSpec } from "@/lib/import/spec";
 import { parseImportFile, buildErrorCsv } from "@/lib/import/parse";
 import {
-  validateQuotationImport, commitQuotationImport, MAX_IMPORT_ROWS,
+  validateDocumentImport, commitDocumentImport, MAX_IMPORT_ROWS,
   type PreviewResult, type MappedRow,
-} from "@/lib/import/quotation-import";
+} from "@/lib/import/document-import";
+import type { DocModule } from "@/lib/import/document-fields";
 import { sanitizeDateFormats } from "@/lib/import/dates";
 import {
   validateClientImport, commitClientImport, isDuplicateMode, DEFAULT_DUPLICATE_MODE,
@@ -28,7 +30,8 @@ export type ParseResult = {
   fileName?: string;
 };
 
-const SUPPORTED = new Set(["quotation", "client"]);
+// Every document module plus Clients; anything else keeps the simple CSV dialog.
+const SUPPORTED = new Set([...DOCUMENT_TYPES, "client"]);
 
 function specOrNull(module: string): ImportSpec | null {
   return SUPPORTED.has(module) ? importSpec(module) : null;
@@ -106,7 +109,7 @@ export async function previewImportAction(
     const { result } = await validateClientImport(session.orgId, mapped, duplicateModeOf(duplicateMode));
     return { clientPreview: result };
   }
-  const { result } = await validateQuotationImport(session.orgId, mapped, sanitizeDateFormats(dateFormats));
+  const { result } = await validateDocumentImport(module as DocModule, session.orgId, mapped, sanitizeDateFormats(dateFormats));
   return { preview: result };
 }
 
@@ -174,7 +177,7 @@ export async function commitImportV2Action(
     };
   }
 
-  const outcome = await commitQuotationImport(session.orgId, session.userId, mapped, sanitizeDateFormats(dateFormats));
+  const outcome = await commitDocumentImport(module as DocModule, session.orgId, session.userId, mapped, sanitizeDateFormats(dateFormats));
 
   if (outcome.imported > 0) {
     await logActivity(session, {
@@ -224,7 +227,7 @@ export async function previewErrorCsvAction(
     return { csv: buildErrorCsv(headers, rows, new Map(result.rowErrors)) };
   }
 
-  const { result } = await validateQuotationImport(session.orgId, mapped, sanitizeDateFormats(dateFormats));
+  const { result } = await validateDocumentImport(module as DocModule, session.orgId, mapped, sanitizeDateFormats(dateFormats));
   if (!result.rowErrors.length) return { csv: undefined };
   return { csv: buildErrorCsv(headers, rows, new Map(result.rowErrors)) };
 }
