@@ -3,22 +3,26 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Upload, Check, RotateCcw } from "lucide-react";
+import { Upload, Check, RotateCcw, AlertTriangle } from "lucide-react";
 import {
   DEFAULT_PRIMARY,
   DEFAULT_ACCENT,
   DEFAULT_GRADIENT_FROM,
   DEFAULT_GRADIENT_TO,
   HEX_COLOR,
-  THEME_COMPONENTS,
   APPEARANCES,
   NEUTRALS,
   generateComponentColors,
   resolveComponentColors,
   componentBgSolid,
   normalizeOverrides,
-  isReadable,
   suggestReadableFg,
+  AUDITED_COMPONENTS,
+  auditedPair,
+  auditTheme,
+  componentContrast,
+  formatRatio,
+  type AuditedComponent,
   type ColorThemeMode,
   type ThemeComponent,
   type ThemeOverrides,
@@ -271,12 +275,22 @@ function MiniColor({ locale, label, value, auto, overridden, onChange, onAuto }:
   );
 }
 
-const COMPONENT_LABELS: Record<ThemeComponent, string> = {
+/** "Light Mode", "Dark Mode" or "Light and Dark Mode" — which appearance(s) a warning applies to. */
+function modeScopeLabel(fails: { appearance: Appearance }[]): string {
+  const light = fails.some((f) => f.appearance === "light");
+  const dark = fails.some((f) => f.appearance === "dark");
+  if (light && dark) return "Light and Dark Mode";
+  return dark ? "Dark Mode" : "Light Mode";
+}
+
+const COMPONENT_LABELS: Record<AuditedComponent, string> = {
   primaryButton: "Primary button",
   accentButton: "Accent button",
   activeTab: "Active tab",
   selectedItem: "Selected item",
   badge: "Badge",
+  // Painted from the Selected item tokens; audited under its own name so the warning is findable.
+  sidebarActive: "Sidebar active item",
 };
 
 // Business Settings → Color Theme (Issue #16). Editable gradient (start/end) and single (primary/
@@ -285,9 +299,16 @@ const COMPONENT_LABELS: Record<ThemeComponent, string> = {
 // shared injected stylesheet (router.refresh re-reads the org's colors — no full page reload).
 /** A preview of the five themed components rendered with ONE appearance's calculated colors, on
     that appearance's own surfaces — so light and dark can be compared side by side. */
-function ModePreview({ locale, input, appearance }: { locale: Locale; input: Parameters<typeof resolveComponentColors>[0]; appearance: Appearance }) {
+function ModePreview({ locale, input, appearance, lowContrast }: {
+  locale: Locale; input: Parameters<typeof resolveComponentColors>[0]; appearance: Appearance;
+  /** Components below the recommended ratio in THIS appearance — outlined so they are easy to spot. */
+  lowContrast: Set<string>;
+}) {
   const r = resolveComponentColors(input, appearance);
   const n = NEUTRALS[appearance];
+  // A dashed warning outline on the offending swatch, without touching the colours being previewed.
+  const mark = (comp: string) =>
+    lowContrast.has(comp) ? { outline: "2px dashed var(--warning)", outlineOffset: 2 } : {};
   return (
     <div className="rounded-xl border p-4 flex flex-col gap-3" style={{ background: n.background, borderColor: n.border }}>
       <div className="flex items-center justify-between">
@@ -299,21 +320,21 @@ function ModePreview({ locale, input, appearance }: { locale: Locale; input: Par
       <div className="rounded-lg p-3 flex flex-col gap-2.5" style={{ background: n.surface, border: `1px solid ${n.border}` }}>
         <div className="text-[11.5px]" style={{ color: n.textSecondary }}>{t(locale, "Sample interface text")}</div>
         <div className="flex flex-wrap items-center gap-2">
-          <span style={{ background: r.primaryButton.bg, color: r.primaryButton.fg, borderRadius: 9, padding: "6px 12px", fontSize: 11.5, fontWeight: 600 }}>
+          <span style={{ background: r.primaryButton.bg, color: r.primaryButton.fg, borderRadius: 9, padding: "6px 12px", fontSize: 11.5, fontWeight: 600 , ...mark("primaryButton") }}>
             {t(locale, "Primary button")}
           </span>
-          <span style={{ background: r.accentButton.bg, color: r.accentButton.fg, borderRadius: 9, padding: "6px 12px", fontSize: 11.5, fontWeight: 600 }}>
+          <span style={{ background: r.accentButton.bg, color: r.accentButton.fg, borderRadius: 9, padding: "6px 12px", fontSize: 11.5, fontWeight: 600 , ...mark("accentButton") }}>
             {t(locale, "Accent button")}
           </span>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <span style={{ background: r.activeTab.bg, color: r.activeTab.fg, borderRadius: 999, padding: "5px 12px", fontSize: 11, fontWeight: 600 }}>
+          <span style={{ background: r.activeTab.bg, color: r.activeTab.fg, borderRadius: 999, padding: "5px 12px", fontSize: 11, fontWeight: 600 , ...mark("activeTab") }}>
             {t(locale, "Active tab")}
           </span>
-          <span style={{ background: r.selectedItem.bg, color: r.selectedItem.fg, borderRadius: 8, padding: "5px 12px", fontSize: 11, fontWeight: 600 }}>
+          <span style={{ background: r.selectedItem.bg, color: r.selectedItem.fg, borderRadius: 8, padding: "5px 12px", fontSize: 11, fontWeight: 600 , ...mark("selectedItem") }}>
             {t(locale, "Selected item")}
           </span>
-          <span style={{ background: r.badge.bg, color: r.badge.fg, borderRadius: 999, padding: "3px 10px", fontSize: 10.5, fontWeight: 600 }}>
+          <span style={{ background: r.badge.bg, color: r.badge.fg, borderRadius: 999, padding: "3px 10px", fontSize: 10.5, fontWeight: 600 , ...mark("badge") }}>
             {t(locale, "Badge")}
           </span>
         </div>
@@ -344,15 +365,21 @@ export function ColorThemePanel({ locale, org }: { locale: Locale; org: Org }) {
   const input = { mode, primaryColor: primary, accentColor: accent, gradientFrom, gradientTo, overrides };
   // Everything below is computed for the appearance currently being edited.
   const generated = generateComponentColors(input, editMode);
-  const resolved = resolveComponentColors(input, editMode);
   const modeOverrides: ThemeOverrides = overrides[editMode] ?? {};
   const themeGradient = `linear-gradient(135deg, ${fromValid ? gradientFrom : DEFAULT_GRADIENT_FROM}, ${toValid ? gradientTo : DEFAULT_GRADIENT_TO})`;
 
-  // An unreadable override must not be saveable (in EITHER appearance), per the contrast rules.
-  const unreadable = APPEARANCES.flatMap((ap) =>
-    THEME_COMPONENTS.filter((c) => !isReadable(resolveComponentColors(input, ap)[c].fg, componentBgSolid(input, ap, c))).map((c) => ({ ap, c })),
-  );
-  const canSave = colorsValid && unreadable.length === 0;
+  // Live contrast audit — recomputed on every render, so any colour change updates the warnings
+  // immediately. Low contrast is a WARNING: it never disables Save and never rewrites a colour.
+  const audit = auditTheme(input);
+  const failing = audit.filter((a) => !a.passes);
+  /** Failures for one component, keyed by appearance, so a warning can name light / dark / both. */
+  const failuresFor = (comp: AuditedComponent) => failing.filter((a) => a.component === comp);
+  /** Which components to outline in each preview — recomputed with the audit, so it stays live. */
+  const lowByMode = {
+    light: new Set(failing.filter((a) => a.appearance === "light").map((a) => a.component)),
+    dark: new Set(failing.filter((a) => a.appearance === "dark").map((a) => a.component)),
+  };
+  const canSave = colorsValid;
 
   function setOv(comp: ThemeComponent, key: "bg" | "fg", val: string) {
     setOverrides((prev) => ({ ...prev, [editMode]: { ...(prev[editMode] ?? {}), [comp]: { ...(prev[editMode]?.[comp] ?? {}), [key]: val } } }));
@@ -387,7 +414,8 @@ export function ColorThemePanel({ locale, org }: { locale: Locale; org: Org }) {
       const result = await updateColorThemeAction({ mode, primaryColor: primary, accentColor: accent, gradientFrom, gradientTo, overrides });
       if (result.error) toast.error(result.error);
       else {
-        toast.success(t(locale, "Saved"));
+        // Low contrast is allowed — say so plainly instead of blocking the save.
+        toast.success(t(locale, failing.length ? "Theme saved with contrast warnings." : "Saved"));
         router.refresh(); // re-theme the whole app immediately, no reload needed
       }
     });
@@ -441,8 +469,8 @@ export function ColorThemePanel({ locale, org }: { locale: Locale; org: Org }) {
 
       {/* Light + dark previews, always both visible */}
       <div className="grid sm:grid-cols-2 gap-3">
-        <ModePreview locale={locale} input={input} appearance="light" />
-        <ModePreview locale={locale} input={input} appearance="dark" />
+        <ModePreview locale={locale} input={input} appearance="light" lowContrast={lowByMode.light} />
+        <ModePreview locale={locale} input={input} appearance="dark" lowContrast={lowByMode.dark} />
       </div>
 
       {/* Per-appearance component overrides */}
@@ -469,31 +497,62 @@ export function ColorThemePanel({ locale, org }: { locale: Locale; org: Org }) {
         </div>
 
         <div className="grid sm:grid-cols-2 gap-3">
-          {THEME_COMPONENTS.map((comp) => {
-            const rBg = resolved[comp].bg;
-            const rFg = resolved[comp].fg;
-            const solid = componentBgSolid(input, editMode, comp);
-            const readable = isReadable(rFg, solid);
-            const ov = modeOverrides[comp];
+          {AUDITED_COMPONENTS.map((comp) => {
+            // Sidebar active is painted from the Selected item tokens: it is audited and shown, but
+            // has no controls of its own — editing Selected item is what changes it.
+            const editable = comp !== "sidebarActive";
+            const pair = auditedPair(input, editMode, comp);
+            const rBg = pair.bg;
+            const rFg = pair.fg;
+            const here = componentContrast(input, editMode, comp);
+            const fails = failuresFor(comp);
+            const readable = here.passes;
+            const ov = editable ? modeOverrides[comp as ThemeComponent] : undefined;
             return (
               <div key={comp} className="rounded-xl border border-line p-3 flex flex-col gap-2">
                 <div className="flex items-center justify-between">
                   <span className="text-[12.5px] font-semibold">{t(locale, COMPONENT_LABELS[comp])}</span>
                   <span className="inline-flex items-center gap-2">
                     <span className="inline-flex items-center justify-center rounded px-2 py-0.5 text-[11px] font-semibold" style={{ background: rBg, color: rFg }}>Aa</span>
-                    {readable ? <span className="text-[10.5px] text-success">{t(locale, "Readable")}</span> : <span className="text-[10.5px] text-danger">{t(locale, "Low contrast")}</span>}
+                    <span className={`text-[10.5px] ${readable ? "text-success" : "text-warning"}`}>
+                      {formatRatio(here.ratio)}
+                    </span>
                   </span>
                 </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <MiniColor locale={locale} label="Background" value={ov?.bg} auto={autoBg(comp)} overridden={Boolean(ov?.bg)} onChange={(v) => setOv(comp, "bg", v)} onAuto={() => clearOv(comp, "bg")} />
-                  <MiniColor locale={locale} label="Font" value={ov?.fg} auto={generated[comp].fg} overridden={Boolean(ov?.fg)} onChange={(v) => setOv(comp, "fg", v)} onAuto={() => clearOv(comp, "fg")} />
-                </div>
-                {!readable && (
-                  <div className="flex items-center justify-between gap-2 text-[11px]">
-                    <span className="text-danger">{t(locale, "Font color is hard to read on this background.")}</span>
-                    <button type="button" className="text-brand-orange underline shrink-0" onClick={() => setOv(comp, "fg", suggestReadableFg(solid, rFg))}>
-                      {t(locale, "Fix automatically")}
-                    </button>
+                {editable ? (
+                  <div className="grid grid-cols-2 gap-2">
+                    <MiniColor locale={locale} label="Background" value={ov?.bg} auto={autoBg(comp as ThemeComponent)} overridden={Boolean(ov?.bg)} onChange={(v) => setOv(comp as ThemeComponent, "bg", v)} onAuto={() => clearOv(comp as ThemeComponent, "bg")} />
+                    <MiniColor locale={locale} label="Font" value={ov?.fg} auto={generated[comp as ThemeComponent].fg} overridden={Boolean(ov?.fg)} onChange={(v) => setOv(comp as ThemeComponent, "fg", v)} onAuto={() => clearOv(comp as ThemeComponent, "fg")} />
+                  </div>
+                ) : (
+                  <span className="text-[11px] text-ink-faint">{t(locale, "Follows the Selected item colors.")}</span>
+                )}
+                {fails.length > 0 && (
+                  // Warning, not an error: it explains the measurement and offers a fix the user
+                  // must click. Nothing here changes a colour on its own.
+                  <div className="rounded-lg border border-warning/40 bg-warning/10 p-2 flex flex-col gap-1.5 text-[11px]">
+                    <div className="flex items-start gap-1.5">
+                      <AlertTriangle className="size-3.5 shrink-0 mt-px text-warning" />
+                      <div className="flex flex-col gap-0.5">
+                        <span className="text-warning-ink font-semibold">
+                          {t(locale, "Low contrast in")} {t(locale, modeScopeLabel(fails))}: {formatRatio(Math.min(...fails.map((f) => f.ratio)))}
+                        </span>
+                        <span className="text-ink-muted">
+                          {t(locale, "Recommended minimum:")} {formatRatio(here.required)}
+                        </span>
+                        {here.gradient && (
+                          <span className="text-ink-faint">
+                            {t(locale, "Lowest ratio across the gradient.")}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    {comp !== "sidebarActive" && (
+                      <button type="button" className="self-start text-brand-orange underline"
+                        onClick={() => setOv(comp as ThemeComponent, "fg", suggestReadableFg(componentBgSolid(input, editMode, comp as ThemeComponent), rFg))}>
+                        {t(locale, "Use suggested text color")}
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
@@ -506,9 +565,10 @@ export function ColorThemePanel({ locale, org }: { locale: Locale; org: Org }) {
         <Button onClick={save} disabled={pending || !canSave}>
           {pending ? t(locale, "Saving…") : t(locale, "Save theme")}
         </Button>
-        {unreadable.length > 0 && (
-          <span className="text-[11.5px] text-danger">
-            {t(locale, "Fix the low-contrast colors before saving.")}
+        {failing.length > 0 && (
+          <span className="inline-flex items-center gap-1.5 text-[11.5px] text-warning-ink">
+            <AlertTriangle className="size-3.5 text-warning" />
+            {t(locale, "Some colors are below the recommended contrast. You can still save.")}
           </span>
         )}
       </div>

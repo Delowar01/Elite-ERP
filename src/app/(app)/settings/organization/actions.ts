@@ -10,8 +10,8 @@ import { getProfileByCountryName, profileHasFeature } from "@/lib/geo/country-pr
 import { validateUpload, storeBlob, deleteStoredBlob, IMAGE_MAX_BYTES } from "@/lib/storage/blob-storage";
 import { isValidCurrencyCode } from "@/lib/currency/currencies";
 import {
-  isColorThemeMode, HEX_COLOR, THEME_COMPONENTS, APPEARANCES, generateComponentColors, isReadable,
-  suggestReadableFg, normalizeOverrides, brandForAppearance,
+  isColorThemeMode, HEX_COLOR, THEME_COMPONENTS, APPEARANCES,
+  normalizeOverrides,
   type ThemeOverrides, type ThemeOverridesByMode, type Appearance,
 } from "@/lib/brand-theme";
 
@@ -72,24 +72,14 @@ export async function updateColorThemeAction(payload: {
   // Validate + persist every main color so all four are kept regardless of the active mode.
   if (!cols.every((c) => HEX_COLOR.test(c))) return { error: "Colors must be valid hex codes (e.g. #1B1B4E)." };
 
-  // Sanitize manual overrides: keep only valid hex; never persist an unreadable font color — replace
-  // it with a readable one derived from its (effective) background. This is the server-side safety
-  // net behind the panel's live contrast warnings, so unreadable text can never be saved.
-  const themeInput = {
-    mode: payload.mode,
-    primaryColor: payload.primaryColor,
-    accentColor: payload.accentColor,
-    gradientFrom: payload.gradientFrom,
-    gradientTo: payload.gradientTo,
-  };
+  // Sanitize manual overrides: keep only valid hex. Low contrast is a WARNING, never a blocker —
+  // the panel shows the measured ratio and the recommended minimum, and the org's chosen colours are
+  // persisted exactly as picked. Nothing here silently substitutes a different colour.
   // Clean each appearance INDEPENDENTLY: a light-mode override never touches the dark-mode value
-  // (and vice versa). An unreadable font colour is replaced with a readable one derived from its own
-  // mode's effective background — the server-side net behind the panel's live contrast warnings.
+  // (and vice versa).
   const incoming = normalizeOverrides(payload.overrides ?? null);
   const cleanedByMode: ThemeOverridesByMode = {};
   for (const appearance of APPEARANCES as Appearance[]) {
-    const generated = generateComponentColors(themeInput, appearance);
-    const brand = brandForAppearance(themeInput, appearance);
     const src = incoming[appearance] ?? {};
     const cleaned: ThemeOverrides = {};
     for (const c of THEME_COMPONENTS) {
@@ -97,12 +87,8 @@ export async function updateColorThemeAction(payload: {
       if (!o) continue;
       const entry: { bg?: string; fg?: string } = {};
       if (o.bg && HEX_COLOR.test(o.bg)) entry.bg = o.bg;
-      if (o.fg && HEX_COLOR.test(o.fg)) {
-        const effectiveBg = entry.bg ?? generated[c].bg;
-        // A gradient bg (primary button) isn't a single hex — check against its solid stop.
-        const bgSolid = HEX_COLOR.test(effectiveBg) ? effectiveBg : brand.primarySolid;
-        entry.fg = isReadable(o.fg, bgSolid) ? o.fg : suggestReadableFg(bgSolid, o.fg);
-      }
+      // Saved exactly as chosen, even when the contrast is low — the user was warned and decided.
+      if (o.fg && HEX_COLOR.test(o.fg)) entry.fg = o.fg;
       if (entry.bg || entry.fg) cleaned[c] = entry;
     }
     if (Object.keys(cleaned).length) cleanedByMode[appearance] = cleaned;

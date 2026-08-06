@@ -28,7 +28,12 @@ export const DEFAULT_GRADIENT_FROM = "#F5A25C"; // Elite gradient start (light o
 export const DEFAULT_GRADIENT_TO = "#E87722"; // Elite gradient end (orange)
 export const HEX_COLOR = /^#([0-9a-fA-F]{6})$/;
 export const INK = "#17173f";
-export const CONTRAST_AA = 4.5; // WCAG AA, normal text
+import {
+  contrast, contrastOverGradient, parseColor, relativeLuminance, meets, isGradient,
+  CONTRAST_NORMAL_TEXT, CONTRAST_LARGE_TEXT, formatRatio,
+} from "./contrast";
+
+export const CONTRAST_AA = CONTRAST_NORMAL_TEXT; // WCAG AA, normal text
 export const CONTRAST_UI = 3; // WCAG AA, large text / UI components
 
 export const THEME_COMPONENTS = ["primaryButton", "accentButton", "activeTab", "selectedItem", "badge"] as const;
@@ -71,17 +76,17 @@ function toHex(n: number): string {
 function rgbHex(r: number, g: number, b: number): string {
   return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
 }
+/** Relative luminance of a hex colour (kept for the internal generators). */
 function luminance(hex: string): number {
-  const lin = channels(hex).map((v) => {
-    const s = v / 255;
-    return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
-  });
-  return 0.2126 * lin[0] + 0.7152 * lin[1] + 0.0722 * lin[2];
+  const c = parseColor(hex) ?? { r: 0, g: 0, b: 0, a: 1 };
+  return relativeLuminance(c);
 }
+/**
+ * WCAG contrast between two colours. Delegates to the shared utility, so HEX, rgb(a), hsl(a) and
+ * `var(--token)` all measure the colour actually rendered rather than falling back to black.
+ */
 export function contrastRatio(a: string, b: string): number {
-  const la = luminance(safe(a, "#000000")), lb = luminance(safe(b, "#ffffff"));
-  const hi = Math.max(la, lb), lo = Math.min(la, lb);
-  return (hi + 0.05) / (lo + 0.05);
+  return contrast(a, b);
 }
 /** Mix two hex colors (t = 0..1 toward `b`). */
 export function mixHex(a: string, b: string, t: number): string {
@@ -159,7 +164,8 @@ export function suggestReadableFg(bg: string, preferred?: string, target = CONTR
   return readableForeground(b);
 }
 export function isReadable(fg: string, bg: string, target = CONTRAST_AA): boolean {
-  return contrastRatio(safe(fg, INK), safe(bg, "#ffffff")) >= target;
+  // Gradients are judged by their worst sample — see contrastOverGradient.
+  return meets(contrastOverGradient(fg, bg).ratio, target);
 }
 
 // ---- generation -----------------------------------------------------------
@@ -371,3 +377,74 @@ export function buildThemeOverrideCss(input: ThemeInput): string {
     `}`,
   ].join("\n");
 }
+
+// ---- contrast audit -------------------------------------------------------
+// What the Color Theme panel shows. Every figure is measured from the colours the preview actually
+// paints: manual overrides where the org set them, generated values everywhere else, gradients
+// sampled across their sweep, and light/dark evaluated independently.
+
+/** Everything audited in one appearance. `sidebarActive` mirrors the sidebar's real token pair. */
+export const AUDITED_COMPONENTS = [...THEME_COMPONENTS, "sidebarActive"] as const;
+export type AuditedComponent = (typeof AUDITED_COMPONENTS)[number];
+
+export type ComponentContrast = {
+  component: AuditedComponent;
+  appearance: Appearance;
+  /** Background as declared — may be a gradient. */
+  bg: string;
+  fg: string;
+  /** Lowest ratio across the background (all gradient samples). */
+  ratio: number;
+  /** Every sampled ratio, start → end. One entry for a solid background. */
+  samples: number[];
+  /** Minimum this pair must reach (4.5 normal text). */
+  required: number;
+  passes: boolean;
+  /** Component background against the page surface — WCAG 1.4.11 non-text contrast, 3:1. */
+  boundaryRatio: number;
+  boundaryRequired: number;
+  boundaryPasses: boolean;
+  /** True when the background is a gradient and was sampled across its stops. */
+  gradient: boolean;
+};
+
+/** The declared background/foreground of one audited component in one appearance. */
+export function auditedPair(input: ThemeInput, appearance: Appearance, comp: AuditedComponent): ComponentColor {
+  if (comp === "sidebarActive") {
+    // The sidebar's active pill is painted from the Selected item tokens — audit what it renders.
+    const sel = resolveComponentColors(input, appearance).selectedItem;
+    return { bg: sel.bg, fg: sel.fg };
+  }
+  return resolveComponentColors(input, appearance)[comp];
+}
+
+/** Measure one component in one appearance. */
+export function componentContrast(input: ThemeInput, appearance: Appearance, comp: AuditedComponent): ComponentContrast {
+  const { bg, fg } = auditedPair(input, appearance, comp);
+  const surface = NEUTRALS[appearance].surface;
+  // Translucent component backgrounds are composited over the page surface before measuring.
+  const g = contrastOverGradient(fg, bg, { surface });
+  const boundary = contrastOverGradient(bg, surface, { surface });
+  return {
+    component: comp,
+    appearance,
+    bg,
+    fg,
+    ratio: g.ratio,
+    samples: g.samples,
+    required: CONTRAST_NORMAL_TEXT,
+    passes: meets(g.ratio, CONTRAST_NORMAL_TEXT),
+    boundaryRatio: boundary.ratio,
+    boundaryRequired: CONTRAST_LARGE_TEXT,
+    boundaryPasses: meets(boundary.ratio, CONTRAST_LARGE_TEXT),
+    gradient: isGradient(bg),
+  };
+}
+
+/** Every component in both appearances — light and dark are computed independently. */
+export function auditTheme(input: ThemeInput): ComponentContrast[] {
+  return APPEARANCES.flatMap((ap) => AUDITED_COMPONENTS.map((c) => componentContrast(input, ap, c)));
+}
+
+/** Ratio formatted the way the warning shows it ("2.4:1"). */
+export { formatRatio };

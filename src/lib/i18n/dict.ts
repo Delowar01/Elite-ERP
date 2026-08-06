@@ -1218,6 +1218,18 @@ const DICT: Record<string, string> = {
   "Will be created": "سيتم إنشاؤها",
   "Invalid": "غير صالحة",
   "Line items to create:": "البنود المراد إنشاؤها:",
+  // Color Theme contrast warnings
+  "Low contrast in": "تباين منخفض في",
+  "Recommended minimum:": "الحد الأدنى الموصى به:",
+  "Lowest ratio across the gradient.": "أقل نسبة على امتداد التدرج.",
+  "Use suggested text color": "استخدام لون النص المقترح",
+  "Some colors are below the recommended contrast. You can still save.": "بعض الألوان أقل من التباين الموصى به. يمكنك الحفظ مع ذلك.",
+  "Theme saved with contrast warnings.": "تم حفظ السمة مع تحذيرات التباين.",
+  "Light Mode": "الوضع الفاتح",
+  "Dark Mode": "الوضع الداكن",
+  "Light and Dark Mode": "الوضعين الفاتح والداكن",
+  "Sidebar active item": "العنصر النشط في الشريط الجانبي",
+  "Follows the Selected item colors.": "يتبع ألوان العنصر المحدد.",
   // Client / Vendor statements
   "Client & Vendor Statements": "كشوف حساب العملاء والموردين",
   "Statement of Account": "كشف الحساب",
