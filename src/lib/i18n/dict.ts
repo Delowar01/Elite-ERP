@@ -757,6 +757,7 @@ const DICT: Record<string, string> = {
   "Total Expenses": "إجمالي المصروفات",
   "Total Profit": "إجمالي الربح",
   "Quick Actions": "إجراءات سريعة",
+  "Add Journal": "إضافة قيد",
   "Add Expense": "إضافة مصروف",
   "Bank Transaction": "معاملة بنكية",
   "New Purchase Order": "أمر شراء جديد",

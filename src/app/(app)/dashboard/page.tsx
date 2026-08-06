@@ -1,5 +1,5 @@
 import { Fragment } from "react";
-import { ShoppingCart, FileText, Wallet, CreditCard, ChevronRight, FileSignature, Building2, UserPlus, Shield, Lock, TrendingUp, RefreshCw, Link2 } from "lucide-react";
+import { ShoppingCart, FileText, Wallet, CreditCard, BookOpen, ChevronRight, FileSignature, Building2, UserPlus, Shield, Lock, TrendingUp, RefreshCw, Link2 } from "lucide-react";
 import Link from "next/link";
 import { requireSession } from "@/lib/session";
 import { getLocale } from "@/lib/i18n/server";
@@ -58,7 +58,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const quickActions: { icon: React.ReactNode; label: string; href?: string }[] = [
     { icon: <FileSignature className="size-4" />, label: "Create Invoice", href: "/sales/invoices/new" },
     { icon: <FileText className="size-4" />, label: "Create Quotation", href: "/sales/quotations/new" },
-    { icon: <CreditCard className="size-4" />, label: "Add Expense" },
+    { icon: <BookOpen className="size-4" />, label: "Add Journal", href: "/finance/journal" },
     { icon: <Building2 className="size-4" />, label: "Bank Transaction", href: "/finance/journal" },
     { icon: <ShoppingCart className="size-4" />, label: "New Purchase Order", href: "/purchasing/orders/new" },
     { icon: <UserPlus className="size-4" />, label: "Add Employee", href: "/hr/employees/new" },
