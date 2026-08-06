@@ -13,6 +13,8 @@ import { Badge } from "@/components/ui/badge";
 import { ClientForm } from "../client-form";
 import { updateClientAction } from "../actions";
 import { ClientRecordActions } from "../client-record-actions";
+import { StatementView } from "../../finance/statements/statement-view";
+import { getStatement, presetRange } from "@/lib/statements";
 import { Money } from "../../sales/_shared/money";
 
 export default async function ClientDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -43,6 +45,9 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
     .from(salesInvoicesTable)
     .where(and(eq(salesInvoicesTable.customerId, clientId), eq(salesInvoicesTable.orgId, session.orgId)))
     .orderBy(salesInvoicesTable.issueDate);
+
+  const stmtRange = presetRange("this_year")!;
+  const clientStatement = await getStatement(session.orgId, "client", client.id, stmtRange);
 
   return (
     <div className="max-w-6xl mx-auto">
@@ -98,6 +103,12 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
           </CardContent>
         </Card>
         </div>
+      </div>
+
+      {/* Statement of account for this client — same component the central statement page uses. */}
+      <div className="mt-6">
+        <div className="main-head"><h3>{t(locale, "Statement of Account")}</h3></div>
+        <StatementView locale={locale} kind="client" partyId={client.id} compact initial={clientStatement} />
       </div>
     </div>
   );

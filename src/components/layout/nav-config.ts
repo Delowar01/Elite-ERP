@@ -86,6 +86,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: "Account Ledger", href: "/finance/ledger", icon: ScrollText },
       { label: "Account Reporting", href: "/finance/reports", icon: BarChart3 },
       { label: "Payment Records", href: "/finance/payments", icon: Wallet },
+      { label: "Client & Vendor Statements", href: "/finance/statements", icon: FileText },
     ],
   },
   {

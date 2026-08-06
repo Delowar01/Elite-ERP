@@ -3,6 +3,8 @@ import Link from "next/link";
 import { and, eq } from "drizzle-orm";
 import { db, vendorsTable, purchaseOrdersTable, orgsTable } from "@/db";
 import { requireSession } from "@/lib/session";
+import { getLocale } from "@/lib/i18n/server";
+import { t } from "@/lib/i18n/dict";
 import { getProfileByCountryName, resolveTaxLabels } from "@/lib/geo/country-profiles";
 import { tenantScope } from "@/lib/tenant";
 import { PageHeader } from "@/components/layout/page-header";
@@ -11,10 +13,13 @@ import { Badge } from "@/components/ui/badge";
 import { VendorForm } from "../vendor-form";
 import { updateVendorAction } from "../actions";
 import { VendorRecordActions } from "../vendor-record-actions";
+import { StatementView } from "../../../finance/statements/statement-view";
+import { getStatement, presetRange } from "@/lib/statements";
 import { Money } from "../../../sales/_shared/money";
 
 export default async function VendorDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await requireSession();
+  const locale = await getLocale();
   const { id } = await params;
   const vendorId = Number(id);
   if (!Number.isInteger(vendorId)) notFound();
@@ -38,6 +43,9 @@ export default async function VendorDetailPage({ params }: { params: Promise<{ i
     .from(purchaseOrdersTable)
     .where(and(eq(purchaseOrdersTable.vendorId, vendorId), eq(purchaseOrdersTable.orgId, session.orgId)))
     .orderBy(purchaseOrdersTable.orderDate);
+
+  const stmtRange = presetRange("this_year")!;
+  const vendorStatement = await getStatement(session.orgId, "vendor", vendor.id, stmtRange);
 
   return (
     <div className="max-w-6xl mx-auto">
@@ -83,6 +91,12 @@ export default async function VendorDetailPage({ params }: { params: Promise<{ i
             )}
           </CardContent>
         </Card>
+      </div>
+
+      {/* Statement of account for this vendor — same component the central statement page uses. */}
+      <div className="mt-6">
+        <div className="main-head"><h3>{t(locale, "Statement of Account")}</h3></div>
+        <StatementView locale={locale} kind="vendor" partyId={vendor.id} compact initial={vendorStatement} />
       </div>
     </div>
   );
