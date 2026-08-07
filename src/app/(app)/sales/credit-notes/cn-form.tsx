@@ -22,7 +22,7 @@ import type { ContentPreset } from "@/lib/document-presets";
 import { Money } from "../_shared/money";
 import { computeTotals } from "../_shared/totals";
 import { t, type Locale } from "@/lib/i18n/dict";
-import { useFormDirty, useLeaveWarning } from "../../_shared/unsaved-changes";
+import { useDirtyForm } from "../../_shared/dirty-form";
 import { getProfileByCountryName } from "@/lib/geo/country-profiles";
 import type { Product, Org } from "@/db";
 import { createCreditNoteAction, updateCreditNoteAction } from "./actions";
@@ -100,16 +100,25 @@ export function CnForm({
     bankAccounts: snapshotSelectedBankAccounts(bankAccountIds, bankAccounts),
   };
 
-  // Warn before the tab is closed or reloaded with unsaved work (only when it really changed).
-  useLeaveWarning(useFormDirty({ reason, items }));
+  // Everything that counts as this document's content. Leaving a field out would leave it
+  // unprotected, so line items, terms, notes, attachments, bank accounts and the seal are all in.
+
+  const dirtyForm = useDirtyForm({ sourceInvoiceId, issueDate, reason, terms, items, bankAccountIds });
 
   function submit(andIssue: boolean) {
     const start = andIssue ? startPrimaryTransition : startDraftTransition;
     start(async () => {
+      // Clean BEFORE the call: a successful save redirects from the server and never returns,
+      // so marking clean afterwards would be too late and the user would be asked to discard
+      // exactly what they just saved. A failure below puts the dirty state back.
+      dirtyForm.markClean();
       const result = isEdit && documentId
         ? await updateCreditNoteAction(documentId, { reason, items, terms, bankAccountIds })
         : await createCreditNoteAction({ title: "", sourceInvoiceId, reason, items, terms, bankAccountIds }, andIssue);
-      if (result?.error) toast.error(result.error);
+      if (result?.error) {
+        dirtyForm.restoreDirty();
+        toast.error(result.error);
+      }
     });
   }
 

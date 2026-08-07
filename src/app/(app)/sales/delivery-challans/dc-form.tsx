@@ -19,7 +19,7 @@ import { DocumentTermsEditor } from "../_shared/terms-editor";
 import type { DocumentTerm } from "../_shared/document-terms";
 import type { ContentPreset } from "@/lib/document-presets";
 import { t, type Locale } from "@/lib/i18n/dict";
-import { useFormDirty, useLeaveWarning } from "../../_shared/unsaved-changes";
+import { useDirtyForm } from "../../_shared/dirty-form";
 import { getProfileByCountryName } from "@/lib/geo/country-profiles";
 import type { Customer, Product, Org } from "@/db";
 import { createDeliveryChallanAction, updateDeliveryChallanAction } from "./actions";
@@ -93,17 +93,26 @@ export function DcForm({
     bankAccounts: snapshotSelectedBankAccounts(bankAccountIds, bankAccounts),
   };
 
-  // Warn before the tab is closed or reloaded with unsaved work (only when it really changed).
-  useLeaveWarning(useFormDirty({ customerId, items }));
+  // Everything that counts as this document's content. Leaving a field out would leave it
+  // unprotected, so line items, terms, notes, attachments, bank accounts and the seal are all in.
+
+  const dirtyForm = useDirtyForm({ customerId, dispatchDate, carrier, vehicleNo, terms, items, bankAccountIds });
 
   function submit(andDispatch: boolean) {
     const start = andDispatch ? startPrimaryTransition : startDraftTransition;
     start(async () => {
+      // Clean BEFORE the call: a successful save redirects from the server and never returns,
+      // so marking clean afterwards would be too late and the user would be asked to discard
+      // exactly what they just saved. A failure below puts the dirty state back.
+      dirtyForm.markClean();
       const payload = { customerId, dispatchDate, carrier, vehicleNo, items, terms, bankAccountIds };
       const result = isEdit && documentId
         ? await updateDeliveryChallanAction(documentId, payload)
         : await createDeliveryChallanAction({ title: "", ...payload }, andDispatch);
-      if (result?.error) toast.error(result.error);
+      if (result?.error) {
+        dirtyForm.restoreDirty();
+        toast.error(result.error);
+      }
     });
   }
 

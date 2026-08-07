@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { useDirtyFormFields } from "../../_shared/dirty-form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { FormField } from "@/components/ui/form-field";
@@ -17,9 +18,11 @@ export function ProductForm({
   submitLabel?: string;
 }) {
   const [state, formAction, pending] = useActionState(action, undefined);
+  // Unsaved-changes protection, shared with every other form in the app.
+  const { ref: dirtyRef, form: dirtyForm } = useDirtyFormFields();
 
   return (
-    <form action={formAction} className="flex flex-col gap-5 max-w-xl">
+    <form ref={dirtyRef} action={formAction} onSubmit={() => dirtyForm.markClean()} className="flex flex-col gap-5 max-w-xl">
       <div className="grid grid-cols-2 gap-4">
         <FormField label="SKU" htmlFor="sku">
           <Input id="sku" name="sku" required defaultValue={product?.sku} placeholder="SKU-00482" />

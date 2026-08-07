@@ -27,7 +27,7 @@ import { docMoneyMark } from "../../sales/_shared/doc-currency";
 import { ConfigureColumnsDialog } from "../../sales/_shared/configure-columns-dialog";
 import { resolveColumns, type ColumnDef } from "@/lib/column-config";
 import { t, type Locale } from "@/lib/i18n/dict";
-import { useFormDirty, useLeaveWarning } from "../../_shared/unsaved-changes";
+import { useDirtyForm } from "../../_shared/dirty-form";
 import { getProfileByCountryName } from "@/lib/geo/country-profiles";
 import type { ContentPreset } from "@/lib/document-presets";
 import type { Vendor, Product, Org } from "@/db";
@@ -123,19 +123,28 @@ export function PoForm({
   const totals = computeTotals(items, discount);
   const selectedVendor = vendors.find((v) => String(v.id) === vendorId);
 
-  // Warn before the tab is closed or reloaded with unsaved work (only when it really changed).
-  useLeaveWarning(useFormDirty({ title, vendorId, notes, terms, items }));
+  // Everything that counts as this document's content. Leaving a field out would leave it
+  // unprotected, so line items, terms, notes, attachments, bank accounts and the seal are all in.
+
+  const dirtyForm = useDirtyForm({ title, vendorId, projectId, orderDate, expectedDate, discount, notes, terms, items, attachments, bankAccountIds, currency, sealOverride, signatureOverride });
 
   function submit(andSend: boolean) {
     const start = andSend ? startPrimaryTransition : startDraftTransition;
     start(async () => {
+      // Clean BEFORE the call: a successful save redirects from the server and never returns,
+      // so marking clean afterwards would be too late and the user would be asked to discard
+      // exactly what they just saved. A failure below puts the dirty state back.
+      dirtyForm.markClean();
       const result = isEdit && documentId
         ? await updatePurchaseOrderAction(documentId, { title, vendorId, projectId, orderDate, expectedDate, discount, notes, terms, items, attachments, bankAccountIds, currency, sealUrl: sealOverride, signatureUrl: signatureOverride })
         : await createPurchaseOrderAction(
             { title, vendorId, projectId, orderDate, expectedDate, discount, notes, items, attachments, sourceQuotationId, sourceSalesOrderId, sourceProformaId, sourceInvoiceId, bankAccountIds, currency, sealUrl: sealOverride, signatureUrl: signatureOverride },
             andSend,
           );
-      if (result?.error) toast.error(result.error);
+      if (result?.error) {
+        dirtyForm.restoreDirty();
+        toast.error(result.error);
+      }
     });
   }
 

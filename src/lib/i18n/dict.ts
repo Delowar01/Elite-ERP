@@ -1713,6 +1713,8 @@ const DICT: Record<string, string> = {
   "against Invoice": "مقابل الفاتورة",
   "against Purchase Order": "مقابل أمر الشراء",
   "against Proforma Invoice": "مقابل الفاتورة المبدئية",
+  "You have changes that have not been saved. If you leave this page, those changes will be lost.":
+    "لديك تغييرات لم يتم حفظها. إذا غادرت هذه الصفحة فستفقد تلك التغييرات.",
 };
 
 export function t(locale: Locale, en: string): string {

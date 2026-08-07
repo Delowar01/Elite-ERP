@@ -178,7 +178,7 @@ export function ConfirmProvider({ locale, children }: { locale: Locale; children
           <DialogFooter>
             {/* Cancel is first and takes initial focus: the safe option, never the destructive one. */}
             <Button variant="ghost" onClick={close} disabled={busy} autoFocus>
-              {t(locale, "Cancel")}
+              {content?.cancelLabel ?? t(locale, "Cancel")}
             </Button>
             <Button variant={destructive ? "destructive" : "primary"} onClick={run} disabled={busy} aria-busy={busy}>
               {busy ? t(locale, "Working…") : content?.confirmLabel}

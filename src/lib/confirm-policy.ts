@@ -50,6 +50,8 @@ export const SENSITIVE_ACTIONS = [
   // --- data in bulk ---------------------------------------------------------------------------
   "import.commit",
   "view.delete",
+  // --- leaving a form with unsaved work ------------------------------------------------------
+  "navigation.discardUnsavedChanges",
 ] as const;
 
 export type SensitiveActionKind = (typeof SENSITIVE_ACTIONS)[number];
@@ -62,6 +64,10 @@ type PolicyEntry = {
   consequence: string;
   /** True when the action cannot be undone — the dialog says so explicitly. */
   irreversible?: boolean;
+  /** Fixed title, for actions that are not "verb + record" shaped. */
+  title?: string;
+  /** i18n key overriding the default "Cancel" on the safe button. */
+  cancelVerb?: string;
 };
 
 const POLICY: Record<SensitiveActionKind, PolicyEntry> = {
@@ -199,6 +205,16 @@ const POLICY: Record<SensitiveActionKind, PolicyEntry> = {
     consequence: "This saved view will be removed. No documents are affected.",
     irreversible: true,
   },
+
+  // Not about a record's consequence — about losing typing. Kept in the same registry so the app
+  // has exactly one confirmation system, with its own fixed title (see `title` below).
+  "navigation.discardUnsavedChanges": {
+    severity: "warning",
+    verb: "Discard Changes",
+    consequence: "You have changes that have not been saved. If you leave this page, those changes will be lost.",
+    title: "Discard unsaved changes?",
+    cancelVerb: "Keep Editing",
+  },
 };
 
 /**
@@ -237,6 +253,8 @@ export type ConfirmContent = {
   title: string;
   description: string;
   confirmLabel: string;
+  /** Label for the safe button — "Cancel" unless the policy names something better. */
+  cancelLabel: string;
   severity: ConfirmSeverity;
   irreversible: boolean;
 };
@@ -254,8 +272,13 @@ export function buildConfirmContent(locale: Locale, input: ConfirmContentInput):
     .join(" ")
     .trim();
 
-  // "Void Sales Invoice INV-000123?" — or "Void this document?" when there is nothing to name.
-  const title = subject ? `${verb} ${subject}?` : `${verb} ${t(locale, "this record")}?`;
+  // "Void Sales Invoice INV-000123?" — or "Void this record?" when there is nothing to name.
+  // A policy with a fixed title (e.g. discarding unsaved changes) uses that instead.
+  const title = entry.title
+    ? t(locale, entry.title)
+    : subject
+      ? `${verb} ${subject}?`
+      : `${verb} ${t(locale, "this record")}?`;
 
   const consequence = t(locale, input.consequence ?? entry.consequence);
   const description = entry.irreversible
@@ -266,6 +289,7 @@ export function buildConfirmContent(locale: Locale, input: ConfirmContentInput):
     title,
     description,
     confirmLabel: verb,
+    cancelLabel: t(locale, entry.cancelVerb ?? "Cancel"),
     severity: entry.severity,
     irreversible: Boolean(entry.irreversible),
   };

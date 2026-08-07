@@ -7,6 +7,7 @@ import { getFavorites } from "@/lib/favorites";
 import { AppShell } from "@/components/layout/app-shell";
 import { CurrencyProvider } from "@/components/ui/currency-mark";
 import { ConfirmProvider } from "./_shared/confirm-provider";
+import { DirtyFormProvider } from "./_shared/dirty-form";
 import { buildMoneyMark } from "@/lib/currency/currencies";
 import "./mockup-parity.css";
 
@@ -46,8 +47,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           roundRates: session.orgRoundRates,
         })}
       >
-        {/* One confirmation dialog for every sensitive action in the app (see confirm-policy.ts). */}
-        <ConfirmProvider locale={locale}>{children}</ConfirmProvider>
+        {/* One confirmation dialog for every sensitive action in the app (see confirm-policy.ts),
+            with unsaved-changes protection layered on top of it — same dialog, one more policy. */}
+        <ConfirmProvider locale={locale}>
+          <DirtyFormProvider>{children}</DirtyFormProvider>
+        </ConfirmProvider>
       </CurrencyProvider>
     </AppShell>
   );

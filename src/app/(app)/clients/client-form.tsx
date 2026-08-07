@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
+import { useDirtyFormFields } from "../_shared/dirty-form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { FormField } from "@/components/ui/form-field";
@@ -42,6 +43,8 @@ export function ClientForm({
   onDirty?: () => void;
 }) {
   const [state, formAction, pending] = useActionState(action, undefined);
+  // Unsaved-changes protection, shared with every other form in the app.
+  const { ref: dirtyRef, form: dirtyForm } = useDirtyFormFields();
   const [clientType, setClientType] = useState<ClientType>((client?.clientType as ClientType) ?? "individual");
   // Auto-select flow: the inline create action returns the created client on success.
   useEffect(() => {
@@ -66,7 +69,7 @@ export function ClientForm({
   const nameLabel = clientType === "company" ? "Business Name" : "Name";
 
   return (
-    <form action={formAction} onInput={onDirty} className={inDialog ? "flex flex-col gap-5" : "flex flex-col gap-5 max-w-2xl"}>
+    <form ref={dirtyRef} action={formAction} onInput={onDirty} onSubmit={() => dirtyForm.markClean()} className={inDialog ? "flex flex-col gap-5" : "flex flex-col gap-5 max-w-2xl"}>
       {/* Hidden inputs carry the controlled Client Type + structured address into the form submit. */}
       <input type="hidden" name="clientType" value={clientType} />
       <input type="hidden" name="countryCode" value={address.countryCode} />

@@ -13,6 +13,7 @@ import { t, type Locale } from "@/lib/i18n/dict";
 import type { Account } from "@/db";
 import { postJournalEntryAction } from "./actions";
 import { useConfirm } from "../../_shared/confirm-provider";
+import { useDirtyForm } from "../../_shared/dirty-form";
 
 type Line = { accountId: string; memo: string; debit: string; credit: string };
 
@@ -31,6 +32,8 @@ export function JournalForm({ locale, accounts, projects = [] }: { locale: Local
   const [lines, setLines] = useState<Line[]>([emptyLine(), emptyLine()]);
   const [pending, startTransition] = useTransition();
   const confirm = useConfirm();
+  // Same shared protection the document builders use — an unposted entry is unsaved work.
+  const dirtyForm = useDirtyForm({ entryDate, memo, projectId, lines });
 
   const totalDebit = lines.reduce((sum, l) => sum + (Number(l.debit) || 0), 0);
   const totalCredit = lines.reduce((sum, l) => sum + (Number(l.credit) || 0), 0);
@@ -79,6 +82,7 @@ export function JournalForm({ locale, accounts, projects = [] }: { locale: Local
         setMemo("");
         setProjectId("");
         setLines([emptyLine(), emptyLine()]);
+        dirtyForm.markClean();
         resolve();
       });
     });
