@@ -17,9 +17,16 @@ type Line = { accountId: string; memo: string; debit: string; credit: string };
 
 const emptyLine = (): Line => ({ accountId: "", memo: "", debit: "", credit: "" });
 
-export function JournalForm({ locale, accounts }: { locale: Locale; accounts: Account[] }) {
+// Radix Select has no empty-string item, so "no project" gets an explicit sentinel that lets the
+// user clear a project they picked by mistake.
+const NO_PROJECT = "__none__";
+
+export function JournalForm({ locale, accounts, projects = [] }: { locale: Locale; accounts: Account[]; projects?: { id: number; name: string }[] }) {
   const [entryDate, setEntryDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [memo, setMemo] = useState("");
+  // Optional project tag. Only manual entries carry one — a document-sourced entry inherits its
+  // project from the source document, so tagging both would double-count in Project Cost Control.
+  const [projectId, setProjectId] = useState("");
   const [lines, setLines] = useState<Line[]>([emptyLine(), emptyLine()]);
   const [pending, startTransition] = useTransition();
 
@@ -42,12 +49,14 @@ export function JournalForm({ locale, accounts }: { locale: Locale; accounts: Ac
       const result = await postJournalEntryAction({
         entryDate,
         memo,
+        projectId: projectId && projectId !== NO_PROJECT ? projectId : undefined,
         lines: filledLines.map((l) => ({ accountId: Number(l.accountId), memo: l.memo, debit: l.debit || "0", credit: l.credit || "0" })),
       });
       if (result.error) toast.error(result.error);
       else {
         toast.success(t(locale, "Saved"));
         setMemo("");
+        setProjectId("");
         setLines([emptyLine(), emptyLine()]);
       }
     });
@@ -55,7 +64,7 @@ export function JournalForm({ locale, accounts }: { locale: Locale; accounts: Ac
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-4 gap-4">
         <FormField label={t(locale, "Entry Date")} htmlFor="je-date">
           <Input id="je-date" type="date" value={entryDate} onChange={(e) => setEntryDate(e.target.value)} />
         </FormField>
@@ -64,6 +73,21 @@ export function JournalForm({ locale, accounts }: { locale: Locale; accounts: Ac
             <Input id="je-memo" value={memo} onChange={(e) => setMemo(e.target.value)} placeholder="e.g. Owner capital injection" />
           </FormField>
         </div>
+        <FormField label={t(locale, "Project")} htmlFor="je-project">
+          <Select value={projectId} onValueChange={setProjectId}>
+            <SelectTrigger id="je-project">
+              <SelectValue placeholder={t(locale, "No project")} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={NO_PROJECT}>{t(locale, "No project")}</SelectItem>
+              {projects.map((p) => (
+                <SelectItem key={p.id} value={String(p.id)}>
+                  {p.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </FormField>
       </div>
 
       <Table className="line-table">

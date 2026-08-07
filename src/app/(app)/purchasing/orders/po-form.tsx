@@ -35,6 +35,7 @@ import { createPurchaseOrderAction, updatePurchaseOrderAction } from "./actions"
 export type PoFormInitial = {
   title: string;
   vendorId: string;
+  projectId?: string;
   orderDate: string;
   expectedDate: string;
   discount: string;
@@ -51,6 +52,7 @@ export function PoForm({
   products,
   org,
   numberPreview,
+  projects = [],
   initialTitle,
   initialItems,
   sourceQuotationId,
@@ -74,6 +76,7 @@ export function PoForm({
   products: Product[];
   org: Org;
   numberPreview: string;
+  projects?: { id: number; name: string }[];
   initialTitle?: string;
   initialItems?: LineItemDraft[];
   sourceQuotationId?: string;
@@ -94,6 +97,7 @@ export function PoForm({
   const [columns, setColumns] = useState<ColumnDef[]>(columnConfig ?? resolveColumns(null));
   const [title, setTitle] = useState(initial?.title ?? initialTitle ?? "");
   const [vendorId, setVendorId] = useState(initial?.vendorId ?? "");
+  const [projectId, setProjectId] = useState(initial?.projectId ?? "");
   const [orderDate, setOrderDate] = useState(initial?.orderDate ?? new Date().toISOString().slice(0, 10));
   const [expectedDate, setExpectedDate] = useState(initial?.expectedDate ?? "");
   const [discount, setDiscount] = useState(initial?.discount ?? "0");
@@ -122,9 +126,9 @@ export function PoForm({
     const start = andSend ? startPrimaryTransition : startDraftTransition;
     start(async () => {
       const result = isEdit && documentId
-        ? await updatePurchaseOrderAction(documentId, { title, vendorId, orderDate, expectedDate, discount, notes, terms, items, attachments, bankAccountIds, currency, sealUrl: sealOverride, signatureUrl: signatureOverride })
+        ? await updatePurchaseOrderAction(documentId, { title, vendorId, projectId, orderDate, expectedDate, discount, notes, terms, items, attachments, bankAccountIds, currency, sealUrl: sealOverride, signatureUrl: signatureOverride })
         : await createPurchaseOrderAction(
-            { title, vendorId, orderDate, expectedDate, discount, notes, items, attachments, sourceQuotationId, sourceSalesOrderId, sourceProformaId, sourceInvoiceId, bankAccountIds, currency, sealUrl: sealOverride, signatureUrl: signatureOverride },
+            { title, vendorId, projectId, orderDate, expectedDate, discount, notes, items, attachments, sourceQuotationId, sourceSalesOrderId, sourceProformaId, sourceInvoiceId, bankAccountIds, currency, sealUrl: sealOverride, signatureUrl: signatureOverride },
             andSend,
           );
       if (result?.error) toast.error(result.error);
@@ -194,7 +198,18 @@ export function PoForm({
             >
               <input type="date" value={expectedDate} onChange={(e) => setExpectedDate(e.target.value)} className="w-full bg-transparent outline-none" />
             </DocFieldBox>
-            <div />
+            {/* Optional project tag — same field the sales-side builders already offer. It is what
+                attributes this order's cost to a project in Project Cost Control. */}
+            <DocFieldBox label={t(locale, "Project")}>
+              <select value={projectId} onChange={(e) => setProjectId(e.target.value)} className="w-full bg-transparent outline-none">
+                <option value="">—</option>
+                {projects.map((p) => (
+                  <option key={p.id} value={String(p.id)}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+            </DocFieldBox>
           </div>
           <div className="field">
             <label>{t(locale, "Purchase Order Title")}</label>

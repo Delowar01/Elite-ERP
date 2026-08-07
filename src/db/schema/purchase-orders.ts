@@ -10,6 +10,7 @@ import { quotationsTable } from "./quotations";
 import { salesOrdersTable } from "./sales-orders";
 import { proformaInvoicesTable } from "./proforma-invoices";
 import { salesInvoicesTable } from "./sales-invoices";
+import { projectsTable } from "./projects";
 
 export const purchaseOrdersTable = pgTable("purchase_orders", {
   id: serial("id").primaryKey(),
@@ -21,6 +22,10 @@ export const purchaseOrdersTable = pgTable("purchase_orders", {
   vendorId: integer("vendor_id")
     .notNull()
     .references(() => vendorsTable.id),
+  // Optional project tag — the same nullable link quotations/sales orders/invoices already carry.
+  // It is what lets Project Cost Control attribute supplier cost to a project. Existing rows stay
+  // NULL (unattributed) and no purchasing workflow depends on it.
+  projectId: integer("project_id").references(() => projectsTable.id),
   sourceQuotationId: integer("source_quotation_id").references(() => quotationsTable.id),
   sourceSalesOrderId: integer("source_sales_order_id").references(() => salesOrdersTable.id),
   sourceProformaId: integer("source_proforma_id").references(() => proformaInvoicesTable.id),

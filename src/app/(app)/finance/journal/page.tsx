@@ -1,5 +1,5 @@
-import { eq, desc, sql } from "drizzle-orm";
-import { db, accountsTable, journalEntriesTable, journalLinesTable } from "@/db";
+import { asc, eq, desc, sql } from "drizzle-orm";
+import { db, accountsTable, journalEntriesTable, journalLinesTable, projectsTable } from "@/db";
 import { requireSession } from "@/lib/session";
 import { getLocale } from "@/lib/i18n/server";
 import { t } from "@/lib/i18n/dict";
@@ -12,7 +12,7 @@ export default async function JournalPage() {
   const locale = await getLocale();
   const orgId = session.orgId;
 
-  const [accounts, recentEntries] = await Promise.all([
+  const [accounts, recentEntries, projects] = await Promise.all([
     db.select().from(accountsTable).where(eq(accountsTable.orgId, orgId)).orderBy(accountsTable.code),
     db
       .select({
@@ -28,6 +28,7 @@ export default async function JournalPage() {
       .groupBy(journalEntriesTable.id)
       .orderBy(desc(journalEntriesTable.entryDate), desc(journalEntriesTable.id))
       .limit(15),
+    db.select({ id: projectsTable.id, name: projectsTable.name }).from(projectsTable).where(eq(projectsTable.orgId, orgId)).orderBy(asc(projectsTable.name)),
   ]);
 
   return (
@@ -37,7 +38,7 @@ export default async function JournalPage() {
         <span className="org-pill">{t(locale, "Manual")}</span>
       </div>
 
-      <JournalForm locale={locale} accounts={accounts} />
+      <JournalForm locale={locale} accounts={accounts} projects={projects} />
 
       <div className="main-head" style={{ marginTop: 40 }}>
         <h3 style={{ fontSize: 15 }}>{t(locale, "Recent journal entries")}</h3>

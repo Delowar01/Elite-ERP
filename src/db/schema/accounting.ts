@@ -3,6 +3,7 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { orgsTable } from "./orgs";
 import { usersTable } from "./users";
+import { projectsTable } from "./projects";
 
 export const accountsTable = pgTable("accounts", {
   id: serial("id").primaryKey(),
@@ -36,6 +37,10 @@ export const journalEntriesTable = pgTable("journal_entries", {
   memo: text("memo").notNull(),
   sourceType: text("source_type").notNull(), // sales_invoice | credit_note | purchase_order | debit_note | payment | payroll_run | expense | manual
   sourceId: integer("source_id"),
+  // Optional project tag for MANUAL entries, so a direct project cost posted straight to the ledger
+  // can be attributed. Document-sourced entries leave this NULL — their project comes from the
+  // source document, and counting both would double-count.
+  projectId: integer("project_id").references(() => projectsTable.id),
   createdById: integer("created_by_id")
     .notNull()
     .references(() => usersTable.id),

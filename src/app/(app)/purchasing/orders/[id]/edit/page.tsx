@@ -1,7 +1,7 @@
 import { and, asc, eq } from "drizzle-orm";
 import { notFound, redirect } from "next/navigation";
 import { getColumnConfig } from "@/lib/column-config-server";
-import { db, vendorsTable, productsTable, orgsTable, purchaseOrdersTable, purchaseOrderItemsTable } from "@/db";
+import { db, vendorsTable, productsTable, orgsTable, purchaseOrdersTable, purchaseOrderItemsTable, projectsTable } from "@/db";
 import { requireSession } from "@/lib/session";
 import { getLocale } from "@/lib/i18n/server";
 import { tenantScope } from "@/lib/tenant";
@@ -22,12 +22,13 @@ export default async function EditPurchaseOrderPage({ params }: { params: Promis
   if (!po) notFound();
   if (!can("purchase_order", po.status, "edit")) redirect(`/purchasing/orders/${poId}`);
 
-  const [items, vendors, products, [org], bankData] = await Promise.all([
+  const [items, vendors, products, [org], bankData, projects] = await Promise.all([
     db.select().from(purchaseOrderItemsTable).where(eq(purchaseOrderItemsTable.purchaseOrderId, poId)),
     db.select().from(vendorsTable).where(tenantScope(session.orgId, vendorsTable)).orderBy(asc(vendorsTable.name)),
     db.select().from(productsTable).where(tenantScope(session.orgId, productsTable)).orderBy(asc(productsTable.name)),
     db.select().from(orgsTable).where(eq(orgsTable.id, session.orgId)),
     getDocumentBankData(session.orgId),
+    db.select({ id: projectsTable.id, name: projectsTable.name }).from(projectsTable).where(eq(projectsTable.orgId, session.orgId)).orderBy(asc(projectsTable.name)),
   ]);
 
   const initialItems: LineItemDraft[] = items.map((it) => ({
@@ -49,6 +50,7 @@ export default async function EditPurchaseOrderPage({ params }: { params: Promis
         products={products}
         org={org}
         numberPreview={po.poNumber}
+        projects={projects}
         mode="edit"
         columnConfig={columnConfig}
         documentId={poId}
@@ -57,6 +59,7 @@ export default async function EditPurchaseOrderPage({ params }: { params: Promis
         initial={{
           title: po.title ?? "",
           vendorId: String(po.vendorId),
+          projectId: po.projectId ? String(po.projectId) : "",
           orderDate: po.orderDate,
           expectedDate: po.expectedDate ?? "",
           discount: po.discount,

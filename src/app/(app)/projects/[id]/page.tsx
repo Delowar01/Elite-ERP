@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { and, desc, eq, gte, notInArray, sql } from "drizzle-orm";
+import { and, desc, eq, gte } from "drizzle-orm";
 import {
   db,
   projectsTable,
@@ -11,9 +11,11 @@ import {
   quotationsTable,
   salesOrdersTable,
   salesInvoicesTable,
+  purchaseOrdersTable,
 } from "@/db";
-import { latestStructures } from "../../hr/payroll/queries";
 import { Money } from "../../sales/_shared/money";
+import { getProjectCostControl } from "@/lib/project-costing";
+import { ProjectCostControlSection } from "./cost-control";
 import { requireSession } from "@/lib/session";
 import { getLocale } from "@/lib/i18n/server";
 import { tenantScope } from "@/lib/tenant";
@@ -91,27 +93,12 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
       .orderBy(desc(timeLogsTable.date), desc(timeLogsTable.id)),
   ]);
 
-  // ---- Section 9: project financials ----
-  // Invoiced revenue = all non-draft/non-void invoices tagged to this project. Labor cost =
-  // logged hours × each employee's hourly rate, derived from their latest salary structure
-  // as monthly gross ÷ 240 hours — the documented "simple rate" from the master plan.
-  const [invoicedRows, laborRows, linkedQuotations, linkedOrders, linkedInvoices, structures] = await Promise.all([
-    db
-      .select({ total: sql<string>`coalesce(sum(${salesInvoicesTable.total}), 0)`, n: sql<number>`count(*)::int` })
-      .from(salesInvoicesTable)
-      .where(
-        and(
-          eq(salesInvoicesTable.projectId, projectId),
-          eq(salesInvoicesTable.orgId, session.orgId),
-          notInArray(salesInvoicesTable.status, ["draft", "void"]),
-        ),
-      ),
-    db
-      .select({ employeeId: timeLogsTable.employeeId, hours: sql<string>`coalesce(sum(${timeLogsTable.hours}), 0)` })
-      .from(timeLogsTable)
-      .innerJoin(tasksTable, eq(timeLogsTable.taskId, tasksTable.id))
-      .where(and(eq(tasksTable.projectId, projectId), eq(timeLogsTable.orgId, session.orgId)))
-      .groupBy(timeLogsTable.employeeId),
+  // ---- Project Cost & Profitability ----
+  // Every figure comes from src/lib/project-costing.ts, which reads only project-linked records that
+  // are already financially effective. Linked Documents below is a different view on purpose: it
+  // lists everything tagged to the project, including drafts that the cost figures correctly ignore.
+  const [costControl, linkedQuotations, linkedOrders, linkedInvoices, linkedPos] = await Promise.all([
+    getProjectCostControl(session.orgId, projectId, session.orgCurrency),
     db
       .select({ id: quotationsTable.id, number: quotationsTable.quotationNumber, date: quotationsTable.issueDate, total: quotationsTable.total, status: quotationsTable.status })
       .from(quotationsTable)
@@ -124,24 +111,18 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
       .select({ id: salesInvoicesTable.id, number: salesInvoicesTable.invoiceNumber, date: salesInvoicesTable.issueDate, total: salesInvoicesTable.total, status: salesInvoicesTable.status })
       .from(salesInvoicesTable)
       .where(and(eq(salesInvoicesTable.projectId, projectId), eq(salesInvoicesTable.orgId, session.orgId))),
-    latestStructures(session.orgId),
+    db
+      .select({ id: purchaseOrdersTable.id, number: purchaseOrdersTable.poNumber, date: purchaseOrdersTable.orderDate, total: purchaseOrdersTable.total, status: purchaseOrdersTable.status })
+      .from(purchaseOrdersTable)
+      .where(and(eq(purchaseOrdersTable.projectId, projectId), eq(purchaseOrdersTable.orgId, session.orgId))),
   ]);
-
-  const invoiced = Number(invoicedRows[0]?.total ?? 0);
-  let laborHours = 0;
-  let laborCost = 0;
-  for (const row of laborRows) {
-    const hours = Number(row.hours);
-    laborHours += hours;
-    const s = structures.get(row.employeeId);
-    if (s) laborCost += hours * ((Number(s.basicSalary) + Number(s.allowances)) / 240);
-  }
-  const margin = invoiced - laborCost;
+  if (!costControl) notFound();
 
   const linkedDocs = [
     ...linkedQuotations.map((d) => ({ ...d, type: "Quotation", href: `/sales/quotations/${d.id}` })),
     ...linkedOrders.map((d) => ({ ...d, type: "Sales Order", href: `/sales/orders/${d.id}` })),
     ...linkedInvoices.map((d) => ({ ...d, type: "Invoice", href: `/sales/invoices/${d.id}` })),
+    ...linkedPos.map((d) => ({ ...d, type: "Purchase Order", href: `/purchasing/orders/${d.id}` })),
   ].sort((a, b) => (a.date < b.date ? 1 : -1));
 
   const currencyMark = resolveCurrencyMark(session.orgCurrency);
@@ -178,7 +159,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
         </div>
       )}
 
-      <div className="stat-row-2">
+      <div className="stat-row-2" style={{ gridTemplateColumns: "repeat(2, 1fr)", maxWidth: 520 }}>
         <div className="card" style={{ padding: "16px 18px" }}>
           <div style={{ fontSize: 11.5, color: "var(--ink-muted)" }}>{t(locale, "Budget")}</div>
           <div style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 20, marginTop: 4 }}>
@@ -186,37 +167,14 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
           </div>
         </div>
         <div className="card" style={{ padding: "16px 18px" }}>
-          <div style={{ fontSize: 11.5, color: "var(--ink-muted)" }}>{t(locale, "Invoiced")}</div>
-          <div style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 20, marginTop: 4, color: "var(--accent-green)" }}>
-            <Money amount={invoiced} context="summary" />
-          </div>
-        </div>
-        <div className="card" style={{ padding: "16px 18px" }}>
           <div style={{ fontSize: 11.5, color: "var(--ink-muted)" }}>
-            {t(locale, "Labor cost")} · {laborHours.toFixed(1)} {t(locale, "Hours").toLowerCase()}
+            {t(locale, "Tasks")} · {costControl.labourEstimate.hours.toFixed(1)} {t(locale, "Hours logged").toLowerCase()}
           </div>
-          <div style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 20, marginTop: 4, color: "var(--warning)" }}>
-            <Money amount={laborCost} context="summary" />
-          </div>
-        </div>
-        <div className="card" style={{ padding: "16px 18px" }}>
-          <div style={{ fontSize: 11.5, color: "var(--ink-muted)" }}>{t(locale, "Margin")}</div>
-          <div
-            style={{
-              fontFamily: "var(--font-display)",
-              fontWeight: 800,
-              fontSize: 20,
-              marginTop: 4,
-              color: margin >= 0 ? "var(--accent-green)" : "var(--accent-red)",
-            }}
-          >
-            <Money amount={margin} context="summary" />
-          </div>
+          <div style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 20, marginTop: 4 }}>{tasks.length}</div>
         </div>
       </div>
-      <p className="text-[11px] text-ink-faint -mt-2 mb-4">
-        {t(locale, "Labor cost uses each employee's latest salary structure as an hourly rate (monthly gross ÷ 240 hours).")}
-      </p>
+
+      <ProjectCostControlSection locale={locale} data={costControl} />
 
       <KanbanBoard locale={locale} projectId={project.id} tasks={tasks} employees={employees} />
 

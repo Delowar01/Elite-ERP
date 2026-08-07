@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { and, eq } from "drizzle-orm";
-import { db, accountsTable, journalEntriesTable, journalLinesTable } from "@/db";
+import { db, accountsTable, journalEntriesTable, journalLinesTable, projectsTable } from "@/db";
 import { requireSession } from "@/lib/session";
 import { logActivity } from "@/lib/activity";
 
@@ -15,12 +15,24 @@ type LineInput = { accountId: number; memo: string; debit: string; credit: strin
 export async function postJournalEntryAction(input: {
   entryDate: string;
   memo: string;
+  /** Optional project tag (manual entries only) — used by Project Cost Control. */
+  projectId?: string;
   lines: LineInput[];
 }): Promise<ActionResult> {
   const session = await requireSession();
   const memo = input.memo.trim();
   if (!memo) return { error: "Memo is required." };
   if (!input.entryDate) return { error: "Entry date is required." };
+
+  let projectId: number | null = null;
+  if (input.projectId) {
+    const [project] = await db
+      .select({ id: projectsTable.id })
+      .from(projectsTable)
+      .where(and(eq(projectsTable.id, Number(input.projectId)), eq(projectsTable.orgId, session.orgId)));
+    if (!project) return { error: "Project not found." };
+    projectId = project.id;
+  }
 
   const lines = input.lines.filter((l) => l.accountId && (Number(l.debit) > 0 || Number(l.credit) > 0));
   if (lines.length < 2) return { error: "At least two lines are required." };
@@ -47,6 +59,7 @@ export async function postJournalEntryAction(input: {
         entryDate: input.entryDate,
         memo,
         sourceType: "manual",
+        projectId,
         createdById: session.userId,
       })
       .returning({ id: journalEntriesTable.id });
@@ -74,5 +87,6 @@ export async function postJournalEntryAction(input: {
   revalidatePath("/finance/chart-of-accounts");
   revalidatePath("/finance/ledger");
   revalidatePath("/finance/reports");
+  if (projectId) revalidatePath(`/projects/${projectId}`);
   return {};
 }

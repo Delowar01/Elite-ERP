@@ -13,6 +13,7 @@ import {
   salesInvoicesTable,
   salesInvoiceItemsTable,
   sealSignatureAssetsTable,
+  projectsTable,
 } from "@/db";
 import { getColumnConfig } from "@/lib/column-config-server";
 import { requireSession } from "@/lib/session";
@@ -91,13 +92,14 @@ export default async function NewPurchaseOrderPage({
     }
   }
 
-  const [vendors, products, [org], numberPreview, presets, bankData] = await Promise.all([
+  const [vendors, products, [org], numberPreview, presets, bankData, projects] = await Promise.all([
     db.select().from(vendorsTable).where(tenantScope(session.orgId, vendorsTable)).orderBy(asc(vendorsTable.name)),
     db.select().from(productsTable).where(tenantScope(session.orgId, productsTable)).orderBy(asc(productsTable.name)),
     db.select().from(orgsTable).where(eq(orgsTable.id, session.orgId)),
     previewNextDocumentNumber(session.orgId, "purchase_order"),
     getDocumentContentPresets(session.orgId, "purchase_order"),
     getDocumentBankData(session.orgId),
+    db.select({ id: projectsTable.id, name: projectsTable.name }).from(projectsTable).where(eq(projectsTable.orgId, session.orgId)).orderBy(asc(projectsTable.name)),
   ]);
   const sealAssets = await db.select().from(sealSignatureAssetsTable).where(eq(sealSignatureAssetsTable.orgId, session.orgId)).orderBy(sealSignatureAssetsTable.id);
 
@@ -110,6 +112,7 @@ export default async function NewPurchaseOrderPage({
         org={org}
         sealAssets={sealAssets}
         numberPreview={numberPreview}
+        projects={projects}
         initialTitle={initialTitle}
         initialItems={initialItems}
         sourceQuotationId={fromQuotation}

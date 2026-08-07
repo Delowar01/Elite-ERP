@@ -5,7 +5,7 @@ import { sanitizeIfHtml } from "@/lib/sanitize-html";
 import { normalizeDocumentTerms, type DocumentTerm } from "../../sales/_shared/document-terms";
 import { redirect } from "next/navigation";
 import { and, eq, sql } from "drizzle-orm";
-import { db, vendorsTable, purchaseOrdersTable, purchaseOrderItemsTable, productsTable, accountsTable, journalEntriesTable, journalLinesTable } from "@/db";
+import { db, vendorsTable, purchaseOrdersTable, purchaseOrderItemsTable, productsTable, accountsTable, journalEntriesTable, journalLinesTable, projectsTable } from "@/db";
 import { requireSession } from "@/lib/session";
 import { logActivity } from "@/lib/activity";
 import { nextDocumentNumber } from "@/lib/documents";
@@ -22,10 +22,22 @@ const PATH = "/purchasing/orders";
 
 type LineInput = { productId: string; description: string; quantity: string; unitPrice: string; taxRatePercent: string; imageUrl?: string; unit?: string; customFields?: Record<string, string> };
 
+// Resolve the optional project tag, tenant-scoped. Returns null for "no project" and `undefined`
+// when the id was supplied but does not belong to this org (the caller turns that into an error).
+async function resolveProjectId(orgId: number, raw: string | undefined): Promise<number | null | undefined> {
+  if (!raw) return null;
+  const [project] = await db
+    .select({ id: projectsTable.id })
+    .from(projectsTable)
+    .where(and(eq(projectsTable.id, Number(raw)), eq(projectsTable.orgId, orgId)));
+  return project ? project.id : undefined;
+}
+
 export async function createPurchaseOrderAction(
   input: {
     title: string;
     vendorId: string;
+    projectId?: string;
     orderDate: string;
     expectedDate: string;
     discount: string;
@@ -49,6 +61,8 @@ export async function createPurchaseOrderAction(
   const [vendorOwned] = await db.select({ id: vendorsTable.id }).from(vendorsTable).where(and(eq(vendorsTable.id, vendorId), eq(vendorsTable.orgId, session.orgId)));
   if (!vendorOwned) return { error: "Vendor not found." };
   if (!input.orderDate) return { error: "Order date is required." };
+  const projectId = await resolveProjectId(session.orgId, input.projectId);
+  if (projectId === undefined) return { error: "Project not found." };
 
   const items = input.items.filter((l) => l.description.trim() && Number(l.quantity) > 0);
   if (items.length === 0) return { error: "Add at least one line item." };
@@ -66,6 +80,7 @@ export async function createPurchaseOrderAction(
         poNumber,
         title: input.title.trim() || null,
         vendorId,
+        projectId,
         sourceQuotationId: input.sourceQuotationId ? Number(input.sourceQuotationId) : null,
         sourceSalesOrderId: input.sourceSalesOrderId ? Number(input.sourceSalesOrderId) : null,
         sourceProformaId: input.sourceProformaId ? Number(input.sourceProformaId) : null,
@@ -116,7 +131,7 @@ export async function createPurchaseOrderAction(
 // Batch A2 — draft-only edit. Preserves number/org/status/source links; recomputes totals server-side.
 export async function updatePurchaseOrderAction(
   id: number,
-  input: { title: string; vendorId: string; orderDate: string; expectedDate: string; discount: string; notes: string; terms?: DocumentTerm[]; items: LineInput[]; attachments?: AttachmentInput[]; bankAccountIds?: number[]; currency?: string; sealUrl?: string; signatureUrl?: string },
+  input: { title: string; vendorId: string; projectId?: string; orderDate: string; expectedDate: string; discount: string; notes: string; terms?: DocumentTerm[]; items: LineInput[]; attachments?: AttachmentInput[]; bankAccountIds?: number[]; currency?: string; sealUrl?: string; signatureUrl?: string },
 ): Promise<ActionResult> {
   const session = await requireSession();
   const [existing] = await db.select().from(purchaseOrdersTable).where(and(eq(purchaseOrdersTable.id, id), eq(purchaseOrdersTable.orgId, session.orgId)));
@@ -128,6 +143,8 @@ export async function updatePurchaseOrderAction(
   const [vendorOwned] = await db.select({ id: vendorsTable.id }).from(vendorsTable).where(and(eq(vendorsTable.id, vendorId), eq(vendorsTable.orgId, session.orgId)));
   if (!vendorOwned) return { error: "Vendor not found." };
   if (!input.orderDate) return { error: "Order date is required." };
+  const projectId = await resolveProjectId(session.orgId, input.projectId);
+  if (projectId === undefined) return { error: "Project not found." };
   const items = input.items.filter((l) => l.description.trim() && Number(l.quantity) > 0);
   if (items.length === 0) return { error: "Add at least one line item." };
   const totals = computeTotals(items as LineItemInput[], input.discount);
@@ -140,6 +157,7 @@ export async function updatePurchaseOrderAction(
       .set({
         title: input.title.trim() || null,
         vendorId,
+        projectId,
         orderDate: input.orderDate,
         expectedDate: input.expectedDate || null,
         bankAccounts,
