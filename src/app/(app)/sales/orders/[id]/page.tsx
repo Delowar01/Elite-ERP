@@ -18,6 +18,7 @@ import { TotalsStrip } from "../../_shared/totals-strip";
 import { DocNum } from "../../_shared/money";
 import { OrderDetailActions } from "../order-detail-actions";
 import { DownloadPdfButton } from "../../_shared/download-pdf-button";
+import { EditDocumentButton } from "../../../_shared/edit-document";
 
 const STATUS_VARIANT: Record<string, "success" | "warning" | "danger" | "info" | "neutral"> = {
   draft: "neutral",
@@ -38,6 +39,8 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
       soNumber: salesOrdersTable.soNumber,
       title: salesOrdersTable.title,
       status: salesOrdersTable.status,
+      archivedAt: salesOrdersTable.archivedAt,
+      deletedAt: salesOrdersTable.deletedAt,
       issueDate: salesOrdersTable.issueDate,
       expectedDate: salesOrdersTable.expectedDate,
       subtotal: salesOrdersTable.subtotal,
@@ -93,6 +96,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
           </div>
         </div>
         <div className="flex items-center gap-2.5">
+          <EditDocumentButton locale={locale} docType="sales_order" id={order.id} number={order.soNumber} status={order.status} recordState={order.deletedAt ? "deleted" : order.archivedAt ? "archived" : "active"} />
           <DownloadPdfButton locale={locale} type="sales-order" docId={order.id} number={order.soNumber} />
           <OrderDetailActions locale={locale} orderId={order.id} status={order.status} />
         </div>

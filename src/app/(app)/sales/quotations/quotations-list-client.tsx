@@ -4,15 +4,15 @@ import { useMemo, useTransition } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { downloadDocumentPdf } from "../_shared/download-pdf-button";
-import { Eye, Star, Pencil, Copy, Send, Download } from "lucide-react";
+import { Eye, Star, Copy, Send, Download } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { StatRow } from "../_shared/stat-row";
 import { RowMenu, type RowMenuEntry } from "../_shared/row-menu";
 import { Money } from "../_shared/money";
 import { t, type Locale } from "@/lib/i18n/dict";
-import { can } from "@/lib/document-lifecycle";
 import { useDocumentRowActions } from "../../_shared/document-row-actions";
+import { useDocumentEditAction } from "../../_shared/edit-document";
 import { ListWorkspaceToolbar } from "../../documents/_workspace/list-workspace-toolbar";
 import { useListFilters } from "../../documents/_workspace/use-list-filters";
 import type { SavedViewDTO } from "../../documents/_workspace/saved-view-actions";
@@ -58,6 +58,7 @@ export function QuotationsListClient({
 }) {
   const [, startTransition] = useTransition();
   const rowActions = useDocumentRowActions(locale);
+  const { editEntry, dialog: editDialog } = useDocumentEditAction(locale);
   const { filters, setFilters, filtered } = useListFilters(rows, {
     search: (r) => [r.quotationNumber, r.customerName, r.title ?? ""],
     status: (r) => r.status,
@@ -130,8 +131,8 @@ export function QuotationsListClient({
             const convertTargets = getConvertTargets("quotation", { status: r.status });
             const entries: RowMenuEntry[] = [
               { kind: "item", icon: Eye, label: t(locale, "View"), href: `/sales/quotations/${r.id}` },
+              ...editEntry("quotation", r.id, r.quotationNumber, r.status, r.isArchived),
               { kind: "item", icon: Star, label: t(locale, "Add to Favorites") },
-              { kind: "item", icon: Pencil, label: t(locale, "Edit"), href: can("quotation", r.status, "edit") ? `/sales/quotations/${r.id}/edit` : undefined },
               { kind: "item", icon: Copy, label: t(locale, "Duplicate") },
               { kind: "item", icon: Download, label: t(locale, "Download PDF"), onSelect: () => { void downloadDocumentPdf("quotation", r.id).catch((e) => toast.error(e instanceof Error && e.message ? e.message : t(locale, "PDF download failed. Please try again."))); } },
               ...(convertTargets.length
@@ -186,6 +187,7 @@ export function QuotationsListClient({
       <div className="text-[11.5px] text-ink-faint mt-2">
         {t(locale, "Showing")} {filtered.length} {t(locale, "of")} {rows.length} {t(locale, "Quotations")}.
       </div>
+      {editDialog}
     </div>
   );
 }

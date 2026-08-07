@@ -5,7 +5,7 @@ import { db, customersTable, productsTable, orgsTable, proformaInvoicesTable, pr
 import { requireSession } from "@/lib/session";
 import { getLocale } from "@/lib/i18n/server";
 import { tenantScope } from "@/lib/tenant";
-import { can } from "@/lib/document-lifecycle";
+import { canEditDocument } from "@/lib/document-edit";
 import { getDocumentBankData } from "@/lib/document-bank-data";
 import { initialSelectedIds } from "@/lib/document-bank-accounts";
 import type { LineItemDraft } from "../../../_shared/line-items-editor";
@@ -20,7 +20,10 @@ export default async function EditProformaPage({ params }: { params: Promise<{ i
 
   const [pf] = await db.select().from(proformaInvoicesTable).where(and(eq(proformaInvoicesTable.id, pfId), eq(proformaInvoicesTable.orgId, session.orgId)));
   if (!pf) notFound();
-  if (!can("proforma_invoice", pf.status, "edit")) redirect(`/sales/proforma/${pfId}`);
+  // Server-side authorization for a direct edit URL: the SAME shared rule the list menu and
+  // the Preview Edit action use — draft-only, and never a record sitting in the Recycle Bin.
+  if (!canEditDocument("proforma_invoice", { status: pf.status, recordState: pf.deletedAt ? "deleted" : pf.archivedAt ? "archived" : "active" }))
+    redirect(`/sales/proforma/${pfId}`);
 
   const [items, customers, products, [org], bankData] = await Promise.all([
     db.select().from(proformaInvoiceItemsTable).where(eq(proformaInvoiceItemsTable.proformaInvoiceId, pfId)),

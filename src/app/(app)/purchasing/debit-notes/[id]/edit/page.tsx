@@ -5,7 +5,7 @@ import { requireSession } from "@/lib/session";
 import { getDocumentContentPresets } from "@/lib/document-presets";
 import { getLocale } from "@/lib/i18n/server";
 import { tenantScope } from "@/lib/tenant";
-import { can } from "@/lib/document-lifecycle";
+import { canEditDocument } from "@/lib/document-edit";
 import { getDocumentBankData } from "@/lib/document-bank-data";
 import { initialSelectedIds } from "@/lib/document-bank-accounts";
 import type { LineItemDraft } from "../../../../sales/_shared/line-items-editor";
@@ -19,7 +19,10 @@ export default async function EditDebitNotePage({ params }: { params: Promise<{ 
 
   const [dn] = await db.select().from(debitNotesTable).where(and(eq(debitNotesTable.id, dnId), eq(debitNotesTable.orgId, session.orgId)));
   if (!dn) notFound();
-  if (!can("debit_note", dn.status, "edit")) redirect(`/purchasing/debit-notes/${dnId}`);
+  // Server-side authorization for a direct edit URL: the SAME shared rule the list menu and
+  // the Preview Edit action use — draft-only, and never a record sitting in the Recycle Bin.
+  if (!canEditDocument("debit_note", { status: dn.status, recordState: dn.deletedAt ? "deleted" : dn.archivedAt ? "archived" : "active" }))
+    redirect(`/purchasing/debit-notes/${dnId}`);
 
   const [items, [sourcePo], products, [org]] = await Promise.all([
     db.select().from(debitNoteItemsTable).where(eq(debitNoteItemsTable.debitNoteId, dnId)),

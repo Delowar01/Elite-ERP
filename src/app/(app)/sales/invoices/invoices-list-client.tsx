@@ -16,6 +16,7 @@ import { RowMenu, type RowMenuEntry } from "../_shared/row-menu";
 import { Money } from "../_shared/money";
 import { t, type Locale } from "@/lib/i18n/dict";
 import { useDocumentRowActions } from "../../_shared/document-row-actions";
+import { useDocumentEditAction } from "../../_shared/edit-document";
 import { getConvertTargets, runConvertTarget } from "../_shared/convert-config";
 
 const STATUS_VARIANT: Record<string, "success" | "warning" | "danger" | "info" | "neutral"> = {
@@ -55,6 +56,7 @@ export function InvoicesListClient({
   partyLabel: string;
 }) {
   const rowActions = useDocumentRowActions(locale);
+  const { editEntry, dialog: editDialog } = useDocumentEditAction(locale);
   const [, startTransition] = useTransition();
 
 
@@ -122,6 +124,7 @@ export function InvoicesListClient({
             const convertTargets = getConvertTargets("invoice", { status: r.status });
             const entries: RowMenuEntry[] = [
               { kind: "item", icon: Eye, label: t(locale, "View"), href: `/sales/invoices/${r.id}` },
+              ...editEntry("sales_invoice", r.id, r.invoiceNumber, r.status, r.isArchived),
               { kind: "item", icon: Star, label: t(locale, "Add to Favorites") },
               { kind: "item", icon: Download, label: t(locale, "Download PDF"), onSelect: () => { void downloadDocumentPdf("invoice", r.id).catch((e) => toast.error(e instanceof Error && e.message ? e.message : t(locale, "PDF download failed. Please try again."))); } },
               { kind: "item", icon: Wallet, label: t(locale, "Record Payment") },
@@ -176,6 +179,7 @@ export function InvoicesListClient({
       <div className="text-[11.5px] text-ink-faint mt-2">
         {t(locale, "Showing")} {filtered.length} {t(locale, "of")} {rows.length} {t(locale, "Invoices")}.
       </div>
+      {editDialog}
     </div>
   );
 }

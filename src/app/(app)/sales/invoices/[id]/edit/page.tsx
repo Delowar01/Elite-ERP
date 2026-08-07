@@ -5,7 +5,7 @@ import { db, customersTable, productsTable, orgsTable, projectsTable, salesInvoi
 import { requireSession } from "@/lib/session";
 import { getLocale } from "@/lib/i18n/server";
 import { tenantScope } from "@/lib/tenant";
-import { can } from "@/lib/document-lifecycle";
+import { canEditDocument } from "@/lib/document-edit";
 import { getDocumentBankData } from "@/lib/document-bank-data";
 import { initialSelectedIds } from "@/lib/document-bank-accounts";
 import type { LineItemDraft } from "../../../_shared/line-items-editor";
@@ -20,7 +20,10 @@ export default async function EditInvoicePage({ params }: { params: Promise<{ id
 
   const [inv] = await db.select().from(salesInvoicesTable).where(and(eq(salesInvoicesTable.id, invId), eq(salesInvoicesTable.orgId, session.orgId)));
   if (!inv) notFound();
-  if (!can("sales_invoice", inv.status, "edit")) redirect(`/sales/invoices/${invId}`);
+  // Server-side authorization for a direct edit URL: the SAME shared rule the list menu and
+  // the Preview Edit action use — draft-only, and never a record sitting in the Recycle Bin.
+  if (!canEditDocument("sales_invoice", { status: inv.status, recordState: inv.deletedAt ? "deleted" : inv.archivedAt ? "archived" : "active" }))
+    redirect(`/sales/invoices/${invId}`);
 
   const [items, customers, products, [org], projects, bankData] = await Promise.all([
     db.select().from(salesInvoiceItemsTable).where(eq(salesInvoiceItemsTable.invoiceId, invId)),

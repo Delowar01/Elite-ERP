@@ -13,6 +13,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@
 import { Money, DocNum } from "../../../sales/_shared/money";
 import { DnDetailActions } from "../dn-detail-actions";
 import { DownloadPdfButton } from "../../../sales/_shared/download-pdf-button";
+import { EditDocumentButton } from "../../../_shared/edit-document";
 
 const STATUS_VARIANT: Record<string, "success" | "warning" | "danger" | "info" | "neutral"> = {
   draft: "neutral",
@@ -37,6 +38,8 @@ export default async function DebitNoteDetailPage({ params }: { params: Promise<
       debitNoteNumber: debitNotesTable.debitNoteNumber,
       title: debitNotesTable.title,
       status: debitNotesTable.status,
+      archivedAt: debitNotesTable.archivedAt,
+      deletedAt: debitNotesTable.deletedAt,
       issueDate: debitNotesTable.issueDate,
       reason: debitNotesTable.reason,
       terms: debitNotesTable.terms,
@@ -71,6 +74,7 @@ export default async function DebitNoteDetailPage({ params }: { params: Promise<
           </div>
         </div>
         <div className="flex items-center gap-2.5">
+          <EditDocumentButton locale={locale} docType="debit_note" id={dn.id} number={dn.debitNoteNumber} status={dn.status} recordState={dn.deletedAt ? "deleted" : dn.archivedAt ? "archived" : "active"} />
           <DownloadPdfButton locale={locale} type="debit-note" docId={dn.id} number={dn.debitNoteNumber} />
           <DnDetailActions locale={locale} debitNoteId={dn.id} status={dn.status} />
         </div>

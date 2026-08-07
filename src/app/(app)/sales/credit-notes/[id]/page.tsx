@@ -13,6 +13,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@
 import { Money, DocNum } from "../../_shared/money";
 import { CnDetailActions } from "../cn-detail-actions";
 import { DownloadPdfButton } from "../../_shared/download-pdf-button";
+import { EditDocumentButton } from "../../../_shared/edit-document";
 
 const STATUS_VARIANT: Record<string, "success" | "warning" | "danger" | "info" | "neutral"> = {
   draft: "neutral",
@@ -37,6 +38,8 @@ export default async function CreditNoteDetailPage({ params }: { params: Promise
       creditNoteNumber: creditNotesTable.creditNoteNumber,
       title: creditNotesTable.title,
       status: creditNotesTable.status,
+      archivedAt: creditNotesTable.archivedAt,
+      deletedAt: creditNotesTable.deletedAt,
       issueDate: creditNotesTable.issueDate,
       reason: creditNotesTable.reason,
       terms: creditNotesTable.terms,
@@ -71,6 +74,7 @@ export default async function CreditNoteDetailPage({ params }: { params: Promise
           </div>
         </div>
         <div className="flex items-center gap-2.5">
+          <EditDocumentButton locale={locale} docType="credit_note" id={cn.id} number={cn.creditNoteNumber} status={cn.status} recordState={cn.deletedAt ? "deleted" : cn.archivedAt ? "archived" : "active"} />
           <DownloadPdfButton locale={locale} type="credit-note" docId={cn.id} number={cn.creditNoteNumber} />
           <CnDetailActions locale={locale} creditNoteId={cn.id} status={cn.status} />
         </div>

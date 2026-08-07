@@ -5,7 +5,7 @@ import { requireSession } from "@/lib/session";
 import { getDocumentContentPresets } from "@/lib/document-presets";
 import { getLocale } from "@/lib/i18n/server";
 import { tenantScope } from "@/lib/tenant";
-import { can } from "@/lib/document-lifecycle";
+import { canEditDocument } from "@/lib/document-edit";
 import { getDocumentBankData } from "@/lib/document-bank-data";
 import { initialSelectedIds } from "@/lib/document-bank-accounts";
 import type { LineItemDraft } from "../../../_shared/line-items-editor";
@@ -19,7 +19,10 @@ export default async function EditCreditNotePage({ params }: { params: Promise<{
 
   const [cn] = await db.select().from(creditNotesTable).where(and(eq(creditNotesTable.id, cnId), eq(creditNotesTable.orgId, session.orgId)));
   if (!cn) notFound();
-  if (!can("credit_note", cn.status, "edit")) redirect(`/sales/credit-notes/${cnId}`);
+  // Server-side authorization for a direct edit URL: the SAME shared rule the list menu and
+  // the Preview Edit action use — draft-only, and never a record sitting in the Recycle Bin.
+  if (!canEditDocument("credit_note", { status: cn.status, recordState: cn.deletedAt ? "deleted" : cn.archivedAt ? "archived" : "active" }))
+    redirect(`/sales/credit-notes/${cnId}`);
 
   const [items, [sourceInvoice], products, [org]] = await Promise.all([
     db.select().from(creditNoteItemsTable).where(eq(creditNoteItemsTable.creditNoteId, cnId)),

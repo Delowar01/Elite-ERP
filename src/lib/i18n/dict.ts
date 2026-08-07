@@ -1612,6 +1612,12 @@ const DICT: Record<string, string> = {
   "Hours logged": "الساعات المسجَّلة",
   "No project": "بدون مشروع",
   posted: "مُرحَّل",
+  // Edit confirmation
+  "Edit this document?": "تعديل هذا المستند؟",
+  "You are about to edit this document. Any changes you save may update the document details. Do you want to continue?":
+    "أنت على وشك تعديل هذا المستند. أي تغييرات تحفظها قد تُحدِّث بيانات المستند. هل تريد المتابعة؟",
+  "Continue to Edit": "المتابعة إلى التعديل",
+  "Opening…": "جارٍ الفتح…",
 };
 
 export function t(locale: Locale, en: string): string {

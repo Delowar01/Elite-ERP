@@ -15,6 +15,7 @@ import type { ImportColumn } from "@/lib/document-list-workspace";
 import { RowMenu, type RowMenuEntry } from "../_shared/row-menu";
 import { t, type Locale } from "@/lib/i18n/dict";
 import { useDocumentRowActions } from "../../_shared/document-row-actions";
+import { useDocumentEditAction } from "../../_shared/edit-document";
 
 const STATUS_VARIANT: Record<string, "success" | "warning" | "danger" | "info" | "neutral"> = {
   draft: "neutral",
@@ -50,6 +51,7 @@ export function DcListClient({
   partyLabel: string;
 }) {
   const rowActions = useDocumentRowActions(locale);
+  const { editEntry, dialog: editDialog } = useDocumentEditAction(locale);
 
   const { filters, setFilters, filtered } = useListFilters(rows, {
     search: (r) => [r.dcNumber, r.customerName],
@@ -113,6 +115,7 @@ export function DcListClient({
           {filtered.map((r) => {
             const entries: RowMenuEntry[] = [
               { kind: "item", icon: Eye, label: t(locale, "View"), href: `/sales/delivery-challans/${r.id}` },
+              ...editEntry("delivery_challan", r.id, r.dcNumber, r.status, r.isArchived),
               { kind: "item", icon: Download, label: t(locale, "Download PDF"), onSelect: () => { void downloadDocumentPdf("delivery-challan", r.id).catch((e) => toast.error(e instanceof Error && e.message ? e.message : t(locale, "PDF download failed. Please try again."))); } },
               { kind: "item", icon: TruckIcon, label: t(locale, "Mark Delivered") },
               { kind: "separator" },
@@ -151,6 +154,7 @@ export function DcListClient({
       <div className="text-[11.5px] text-ink-faint mt-2">
         {t(locale, "Showing")} {filtered.length} {t(locale, "of")} {rows.length} {t(locale, "Delivery Challans")}.
       </div>
+      {editDialog}
     </div>
   );
 }

@@ -5,7 +5,7 @@ import { requireSession } from "@/lib/session";
 import { getDocumentContentPresets } from "@/lib/document-presets";
 import { getLocale } from "@/lib/i18n/server";
 import { tenantScope } from "@/lib/tenant";
-import { can } from "@/lib/document-lifecycle";
+import { canEditDocument } from "@/lib/document-edit";
 import { getDocumentBankData } from "@/lib/document-bank-data";
 import { initialSelectedIds } from "@/lib/document-bank-accounts";
 import type { LineItemDraft } from "../../../_shared/line-items-editor";
@@ -19,7 +19,10 @@ export default async function EditDcPage({ params }: { params: Promise<{ id: str
 
   const [dc] = await db.select().from(deliveryChallansTable).where(and(eq(deliveryChallansTable.id, dcId), eq(deliveryChallansTable.orgId, session.orgId)));
   if (!dc) notFound();
-  if (!can("delivery_challan", dc.status, "edit")) redirect(`/sales/delivery-challans/${dcId}`);
+  // Server-side authorization for a direct edit URL: the SAME shared rule the list menu and
+  // the Preview Edit action use — draft-only, and never a record sitting in the Recycle Bin.
+  if (!canEditDocument("delivery_challan", { status: dc.status, recordState: dc.deletedAt ? "deleted" : dc.archivedAt ? "archived" : "active" }))
+    redirect(`/sales/delivery-challans/${dcId}`);
 
   const [items, customers, products, [org], bankData] = await Promise.all([
     db.select().from(deliveryChallanItemsTable).where(eq(deliveryChallanItemsTable.deliveryChallanId, dcId)),

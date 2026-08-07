@@ -17,6 +17,7 @@ import { TotalsStrip } from "../../../sales/_shared/totals-strip";
 import { DocNum } from "../../../sales/_shared/money";
 import { PoDetailActions } from "../po-detail-actions";
 import { DownloadPdfButton } from "../../../sales/_shared/download-pdf-button";
+import { EditDocumentButton } from "../../../_shared/edit-document";
 
 const STATUS_VARIANT: Record<string, "success" | "warning" | "danger" | "info" | "neutral"> = {
   draft: "neutral",
@@ -37,6 +38,8 @@ export default async function PurchaseOrderDetailPage({ params }: { params: Prom
       poNumber: purchaseOrdersTable.poNumber,
       title: purchaseOrdersTable.title,
       status: purchaseOrdersTable.status,
+      archivedAt: purchaseOrdersTable.archivedAt,
+      deletedAt: purchaseOrdersTable.deletedAt,
       orderDate: purchaseOrdersTable.orderDate,
       subtotal: purchaseOrdersTable.subtotal,
       discount: purchaseOrdersTable.discount,
@@ -81,6 +84,7 @@ export default async function PurchaseOrderDetailPage({ params }: { params: Prom
           </div>
         </div>
         <div className="flex items-center gap-2.5">
+          <EditDocumentButton locale={locale} docType="purchase_order" id={po.id} number={po.poNumber} status={po.status} recordState={po.deletedAt ? "deleted" : po.archivedAt ? "archived" : "active"} />
           <DownloadPdfButton locale={locale} type="purchase-order" docId={po.id} number={po.poNumber} />
           <PoDetailActions
             locale={locale}

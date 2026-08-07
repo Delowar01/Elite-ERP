@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { DcDetailActions } from "../dc-detail-actions";
 import { DownloadPdfButton } from "../../_shared/download-pdf-button";
+import { EditDocumentButton } from "../../../_shared/edit-document";
 
 const STATUS_VARIANT: Record<string, "success" | "warning" | "danger" | "info" | "neutral"> = {
   draft: "neutral",
@@ -34,6 +35,8 @@ export default async function DcDetailPage({ params }: { params: Promise<{ id: s
       terms: deliveryChallansTable.terms,
       bankAccounts: deliveryChallansTable.bankAccounts,
       status: deliveryChallansTable.status,
+      archivedAt: deliveryChallansTable.archivedAt,
+      deletedAt: deliveryChallansTable.deletedAt,
       dispatchDate: deliveryChallansTable.dispatchDate,
       deliveredDate: deliveryChallansTable.deliveredDate,
       carrier: deliveryChallansTable.carrier,
@@ -72,6 +75,7 @@ export default async function DcDetailPage({ params }: { params: Promise<{ id: s
           </div>
         </div>
         <div className="flex items-center gap-2.5">
+          <EditDocumentButton locale={locale} docType="delivery_challan" id={dc.id} number={dc.dcNumber} status={dc.status} recordState={dc.deletedAt ? "deleted" : dc.archivedAt ? "archived" : "active"} />
           <DownloadPdfButton locale={locale} type="delivery-challan" docId={dc.id} number={dc.dcNumber} />
           <DcDetailActions locale={locale} dcId={dc.id} status={dc.status} />
         </div>

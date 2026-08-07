@@ -16,6 +16,7 @@ import { RowMenu, type RowMenuEntry } from "../../sales/_shared/row-menu";
 import { Money } from "../../sales/_shared/money";
 import { t, type Locale } from "@/lib/i18n/dict";
 import { useDocumentRowActions } from "../../_shared/document-row-actions";
+import { useDocumentEditAction } from "../../_shared/edit-document";
 
 const STATUS_VARIANT: Record<string, "success" | "warning" | "danger" | "info" | "neutral"> = {
   draft: "neutral",
@@ -52,6 +53,7 @@ export function DnListClient({
   partyLabel: string;
 }) {
   const rowActions = useDocumentRowActions(locale);
+  const { editEntry, dialog: editDialog } = useDocumentEditAction(locale);
 
   const { filters, setFilters, filtered } = useListFilters(rows, {
     search: (r) => [r.debitNoteNumber, r.vendorName],
@@ -129,6 +131,7 @@ export function DnListClient({
             {filtered.map((r) => {
               const entries: RowMenuEntry[] = [
                 { kind: "item", icon: Eye, label: t(locale, "View"), href: `/purchasing/debit-notes/${r.id}` },
+                ...editEntry("debit_note", r.id, r.debitNoteNumber, r.status, r.isArchived),
                 { kind: "item", icon: Download, label: t(locale, "Download PDF"), onSelect: () => { void downloadDocumentPdf("debit-note", r.id).catch((e) => toast.error(e instanceof Error && e.message ? e.message : t(locale, "PDF download failed. Please try again."))); } },
                 { kind: "separator" },
                 ...rowActions("debit_note", r.id, r.status, r.isArchived),
@@ -176,6 +179,7 @@ export function DnListClient({
           {t(locale, "Showing")} {filtered.length} {t(locale, "of")} {rows.length} {t(locale, "Debit Notes")}.
         </div>
       )}
+      {editDialog}
     </div>
   );
 }

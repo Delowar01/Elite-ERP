@@ -2,7 +2,7 @@
 
 import { useMemo, useTransition } from "react";
 import Link from "next/link";
-import { Eye, Star, Pencil, Download } from "lucide-react";
+import { Eye, Star, Download } from "lucide-react";
 import { toast } from "sonner";
 import { downloadDocumentPdf } from "../../sales/_shared/download-pdf-button";
 import { Badge } from "@/components/ui/badge";
@@ -16,7 +16,7 @@ import { RowMenu, type RowMenuEntry } from "../../sales/_shared/row-menu";
 import { Money } from "../../sales/_shared/money";
 import { t, type Locale } from "@/lib/i18n/dict";
 import { useDocumentRowActions } from "../../_shared/document-row-actions";
-import { can } from "@/lib/document-lifecycle";
+import { useDocumentEditAction } from "../../_shared/edit-document";
 import { getConvertTargets, runConvertTarget } from "../../sales/_shared/convert-config";
 
 const STATUS_VARIANT: Record<string, "success" | "warning" | "danger" | "info" | "neutral"> = {
@@ -55,6 +55,7 @@ export function PoListClient({
   partyLabel: string;
 }) {
   const rowActions = useDocumentRowActions(locale);
+  const { editEntry, dialog: editDialog } = useDocumentEditAction(locale);
   const [, startTransition] = useTransition();
 
   const { filters, setFilters, filtered } = useListFilters(rows, {
@@ -127,8 +128,8 @@ export function PoListClient({
               const convertTargets = getConvertTargets("purchase_order", { status: r.status });
               const entries: RowMenuEntry[] = [
                 { kind: "item", icon: Eye, label: t(locale, "View"), href: `/purchasing/orders/${r.id}` },
+                ...editEntry("purchase_order", r.id, r.poNumber, r.status, r.isArchived),
                 { kind: "item", icon: Star, label: t(locale, "Add to Favorites") },
-                { kind: "item", icon: Pencil, label: t(locale, "Edit"), href: can("purchase_order", r.status, "edit") ? `/purchasing/orders/${r.id}/edit` : undefined },
                 { kind: "item", icon: Download, label: t(locale, "Download PDF"), onSelect: () => { void downloadDocumentPdf("purchase-order", r.id).catch((e) => toast.error(e instanceof Error && e.message ? e.message : t(locale, "PDF download failed. Please try again."))); } },
                 ...(convertTargets.length
                   ? [{
@@ -184,6 +185,7 @@ export function PoListClient({
           {t(locale, "Showing")} {filtered.length} {t(locale, "of")} {rows.length} {t(locale, "Purchase Orders")}.
         </div>
       )}
+      {editDialog}
     </div>
   );
 }

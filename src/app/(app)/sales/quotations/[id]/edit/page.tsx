@@ -5,7 +5,7 @@ import { db, customersTable, productsTable, orgsTable, projectsTable, quotations
 import { requireSession } from "@/lib/session";
 import { getLocale } from "@/lib/i18n/server";
 import { tenantScope } from "@/lib/tenant";
-import { can } from "@/lib/document-lifecycle";
+import { canEditDocument } from "@/lib/document-edit";
 import { getDocumentBankData } from "@/lib/document-bank-data";
 import { initialSelectedIds } from "@/lib/document-bank-accounts";
 import type { LineItemDraft } from "../../../_shared/line-items-editor";
@@ -20,8 +20,10 @@ export default async function EditQuotationPage({ params }: { params: Promise<{ 
 
   const [quotation] = await db.select().from(quotationsTable).where(and(eq(quotationsTable.id, quotationId), eq(quotationsTable.orgId, session.orgId)));
   if (!quotation) notFound();
-  // Server-side draft-only enforcement — direct access to a non-draft edit URL redirects to the detail page.
-  if (!can("quotation", quotation.status, "edit")) redirect(`/sales/quotations/${quotationId}`);
+  // Server-side authorization for a direct edit URL: the SAME shared rule the list menu and
+  // the Preview Edit action use — draft-only, and never a record sitting in the Recycle Bin.
+  if (!canEditDocument("quotation", { status: quotation.status, recordState: quotation.deletedAt ? "deleted" : quotation.archivedAt ? "archived" : "active" }))
+    redirect(`/sales/quotations/${quotationId}`);
 
   const [items, customers, products, [org], projects, bankData] = await Promise.all([
     db.select().from(quotationItemsTable).where(eq(quotationItemsTable.quotationId, quotationId)),

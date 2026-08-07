@@ -18,6 +18,7 @@ import { CurrencyProvider } from "@/components/ui/currency-mark";
 import { docMoneyMark } from "../../_shared/doc-currency";
 import { QuotationDetailActions } from "../quotation-detail-actions";
 import { DownloadPdfButton } from "../../_shared/download-pdf-button";
+import { EditDocumentButton } from "../../../_shared/edit-document";
 
 const STATUS_VARIANT: Record<string, "success" | "warning" | "danger" | "info" | "neutral"> = {
   draft: "neutral",
@@ -39,6 +40,8 @@ export default async function QuotationDetailPage({ params }: { params: Promise<
       quotationNumber: quotationsTable.quotationNumber,
       title: quotationsTable.title,
       status: quotationsTable.status,
+      archivedAt: quotationsTable.archivedAt,
+      deletedAt: quotationsTable.deletedAt,
       issueDate: quotationsTable.issueDate,
       validUntil: quotationsTable.validUntil,
       subtotal: quotationsTable.subtotal,
@@ -80,6 +83,7 @@ export default async function QuotationDetailPage({ params }: { params: Promise<
           </div>
         </div>
         <div className="flex items-center gap-2.5">
+          <EditDocumentButton locale={locale} docType="quotation" id={quotation.id} number={quotation.quotationNumber} status={quotation.status} recordState={quotation.deletedAt ? "deleted" : quotation.archivedAt ? "archived" : "active"} />
           <DownloadPdfButton locale={locale} type="quotation" docId={quotation.id} number={quotation.quotationNumber} />
           <QuotationDetailActions locale={locale} quotationId={quotation.id} status={quotation.status} />
         </div>

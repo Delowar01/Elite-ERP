@@ -5,7 +5,7 @@ import { db, vendorsTable, productsTable, orgsTable, purchaseOrdersTable, purcha
 import { requireSession } from "@/lib/session";
 import { getLocale } from "@/lib/i18n/server";
 import { tenantScope } from "@/lib/tenant";
-import { can } from "@/lib/document-lifecycle";
+import { canEditDocument } from "@/lib/document-edit";
 import { getDocumentBankData } from "@/lib/document-bank-data";
 import { initialSelectedIds } from "@/lib/document-bank-accounts";
 import type { LineItemDraft } from "../../../../sales/_shared/line-items-editor";
@@ -20,7 +20,10 @@ export default async function EditPurchaseOrderPage({ params }: { params: Promis
 
   const [po] = await db.select().from(purchaseOrdersTable).where(and(eq(purchaseOrdersTable.id, poId), eq(purchaseOrdersTable.orgId, session.orgId)));
   if (!po) notFound();
-  if (!can("purchase_order", po.status, "edit")) redirect(`/purchasing/orders/${poId}`);
+  // Server-side authorization for a direct edit URL: the SAME shared rule the list menu and
+  // the Preview Edit action use — draft-only, and never a record sitting in the Recycle Bin.
+  if (!canEditDocument("purchase_order", { status: po.status, recordState: po.deletedAt ? "deleted" : po.archivedAt ? "archived" : "active" }))
+    redirect(`/purchasing/orders/${poId}`);
 
   const [items, vendors, products, [org], bankData, projects] = await Promise.all([
     db.select().from(purchaseOrderItemsTable).where(eq(purchaseOrderItemsTable.purchaseOrderId, poId)),

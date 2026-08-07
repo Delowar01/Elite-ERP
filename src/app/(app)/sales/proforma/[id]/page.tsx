@@ -21,6 +21,7 @@ import { DocRelationships } from "../../_shared/doc-relationships";
 import { DocNum } from "../../_shared/money";
 import { ProformaDetailActions } from "../proforma-detail-actions";
 import { DownloadPdfButton } from "../../_shared/download-pdf-button";
+import { EditDocumentButton } from "../../../_shared/edit-document";
 
 const STATUS_VARIANT: Record<string, "success" | "warning" | "danger" | "info" | "neutral"> = {
   draft: "neutral",
@@ -39,6 +40,8 @@ export default async function ProformaDetailPage({ params }: { params: Promise<{
       proformaNumber: proformaInvoicesTable.proformaNumber,
       title: proformaInvoicesTable.title,
       status: proformaInvoicesTable.status,
+      archivedAt: proformaInvoicesTable.archivedAt,
+      deletedAt: proformaInvoicesTable.deletedAt,
       issueDate: proformaInvoicesTable.issueDate,
       subtotal: proformaInvoicesTable.subtotal,
       discount: proformaInvoicesTable.discount,
@@ -110,6 +113,7 @@ export default async function ProformaDetailPage({ params }: { params: Promise<{
           </div>
         </div>
         <div className="flex items-center gap-2.5">
+          <EditDocumentButton locale={locale} docType="proforma_invoice" id={pf.id} number={pf.proformaNumber} status={pf.status} recordState={pf.deletedAt ? "deleted" : pf.archivedAt ? "archived" : "active"} />
           <DownloadPdfButton locale={locale} type="proforma" docId={pf.id} number={pf.proformaNumber} />
           <ProformaDetailActions
             locale={locale}
