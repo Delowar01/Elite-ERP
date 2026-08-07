@@ -1,0 +1,404 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   Elite ERP Executive Presentation — presentation.css
+   Per-slide layouts on the fixed 1920×1080 canvas.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Background moods (Round 2 revision)
+   Every slide's edge/corner treatment is authored here, per slide, on
+   purpose asymmetric — never the same weight on all four sides, never
+   mirrored. Three moods share one visual language (thin brand-color
+   strokes, low-opacity dot-grids, off-corner glows) so the deck still
+   reads as one system:
+     • Hero      (01)     — richest: glows + masked grid + orbit device
+     • Content   (02, 04) — off-center gradient wash + one big corner
+                             motif (orbit or extended grid) + two off-
+                             corner glows
+     • Narrative (03)     — heavier multi-stop gradient wash + a second,
+                             asymmetric counter-glow + a corner orbit
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ═══ Slide 01 — Cover ═══════════════════════════════════════════════════── */
+/* Round 4: left copy column keeps a warm-tinted (not flat white) wash; the
+   hero half becomes a genuine navy field behind the device + ecosystem
+   diagram, rather than white with faint glows. */
+#slide-01 { background: linear-gradient(165deg, #FFFFFF 4%, var(--cream) 46%, #F2DFC3 100%); }
+
+#slide-01 .s01-orbit {
+  width: 640px; height: 640px;
+  inset-inline-end: -220px;
+  bottom: -260px;
+  color: #fff;
+  opacity: 0.05;
+}
+
+#slide-01 .s01-glow-a,
+#slide-01 .s01-glow-b {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(2px);
+  pointer-events: none;
+}
+#slide-01 .s01-glow-a {
+  width: 1100px; height: 1100px;
+  top: -340px; inset-inline-end: -240px;
+  background: radial-gradient(circle, rgba(229, 108, 37, 0.4) 0%, rgba(229, 108, 37, 0) 62%);
+  animation: glowDrift 11s var(--ease) infinite;
+}
+#slide-01 .s01-glow-b {
+  width: 950px; height: 950px;
+  bottom: -440px; inset-inline-start: -270px;
+  background: radial-gradient(circle, rgba(21, 19, 72, 0.16) 0%, rgba(21, 19, 72, 0) 60%);
+}
+
+#slide-01 .s01-copy { position: absolute; top: 264px; inset-inline-start: 96px; width: 830px; }
+#slide-01 .s01-copy .eyebrow { margin-bottom: 28px; }
+#slide-01 .s01-copy .headline { font-size: 104px; }
+#slide-01 .s01-copy .subheadline {
+  margin-top: 22px;
+  font-size: 36px;
+  font-weight: 750;
+  letter-spacing: -0.015em;
+  color: var(--orange);
+}
+#slide-01 .s01-copy .support { margin-top: 32px; max-width: 650px; }
+#slide-01 .s01-copy .tag-row { margin-top: 38px; }
+
+#slide-01 .s01-tagline {
+  position: absolute;
+  bottom: 92px;
+  inset-inline-start: 96px;
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: 0.015em;
+  color: var(--graphite);
+}
+#slide-01 .s01-tagline b { color: var(--navy); font-weight: 750; }
+#slide-01 .s01-tagline::before {
+  content: '';
+  width: 24px; height: 2px;
+  border-radius: 2px;
+  background: var(--orange);
+  flex: 0 0 auto;
+}
+
+#slide-01 .s01-hero { position: absolute; top: 0; inset-inline-end: 0; width: 960px; height: 1080px; }
+/* Round 4: solid navy field behind the whole hero half — the single
+   biggest lever for cutting slide 01's white/cream canvas area. */
+#slide-01 .s01-hero-panel {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(155deg, #201D66 0%, var(--navy-deep) 72%);
+}
+#slide-01 .s01-hero-grid {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.09) 1.2px, transparent 1.2px);
+  background-size: 27px 27px;
+  -webkit-mask-image: radial-gradient(closest-side at 62% 45%, #000 20%, transparent 100%);
+          mask-image: radial-gradient(closest-side at 62% 45%, #000 20%, transparent 100%);
+  pointer-events: none;
+}
+#slide-01 .s01-shot-glow {
+  width: 900px; height: 560px;
+  top: 110px;
+  inset-inline-end: 20px;
+  background: radial-gradient(closest-side, rgba(229, 108, 37, 0.3), rgba(21, 19, 72, 0) 72%);
+}
+#slide-01 .s01-shot {
+  position: absolute;
+  top: 140px;
+  inset-inline-end: 60px;
+  width: 800px;
+  height: 500px;
+  rotate: 1.4deg;
+}
+#slide-01 .s01-net { position: absolute; inset-inline-start: 130px; bottom: 42px; width: 500px; height: 430px; }
+#slide-01 .s01-net .net-lines { position: absolute; inset: 0; }
+#slide-01 .s01-net .net-lines path { stroke: rgba(255, 255, 255, 0.22); stroke-width: 1.6; fill: none; }
+#slide-01 .s01-net .net-core {
+  position: absolute;
+  left: 250px; top: 215px;
+  translate: -50% -50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 86px; height: 86px;
+  border-radius: 25px;
+  background: linear-gradient(135deg, var(--orange) 0%, #C9530F 100%);
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.4), 0 0 0 5px rgba(255, 255, 255, 0.08);
+}
+#slide-01 .s01-net .net-core img { width: 41px; }
+#slide-01 .s01-net .net-node { translate: -50% -50%; }
+#slide-01 .s01-net .pulse {
+  position: absolute;
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--orange);
+  translate: -50% -50%;
+  animation: pulseDot 2.6s var(--ease) infinite;
+}
+#slide-01 .s01-chip-margin { top: 604px; inset-inline-end: 686px; animation: floatSoft 7s var(--ease) infinite; }
+#slide-01 .s01-chip-revenue { top: 98px; inset-inline-end: 26px; animation: floatSoft 8s var(--ease) 1.2s infinite; }
+#slide-01 .s01-chip-revenue .icon-tile { width: 48px; height: 48px; border-radius: 14px 14px 14px 4px; }
+#slide-01 .s01-chip-revenue .icon-tile svg { width: 22px; height: 22px; }
+
+/* ═══ Slide 02 — Executive Summary (Content mood) ════════════════════════── */
+/* Round 4: named the worst offender at ~60% blank canvas. The diagram panel
+   is now a genuine navy field (not cream-on-cream), and the base wash
+   carries color much further across the slide instead of staying white. */
+#slide-02 { background: linear-gradient(200deg, #FFFFFF 0%, var(--cream) 42%, #F2DFC3 100%); }
+#slide-02 .s02-bg-glow-a {
+  position: absolute;
+  width: 900px; height: 900px;
+  top: -300px; inset-inline-end: -260px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(229, 108, 37, 0.2) 0%, rgba(229, 108, 37, 0) 62%);
+  pointer-events: none;
+}
+#slide-02 .s02-bg-glow-b {
+  position: absolute;
+  width: 820px; height: 820px;
+  bottom: -380px; inset-inline-start: -260px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(21, 19, 72, 0.14) 0%, rgba(21, 19, 72, 0) 60%);
+  pointer-events: none;
+}
+#slide-02 .s02-grid-wide {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(21, 19, 72, 0.06) 1.1px, transparent 1.1px);
+  background-size: 26px 26px;
+  -webkit-mask-image: radial-gradient(600px 600px at 4% 98%, #000 0%, transparent 72%);
+          mask-image: radial-gradient(600px 600px at 4% 98%, #000 0%, transparent 72%);
+  pointer-events: none;
+}
+#slide-02 .s02-orbit {
+  width: 580px; height: 580px;
+  top: -210px;
+  inset-inline-end: -170px;
+  color: #fff;
+  opacity: 0.06;
+}
+#slide-02 .s02-panel {
+  position: absolute;
+  top: 224px;
+  inset-inline-end: 56px;
+  width: 950px;
+  height: 664px;
+  border-radius: 32px;
+  background: linear-gradient(160deg, #211E68 0%, var(--navy-deep) 100%);
+  box-shadow: 0 30px 70px rgba(21, 19, 72, 0.32), 0 0 0 1px rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+}
+#slide-02 .s02-panel::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.07) 1.1px, transparent 1.1px);
+  background-size: 24px 24px;
+  -webkit-mask-image: radial-gradient(closest-side at 85% 12%, #000 0%, transparent 65%);
+          mask-image: radial-gradient(closest-side at 85% 12%, #000 0%, transparent 65%);
+}
+#slide-02 .s02-panel::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(480px 300px at 88% 8%, rgba(229, 108, 37, 0.28), transparent 70%);
+  pointer-events: none;
+}
+#slide-02 .s02-head { position: absolute; top: 146px; inset-inline-start: 96px; width: 1000px; }
+#slide-02 .s02-head .headline { font-size: 66px; margin-top: 20px; }
+#slide-02 .s02-head::after {
+  content: '';
+  display: block;
+  width: 64px; height: 4px;
+  border-radius: 3px;
+  background: var(--orange);
+  margin-top: 28px;
+}
+#slide-02 .s02-left { position: absolute; top: 396px; inset-inline-start: 96px; width: 660px; }
+#slide-02 .s02-left .spine { inset-inline-start: -30px; top: 4px; height: 148px; }
+#slide-02 .s02-left .support { font-size: 21px; }
+#slide-02 .s02-highlights { margin-top: 22px; display: grid; gap: 20px; }
+
+#slide-02 .s02-diagram { position: absolute; top: 258px; inset-inline-end: 92px; width: 878px; height: 596px; }
+#slide-02 .s02-modules {
+  position: absolute;
+  top: 34px; left: 0;
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+}
+#slide-02 .s02-modules .module-chip { position: static; justify-content: flex-start; padding-inline-start: 20px; }
+#slide-02 .s02-links { position: absolute; left: 0; top: 0; width: 878px; height: 596px; pointer-events: none; }
+#slide-02 .s02-links path { stroke: rgba(255, 255, 255, 0.24); stroke-width: 1.6; fill: none; }
+#slide-02 .s02-core {
+  left: 139px; top: 418px;
+  width: 600px; height: 128px;
+  flex-direction: row;
+  background: linear-gradient(135deg, var(--orange) 0%, #C9530F 100%);
+  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.35);
+}
+#slide-02 .s02-core .core-sub { opacity: 0.85; }
+#slide-02 .s02-core .core-text { text-align: start; }
+#slide-02 .s02-core-glow {
+  position: absolute;
+  left: 209px; top: 560px;
+  width: 480px; height: 26px;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(229, 108, 37, 0.35), rgba(229, 108, 37, 0));
+}
+#slide-02 .benefit-strip { position: absolute; inset-inline: 96px; bottom: 68px; }
+
+/* ═══ Slide 03 — Business Challenges (Narrative mood — heaviest wash) ────── */
+#slide-03 { background: linear-gradient(128deg, #FFFFFF 0%, #FDF0DC 40%, #FBE4BE 74%, #F6D19B 100%); }
+#slide-03 .s03-bg-glow {
+  position: absolute;
+  width: 1000px; height: 1000px;
+  top: -380px; inset-inline-end: -320px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(229, 108, 37, 0.24) 0%, rgba(229, 108, 37, 0) 62%);
+  pointer-events: none;
+}
+#slide-03 .s03-bg-glow-b {
+  position: absolute;
+  width: 860px; height: 860px;
+  bottom: -360px; inset-inline-start: -280px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(21, 19, 72, 0.16) 0%, rgba(21, 19, 72, 0) 60%);
+  pointer-events: none;
+}
+#slide-03 .s03-accent-glow {
+  position: absolute;
+  width: 640px; height: 640px;
+  top: 470px; inset-inline-start: -80px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(229, 108, 37, 0.16) 0%, rgba(21, 19, 72, 0.08) 45%, rgba(21, 19, 72, 0) 68%);
+  pointer-events: none;
+}
+#slide-03 .s03-orbit {
+  width: 480px; height: 480px;
+  top: -260px;
+  inset-inline-start: -220px;
+  color: var(--navy);
+  opacity: 0.09;
+}
+#slide-03 .s03-left { position: absolute; top: 210px; inset-inline-start: 96px; width: 680px; }
+#slide-03 .s03-left .spine { inset-inline-start: -30px; top: 6px; height: 620px; }
+#slide-03 .s03-left .headline { font-size: 68px; margin-top: 26px; }
+#slide-03 .s03-left .support { margin-top: 34px; max-width: 610px; }
+#slide-03 .s03-transition { position: absolute; bottom: 210px; inset-inline-start: 96px; width: 680px; }
+
+#slide-03 .s03-field { position: absolute; top: 118px; inset-inline-end: 60px; width: 1030px; height: 830px; }
+#slide-03 .s03-broken { position: absolute; inset: 0; pointer-events: none; }
+#slide-03 .s03-broken path {
+  stroke: #C9C2B4;
+  stroke-width: 1.7;
+  stroke-dasharray: 5 7;
+  fill: none;
+}
+#slide-03 .s03-broken .snap {
+  stroke: rgba(214, 69, 80, 0.55);
+  stroke-width: 2;
+  stroke-dasharray: none;
+}
+#slide-03 .s03-converge { position: absolute; inset: 0; pointer-events: none; }
+#slide-03 .s03-converge path { stroke: var(--orange); stroke-width: 2.4; fill: none; opacity: 0.85; }
+#slide-03 .s03-core {
+  left: 265px; top: 566px;
+  width: 540px; height: 118px;
+  gap: 18px;
+}
+#slide-03 .s03-core .core-mark { width: 40px; }
+#slide-03 .s03-core .core-check {
+  display: flex; align-items: center; justify-content: center;
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  background: var(--orange);
+  position: absolute;
+  top: -16px;
+  inset-inline-end: -13px;
+  box-shadow: 0 4px 10px rgba(229, 108, 37, 0.4);
+}
+#slide-03 .s03-core .core-check svg { width: 17px; height: 17px; color: #fff; }
+
+/* ═══ Slide 04 — Why Elite ERP (Content mood) ════════════════════════════── */
+#slide-04 { background: radial-gradient(1300px 800px at 36% 20%, #FFFFFF 30%, #F5E2C4 100%); }
+#slide-04 .s04-bg-glow-a {
+  position: absolute;
+  width: 820px; height: 820px;
+  top: -300px; inset-inline-start: -260px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(21, 19, 72, 0.15) 0%, rgba(21, 19, 72, 0) 60%);
+  pointer-events: none;
+}
+#slide-04 .s04-bg-glow-b {
+  position: absolute;
+  width: 760px; height: 760px;
+  bottom: -320px; inset-inline-end: -240px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(229, 108, 37, 0.22) 0%, rgba(229, 108, 37, 0) 60%);
+  pointer-events: none;
+}
+#slide-04 .s04-orbit {
+  width: 560px; height: 560px;
+  bottom: -220px;
+  inset-inline-end: -180px;
+  color: var(--orange);
+  opacity: 0.1;
+}
+#slide-04 .s04-head { position: absolute; top: 86px; left: 0; right: 0; text-align: center; }
+#slide-04 .s04-head .headline { font-size: 60px; margin-top: 20px; }
+
+#slide-04 .s04-eco {
+  position: absolute;
+  top: 250px;
+  left: 50%;
+  translate: -50%;
+  width: 1020px;
+  height: 630px;
+}
+#slide-04 .s04-links { position: absolute; inset: 0; pointer-events: none; }
+#slide-04 .s04-links path { stroke: rgba(21, 19, 72, 0.17); stroke-width: 1.6; fill: none; }
+#slide-04 .s04-eco .module-chip { translate: -50% -50%; }
+#slide-04 .s04-eco .pulse {
+  position: absolute;
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--orange);
+  translate: -50% -50%;
+  animation: pulseDot 3s var(--ease) infinite;
+}
+#slide-04 .s04-core-ring {
+  left: 50%; top: 50%;
+  translate: -50% -50%;
+  width: 372px; height: 372px;
+}
+#slide-04 .s04-core {
+  left: 50%; top: 50%;
+  translate: -50% -50%;
+  width: 292px; height: 160px;
+  flex-direction: column;
+  gap: 11px;
+}
+#slide-04 .s04-core .core-text { text-align: center; }
+
+#slide-04 .s04-side { position: absolute; top: 318px; width: 336px; }
+#slide-04 .s04-value { inset-inline-start: 96px; }
+#slide-04 .s04-caps { inset-inline-end: 96px; }
+#slide-04 .s04-side .value-item + .value-item { margin-top: 34px; }
+
+#slide-04 .s04-transition-wrap {
+  position: absolute;
+  bottom: 72px;
+  left: 50%;
+  translate: -50% 0;
+  width: 980px;
+}
+#slide-04 .s04-transition-wrap .transition-bar { justify-content: center; }
+#slide-04 .s04-transition-wrap p { font-size: 20.5px; }
