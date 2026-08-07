@@ -1618,6 +1618,101 @@ const DICT: Record<string, string> = {
     "أنت على وشك تعديل هذا المستند. أي تغييرات تحفظها قد تُحدِّث بيانات المستند. هل تريد المتابعة؟",
   "Continue to Edit": "المتابعة إلى التعديل",
   "Opening…": "جارٍ الفتح…",
+  // Confirmation policy (sensitive actions)
+  "A new document will be created from this one. The original stays as it is.":
+    "سيتم إنشاء مستند جديد من هذا المستند، ويبقى الأصل كما هو.",
+  "A reversing entry will be posted and the linked document's balance restored.":
+    "سيتم ترحيل قيد عكسي واستعادة رصيد المستند المرتبط.",
+  "Cancel Document": "إلغاء المستند",
+  "Change Role": "تغيير الدور",
+  "Change Status": "تغيير الحالة",
+  "Changing the status moves this delivery challan forward in its workflow.":
+    "تغيير الحالة ينقل إذن التسليم إلى المرحلة التالية في مساره.",
+  "Changing the status moves this document forward in its workflow.":
+    "تغيير الحالة ينقل هذا المستند إلى المرحلة التالية في مساره.",
+  "Changing the status moves this proforma forward. Proformas never post to the ledger.":
+    "تغيير الحالة ينقل الفاتورة المبدئية إلى المرحلة التالية. الفواتير المبدئية لا تُرحَّل إلى دفتر الأستاذ إطلاقًا.",
+  "Consent Record": "سجل الموافقة",
+  "Continue": "متابعة",
+  "Convert": "تحويل",
+  "Creates": "ينشئ",
+  "Delete Payment": "حذف الدفعة",
+  "Delete Permanently": "حذف نهائي",
+  "Discard Changes": "تجاهل التغييرات",
+  "Discard unsaved changes?": "تجاهل التغييرات غير المحفوظة؟",
+  "Issuing posts a reversing entry against the source invoice and restores its balance.":
+    "الإصدار يُرحِّل قيدًا عكسيًا مقابل الفاتورة المصدر ويستعيد رصيدها.",
+  "Issuing posts a reversing entry against the source purchase order and returns the stock.":
+    "الإصدار يُرحِّل قيدًا عكسيًا مقابل أمر الشراء المصدر ويعيد المخزون.",
+  "Keep Editing": "متابعة التعديل",
+  "Lines": "عدد البنود",
+  "New Role": "الدور الجديد",
+  "Personal Data": "البيانات الشخصية",
+  "Post Entry": "ترحيل القيد",
+  "Product": "منتج",
+  "Product Bundle": "حزمة منتجات",
+  "Receiving posts to inventory and accounts payable, and increases stock on hand.":
+    "الاستلام يُرحَّل إلى المخزون والذمم الدائنة، ويزيد الرصيد المتاح في المخزون.",
+  "Records will be created or updated in bulk from the imported file.":
+    "سيتم إنشاء أو تحديث سجلات بالجملة من الملف المستورد.",
+  "Reverse": "عكس القيد",
+  "Save Numbering": "حفظ الترقيم",
+  "Saved View": "العرض المحفوظ",
+  "Sending posts this invoice to the ledger and reduces stock on hand.":
+    "الإرسال يُرحِّل هذه الفاتورة إلى دفتر الأستاذ ويخصم من رصيد المخزون.",
+  "Something went wrong. Please try again.": "حدث خطأ ما. يرجى المحاولة مرة أخرى.",
+  "Team Member": "عضو الفريق",
+  "Terms Group": "مجموعة الشروط",
+  "The consent record will be removed from the organization's compliance log.":
+    "سيتم حذف سجل الموافقة من سجل الامتثال الخاص بالمؤسسة.",
+  "The customer's personal details will be irreversibly anonymized to satisfy a right-to-erasure request.":
+    "سيتم إخفاء هوية البيانات الشخصية للعميل بشكل نهائي استجابةً لطلب الحق في المحو.",
+  "The document and its line items will be erased from the Recycle Bin.":
+    "سيتم محو المستند وبنوده من سلة المحذوفات.",
+  "The document will be cancelled and can no longer move forward in its workflow.":
+    "سيتم إلغاء المستند ولن يتمكن من المضي قدمًا في مساره.",
+  "The document will be hidden from the default list. You can unarchive it later.":
+    "سيتم إخفاء المستند من القائمة الافتراضية، ويمكنك إلغاء أرشفته لاحقًا.",
+  "The document will be moved to the Recycle Bin, where it can still be restored.":
+    "سيتم نقل المستند إلى سلة المحذوفات حيث يمكن استعادته.",
+  "The entry will be posted to the ledger and will affect account balances.":
+    "سيتم ترحيل القيد إلى دفتر الأستاذ وسيؤثر على أرصدة الحسابات.",
+  "The order will be issued to the vendor. Nothing is posted to the ledger until it is received.":
+    "سيتم إصدار الأمر إلى المورد. لا يُرحَّل أي شيء إلى دفتر الأستاذ حتى يتم الاستلام.",
+  "The payment will be posted to the ledger and the document's balance updated.":
+    "سيتم ترحيل الدفعة إلى دفتر الأستاذ وتحديث رصيد المستند.",
+  "The payment will be removed and its ledger posting reversed.": "سيتم حذف الدفعة وعكس ترحيلها في دفتر الأستاذ.",
+  "The posted entry will be reversed and any stock movement restored.":
+    "سيتم عكس القيد المُرحَّل واستعادة أي حركة مخزون.",
+  "The record will be erased from the Recycle Bin.": "سيتم محو السجل من سلة المحذوفات.",
+  "The record will be moved to the Recycle Bin, where it can still be restored.":
+    "سيتم نقل السجل إلى سلة المحذوفات حيث يمكن استعادته.",
+  "The saved values will be replaced with the defaults for the whole organization.":
+    "سيتم استبدال القيم المحفوظة بالقيم الافتراضية للمؤسسة بأكملها.",
+  "This cannot be undone.": "لا يمكن التراجع عن هذا الإجراء.",
+  "This changes a compliance setting for the whole organization.":
+    "هذا يغيّر إعداد امتثال يخص المؤسسة بأكملها.",
+  "This changes the numbers given to documents created from now on.":
+    "هذا يغيّر الأرقام التي تُمنح للمستندات التي تُنشأ من الآن فصاعدًا.",
+  "This changes what this person is allowed to do across the whole organization.":
+    "هذا يغيّر ما يُسمح لهذا الشخص بفعله في المؤسسة بأكملها.",
+  "This person will lose access to the organization immediately.":
+    "سيفقد هذا الشخص صلاحية الوصول إلى المؤسسة فورًا.",
+  "This preset will be removed. Documents already saved with it are not changed.":
+    "سيتم حذف هذا الإعداد المسبق. المستندات المحفوظة به مسبقًا لن تتغير.",
+  "This saved view will be removed. No documents are affected.": "سيتم حذف هذا العرض المحفوظ. لن تتأثر أي مستندات.",
+  "This will finalize the document and post the resulting accounting entries.":
+    "سيؤدي هذا إلى اعتماد المستند وترحيل القيود المحاسبية الناتجة عنه.",
+  "Total Credits": "إجمالي الدائن",
+  "Total Debits": "إجمالي المدين",
+  "Working…": "جارٍ التنفيذ…",
+  "You are about to edit this document. Saved changes will update the document details.":
+    "أنت على وشك تعديل هذا المستند. التغييرات المحفوظة ستُحدِّث بيانات المستند.",
+  "You have changes that have not been saved.": "لديك تغييرات لم يتم حفظها.",
+  "this record": "هذا السجل",
+  "against Invoice": "مقابل الفاتورة",
+  "against Purchase Order": "مقابل أمر الشراء",
+  "against Proforma Invoice": "مقابل الفاتورة المبدئية",
 };
 
 export function t(locale: Locale, en: string): string {

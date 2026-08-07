@@ -13,6 +13,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { t, type Locale } from "@/lib/i18n/dict";
+import { useConfirm } from "../../_shared/confirm-provider";
 import type { TermsConditionsGroup } from "@/db";
 import { MasterTermsListEditor } from "../../sales/_shared/terms-editor";
 import { saveTermsGroupAction, deleteTermsGroupAction } from "./actions";
@@ -29,6 +30,7 @@ const DOC_TYPE_LABELS: Record<string, string> = {
 export function TermsGroupsPanel({ locale, groups }: { locale: Locale; groups: TermsConditionsGroup[] }) {
   const [editing, setEditing] = useState<TermsConditionsGroup | "new" | null>(null);
   const [pending, startTransition] = useTransition();
+  const confirm = useConfirm();
   const [docType, setDocType] = useState<string>("none");
   const [isDefault, setIsDefault] = useState(false);
   // A group holds multiple terms; edited as a reorderable list and stored structured (jsonb array).
@@ -59,11 +61,23 @@ export function TermsGroupsPanel({ locale, groups }: { locale: Locale; groups: T
     });
   }
 
-  function onDelete(id: number) {
-    startTransition(async () => {
-      const result = await deleteTermsGroupAction(id);
-      if (result.error) toast.error(result.error);
-      else toast.success(t(locale, "Deleted"));
+  function onDelete(id: number, name: string) {
+    confirm({
+      action: "preset.delete",
+      entityType: "Terms Group",
+      entityNumber: name,
+      onConfirm: () =>
+        new Promise<{ error?: string } | void>((resolve) => {
+          startTransition(async () => {
+            const result = await deleteTermsGroupAction(id);
+            if (result.error) {
+              resolve({ error: result.error });
+              return;
+            }
+            toast.success(t(locale, "Deleted"));
+            resolve();
+          });
+        }),
     });
   }
 
@@ -100,7 +114,7 @@ export function TermsGroupsPanel({ locale, groups }: { locale: Locale; groups: T
                   <Button variant="ghost" size="icon" disabled={pending} onClick={() => openEdit(group)} aria-label={t(locale, "Edit")}>
                     <Pencil className="size-3.5" />
                   </Button>
-                  <Button variant="ghost" size="icon" disabled={pending} onClick={() => onDelete(group.id)} aria-label={t(locale, "Delete")} className="text-danger hover:text-danger">
+                  <Button variant="ghost" size="icon" disabled={pending} onClick={() => onDelete(group.id, group.name)} aria-label={t(locale, "Delete")} className="text-danger hover:text-danger">
                     <Trash2 className="size-3.5" />
                   </Button>
                 </TableCell>

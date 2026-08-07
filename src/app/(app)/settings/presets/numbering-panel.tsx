@@ -7,6 +7,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { t, type Locale } from "@/lib/i18n/dict";
+import { useConfirm } from "../../_shared/confirm-provider";
 import type { DocumentSequence } from "@/db";
 import { updateSequenceAction } from "./actions";
 
@@ -27,6 +28,7 @@ export function NumberingPanel({ locale, sequences }: { locale: Locale; sequence
   const [editingId, setEditingId] = useState<number | null>(null);
   const [draft, setDraft] = useState<Draft>({ prefix: "", nextNumber: "", padding: "" });
   const [pending, startTransition] = useTransition();
+  const confirm = useConfirm();
 
   function startEdit(seq: DocumentSequence) {
     setEditingId(seq.id);
@@ -36,13 +38,27 @@ export function NumberingPanel({ locale, sequences }: { locale: Locale; sequence
   // A <form> can't be a direct child of <tr> (invalid table content model — browsers hoist it
   // out, breaking the row), so this edits via local state + a direct action call, not a form.
   function save(seq: DocumentSequence) {
-    startTransition(async () => {
-      const result = await updateSequenceAction(seq.id, draft.prefix, draft.nextNumber, draft.padding);
-      if (result.error) toast.error(result.error);
-      else {
-        toast.success(t(locale, "Saved"));
-        setEditingId(null);
-      }
+    confirm({
+      action: "preset.numbering",
+      entityType: "Document Numbering",
+      entityNumber: t(locale, DOC_TYPE_LABELS[seq.documentType] ?? seq.documentType),
+      details: [
+        { label: "Prefix", value: draft.prefix },
+        { label: "Next Number", value: String(draft.nextNumber) },
+      ],
+      onConfirm: () =>
+        new Promise<{ error?: string } | void>((resolve) => {
+          startTransition(async () => {
+            const result = await updateSequenceAction(seq.id, draft.prefix, draft.nextNumber, draft.padding);
+            if (result?.error) {
+              resolve({ error: result.error });
+              return;
+            }
+            toast.success(t(locale, "Saved"));
+            setEditingId(null);
+            resolve();
+          });
+        }),
     });
   }
 

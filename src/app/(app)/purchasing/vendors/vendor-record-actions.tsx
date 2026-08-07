@@ -11,17 +11,41 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { useConfirm } from "../../_shared/confirm-provider";
 import type { Vendor } from "@/db";
 import { archiveVendorAction, unarchiveVendorAction, deleteVendorAction, toggleVendorActiveAction } from "./actions";
 
-export function VendorRecordActions({ vendor }: { vendor: Pick<Vendor, "id" | "recordState" | "isActive"> }) {
+export function VendorRecordActions({ vendor }: { vendor: Pick<Vendor, "id" | "recordState" | "isActive" | "name" | "name"> }) {
   const [pending, startTransition] = useTransition();
+  const confirm = useConfirm();
 
   function run(action: () => Promise<void | { error?: string }>, successMessage: string) {
     startTransition(async () => {
       const result = await action();
       if (result && "error" in result && result.error) toast.error(result.error);
       else toast.success(successMessage);
+    });
+  }
+
+  // Archiving hides the record and deleting moves it to the Recycle Bin — both ask first, through
+  // the app-wide confirmation. Marking active/inactive and unarchiving are ordinary toggles.
+  function ask(kind: "record.delete" | "document.archive", action: () => Promise<void | { error?: string }>, successMessage: string) {
+    confirm({
+      action: kind,
+      entityType: "Vendor",
+      entityNumber: vendor.name,
+      onConfirm: () =>
+        new Promise<{ error?: string } | void>((resolve) => {
+          startTransition(async () => {
+            const result = await action();
+            if (result && "error" in result && result.error) {
+              resolve({ error: result.error });
+              return;
+            }
+            toast.success(successMessage);
+            resolve();
+          });
+        }),
     });
   }
 
@@ -45,13 +69,13 @@ export function VendorRecordActions({ vendor }: { vendor: Pick<Vendor, "id" | "r
             <ArchiveRestore className="size-3.5" /> Unarchive
           </DropdownMenuItem>
         ) : (
-          <DropdownMenuItem className="cursor-pointer" onSelect={() => run(() => archiveVendorAction(vendor.id), "Archived")}>
+          <DropdownMenuItem className="cursor-pointer" onSelect={() => ask("document.archive", () => archiveVendorAction(vendor.id), "Archived")}>
             <Archive className="size-3.5" /> Archive
           </DropdownMenuItem>
         )}
         <DropdownMenuItem
           className="cursor-pointer text-danger data-[highlighted]:bg-danger-bg"
-          onSelect={() => run(() => deleteVendorAction(vendor.id), "Moved to Recycle Bin")}
+          onSelect={() => ask("record.delete", () => deleteVendorAction(vendor.id), "Moved to Recycle Bin")}
         >
           <Trash2 className="size-3.5" /> Delete
         </DropdownMenuItem>

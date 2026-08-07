@@ -10,6 +10,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@
 import { t, type Locale } from "@/lib/i18n/dict";
 import type { DocumentType } from "@/lib/document-lifecycle";
 import { restoreDocumentAction, permanentDeleteDocumentAction } from "../_shared/lifecycle-actions";
+import { useConfirm } from "../_shared/confirm-provider";
 
 export type BinRow = {
   docType: DocumentType;
@@ -26,7 +27,7 @@ export type BinRow = {
 export function RecycleBinClient({ locale, rows, isOwner }: { locale: Locale; rows: BinRow[]; isOwner: boolean }) {
   const [search, setSearch] = useState("");
   const [pending, startTransition] = useTransition();
-  const [confirmKey, setConfirmKey] = useState<string | null>(null);
+  const confirm = useConfirm();
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -42,12 +43,25 @@ export function RecycleBinClient({ locale, rows, isOwner }: { locale: Locale; ro
     });
   }
 
+  // The single most destructive action in the app — owner-only, draft-only, and gone for good.
   function permanentDelete(r: BinRow) {
-    startTransition(async () => {
-      const result = await permanentDeleteDocumentAction(r.docType, r.id);
-      if (result?.error) toast.error(result.error);
-      else toast.success(t(locale, "Document permanently deleted."));
-      setConfirmKey(null);
+    confirm({
+      action: "document.permanentDelete",
+      entityType: r.typeLabel,
+      entityNumber: r.number,
+      details: [{ label: "Party", value: r.partyName }],
+      onConfirm: () =>
+        new Promise<{ error?: string } | void>((resolve) => {
+          startTransition(async () => {
+            const result = await permanentDeleteDocumentAction(r.docType, r.id);
+            if (result?.error) {
+              resolve({ error: result.error });
+              return;
+            }
+            toast.success(t(locale, "Document permanently deleted."));
+            resolve();
+          });
+        }),
     });
   }
 
@@ -110,22 +124,11 @@ export function RecycleBinClient({ locale, rows, isOwner }: { locale: Locale; ro
                       <Button variant="glass" style={{ width: "auto" }} disabled={pending} onClick={() => restore(r)}>
                         <RotateCcw className="size-3.5" /> {t(locale, "Restore")}
                       </Button>
-                      {isOwner &&
-                        r.canPermanentDelete &&
-                        (confirmKey === key ? (
-                          <>
-                            <Button variant="destructive" style={{ width: "auto" }} disabled={pending} onClick={() => permanentDelete(r)}>
-                              {t(locale, "Confirm")}
-                            </Button>
-                            <Button variant="ghost" style={{ width: "auto" }} disabled={pending} onClick={() => setConfirmKey(null)}>
-                              {t(locale, "Cancel")}
-                            </Button>
-                          </>
-                        ) : (
-                          <Button variant="ghost" style={{ width: "auto" }} disabled={pending} onClick={() => setConfirmKey(key)} className="text-danger">
-                            <Trash2 className="size-3.5" /> {t(locale, "Permanent Delete")}
-                          </Button>
-                        ))}
+                      {isOwner && r.canPermanentDelete && (
+                        <Button variant="ghost" style={{ width: "auto" }} disabled={pending} onClick={() => permanentDelete(r)} className="text-danger">
+                          <Trash2 className="size-3.5" /> {t(locale, "Permanent Delete")}
+                        </Button>
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>

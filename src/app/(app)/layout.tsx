@@ -6,6 +6,7 @@ import { getNotifications } from "@/lib/notifications";
 import { getFavorites } from "@/lib/favorites";
 import { AppShell } from "@/components/layout/app-shell";
 import { CurrencyProvider } from "@/components/ui/currency-mark";
+import { ConfirmProvider } from "./_shared/confirm-provider";
 import { buildMoneyMark } from "@/lib/currency/currencies";
 import "./mockup-parity.css";
 
@@ -45,7 +46,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           roundRates: session.orgRoundRates,
         })}
       >
-        {children}
+        {/* One confirmation dialog for every sensitive action in the app (see confirm-policy.ts). */}
+        <ConfirmProvider locale={locale}>{children}</ConfirmProvider>
       </CurrencyProvider>
     </AppShell>
   );

@@ -19,6 +19,7 @@ import { DocumentTermsEditor } from "../_shared/terms-editor";
 import type { DocumentTerm } from "../_shared/document-terms";
 import type { ContentPreset } from "@/lib/document-presets";
 import { t, type Locale } from "@/lib/i18n/dict";
+import { useFormDirty, useLeaveWarning } from "../../_shared/unsaved-changes";
 import { getProfileByCountryName } from "@/lib/geo/country-profiles";
 import type { Customer, Product, Org } from "@/db";
 import { createDeliveryChallanAction, updateDeliveryChallanAction } from "./actions";
@@ -91,6 +92,9 @@ export function DcForm({
     currency: org.currency,
     bankAccounts: snapshotSelectedBankAccounts(bankAccountIds, bankAccounts),
   };
+
+  // Warn before the tab is closed or reloaded with unsaved work (only when it really changed).
+  useLeaveWarning(useFormDirty({ customerId, items }));
 
   function submit(andDispatch: boolean) {
     const start = andDispatch ? startPrimaryTransition : startDraftTransition;

@@ -27,6 +27,7 @@ import { docMoneyMark } from "../../sales/_shared/doc-currency";
 import { ConfigureColumnsDialog } from "../../sales/_shared/configure-columns-dialog";
 import { resolveColumns, type ColumnDef } from "@/lib/column-config";
 import { t, type Locale } from "@/lib/i18n/dict";
+import { useFormDirty, useLeaveWarning } from "../../_shared/unsaved-changes";
 import { getProfileByCountryName } from "@/lib/geo/country-profiles";
 import type { ContentPreset } from "@/lib/document-presets";
 import type { Vendor, Product, Org } from "@/db";
@@ -121,6 +122,9 @@ export function PoForm({
 
   const totals = computeTotals(items, discount);
   const selectedVendor = vendors.find((v) => String(v.id) === vendorId);
+
+  // Warn before the tab is closed or reloaded with unsaved work (only when it really changed).
+  useLeaveWarning(useFormDirty({ title, vendorId, notes, terms, items }));
 
   function submit(andSend: boolean) {
     const start = andSend ? startPrimaryTransition : startDraftTransition;

@@ -8,6 +8,7 @@ import { Search, SlidersHorizontal, Bookmark, ChevronDown, Download, Archive, Pl
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { t, type Locale } from "@/lib/i18n/dict";
+import { useConfirm } from "../../_shared/confirm-provider";
 import type { ImportColumn } from "@/lib/document-list-workspace";
 import { ImportDialog } from "./import-dialog";
 import { ImportV2Dialog } from "./import-v2-dialog";
@@ -46,6 +47,7 @@ export function ListWorkspaceToolbar({
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const confirm = useConfirm();
   const active = filtersActive(filters);
   const set = (patch: Partial<ListFilterState>) => setFilters({ ...filters, ...patch });
 
@@ -73,11 +75,23 @@ export function ListWorkspaceToolbar({
     });
   }
   function deleteView(v: SavedViewDTO) {
-    if (!window.confirm(t(locale, "Delete this view?"))) return;
-    startTransition(async () => {
-      const res = await deleteViewAction(v.id);
-      if (res.error) toast.error(res.error);
-      else { toast.success(t(locale, "View deleted.")); router.refresh(); }
+    confirm({
+      action: "view.delete",
+      entityType: "Saved View",
+      entityNumber: v.name,
+      onConfirm: () =>
+        new Promise<{ error?: string } | void>((resolve) => {
+          startTransition(async () => {
+            const res = await deleteViewAction(v.id);
+            if (res.error) {
+              resolve({ error: res.error });
+              return;
+            }
+            toast.success(t(locale, "View deleted."));
+            router.refresh();
+            resolve();
+          });
+        }),
     });
   }
 

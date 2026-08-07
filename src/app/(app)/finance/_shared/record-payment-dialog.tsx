@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { t, type Locale } from "@/lib/i18n/dict";
 import { fmt } from "../../sales/_shared/totals";
 import { recordPaymentAction } from "../payments/actions";
+import { useConfirm } from "../../_shared/confirm-provider";
 
 export type OutstandingInvoice = { id: number; invoiceNumber: string; customerName: string; balance: number };
 export type OutstandingProforma = { id: number; proformaNumber: string; customerName: string; balance: number };
@@ -62,6 +63,7 @@ export function RecordPaymentDialog({
   const [amount, setAmount] = useState(initialBalance !== undefined ? String(initialBalance) : "");
   const [method, setMethod] = useState("bank_transfer");
   const [pending, startTransition] = useTransition();
+  const confirm = useConfirm();
 
   const locked = !!lockedDirection;
   const selected = useMemo(
@@ -91,19 +93,57 @@ export function RecordPaymentDialog({
     setMethod("bank_transfer");
   }
 
+  // Recording a payment moves cash and the ledger, so it is confirmed with the figures that matter
+  // (amount, document, party, bank account) before anything is posted. Nothing runs until confirm.
   function submit(formData: FormData) {
     formData.set("direction", direction);
     formData.set("sourceType", sourceType);
     formData.set("sourceId", sourceId);
     formData.set("bankAccountId", bankAccountId);
     formData.set("method", method);
-    startTransition(async () => {
-      const result = await recordPaymentAction(formData);
-      if (result.error) toast.error(result.error);
-      else {
-        toast.success(t(locale, "Payment recorded — posted to ledger."));
-        setOpen(false);
-      }
+
+    const docNumber =
+      sourceType === "proforma"
+        ? proformas.find((x) => String(x.id) === sourceId)?.proformaNumber
+        : direction === "in"
+          ? invoices.find((x) => String(x.id) === sourceId)?.invoiceNumber
+          : purchaseOrders.find((x) => String(x.id) === sourceId)?.poNumber;
+    const party =
+      sourceType === "proforma"
+        ? proformas.find((x) => String(x.id) === sourceId)?.customerName
+        : direction === "in"
+          ? invoices.find((x) => String(x.id) === sourceId)?.customerName
+          : purchaseOrders.find((x) => String(x.id) === sourceId)?.vendorName;
+    const bankName = bankAccounts.find((b) => String(b.id) === bankAccountId)?.name;
+
+    confirm({
+      action: "payment.record",
+      // Reads as "Record Payment against Purchase Order PO-000123?" in both languages.
+      entityType: sourceType === "proforma" ? "against Proforma Invoice" : direction === "in" ? "against Invoice" : "against Purchase Order",
+      entityNumber: docNumber ?? "",
+      description:
+        direction === "in"
+          ? "The payment will be posted against this document and will increase your bank balance."
+          : "The payment will be posted against this document and will reduce your bank balance.",
+      details: [
+        { label: "Amount", value: fmt(Number(amount) || 0) },
+        ...(docNumber ? [{ label: "Document", value: docNumber }] : []),
+        ...(party ? [{ label: direction === "in" ? "Client" : "Vendor", value: party }] : []),
+        ...(bankName ? [{ label: "Bank Account", value: bankName }] : []),
+      ],
+      onConfirm: () =>
+        new Promise<{ error?: string } | void>((resolve) => {
+          startTransition(async () => {
+            const result = await recordPaymentAction(formData);
+            if (result.error) {
+              resolve({ error: result.error });
+              return;
+            }
+            toast.success(t(locale, "Payment recorded — posted to ledger."));
+            setOpen(false);
+            resolve();
+          });
+        }),
     });
   }
 

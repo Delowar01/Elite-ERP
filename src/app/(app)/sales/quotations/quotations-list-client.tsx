@@ -18,7 +18,8 @@ import { useListFilters } from "../../documents/_workspace/use-list-filters";
 import type { SavedViewDTO } from "../../documents/_workspace/saved-view-actions";
 import type { ImportColumn } from "@/lib/document-list-workspace";
 import { updateQuotationStatusAction } from "./actions";
-import { getConvertTargets, runConvertTarget } from "../_shared/convert-config";
+import { getConvertTargets } from "../_shared/convert-config";
+import { useConvertConfirm } from "../../_shared/confirm-actions";
 
 const STATUS_VARIANT: Record<string, "success" | "warning" | "danger" | "info" | "neutral"> = {
   draft: "neutral",
@@ -58,7 +59,8 @@ export function QuotationsListClient({
 }) {
   const [, startTransition] = useTransition();
   const rowActions = useDocumentRowActions(locale);
-  const { editEntry, dialog: editDialog } = useDocumentEditAction(locale);
+  const { editEntry } = useDocumentEditAction(locale);
+  const { requestConvert } = useConvertConfirm(locale);
   const { filters, setFilters, filtered } = useListFilters(rows, {
     search: (r) => [r.quotationNumber, r.customerName, r.title ?? ""],
     status: (r) => r.status,
@@ -142,13 +144,13 @@ export function QuotationsListClient({
                     targets: convertTargets.map((tgt) => ({
                       label: t(locale, tgt.labelKey),
                       icon: tgt.icon,
-                      onSelect: () => runConvertTarget(tgt, r.id, startTransition, (m: string) => toast.error(m)),
+                      onSelect: () => requestConvert(tgt, r.id, "Quotation", r.quotationNumber),
                     })),
                   }]
                 : []),
               { kind: "item", icon: Send, label: t(locale, "Send to Client"), onSelect: () => convert(r.id, (id) => updateQuotationStatusAction(id, "sent")) },
               { kind: "separator" },
-              ...rowActions("quotation", r.id, r.status, r.isArchived),
+              ...rowActions("quotation", r.id, r.status, r.isArchived, r.quotationNumber),
             ];
             return (
               <TableRow key={r.id}>
@@ -187,7 +189,6 @@ export function QuotationsListClient({
       <div className="text-[11.5px] text-ink-faint mt-2">
         {t(locale, "Showing")} {filtered.length} {t(locale, "of")} {rows.length} {t(locale, "Quotations")}.
       </div>
-      {editDialog}
     </div>
   );
 }

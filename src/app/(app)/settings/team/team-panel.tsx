@@ -18,6 +18,7 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { t, type Locale } from "@/lib/i18n/dict";
+import { useConfirm } from "../../_shared/confirm-provider";
 import type { User, Role } from "@/db";
 import { addTeamMemberAction, changeRoleAction, toggleMemberActiveAction } from "./actions";
 
@@ -37,6 +38,7 @@ export function TeamPanel({
   const [adding, setAdding] = useState(false);
   const [role, setRole] = useState<Role>("staff");
   const [pending, startTransition] = useTransition();
+  const confirm = useConfirm();
 
   const assignableRoles: Role[] = currentUserRole === "owner" ? ["owner", "admin", "staff"] : ["admin", "staff"];
 
@@ -49,6 +51,37 @@ export function TeamPanel({
         toast.success(t(locale, "Saved"));
         setAdding(false);
       }
+    });
+  }
+
+  // Role changes and deactivation both alter what a real person can do across the organization.
+  // Re-activating someone is harmless and stays a one-click toggle.
+  function ask(
+    kind: "team.roleChange" | "team.remove",
+    name: string,
+    action: () => Promise<{ error?: string }>,
+    details: { label: string; value: string }[] = [],
+    confirmLabel?: string,
+  ) {
+    confirm({
+      action: kind,
+      entityType: "Team Member",
+      entityNumber: name,
+      confirmLabel,
+      description: kind === "team.remove" ? "This person will lose access to the organization immediately." : undefined,
+      details,
+      onConfirm: () =>
+        new Promise<{ error?: string } | void>((resolve) => {
+          startTransition(async () => {
+            const result = await action();
+            if (result.error) {
+              resolve({ error: result.error });
+              return;
+            }
+            toast.success(t(locale, "Saved"));
+            resolve();
+          });
+        }),
     });
   }
 
@@ -96,14 +129,26 @@ export function TeamPanel({
                       {assignableRoles
                         .filter((r) => r !== member.role)
                         .map((r) => (
-                          <DropdownMenuItem key={r} className="cursor-pointer" onSelect={() => run(() => changeRoleAction(member.id, r))}>
+                          <DropdownMenuItem
+                            key={r}
+                            className="cursor-pointer"
+                            onSelect={() =>
+                              ask("team.roleChange", member.name, () => changeRoleAction(member.id, r), [
+                                { label: "New Role", value: t(locale, ROLE_LABELS[r]) },
+                              ])
+                            }
+                          >
                             {t(locale, "Make")} {t(locale, ROLE_LABELS[r])}
                           </DropdownMenuItem>
                         ))}
                       <DropdownMenuSeparator />
                       <DropdownMenuItem
                         className="cursor-pointer"
-                        onSelect={() => run(() => toggleMemberActiveAction(member.id, !member.isActive))}
+                        onSelect={() =>
+                          member.isActive
+                            ? ask("team.remove", member.name, () => toggleMemberActiveAction(member.id, false), [], "Deactivate")
+                            : run(() => toggleMemberActiveAction(member.id, true))
+                        }
                       >
                         {member.isActive ? t(locale, "Deactivate") : t(locale, "Activate")}
                       </DropdownMenuItem>

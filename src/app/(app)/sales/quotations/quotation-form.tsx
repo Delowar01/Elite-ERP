@@ -27,6 +27,7 @@ import { computeTotals } from "../_shared/totals";
 import { ConfigureColumnsDialog } from "../_shared/configure-columns-dialog";
 import { resolveColumns, type ColumnDef } from "@/lib/column-config";
 import { t, type Locale } from "@/lib/i18n/dict";
+import { useFormDirty, useLeaveWarning } from "../../_shared/unsaved-changes";
 import { getProfileByCountryName } from "@/lib/geo/country-profiles";
 import { Settings, Columns3 } from "lucide-react";
 import type { Customer, Product, Org } from "@/db";
@@ -119,6 +120,9 @@ export function QuotationForm({
   // changes); a manual date edit turns auto off and uses the entered value. Derived at render (no
   // effect) so there are no cascading state updates.
   const effectiveValidUntil = autoValidity ? addDays(issueDate, validityDays) : validUntil;
+
+  // Warn before the tab is closed or reloaded with unsaved work (only when it really changed).
+  useLeaveWarning(useFormDirty({ title, customerId, notes, terms, items }));
 
   function submit(andSend: boolean) {
     const start = andSend ? startPrimaryTransition : startDraftTransition;

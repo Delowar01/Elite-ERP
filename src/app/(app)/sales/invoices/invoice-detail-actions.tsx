@@ -2,8 +2,8 @@
 
 import { useTransition } from "react";
 import { toast } from "sonner";
-import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { useConfirm } from "../../_shared/confirm-provider";
 import { RecordPaymentDialog, type BankAccountOption } from "../../finance/_shared/record-payment-dialog";
 import { t, type Locale } from "@/lib/i18n/dict";
 import { sendInvoiceAction, voidInvoiceAction } from "./actions";
@@ -28,30 +28,43 @@ export function InvoiceDetailActions({
   canVoid: boolean;
   bankAccounts: BankAccountOption[];
 }) {
-  const [pending, startTransition] = useTransition();
+  const [pending] = useTransition();
+  const confirm = useConfirm();
 
+  // Sending posts to the ledger and moves stock, so it is confirmed as a financial action.
   function send() {
-    startTransition(async () => {
-      const result = await sendInvoiceAction(invoiceId);
-      if (result?.error) toast.error(result.error);
-      else toast.success(t(locale, "Invoice sent — posted to ledger and stock updated."));
+    confirm({
+      action: "document.submit",
+      entityType: "Invoice",
+      entityNumber: invoiceNumber,
+      confirmLabel: "Send Invoice",
+      description: "Sending posts this invoice to the ledger and reduces stock on hand.",
+      details: [{ label: "Client", value: customerName }],
+      onConfirm: async () => {
+        const result = await sendInvoiceAction(invoiceId);
+        if (result?.error) return result;
+        toast.success(t(locale, "Invoice sent — posted to ledger and stock updated."));
+      },
     });
   }
 
   function voidInvoice() {
-    startTransition(async () => {
-      const result = await voidInvoiceAction(invoiceId);
-      if (result?.error) toast.error(result.error);
-      else toast.success(t(locale, "Invoice voided — ledger entry reversed and stock restored."));
+    confirm({
+      action: "document.void",
+      entityType: "Invoice",
+      entityNumber: invoiceNumber,
+      details: [{ label: "Client", value: customerName }],
+      onConfirm: async () => {
+        const result = await voidInvoiceAction(invoiceId);
+        if (result?.error) return result;
+        toast.success(t(locale, "Invoice voided — ledger entry reversed and stock restored."));
+      },
     });
   }
 
   if (status === "draft") {
     return (
       <div className="flex items-center gap-2.5">
-        <Button variant="glass" style={{ width: "auto" }} asChild>
-          <Link href={`/sales/invoices/${invoiceId}/edit`}>{t(locale, "Edit")}</Link>
-        </Button>
         <Button style={{ width: "auto" }} disabled={pending} onClick={send}>
           {t(locale, "Send Invoice")}
         </Button>
@@ -83,7 +96,7 @@ export function InvoiceDetailActions({
           }
         />
       )}
-      <ConvertMenu locale={locale} source="invoice" id={invoiceId} ctx={{ status }} disabled={pending} />
+      <ConvertMenu locale={locale} source="invoice" id={invoiceId} number={invoiceNumber} typeLabel="Invoice" ctx={{ status }} disabled={pending} />
     </div>
   );
 }

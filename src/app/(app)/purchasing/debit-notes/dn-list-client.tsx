@@ -53,7 +53,7 @@ export function DnListClient({
   partyLabel: string;
 }) {
   const rowActions = useDocumentRowActions(locale);
-  const { editEntry, dialog: editDialog } = useDocumentEditAction(locale);
+  const { editEntry } = useDocumentEditAction(locale);
 
   const { filters, setFilters, filtered } = useListFilters(rows, {
     search: (r) => [r.debitNoteNumber, r.vendorName],
@@ -134,7 +134,7 @@ export function DnListClient({
                 ...editEntry("debit_note", r.id, r.debitNoteNumber, r.status, r.isArchived),
                 { kind: "item", icon: Download, label: t(locale, "Download PDF"), onSelect: () => { void downloadDocumentPdf("debit-note", r.id).catch((e) => toast.error(e instanceof Error && e.message ? e.message : t(locale, "PDF download failed. Please try again."))); } },
                 { kind: "separator" },
-                ...rowActions("debit_note", r.id, r.status, r.isArchived),
+                ...rowActions("debit_note", r.id, r.status, r.isArchived, r.debitNoteNumber),
               ];
               return (
                 <TableRow key={r.id}>
@@ -179,7 +179,6 @@ export function DnListClient({
           {t(locale, "Showing")} {filtered.length} {t(locale, "of")} {rows.length} {t(locale, "Debit Notes")}.
         </div>
       )}
-      {editDialog}
     </div>
   );
 }

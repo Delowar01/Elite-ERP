@@ -7,6 +7,8 @@ import type { RowMenuEntry } from "../sales/_shared/row-menu";
 import { t, type Locale } from "@/lib/i18n/dict";
 import { can, type DocumentType } from "@/lib/document-lifecycle";
 import { archiveDocumentAction, unarchiveDocumentAction, softDeleteDocumentAction } from "./lifecycle-actions";
+import { useConfirm } from "./confirm-provider";
+import { DOC_EDIT_CONFIG } from "@/lib/document-edit";
 
 /**
  * Batch A3 — the Archive/Unarchive + Delete (soft) row-menu entries shared by all
@@ -18,7 +20,10 @@ import { archiveDocumentAction, unarchiveDocumentAction, softDeleteDocumentActio
  */
 export function useDocumentRowActions(locale: Locale) {
   const [, startTransition] = useTransition();
+  const confirm = useConfirm();
 
+  // Unarchive is a plain restore with no consequence, so it runs straight away (see the policy's
+  // NON_SENSITIVE_ACTIONS list). Archive and Delete both change what the org can see, so both ask.
   function run(action: (docType: DocumentType, id: number) => Promise<{ error?: string }>, docType: DocumentType, id: number) {
     startTransition(async () => {
       const result = await action(docType, id);
@@ -26,14 +31,32 @@ export function useDocumentRowActions(locale: Locale) {
     });
   }
 
-  return function entries(docType: DocumentType, id: number, status: string, isArchived: boolean): RowMenuEntry[] {
+  function ask(
+    kind: "document.archive" | "document.delete",
+    docType: DocumentType,
+    id: number,
+    number: string,
+    action: (docType: DocumentType, id: number) => Promise<{ error?: string }>,
+  ) {
+    confirm({
+      action: kind,
+      entityType: DOC_EDIT_CONFIG[docType].typeLabel,
+      entityNumber: number,
+      onConfirm: async () => {
+        const result = await action(docType, id);
+        if (result?.error) return result;
+      },
+    });
+  }
+
+  return function entries(docType: DocumentType, id: number, status: string, isArchived: boolean, number = ""): RowMenuEntry[] {
     const items: RowMenuEntry[] = [];
 
     if (isArchived) {
       items.push({ kind: "item", icon: ArchiveRestore, label: t(locale, "Unarchive"), onSelect: () => run(unarchiveDocumentAction, docType, id) });
     } else {
       const archivable = can(docType, status, "archive", { recordState: "active" });
-      items.push({ kind: "item", icon: Archive, label: t(locale, "Archive"), onSelect: archivable ? () => run(archiveDocumentAction, docType, id) : undefined });
+      items.push({ kind: "item", icon: Archive, label: t(locale, "Archive"), onSelect: archivable ? () => ask("document.archive", docType, id, number, archiveDocumentAction) : undefined });
     }
 
     const deletable = can(docType, status, "soft_delete", { recordState: isArchived ? "archived" : "active" });
@@ -42,7 +65,7 @@ export function useDocumentRowActions(locale: Locale) {
       icon: Trash2,
       label: t(locale, "Delete"),
       danger: true,
-      onSelect: deletable ? () => run(softDeleteDocumentAction, docType, id) : undefined,
+      onSelect: deletable ? () => ask("document.delete", docType, id, number, softDeleteDocumentAction) : undefined,
     });
 
     return items;

@@ -1,24 +1,17 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useTransition } from "react";
 import { ArchiveRestore, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogTrigger,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-  DialogClose,
-} from "@/components/ui/dialog";
+import { useConfirm } from "../_shared/confirm-provider";
 import { restoreClientAction, permanentlyDeleteClientAction } from "./actions";
 
+// Restore is harmless and runs straight away; permanent delete goes through the app-wide
+// confirmation (see confirm-policy.ts) rather than a dialog written for this one screen.
 export function ClientRecycleBinActions({ id, name }: { id: number; name: string }) {
   const [pending, startTransition] = useTransition();
-  const [confirmOpen, setConfirmOpen] = useState(false);
+  const confirm = useConfirm();
 
   function restore() {
     startTransition(async () => {
@@ -29,11 +22,22 @@ export function ClientRecycleBinActions({ id, name }: { id: number; name: string
   }
 
   function permanentlyDelete() {
-    startTransition(async () => {
-      const result = await permanentlyDeleteClientAction(id);
-      if (result?.error) toast.error(result.error);
-      else toast.success("Permanently deleted");
-      setConfirmOpen(false);
+    confirm({
+      action: "record.permanentDelete",
+      entityType: "Client",
+      entityNumber: name,
+      onConfirm: () =>
+        new Promise<{ error?: string } | void>((resolve) => {
+          startTransition(async () => {
+            const result = await permanentlyDeleteClientAction(id);
+            if (result?.error) {
+              resolve({ error: result.error });
+              return;
+            }
+            toast.success("Permanently deleted");
+            resolve();
+          });
+        }),
     });
   }
 
@@ -42,29 +46,9 @@ export function ClientRecycleBinActions({ id, name }: { id: number; name: string
       <Button variant="ghost" size="sm" disabled={pending} onClick={restore}>
         <ArchiveRestore className="size-3.5" /> Restore
       </Button>
-      <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-        <DialogTrigger asChild>
-          <Button variant="ghost" size="sm" disabled={pending} className="text-danger hover:bg-danger-bg">
-            <Trash2 className="size-3.5" /> Delete Permanently
-          </Button>
-        </DialogTrigger>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete &quot;{name}&quot; permanently?</DialogTitle>
-            <DialogDescription>
-              This cannot be undone. The record will be removed entirely, not just moved to the Recycle Bin.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <DialogClose asChild>
-              <Button variant="ghost">Cancel</Button>
-            </DialogClose>
-            <Button variant="destructive" disabled={pending} onClick={permanentlyDelete}>
-              Delete Permanently
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <Button variant="ghost" size="sm" disabled={pending} onClick={permanentlyDelete} className="text-danger hover:bg-danger-bg">
+        <Trash2 className="size-3.5" /> Delete Permanently
+      </Button>
     </div>
   );
 }

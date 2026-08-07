@@ -11,6 +11,7 @@ import { FormField } from "@/components/ui/form-field";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { t, type Locale } from "@/lib/i18n/dict";
+import { useConfirm } from "../../_shared/confirm-provider";
 import type { ProductBundle, ProductBundleItem, Product } from "@/db";
 import { createBundleAction, updateBundleAction, deleteBundleAction, addBundleItemAction, removeBundleItemAction } from "./actions";
 
@@ -30,6 +31,7 @@ export function BundlesPanel({
   const [managing, setManaging] = useState<BundleWithItems | null>(null);
   const [productId, setProductId] = useState<string>("");
   const [pending, startTransition] = useTransition();
+  const confirm = useConfirm();
 
   function createBundle(formData: FormData) {
     const name = String(formData.get("name") ?? "");
@@ -56,11 +58,23 @@ export function BundlesPanel({
     });
   }
 
-  function deleteBundle(id: number) {
-    startTransition(async () => {
-      const result = await deleteBundleAction(id);
-      if (result.error) toast.error(result.error);
-      else toast.success(t(locale, "Deleted"));
+  function deleteBundle(id: number, name: string) {
+    confirm({
+      action: "preset.delete",
+      entityType: "Product Bundle",
+      entityNumber: name,
+      onConfirm: () =>
+        new Promise<{ error?: string } | void>((resolve) => {
+          startTransition(async () => {
+            const result = await deleteBundleAction(id);
+            if (result.error) {
+              resolve({ error: result.error });
+              return;
+            }
+            toast.success(t(locale, "Deleted"));
+            resolve();
+          });
+        }),
     });
   }
 
@@ -120,7 +134,7 @@ export function BundlesPanel({
                     variant="ghost"
                     size="icon"
                     disabled={pending}
-                    onClick={() => deleteBundle(bundle.id)}
+                    onClick={() => deleteBundle(bundle.id, bundle.name)}
                     aria-label={t(locale, "Delete")}
                     className="text-danger hover:text-danger"
                   >

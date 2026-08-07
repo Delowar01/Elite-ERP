@@ -76,7 +76,7 @@ export default async function CreditNoteDetailPage({ params }: { params: Promise
         <div className="flex items-center gap-2.5">
           <EditDocumentButton locale={locale} docType="credit_note" id={cn.id} number={cn.creditNoteNumber} status={cn.status} recordState={cn.deletedAt ? "deleted" : cn.archivedAt ? "archived" : "active"} />
           <DownloadPdfButton locale={locale} type="credit-note" docId={cn.id} number={cn.creditNoteNumber} />
-          <CnDetailActions locale={locale} creditNoteId={cn.id} status={cn.status} />
+          <CnDetailActions locale={locale} creditNoteId={cn.id} creditNoteNumber={cn.creditNoteNumber} status={cn.status} />
         </div>
       </div>
 

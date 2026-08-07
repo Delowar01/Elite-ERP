@@ -77,7 +77,7 @@ export default async function DcDetailPage({ params }: { params: Promise<{ id: s
         <div className="flex items-center gap-2.5">
           <EditDocumentButton locale={locale} docType="delivery_challan" id={dc.id} number={dc.dcNumber} status={dc.status} recordState={dc.deletedAt ? "deleted" : dc.archivedAt ? "archived" : "active"} />
           <DownloadPdfButton locale={locale} type="delivery-challan" docId={dc.id} number={dc.dcNumber} />
-          <DcDetailActions locale={locale} dcId={dc.id} status={dc.status} />
+          <DcDetailActions locale={locale} dcId={dc.id} dcNumber={dc.dcNumber} status={dc.status} />
         </div>
       </div>
 

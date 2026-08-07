@@ -1,37 +1,50 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { ShieldCheck, Lock } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogFooter, DialogTitle, DialogDescription, DialogClose } from "@/components/ui/dialog";
 import { t, type Locale } from "@/lib/i18n/dict";
 import type { Org } from "@/db";
 import { enableZatcaPhase1Action } from "./actions";
+import { useConfirm } from "../../_shared/confirm-provider";
 
 // ZATCA E-Invoicing — Phase 1 only. Eligible Saudi orgs can enable Phase 1 after an explicit
 // confirmation. Once enabled it is locked on for organization users (no disable control here); the
 // panel shows a locked state explaining that only a backend administrator may turn it off.
 export function ZatcaPanel({ locale, org }: { locale: Locale; org: Org }) {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
+  const confirm = useConfirm();
   const enabled = org.zatcaPhase1Enabled;
   const connected = Boolean(org.zatcaCsid);
 
+  // Enabling is permanent for organization users, so it goes through the app-wide confirmation with
+  // that consequence spelled out — rather than a dialog written only for this panel.
   function confirmEnable() {
-    startTransition(async () => {
-      const result = await enableZatcaPhase1Action();
-      if (result.error) {
-        toast.error(result.error);
-        return;
-      }
-      setOpen(false);
-      toast.success(t(locale, "ZATCA Phase 1 enabled."));
-      router.refresh();
+    confirm({
+      action: "settings.compliance",
+      entityType: "ZATCA Phase 1",
+      entityNumber: "",
+      confirmLabel: "Enable ZATCA Phase 1",
+      description:
+        "This activates ZATCA Phase 1 e-invoicing for your organization. After enabling, you will not be able to disable it yourself — only a backend administrator or the Elite Marcom Platform Owner can.",
+      onConfirm: () =>
+        new Promise<{ error?: string } | void>((resolve) => {
+          startTransition(async () => {
+            const result = await enableZatcaPhase1Action();
+            if (result.error) {
+              resolve({ error: result.error });
+              return;
+            }
+            toast.success(t(locale, "ZATCA Phase 1 enabled."));
+            router.refresh();
+            resolve();
+          });
+        }),
     });
   }
 
@@ -83,27 +96,9 @@ export function ZatcaPanel({ locale, org }: { locale: Locale; org: Org }) {
               {t(locale, "Enable ZATCA Phase 1 to activate compliant e-invoicing for this organization. Enabling is permanent for organization users — once on, it can only be turned off by a backend administrator.")}
             </p>
             <div>
-              <Dialog open={open} onOpenChange={setOpen}>
-                <DialogTrigger asChild>
-                  <Button type="button">{t(locale, "Enable ZATCA Phase 1")}</Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>{t(locale, "Enable ZATCA Phase 1?")}</DialogTitle>
-                    <DialogDescription>
-                      {t(locale, "This activates ZATCA Phase 1 e-invoicing for your organization. After enabling, you will not be able to disable it yourself — only a backend administrator or the Elite Marcom Platform Owner can. Do you want to continue?")}
-                    </DialogDescription>
-                  </DialogHeader>
-                  <DialogFooter>
-                    <DialogClose asChild>
-                      <Button type="button" variant="ghost" disabled={pending}>{t(locale, "Cancel")}</Button>
-                    </DialogClose>
-                    <Button type="button" onClick={confirmEnable} disabled={pending}>
-                      {pending ? t(locale, "Enabling…") : t(locale, "Enable ZATCA Phase 1")}
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
+              <Button type="button" onClick={confirmEnable} disabled={pending}>
+                {t(locale, "Enable ZATCA Phase 1")}
+              </Button>
             </div>
           </CardContent>
         </Card>

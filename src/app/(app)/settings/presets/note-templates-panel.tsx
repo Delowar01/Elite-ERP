@@ -14,6 +14,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { t, type Locale } from "@/lib/i18n/dict";
+import { useConfirm } from "../../_shared/confirm-provider";
 import type { NoteTemplate } from "@/db";
 import { saveNoteTemplateAction, deleteNoteTemplateAction } from "./actions";
 
@@ -28,6 +29,7 @@ const DOC_TYPE_LABELS: Record<string, string> = {
 export function NoteTemplatesPanel({ locale, templates }: { locale: Locale; templates: NoteTemplate[] }) {
   const [editing, setEditing] = useState<NoteTemplate | "new" | null>(null);
   const [pending, startTransition] = useTransition();
+  const confirm = useConfirm();
   const [docType, setDocType] = useState<string>("none");
   const [isDefault, setIsDefault] = useState(false);
 
@@ -56,11 +58,23 @@ export function NoteTemplatesPanel({ locale, templates }: { locale: Locale; temp
     });
   }
 
-  function onDelete(id: number) {
-    startTransition(async () => {
-      const result = await deleteNoteTemplateAction(id);
-      if (result.error) toast.error(result.error);
-      else toast.success(t(locale, "Deleted"));
+  function onDelete(id: number, name: string) {
+    confirm({
+      action: "preset.delete",
+      entityType: "Note Template",
+      entityNumber: name,
+      onConfirm: () =>
+        new Promise<{ error?: string } | void>((resolve) => {
+          startTransition(async () => {
+            const result = await deleteNoteTemplateAction(id);
+            if (result.error) {
+              resolve({ error: result.error });
+              return;
+            }
+            toast.success(t(locale, "Deleted"));
+            resolve();
+          });
+        }),
     });
   }
 
@@ -105,7 +119,7 @@ export function NoteTemplatesPanel({ locale, templates }: { locale: Locale; temp
                     variant="ghost"
                     size="icon"
                     disabled={pending}
-                    onClick={() => onDelete(template.id)}
+                    onClick={() => onDelete(template.id, template.name)}
                     aria-label={t(locale, "Delete")}
                     className="text-danger hover:text-danger"
                   >

@@ -98,7 +98,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
         <div className="flex items-center gap-2.5">
           <EditDocumentButton locale={locale} docType="sales_order" id={order.id} number={order.soNumber} status={order.status} recordState={order.deletedAt ? "deleted" : order.archivedAt ? "archived" : "active"} />
           <DownloadPdfButton locale={locale} type="sales-order" docId={order.id} number={order.soNumber} />
-          <OrderDetailActions locale={locale} orderId={order.id} status={order.status} />
+          <OrderDetailActions locale={locale} orderId={order.id} orderNumber={order.soNumber} status={order.status} />
         </div>
       </div>
 

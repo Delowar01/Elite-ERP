@@ -76,7 +76,7 @@ export default async function DebitNoteDetailPage({ params }: { params: Promise<
         <div className="flex items-center gap-2.5">
           <EditDocumentButton locale={locale} docType="debit_note" id={dn.id} number={dn.debitNoteNumber} status={dn.status} recordState={dn.deletedAt ? "deleted" : dn.archivedAt ? "archived" : "active"} />
           <DownloadPdfButton locale={locale} type="debit-note" docId={dn.id} number={dn.debitNoteNumber} />
-          <DnDetailActions locale={locale} debitNoteId={dn.id} status={dn.status} />
+          <DnDetailActions locale={locale} debitNoteId={dn.id} debitNoteNumber={dn.debitNoteNumber} status={dn.status} />
         </div>
       </div>
 

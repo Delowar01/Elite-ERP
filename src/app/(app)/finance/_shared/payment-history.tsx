@@ -78,7 +78,7 @@ export async function PaymentHistory({
                   <td className="px-3 py-2 text-end font-mono"><DocNum value={p.amount} kind="amount" /></td>
                   {canDelete && (
                     <td className="px-2 py-2 text-center">
-                      <DeletePaymentButton locale={locale} paymentId={p.id} />
+                      <DeletePaymentButton locale={locale} paymentId={p.id} reference={p.reference ?? undefined} amount={p.amount} />
                     </td>
                   )}
                 </tr>

@@ -53,7 +53,7 @@ export function CnListClient({
   partyLabel: string;
 }) {
   const rowActions = useDocumentRowActions(locale);
-  const { editEntry, dialog: editDialog } = useDocumentEditAction(locale);
+  const { editEntry } = useDocumentEditAction(locale);
 
   const { filters, setFilters, filtered } = useListFilters(rows, {
     search: (r) => [r.creditNoteNumber, r.customerName],
@@ -134,7 +134,7 @@ export function CnListClient({
                 ...editEntry("credit_note", r.id, r.creditNoteNumber, r.status, r.isArchived),
                 { kind: "item", icon: Download, label: t(locale, "Download PDF"), onSelect: () => { void downloadDocumentPdf("credit-note", r.id).catch((e) => toast.error(e instanceof Error && e.message ? e.message : t(locale, "PDF download failed. Please try again."))); } },
                 { kind: "separator" },
-                ...rowActions("credit_note", r.id, r.status, r.isArchived),
+                ...rowActions("credit_note", r.id, r.status, r.isArchived, r.creditNoteNumber),
               ];
               return (
                 <TableRow key={r.id}>
@@ -179,7 +179,6 @@ export function CnListClient({
           {t(locale, "Showing")} {filtered.length} {t(locale, "of")} {rows.length} {t(locale, "Credit Notes")}.
         </div>
       )}
-      {editDialog}
     </div>
   );
 }

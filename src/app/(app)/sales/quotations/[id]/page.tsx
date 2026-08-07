@@ -85,7 +85,7 @@ export default async function QuotationDetailPage({ params }: { params: Promise<
         <div className="flex items-center gap-2.5">
           <EditDocumentButton locale={locale} docType="quotation" id={quotation.id} number={quotation.quotationNumber} status={quotation.status} recordState={quotation.deletedAt ? "deleted" : quotation.archivedAt ? "archived" : "active"} />
           <DownloadPdfButton locale={locale} type="quotation" docId={quotation.id} number={quotation.quotationNumber} />
-          <QuotationDetailActions locale={locale} quotationId={quotation.id} status={quotation.status} />
+          <QuotationDetailActions locale={locale} quotationId={quotation.id} quotationNumber={quotation.quotationNumber} status={quotation.status} />
         </div>
       </div>
 

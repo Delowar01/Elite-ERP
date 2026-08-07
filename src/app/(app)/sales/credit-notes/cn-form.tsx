@@ -22,6 +22,7 @@ import type { ContentPreset } from "@/lib/document-presets";
 import { Money } from "../_shared/money";
 import { computeTotals } from "../_shared/totals";
 import { t, type Locale } from "@/lib/i18n/dict";
+import { useFormDirty, useLeaveWarning } from "../../_shared/unsaved-changes";
 import { getProfileByCountryName } from "@/lib/geo/country-profiles";
 import type { Product, Org } from "@/db";
 import { createCreditNoteAction, updateCreditNoteAction } from "./actions";
@@ -98,6 +99,9 @@ export function CnForm({
     currency: org.currency,
     bankAccounts: snapshotSelectedBankAccounts(bankAccountIds, bankAccounts),
   };
+
+  // Warn before the tab is closed or reloaded with unsaved work (only when it really changed).
+  useLeaveWarning(useFormDirty({ reason, items }));
 
   function submit(andIssue: boolean) {
     const start = andIssue ? startPrimaryTransition : startDraftTransition;

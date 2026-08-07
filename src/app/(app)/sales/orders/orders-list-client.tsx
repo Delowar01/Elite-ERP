@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useTransition } from "react";
+import { useMemo } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { downloadDocumentPdf } from "../_shared/download-pdf-button";
@@ -17,7 +17,8 @@ import { Money } from "../_shared/money";
 import { t, type Locale } from "@/lib/i18n/dict";
 import { useDocumentRowActions } from "../../_shared/document-row-actions";
 import { useDocumentEditAction } from "../../_shared/edit-document";
-import { getConvertTargets, runConvertTarget } from "../_shared/convert-config";
+import { getConvertTargets } from "../_shared/convert-config";
+import { useConvertConfirm } from "../../_shared/confirm-actions";
 
 const STATUS_VARIANT: Record<string, "success" | "warning" | "danger" | "info" | "neutral"> = {
   draft: "neutral",
@@ -56,8 +57,8 @@ export function OrdersListClient({
   partyLabel: string;
 }) {
   const rowActions = useDocumentRowActions(locale);
-  const { editEntry, dialog: editDialog } = useDocumentEditAction(locale);
-  const [, startTransition] = useTransition();
+  const { editEntry } = useDocumentEditAction(locale);
+  const { requestConvert } = useConvertConfirm(locale);
 
   const { filters, setFilters, filtered } = useListFilters(rows, {
     search: (r) => [r.soNumber, r.customerName, r.title ?? ""],
@@ -135,13 +136,13 @@ export function OrdersListClient({
                     targets: convertTargets.map((tgt) => ({
                       label: t(locale, tgt.labelKey),
                       icon: tgt.icon,
-                      onSelect: () => runConvertTarget(tgt, r.id, startTransition, (m: string) => toast.error(m)),
+                      onSelect: () => requestConvert(tgt, r.id, "Sales Order", r.soNumber),
                     })),
                   }]
                 : []),
               { kind: "item", icon: Copy, label: t(locale, "Duplicate") },
               { kind: "separator" },
-              ...rowActions("sales_order", r.id, r.status, r.isArchived),
+              ...rowActions("sales_order", r.id, r.status, r.isArchived, r.soNumber),
             ];
             return (
               <TableRow key={r.id}>
@@ -180,7 +181,6 @@ export function OrdersListClient({
       <div className="text-[11.5px] text-ink-faint mt-2">
         {t(locale, "Showing")} {filtered.length} {t(locale, "of")} {rows.length} {t(locale, "Sales Orders")}.
       </div>
-      {editDialog}
     </div>
   );
 }

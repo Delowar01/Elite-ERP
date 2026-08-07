@@ -26,6 +26,7 @@ import { docMoneyMark } from "../_shared/doc-currency";
 import { ConfigureColumnsDialog } from "../_shared/configure-columns-dialog";
 import { resolveColumns, type ColumnDef } from "@/lib/column-config";
 import { t, type Locale } from "@/lib/i18n/dict";
+import { useFormDirty, useLeaveWarning } from "../../_shared/unsaved-changes";
 import { getProfileByCountryName } from "@/lib/geo/country-profiles";
 import type { ContentPreset } from "@/lib/document-presets";
 import type { Customer, Product, Org } from "@/db";
@@ -100,6 +101,9 @@ export function ProformaForm({
 
   const totals = computeTotals(items, discount);
   const selectedCustomer = customers.find((c) => String(c.id) === customerId);
+
+  // Warn before the tab is closed or reloaded with unsaved work (only when it really changed).
+  useLeaveWarning(useFormDirty({ title, customerId, notes, terms, items }));
 
   function submit(andSend: boolean) {
     const start = andSend ? startPrimaryTransition : startDraftTransition;

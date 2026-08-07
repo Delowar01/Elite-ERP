@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 import { t, type Locale } from "@/lib/i18n/dict";
 import type { Account } from "@/db";
 import { postJournalEntryAction } from "./actions";
+import { useConfirm } from "../../_shared/confirm-provider";
 
 type Line = { accountId: string; memo: string; debit: string; credit: string };
 
@@ -29,6 +30,7 @@ export function JournalForm({ locale, accounts, projects = [] }: { locale: Local
   const [projectId, setProjectId] = useState("");
   const [lines, setLines] = useState<Line[]>([emptyLine(), emptyLine()]);
   const [pending, startTransition] = useTransition();
+  const confirm = useConfirm();
 
   const totalDebit = lines.reduce((sum, l) => sum + (Number(l.debit) || 0), 0);
   const totalCredit = lines.reduce((sum, l) => sum + (Number(l.credit) || 0), 0);
@@ -44,21 +46,41 @@ export function JournalForm({ locale, accounts, projects = [] }: { locale: Local
     setLines((prev) => prev.filter((_, i) => i !== index));
   }
 
+  // Posting hits the ledger, so it is confirmed with the balanced totals in view.
   function submit() {
-    startTransition(async () => {
-      const result = await postJournalEntryAction({
-        entryDate,
-        memo,
-        projectId: projectId && projectId !== NO_PROJECT ? projectId : undefined,
-        lines: filledLines.map((l) => ({ accountId: Number(l.accountId), memo: l.memo, debit: l.debit || "0", credit: l.credit || "0" })),
-      });
-      if (result.error) toast.error(result.error);
-      else {
+    confirm({
+      action: "journal.post",
+      entityType: "Journal Entry",
+      entityNumber: memo.trim(),
+      details: [
+        { label: "Date", value: entryDate },
+        { label: "Total Debits", value: totalDebit.toFixed(2) },
+        { label: "Total Credits", value: totalCredit.toFixed(2) },
+        { label: "Lines", value: String(filledLines.length) },
+      ],
+      onConfirm: () => post(),
+    });
+  }
+
+  function post() {
+    return new Promise<{ error?: string } | void>((resolve) => {
+      startTransition(async () => {
+        const result = await postJournalEntryAction({
+          entryDate,
+          memo,
+          projectId: projectId && projectId !== NO_PROJECT ? projectId : undefined,
+          lines: filledLines.map((l) => ({ accountId: Number(l.accountId), memo: l.memo, debit: l.debit || "0", credit: l.credit || "0" })),
+        });
+        if (result.error) {
+          resolve({ error: result.error });
+          return;
+        }
         toast.success(t(locale, "Saved"));
         setMemo("");
         setProjectId("");
         setLines([emptyLine(), emptyLine()]);
-      }
+        resolve();
+      });
     });
   }
 

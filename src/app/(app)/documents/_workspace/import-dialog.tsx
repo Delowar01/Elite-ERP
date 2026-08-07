@@ -7,6 +7,7 @@ import { Upload, Download, CheckCircle2, XCircle } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { t, type Locale } from "@/lib/i18n/dict";
+import { useConfirm } from "../../_shared/confirm-provider";
 import type { ImportColumn, ImportRowResult } from "@/lib/document-list-workspace";
 import { previewImportAction, commitImportAction } from "./import-actions";
 
@@ -38,6 +39,7 @@ export function ImportDialog({ locale, module, importColumns }: { locale: Locale
   const [fileName, setFileName] = useState("");
   const [results, setResults] = useState<ImportRowResult[] | null>(null);
   const [pending, startTransition] = useTransition();
+  const confirm = useConfirm();
 
   function reset() {
     setRows([]);
@@ -87,14 +89,28 @@ export function ImportDialog({ locale, module, importColumns }: { locale: Locale
     reader.readAsText(file);
   }
 
+  // Bulk create — confirmed with the row count before anything is written.
   function commit() {
-    startTransition(async () => {
-      const res = await commitImportAction(module, rows);
-      if (res.error) { toast.error(res.error); return; }
-      toast.success(t(locale, "Imported {n} record(s).").replace("{n}", String(res.inserted ?? 0)));
-      setOpen(false);
-      reset();
-      router.refresh();
+    confirm({
+      action: "import.commit",
+      entityType: "Import",
+      entityNumber: "",
+      details: [{ label: "Will be created", value: String(validCount) }],
+      onConfirm: () =>
+        new Promise<{ error?: string } | void>((resolve) => {
+          startTransition(async () => {
+            const res = await commitImportAction(module, rows);
+            if (res.error) {
+              resolve({ error: res.error });
+              return;
+            }
+            toast.success(t(locale, "Imported {n} record(s).").replace("{n}", String(res.inserted ?? 0)));
+            setOpen(false);
+            reset();
+            router.refresh();
+            resolve();
+          });
+        }),
     });
   }
 

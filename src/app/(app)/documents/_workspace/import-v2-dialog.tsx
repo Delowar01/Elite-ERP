@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Button } from "@/components/ui/button";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { t, type Locale } from "@/lib/i18n/dict";
+import { useConfirm } from "../../_shared/confirm-provider";
 import type { FieldSpec } from "@/lib/import/spec";
 import { DATE_FORMATS, DATE_FORMAT_LABELS, DEFAULT_DATE_FORMAT, type DateFormat } from "@/lib/import/dates";
 import {
@@ -130,13 +131,32 @@ export function ImportV2Dialog({ locale, module, moduleLabel, fields, entity = "
     });
   }
 
+  // Importing writes many records in one go, so the counts are confirmed before anything is created.
   function confirmImport() {
-    startTransition(async () => {
-      const res = await commitImportV2Action(module, headers, rows, mapping, dateFormats, duplicateMode);
-      if (res.error) { toast.error(res.error); return; }
-      setResult(res as Result);
-      setStep("done");
-      router.refresh();
+    const created = clientPreview?.summary.willCreate ?? preview?.summary.willCreate ?? 0;
+    const updated = clientPreview?.summary.willUpdate ?? 0;
+    confirm({
+      action: "import.commit",
+      entityType: "Import",
+      entityNumber: "",
+      details: [
+        { label: "Will be created", value: String(created) },
+        ...(updated ? [{ label: "Will be updated", value: String(updated) }] : []),
+      ],
+      onConfirm: () =>
+        new Promise<{ error?: string } | void>((resolve) => {
+          startTransition(async () => {
+            const res = await commitImportV2Action(module, headers, rows, mapping, dateFormats, duplicateMode);
+            if (res.error) {
+              resolve({ error: res.error });
+              return;
+            }
+            setResult(res as Result);
+            setStep("done");
+            router.refresh();
+            resolve();
+          });
+        }),
     });
   }
 
@@ -149,6 +169,7 @@ export function ImportV2Dialog({ locale, module, moduleLabel, fields, entity = "
     });
   }
 
+  const confirm = useConfirm();
   const s = preview?.summary;
   const cs = clientPreview?.summary;
 

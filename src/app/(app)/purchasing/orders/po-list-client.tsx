@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useTransition } from "react";
+import { useMemo } from "react";
 import Link from "next/link";
 import { Eye, Star, Download } from "lucide-react";
 import { toast } from "sonner";
@@ -17,7 +17,8 @@ import { Money } from "../../sales/_shared/money";
 import { t, type Locale } from "@/lib/i18n/dict";
 import { useDocumentRowActions } from "../../_shared/document-row-actions";
 import { useDocumentEditAction } from "../../_shared/edit-document";
-import { getConvertTargets, runConvertTarget } from "../../sales/_shared/convert-config";
+import { getConvertTargets } from "../../sales/_shared/convert-config";
+import { useConvertConfirm } from "../../_shared/confirm-actions";
 
 const STATUS_VARIANT: Record<string, "success" | "warning" | "danger" | "info" | "neutral"> = {
   draft: "neutral",
@@ -55,8 +56,8 @@ export function PoListClient({
   partyLabel: string;
 }) {
   const rowActions = useDocumentRowActions(locale);
-  const { editEntry, dialog: editDialog } = useDocumentEditAction(locale);
-  const [, startTransition] = useTransition();
+  const { editEntry } = useDocumentEditAction(locale);
+  const { requestConvert } = useConvertConfirm(locale);
 
   const { filters, setFilters, filtered } = useListFilters(rows, {
     search: (r) => [r.poNumber, r.vendorName, r.title ?? ""],
@@ -138,12 +139,12 @@ export function PoListClient({
                       targets: convertTargets.map((tgt) => ({
                         label: t(locale, tgt.labelKey),
                         icon: tgt.icon,
-                        onSelect: () => runConvertTarget(tgt, r.id, startTransition, (m: string) => toast.error(m)),
+                        onSelect: () => requestConvert(tgt, r.id, "Purchase Order", r.poNumber),
                       })),
                     }]
                   : []),
                 { kind: "separator" },
-                ...rowActions("purchase_order", r.id, r.status, r.isArchived),
+                ...rowActions("purchase_order", r.id, r.status, r.isArchived, r.poNumber),
               ];
               return (
                 <TableRow key={r.id}>
@@ -185,7 +186,6 @@ export function PoListClient({
           {t(locale, "Showing")} {filtered.length} {t(locale, "of")} {rows.length} {t(locale, "Purchase Orders")}.
         </div>
       )}
-      {editDialog}
     </div>
   );
 }

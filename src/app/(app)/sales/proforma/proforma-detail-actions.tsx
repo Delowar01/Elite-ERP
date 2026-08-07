@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { RecordPaymentDialog, type BankAccountOption } from "../../finance/_shared/record-payment-dialog";
+import { useConfirm } from "../../_shared/confirm-provider";
 import { t, type Locale } from "@/lib/i18n/dict";
 import { updateProformaStatusAction } from "./actions";
 import { ConvertMenu } from "../_shared/convert-menu";
@@ -31,14 +32,23 @@ export function ProformaDetailActions({
   convertedInvoiceId: number | null;
   bankAccounts: BankAccountOption[];
 }) {
-  const [pending, startTransition] = useTransition();
+  const [pending] = useTransition();
+  const confirm = useConfirm();
   const converted = convertedInvoiceId != null;
 
   function changeStatus(value: string) {
-    startTransition(async () => {
-      const result = await updateProformaStatusAction(proformaId, value);
-      if (result?.error) toast.error(result.error);
-      else toast.success(t(locale, "Saved"));
+    if (value === status) return;
+    confirm({
+      action: "document.statusChange",
+      entityType: "Proforma Invoice",
+      entityNumber: proformaNumber,
+      description: "Changing the status moves this proforma forward. Proformas never post to the ledger.",
+      details: [{ label: "Status", value: t(locale, value) }],
+      onConfirm: async () => {
+        const result = await updateProformaStatusAction(proformaId, value);
+        if (result?.error) return result;
+        toast.success(t(locale, "Saved"));
+      },
     });
   }
 
@@ -80,7 +90,7 @@ export function ProformaDetailActions({
           trigger={<Button style={{ width: "auto" }}>{t(locale, "Record Payment")}</Button>}
         />
       )}
-      <ConvertMenu locale={locale} source="proforma" id={proformaId} ctx={{ status, converted }} disabled={pending} />
+      <ConvertMenu locale={locale} source="proforma" id={proformaId} number={proformaNumber} typeLabel="Proforma Invoice" ctx={{ status, converted }} disabled={pending} />
     </div>
   );
 }

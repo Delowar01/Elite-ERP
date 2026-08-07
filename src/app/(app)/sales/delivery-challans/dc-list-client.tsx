@@ -51,7 +51,7 @@ export function DcListClient({
   partyLabel: string;
 }) {
   const rowActions = useDocumentRowActions(locale);
-  const { editEntry, dialog: editDialog } = useDocumentEditAction(locale);
+  const { editEntry } = useDocumentEditAction(locale);
 
   const { filters, setFilters, filtered } = useListFilters(rows, {
     search: (r) => [r.dcNumber, r.customerName],
@@ -119,7 +119,7 @@ export function DcListClient({
               { kind: "item", icon: Download, label: t(locale, "Download PDF"), onSelect: () => { void downloadDocumentPdf("delivery-challan", r.id).catch((e) => toast.error(e instanceof Error && e.message ? e.message : t(locale, "PDF download failed. Please try again."))); } },
               { kind: "item", icon: TruckIcon, label: t(locale, "Mark Delivered") },
               { kind: "separator" },
-              ...rowActions("delivery_challan", r.id, r.status, r.isArchived),
+              ...rowActions("delivery_challan", r.id, r.status, r.isArchived, r.dcNumber),
             ];
             return (
               <TableRow key={r.id}>
@@ -154,7 +154,6 @@ export function DcListClient({
       <div className="text-[11.5px] text-ink-faint mt-2">
         {t(locale, "Showing")} {filtered.length} {t(locale, "of")} {rows.length} {t(locale, "Delivery Challans")}.
       </div>
-      {editDialog}
     </div>
   );
 }

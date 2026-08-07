@@ -3,20 +3,29 @@
 import { useTransition } from "react";
 import { toast } from "sonner";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { useConfirm } from "../../_shared/confirm-provider";
 import { t, type Locale } from "@/lib/i18n/dict";
 import { updateQuotationStatusAction } from "./actions";
 import { ConvertMenu } from "../_shared/convert-menu";
 
 const STATUSES = ["draft", "sent", "accepted", "rejected", "expired"];
 
-export function QuotationDetailActions({ locale, quotationId, status }: { locale: Locale; quotationId: number; status: string }) {
-  const [pending, startTransition] = useTransition();
+export function QuotationDetailActions({ locale, quotationId, quotationNumber, status }: { locale: Locale; quotationId: number; quotationNumber: string; status: string }) {
+  const [pending] = useTransition();
+  const confirm = useConfirm();
 
   function changeStatus(value: string) {
-    startTransition(async () => {
-      const result = await updateQuotationStatusAction(quotationId, value);
-      if (result?.error) toast.error(result.error);
-      else toast.success(t(locale, "Saved"));
+    if (value === status) return;
+    confirm({
+      action: "document.statusChange",
+      entityType: "Quotation",
+      entityNumber: quotationNumber,
+      details: [{ label: "Status", value: t(locale, value) }],
+      onConfirm: async () => {
+        const result = await updateQuotationStatusAction(quotationId, value);
+        if (result?.error) return result;
+        toast.success(t(locale, "Saved"));
+      },
     });
   }
 
@@ -34,7 +43,7 @@ export function QuotationDetailActions({ locale, quotationId, status }: { locale
           ))}
         </SelectContent>
       </Select>
-      <ConvertMenu locale={locale} source="quotation" id={quotationId} ctx={{ status }} disabled={pending} />
+      <ConvertMenu locale={locale} source="quotation" id={quotationId} number={quotationNumber} typeLabel="Quotation" ctx={{ status }} disabled={pending} />
     </div>
   );
 }

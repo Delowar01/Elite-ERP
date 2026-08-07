@@ -2,36 +2,46 @@
 
 import { useTransition } from "react";
 import { toast } from "sonner";
-import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { useConfirm } from "../../_shared/confirm-provider";
 import { t, type Locale } from "@/lib/i18n/dict";
 import { issueDebitNoteAction, reverseDebitNoteAction } from "./actions";
 
-export function DnDetailActions({ locale, debitNoteId, status }: { locale: Locale; debitNoteId: number; status: string }) {
-  const [pending, startTransition] = useTransition();
+export function DnDetailActions({ locale, debitNoteId, debitNoteNumber, status }: { locale: Locale; debitNoteId: number; debitNoteNumber: string; status: string }) {
+  const [pending] = useTransition();
+  const confirm = useConfirm();
 
   function issue() {
-    startTransition(async () => {
-      const result = await issueDebitNoteAction(debitNoteId);
-      if (result?.error) toast.error(result.error);
-      else toast.success(t(locale, "Debit note issued — posted to ledger."));
+    confirm({
+      action: "document.submit",
+      entityType: "Debit Note",
+      entityNumber: debitNoteNumber,
+      confirmLabel: "Issue Debit Note",
+      description: "Issuing posts a reversing entry against the source purchase order and returns the stock.",
+      onConfirm: async () => {
+        const result = await issueDebitNoteAction(debitNoteId);
+        if (result?.error) return result;
+        toast.success(t(locale, "Debit note issued — posted to ledger."));
+      },
     });
   }
 
   function reverse() {
-    startTransition(async () => {
-      const result = await reverseDebitNoteAction(debitNoteId);
-      if (result?.error) toast.error(result.error);
-      else toast.success(t(locale, "Debit note reversed — reversing entry posted and stock restored."));
+    confirm({
+      action: "document.reverse",
+      entityType: "Debit Note",
+      entityNumber: debitNoteNumber,
+      onConfirm: async () => {
+        const result = await reverseDebitNoteAction(debitNoteId);
+        if (result?.error) return result;
+        toast.success(t(locale, "Debit note reversed — reversing entry posted and stock restored."));
+      },
     });
   }
 
   if (status === "draft") {
     return (
       <div className="flex items-center gap-2.5">
-        <Button variant="glass" style={{ width: "auto" }} asChild>
-          <Link href={`/purchasing/debit-notes/${debitNoteId}/edit`}>{t(locale, "Edit")}</Link>
-        </Button>
         <Button style={{ width: "auto" }} disabled={pending} onClick={issue}>
           {t(locale, "Issue Debit Note")}
         </Button>

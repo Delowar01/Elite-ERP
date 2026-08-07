@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { t, type Locale } from "@/lib/i18n/dict";
+import { useConfirm } from "../../_shared/confirm-provider";
 import { recordConsentAction, exportOrgDataAction, anonymizeCustomerAction, deleteConsentAction } from "./actions";
 
 type ConsentRow = { id: number; subject: string; granted: boolean; version: string | null; createdAt: string };
@@ -53,6 +54,7 @@ function fmtDate(iso: string): string {
 export function ComplianceCenterClient(props: { locale: Locale; consents: ConsentRow[]; customers: CustomerRow[] }) {
   const { locale } = props;
   const [pending, startTransition] = useTransition();
+  const confirm = useConfirm();
 
   const [consentSubject, setConsentSubject] = useState(CONSENT_SUBJECTS[0]);
   const [eraseId, setEraseId] = useState<string>("");
@@ -84,18 +86,44 @@ export function ComplianceCenterClient(props: { locale: Locale; consents: Consen
   function anonymize() {
     const id = Number(eraseId);
     if (!id) { toast.error(t(locale, "Select a customer.")); return; }
-    startTransition(async () => {
-      const res = await anonymizeCustomerAction(id);
-      if (res.error) { toast.error(res.error); return; }
-      setConfirmErase(false);
-      setEraseId("");
-      toast.success(t(locale, "Personal data erased."));
+    const target = props.customers.find((c) => c.id === id);
+    confirm({
+      action: "record.permanentDelete",
+      entityType: "Personal Data",
+      entityNumber: target?.name ?? "",
+      confirmLabel: "Erase",
+      description: "The customer's personal details will be irreversibly anonymized to satisfy a right-to-erasure request.",
+      onConfirm: () =>
+        new Promise<{ error?: string } | void>((resolve) => {
+          startTransition(async () => {
+            const res = await anonymizeCustomerAction(id);
+            if (res.error) {
+              resolve({ error: res.error });
+              return;
+            }
+            setConfirmErase(false);
+            setEraseId("");
+            toast.success(t(locale, "Personal data erased."));
+            resolve();
+          });
+        }),
     });
   }
 
   function removeConsent(id: number) {
-    startTransition(async () => {
-      await deleteConsentAction(id);
+    confirm({
+      action: "settings.compliance",
+      entityType: "Consent Record",
+      entityNumber: "",
+      confirmLabel: "Remove",
+      description: "The consent record will be removed from the organization's compliance log.",
+      onConfirm: () =>
+        new Promise<{ error?: string } | void>((resolve) => {
+          startTransition(async () => {
+            await deleteConsentAction(id);
+            resolve();
+          });
+        }),
     });
   }
 
@@ -166,7 +194,7 @@ export function ComplianceCenterClient(props: { locale: Locale; consents: Consen
                 ))}
               </select>
             </div>
-            <Button variant="destructive" onClick={() => (eraseId ? setConfirmErase(true) : toast.error(t(locale, "Select a customer.")))} disabled={pending}>
+            <Button variant="destructive" onClick={anonymize} disabled={pending}>
               <UserX className="size-4" /> {t(locale, "Erase")}
             </Button>
           </div>

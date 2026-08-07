@@ -2,36 +2,46 @@
 
 import { useTransition } from "react";
 import { toast } from "sonner";
-import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { useConfirm } from "../../_shared/confirm-provider";
 import { t, type Locale } from "@/lib/i18n/dict";
 import { issueCreditNoteAction, reverseCreditNoteAction } from "./actions";
 
-export function CnDetailActions({ locale, creditNoteId, status }: { locale: Locale; creditNoteId: number; status: string }) {
-  const [pending, startTransition] = useTransition();
+export function CnDetailActions({ locale, creditNoteId, creditNoteNumber, status }: { locale: Locale; creditNoteId: number; creditNoteNumber: string; status: string }) {
+  const [pending] = useTransition();
+  const confirm = useConfirm();
 
   function issue() {
-    startTransition(async () => {
-      const result = await issueCreditNoteAction(creditNoteId);
-      if (result?.error) toast.error(result.error);
-      else toast.success(t(locale, "Credit note issued — posted to ledger."));
+    confirm({
+      action: "document.submit",
+      entityType: "Credit Note",
+      entityNumber: creditNoteNumber,
+      confirmLabel: "Issue Credit Note",
+      description: "Issuing posts a reversing entry against the source invoice and restores its balance.",
+      onConfirm: async () => {
+        const result = await issueCreditNoteAction(creditNoteId);
+        if (result?.error) return result;
+        toast.success(t(locale, "Credit note issued — posted to ledger."));
+      },
     });
   }
 
   function reverse() {
-    startTransition(async () => {
-      const result = await reverseCreditNoteAction(creditNoteId);
-      if (result?.error) toast.error(result.error);
-      else toast.success(t(locale, "Credit note reversed — reversing entry posted and invoice balance restored."));
+    confirm({
+      action: "document.reverse",
+      entityType: "Credit Note",
+      entityNumber: creditNoteNumber,
+      onConfirm: async () => {
+        const result = await reverseCreditNoteAction(creditNoteId);
+        if (result?.error) return result;
+        toast.success(t(locale, "Credit note reversed — reversing entry posted and invoice balance restored."));
+      },
     });
   }
 
   if (status === "draft") {
     return (
       <div className="flex items-center gap-2.5">
-        <Button variant="glass" style={{ width: "auto" }} asChild>
-          <Link href={`/sales/credit-notes/${creditNoteId}/edit`}>{t(locale, "Edit")}</Link>
-        </Button>
         <Button style={{ width: "auto" }} disabled={pending} onClick={issue}>
           {t(locale, "Issue Credit Note")}
         </Button>
