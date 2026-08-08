@@ -1157,6 +1157,7 @@ const DICT: Record<string, string> = {
   "Apply to notes": "تطبيق على الملاحظات",
   "Add Note": "إضافة ملاحظة",
   "Rename Bundle": "إعادة تسمية الحزمة",
+  "A new draft will be created with a new document number. Line items, notes, terms, bank accounts and the seal are copied. Attachments are not copied, and status, payments and links to related documents are not carried over.": "سيتم إنشاء مسودة جديدة برقم مستند جديد. تُنسخ البنود والملاحظات والشروط والحسابات البنكية والختم. لا تُنسخ المرفقات، ولا تُنقل الحالة أو المدفوعات أو الروابط بالمستندات ذات الصلة.",
   "Add to Favorites": "إضافة إلى المفضلة",
   "Remove from Favorites": "إزالة من المفضلة",
   "Added to favorites.": "أُضيف إلى المفضلة.",

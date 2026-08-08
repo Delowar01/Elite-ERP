@@ -51,7 +51,7 @@ export default async function VendorRecycleBinPage() {
                 <TableCell className="font-semibold">{v.name}</TableCell>
                 <TableCell className="text-ink-muted">{v.email ?? "—"}</TableCell>
                 <TableCell className="text-right">
-                  <VendorRecycleBinActions id={v.id} name={v.name} />
+                  <VendorRecycleBinActions id={v.id} name={v.name} isOwner={session.role === "owner"} />
                 </TableCell>
               </TableRow>
             ))}

@@ -9,7 +9,7 @@ import { restoreProductAction, permanentlyDeleteProductAction } from "./actions"
 
 // Restore is harmless and runs straight away; permanent delete goes through the app-wide
 // confirmation (see confirm-policy.ts) rather than a dialog written for this one screen.
-export function ProductRecycleBinActions({ id, name }: { id: number; name: string }) {
+export function ProductRecycleBinActions({ id, name, isOwner }: { id: number; name: string; isOwner: boolean }) {
   const [pending, startTransition] = useTransition();
   const confirm = useConfirm();
 
@@ -46,9 +46,9 @@ export function ProductRecycleBinActions({ id, name }: { id: number; name: strin
       <Button variant="ghost" size="sm" disabled={pending} onClick={restore}>
         <ArchiveRestore className="size-3.5" /> Restore
       </Button>
-      <Button variant="ghost" size="sm" disabled={pending} onClick={permanentlyDelete} className="text-danger hover:bg-danger-bg">
+      {isOwner && (<Button variant="ghost" size="sm" disabled={pending} onClick={permanentlyDelete} className="text-danger hover:bg-danger-bg">
         <Trash2 className="size-3.5" /> Delete Permanently
-      </Button>
+      </Button>)}
     </div>
   );
 }

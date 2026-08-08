@@ -118,7 +118,9 @@ export async function restoreVendorAction(id: number) {
 }
 
 export async function permanentlyDeleteVendorAction(id: number) {
-  const session = await requireRole("owner", "admin");
+  // Owner-only, matching the lifecycle rule for documents. A permanently-deleted client or product
+  // may have posted transactions behind it, which is at least as destructive as erasing a draft.
+  const session = await requireRole("owner");
   const result = await db
     .delete(vendorsTable)
     .where(and(eq(vendorsTable.id, id), eq(vendorsTable.orgId, session.orgId), eq(vendorsTable.recordState, "deleted")))

@@ -264,7 +264,12 @@ export async function updateVatConfigAction(formData: FormData): Promise<ActionR
 // Remembers the "Valid Till = Issue Date + N days" offset (Issue #4). Called from the Valid Till
 // gear popup on a document so the last-used number of days persists for future documents.
 export async function updateValidityDaysAction(days: number): Promise<ActionResult> {
+  // Reached from the quotation builder's validity gear, not from Business Settings — but it writes
+  // an ORGANIZATION-wide default, so it carries the same staff refusal as the numbering gear and
+  // the business-details popup next to it. requireRole would redirect, which is wrong for a dialog
+  // inside a half-finished document, so it refuses inline like its siblings do.
   const session = await requireSession();
+  if (session.role === "staff") return { error: "You don't have permission to change the default validity period." };
   const n = Number.isFinite(days) ? Math.min(3650, Math.max(0, Math.round(days))) : 30;
   await db.update(orgsTable).set({ defaultValidityDays: n, updatedAt: new Date() }).where(eq(orgsTable.id, session.orgId));
   revalidatePath(PATH);

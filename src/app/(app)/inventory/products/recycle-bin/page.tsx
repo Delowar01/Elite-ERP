@@ -51,7 +51,7 @@ export default async function ProductRecycleBinPage() {
                 <TableCell className="font-mono text-xs">{p.sku}</TableCell>
                 <TableCell className="font-semibold">{p.name}</TableCell>
                 <TableCell className="text-right">
-                  <ProductRecycleBinActions id={p.id} name={p.name} />
+                  <ProductRecycleBinActions id={p.id} name={p.name} isOwner={session.role === "owner"} />
                 </TableCell>
               </TableRow>
             ))}

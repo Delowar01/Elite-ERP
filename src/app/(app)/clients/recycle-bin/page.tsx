@@ -51,7 +51,7 @@ export default async function ClientRecycleBinPage() {
                 <TableCell className="font-semibold">{c.name}</TableCell>
                 <TableCell className="text-ink-muted">{c.email ?? "—"}</TableCell>
                 <TableCell className="text-right">
-                  <ClientRecycleBinActions id={c.id} name={c.name} />
+                  <ClientRecycleBinActions id={c.id} name={c.name} isOwner={session.role === "owner"} />
                 </TableCell>
               </TableRow>
             ))}

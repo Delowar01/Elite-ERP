@@ -149,7 +149,9 @@ export async function restoreClientAction(id: number) {
 
 // Hard delete: the only action in this module that issues a real SQL DELETE. Owner/admin only.
 export async function permanentlyDeleteClientAction(id: number) {
-  const session = await requireRole("owner", "admin");
+  // Owner-only, matching the lifecycle rule for documents. A permanently-deleted client or product
+  // may have posted transactions behind it, which is at least as destructive as erasing a draft.
+  const session = await requireRole("owner");
   const result = await db
     .delete(customersTable)
     .where(and(eq(customersTable.id, id), eq(customersTable.orgId, session.orgId), eq(customersTable.recordState, "deleted")))

@@ -150,7 +150,9 @@ export async function restoreProductAction(id: number) {
 }
 
 export async function permanentlyDeleteProductAction(id: number) {
-  const session = await requireRole("owner", "admin");
+  // Owner-only, matching the lifecycle rule for documents. A permanently-deleted client or product
+  // may have posted transactions behind it, which is at least as destructive as erasing a draft.
+  const session = await requireRole("owner");
   const result = await db
     .delete(productsTable)
     .where(and(eq(productsTable.id, id), eq(productsTable.orgId, session.orgId), eq(productsTable.recordState, "deleted")))
