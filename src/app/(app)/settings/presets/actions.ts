@@ -202,7 +202,32 @@ export async function deleteLeaveTypeAction(id: number): Promise<ActionResult> {
   return {};
 }
 
+
+/**
+ * Expense Categories is hidden.
+ *
+ * Nothing consumes it. The only reads of expense_categories are the preset editor rendering itself
+ * and seed-org inserting three defaults per org — there is no Expenses module, and expensesTable
+ * (finance.ts) is referenced by nothing at all. It is also orphaned by schema rather than merely by
+ * omission: expenses.category is free text, not a foreign key to this table, so shipping Expenses
+ * would not consume these rows as things currently stand. Offering an editor for a list that
+ * changes nothing is a promise the app does not keep.
+ *
+ * The table, its rows and this code all stay. Hiding is reversible; dropping data is not, and if an
+ * Expenses module arrives this is a starting point rather than something to rebuild. Restoring the
+ * feature means flipping this flag back, restoring the tab, and — the actual work — deciding how
+ * expenses reference a category.
+ *
+ * The actions below refuse rather than merely being unreachable from the UI. A server action stays
+ * callable whether or not anything renders a button for it, so hiding the tab alone would leave a
+ * live write path behind a hidden door — the same "hidden in the UI, not actually restricted" shape
+ * catalogued in the Roles & Permissions work.
+ */
+const EXPENSE_CATEGORIES_ENABLED = false;
+const EXPENSE_CATEGORIES_DISABLED = "Expense categories are not available.";
+
 export async function createExpenseCategoryAction(name: string): Promise<ActionResult> {
+  if (!EXPENSE_CATEGORIES_ENABLED) return { error: EXPENSE_CATEGORIES_DISABLED };
   const session = await requireRole("owner", "admin");
   if (!name.trim()) return { error: "Name is required." };
   await db.insert(expenseCategoriesTable).values({ orgId: session.orgId, name: name.trim() });
@@ -210,6 +235,7 @@ export async function createExpenseCategoryAction(name: string): Promise<ActionR
   return {};
 }
 export async function updateExpenseCategoryAction(id: number, name: string): Promise<ActionResult> {
+  if (!EXPENSE_CATEGORIES_ENABLED) return { error: EXPENSE_CATEGORIES_DISABLED };
   const session = await requireRole("owner", "admin");
   if (!name.trim()) return { error: "Name is required." };
   const result = await db
@@ -222,6 +248,7 @@ export async function updateExpenseCategoryAction(id: number, name: string): Pro
   return {};
 }
 export async function deleteExpenseCategoryAction(id: number): Promise<ActionResult> {
+  if (!EXPENSE_CATEGORIES_ENABLED) return { error: EXPENSE_CATEGORIES_DISABLED };
   const session = await requireRole("owner", "admin");
   await db
     .delete(expenseCategoriesTable)

@@ -7,7 +7,6 @@ import {
   departmentsTable,
   productCategoriesTable,
   leaveTypesTable,
-  expenseCategoriesTable,
   noteTemplatesTable,
   termsConditionsGroupsTable,
   productBundlesTable,
@@ -52,9 +51,6 @@ import {
   createLeaveTypeAction,
   updateLeaveTypeAction,
   deleteLeaveTypeAction,
-  createExpenseCategoryAction,
-  updateExpenseCategoryAction,
-  deleteExpenseCategoryAction,
 } from "./actions";
 
 export default async function PresetsPage() {
@@ -69,7 +65,6 @@ export default async function PresetsPage() {
     departments,
     productCategories,
     leaveTypes,
-    expenseCategories,
     noteTemplates,
     termsGroups,
     bundles,
@@ -83,7 +78,6 @@ export default async function PresetsPage() {
     db.select().from(departmentsTable).where(eq(departmentsTable.orgId, orgId)).orderBy(asc(departmentsTable.name)),
     db.select().from(productCategoriesTable).where(eq(productCategoriesTable.orgId, orgId)).orderBy(asc(productCategoriesTable.name)),
     db.select().from(leaveTypesTable).where(eq(leaveTypesTable.orgId, orgId)).orderBy(asc(leaveTypesTable.name)),
-    db.select().from(expenseCategoriesTable).where(eq(expenseCategoriesTable.orgId, orgId)).orderBy(asc(expenseCategoriesTable.name)),
     db.select().from(noteTemplatesTable).where(eq(noteTemplatesTable.orgId, orgId)).orderBy(asc(noteTemplatesTable.name)),
     db.select().from(termsConditionsGroupsTable).where(eq(termsConditionsGroupsTable.orgId, orgId)).orderBy(asc(termsConditionsGroupsTable.name)),
     db.select().from(productBundlesTable).where(eq(productBundlesTable.orgId, orgId)).orderBy(asc(productBundlesTable.name)),
@@ -157,7 +151,6 @@ export default async function PresetsPage() {
           <TabsTrigger value="departments">{t(locale, "Departments")}</TabsTrigger>
           <TabsTrigger value="product-categories">{t(locale, "Product Categories")}</TabsTrigger>
           <TabsTrigger value="leave-types">{t(locale, "Leave Types")}</TabsTrigger>
-          <TabsTrigger value="expense-categories">{t(locale, "Expense Categories")}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="tax-rates">
@@ -269,18 +262,6 @@ export default async function PresetsPage() {
           />
         </TabsContent>
 
-        <TabsContent value="expense-categories">
-          <SimplePresetPanel
-            locale={locale}
-            items={expenseCategories.map((c) => ({ id: c.id, name: c.name, extra: null }))}
-            extraLabel={null}
-            addLabel={t(locale, "Add Expense Category")}
-            emptyLabel={t(locale, "No expense categories yet.")}
-            create={createExpenseCategoryAction}
-            update={updateExpenseCategoryAction}
-            remove={deleteExpenseCategoryAction}
-          />
-        </TabsContent>
       </Tabs>
     </div>
   );
