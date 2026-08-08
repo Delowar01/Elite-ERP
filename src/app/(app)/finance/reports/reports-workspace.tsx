@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { t, type Locale } from "@/lib/i18n/dict";
 import { Money } from "../../sales/_shared/money";
 import { getAccountDrilldownAction } from "./actions";
+import { ReportBodySkeleton } from "@/components/ui/skeleton";
 import type {
   ReportKind, DateRange, ProfitAndLoss, BalanceSheet, CashFlow, TrialBalance,
   GlAccountBlock, Aging, AgingBucketKey, VatSummary,
@@ -192,15 +193,26 @@ export function ReportsWorkspace({
         <div className="text-[12px] text-ink-faint">{range.from} → {range.to}</div>
       </div>
 
+      {/* Only the report BODY is replaced during a transition. The report picker, date range,
+          compare toggle and search above stay live and interactive — the most common move is to
+          switch report, notice the range is wrong and fix it, and blanking the controls with the
+          body would cost a whole extra round trip. The skeleton uses the same delay rule as the
+          list placeholders, so a fast switch shows no placeholder at all. */}
       <div className="card" style={{ padding: "18px 20px" }}>
-        {payload.kind === "pl" && <PnlView locale={locale} d={payload.pl} prev={payload.plPrev} search={search} onDrill={openDrill} />}
-        {payload.kind === "bs" && <BsView locale={locale} d={payload.bs} prev={payload.bsPrev} search={search} onDrill={openDrill} />}
-        {payload.kind === "cf" && <CfView locale={locale} d={payload.cf} prev={payload.cfPrev} />}
-        {payload.kind === "tb" && <TbView locale={locale} d={payload.tb} search={search} onDrill={openDrill} />}
-        {payload.kind === "gl" && <GlView locale={locale} blocks={payload.gl} search={search} />}
-        {payload.kind === "ar" && <AgingView locale={locale} d={payload.ar} search={search} kind="ar" />}
-        {payload.kind === "ap" && <AgingView locale={locale} d={payload.ap} search={search} kind="ap" />}
-        {payload.kind === "vat" && <VatView locale={locale} d={payload.vat} prev={payload.vatPrev} />}
+        {pending ? (
+          <ReportBodySkeleton />
+        ) : (
+          <>
+            {payload.kind === "pl" && <PnlView locale={locale} d={payload.pl} prev={payload.plPrev} search={search} onDrill={openDrill} />}
+            {payload.kind === "bs" && <BsView locale={locale} d={payload.bs} prev={payload.bsPrev} search={search} onDrill={openDrill} />}
+            {payload.kind === "cf" && <CfView locale={locale} d={payload.cf} prev={payload.cfPrev} />}
+            {payload.kind === "tb" && <TbView locale={locale} d={payload.tb} search={search} onDrill={openDrill} />}
+            {payload.kind === "gl" && <GlView locale={locale} blocks={payload.gl} search={search} />}
+            {payload.kind === "ar" && <AgingView locale={locale} d={payload.ar} search={search} kind="ar" />}
+            {payload.kind === "ap" && <AgingView locale={locale} d={payload.ap} search={search} kind="ap" />}
+            {payload.kind === "vat" && <VatView locale={locale} d={payload.vat} prev={payload.vatPrev} />}
+          </>
+        )}
       </div>
 
       <DrillDrawer locale={locale} drill={drill} block={drillBlock} loading={drillLoading} onClose={() => setDrill(null)} />

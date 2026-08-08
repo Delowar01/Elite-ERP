@@ -1454,6 +1454,15 @@ const DICT: Record<string, string> = {
   "Keep editing": "متابعة التعديل",
   "Discard": "تجاهل",
 
+  // Empty states for the document lists. Five of the eight had none and rendered a bare header
+  // row; all eight now share one card and offer the primary create action.
+  "No quotations yet.": "لا توجد عروض أسعار بعد.",
+  "No sales orders yet.": "لا توجد أوامر بيع بعد.",
+  "No proforma invoices yet.": "لا توجد فواتير مبدئية بعد.",
+  "No invoices yet.": "لا توجد فواتير بعد.",
+  "No delivery challans yet.": "لا توجد سندات تسليم بعد.",
+  "Nothing to show yet.": "لا يوجد ما يُعرض بعد.",
+
   // In-document vendor creation — the vendor-side twin of the client popup above.
   "Select a vendor from the list": "اختر المورّد من القائمة",
   "Add New Vendor": "إضافة مورّد جديد",

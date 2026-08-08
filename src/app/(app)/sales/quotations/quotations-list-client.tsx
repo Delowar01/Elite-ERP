@@ -20,6 +20,7 @@ import type { ImportColumn } from "@/lib/document-list-workspace";
 import { updateQuotationStatusAction } from "./actions";
 import { getConvertTargets } from "../_shared/convert-config";
 import { useConvertConfirm } from "../../_shared/confirm-actions";
+import { ListEmptyState } from "../_shared/list-empty-state";
 
 const STATUS_VARIANT: Record<string, "success" | "warning" | "danger" | "info" | "neutral"> = {
   draft: "neutral",
@@ -113,7 +114,10 @@ export function QuotationsListClient({
         importColumns={importColumns}
       />
 
-      <Table>
+      {rows.length === 0 ? (
+        <ListEmptyState locale={locale} message={t(locale, "No quotations yet.")} createHref="/sales/quotations/new" createLabel={t(locale, "New Quotation")} />
+      ) : (
+        <Table>
         <TableHeader>
           <TableRow>
             <TableHead>{t(locale, "Quotation #")}</TableHead>
@@ -184,6 +188,7 @@ export function QuotationsListClient({
           })}
         </TableBody>
       </Table>
+      )}
       <div className="text-[11.5px] text-ink-faint mt-2">
         {t(locale, "Showing")} {filtered.length} {t(locale, "of")} {rows.length} {t(locale, "Quotations")}.
       </div>

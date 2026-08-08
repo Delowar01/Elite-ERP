@@ -19,6 +19,7 @@ import { useDocumentRowActions } from "../../_shared/document-row-actions";
 import { useDocumentEditAction } from "../../_shared/edit-document";
 import { getConvertTargets } from "../_shared/convert-config";
 import { useConvertConfirm } from "../../_shared/confirm-actions";
+import { ListEmptyState } from "../_shared/list-empty-state";
 
 const STATUS_VARIANT: Record<string, "success" | "warning" | "danger" | "info" | "neutral"> = {
   draft: "neutral",
@@ -106,7 +107,10 @@ export function InvoicesListClient({
         importColumns={importColumns}
       />
 
-      <Table>
+      {rows.length === 0 ? (
+        <ListEmptyState locale={locale} message={t(locale, "No invoices yet.")} createHref="/sales/invoices/new" createLabel={t(locale, "New Invoice")} />
+      ) : (
+        <Table>
         <TableHeader>
           <TableRow>
             <TableHead>{t(locale, "Invoice #")}</TableHead>
@@ -176,6 +180,7 @@ export function InvoicesListClient({
           })}
         </TableBody>
       </Table>
+      )}
       <div className="text-[11.5px] text-ink-faint mt-2">
         {t(locale, "Showing")} {filtered.length} {t(locale, "of")} {rows.length} {t(locale, "Invoices")}.
       </div>

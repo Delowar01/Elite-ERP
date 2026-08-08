@@ -17,6 +17,7 @@ import { Money } from "../../sales/_shared/money";
 import { t, type Locale } from "@/lib/i18n/dict";
 import { useDocumentRowActions } from "../../_shared/document-row-actions";
 import { useDocumentEditAction } from "../../_shared/edit-document";
+import { ListEmptyState } from "../../sales/_shared/list-empty-state";
 
 const STATUS_VARIANT: Record<string, "success" | "warning" | "danger" | "info" | "neutral"> = {
   draft: "neutral",
@@ -109,9 +110,7 @@ export function DnListClient({
       />
 
       {rows.length === 0 ? (
-        <div className="rounded-2xl border border-line bg-surface shadow-elevated py-12 text-center text-ink-muted text-sm">
-          {t(locale, "No debit notes yet. Open a received purchase order to issue one against it.")}
-        </div>
+        <ListEmptyState locale={locale} message={t(locale, "No debit notes yet.")} hint={t(locale, "Open a received purchase order to issue one against it.")} createHref="/purchasing/debit-notes/new" createLabel={t(locale, "New Debit Note")} />
       ) : (
         <Table>
           <TableHeader>

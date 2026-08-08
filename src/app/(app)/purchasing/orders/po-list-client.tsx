@@ -19,6 +19,7 @@ import { useDocumentRowActions } from "../../_shared/document-row-actions";
 import { useDocumentEditAction } from "../../_shared/edit-document";
 import { getConvertTargets } from "../../sales/_shared/convert-config";
 import { useConvertConfirm } from "../../_shared/confirm-actions";
+import { ListEmptyState } from "../../sales/_shared/list-empty-state";
 
 const STATUS_VARIANT: Record<string, "success" | "warning" | "danger" | "info" | "neutral"> = {
   draft: "neutral",
@@ -105,9 +106,7 @@ export function PoListClient({
       />
 
       {rows.length === 0 ? (
-        <div className="rounded-2xl border border-line bg-surface shadow-elevated py-12 text-center text-ink-muted text-sm">
-          {t(locale, "No purchase orders yet.")}
-        </div>
+        <ListEmptyState locale={locale} message={t(locale, "No purchase orders yet.")} createHref="/purchasing/orders/new" createLabel={t(locale, "New Purchase Order")} />
       ) : (
         <Table>
           <TableHeader>

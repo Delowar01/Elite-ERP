@@ -6,6 +6,29 @@ was made and postponed, not an idea someone had.
 
 ---
 
+## Remaining untranslated modules
+
+**Status:** deferred, not started. Distinct from the chart-of-accounts naming work, which is scoped
+to account names only.
+
+The project convention is that every UI string ships with native Arabic from the outset. Three
+areas predate or escaped that and are substantially English regardless of the selected locale:
+
+| Module | Notes |
+|---|---|
+| Security Center | Flagged in the features audit as substantially English. |
+| Compliance Center | Same. |
+| Vendors | Every field label in `purchasing/vendors/vendor-form.tsx` is a raw string — "Name", "Email", "Address", "Notes" — and the list/page chrome around it follows. |
+
+**Vendors has a wrinkle worth knowing before picking this up.** The in-document "Add New Vendor"
+popup reuses the full-page `VendorForm`, so the popup's own chrome (title, buttons, discard
+confirmation) is translated while the fields inside it are not. Translating the popup alone would
+make that split worse, not better — the fix has to touch the full-page form, which is why it was
+not folded into the in-document creation task. Doing it means adding a `locale` prop to
+`VendorForm` and updating both call sites.
+
+---
+
 ## Structured addresses for vendors
 
 **Status:** deferred, not started. Not a blocker for anything currently shipped.
