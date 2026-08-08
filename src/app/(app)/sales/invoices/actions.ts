@@ -5,7 +5,7 @@ import { sanitizeIfHtml } from "@/lib/sanitize-html";
 import { normalizeDocumentTerms, type DocumentTerm } from "../_shared/document-terms";
 import { redirect } from "next/navigation";
 import { and, eq, sql } from "drizzle-orm";
-import { db, customersTable, projectsTable, salesInvoicesTable, salesInvoiceItemsTable, productsTable, accountsTable, journalEntriesTable, journalLinesTable, deliveryChallansTable, deliveryChallanItemsTable } from "@/db";
+import { db, customersTable, projectsTable, salesInvoicesTable, salesInvoiceItemsTable, productsTable, accountsTable, journalEntriesTable, journalLinesTable, deliveryChallansTable, deliveryChallanItemsTable, paymentTermPresetsTable } from "@/db";
 import { requireSession } from "@/lib/session";
 import { logActivity } from "@/lib/activity";
 import { nextDocumentNumber } from "@/lib/documents";
@@ -22,12 +22,38 @@ const PATH = "/sales/invoices";
 
 type LineInput = { productId: string; description: string; quantity: string; unitPrice: string; taxRatePercent: string; imageUrl?: string; unit?: string; customFields?: Record<string, string> };
 
+/**
+ * Validate the due date + payment term submitted with an invoice. Both are optional (an invoice can
+ * be issued with no agreed due date), but when present the term must belong to this org and the due
+ * date may not precede the issue date — otherwise AR Aging would report it overdue from day one.
+ */
+async function resolveDueTerms(
+  orgId: number,
+  issueDate: string,
+  rawDueDate?: string,
+  rawTermId?: string,
+): Promise<{ error?: string; dueDate?: string | null; paymentTermPresetId?: number | null }> {
+  const dueDate = (rawDueDate ?? "").trim() || null;
+  if (dueDate && dueDate < issueDate) return { error: "Due date cannot be before the issue date." };
+
+  const termId = Number(rawTermId) || null;
+  if (!termId) return { dueDate, paymentTermPresetId: null };
+  const [term] = await db
+    .select({ id: paymentTermPresetsTable.id })
+    .from(paymentTermPresetsTable)
+    .where(and(eq(paymentTermPresetsTable.id, termId), eq(paymentTermPresetsTable.orgId, orgId)));
+  if (!term) return { error: "Payment term not found." };
+  return { dueDate, paymentTermPresetId: term.id };
+}
+
 export async function createInvoiceAction(
   input: {
     title: string;
     customerId: string;
     projectId?: string;
     issueDate: string;
+    dueDate?: string;
+    paymentTermId?: string;
     discount: string;
     notes: string; terms?: DocumentTerm[];
     items: LineInput[];
@@ -56,6 +82,9 @@ export async function createInvoiceAction(
   }
   if (!input.issueDate) return { error: "Issue date is required." };
 
+  const due = await resolveDueTerms(session.orgId, input.issueDate, input.dueDate, input.paymentTermId);
+  if (due.error) return { error: due.error };
+
   const items = input.items.filter((l) => l.description.trim() && Number(l.quantity) > 0);
   if (items.length === 0) return { error: "Add at least one line item." };
 
@@ -74,6 +103,8 @@ export async function createInvoiceAction(
         customerId,
         projectId,
         issueDate: input.issueDate,
+        dueDate: due.dueDate ?? null,
+        paymentTermPresetId: due.paymentTermPresetId ?? null,
         notes: sanitizeIfHtml(input.notes) || null,
         terms: normalizeDocumentTerms(input.terms),
         bankAccounts,
@@ -118,7 +149,7 @@ export async function createInvoiceAction(
 // Batch A2 — draft-only edit. Preserves number/org/status/source links; recomputes totals server-side.
 export async function updateInvoiceAction(
   id: number,
-  input: { title: string; customerId: string; projectId?: string; issueDate: string; discount: string; notes: string; terms?: DocumentTerm[]; items: LineInput[]; attachments?: AttachmentInput[]; bankAccountIds?: number[]; currency?: string; sealUrl?: string; signatureUrl?: string },
+  input: { title: string; customerId: string; projectId?: string; issueDate: string; dueDate?: string; paymentTermId?: string; discount: string; notes: string; terms?: DocumentTerm[]; items: LineInput[]; attachments?: AttachmentInput[]; bankAccountIds?: number[]; currency?: string; sealUrl?: string; signatureUrl?: string },
 ): Promise<ActionResult> {
   const session = await requireSession();
   const [existing] = await db.select().from(salesInvoicesTable).where(and(eq(salesInvoicesTable.id, id), eq(salesInvoicesTable.orgId, session.orgId)));
@@ -136,6 +167,9 @@ export async function updateInvoiceAction(
     projectId = project.id;
   }
   if (!input.issueDate) return { error: "Issue date is required." };
+
+  const due = await resolveDueTerms(session.orgId, input.issueDate, input.dueDate, input.paymentTermId);
+  if (due.error) return { error: due.error };
   const items = input.items.filter((l) => l.description.trim() && Number(l.quantity) > 0);
   if (items.length === 0) return { error: "Add at least one line item." };
   const totals = computeTotals(items as LineItemInput[], input.discount);
@@ -150,6 +184,8 @@ export async function updateInvoiceAction(
         customerId,
         projectId,
         issueDate: input.issueDate,
+        dueDate: due.dueDate ?? null,
+        paymentTermPresetId: due.paymentTermPresetId ?? null,
         notes: sanitizeIfHtml(input.notes) || null,
         terms: normalizeDocumentTerms(input.terms),
         bankAccounts,

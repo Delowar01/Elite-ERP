@@ -8,6 +8,7 @@ import { productsTable } from "./products";
 import { usersTable } from "./users";
 import { projectsTable } from "./projects";
 import { salesOrdersTable } from "./sales-orders";
+import { paymentTermPresetsTable } from "./presets";
 
 export const salesInvoicesTable = pgTable("sales_invoices", {
   id: serial("id").primaryKey(),
@@ -24,6 +25,10 @@ export const salesInvoicesTable = pgTable("sales_invoices", {
   status: text("status").notNull().default("draft"), // draft | sent | partially_paid | paid | void
   issueDate: date("issue_date").notNull(),
   dueDate: date("due_date"),
+  // The Payment Terms preset the due date was derived from (Net 30, …). Stored so the term can be
+  // shown on the document and re-selected when editing. The due date itself stays independently
+  // editable, so this records which term was chosen — it is not a live formula.
+  paymentTermPresetId: integer("payment_term_preset_id").references(() => paymentTermPresetsTable.id, { onDelete: "set null" }),
   subtotal: numeric("subtotal", { precision: 14, scale: 2 }).notNull().default("0"),
   discount: numeric("discount", { precision: 14, scale: 2 }).notNull().default("0"),
   taxTotal: numeric("tax_total", { precision: 14, scale: 2 }).notNull().default("0"),

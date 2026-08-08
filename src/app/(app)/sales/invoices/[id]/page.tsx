@@ -47,6 +47,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
       archivedAt: salesInvoicesTable.archivedAt,
       deletedAt: salesInvoicesTable.deletedAt,
       issueDate: salesInvoicesTable.issueDate,
+      dueDate: salesInvoicesTable.dueDate,
       subtotal: salesInvoicesTable.subtotal,
       discount: salesInvoicesTable.discount,
       taxTotal: salesInvoicesTable.taxTotal,
@@ -99,6 +100,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
           <h3 className="mono">{invoice.invoiceNumber}</h3>
           <div className="inv-sub">
             {t(locale, "Issue Date")} {invoice.issueDate}
+            {invoice.dueDate ? ` · ${t(locale, "Due Date")} ${invoice.dueDate}` : ""}
             {invoice.title ? ` · ${invoice.title}` : ""}
             {invoice.sourceSoNumber && (
               <>

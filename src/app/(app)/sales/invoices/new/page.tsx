@@ -1,5 +1,5 @@
 import { asc, eq } from "drizzle-orm";
-import { db, customersTable, productsTable, orgsTable, projectsTable, sealSignatureAssetsTable } from "@/db";
+import { db, customersTable, productsTable, orgsTable, projectsTable, sealSignatureAssetsTable, paymentTermPresetsTable } from "@/db";
 import { getColumnConfig } from "@/lib/column-config-server";
 import { requireSession } from "@/lib/session";
 import { getLocale } from "@/lib/i18n/server";
@@ -14,7 +14,7 @@ export default async function NewInvoicePage() {
   const columnConfig = await getColumnConfig(session.orgId, session.userId, "sales_invoice");
   const locale = await getLocale();
 
-  const [customers, products, [org], numberPreview, projects, presets, bankData] = await Promise.all([
+  const [customers, products, [org], numberPreview, projects, presets, bankData, paymentTerms] = await Promise.all([
     db.select().from(customersTable).where(tenantScope(session.orgId, customersTable)).orderBy(asc(customersTable.name)),
     db.select().from(productsTable).where(tenantScope(session.orgId, productsTable)).orderBy(asc(productsTable.name)),
     db.select().from(orgsTable).where(eq(orgsTable.id, session.orgId)),
@@ -22,6 +22,9 @@ export default async function NewInvoicePage() {
     db.select({ id: projectsTable.id, name: projectsTable.name }).from(projectsTable).where(eq(projectsTable.orgId, session.orgId)).orderBy(asc(projectsTable.name)),
     getDocumentContentPresets(session.orgId, "sales_invoice"),
     getDocumentBankData(session.orgId),
+    // Payment Terms presets drive the Due Date (Net 30 → issue date + 30 days).
+    db.select({ id: paymentTermPresetsTable.id, name: paymentTermPresetsTable.name, netDays: paymentTermPresetsTable.netDays })
+      .from(paymentTermPresetsTable).where(eq(paymentTermPresetsTable.orgId, session.orgId)).orderBy(asc(paymentTermPresetsTable.netDays)),
   ]);
 
   const sealAssets = await db.select().from(sealSignatureAssetsTable).where(eq(sealSignatureAssetsTable.orgId, session.orgId)).orderBy(sealSignatureAssetsTable.id);
@@ -29,7 +32,7 @@ export default async function NewInvoicePage() {
   return (
     <div className="max-w-6xl mx-auto">
       <InvoiceForm locale={locale} customers={customers} products={products} org={org} sealAssets={sealAssets} numberPreview={numberPreview} projects={projects} noteTemplates={presets.noteTemplates} termsGroups={presets.termsGroups}
-        columnConfig={columnConfig} bankAccounts={bankData.bankAccounts} glAccounts={bankData.glAccounts} defaultBankAccountIds={bankData.defaultBankAccountIds} />
+        columnConfig={columnConfig} bankAccounts={bankData.bankAccounts} glAccounts={bankData.glAccounts} defaultBankAccountIds={bankData.defaultBankAccountIds} paymentTerms={paymentTerms} />
     </div>
   );
 }

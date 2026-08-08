@@ -38,6 +38,8 @@ export type InvoiceFormInitial = {
   customerId: string;
   projectId: string;
   issueDate: string;
+  dueDate?: string;
+  paymentTermId?: string;
   discount: string;
   notes: string;
   items: LineItemDraft[];
@@ -45,6 +47,17 @@ export type InvoiceFormInitial = {
   bankAccountIds?: number[];
   currency?: string;
 };
+
+/** A Payment Terms preset, used to derive the due date (Net 30 → issue date + 30 days). */
+export type PaymentTermOption = { id: number; name: string; netDays: number };
+
+/** issueDate + netDays, as a YYYY-MM-DD string. Returns "" when the issue date is not yet valid. */
+function addDays(issueDate: string, netDays: number): string {
+  const base = new Date(`${issueDate}T00:00:00Z`);
+  if (Number.isNaN(base.getTime())) return "";
+  base.setUTCDate(base.getUTCDate() + netDays);
+  return base.toISOString().slice(0, 10);
+}
 
 export function InvoiceForm({
   locale,
@@ -63,7 +76,9 @@ export function InvoiceForm({
   glAccounts = [],
   defaultBankAccountIds = [],
   sealAssets = [],
+  paymentTerms = [],
 }: {
+  paymentTerms?: PaymentTermOption[];
   sealAssets?: SealAsset[];
   locale: Locale;
   customers: Customer[];
@@ -86,8 +101,37 @@ export function InvoiceForm({
   const [title, setTitle] = useState(initial?.title ?? "");
   const [customerId, setCustomerId] = useState(initial?.customerId ?? "");
   const [projectId, setProjectId] = useState(initial?.projectId ?? "");
-  const [issueDate, setIssueDate] = useState(initial?.issueDate ?? new Date().toISOString().slice(0, 10));
+  const [issueDate, setIssueDateRaw] = useState(initial?.issueDate ?? new Date().toISOString().slice(0, 10));
+  const [dueDate, setDueDateRaw] = useState(initial?.dueDate ?? "");
+  const [paymentTermId, setPaymentTermId] = useState(initial?.paymentTermId ?? "");
+  // True once the user has typed a due date themselves. From then on, changing the issue date no
+  // longer moves it — only explicitly picking a payment term does, since that is a deliberate act.
+  const [dueDateEdited, setDueDateEdited] = useState(Boolean(initial?.dueDate));
   const [discount, setDiscount] = useState(initial?.discount ?? "0");
+
+  // Picking a term always re-derives the due date (an explicit choice outranks a previous manual
+  // edit); clearing the term leaves whatever date is there.
+  function choosePaymentTerm(id: string) {
+    setPaymentTermId(id);
+    const term = paymentTerms.find((p) => String(p.id) === id);
+    if (!term || !issueDate) return;
+    setDueDateRaw(addDays(issueDate, term.netDays));
+    setDueDateEdited(false);
+  }
+
+  // Moving the issue date carries an auto-derived due date along with it, but never overwrites one
+  // the user typed.
+  function setIssueDate(next: string) {
+    setIssueDateRaw(next);
+    if (dueDateEdited) return;
+    const term = paymentTerms.find((p) => String(p.id) === paymentTermId);
+    if (term && next) setDueDateRaw(addDays(next, term.netDays));
+  }
+
+  function setDueDate(next: string) {
+    setDueDateRaw(next);
+    setDueDateEdited(true);
+  }
   const defaultNote = noteTemplates.find((n) => n.isDefault) ?? noteTemplates[0];
   const [notes, setNotes] = useState(initial?.notes ?? defaultNote?.content ?? "");
   const [terms, setTerms] = useState<DocumentTerm[]>(initial?.terms ?? []);
@@ -110,7 +154,7 @@ export function InvoiceForm({
   // Everything that counts as this document's content. Leaving a field out would leave it
   // unprotected, so line items, terms, notes, attachments, bank accounts and the seal are all in.
 
-  const dirtyForm = useDirtyForm({ title, customerId, projectId, issueDate, discount, notes, terms, items, attachments, bankAccountIds, currency, sealOverride, signatureOverride });
+  const dirtyForm = useDirtyForm({ title, customerId, projectId, issueDate, dueDate, paymentTermId, discount, notes, terms, items, attachments, bankAccountIds, currency, sealOverride, signatureOverride });
 
   function submit(andSend: boolean) {
     const start = andSend ? startPrimaryTransition : startDraftTransition;
@@ -119,7 +163,7 @@ export function InvoiceForm({
       // so marking clean afterwards would be too late and the user would be asked to discard
       // exactly what they just saved. A failure below puts the dirty state back.
       dirtyForm.markClean();
-      const payload = { title, customerId, projectId, issueDate, discount, notes, terms, items, attachments, bankAccountIds, currency, sealUrl: sealOverride, signatureUrl: signatureOverride };
+      const payload = { title, customerId, projectId, issueDate, dueDate, paymentTermId, discount, notes, terms, items, attachments, bankAccountIds, currency, sealUrl: sealOverride, signatureUrl: signatureOverride };
       const result = isEdit && documentId ? await updateInvoiceAction(documentId, payload) : await createInvoiceAction(payload, andSend);
       if (result?.error) {
         dirtyForm.restoreDirty();
@@ -132,7 +176,10 @@ export function InvoiceForm({
     docLabel: t(locale, "Invoice"),
     number: numberPreview,
     title,
-    fields: [{ label: t(locale, "Issue Date"), value: issueDate }],
+    fields: [
+      { label: t(locale, "Issue Date"), value: issueDate },
+      ...(dueDate ? [{ label: t(locale, "Due Date"), value: dueDate }] : []),
+    ],
     from: { label: t(locale, "From"), name: org.name, lines: [org.address, org.email, org.phone] },
     to: selectedCustomer ? { label: t(locale, "To Client"), name: selectedCustomer.name, lines: [selectedCustomer.address, selectedCustomer.email, selectedCustomer.phone] } : undefined,
     items: items.map((it) => ({ description: it.description, desc: getLineDesc(it.customFields), quantity: it.quantity, unitPrice: String(Number(it.unitPrice) || 0), lineTotal: String((Number(it.quantity) || 0) * (Number(it.unitPrice) || 0)) })),
@@ -165,6 +212,23 @@ export function InvoiceForm({
             </DocFieldBox>
             <DocFieldBox label={t(locale, "Issue Date")} required>
               <input type="date" value={issueDate} onChange={(e) => setIssueDate(e.target.value)} className="w-full bg-transparent outline-none" />
+            </DocFieldBox>
+          </div>
+          {/* Payment Terms drives the Due Date (Net 30 → issue date + 30 days); the date itself
+              stays editable, and a hand-typed date is never overwritten by moving the issue date. */}
+          <div className="doc-header-grid" style={{ gridTemplateColumns: "1fr 1fr" }}>
+            <DocFieldBox label={t(locale, "Payment Terms")}>
+              <select value={paymentTermId} onChange={(e) => choosePaymentTerm(e.target.value)} className="w-full bg-transparent outline-none">
+                <option value="">—</option>
+                {paymentTerms.map((p) => (
+                  <option key={p.id} value={String(p.id)}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+            </DocFieldBox>
+            <DocFieldBox label={t(locale, "Due Date")}>
+              <input type="date" value={dueDate} min={issueDate || undefined} onChange={(e) => setDueDate(e.target.value)} className="w-full bg-transparent outline-none" />
             </DocFieldBox>
           </div>
           <div className="doc-header-grid" style={{ gridTemplateColumns: "1fr 1fr" }}>

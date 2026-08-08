@@ -272,7 +272,7 @@ export default async function PrintPage({ params }: { params: Promise<{ type: st
 
       body = (
         <A4Page org={org} documentType="sales_invoice">
-          <PdfHeader docLabel="INVOICE" numberLabel="Invoice No" numberVal={inv.invoiceNumber} dateVal={fmtDate(inv.issueDate)} org={org} />
+          <PdfHeader docLabel="INVOICE" numberLabel="Invoice No" numberVal={inv.invoiceNumber} dateVal={fmtDate(inv.issueDate)} extraLabel="Due Date" extraVal={inv.dueDate ? fmtDate(inv.dueDate) : null} org={org} />
           <Parties>{orgParty("FROM")}<Party label="TO" name={customer.name} lines={customerLines(customer)} /></Parties>
           <ItemsTableFull items={fullItems} format={numFmt} />
           <div className="pdf-bottom">
