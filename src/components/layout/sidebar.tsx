@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { ChevronDown, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { LogoMark } from "@/components/brand/logo-mark";
 import { NAV_GROUPS } from "./nav-config";
 import { cn } from "@/lib/utils";
 import { t, type Locale } from "@/lib/i18n/dict";
 import { SIDEBAR_COLLAPSED_COOKIE, SIDEBAR_GROUPS_COOKIE } from "@/lib/sidebar-cookies";
+import { useSidebarScroll } from "./use-sidebar-scroll";
 
 // Routes with a built page — the rest are planned nav items for sections not yet implemented.
 // Keeping prefetch off for those avoids prefetching 404s on every render.
@@ -68,6 +69,9 @@ export function Sidebar({
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(initialCollapsed);
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(() => new Set(initialCollapsedGroups));
+  // The <aside> is the scrolling element (.sidebar has overflow-y: auto).
+  const navRef = useRef<HTMLElement>(null);
+  useSidebarScroll(navRef);
 
   function toggleSidebar() {
     setCollapsed((c) => {
@@ -91,7 +95,7 @@ export function Sidebar({
   const ToggleIcon = collapsed ? PanelLeftOpen : PanelLeftClose;
 
   return (
-    <aside className={cn("sidebar", collapsed && "collapsed")}>
+    <aside ref={navRef} className={cn("sidebar", collapsed && "collapsed")}>
       <div className="sidebar-head">
         {orgLogoUrl ? (
           <div className="sidebar-brand">

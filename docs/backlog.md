@@ -6,6 +6,37 @@ was made and postponed, not an idea someone had.
 
 ---
 
+## Load testing at realistic volume — and re-tuning the loading placeholders against it
+
+**Status:** deferred, not started. Blocks nothing today, but one shipped feature is currently
+tuned against numbers that do not represent production.
+
+Every route in the `(app)` group was measured with seeded data during the loading-placeholder work:
+all 46 landed **under 150ms**, the dashboard slowest at 147ms. That is the entire empirical basis
+for the placeholder system, and it is thin. Under those timings the placeholders essentially never
+appear, which means **they are untested in the only conditions they exist for** — a remote
+database, cold starts, and tenants with real volume. A skeleton tuned on 147ms data is a guess
+about a three-second list.
+
+**What to test:** seed 10k+ documents, clients, products and journal lines for one org and re-run
+the route timings, ideally against a non-local database so network latency is included.
+
+**What to re-check first, once those numbers exist:**
+
+1. **The delay threshold.** `DELAY_MS` in `src/components/ui/skeleton.tsx` is 150ms. If real lists
+   settle at one to three seconds, the threshold is doing nothing useful and should be reconsidered
+   — and the ~134ms-visible flash measured for a response landing just after the threshold may look
+   very different when responses cluster elsewhere.
+2. **Whether the column shapes still hold.** The shape assertion compares the placeholder's column
+   count to the list's `<TableHead>` count, which is volume-independent — but row height and the
+   number of skeleton rows were chosen to look right against a short list.
+3. **Whether delay-only is still the right rule.** A minimum visible duration is impossible for a
+   route-level `loading.tsx` (React unmounts the fallback as soon as the payload arrives). If real
+   timings make the tear-away flash common, the answer may be to move list loading into a client
+   transition where a hold *is* possible — a real design change, not a tuning change.
+
+---
+
 ## Remaining untranslated modules
 
 **Status:** deferred, not started. Distinct from the chart-of-accounts naming work, which is scoped
