@@ -1,8 +1,10 @@
 import "server-only";
 import { and, eq, count, isNull, isNotNull, desc } from "drizzle-orm";
 import type { PgColumn, PgTable } from "drizzle-orm/pg-core";
+import { DOCUMENT_DETAIL_HREF } from "./document-hrefs";
 import {
   db,
+  favoritesTable,
   quotationsTable,
   quotationItemsTable,
   salesOrdersTable,
@@ -86,12 +88,25 @@ export type DocAdminEntry = {
   listDeleted: (orgId: number) => Promise<RecycleRow[]>;
 };
 
+/**
+ * A permanently-deleted document must leave nothing behind — including the per-user favorites that
+ * point at its detail page. Favorites are keyed by route, so once the record is gone the entry would
+ * be a dead link with no way for the user to tell why. Matched on org + href, so it clears the entry
+ * for EVERY user in the org, not only whoever pressed delete.
+ *
+ * Only permanent delete does this. A soft-deleted document is still recoverable from the Recycle
+ * Bin, so its favorite is still meaningful and deliberately survives.
+ */
+async function purgeFavorites(tx: { delete: typeof db.delete }, orgId: number, href: string): Promise<void> {
+  await tx.delete(favoritesTable).where(and(eq(favoritesTable.orgId, orgId), eq(favoritesTable.href, href)));
+}
+
 export const DOCUMENT_ADMIN: Record<DocumentType, DocAdminEntry> = {
   quotation: {
     docType: "quotation",
     typeLabel: "Quotation",
     listPath: "/sales/quotations",
-    detailHref: (id) => `/sales/quotations/${id}`,
+    detailHref: DOCUMENT_DETAIL_HREF.quotation,
     revalidatePaths: ["/sales/quotations", "/recycle-bin"],
     loadState: async (orgId, id) => {
       const [r] = await db
@@ -108,6 +123,7 @@ export const DOCUMENT_ADMIN: Record<DocumentType, DocAdminEntry> = {
     setDeletedAt: async (orgId, id, value) => (await db.update(quotationsTable).set({ deletedAt: value, updatedAt: new Date() }).where(and(eq(quotationsTable.id, id), eq(quotationsTable.orgId, orgId))).returning({ id: quotationsTable.id })).length,
     hardDelete: async (orgId, id) => {
       await db.transaction(async (tx) => {
+        await purgeFavorites(tx, orgId, DOCUMENT_DETAIL_HREF.quotation(id));
         await tx.delete(quotationItemsTable).where(eq(quotationItemsTable.quotationId, id));
         await tx.delete(quotationsTable).where(and(eq(quotationsTable.id, id), eq(quotationsTable.orgId, orgId)));
       });
@@ -126,7 +142,7 @@ export const DOCUMENT_ADMIN: Record<DocumentType, DocAdminEntry> = {
     docType: "sales_order",
     typeLabel: "Sales Order",
     listPath: "/sales/orders",
-    detailHref: (id) => `/sales/orders/${id}`,
+    detailHref: DOCUMENT_DETAIL_HREF.sales_order,
     revalidatePaths: ["/sales/orders", "/recycle-bin"],
     loadState: async (orgId, id) => {
       const [r] = await db
@@ -144,6 +160,7 @@ export const DOCUMENT_ADMIN: Record<DocumentType, DocAdminEntry> = {
     setDeletedAt: async (orgId, id, value) => (await db.update(salesOrdersTable).set({ deletedAt: value, updatedAt: new Date() }).where(and(eq(salesOrdersTable.id, id), eq(salesOrdersTable.orgId, orgId))).returning({ id: salesOrdersTable.id })).length,
     hardDelete: async (orgId, id) => {
       await db.transaction(async (tx) => {
+        await purgeFavorites(tx, orgId, DOCUMENT_DETAIL_HREF.sales_order(id));
         await tx.delete(salesOrderItemsTable).where(eq(salesOrderItemsTable.salesOrderId, id));
         await tx.delete(salesOrdersTable).where(and(eq(salesOrdersTable.id, id), eq(salesOrdersTable.orgId, orgId)));
       });
@@ -162,7 +179,7 @@ export const DOCUMENT_ADMIN: Record<DocumentType, DocAdminEntry> = {
     docType: "proforma_invoice",
     typeLabel: "Proforma Invoice",
     listPath: "/sales/proforma",
-    detailHref: (id) => `/sales/proforma/${id}`,
+    detailHref: DOCUMENT_DETAIL_HREF.proforma_invoice,
     revalidatePaths: ["/sales/proforma", "/recycle-bin"],
     loadState: async (orgId, id) => {
       const [r] = await db
@@ -178,6 +195,7 @@ export const DOCUMENT_ADMIN: Record<DocumentType, DocAdminEntry> = {
     setDeletedAt: async (orgId, id, value) => (await db.update(proformaInvoicesTable).set({ deletedAt: value, updatedAt: new Date() }).where(and(eq(proformaInvoicesTable.id, id), eq(proformaInvoicesTable.orgId, orgId))).returning({ id: proformaInvoicesTable.id })).length,
     hardDelete: async (orgId, id) => {
       await db.transaction(async (tx) => {
+        await purgeFavorites(tx, orgId, DOCUMENT_DETAIL_HREF.proforma_invoice(id));
         await tx.delete(proformaInvoiceItemsTable).where(eq(proformaInvoiceItemsTable.proformaInvoiceId, id));
         await tx.delete(proformaInvoicesTable).where(and(eq(proformaInvoicesTable.id, id), eq(proformaInvoicesTable.orgId, orgId)));
       });
@@ -196,7 +214,7 @@ export const DOCUMENT_ADMIN: Record<DocumentType, DocAdminEntry> = {
     docType: "sales_invoice",
     typeLabel: "Invoice",
     listPath: "/sales/invoices",
-    detailHref: (id) => `/sales/invoices/${id}`,
+    detailHref: DOCUMENT_DETAIL_HREF.sales_invoice,
     revalidatePaths: ["/sales/invoices", "/recycle-bin"],
     loadState: async (orgId, id) => {
       const [r] = await db
@@ -213,6 +231,7 @@ export const DOCUMENT_ADMIN: Record<DocumentType, DocAdminEntry> = {
     setDeletedAt: async (orgId, id, value) => (await db.update(salesInvoicesTable).set({ deletedAt: value, updatedAt: new Date() }).where(and(eq(salesInvoicesTable.id, id), eq(salesInvoicesTable.orgId, orgId))).returning({ id: salesInvoicesTable.id })).length,
     hardDelete: async (orgId, id) => {
       await db.transaction(async (tx) => {
+        await purgeFavorites(tx, orgId, DOCUMENT_DETAIL_HREF.sales_invoice(id));
         await tx.delete(salesInvoiceItemsTable).where(eq(salesInvoiceItemsTable.invoiceId, id));
         await tx.delete(salesInvoicesTable).where(and(eq(salesInvoicesTable.id, id), eq(salesInvoicesTable.orgId, orgId)));
       });
@@ -231,7 +250,7 @@ export const DOCUMENT_ADMIN: Record<DocumentType, DocAdminEntry> = {
     docType: "delivery_challan",
     typeLabel: "Delivery Challan",
     listPath: "/sales/delivery-challans",
-    detailHref: (id) => `/sales/delivery-challans/${id}`,
+    detailHref: DOCUMENT_DETAIL_HREF.delivery_challan,
     revalidatePaths: ["/sales/delivery-challans", "/recycle-bin"],
     loadState: async (orgId, id) => {
       const [r] = await db
@@ -245,6 +264,7 @@ export const DOCUMENT_ADMIN: Record<DocumentType, DocAdminEntry> = {
     setDeletedAt: async (orgId, id, value) => (await db.update(deliveryChallansTable).set({ deletedAt: value, updatedAt: new Date() }).where(and(eq(deliveryChallansTable.id, id), eq(deliveryChallansTable.orgId, orgId))).returning({ id: deliveryChallansTable.id })).length,
     hardDelete: async (orgId, id) => {
       await db.transaction(async (tx) => {
+        await purgeFavorites(tx, orgId, DOCUMENT_DETAIL_HREF.delivery_challan(id));
         await tx.delete(deliveryChallanItemsTable).where(eq(deliveryChallanItemsTable.deliveryChallanId, id));
         await tx.delete(deliveryChallansTable).where(and(eq(deliveryChallansTable.id, id), eq(deliveryChallansTable.orgId, orgId)));
       });
@@ -263,7 +283,7 @@ export const DOCUMENT_ADMIN: Record<DocumentType, DocAdminEntry> = {
     docType: "credit_note",
     typeLabel: "Credit Note",
     listPath: "/sales/credit-notes",
-    detailHref: (id) => `/sales/credit-notes/${id}`,
+    detailHref: DOCUMENT_DETAIL_HREF.credit_note,
     revalidatePaths: ["/sales/credit-notes", "/recycle-bin"],
     loadState: async (orgId, id) => {
       const [r] = await db
@@ -277,6 +297,7 @@ export const DOCUMENT_ADMIN: Record<DocumentType, DocAdminEntry> = {
     setDeletedAt: async (orgId, id, value) => (await db.update(creditNotesTable).set({ deletedAt: value }).where(and(eq(creditNotesTable.id, id), eq(creditNotesTable.orgId, orgId))).returning({ id: creditNotesTable.id })).length,
     hardDelete: async (orgId, id) => {
       await db.transaction(async (tx) => {
+        await purgeFavorites(tx, orgId, DOCUMENT_DETAIL_HREF.credit_note(id));
         await tx.delete(creditNoteItemsTable).where(eq(creditNoteItemsTable.creditNoteId, id));
         await tx.delete(creditNotesTable).where(and(eq(creditNotesTable.id, id), eq(creditNotesTable.orgId, orgId)));
       });
@@ -295,7 +316,7 @@ export const DOCUMENT_ADMIN: Record<DocumentType, DocAdminEntry> = {
     docType: "debit_note",
     typeLabel: "Debit Note",
     listPath: "/purchasing/debit-notes",
-    detailHref: (id) => `/purchasing/debit-notes/${id}`,
+    detailHref: DOCUMENT_DETAIL_HREF.debit_note,
     revalidatePaths: ["/purchasing/debit-notes", "/recycle-bin"],
     loadState: async (orgId, id) => {
       const [r] = await db
@@ -309,6 +330,7 @@ export const DOCUMENT_ADMIN: Record<DocumentType, DocAdminEntry> = {
     setDeletedAt: async (orgId, id, value) => (await db.update(debitNotesTable).set({ deletedAt: value }).where(and(eq(debitNotesTable.id, id), eq(debitNotesTable.orgId, orgId))).returning({ id: debitNotesTable.id })).length,
     hardDelete: async (orgId, id) => {
       await db.transaction(async (tx) => {
+        await purgeFavorites(tx, orgId, DOCUMENT_DETAIL_HREF.debit_note(id));
         await tx.delete(debitNoteItemsTable).where(eq(debitNoteItemsTable.debitNoteId, id));
         await tx.delete(debitNotesTable).where(and(eq(debitNotesTable.id, id), eq(debitNotesTable.orgId, orgId)));
       });
@@ -327,7 +349,7 @@ export const DOCUMENT_ADMIN: Record<DocumentType, DocAdminEntry> = {
     docType: "purchase_order",
     typeLabel: "Purchase Order",
     listPath: "/purchasing/orders",
-    detailHref: (id) => `/purchasing/orders/${id}`,
+    detailHref: DOCUMENT_DETAIL_HREF.purchase_order,
     revalidatePaths: ["/purchasing/orders", "/recycle-bin"],
     loadState: async (orgId, id) => {
       const [r] = await db
@@ -341,6 +363,7 @@ export const DOCUMENT_ADMIN: Record<DocumentType, DocAdminEntry> = {
     setDeletedAt: async (orgId, id, value) => (await db.update(purchaseOrdersTable).set({ deletedAt: value, updatedAt: new Date() }).where(and(eq(purchaseOrdersTable.id, id), eq(purchaseOrdersTable.orgId, orgId))).returning({ id: purchaseOrdersTable.id })).length,
     hardDelete: async (orgId, id) => {
       await db.transaction(async (tx) => {
+        await purgeFavorites(tx, orgId, DOCUMENT_DETAIL_HREF.purchase_order(id));
         await tx.delete(purchaseOrderItemsTable).where(eq(purchaseOrderItemsTable.purchaseOrderId, id));
         await tx.delete(purchaseOrdersTable).where(and(eq(purchaseOrdersTable.id, id), eq(purchaseOrdersTable.orgId, orgId)));
       });

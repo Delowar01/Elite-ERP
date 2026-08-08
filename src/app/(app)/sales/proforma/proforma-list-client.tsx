@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { downloadDocumentPdf } from "../_shared/download-pdf-button";
-import { Eye, Star, Wallet, Download } from "lucide-react";
+import { Eye, Wallet, Download } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { StatRow } from "../_shared/stat-row";
@@ -123,7 +123,6 @@ export function ProformaListClient({
             const entries: RowMenuEntry[] = [
               { kind: "item", icon: Eye, label: t(locale, "View"), href: `/sales/proforma/${r.id}` },
               ...editEntry("proforma_invoice", r.id, r.proformaNumber, r.status, r.isArchived),
-              { kind: "item", icon: Star, label: t(locale, "Add to Favorites") },
               { kind: "item", icon: Download, label: t(locale, "Download PDF"), onSelect: () => { void downloadDocumentPdf("proforma", r.id).catch((e) => toast.error(e instanceof Error && e.message ? e.message : t(locale, "PDF download failed. Please try again."))); } },
               { kind: "item", icon: Wallet, label: t(locale, "Record Payment") },
               ...(convertTargets.length

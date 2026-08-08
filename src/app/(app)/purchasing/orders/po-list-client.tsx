@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import Link from "next/link";
-import { Eye, Star, Download } from "lucide-react";
+import { Eye, Download } from "lucide-react";
 import { toast } from "sonner";
 import { downloadDocumentPdf } from "../../sales/_shared/download-pdf-button";
 import { Badge } from "@/components/ui/badge";
@@ -130,7 +130,6 @@ export function PoListClient({
               const entries: RowMenuEntry[] = [
                 { kind: "item", icon: Eye, label: t(locale, "View"), href: `/purchasing/orders/${r.id}` },
                 ...editEntry("purchase_order", r.id, r.poNumber, r.status, r.isArchived),
-                { kind: "item", icon: Star, label: t(locale, "Add to Favorites") },
                 { kind: "item", icon: Download, label: t(locale, "Download PDF"), onSelect: () => { void downloadDocumentPdf("purchase-order", r.id).catch((e) => toast.error(e instanceof Error && e.message ? e.message : t(locale, "PDF download failed. Please try again."))); } },
                 ...(convertTargets.length
                   ? [{

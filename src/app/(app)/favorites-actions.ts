@@ -1,9 +1,10 @@
 "use server";
 
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db, favoritesTable } from "@/db";
 import { requireSession } from "@/lib/session";
+import { MAX_FAVORITES } from "@/lib/favorites";
 
 export type FavoriteResult = { error?: string; favorited?: boolean };
 
@@ -26,6 +27,15 @@ export async function toggleFavoriteAction(label: string, href: string): Promise
     revalidatePath("/", "layout");
     return { favorited: false };
   }
+  // At the ceiling, say so plainly rather than accepting a pin the menu would never show.
+  const [{ n }] = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(favoritesTable)
+    .where(and(eq(favoritesTable.orgId, session.orgId), eq(favoritesTable.userId, session.userId)));
+  if (n >= MAX_FAVORITES) {
+    return { error: `You have reached the limit of ${MAX_FAVORITES} favorites. Remove one before adding another.` };
+  }
+
   await db.insert(favoritesTable).values({ orgId: session.orgId, userId: session.userId, label: cleanLabel, href: cleanHref });
   revalidatePath("/", "layout");
   return { favorited: true };

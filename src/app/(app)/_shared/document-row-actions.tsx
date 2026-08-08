@@ -2,13 +2,16 @@
 
 import { useTransition } from "react";
 import { toast } from "sonner";
-import { Archive, ArchiveRestore, Trash2, Copy } from "lucide-react";
+import { Archive, ArchiveRestore, Trash2, Copy, Star, StarOff } from "lucide-react";
 import type { RowMenuEntry } from "../sales/_shared/row-menu";
 import { t, type Locale } from "@/lib/i18n/dict";
 import { can, type DocumentType } from "@/lib/document-lifecycle";
 import { archiveDocumentAction, unarchiveDocumentAction, softDeleteDocumentAction } from "./lifecycle-actions";
 import { duplicateDocumentAction } from "./duplicate-actions";
 import { isDuplicableType } from "@/lib/document-duplicate";
+import { DOCUMENT_DETAIL_HREF } from "@/lib/document-hrefs";
+import { useFavoriteHrefs } from "./favorites-context";
+import { toggleFavoriteAction } from "../favorites-actions";
 import { useConfirm } from "./confirm-provider";
 import { DOC_EDIT_CONFIG } from "@/lib/document-edit";
 
@@ -22,6 +25,7 @@ import { DOC_EDIT_CONFIG } from "@/lib/document-edit";
  */
 export function useDocumentRowActions(locale: Locale) {
   const [, startTransition] = useTransition();
+  const favoriteHrefs = useFavoriteHrefs();
   const confirm = useConfirm();
 
   // Unarchive is a plain restore with no consequence, so it runs straight away (see the policy's
@@ -51,6 +55,16 @@ export function useDocumentRowActions(locale: Locale) {
     });
   }
 
+  // Not confirmed on purpose: the policy lists addToFavorites among the actions that must never
+  // ask, and this one is reversed by clicking the very same row again.
+  function toggleFavorite(href: string, label: string) {
+    startTransition(async () => {
+      const result = await toggleFavoriteAction(label, href);
+      if (result?.error) toast.error(result.error);
+      else toast.success(t(locale, result.favorited ? "Added to favorites." : "Removed from favorites."));
+    });
+  }
+
   // Duplicating redirects to the new draft's builder, so — exactly like a conversion — the promise
   // never resolves on the happy path and the dialog holds its working state until the new page
   // takes over. Only a refusal comes back, and that keeps the dialog open and retry-able.
@@ -72,6 +86,18 @@ export function useDocumentRowActions(locale: Locale) {
 
   return function entries(docType: DocumentType, id: number, status: string, isArchived: boolean, number = ""): RowMenuEntry[] {
     const items: RowMenuEntry[] = [];
+
+    // Favorite / unfavorite. Two-way: the label follows the current state, so the same row never
+    // offers an action that silently does nothing. Available on all 8 types — a delivery challan is
+    // as worth pinning as an invoice.
+    const href = DOCUMENT_DETAIL_HREF[docType](id);
+    const favorited = favoriteHrefs.has(href);
+    items.push({
+      kind: "item",
+      icon: favorited ? StarOff : Star,
+      label: t(locale, favorited ? "Remove from Favorites" : "Add to Favorites"),
+      onSelect: () => toggleFavorite(href, number || DOC_EDIT_CONFIG[docType].typeLabel),
+    });
 
     // Duplicate — offered only for the six types where a copy is safe. Credit and Debit Notes are
     // omitted entirely (not shown disabled): their source binding is mandatory, so a copy would be

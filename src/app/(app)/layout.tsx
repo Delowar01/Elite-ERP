@@ -8,6 +8,7 @@ import { AppShell } from "@/components/layout/app-shell";
 import { CurrencyProvider } from "@/components/ui/currency-mark";
 import { ConfirmProvider } from "./_shared/confirm-provider";
 import { DirtyFormProvider } from "./_shared/dirty-form";
+import { FavoriteHrefsProvider } from "./_shared/favorites-context";
 import { buildMoneyMark } from "@/lib/currency/currencies";
 import "./mockup-parity.css";
 
@@ -50,7 +51,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         {/* One confirmation dialog for every sensitive action in the app (see confirm-policy.ts),
             with unsaved-changes protection layered on top of it — same dialog, one more policy. */}
         <ConfirmProvider locale={locale}>
-          <DirtyFormProvider>{children}</DirtyFormProvider>
+          {/* Favorites are already loaded above for the top-bar menu; publishing just the hrefs lets
+              any row menu show "Add to"/"Remove from Favorites" without a query of its own. */}
+          <FavoriteHrefsProvider hrefs={favorites.map((f) => f.href)}>
+            <DirtyFormProvider>{children}</DirtyFormProvider>
+          </FavoriteHrefsProvider>
         </ConfirmProvider>
       </CurrencyProvider>
     </AppShell>

@@ -1157,6 +1157,8 @@ const DICT: Record<string, string> = {
   "Apply to notes": "تطبيق على الملاحظات",
   "Add Note": "إضافة ملاحظة",
   "Rename Bundle": "إعادة تسمية الحزمة",
+  "Add to Favorites": "إضافة إلى المفضلة",
+  "Remove from Favorites": "إزالة من المفضلة",
   "Added to favorites.": "أُضيف إلى المفضلة.",
   "Removed from favorites.": "أُزيل من المفضلة.",
   "Add this page": "إضافة هذه الصفحة",
