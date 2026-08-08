@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Money } from "../../sales/_shared/money";
 import { formatMoneyNumber } from "@/lib/currency/currencies";
 import { AddAccountDialog } from "./add-account-dialog";
+import { accountName } from "@/lib/account-names";
 
 const TYPE_ORDER = ["asset", "liability", "equity", "revenue", "expense"] as const;
 const TYPE_LABEL: Record<(typeof TYPE_ORDER)[number], string> = {
@@ -65,7 +66,7 @@ export function AccountLedgerView({
             {group.accounts.map((a) => (
               <Link key={a.id} href={`${basePath}?account=${a.id}`} className={cn("acct-row", selectedAccount?.id === a.id && "selected")}>
                 <span className="code">{a.code}</span>
-                <span className="nm truncate">{a.name}</span>
+                <span className="nm truncate">{accountName(locale, a)}</span>
                 <span className="bal">{(balances.get(a.id) ?? 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
               </Link>
             ))}
@@ -84,7 +85,7 @@ export function AccountLedgerView({
             <div className="flex items-center justify-between mb-4">
               <div>
                 <div className="mono" style={{ fontWeight: 700, fontSize: 15 }}>
-                  {selectedAccount.code} · {selectedAccount.name}
+                  {selectedAccount.code} · {accountName(locale, selectedAccount)}
                 </div>
                 <div className="text-[11.5px] text-ink-muted mt-0.5">{t(locale, NORMAL_BALANCE_CAPTION[selectedAccount.type as (typeof TYPE_ORDER)[number]])}</div>
               </div>

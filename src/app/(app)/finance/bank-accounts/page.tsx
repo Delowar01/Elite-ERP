@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { Money } from "../../sales/_shared/money";
 import { BankAccountFormDialog } from "./bank-account-form-dialog";
+import { accountName } from "@/lib/account-names";
 
 export default async function BankAccountsPage() {
   const session = await requireSession();
@@ -71,7 +72,7 @@ export default async function BankAccountsPage() {
                     <div>
                       <div style={{ fontWeight: 700, fontSize: 14 }}>{ba.name}</div>
                       <div style={{ fontSize: 11.5, color: "var(--ink-muted)", marginTop: 2 }}>
-                        {glAccount ? `GL ${glAccount.code} · ${glAccount.name}` : "—"}
+                        {glAccount ? `GL ${glAccount.code} · ${accountName(locale, glAccount)}` : "—"}
                         {ba.accountNumberMasked ? ` · ${ba.accountNumberMasked}` : ""}
                       </div>
                     </div>

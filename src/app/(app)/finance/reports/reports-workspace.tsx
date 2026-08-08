@@ -11,6 +11,7 @@ import { t, type Locale } from "@/lib/i18n/dict";
 import { Money } from "../../sales/_shared/money";
 import { getAccountDrilldownAction } from "./actions";
 import { ReportBodySkeleton } from "@/components/ui/skeleton";
+import { accountName } from "@/lib/account-names";
 import type {
   ReportKind, DateRange, ProfitAndLoss, BalanceSheet, CashFlow, TrialBalance,
   GlAccountBlock, Aging, AgingBucketKey, VatSummary,
@@ -175,7 +176,7 @@ export function ReportsWorkspace({
               <SelectTrigger className="h-8 w-56 text-xs"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">{t(locale, "All accounts")}</SelectItem>
-                {accounts.map((a) => <SelectItem key={a.id} value={String(a.id)}>{a.code} · {a.name}</SelectItem>)}
+                {accounts.map((a) => <SelectItem key={a.id} value={String(a.id)}>{a.code} · {accountName(locale, a)}</SelectItem>)}
               </SelectContent>
             </Select>
           )}
@@ -251,7 +252,7 @@ const inSearch = (s: string, ...fields: string[]) => !s.trim() || fields.some((f
 // ── P&L ──────────────────────────────────────────────────────────────────────
 function PnlView({ locale, d, prev, search, onDrill }: { locale: Locale; d: ProfitAndLoss; prev?: ProfitAndLoss; search: string; onDrill: (x: { id: number; name: string }) => void }) {
   const line = (l: { id: number; code: string; name: string; amount: number }) =>
-    inSearch(search, l.code, l.name) ? <Row key={l.id} label={`${l.code} ${l.name}`} value={l.amount} onDrill={() => onDrill({ id: l.id, name: l.name })} /> : null;
+    inSearch(search, l.code, l.name) ? <Row key={l.id} label={`${l.code} ${accountName(locale, l)}`} value={l.amount} onDrill={() => onDrill({ id: l.id, name: accountName(locale, l) })} /> : null;
   return (
     <>
       <Cards items={[
@@ -279,7 +280,7 @@ function PnlView({ locale, d, prev, search, onDrill }: { locale: Locale; d: Prof
 // ── Balance Sheet ─────────────────────────────────────────────────────────────
 function BsView({ locale, d, prev, search, onDrill }: { locale: Locale; d: BalanceSheet; prev?: BalanceSheet; search: string; onDrill: (x: { id: number; name: string }) => void }) {
   const line = (l: { id: number; code: string; name: string; amount: number }) =>
-    inSearch(search, l.code, l.name) ? <Row key={l.id} label={`${l.code} ${l.name}`} value={l.amount} onDrill={() => onDrill({ id: l.id, name: l.name })} /> : null;
+    inSearch(search, l.code, l.name) ? <Row key={l.id} label={`${l.code} ${accountName(locale, l)}`} value={l.amount} onDrill={() => onDrill({ id: l.id, name: accountName(locale, l) })} /> : null;
   return (
     <>
       <Cards items={[
@@ -354,7 +355,7 @@ function TbView({ locale, d, search, onDrill }: { locale: Locale; d: TrialBalanc
           <TableBody>
             {rows.map((r) => (
               <TableRow key={r.id} className="cursor-pointer" onClick={() => onDrill({ id: r.id, name: r.name })}>
-                <TableCell className="mono">{r.code}</TableCell><TableCell>{r.name}</TableCell>
+                <TableCell className="mono">{r.code}</TableCell><TableCell>{accountName(locale, r)}</TableCell>
                 <TableCell className="num mono">{cell(r.openingDr)}</TableCell><TableCell className="num mono">{cell(r.openingCr)}</TableCell>
                 <TableCell className="num mono">{cell(r.periodDebit)}</TableCell><TableCell className="num mono">{cell(r.periodCredit)}</TableCell>
                 <TableCell className="num mono">{cell(r.closingDr)}</TableCell><TableCell className="num mono">{cell(r.closingCr)}</TableCell>
@@ -383,7 +384,7 @@ function GlView({ locale, blocks, search }: { locale: Locale; blocks: GlAccountB
       {shown.map((b) => (
         <div key={b.accountId}>
           <div className="flex items-center justify-between mb-1.5">
-            <div className="font-semibold text-[13px]"><span className="mono text-ink-faint">{b.code}</span> {b.name}</div>
+            <div className="font-semibold text-[13px]"><span className="mono text-ink-faint">{b.code}</span> {accountName(locale, b)}</div>
             <div className="text-[12px] text-ink-muted">{t(locale, "Opening")}: <span className="mono"><Money amount={b.opening} context="document" /></span></div>
           </div>
           <div className="table-scroll">

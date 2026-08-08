@@ -9,6 +9,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { t, type Locale } from "@/lib/i18n/dict";
 import { createBankAccountAction, updateBankAccountAction } from "./actions";
+import { accountName } from "@/lib/account-names";
 
 export type GlAccountOption = { id: number; code: string; name: string };
 export type EditableBankAccount = {
@@ -103,7 +104,7 @@ export function BankAccountFormDialog({
               <SelectContent>
                 {glAccounts.map((a) => (
                   <SelectItem key={a.id} value={String(a.id)}>
-                    {a.code} · {a.name}
+                    {a.code} · {accountName(locale, a)}
                   </SelectItem>
                 ))}
               </SelectContent>

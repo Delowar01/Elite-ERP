@@ -1,6 +1,8 @@
 import { eq } from "drizzle-orm";
 import { db, orgsTable } from "@/db";
 import { requireSession } from "@/lib/session";
+import { getLocale } from "@/lib/i18n/server";
+import { accountName } from "@/lib/account-names";
 import { exportResponse, type ExportColumn } from "@/lib/report-export";
 import {
   resolveRange, isReportKind,
@@ -16,6 +18,10 @@ const money = (n: number) => n.toFixed(2);
 
 export async function GET(req: Request) {
   const session = await requireSession();
+  // Exports follow the viewer's language too: an Arabic session that downloads a CSV of English
+  // account names is the same defect as an English screen, one layer down.
+  const locale = await getLocale();
+  const acct = (a: { code: string; name: string }) => accountName(locale, a);
   const url = new URL(req.url);
   const report = url.searchParams.get("report") ?? "pl";
   const format = (url.searchParams.get("format") ?? "csv").toLowerCase();
@@ -31,7 +37,7 @@ export async function GET(req: Request) {
     title = "Profit & Loss";
     columns = [{ key: "section", header: "Section" }, { key: "account", header: "Account" }, { key: "amount", header: "Amount" }];
     const d = await getProfitAndLoss(session.orgId, range);
-    const grp = (section: string, lines: { code: string; name: string; amount: number }[]) => lines.map((l) => ({ section, account: `${l.code} ${l.name}`, amount: money(l.amount) }));
+    const grp = (section: string, lines: { code: string; name: string; amount: number }[]) => lines.map((l) => ({ section, account: `${l.code} ${acct(l)}`, amount: money(l.amount) }));
     rows = [
       ...grp("Revenue", d.revenue), { section: "Revenue", account: "Total Revenue", amount: money(d.revenueTotal) },
       ...grp("Cost of Sales", d.costOfSales), { section: "", account: "Gross Profit", amount: money(d.grossProfit) },
@@ -43,7 +49,7 @@ export async function GET(req: Request) {
     title = "Balance Sheet";
     columns = [{ key: "section", header: "Section" }, { key: "account", header: "Account" }, { key: "amount", header: "Amount" }];
     const d = await getBalanceSheet(session.orgId, range);
-    const grp = (section: string, lines: { code: string; name: string; amount: number }[]) => lines.map((l) => ({ section, account: `${l.code} ${l.name}`, amount: money(l.amount) }));
+    const grp = (section: string, lines: { code: string; name: string; amount: number }[]) => lines.map((l) => ({ section, account: `${l.code} ${acct(l)}`, amount: money(l.amount) }));
     rows = [
       ...grp("Current Assets", d.currentAssets), ...grp("Non-current Assets", d.nonCurrentAssets),
       { section: "", account: "Total Assets", amount: money(d.totalAssets) },
@@ -77,7 +83,7 @@ export async function GET(req: Request) {
       { key: "cdr", header: "Closing Dr" }, { key: "ccr", header: "Closing Cr" },
     ];
     const d = await getTrialBalance(session.orgId, range);
-    rows = d.rows.map((r) => ({ code: r.code, account: r.name, odr: money(r.openingDr), ocr: money(r.openingCr), pdr: money(r.periodDebit), pcr: money(r.periodCredit), cdr: money(r.closingDr), ccr: money(r.closingCr) }));
+    rows = d.rows.map((r) => ({ code: r.code, account: acct(r), odr: money(r.openingDr), ocr: money(r.openingCr), pdr: money(r.periodDebit), pcr: money(r.periodCredit), cdr: money(r.closingDr), ccr: money(r.closingCr) }));
     rows.push({ code: "", account: "TOTAL", odr: money(d.totals.openingDr), ocr: money(d.totals.openingCr), pdr: money(d.totals.periodDr), pcr: money(d.totals.periodCr), cdr: money(d.totals.closingDr), ccr: money(d.totals.closingCr) });
   } else if (report === "gl") {
     title = "General Ledger";
@@ -88,9 +94,9 @@ export async function GET(req: Request) {
     ];
     const blocks = await getGeneralLedger(session.orgId, range, accountId);
     for (const b of blocks) {
-      rows.push({ date: "", code: b.code, account: `${b.name} — Opening`, memo: "", source: "", debit: "", credit: "", running: money(b.opening) });
-      for (const r of b.rows) rows.push({ date: r.date, code: b.code, account: b.name, memo: r.memo, source: r.sourceType, debit: money(r.debit), credit: money(r.credit), running: money(r.running) });
-      rows.push({ date: "", code: b.code, account: `${b.name} — Closing`, memo: "", source: "", debit: money(b.totalDebit), credit: money(b.totalCredit), running: money(b.closing) });
+      rows.push({ date: "", code: b.code, account: `${acct(b)} — Opening`, memo: "", source: "", debit: "", credit: "", running: money(b.opening) });
+      for (const r of b.rows) rows.push({ date: r.date, code: b.code, account: acct(b), memo: r.memo, source: r.sourceType, debit: money(r.debit), credit: money(r.credit), running: money(r.running) });
+      rows.push({ date: "", code: b.code, account: `${acct(b)} — Closing`, memo: "", source: "", debit: money(b.totalDebit), credit: money(b.totalCredit), running: money(b.closing) });
     }
   } else if (report === "ar" || report === "ap") {
     title = report === "ar" ? "Accounts Receivable Aging" : "Accounts Payable Aging";

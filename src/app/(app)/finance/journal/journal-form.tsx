@@ -14,6 +14,7 @@ import type { Account } from "@/db";
 import { postJournalEntryAction } from "./actions";
 import { useConfirm } from "../../_shared/confirm-provider";
 import { useDirtyForm } from "../../_shared/dirty-form";
+import { accountName } from "@/lib/account-names";
 
 type Line = { accountId: string; memo: string; debit: string; credit: string };
 
@@ -137,7 +138,7 @@ export function JournalForm({ locale, accounts, projects = [] }: { locale: Local
                   <SelectContent>
                     {accounts.map((a) => (
                       <SelectItem key={a.id} value={String(a.id)}>
-                        {a.code} · {a.name}
+                        {a.code} · {accountName(locale, a)}
                       </SelectItem>
                     ))}
                   </SelectContent>

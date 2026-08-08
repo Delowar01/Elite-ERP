@@ -6,6 +6,32 @@ was made and postponed, not an idea someone had.
 
 ---
 
+## Expense categories: preset or free text? (decide before building Expenses)
+
+**Status:** deferred. The preset UI is hidden (see the flag in
+`src/app/(app)/settings/presets/actions.ts`); the table and its rows are kept.
+
+This is **not** "build the Expenses module and the preset starts working". The two were never
+connected: `expenses.category` is a free-text column, not a foreign key to `expense_categories`, and
+`expensesTable` is referenced by nothing at all. Shipping an Expenses module as the schema currently
+stands would store whatever someone typed and never read the preset list.
+
+**So the decision comes first, and it is a real one:**
+
+1. **Categories are a preset** — add `expenses.category_id` referencing `expense_categories`,
+   validate on write, and the existing preset UI becomes meaningful again (unhide the tab, flip the
+   flag). Consistent reporting, but users cannot type an ad-hoc category.
+2. **Categories are free text** — keep `expenses.category` as-is and **drop** the preset table and
+   its UI rather than leaving them hidden. Flexible, but expense reporting groups on whatever people
+   typed, including typos.
+3. **Both** — free text with the preset list as suggestions. Most forgiving, most work, and the
+   reporting story needs deciding anyway.
+
+Only after that is settled does building the module make sense. Whoever picks this up should treat
+the hidden preset as evidence of an unmade decision, not as a half-built feature.
+
+---
+
 ## Load testing at realistic volume — and re-tuning the loading placeholders against it
 
 **Status:** deferred, not started. Blocks nothing today, but one shipped feature is currently
