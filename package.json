@@ -10,7 +10,13 @@
     "db:push": "drizzle-kit push",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "verify:statements": "tsx --conditions=react-server scratchpad/verify-statements.mts",
+    "verify:project-costing": "tsx --conditions=react-server scratchpad/verify-project-costing.mts",
+    "verify:docs-import": "tsx --conditions=react-server scratchpad/verify-docs-import.mts",
+    "verify:client-import": "tsx --conditions=react-server scratchpad/verify-client-import.mts",
+    "verify:import": "tsx --conditions=react-server scratchpad/verify-import.mts",
+    "verify:server": "npm run verify:statements && npm run verify:project-costing && npm run verify:docs-import && npm run verify:client-import && npm run verify:import"
   },
   "dependencies": {
     "@radix-ui/react-avatar": "^1.2.2",
