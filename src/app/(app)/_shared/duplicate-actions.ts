@@ -236,7 +236,8 @@ async function duplicateOne(docType: DuplicableType, id: number, orgId: number, 
           title: src.title, customerId: src.customerId,
           dispatchDate: base,
           carrier: src.carrier, vehicleNo: src.vehicleNo,
-          notes: src.notes, terms: src.terms, bankAccounts: src.bankAccounts, currency: src.currency,
+          // bankAccounts is deliberately not carried: a delivery challan has no bank block.
+          notes: src.notes, terms: src.terms, currency: src.currency,
           sealUrl: src.sealUrl, signatureUrl: src.signatureUrl,
         }).returning({ id: deliveryChallansTable.id });
         if (items.length) {

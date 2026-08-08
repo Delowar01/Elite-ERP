@@ -6,8 +6,6 @@ import { getDocumentContentPresets } from "@/lib/document-presets";
 import { getLocale } from "@/lib/i18n/server";
 import { tenantScope } from "@/lib/tenant";
 import { canEditDocument } from "@/lib/document-edit";
-import { getDocumentBankData } from "@/lib/document-bank-data";
-import { initialSelectedIds } from "@/lib/document-bank-accounts";
 import type { LineItemDraft } from "../../../_shared/line-items-editor";
 import { DcForm } from "../../dc-form";
 
@@ -24,12 +22,11 @@ export default async function EditDcPage({ params }: { params: Promise<{ id: str
   if (!canEditDocument("delivery_challan", { status: dc.status, recordState: dc.deletedAt ? "deleted" : dc.archivedAt ? "archived" : "active" }))
     redirect(`/sales/delivery-challans/${dcId}`);
 
-  const [items, customers, products, [org], bankData] = await Promise.all([
+  const [items, customers, products, [org]] = await Promise.all([
     db.select().from(deliveryChallanItemsTable).where(eq(deliveryChallanItemsTable.deliveryChallanId, dcId)),
     db.select().from(customersTable).where(tenantScope(session.orgId, customersTable)).orderBy(asc(customersTable.name)),
     db.select().from(productsTable).where(tenantScope(session.orgId, productsTable)).orderBy(asc(productsTable.name)),
     db.select().from(orgsTable).where(eq(orgsTable.id, session.orgId)),
-    getDocumentBankData(session.orgId),
   ]);
   const presets = await getDocumentContentPresets(session.orgId, "delivery_challan");
 
@@ -55,8 +52,6 @@ export default async function EditDcPage({ params }: { params: Promise<{ id: str
         numberPreview={dc.dcNumber}
         mode="edit"
         documentId={dcId}
-        bankAccounts={bankData.bankAccounts}
-        glAccounts={bankData.glAccounts}
         initial={{
           customerId: String(dc.customerId),
           dispatchDate: dc.dispatchDate ?? "",
@@ -64,7 +59,6 @@ export default async function EditDcPage({ params }: { params: Promise<{ id: str
           vehicleNo: dc.vehicleNo ?? "",
           items: initialItems,
           terms: dc.terms ?? [],
-          bankAccountIds: initialSelectedIds(dc.bankAccounts, bankData.bankAccounts),
         }}
       />
     </div>

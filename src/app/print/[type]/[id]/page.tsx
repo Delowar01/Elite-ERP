@@ -349,7 +349,8 @@ export default async function PrintPage({ params }: { params: Promise<{ type: st
         <ItemsTableQty items={items.map((it) => ({ name: itemName(it), description: getLineDesc(it.customFields), quantity: it.quantity }))} format={numFmt} />
         <PdfTermsBlock terms={dc.terms} />
         <NotesBlock notes={logistics || null} />
-        <DocBankBlocks accounts={dc.bankAccounts} />
+        {/* No bank block: a challan quotes no prices and requests no payment, so printing
+            payment instructions on it would invite someone to pay against a delivery note. */}
         <ClientComments />
         <ApprovalBlock />
         <SealSignature org={org} showSignature={false} sealUrl={dc.sealUrl} signatureUrl={dc.signatureUrl} />
