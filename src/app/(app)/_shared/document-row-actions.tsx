@@ -2,11 +2,13 @@
 
 import { useTransition } from "react";
 import { toast } from "sonner";
-import { Archive, ArchiveRestore, Trash2 } from "lucide-react";
+import { Archive, ArchiveRestore, Trash2, Copy } from "lucide-react";
 import type { RowMenuEntry } from "../sales/_shared/row-menu";
 import { t, type Locale } from "@/lib/i18n/dict";
 import { can, type DocumentType } from "@/lib/document-lifecycle";
 import { archiveDocumentAction, unarchiveDocumentAction, softDeleteDocumentAction } from "./lifecycle-actions";
+import { duplicateDocumentAction } from "./duplicate-actions";
+import { isDuplicableType } from "@/lib/document-duplicate";
 import { useConfirm } from "./confirm-provider";
 import { DOC_EDIT_CONFIG } from "@/lib/document-edit";
 
@@ -49,8 +51,39 @@ export function useDocumentRowActions(locale: Locale) {
     });
   }
 
+  // Duplicating redirects to the new draft's builder, so — exactly like a conversion — the promise
+  // never resolves on the happy path and the dialog holds its working state until the new page
+  // takes over. Only a refusal comes back, and that keeps the dialog open and retry-able.
+  function askDuplicate(docType: DocumentType, id: number, number: string) {
+    confirm({
+      action: "document.duplicate",
+      entityType: DOC_EDIT_CONFIG[docType].typeLabel,
+      entityNumber: number,
+      navigatesOnSuccess: true,
+      onConfirm: () =>
+        new Promise<{ error?: string } | void>((resolve) => {
+          startTransition(async () => {
+            const result = await duplicateDocumentAction(docType, id);
+            if (result?.error) resolve({ error: result.error });
+          });
+        }),
+    });
+  }
+
   return function entries(docType: DocumentType, id: number, status: string, isArchived: boolean, number = ""): RowMenuEntry[] {
     const items: RowMenuEntry[] = [];
+
+    // Duplicate — offered only for the six types where a copy is safe. Credit and Debit Notes are
+    // omitted entirely (not shown disabled): their source binding is mandatory, so a copy would be
+    // a second identical reversal against the same invoice/PO, one click from a wrong ledger.
+    if (isDuplicableType(docType) && can(docType, status, "duplicate", { recordState: isArchived ? "archived" : "active" })) {
+      items.push({
+        kind: "item",
+        icon: Copy,
+        label: t(locale, "Duplicate"),
+        onSelect: () => askDuplicate(docType, id, number),
+      });
+    }
 
     if (isArchived) {
       items.push({ kind: "item", icon: ArchiveRestore, label: t(locale, "Unarchive"), onSelect: () => run(unarchiveDocumentAction, docType, id) });

@@ -4,7 +4,7 @@ import { useMemo, useTransition } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { downloadDocumentPdf } from "../_shared/download-pdf-button";
-import { Eye, Star, Copy, Send, Download } from "lucide-react";
+import { Eye, Star, Send, Download } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { StatRow } from "../_shared/stat-row";
@@ -135,7 +135,6 @@ export function QuotationsListClient({
               { kind: "item", icon: Eye, label: t(locale, "View"), href: `/sales/quotations/${r.id}` },
               ...editEntry("quotation", r.id, r.quotationNumber, r.status, r.isArchived),
               { kind: "item", icon: Star, label: t(locale, "Add to Favorites") },
-              { kind: "item", icon: Copy, label: t(locale, "Duplicate") },
               { kind: "item", icon: Download, label: t(locale, "Download PDF"), onSelect: () => { void downloadDocumentPdf("quotation", r.id).catch((e) => toast.error(e instanceof Error && e.message ? e.message : t(locale, "PDF download failed. Please try again."))); } },
               ...(convertTargets.length
                 ? [{

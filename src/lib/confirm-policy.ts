@@ -23,6 +23,7 @@ export type ConfirmSeverity = "standard" | "warning" | "danger" | "financial";
 export const SENSITIVE_ACTIONS = [
   // --- commercial documents -------------------------------------------------------------------
   "document.edit",
+  "document.duplicate",
   "document.convert",
   "document.submit", // send / issue / post — creates accounting postings and/or moves stock
   "document.receive",
@@ -75,6 +76,14 @@ const POLICY: Record<SensitiveActionKind, PolicyEntry> = {
     severity: "standard",
     verb: "Continue to Edit",
     consequence: "You are about to edit this document. Saved changes will update the document details.",
+  },
+  "document.duplicate": {
+    severity: "standard",
+    verb: "Duplicate",
+    // Spelled out because two things surprise people: attachments are deliberately left behind,
+    // and the copy takes the next number from the sequence rather than the source's number + 1.
+    consequence:
+      "A new draft will be created with a new document number. Line items, notes, terms, bank accounts and the seal are copied. Attachments are not copied, and status, payments and links to related documents are not carried over.",
   },
   "document.convert": {
     severity: "standard",

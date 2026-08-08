@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { downloadDocumentPdf } from "../_shared/download-pdf-button";
-import { Eye, Star, Copy, Download } from "lucide-react";
+import { Eye, Star, Download } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { StatRow } from "../_shared/stat-row";
@@ -140,7 +140,6 @@ export function OrdersListClient({
                     })),
                   }]
                 : []),
-              { kind: "item", icon: Copy, label: t(locale, "Duplicate") },
               { kind: "separator" },
               ...rowActions("sales_order", r.id, r.status, r.isArchived, r.soNumber),
             ];
