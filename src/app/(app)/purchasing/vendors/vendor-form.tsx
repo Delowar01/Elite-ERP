@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
 import { useDirtyFormFields } from "../../_shared/dirty-form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,10 @@ export function VendorForm({
   submitLabel = "Save",
   taxNumberLabel = "VAT Number",
   registrationLabel = "CR Number",
+  inDialog = false,
+  onSuccess,
+  onCancel,
+  onDirty,
 }: {
   vendor?: Vendor;
   action: (prev: ActionState, formData: FormData) => Promise<ActionState>;
@@ -23,13 +27,24 @@ export function VendorForm({
   // Tax/registration labels follow the org's country profile (VAT Number/CR, TRN/Trade License, …).
   taxNumberLabel?: string;
   registrationLabel?: string;
+  // Dialog mode: the dialog controls width and adds a Cancel button; onSuccess fires with the
+  // created vendor so the caller can auto-select it. Mirrors ClientForm's dialog mode exactly.
+  inDialog?: boolean;
+  onSuccess?: (vendor: Vendor) => void;
+  onCancel?: () => void;
+  onDirty?: () => void;
 }) {
   const [state, formAction, pending] = useActionState(action, undefined);
   // Unsaved-changes protection, shared with every other form in the app.
   const { ref: dirtyRef, form: dirtyForm } = useDirtyFormFields();
 
+  // Only the inline action returns a vendor; the full-page action redirects and never reaches here.
+  useEffect(() => {
+    if (state?.vendor) onSuccess?.(state.vendor);
+  }, [state, onSuccess]);
+
   return (
-    <form ref={dirtyRef} action={formAction} onSubmit={() => dirtyForm.markClean()} className="flex flex-col gap-5 max-w-xl">
+    <form ref={dirtyRef} action={formAction} onInput={onDirty} onSubmit={() => dirtyForm.markClean()} className={inDialog ? "flex flex-col gap-5" : "flex flex-col gap-5 max-w-xl"}>
       {vendor && (
         <FormField label="Logo" htmlFor="logo">
           <RecordImageUpload locale="en" currentUrl={vendor.logoUrl} config={CROP_PARTY_LOGO} fieldName="logo" label="Upload Logo" action={uploadVendorLogoAction.bind(null, vendor.id)} />
@@ -59,7 +74,12 @@ export function VendorForm({
         </FormField>
       </div>
       {state?.error && <p className="text-[12.5px] text-danger">{state.error}</p>}
-      <div>
+      <div className={inDialog ? "flex items-center justify-end gap-2" : ""}>
+        {inDialog && onCancel && (
+          <button type="button" className="btn btn-glass" style={{ width: "auto", padding: "0 18px" }} disabled={pending} onClick={onCancel}>
+            Cancel
+          </button>
+        )}
         <Button type="submit" disabled={pending}>
           {pending ? "Saving…" : submitLabel}
         </Button>

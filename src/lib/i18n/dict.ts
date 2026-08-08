@@ -1454,6 +1454,15 @@ const DICT: Record<string, string> = {
   "Keep editing": "متابعة التعديل",
   "Discard": "تجاهل",
 
+  // In-document vendor creation — the vendor-side twin of the client popup above.
+  "Select a vendor from the list": "اختر المورّد من القائمة",
+  "Add New Vendor": "إضافة مورّد جديد",
+  "New Vendor": "مورّد جديد",
+  "Add a vendor to raise purchase orders against.": "أضف مورّدًا لإصدار أوامر الشراء له.",
+  "Save Vendor": "حفظ المورّد",
+  "Vendor created": "تم إنشاء المورّد",
+  "Discard unsaved vendor details?": "تجاهل بيانات المورّد غير المحفوظة؟",
+
   // Client-country change confirmation (client form address section)
   "Changing the client country will update address fields, tax labels, and validation. Existing saved documents will not be changed.": "سيؤدي تغيير دولة العميل إلى تحديث حقول العنوان والمسميات الضريبية وقواعد التحقق. لن تتغير المستندات المحفوظة الحالية.",
   "Change country": "تغيير الدولة",

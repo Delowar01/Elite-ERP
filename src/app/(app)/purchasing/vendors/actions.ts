@@ -4,12 +4,15 @@ import { revalidatePath } from "next/cache";
 import { validateUpload, storeBlob, deleteStoredBlob, IMAGE_MAX_BYTES } from "@/lib/storage/blob-storage";
 import { redirect } from "next/navigation";
 import { and, eq } from "drizzle-orm";
-import { db, vendorsTable } from "@/db";
+import { db, vendorsTable, type Vendor } from "@/db";
 import { requireSession, requireRole } from "@/lib/session";
+import type { Session } from "@/lib/session";
 import { tenantScope } from "@/lib/tenant";
 import { logActivity } from "@/lib/activity";
 
-export type ActionState = { error?: string } | undefined;
+// `vendor` is set only by the inline (popup) create action so the caller can auto-select the new
+// record without a page reload; the full-page create action redirects instead.
+export type ActionState = { error?: string; vendor?: Vendor } | undefined;
 
 function readVendorFields(formData: FormData) {
   const name = String(formData.get("name") ?? "").trim();
@@ -24,15 +27,13 @@ function readVendorFields(formData: FormData) {
   };
 }
 
-export async function createVendorAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const session = await requireSession();
-  const fields = readVendorFields(formData);
-  if (!fields.name) return { error: "Name is required." };
-
+// Shared insert used by both the full-page create action and the in-document popup create action, so
+// field handling, tenant scoping and audit logging never diverge between the two entry points.
+async function insertVendorRecord(session: Session, fields: ReturnType<typeof readVendorFields>): Promise<Vendor> {
   const [row] = await db
     .insert(vendorsTable)
     .values({ orgId: session.orgId, ...fields })
-    .returning({ id: vendorsTable.id });
+    .returning();
 
   await logActivity(session, {
     type: "vendor.created",
@@ -40,9 +41,29 @@ export async function createVendorAction(_prev: ActionState, formData: FormData)
     entityType: "vendor",
     entityId: row.id,
   });
-
   revalidatePath("/purchasing/vendors");
+  return row;
+}
+
+export async function createVendorAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const session = await requireSession();
+  const fields = readVendorFields(formData);
+  if (!fields.name) return { error: "Name is required." };
+
+  const row = await insertVendorRecord(session, fields);
   redirect(`/purchasing/vendors/${row.id}`);
+}
+
+// In-document popup create action: same validation + insert as the full page, but returns the created
+// (tenant-scoped) vendor so the document's vendor selector can auto-select it in place — no redirect,
+// preserving all unsaved document data.
+export async function createVendorInlineAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const session = await requireSession();
+  const fields = readVendorFields(formData);
+  if (!fields.name) return { error: "Name is required." };
+
+  const vendor = await insertVendorRecord(session, fields);
+  return { vendor };
 }
 
 export async function updateVendorAction(id: number, _prev: ActionState, formData: FormData): Promise<ActionState> {

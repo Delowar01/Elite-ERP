@@ -6,9 +6,10 @@ import { SearchableSelect } from "@/components/ui/searchable-select";
 import { composeAddress } from "@/lib/geo/countries";
 import { getCountryProfile, resolveTaxLabels } from "@/lib/geo/country-profiles";
 import { t, type Locale } from "@/lib/i18n/dict";
-import type { Customer } from "@/db";
+import type { Customer, Vendor } from "@/db";
 import { PartyEditDialog } from "./party-edit-dialog";
 import { ClientCreateDialog } from "./client-create-dialog";
+import { VendorCreateDialog } from "./vendor-create-dialog";
 
 function PcRow({ icon, text }: { icon: React.ReactNode; text: string }) {
   return (
@@ -122,9 +123,9 @@ export function PartyCardSelect({
   /** Org's configured generic tax terminology (Global-profile clients only). */
   taxOverrides?: { customTaxName?: string | null; customTaxNumberLabel?: string | null; customRegistrationLabel?: string | null };
 }) {
-  // Clients created via the in-page "Add New Client" popup are held here and merged into the list so
-  // the new record is selectable/selected immediately — no page reload, so unsaved document data and
-  // line items are preserved.
+  // Parties created via the in-page "Add New Client" / "Add New Vendor" popup are held here and
+  // merged into the list so the new record is selectable/selected immediately — no page reload, so
+  // unsaved document data and line items are preserved.
   const [created, setCreated] = useState<PartySelectCustomer[]>([]);
   const [createOpen, setCreateOpen] = useState(false);
   const isClient = partyKind === "client";
@@ -142,9 +143,11 @@ export function PartyCardSelect({
   // The selected client's tax/registration labels follow that CLIENT's country (not the org's).
   const selLabels = resolveTaxLabels(getCountryProfile(selected?.countryCode || defaultCountryCode), taxOverrides);
 
-  function handleCreated(client: Customer) {
-    setCreated((c) => [client as PartySelectCustomer, ...c]);
-    onChange(String(client.id)); // auto-select the new client
+  // Vendors satisfy PartySelectCustomer too — its structured-address fields are optional — so one
+  // handler serves both kinds.
+  function handleCreated(party: Customer | Vendor) {
+    setCreated((c) => [party as PartySelectCustomer, ...c]);
+    onChange(String(party.id)); // auto-select the newly created party
   }
 
   return (
@@ -160,8 +163,8 @@ export function PartyCardSelect({
         emptyText={t(locale, "No matches.")}
         aria-label={label}
         triggerClassName="mt-1 mb-1"
-        addNewLabel={isClient ? t(locale, "Add New Client") : undefined}
-        onAddNew={isClient ? () => setCreateOpen(true) : undefined}
+        addNewLabel={t(locale, isClient ? "Add New Client" : "Add New Vendor")}
+        onAddNew={() => setCreateOpen(true)}
       />
 
       {selected ? (
@@ -194,18 +197,18 @@ export function PartyCardSelect({
             }
           />
         </>
-      ) : isClient ? (
-        // Empty state: a bordered card prompting selection, with an in-page "Add New Client" action.
+      ) : (
+        // Empty state: a bordered card prompting selection, with the in-page create action.
         <div className="mt-2 rounded-xl border border-dashed border-line-strong px-4 py-6 text-center">
-          <p className="text-[12.5px] text-ink-muted">{t(locale, "Select Client/Business from the list")}</p>
+          <p className="text-[12.5px] text-ink-muted">{t(locale, isClient ? "Select Client/Business from the list" : "Select a vendor from the list")}</p>
           <p className="text-[11.5px] text-ink-faint my-2">{t(locale, "OR")}</p>
           <button type="button" className="btn btn-primary" style={{ width: "auto", padding: "0 18px" }} onClick={() => setCreateOpen(true)}>
-            <UserPlus className="size-4" /> {t(locale, "Add New Client")}
+            <UserPlus className="size-4" /> {t(locale, isClient ? "Add New Client" : "Add New Vendor")}
           </button>
         </div>
-      ) : null}
+      )}
 
-      {isClient && (
+      {isClient ? (
         <ClientCreateDialog
           locale={locale}
           open={createOpen}
@@ -213,6 +216,15 @@ export function PartyCardSelect({
           onCreated={handleCreated}
           defaultCountryCode={defaultCountryCode}
           taxOverrides={taxOverrides}
+        />
+      ) : (
+        <VendorCreateDialog
+          locale={locale}
+          open={createOpen}
+          onOpenChange={setCreateOpen}
+          onCreated={handleCreated}
+          taxNumberLabel={selLabels.taxNumberLabel}
+          registrationLabel={selLabels.registrationLabel}
         />
       )}
     </div>
