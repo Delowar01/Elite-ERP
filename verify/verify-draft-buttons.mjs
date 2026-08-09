@@ -1,8 +1,8 @@
-// Verifies the "Fix Save as Draft and Print Preview Buttons" task on live create pages.
+// Verifies the "Fix Save as Draft and Preview Buttons" task on live create pages.
 // The app renders a top titlebar action row AND a bottom sticky action bar; each is one
 // intentional container that mirrors the other (this is NOT the duplicate the task targets).
 // The task's duplicate was "Save as Draft" living inside the Save & Submit dropdown — removed.
-// So we assert, PER container: exactly one Save as Draft, one Print Preview, no More Actions,
+// So we assert, PER container: exactly one Save as Draft, one Preview, no More Actions,
 // no split-button dropdown; the bottom bar additionally has the primary submit; and page-wide
 // there are exactly 2 Save as Draft (top + bottom) — never 3+ and never inside a dropdown.
 import { chromium } from "playwright";
@@ -51,17 +51,17 @@ const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PAT
     ok("bottom action bar present", (await bar.count()) === 1);
     ok("top titlebar actions present", (await top.count()) === 1);
 
-    // bottom bar: Save as Draft | Print Preview | primary, one each, in that DOM order
+    // bottom bar: Save as Draft | Preview | primary, one each, in that DOM order
     ok("bottom: exactly one Save as Draft", (await bar.getByRole("button", { name: /^Save as Draft$/ }).count()) === 1);
-    ok("bottom: exactly one Print Preview", (await bar.getByRole("button", { name: /Print Preview/ }).count() + await bar.getByRole("link", { name: /Print Preview/ }).count()) === 1);
+    ok("bottom: exactly one Preview", (await bar.getByRole("button", { name: /Preview/ }).count() + await bar.getByRole("link", { name: /Preview/ }).count()) === 1);
     ok(`bottom: primary "${primary}" present`, (await bar.getByRole("button", { name: rx(primary) }).count()) === 1);
     const barText = (await bar.innerText()).replace(/\s+/g, " ");
-    ok("bottom order = Save as Draft → Print Preview → primary",
-       barText.indexOf("Save as Draft") < barText.indexOf("Print Preview") && barText.indexOf("Print Preview") < barText.indexOf(primary));
+    ok("bottom order = Save as Draft → Preview → primary",
+       barText.indexOf("Save as Draft") < barText.indexOf("Preview") && barText.indexOf("Preview") < barText.indexOf(primary));
 
-    // top titlebar: Save as Draft + Print Preview, one each, NO More Actions
+    // top titlebar: Save as Draft + Preview, one each, NO More Actions
     ok("top: exactly one Save as Draft", (await top.getByRole("button", { name: /^Save as Draft$/ }).count()) === 1);
-    ok("top: exactly one Print Preview", (await top.getByRole("button", { name: /Print Preview/ }).count()) === 1);
+    ok("top: exactly one Preview", (await top.getByRole("button", { name: /Preview/ }).count()) === 1);
     ok("top: no More Actions", (await top.getByRole("button", { name: /More Actions/ }).count()) === 0);
 
     // page-wide guards

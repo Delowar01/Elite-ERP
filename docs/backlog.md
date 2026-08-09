@@ -118,32 +118,31 @@ PO/DN PDF address block, and a decision about whether existing vendors are ever 
 
 ---
 
-## Four browser suites assert UI that was deliberately removed
+## `verify-proforma-payments` fails: stale suite, or a real payments defect?
 
-**Status:** deferred, not started. They fail today. None of it is a product defect — the suites are
-out of date, and each one is asserting the *old* behaviour of a change that was made on purpose.
+**Status:** open, and it is the one entry here that might be a bug rather than a decision. It is the
+single red suite in `npm run verify:browser` (22 of 23 pass). **Not carried over from anything —
+the runner found it on its first full pass, which is the runner doing its job.**
 
-Found while re-running the whole browser tier after registration gained required fields. Nineteen of
-the twenty-three suites pass. These four do not, and the failure text names the cause in every case:
+Two clusters of failure:
 
-| Suite | Failing assertions | Why |
-|---|---|---|
-| `verify-draft-buttons.mjs` | 24, all naming "Print Preview" | Print was removed from the document action bar on purpose (the serverless-PDF rework replaced it with Download PDF). |
-| `verify-edit.mjs` | 1: `edit: Print Preview present` | Same removal. |
-| `verify-draft-func.mjs` | times out waiting for a "Print Preview" button in `.doc-action-bar` | Same removal. |
-| `verify-color-theme.mjs` | times out on `button.btn` containing "Primary button" | The Color Theme preview renders that sample as a styled `<span>`, not a `<button class="btn">` — changed by the per-mode-overrides rework (`company-panels.tsx:328`). |
+1. **Recording a payment against a proforma does nothing observable.** Five assertions fail: no
+   `payments` rows, no `paidAmount`, no journal entries, nothing in the payment history. The
+   `Record Payment` trigger it clicks *does* still exist (`proforma-detail-actions.tsx:90`), so
+   this is not a missing button — the interaction gets that far and no row appears.
+2. **It then dies waiting for a top-level `Convert to Invoice` button.** That one is explicable:
+   per-type convert buttons were replaced by the shared `ConvertMenu` dropdown, so this assertion
+   is stale in the same way the Print Preview ones were.
 
-**Why this is worth an entry rather than a quick fix.** Three of them are one deletion away from
-correct — remove the Print assertions. But a suite that asserts a *removed* feature has been failing
-since the day that feature was removed, which means nobody has run the browser tier since. That is
-the actual finding: `verify:all` covers the twelve server-tier suites and the browser tier has no
-runner at all, so it rots silently. Deleting four assertions fixes the symptom and leaves the tier
-un-run.
+**Why it was not resolved on the spot.** Cluster 2 is clearly staleness. Cluster 1 is not clearly
+anything yet, and it touches money: a payment that appears to record but writes no row, no ledger
+entry and no `paidAmount` would be a serious defect, while a dialog whose field ids or submit
+button moved is a five-minute suite fix. Deciding which by editing the suite until it goes green is
+exactly the failure this project keeps writing rules about, so it stays red and named instead.
 
-**Scope when picked up:** update the four suites to the current UI, then decide how the browser tier
-gets executed regularly — a `verify:browser` script that builds, starts a server, runs all
-twenty-three and tears down, is the obvious shape. `assert-fresh-build.mjs` already makes it safe to
-run them against a server someone else started, which was the missing precondition.
+**Scope when picked up:** drive the proforma payment dialog by hand first and watch the database —
+if a payment records, the suite is stale and gets updated alongside the `ConvertMenu` selector; if
+it does not, stop and treat it as a payments bug with its own task. Do not start from the suite.
 
 ---
 

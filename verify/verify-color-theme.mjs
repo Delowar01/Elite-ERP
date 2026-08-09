@@ -6,7 +6,7 @@ import { pickCountry } from "./register-org.mjs";
 const BASE="http://localhost:3000";
 const DBURL=readFileSync(".env","utf8").split("\n").find(l=>l.startsWith("DATABASE_URL=")).slice(13).trim();
 const pool=new Pool({connectionString:DBURL});
-let fail=0; const ok=(n,c)=>{console.log(`${c?"  ✓":"  ✗ FAIL"} ${n}`);if(!c)fail++;};
+let fail=0; const ok=(n,c,x="")=>{console.log(`${c?"  ✓":"  ✗ FAIL"} ${n}${x?"  << "+x:""}`);if(!c)fail++;};
 const uniq=()=>Math.random().toString(36).slice(2,8);
 function lum(hex){const c=hex.replace('#','');const ch=[0,2,4].map(i=>{const s=parseInt(c.slice(i,i+2),16)/255;return s<=0.03928?s/12.92:Math.pow((s+0.055)/1.055,2.4);});return 0.2126*ch[0]+0.7152*ch[1]+0.0722*ch[2];}
 function contrast(a,b){const la=lum(a),lb=lum(b);const hi=Math.max(la,lb),lo=Math.min(la,lb);return (hi+0.05)/(lo+0.05);}
@@ -28,7 +28,14 @@ async function reg(ctx){
 }
 const styleText = async (p) => (await p.locator("style").allInnerTexts()).join("\n");
 async function setMain(p,label,hex){ await p.locator('div.p-5',{hasText:label}).first().locator('input.font-mono').first().fill(hex); }
-async function setComp(p,comp,channel,hex){ const card=p.locator('div.rounded-xl.border',{hasText:comp}).first(); await card.locator('div.flex.flex-col.gap-1',{hasText:channel}).first().locator('input.font-mono').first().fill(hex); }
+// The per-component OVERRIDE card. `div.rounded-xl.border` + the component's label now also matches
+// the light/dark ModePreview cards, which render the same labels as sample swatches — so the card
+// is additionally required to contain a hex input, which only the override card does. Without that
+// filter .first() picks the preview and there is nothing to fill.
+async function setComp(p,comp,channel,hex){
+  const card=p.locator('div.rounded-xl.border').filter({hasText:comp}).filter({has:p.locator('input.font-mono')}).first();
+  await card.locator('div.flex.flex-col.gap-1',{hasText:channel}).first().locator('input.font-mono').first().fill(hex);
+}
 
 const ctx1=await browser.newContext();
 const {p, orgId}=await reg(ctx1);
@@ -38,7 +45,13 @@ await p.goto(`${BASE}/settings/organization?tab=color-theme`,{waitUntil:"network
 await setMain(p,"Gradient start color","#2244AA");
 await setMain(p,"Gradient end color","#11CC88");
 await p.waitForTimeout(250);
-const prevBg = await p.locator('button.btn',{hasText:"Primary button"}).first().evaluate(el=>el.style.background||el.style.backgroundImage);
+// The Color Theme preview renders its samples as inline-styled <span>s, not real buttons (see
+// company-panels.tsx). This selected `button.btn`, which stopped matching when the per-mode
+// overrides rework changed the markup — the suite has been red ever since, unnoticed because the
+// browser tier had no runner.
+// .first() is the LIGHT-mode preview: the panel renders one ModePreview per appearance and the
+// dark one derives different colours, so .last() would be asserting the wrong swatch.
+const prevBg = await p.locator('span',{hasText:"Primary button"}).first().evaluate(el=>el.style.background||el.style.backgroundImage);
 ok("Live preview shows edited gradient immediately", prevBg.includes("34, 68, 170") || prevBg.includes("17, 204, 136"));
 await p.getByRole("button",{name:/^Save theme$/}).click(); await p.waitForTimeout(1000);
 const {rows:g}=await pool.query("select gradient_from,gradient_to from orgs where id=$1",[orgId]);
@@ -58,8 +71,10 @@ await p.waitForTimeout(200);
 // bad font override on primary button (dark on the purple primary → unreadable)
 await setComp(p,"Primary button","Font","#3A2A55");
 await p.waitForTimeout(200);
-const pbCard = p.locator('div.rounded-xl.border',{hasText:"Primary button"}).first();
-ok("Low-contrast warning shows for a bad font override", (await pbCard.getByText(/Low contrast/).count())>=1);
+// The warning is now a panel-level banner ("Low contrast in {light|dark}: {ratio}") rather than
+// text inside the component's own card — it aggregates every failing component across both
+// appearances, so it cannot live in one card. Scoped to the page accordingly.
+ok("Low-contrast warning shows for a bad font override", (await p.getByText(/Low contrast in/).count())>=1);
 // manual badge override bg+fg
 await setComp(p,"Badge","Background","#003366");
 await setComp(p,"Badge","Font","#FFFFFF");
@@ -69,9 +84,22 @@ const {rows:s}=await pool.query("select primary_color,accent_color,color_theme_m
 ok("DB saved single primary (#7A1FA2)", s[0].primary_color.toLowerCase()==="#7a1fa2");
 ok("DB saved single accent (#0F9D58)", s[0].accent_color.toLowerCase()==="#0f9d58");
 ok("DB mode=single", s[0].color_theme_mode==="single");
-const ov=s[0].theme_overrides||{};
+// theme_overrides became PER-APPEARANCE in the per-mode rework: { light: {comp: {...}}, dark: {…} }.
+// This used to read the flat shape (ov.badge), which stopped existing then and has been failing
+// silently ever since — the browser tier had no runner to notice. The panel edits the light-mode
+// card, so that is the appearance to read.
+const ovAll=s[0].theme_overrides||{};
+const ov=ovAll.light ?? ovAll; // ?? ovAll tolerates a legacy flat row, which the app also migrates on read
 ok("Manual badge override persisted (bg+fg)", ov.badge && ov.badge.bg?.toLowerCase()==="#003366" && ov.badge.fg?.toLowerCase()==="#ffffff");
-ok("Unreadable primary-button font auto-corrected on save (AA vs #7A1FA2)", contrast(ov.primaryButton?.fg ?? "#ffffff","#7a1fa2")>=4.5);
+// This used to assert that an unreadable font was rewritten on save. That behaviour was
+// deliberately removed: `updateColorThemeAction` says "Low contrast is a WARNING, never a blocker"
+// and "Saved exactly as chosen, even when the contrast is low — the user was warned and decided."
+// So the assertion is inverted to the decision that was actually made — the chosen colour survives
+// the round trip — paired with the warning check above, which is what now protects the user.
+ok("An unreadable font override is saved exactly as chosen, not silently rewritten",
+   ov.primaryButton?.fg?.toLowerCase()==="#3a2a55", ov.primaryButton?.fg);
+ok("CONTROL: and it really is unreadable, so the warning above is about something",
+   contrast(ov.primaryButton?.fg ?? "#ffffff","#7a1fa2") < 4.5);
 // component colors generated automatically → injected style has all 5 component rules
 await p.goto(`${BASE}/dashboard`,{waitUntil:"networkidle"}); await p.waitForTimeout(300);
 const st=(await styleText(p)).replace(/\s/g,"");

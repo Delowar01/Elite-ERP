@@ -35,7 +35,7 @@ await p.goto(`${BASE}/sales/quotations/${id}/edit`,{waitUntil:"networkidle"});aw
 console.log("== edit page ==");
 ok("edit: no 'More Actions'",(await p.getByRole("button",{name:/More Actions/}).count())===0);
 ok("edit: no split-button (.btn-split)",(await p.locator(".btn-split").count())===0);
-ok("edit: Print Preview present",(await p.getByRole("button",{name:/Print Preview/}).count()+await p.getByRole("link",{name:/Print Preview/}).count())>=1);
+ok("edit: Preview present",(await p.getByRole("button",{name:/Preview/}).count()+await p.getByRole("link",{name:/Preview/}).count())>=1);
 ok("edit: Save Changes present",(await p.locator(".doc-action-bar").getByRole("button",{name:/Save Changes/}).count())===1);
 await b.close();await pool.end();
 console.log(`\n${fail===0?"ALL PASSED":fail+" FAILED"}`);process.exit(fail===0?0:1);

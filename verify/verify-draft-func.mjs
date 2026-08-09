@@ -23,10 +23,10 @@ const {rows:o}=await pool.query("select org_id from users where email=$1",[email
 await pool.query("insert into customers (org_id,name,address) values ($1,$2,$3)",[orgId,"Acme Co","1 King Rd"]);
 
 await p.goto(`${BASE}/sales/quotations/new`,{waitUntil:"networkidle"}); await p.waitForTimeout(500);
-// Print Preview opens the in-page modal
-await p.locator(".doc-action-bar").getByRole("button",{name:/Print Preview/}).click();
+// Preview opens the in-page modal
+await p.locator(".doc-action-bar").getByRole("button",{name:/Preview/}).click();
 await p.waitForTimeout(500);
-ok("Print Preview opens an in-page dialog", (await p.getByRole("dialog").count())>=1);
+ok("Preview opens an in-page dialog", (await p.getByRole("dialog").count())>=1);
 await p.keyboard.press("Escape"); await p.waitForTimeout(300);
 
 // Fill a minimal quotation and Save as Draft

@@ -83,7 +83,16 @@ hoping it lands first, it will not.
 
 The `.mjs` suites drive a real browser and need a production build running on `localhost:3000`
 (`npm run build && npm start`). They are not in `verify:all` because they are slow and need that
-server. Run them directly: `node verify/verify-sidebar-scroll.mjs`.
+server. Run the whole tier with **`npm run verify:browser`**, which is the supported way: it checks the
+database is reachable, refuses to start if something already holds the port, builds, starts a
+server, runs all 23 in series, prints a count per suite, tears the server down and exits non-zero on
+any failure. Flags: `--skip-build`, `--no-server` (drive a server you started), `--only=<substring>`.
+
+Run one directly with `node verify/verify-sidebar-scroll.mjs` when iterating — you are then
+responsible for the build being current, which `assertFreshBuild` enforces.
+
+The tier is discovered, not listed: any `.mjs` in this folder that mentions `localhost:3000` is
+picked up, so a new suite runs without anyone remembering to register it.
 
 Every one of them calls `assertFreshBuild(BASE)` from `assert-fresh-build.mjs` before opening the
 browser, and refuses to run if the server is answering with a build other than the one in
