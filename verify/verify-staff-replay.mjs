@@ -10,6 +10,8 @@
 import { chromium } from "playwright";
 import { Client } from "pg";
 import { readFile } from "node:fs/promises";
+import { assertFreshBuild } from "./assert-fresh-build.mjs";
+import { pickCountry } from "./register-org.mjs";
 
 const BASE = "http://localhost:3000";
 const pass = "Qx7#vLm2$Rt9wZp4";
@@ -36,6 +38,9 @@ const favoriteId = idFor("toggleFavoriteAction");
 check("found the Next-Action id for deletePaymentAction", !!delPaymentId, String(delPaymentId));
 check("found the Next-Action id for toggleFavoriteAction (the ungated control)", !!favoriteId, String(favoriteId));
 
+// Refuse to run against a build other than the one on disk — see assert-fresh-build.mjs.
+await assertFreshBuild(BASE);
+
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || "/opt/pw-browsers/chromium" });
 const ctx = await browser.newContext();
 ctx.setDefaultNavigationTimeout(60000);
@@ -48,6 +53,8 @@ await page.fill('input[name="email"]', ownerEmail);
 await page.fill('input[name="password"]', pass);
 const cf = page.locator('input[name="confirmPassword"]');
 if (await cf.count()) await cf.fill(pass);
+// Registration requires a country as of FX-1a; the currency follows it.
+await pickCountry(page);
 await page.getByRole("button", { name: /register|create|sign up/i }).first().click();
 await page.waitForURL(/\/dashboard/, { timeout: 40000 });
 

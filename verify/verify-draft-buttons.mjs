@@ -7,6 +7,8 @@
 // there are exactly 2 Save as Draft (top + bottom) — never 3+ and never inside a dropdown.
 import { chromium } from "playwright";
 import { readFileSync } from "fs";
+import { assertFreshBuild } from "./assert-fresh-build.mjs";
+import { pickCountry } from "./register-org.mjs";
 const BASE = "http://localhost:3000";
 readFileSync(".env", "utf8"); // ensure cwd correct
 let fail = 0;
@@ -25,13 +27,18 @@ const PAGES = [
 const rx = (s) => new RegExp("^" + s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "$");
 
 async function main() {
-  const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || "/opt/pw-browsers/chromium-1194/chrome-linux/chrome" });
+  // Refuse to run against a build other than the one on disk — see assert-fresh-build.mjs.
+await assertFreshBuild(BASE);
+
+const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || "/opt/pw-browsers/chromium-1194/chrome-linux/chrome" });
   const page = await browser.newPage({ viewport: { width: 1360, height: 1000 } });
   await page.goto(`${BASE}/register`, { waitUntil: "networkidle" });
   await page.fill("#orgName", `BTN Org ${uniq()}`);
   await page.fill("#name", "BTN Owner");
   await page.fill("#email", `btn_${uniq()}@test.dev`);
   await page.fill("#password", `Zx9$mQ${uniq()}vK!ray`);
+  // Registration requires a country as of FX-1a; the currency follows it.
+  await pickCountry(page);
   await Promise.all([page.waitForURL(`${BASE}/dashboard`, { timeout: 20000 }), page.click('button[type="submit"]')]);
 
   for (const [path, primary] of PAGES) {

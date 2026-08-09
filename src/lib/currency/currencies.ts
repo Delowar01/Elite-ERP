@@ -262,6 +262,56 @@ export function isValidCurrencyCode(code: string): boolean {
   return CURRENCY_BY_CODE.has(code.toUpperCase());
 }
 
+// ---------------------------------------------------------------------------------------------
+// Country -> currency
+//
+// `CURRENCIES` holds one entry per CURRENCY, tagged with a single representative country, so a
+// direct `countryCode` lookup answers 145 of the 198 countries in `COUNTRIES` and nothing for the
+// other 53 — every country that shares its currency with another. The Euro's representative is the
+// pseudo-code "EU", which is why Germany resolved to nothing and fell through to a USD default.
+//
+// This table names the 53. It is data, not logic: each entry is a country that uses a currency
+// another country represents in the catalog. `verify-registration-currency.mts` asserts that every
+// country in `COUNTRIES` resolves to a currency that exists in `CURRENCIES`, so adding a country
+// without deciding its currency fails the suite rather than silently defaulting.
+const SHARED_CURRENCY_BY_COUNTRY: Record<string, string> = {
+  // Eurozone members, plus the microstates and unilateral adopters that use the euro.
+  AD: "EUR", AT: "EUR", BE: "EUR", HR: "EUR", CY: "EUR", EE: "EUR", FI: "EUR", FR: "EUR",
+  DE: "EUR", GR: "EUR", IE: "EUR", IT: "EUR", LV: "EUR", LT: "EUR", LU: "EUR", MT: "EUR",
+  MC: "EUR", ME: "EUR", NL: "EUR", PT: "EUR", SM: "EUR", SK: "EUR", SI: "EUR", ES: "EUR",
+  VA: "EUR",
+  // West African CFA franc (Senegal represents XOF in the catalog).
+  BJ: "XOF", BF: "XOF", CI: "XOF", GW: "XOF", ML: "XOF", NE: "XOF", TG: "XOF",
+  // Central African CFA franc (Cameroon represents XAF).
+  CF: "XAF", TD: "XAF", CG: "XAF", GQ: "XAF", GA: "XAF",
+  // East Caribbean dollar (Antigua and Barbuda represents XCD).
+  DM: "XCD", GD: "XCD", KN: "XCD", LC: "XCD", VC: "XCD",
+  // Economies that use the US dollar directly.
+  EC: "USD", SV: "USD", FM: "USD", MH: "USD", PW: "USD", TL: "USD",
+  // Australian dollar users.
+  KI: "AUD", NR: "AUD", TV: "AUD",
+  // Remaining one-offs.
+  LI: "CHF", // Liechtenstein uses the Swiss franc
+  PS: "ILS", // Palestine uses the Israeli new shekel
+};
+
+const COUNTRY_TO_CURRENCY = new Map<string, string>([
+  ...CURRENCIES.map((cur) => [cur.countryCode, cur.currencyCode] as [string, string]),
+  ...Object.entries(SHARED_CURRENCY_BY_COUNTRY),
+]);
+
+/**
+ * The ISO 4217 code a country uses, or undefined when the country is unknown.
+ *
+ * Used only to SUGGEST a base currency — registration and Business Settings both pre-fill the
+ * currency picker from it and both let the user change it before anything is stored. Nothing posts
+ * or persists on this value directly.
+ */
+export function currencyCodeForCountry(countryCode: string | null | undefined): string | undefined {
+  if (!countryCode) return undefined;
+  return COUNTRY_TO_CURRENCY.get(countryCode.trim().toUpperCase());
+}
+
 // Normalize a document's selected currency for storage: uppercased ISO code when valid, else null
 // (null means "use the org base currency" on read). Shared by every document create/update action.
 export function normalizeDocCurrency(code: string | null | undefined): string | null {

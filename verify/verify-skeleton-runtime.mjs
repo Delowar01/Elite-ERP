@@ -9,6 +9,8 @@
  */
 import { chromium } from "playwright";
 import { Client } from "pg";
+import { assertFreshBuild } from "./assert-fresh-build.mjs";
+import { pickCountry } from "./register-org.mjs";
 
 const BASE = "http://localhost:3000";
 const pass = "Qx7#vLm2$Rt9wZp4";
@@ -18,6 +20,9 @@ const check = (n, c, x = "") => results.push([c, n, x]);
 
 const db = new Client({ connectionString: process.env.DATABASE_URL });
 await db.connect();
+// Refuse to run against a build other than the one on disk — see assert-fresh-build.mjs.
+await assertFreshBuild(BASE);
+
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || "/opt/pw-browsers/chromium" });
 const ctx = await browser.newContext({ viewport: { width: 1440, height: 950 } });
 ctx.setDefaultTimeout(45000);
@@ -31,6 +36,8 @@ await page.fill('input[name="email"]', email);
 await page.fill('input[name="password"]', pass);
 const cf = page.locator('input[name="confirmPassword"]');
 if (await cf.count()) await cf.fill(pass);
+// Registration requires a country as of FX-1a; the currency follows it.
+await pickCountry(page);
 await page.getByRole("button", { name: /register|create|sign up/i }).first().click();
 await page.waitForURL(/\/dashboard/, { timeout: 40000 });
 

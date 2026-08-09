@@ -18,6 +18,7 @@
 import { chromium } from "playwright";
 import { Client } from "pg";
 import { readFileSync } from "node:fs";
+import { assertFreshBuild } from "./assert-fresh-build.mjs";
 
 process.env.DATABASE_URL ||= readFileSync(".env", "utf8").split("\n").find((l) => l.startsWith("DATABASE_URL="))?.slice(13).trim();
 
@@ -28,6 +29,9 @@ const check = (n, c, x = "") => results.push([c, n, x]);
 
 const db = new Client({ connectionString: process.env.DATABASE_URL });
 await db.connect();
+// Refuse to run against a build other than the one on disk — see assert-fresh-build.mjs.
+await assertFreshBuild(BASE);
+
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || "/opt/pw-browsers/chromium" });
 const ctx = await browser.newContext({ viewport: { width: 1440, height: 950 } });
 ctx.setDefaultTimeout(45000);

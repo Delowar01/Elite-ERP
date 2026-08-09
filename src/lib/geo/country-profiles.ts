@@ -8,6 +8,7 @@
 // import it. It builds on the country/state datasets in ./countries.
 
 import { countryCodeByName, countryName } from "./countries";
+import { currencyCodeForCountry } from "../currency/currencies";
 
 // A registration/identity field surfaced on org + client/vendor forms (e.g. Commercial Registration
 // Number, Trade License Number). `key` maps to an existing column so no per-country schema is needed.
@@ -156,12 +157,23 @@ export const GLOBAL_PROFILE = GLOBAL;
 
 // Resolve a profile by ISO country code. Unknown/empty codes fall back to a GLOBAL profile whose
 // default currency follows the given country's own currency when known.
+//
+// That last clause is what this comment always claimed and the code did not do: `defaultCurrencyCode`
+// stayed at GLOBAL's "USD" for every country without a dedicated profile, so a German org was shown
+// USD. Invisible while nobody was asked their country; a visible defect the moment registration
+// started asking. `currencyCodeForCountry` now supplies it, falling back to USD only for a country
+// genuinely not in the catalog.
 export function getCountryProfile(countryCode: string | null | undefined): CountryProfile {
   const code = (countryCode ?? "").trim().toUpperCase();
   const dedicated = PROFILES[code];
   if (dedicated) return dedicated;
   // Global profile personalized to the resolved country name/currency where we can.
-  return { ...GLOBAL, countryCode: code, countryName: countryName(code) || GLOBAL.countryName };
+  return {
+    ...GLOBAL,
+    countryCode: code,
+    countryName: countryName(code) || GLOBAL.countryName,
+    defaultCurrencyCode: currencyCodeForCountry(code) ?? GLOBAL.defaultCurrencyCode,
+  };
 }
 
 // Resolve a profile from an org's stored country NAME (e.g. "Saudi Arabia"). This is what the app

@@ -1,5 +1,7 @@
 import { chromium } from "playwright";
 import { Client } from "pg";
+import { assertFreshBuild } from "./assert-fresh-build.mjs";
+import { pickCountry } from "./register-org.mjs";
 
 const OUT = "/tmp/claude-0/-home-user-Exhibition-Lead-Pro/762bdf67-a9fd-5562-88ca-0fa1fa890980/scratchpad";
 const BASE = "http://localhost:3000";
@@ -8,6 +10,9 @@ const email = `cf_${Math.random().toString(36).slice(2, 8)}@t.dev`;
 
 const results = [];
 const check = (name, cond, extra = "") => results.push([cond, name, extra]);
+
+// Refuse to run against a build other than the one on disk — see assert-fresh-build.mjs.
+await assertFreshBuild(BASE);
 
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || "/opt/pw-browsers/chromium" });
 const page = await browser.newPage({ viewport: { width: 1440, height: 950 } });
@@ -21,6 +26,8 @@ await page.fill('input[name="email"]', email);
 await page.fill('input[name="password"]', pass);
 const cf = page.locator('input[name="confirmPassword"]');
 if (await cf.count()) await cf.fill(pass);
+// Registration requires a country as of FX-1a; the currency follows it.
+await pickCountry(page);
 await page.click('button[type="submit"]');
 await page.waitForURL(/dashboard|settings/, { timeout: 30000 });
 
@@ -240,6 +247,8 @@ await otherPage.fill('input[name="email"]', otherEmail);
 await otherPage.fill('input[name="password"]', pass);
 const cf2 = otherPage.locator('input[name="confirmPassword"]');
 if (await cf2.count()) await cf2.fill(pass);
+// Registration requires a country as of FX-1a; the currency follows it.
+await pickCountry(otherPage);
 await otherPage.click('button[type="submit"]');
 await otherPage.waitForURL(/dashboard|settings/, { timeout: 30000 });
 await otherPage.goto(`${BASE}/sales/invoices/${sentInv}`, { waitUntil: "networkidle" });

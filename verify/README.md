@@ -22,6 +22,38 @@ cannot supply for itself:
 | `--conditions=react-server` | `import "server-only"` throws on the first import; the suite reports nothing at all. |
 | `--env-file-if-exists=.env` | `DATABASE_URL` is unset unless it happens to be exported in the shell; the suite dies before its first query. |
 
+## The failure mode this folder keeps hitting
+
+Four times now, verification machinery has **reported success without having run**. Not wrong
+answers — no answers, dressed as answers. It is worth naming as one thing, because the individual
+fixes look unrelated and the shape does not:
+
+| # | What happened | How it looked |
+|---|---|---|
+| 1 | A `createRequire` stub meant to neutralise `server-only` ran after the guard had already thrown. | Five suites executed nothing. Two of their numbers were reported from memory as green. |
+| 2 | The same shape again, written after the first was diagnosed. | Same. |
+| 3 | `process.env.DATABASE_URL ||= readFileSync(".env")` above the imports. | Never executed once. Looked like a working fallback because the variable happened to be exported in the shell. |
+| 4 | A browser suite drove the **previous build**: the rebuilt server had died with `EADDRINUSE` because the old one still held port 3000. | **20/20 PASS**, against code that was not under test. |
+
+The fourth is the most dangerous, and it is worth understanding why. The first three failed loudly
+once someone looked — an exception, a missing number. The fourth is silent, repeatable, and emits a
+plausible figure. Nothing about the output distinguishes it from a real pass. It was caught only by
+noticing that a mutation *should* have failed and did not, and then reading a log.
+
+**The rule that follows: a verification harness may not depend on someone remembering to check
+whether it ran.** Every one of these was detectable — by reading a stack trace, a log, a count. That
+is not good enough. The check has to be a precondition that refuses to proceed, in the harness
+itself:
+
+- `--conditions=react-server` and `--env-file-if-exists=.env` on the npm scripts, so the two things
+  a module cannot do for itself are done by the thing that launches it.
+- `assertFreshBuild()` at the top of every browser suite, comparing `.next/BUILD_ID` against the
+  build the running server actually serves. A stale server, someone else's server, or a rebuild that
+  never happened all fail before the browser opens.
+
+When you add a suite, ask what it would print if it silently did not run — and if the answer is
+"something plausible", fix the harness, not the suite.
+
 ## The standing rule behind both flags
 
 **Anything that must happen before a module's dependencies are evaluated cannot live inside that
@@ -52,6 +84,12 @@ hoping it lands first, it will not.
 The `.mjs` suites drive a real browser and need a production build running on `localhost:3000`
 (`npm run build && npm start`). They are not in `verify:all` because they are slow and need that
 server. Run them directly: `node verify/verify-sidebar-scroll.mjs`.
+
+Every one of them calls `assertFreshBuild(BASE)` from `assert-fresh-build.mjs` before opening the
+browser, and refuses to run if the server is answering with a build other than the one in
+`.next/BUILD_ID`. **Do not remove that line when adding or editing a suite** — see the table above
+for the run it exists to prevent. If it fires, the fix is to stop every running server
+(`pkill -f next-server`), confirm the port is free, rebuild, start again.
 
 ## Environment
 

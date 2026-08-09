@@ -1,6 +1,8 @@
 import { chromium } from "playwright";
 import { Pool } from "pg";
 import { readFileSync } from "fs";
+import { assertFreshBuild } from "./assert-fresh-build.mjs";
+import { pickCountry } from "./register-org.mjs";
 const BASE = "http://localhost:3000";
 const DBURL = readFileSync(".env", "utf8").split("\n").find((l) => l.startsWith("DATABASE_URL=")).slice(13).trim();
 const pool = new Pool({ connectionString: DBURL });
@@ -47,6 +49,9 @@ const CONTRAST_FN = `
   };
 })()`;
 
+// Refuse to run against a build other than the one on disk — see assert-fresh-build.mjs.
+await assertFreshBuild(BASE);
+
 const b = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || "/opt/pw-browsers/chromium-1194/chrome-linux/chrome" });
 const ctx = await b.newContext();
 const p = await ctx.newPage();
@@ -54,6 +59,8 @@ const email = `dt_${uniq()}@test.dev`;
 await p.goto(`${BASE}/register`, { waitUntil: "networkidle" });
 await p.fill("#orgName", `DT ${uniq()}`); await p.fill("#name", "DT");
 await p.fill("#email", email); await p.fill("#password", `Zx9$mQ${uniq()}vK!ray`);
+  // Registration requires a country as of FX-1a; the currency follows it.
+  await pickCountry(p);
 await Promise.all([p.waitForURL(`${BASE}/dashboard`, { timeout: 20000 }), p.click('button[type="submit"]')]);
 const { rows: o } = await pool.query("select org_id from users where email=$1", [email]);
 const orgId = o[0].org_id;

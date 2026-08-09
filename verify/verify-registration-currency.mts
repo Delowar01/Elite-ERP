@@ -35,7 +35,9 @@
 import { Pool } from "pg";
 import { getBaseCurrencyConfirmation } from "../src/lib/base-currency";
 import { seedOrgDefaults } from "../src/lib/seed-org";
-import { getProfileByCountryName } from "../src/lib/geo/country-profiles";
+import { getProfileByCountryName, getCountryProfile } from "../src/lib/geo/country-profiles";
+import { COUNTRIES } from "../src/lib/geo/countries";
+import { currencyCodeForCountry, isValidCurrencyCode } from "../src/lib/currency/currencies";
 import { db } from "../src/db";
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
@@ -122,9 +124,35 @@ check("CONTROL: the country profiles carry genuinely different rates",
 // ---------------- 2. currency follows the country profile ----------------
 check("Saudi Arabia defaults to SAR", getProfileByCountryName("Saudi Arabia").defaultCurrencyCode === "SAR");
 check("the UAE defaults to AED", getProfileByCountryName("United Arab Emirates").defaultCurrencyCode === "AED");
-check("a country with no dedicated profile still resolves a currency",
-  getProfileByCountryName("Germany").defaultCurrencyCode.length === 3,
+// The USD fallback: before this, every country without a dedicated profile inherited GLOBAL's
+// "USD", so a German org was offered US dollars. Germany is the named case; the others cover the
+// three shapes — a country that represents its own currency in the catalog, one that shares a
+// currency (eurozone), and one that genuinely uses the dollar.
+check("Germany suggests EUR, not the old USD fallback",
+  getProfileByCountryName("Germany").defaultCurrencyCode === "EUR",
   getProfileByCountryName("Germany").defaultCurrencyCode);
+check("Japan suggests JPY", getProfileByCountryName("Japan").defaultCurrencyCode === "JPY",
+  getProfileByCountryName("Japan").defaultCurrencyCode);
+check("France suggests EUR too (a shared currency, not a representative country)",
+  getProfileByCountryName("France").defaultCurrencyCode === "EUR",
+  getProfileByCountryName("France").defaultCurrencyCode);
+check("Côte d'Ivoire suggests the West African CFA franc",
+  getProfileByCountryName("Côte d'Ivoire").defaultCurrencyCode === "XOF",
+  getProfileByCountryName("Côte d'Ivoire").defaultCurrencyCode);
+check("Ecuador still suggests USD — because Ecuador uses the dollar, not because we gave up",
+  getProfileByCountryName("Ecuador").defaultCurrencyCode === "USD");
+check("CONTROL: a country that is not in the catalog at all falls back to USD",
+  getCountryProfile("ZZ").defaultCurrencyCode === "USD", getCountryProfile("ZZ").defaultCurrencyCode);
+
+// Completeness, asserted rather than claimed: every country the picker offers must resolve to a
+// currency the catalog actually knows. Adding a country without deciding its currency fails here
+// instead of silently defaulting to dollars.
+const unresolved = COUNTRIES.filter((c) => {
+  const code = getCountryProfile(c.code).defaultCurrencyCode;
+  return !currencyCodeForCountry(c.code) || !isValidCurrencyCode(code);
+});
+check(`every one of the ${COUNTRIES.length} selectable countries resolves to a known currency`,
+  unresolved.length === 0, unresolved.slice(0, 6).map((c) => `${c.code} ${c.name}`).join(", "));
 
 // ---------------- 3. WHO SEES THE NOTICE ----------------
 // Each case is the same org differing in exactly one condition, so a passing "not shown" cannot be

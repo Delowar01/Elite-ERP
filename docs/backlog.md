@@ -118,6 +118,68 @@ PO/DN PDF address block, and a decision about whether existing vendors are ever 
 
 ---
 
+## Four browser suites assert UI that was deliberately removed
+
+**Status:** deferred, not started. They fail today. None of it is a product defect — the suites are
+out of date, and each one is asserting the *old* behaviour of a change that was made on purpose.
+
+Found while re-running the whole browser tier after registration gained required fields. Nineteen of
+the twenty-three suites pass. These four do not, and the failure text names the cause in every case:
+
+| Suite | Failing assertions | Why |
+|---|---|---|
+| `verify-draft-buttons.mjs` | 24, all naming "Print Preview" | Print was removed from the document action bar on purpose (the serverless-PDF rework replaced it with Download PDF). |
+| `verify-edit.mjs` | 1: `edit: Print Preview present` | Same removal. |
+| `verify-draft-func.mjs` | times out waiting for a "Print Preview" button in `.doc-action-bar` | Same removal. |
+| `verify-color-theme.mjs` | times out on `button.btn` containing "Primary button" | The Color Theme preview renders that sample as a styled `<span>`, not a `<button class="btn">` — changed by the per-mode-overrides rework (`company-panels.tsx:328`). |
+
+**Why this is worth an entry rather than a quick fix.** Three of them are one deletion away from
+correct — remove the Print assertions. But a suite that asserts a *removed* feature has been failing
+since the day that feature was removed, which means nobody has run the browser tier since. That is
+the actual finding: `verify:all` covers the twelve server-tier suites and the browser tier has no
+runner at all, so it rots silently. Deleting four assertions fixes the symptom and leaves the tier
+un-run.
+
+**Scope when picked up:** update the four suites to the current UI, then decide how the browser tier
+gets executed regularly — a `verify:browser` script that builds, starts a server, runs all
+twenty-three and tears down, is the obvious shape. `assert-fresh-build.mjs` already makes it safe to
+run them against a server someone else started, which was the missing precondition.
+
+---
+
+## Two Saudi-shaped defaults in `seedOrgDefaults` (pre-existing, not fallout)
+
+**Status:** deferred, not started. Both predate the multi-currency work and are unchanged by it.
+
+Registration now asks for a country and the seeded tax preset follows it (15% Saudi Arabia, 5% UAE,
+0% "Standard Tax" for the Global profile). That fix was in scope because asking the question is what
+made the hardcoded rate visible. These two were audited at the same time, found to be the same
+shape, and deliberately left alone — **they were already wrong before the change and are wrong in
+exactly the same way after it.** Whoever picks this up is fixing an old defect, not cleaning up.
+
+**1. `2100 VAT Payable` is seeded for every org.** `DEFAULT_CHART_OF_ACCOUNTS` gives every new
+organization a VAT Payable liability account, including one whose country profile has
+`taxSystem: "None"`. Harmless — nothing posts to it unless tax is charged — but confusing: an
+account named for a tax the org does not levy sits in its chart of accounts forever, and it is a
+system account, so it cannot be removed. Fixing it means making the seeded chart depend on the
+profile, which is a larger change than the tax preset was: the chart is referenced by code
+(`eq(accountsTable.code, "2100")`) in the posting paths, so an org without the account needs those
+paths to handle its absence rather than assume it.
+
+**2. Leave types seed Saudi Labor Law minimums.** `Annual 21` and `Sick 10` are the statutory
+minimums in Saudi Arabia, seeded for every org in every country. This is the more consequential of
+the two: it is a **compliance-shaped default in a module nobody has audited**, so a UAE or German
+org starts with entitlement numbers that look authoritative and are not theirs. Unlike the VAT
+account, this one is directly visible to whoever configures HR, and being silently wrong about
+statutory leave is worse than being obviously absent.
+
+**The decision when picked up:** either make leave types country-dependent (which needs leave
+entitlement data per country — real research, not a lookup we already have), or seed nothing and
+require the org to enter its own, which is honest but adds setup friction. Seeding one country's
+statutory minimums globally is the option that should not survive contact with the question.
+
+---
+
 ## ESLint does not pass, and a third of the failures are now tracked code
 
 **Status:** deferred, not started. Not urgent; the point is that it stops being ignorable.
