@@ -227,6 +227,22 @@ const DICT: Record<string, string> = {
   "Company": "شركة",
   "optional": "اختياري",
   "Select Country": "اختر الدولة",
+
+  // --- FX-1a: base currency at registration, and the one-time confirmation for older orgs ---
+  "Base currency": "العملة الأساسية",
+  "Select a country first": "اختر الدولة أولاً",
+  "Every report and ledger entry is kept in this currency. It cannot be changed once you post your first transaction.":
+    "تُحفظ جميع التقارير وقيود الدفاتر بهذه العملة، ولا يمكن تغييرها بعد ترحيل أول عملية.",
+  "Choose a valid country.": "اختر دولة صحيحة.",
+  "Check your base currency": "تحقّق من عملتك الأساسية",
+  "Your organization was created before we asked for a base currency, so it was set to":
+    "أُنشئت مؤسستك قبل أن نسأل عن العملة الأساسية، لذلك ضُبطت على",
+  "Every report and ledger entry is kept in this currency, and it cannot be changed once you post your first transaction. If it is wrong, change it now.":
+    "تُحفظ جميع التقارير وقيود الدفاتر بهذه العملة، ولا يمكن تغييرها بعد ترحيل أول عملية. إن كانت غير صحيحة فغيّرها الآن.",
+  "Review in Business Settings": "المراجعة في إعدادات الأعمال",
+  "{currency} is correct": "{currency} صحيحة",
+  "Dismiss": "إغلاق",
+
   "State / Province": "الولاية / المنطقة",
   "Select State / Province": "اختر الولاية / المنطقة",
   "District": "الحي",

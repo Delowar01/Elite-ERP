@@ -12,7 +12,14 @@ export const orgsTable = pgTable("orgs", {
   taxId: text("tax_id"),
   vatNumber: text("vat_number"),
   currency: text("currency").notNull().default("SAR"),
-  country: text("country"),
+  country: text("country"), // country NAME, e.g. "Saudi Arabia" — getProfileByCountryName derives the code
+  // Set the moment an org's base currency has been chosen deliberately: at registration, where the
+  // question is now asked, or by dismissing the one-time confirmation. Null therefore means exactly
+  // "this org was never asked" — a fact about the row rather than a cutoff date somebody has to
+  // keep correct. The population drains and never grows, since every new org is stamped on
+  // creation. The confirmation banner keys off this; FX-1b's lock does not (it keys off posted
+  // base amounts, which is a different question).
+  baseCurrencyConfirmedAt: timestamp("base_currency_confirmed_at"),
   defaultLanguage: text("default_language").notNull().default("en"), // en | ar
 
   // Country-profile overrides — only honored for the configurable Global profile (countries without

@@ -15,10 +15,17 @@ import {
   leaveTypesTable,
   expenseCategoriesTable,
 } from "@/db/schema";
+import { getProfileByCountryName } from "@/lib/geo/country-profiles";
 
 // Seeds the minimal defaults a new org needs to be immediately usable:
 // chart of accounts, document numbering sequences, a starter cash bank account, and common presets.
-export async function seedOrgDefaults(tx: Tx, orgId: number) {
+//
+// `country` is the org's country NAME as stored on `orgs.country`. It drives the seeded tax preset
+// only. Before registration asked for a country, the rate here was hardcoded to Saudi Arabia's 15%
+// and nobody could see it was wrong; now that the question is asked, ignoring the answer would be a
+// visible defect on an org's first day.
+export async function seedOrgDefaults(tx: Tx, orgId: number, country?: string | null) {
+  const profile = getProfileByCountryName(country);
   const insertedAccounts = await tx
     .insert(accountsTable)
     .values(
@@ -45,8 +52,10 @@ export async function seedOrgDefaults(tx: Tx, orgId: number) {
     })),
   );
 
+  // Rate and wording both follow the country profile: "Standard VAT" at 15% in Saudi Arabia, 5% in
+  // the UAE, and "Standard Tax" at 0% for the Global profile, whose tax system is unknown.
   await tx.insert(taxPresetsTable).values([
-    { orgId, name: "Standard VAT", ratePercent: "15" },
+    { orgId, name: `Standard ${profile.taxName}`, ratePercent: String(profile.defaultTaxRate) },
     { orgId, name: "Zero-rated", ratePercent: "0" },
   ]);
 

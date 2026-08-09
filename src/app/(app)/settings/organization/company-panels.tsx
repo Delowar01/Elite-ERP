@@ -47,7 +47,12 @@ import { updateBusinessDetailsAction, updateColorThemeAction, uploadLogoAction }
 
 export function BusinessDetailsForm({ locale, org }: { locale: Locale; org: Org }) {
   const [pending, startTransition] = useTransition();
-  const [country, setCountry] = useState(org.country ?? "Saudi Arabia");
+  // No fallback here. This used to read `org.country ?? "Saudi Arabia"`, which displayed a country
+  // that was not stored: every org registered before the country question existed has
+  // `country = NULL`, and this screen told its owner they had selected Saudi Arabia. They had no
+  // way to detect that, and saving anything else on the form would then write the guess for real.
+  // Null now renders as the empty placeholder, which is the truth.
+  const [country, setCountry] = useState(org.country ?? "");
   const [language, setLanguage] = useState(org.defaultLanguage);
   const [currency, setCurrency] = useState(org.currency);
   // Global-profile overrides (only shown/editable when the resolved profile is configurable).

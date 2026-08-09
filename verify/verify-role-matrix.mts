@@ -108,6 +108,11 @@ const DECLARED_FNS = new Set([
   "permanentlyDeleteClientAction", "permanentlyDeleteVendorAction", "permanentlyDeleteProductAction",
   "deletePaymentAction", "approveLeaveAction", "rejectLeaveAction",
   "updateOrgContactAction", "saveDocumentSequenceAction", "updateValidityDaysAction",
+  // Dismissing the one-time base-currency notice writes an org-level column, and only owners and
+  // admins can change the currency it concerns — so the notice is shown to nobody else, and this
+  // guard is what makes that a rule rather than a display choice. Same tier as the other
+  // org-settings writes above.
+  "confirmBaseCurrencyAction",
 ]);
 const DECLARED_AREAS = ["settings/presets", "settings/organization", "settings/team", "settings/compliance", "hr/payroll"];
 

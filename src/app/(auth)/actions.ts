@@ -13,6 +13,8 @@ import { validatePassword, DEFAULT_POLICY } from "@/lib/security/password-policy
 import { createSession } from "@/lib/security/session-store";
 import { verifyTotp } from "@/lib/security/totp";
 import { decryptField } from "@/lib/crypto/field-encryption";
+import { COUNTRIES } from "@/lib/geo/countries";
+import { isValidCurrencyCode } from "@/lib/currency/currencies";
 import bcrypt from "bcryptjs";
 
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 30; // 30 days
@@ -97,8 +99,17 @@ export async function registerAction(_prev: ActionState, formData: FormData): Pr
   const name = String(formData.get("name") ?? "").trim();
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const password = String(formData.get("password") ?? "");
+  const country = String(formData.get("country") ?? "").trim();
+  const currency = String(formData.get("currency") ?? "").trim().toUpperCase();
 
   if (!orgName || !name || !email || !password) return { error: "All fields are required." };
+
+  // Country and currency are asked here rather than left to the column default. `orgs.currency`
+  // defaults to SAR, which silently gave every non-Saudi org a Saudi base currency — and, once
+  // FX-1b lands, would silently lock it there. The country is stored as its NAME, matching what
+  // `getProfileByCountryName` reads everywhere else in the app.
+  if (!COUNTRIES.some((c) => c.name === country)) return { error: "Choose a valid country." };
+  if (!isValidCurrencyCode(currency)) return { error: "Choose a valid currency." };
   // First account uses the default enterprise policy; per-org policy applies to later members.
   const pwErrors = validatePassword(password, DEFAULT_POLICY);
   if (pwErrors.length > 0) return { error: pwErrors[0] };
@@ -109,16 +120,21 @@ export async function registerAction(_prev: ActionState, formData: FormData): Pr
   const passwordHash = await hashPassword(password);
 
   const { userId, orgId } = await db.transaction(async (tx) => {
-    const [org] = await tx.insert(orgsTable).values({ name: orgName }).returning();
+    const [org] = await tx
+      .insert(orgsTable)
+      // Stamped now because the question was just answered — this org never needs the one-time
+      // base-currency confirmation, which exists only for orgs created before it was asked.
+      .values({ name: orgName, country, currency, baseCurrencyConfirmedAt: new Date() })
+      .returning();
     const [user] = await tx
       .insert(usersTable)
       .values({ orgId: org.id, email, passwordHash, name, role: "owner" })
       .returning();
-    await seedOrgDefaults(tx, org.id);
+    await seedOrgDefaults(tx, org.id, country);
     return { userId: user.id, orgId: org.id };
   });
 
-  await recordAudit({ orgId, userId, userName: name }, { action: "org.registered", entityType: "org", entityId: orgId, newValue: { orgName, ownerEmail: email } });
+  await recordAudit({ orgId, userId, userName: name }, { action: "org.registered", entityType: "org", entityId: orgId, newValue: { orgName, ownerEmail: email, country, currency } });
   await recordSecurityEvent({ email, orgId, userId, type: "account.created", severity: "info", detail: "organization owner" });
 
   await issueSession(userId, orgId);

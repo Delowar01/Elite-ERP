@@ -12,6 +12,8 @@ import { formatMoneyNumber } from "@/lib/currency/currencies";
 import { ComboChart, Donut, Sparkline } from "./_shared/charts";
 import { KpiCard } from "./_shared/kpi-card";
 import { DashboardToolbar } from "./dashboard-toolbar";
+import { BaseCurrencyNotice } from "./base-currency-notice";
+import { getBaseCurrencyConfirmation } from "@/lib/base-currency";
 import { getKpis, getRevenueSeries, getInvoicesOverview, getCashFlow, getRecentActivity, getProjectsOverview, getHrSnapshot } from "./_shared/queries";
 
 function DashWidget({ col, row, children }: { col: number; row: number; children: React.ReactNode }) {
@@ -46,6 +48,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     getProjectsOverview(session.orgId),
     getHrSnapshot(session.orgId),
   ]);
+
+  const baseCurrency = await getBaseCurrencyConfirmation(session.orgId, session.role);
 
   const revenueSeries = revenue.map((p) => p.total);
   const revenueLabels = revenue.map((p) => p.label);
@@ -252,6 +256,11 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
 
   return (
     <div>
+      {/* Shown only to orgs that predate the base-currency question and have posted nothing.
+          Renders above the dashboard and blocks none of it. */}
+      {baseCurrency && (
+        <BaseCurrencyNotice locale={locale} currency={baseCurrency.currency} country={baseCurrency.country} />
+      )}
       <DashboardToolbar locale={locale} range={rangeKey} layout={prefs.layout} />
 
       <div className="dash-grid">
