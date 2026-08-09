@@ -118,31 +118,81 @@ PO/DN PDF address block, and a decision about whether existing vendors are ever 
 
 ---
 
-## `verify-proforma-payments` fails: stale suite, or a real payments defect?
+## `verify-vendor-inline` flaked once in a full browser-tier run
 
-**Status:** open, and it is the one entry here that might be a bug rather than a decision. It is the
-single red suite in `npm run verify:browser` (22 of 23 pass). **Not carried over from anything —
-the runner found it on its first full pass, which is the runner doing its job.**
+**Status:** observed once, not reproduced. Filed rather than ignored because an *intermittent* red
+erodes a runner exactly as effectively as a permanent one — it teaches people to re-run and see,
+which is the habit that makes a failing suite unreadable.
 
-Two clusters of failure:
+On the first full `npm run verify:browser` after the tier was repaired, this suite failed at 54s;
+it passes in 23–24s alone and passed in the very next full run (23/23). Playwright's log names the
+cause: a Radix dialog overlay —
 
-1. **Recording a payment against a proforma does nothing observable.** Five assertions fail: no
-   `payments` rows, no `paidAmount`, no journal entries, nothing in the payment history. The
-   `Record Payment` trigger it clicks *does* still exist (`proforma-detail-actions.tsx:90`), so
-   this is not a missing button — the interaction gets that far and no row appears.
-2. **It then dies waiting for a top-level `Convert to Invoice` button.** That one is explicable:
-   per-type convert buttons were replaced by the shared `ConvertMenu` dropdown, so this assertion
-   is stale in the same way the Print Preview ones were.
+```
+<div data-state="open" aria-hidden="true" class="fixed inset-0 z-50 …"> intercepts pointer events
+87 × waiting for element to be visible, enabled and stable
+```
 
-**Why it was not resolved on the spot.** Cluster 2 is clearly staleness. Cluster 1 is not clearly
-anything yet, and it touches money: a payment that appears to record but writes no row, no ledger
-entry and no `paidAmount` would be a serious defect, while a dialog whose field ids or submit
-button moved is a five-minute suite fix. Deciding which by editing the suite until it goes green is
-exactly the failure this project keeps writing rules about, so it stays red and named instead.
+So a dialog's closing animation was still covering the page when the next click was attempted. The
+suite waits with fixed `waitForTimeout` values, which is fine until the machine is busy — and a
+full tier run is exactly when it is busy, which is why it only appeared there.
 
-**Scope when picked up:** drive the proforma payment dialog by hand first and watch the database —
-if a payment records, the suite is stale and gets updated alongside the `ConvertMenu` selector; if
-it does not, stop and treat it as a payments bug with its own task. Do not start from the suite.
+**Fix when picked up:** replace the fixed waits around dialog open/close in this suite with a wait
+on the overlay actually detaching (`locator('[data-state="open"]').waitFor({ state: "detached" })`
+or Playwright's auto-waiting on the target rather than a sleep). Worth auditing the other
+dialog-driving suites for the same pattern while there — `verify-confirm-e2e`, `verify-dirty-core`
+and `verify-proforma-payments` all click through dialogs on fixed timeouts.
+
+---
+
+## Customer advances post to Accounts Receivable, and the subledger cannot be reconciled
+
+**Status:** open, blocked on an accountant. **Sequenced between FX-6 and FX-7** — deliberately not
+part of FX-7. Do not fold it in.
+
+Recording a payment against a proforma invoice posts **`Dr 1000 Cash / Cr 1100 Accounts
+Receivable`** (`finance/payments/actions.ts`, the `sourceType === "proforma"` branch). The entry
+balances, and the mechanism works correctly — this was confirmed by driving the flow by hand. The
+problem is which account it lands in.
+
+**Why AR is the wrong account.** A proforma never created a receivable: no invoice was posted, so
+nothing ever debited AR for that customer. Crediting AR on the advance therefore drives that
+customer's receivable **negative** for something that was never a receivable. A customer advance is
+a liability — the business owes goods, not money — and conventionally belongs in Customer Deposits
+or Unearned Revenue.
+
+**The reconciliation gap, which is the proof rather than the opinion.** `getReceivableAging`
+(`src/lib/finance-reports.ts`) reads **`sales_invoices` only** — proformas appear in it at no
+status. So GL account 1100 and the AR aging subledger disagree by the total of all proforma
+advances, and nothing in the app can explain the difference. That is a subledger that cannot be
+reconciled to its control account, which is a defect rather than a stylistic preference.
+
+**Two things to establish before anyone writes code:**
+
+1. **Get it confirmed by an accountant.** The account structure and the reclassification-on-
+   conversion mechanics deserve a professional eye; nobody on this side is one.
+2. **Ask about the Saudi VAT treatment of advance payments, explicitly.** Receiving an advance may
+   trigger a tax point in KSA — meaning output VAT could be due **on receipt**, not on the later
+   invoice. If so, a proforma advance is not only a liability posting but also needs a VAT entry,
+   which changes the design materially. Ask the question directly rather than deriving an answer
+   from this codebase.
+
+**Why it sits between FX-6 and FX-7 rather than inside FX-7:**
+
+- Fixing account placement *after* payments store base amounts means re-posting entries that carry
+  conversion data. Getting the account right first, then adding currency to a correct posting, is
+  cheaper.
+- FX-7 is a currency question with a clean answer once decided. This is an accounting-design
+  question with a VAT dependency and an outside party in the loop. Bundling them makes the currency
+  work wait on an accountant.
+- Production has essentially no data — one posted journal entry and no known proforma advances. The
+  migration cost is zero today and non-zero the moment a customer records an advance. Same
+  free-hand argument as the base-currency lock: spend it while it is free.
+
+**Scope when picked up:** the account (likely a new `2300 Customer Advances` liability), the
+reclassification when a proforma converts to an invoice — the conversion-transfer path in
+`recordPaymentAction` moves with it — whatever the VAT answer requires, and a decision about
+whether advances should appear in any aging report at all.
 
 ---
 

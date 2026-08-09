@@ -42,7 +42,14 @@ async function recordPayment(pfId, amount){
   await p.locator("#pay-bank-account").click(); await p.waitForTimeout(150);
   await p.getByRole("option",{name:new RegExp(bankName)}).first().click(); await p.waitForTimeout(150);
   await p.getByRole("button",{name:/^Save$/}).click();
-  await p.waitForTimeout(900);
+  await p.waitForTimeout(600);
+  // Save does not call the action: RecordPaymentDialog's submit() opens the shared confirmation
+  // ("Record Payment against Proforma Invoice PI-xxx?") and recordPaymentAction only runs from its
+  // onConfirm. This suite predates the confirmation policy and stopped at Save, so nothing ever
+  // posted — which read exactly like a broken payment path. The confirm verb comes from
+  // confirm-policy.ts ("payment.record" -> "Record Payment").
+  await p.getByRole("dialog").last().getByRole("button",{name:/^Record Payment$/}).click();
+  await p.waitForTimeout(1200);
 }
 
 console.log("\n== Record full + multiple partial payments (#1,#2,#3) ==");
@@ -61,7 +68,13 @@ await p.goto(`${BASE}/sales/proforma/${A}`,{waitUntil:"networkidle"}); await p.w
 ok("Payment history visible after refresh (2 rows)", (await p.locator("text=Payment History").count())>=1 && (await p.locator("table tr, table tbody tr").filter({hasText:bankName}).count())>=2);
 
 console.log("\n== Convert to Sales Invoice — transfer (#4,#5,#6,#7,#8) ==");
-await p.getByRole("button",{name:/^Convert to Invoice$/}).click();
+// Per-type convert buttons were replaced by the shared ConvertMenu: a "Convert to…" dropdown whose
+// items go through the same confirmation ("document.convert" -> verb "Convert").
+await p.getByRole("button",{name:/^Convert to…$/}).click();
+await p.waitForTimeout(400);
+await p.getByRole("menuitem",{name:/Invoice/}).first().click();
+await p.waitForTimeout(500);
+await p.getByRole("dialog").last().getByRole("button",{name:/^Convert$/}).click();
 await p.waitForURL(/\/sales\/invoices\/\d+$/,{timeout:20000});
 const invId=Number(p.url().match(/\/(\d+)$/)[1]);
 const {rows:inv}=await pool.query("select paid_amount,total,status from sales_invoices where id=$1",[invId]);
@@ -95,7 +108,13 @@ console.log("\n== Full payment → paid status ==");
 const Bp = await mkProforma("500.00");
 await recordPayment(Bp, 500);
 await p.goto(`${BASE}/sales/proforma/${Bp}`,{waitUntil:"networkidle"}); await p.waitForTimeout(300);
-await p.getByRole("button",{name:/^Convert to Invoice$/}).click();
+// Per-type convert buttons were replaced by the shared ConvertMenu: a "Convert to…" dropdown whose
+// items go through the same confirmation ("document.convert" -> verb "Convert").
+await p.getByRole("button",{name:/^Convert to…$/}).click();
+await p.waitForTimeout(400);
+await p.getByRole("menuitem",{name:/Invoice/}).first().click();
+await p.waitForTimeout(500);
+await p.getByRole("dialog").last().getByRole("button",{name:/^Convert$/}).click();
 await p.waitForURL(/\/sales\/invoices\/\d+$/,{timeout:20000});
 const invB=Number(p.url().match(/\/(\d+)$/)[1]);
 const {rows:bR}=await pool.query("select paid_amount,total,status from sales_invoices where id=$1",[invB]);

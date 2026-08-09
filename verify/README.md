@@ -54,6 +54,30 @@ itself:
 When you add a suite, ask what it would print if it silently did not run — and if the answer is
 "something plausible", fix the harness, not the suite.
 
+### The mirror image: a failing suite that is also not telling you what it looks like
+
+The same trap runs the other way, and it nearly produced a much worse report than any of the four
+above. `verify-proforma-payments` failed with no `payments` row, no journal entry, no `paidAmount`
+and no error message. Driving the dialog by hand reproduced it exactly: the form filled, Save was
+enabled, the click landed, **no POST was issued at all**, and the database was untouched. A second
+probe against a *sales invoice* — a different document type, a different detail page — reproduced
+it identically. Two independent probes agreeing, pointing at a silent data-loss path across every
+document type that records payments.
+
+That conclusion was wrong. `RecordPaymentDialog`'s submit handler does not call the action; it
+calls `confirm({...})`, and the action runs only from `onConfirm`. Clicking Save opens the shared
+confirmation dialog, which the suite — written before the confirmation policy existed — never
+clicks. The "dialog still open" the probes kept reporting *was* the confirmation, and its buttons
+had been misread as the payment form's own.
+
+**A silent no-op and an unconfirmed confirmation are indistinguishable from outside.** Both show a
+live form, an enabled button, a click that lands, no network call and no database change. What
+separated them was reading the submit handler — five lines of source — instead of adding a third
+probe. Reproducing a symptom more times raises confidence without adding evidence: two probes
+agreeing on a wrong conclusion is not corroboration, it is the same mistake twice.
+
+When a UI-driven suite says a write did not happen, read the write path before believing it.
+
 ## The standing rule behind both flags
 
 **Anything that must happen before a module's dependencies are evaluated cannot live inside that
