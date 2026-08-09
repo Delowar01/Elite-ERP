@@ -23,13 +23,13 @@ export const proformaInvoicesTable = pgTable("proforma_invoices", {
   // Payments recorded against this proforma (Issue #14). paidAmount is the running total; on
   // conversion to a Sales Invoice the payments transfer and convertedInvoiceId links to it (after
   // which the proforma's payment history is shown read-only).
-  paidAmount: numeric("paid_amount", { precision: 14, scale: 2 }).notNull().default("0"),
+  paidAmount: numeric("paid_amount", { precision: 15, scale: 3 }).notNull().default("0"),
   convertedInvoiceId: integer("converted_invoice_id"),
   issueDate: date("issue_date").notNull(),
-  subtotal: numeric("subtotal", { precision: 14, scale: 2 }).notNull().default("0"),
-  discount: numeric("discount", { precision: 14, scale: 2 }).notNull().default("0"),
-  taxTotal: numeric("tax_total", { precision: 14, scale: 2 }).notNull().default("0"),
-  total: numeric("total", { precision: 14, scale: 2 }).notNull().default("0"),
+  subtotal: numeric("subtotal", { precision: 15, scale: 3 }).notNull().default("0"),
+  discount: numeric("discount", { precision: 15, scale: 3 }).notNull().default("0"),
+  taxTotal: numeric("tax_total", { precision: 15, scale: 3 }).notNull().default("0"),
+  total: numeric("total", { precision: 15, scale: 3 }).notNull().default("0"),
   notes: text("notes"),
   terms: jsonb("terms").$type<{ text: string; groupId: number | null; groupName: string | null }[]>(),
   bankAccounts: jsonb("bank_accounts").$type<DocBankAccount[]>(),
@@ -66,8 +66,8 @@ export const proformaInvoiceItemsTable = pgTable("proforma_invoice_items", {
   customFields: jsonb("custom_fields"),
   description: text("description"),
   quantity: numeric("quantity", { precision: 12, scale: 2 }).notNull().default("1"),
-  unitPrice: numeric("unit_price", { precision: 14, scale: 2 }).notNull().default("0"),
+  unitPrice: numeric("unit_price", { precision: 15, scale: 3 }).notNull().default("0"),
   taxRatePercent: numeric("tax_rate_percent", { precision: 5, scale: 2 }).notNull().default("15"),
-  lineTotal: numeric("line_total", { precision: 14, scale: 2 }).notNull().default("0"),
+  lineTotal: numeric("line_total", { precision: 15, scale: 3 }).notNull().default("0"),
 });
 export type ProformaInvoiceItem = typeof proformaInvoiceItemsTable.$inferSelect;

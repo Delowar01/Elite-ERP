@@ -24,10 +24,10 @@ export const salesOrdersTable = pgTable("sales_orders", {
   status: text("status").notNull().default("draft"), // draft | confirmed | fulfilled | cancelled
   issueDate: date("issue_date").notNull(),
   expectedDate: date("expected_date"),
-  subtotal: numeric("subtotal", { precision: 14, scale: 2 }).notNull().default("0"),
-  discount: numeric("discount", { precision: 14, scale: 2 }).notNull().default("0"),
-  taxTotal: numeric("tax_total", { precision: 14, scale: 2 }).notNull().default("0"),
-  total: numeric("total", { precision: 14, scale: 2 }).notNull().default("0"),
+  subtotal: numeric("subtotal", { precision: 15, scale: 3 }).notNull().default("0"),
+  discount: numeric("discount", { precision: 15, scale: 3 }).notNull().default("0"),
+  taxTotal: numeric("tax_total", { precision: 15, scale: 3 }).notNull().default("0"),
+  total: numeric("total", { precision: 15, scale: 3 }).notNull().default("0"),
   notes: text("notes"),
   terms: jsonb("terms").$type<{ text: string; groupId: number | null; groupName: string | null }[]>(),
   bankAccounts: jsonb("bank_accounts").$type<DocBankAccount[]>(),
@@ -64,8 +64,8 @@ export const salesOrderItemsTable = pgTable("sales_order_items", {
   customFields: jsonb("custom_fields"),
   description: text("description"),
   quantity: numeric("quantity", { precision: 12, scale: 2 }).notNull().default("1"),
-  unitPrice: numeric("unit_price", { precision: 14, scale: 2 }).notNull().default("0"),
+  unitPrice: numeric("unit_price", { precision: 15, scale: 3 }).notNull().default("0"),
   taxRatePercent: numeric("tax_rate_percent", { precision: 5, scale: 2 }).notNull().default("15"),
-  lineTotal: numeric("line_total", { precision: 14, scale: 2 }).notNull().default("0"),
+  lineTotal: numeric("line_total", { precision: 15, scale: 3 }).notNull().default("0"),
 });
 export type SalesOrderItem = typeof salesOrderItemsTable.$inferSelect;

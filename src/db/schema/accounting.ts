@@ -57,8 +57,8 @@ export const journalLinesTable = pgTable("journal_lines", {
   accountId: integer("account_id")
     .notNull()
     .references(() => accountsTable.id),
-  debit: numeric("debit", { precision: 14, scale: 2 }).notNull().default("0"),
-  credit: numeric("credit", { precision: 14, scale: 2 }).notNull().default("0"),
+  debit: numeric("debit", { precision: 15, scale: 3 }).notNull().default("0"),
+  credit: numeric("credit", { precision: 15, scale: 3 }).notNull().default("0"),
   memo: text("memo"),
 });
 

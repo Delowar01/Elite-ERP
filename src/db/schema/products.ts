@@ -17,8 +17,8 @@ export const productsTable = pgTable(
     // Item image, saved to the master when a document line is promoted to a product ("Save this item").
     imageUrl: text("image_url"),
     unit: text("unit").notNull().default("pcs"),
-    unitPrice: numeric("unit_price", { precision: 14, scale: 2 }).notNull().default("0"),
-    costPrice: numeric("cost_price", { precision: 14, scale: 2 }),
+    unitPrice: numeric("unit_price", { precision: 15, scale: 3 }).notNull().default("0"),
+    costPrice: numeric("cost_price", { precision: 15, scale: 3 }),
     taxRatePercent: numeric("tax_rate_percent", { precision: 5, scale: 2 }).notNull().default("15"),
     quantityOnHand: integer("quantity_on_hand").notNull().default(0),
     reorderLevel: integer("reorder_level").notNull().default(0),

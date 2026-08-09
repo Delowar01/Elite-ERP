@@ -27,7 +27,7 @@ export const bankAccountsTable = pgTable("bank_accounts", {
   glAccountId: integer("gl_account_id")
     .notNull()
     .references(() => accountsTable.id),
-  openingBalance: numeric("opening_balance", { precision: 14, scale: 2 }).notNull().default("0"),
+  openingBalance: numeric("opening_balance", { precision: 15, scale: 3 }).notNull().default("0"),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
@@ -44,7 +44,7 @@ export const paymentsTable = pgTable("payments", {
   bankAccountId: integer("bank_account_id")
     .notNull()
     .references(() => bankAccountsTable.id),
-  amount: numeric("amount", { precision: 14, scale: 2 }).notNull(),
+  amount: numeric("amount", { precision: 15, scale: 3 }).notNull(),
   paymentDate: date("payment_date").notNull(),
   method: text("method"), // cash | bank_transfer | card | cheque
   reference: text("reference"),
@@ -73,8 +73,8 @@ export const expensesTable = pgTable("expenses", {
   vendorId: integer("vendor_id").references(() => vendorsTable.id),
   projectId: integer("project_id").references(() => projectsTable.id),
   description: text("description"),
-  amount: numeric("amount", { precision: 14, scale: 2 }).notNull(),
-  taxAmount: numeric("tax_amount", { precision: 14, scale: 2 }).notNull().default("0"),
+  amount: numeric("amount", { precision: 15, scale: 3 }).notNull(),
+  taxAmount: numeric("tax_amount", { precision: 15, scale: 3 }).notNull().default("0"),
   expenseDate: date("expense_date").notNull(),
   paymentMethod: text("payment_method"),
   receiptUrl: text("receipt_url"),

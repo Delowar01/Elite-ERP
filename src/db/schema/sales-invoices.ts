@@ -29,11 +29,11 @@ export const salesInvoicesTable = pgTable("sales_invoices", {
   // shown on the document and re-selected when editing. The due date itself stays independently
   // editable, so this records which term was chosen — it is not a live formula.
   paymentTermPresetId: integer("payment_term_preset_id").references(() => paymentTermPresetsTable.id, { onDelete: "set null" }),
-  subtotal: numeric("subtotal", { precision: 14, scale: 2 }).notNull().default("0"),
-  discount: numeric("discount", { precision: 14, scale: 2 }).notNull().default("0"),
-  taxTotal: numeric("tax_total", { precision: 14, scale: 2 }).notNull().default("0"),
-  total: numeric("total", { precision: 14, scale: 2 }).notNull().default("0"),
-  paidAmount: numeric("paid_amount", { precision: 14, scale: 2 }).notNull().default("0"),
+  subtotal: numeric("subtotal", { precision: 15, scale: 3 }).notNull().default("0"),
+  discount: numeric("discount", { precision: 15, scale: 3 }).notNull().default("0"),
+  taxTotal: numeric("tax_total", { precision: 15, scale: 3 }).notNull().default("0"),
+  total: numeric("total", { precision: 15, scale: 3 }).notNull().default("0"),
+  paidAmount: numeric("paid_amount", { precision: 15, scale: 3 }).notNull().default("0"),
   notes: text("notes"),
   terms: jsonb("terms").$type<{ text: string; groupId: number | null; groupName: string | null }[]>(),
   bankAccounts: jsonb("bank_accounts").$type<DocBankAccount[]>(),
@@ -77,8 +77,8 @@ export const salesInvoiceItemsTable = pgTable("sales_invoice_items", {
   customFields: jsonb("custom_fields"),
   description: text("description"),
   quantity: numeric("quantity", { precision: 12, scale: 2 }).notNull().default("1"),
-  unitPrice: numeric("unit_price", { precision: 14, scale: 2 }).notNull().default("0"),
+  unitPrice: numeric("unit_price", { precision: 15, scale: 3 }).notNull().default("0"),
   taxRatePercent: numeric("tax_rate_percent", { precision: 5, scale: 2 }).notNull().default("15"),
-  lineTotal: numeric("line_total", { precision: 14, scale: 2 }).notNull().default("0"),
+  lineTotal: numeric("line_total", { precision: 15, scale: 3 }).notNull().default("0"),
 });
 export type SalesInvoiceItem = typeof salesInvoiceItemsTable.$inferSelect;

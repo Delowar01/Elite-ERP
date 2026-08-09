@@ -15,7 +15,7 @@ export const projectsTable = pgTable("projects", {
   status: text("status").notNull().default("planned"), // planned | active | on_hold | completed | cancelled
   startDate: date("start_date"),
   endDate: date("end_date"),
-  budget: numeric("budget", { precision: 14, scale: 2 }),
+  budget: numeric("budget", { precision: 15, scale: 3 }),
   description: text("description"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),

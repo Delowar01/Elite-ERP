@@ -99,9 +99,9 @@ export const salaryStructuresTable = pgTable("salary_structures", {
   employeeId: integer("employee_id")
     .notNull()
     .references(() => employeesTable.id, { onDelete: "cascade" }),
-  basicSalary: numeric("basic_salary", { precision: 12, scale: 2 }).notNull(),
-  allowances: numeric("allowances", { precision: 12, scale: 2 }).notNull().default("0"),
-  deductions: numeric("deductions", { precision: 12, scale: 2 }).notNull().default("0"),
+  basicSalary: numeric("basic_salary", { precision: 15, scale: 3 }).notNull(),
+  allowances: numeric("allowances", { precision: 15, scale: 3 }).notNull().default("0"),
+  deductions: numeric("deductions", { precision: 15, scale: 3 }).notNull().default("0"),
   effectiveFrom: date("effective_from").notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
@@ -140,11 +140,11 @@ export const payslipsTable = pgTable("payslips", {
   employeeId: integer("employee_id")
     .notNull()
     .references(() => employeesTable.id),
-  basicSalary: numeric("basic_salary", { precision: 12, scale: 2 }).notNull(),
-  allowances: numeric("allowances", { precision: 12, scale: 2 }).notNull().default("0"),
-  deductions: numeric("deductions", { precision: 12, scale: 2 }).notNull().default("0"),
-  grossPay: numeric("gross_pay", { precision: 12, scale: 2 }).notNull(),
-  netPay: numeric("net_pay", { precision: 12, scale: 2 }).notNull(),
+  basicSalary: numeric("basic_salary", { precision: 15, scale: 3 }).notNull(),
+  allowances: numeric("allowances", { precision: 15, scale: 3 }).notNull().default("0"),
+  deductions: numeric("deductions", { precision: 15, scale: 3 }).notNull().default("0"),
+  grossPay: numeric("gross_pay", { precision: 15, scale: 3 }).notNull(),
+  netPay: numeric("net_pay", { precision: 15, scale: 3 }).notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 export type Payslip = typeof payslipsTable.$inferSelect;

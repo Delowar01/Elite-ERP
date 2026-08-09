@@ -1,3 +1,4 @@
+import { amountInWordsAr, amountInWordsEn } from "@/lib/currency/amount-words";
 export type LineItemInput = {
   quantity: string;
   unitPrice: string;
@@ -33,118 +34,27 @@ export function fmt(n: string | number) {
   return Number(n).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-const ONES_EN = ["", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten",
-  "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen", "Seventeen", "Eighteen", "Nineteen"];
-const TENS_EN = ["", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"];
 
-function threeDigitsEn(n: number): string {
-  const parts: string[] = [];
-  if (n >= 100) {
-    parts.push(`${ONES_EN[Math.floor(n / 100)]} Hundred`);
-    n %= 100;
-  }
-  if (n >= 20) {
-    parts.push(TENS_EN[Math.floor(n / 10)] + (n % 10 ? `-${ONES_EN[n % 10].toLowerCase()}` : ""));
-  } else if (n > 0) {
-    parts.push(ONES_EN[n]);
-  }
-  return parts.join(" ");
-}
 
-function integerToWordsEn(n: number): string {
-  if (n === 0) return "Zero";
-  const groups: [number, string][] = [
-    [1_000_000_000, "Billion"],
-    [1_000_000, "Million"],
-    [1_000, "Thousand"],
-    [1, ""],
-  ];
-  const parts: string[] = [];
-  for (const [value, label] of groups) {
-    if (n >= value) {
-      const count = Math.floor(n / value);
-      parts.push(label ? `${threeDigitsEn(count)} ${label}` : threeDigitsEn(count));
-      n %= value;
-    }
-  }
-  return parts.join(" ");
-}
 
-const ONES_AR = ["", "واحد", "اثنان", "ثلاثة", "أربعة", "خمسة", "ستة", "سبعة", "ثمانية", "تسعة", "عشرة",
-  "أحد عشر", "اثنا عشر", "ثلاثة عشر", "أربعة عشر", "خمسة عشر", "ستة عشر", "سبعة عشر", "ثمانية عشر", "تسعة عشر"];
-const TENS_AR = ["", "", "عشرون", "ثلاثون", "أربعون", "خمسون", "ستون", "سبعون", "ثمانون", "تسعون"];
-const HUNDREDS_AR = ["", "مائة", "مائتان", "ثلاثمائة", "أربعمائة", "خمسمائة", "ستمائة", "سبعمائة", "ثمانمائة", "تسعمائة"];
 
-function threeDigitsAr(n: number): string {
-  const parts: string[] = [];
-  if (n >= 100) {
-    parts.push(HUNDREDS_AR[Math.floor(n / 100)]);
-    n %= 100;
-  }
-  if (n >= 20) {
-    const tens = TENS_AR[Math.floor(n / 10)];
-    const ones = n % 10;
-    parts.push(ones ? `${ONES_AR[ones]} و${tens}` : tens);
-  } else if (n > 0) {
-    parts.push(ONES_AR[n]);
-  }
-  return parts.join(" و");
-}
 
-function integerToWordsAr(n: number): string {
-  if (n === 0) return "صفر";
-  const groups: [number, string, string][] = [
-    [1_000_000_000, "مليار", "مليارات"],
-    [1_000_000, "مليون", "ملايين"],
-    [1_000, "ألف", "آلاف"],
-    [1, "", ""],
-  ];
-  const parts: string[] = [];
-  for (const [value, singular, plural] of groups) {
-    if (n >= value) {
-      const count = Math.floor(n / value);
-      if (!singular) {
-        parts.push(threeDigitsAr(count));
-      } else if (count === 1) {
-        parts.push(singular);
-      } else if (count === 2) {
-        parts.push(singular === "ألف" ? "ألفان" : singular === "مليون" ? "مليونان" : "مليارتان");
-      } else if (count <= 10) {
-        parts.push(`${threeDigitsAr(count)} ${plural}`);
-      } else {
-        parts.push(`${threeDigitsAr(count)} ${singular}`);
-      }
-      n %= value;
-    }
-  }
-  return parts.join(" و");
-}
 
 // Amount in words for the document's currency. Defaults to Saudi Riyal (its subunit is the Halala)
 // to preserve the original SAR wording exactly; other currencies use their name + a generic
 // hundredths subunit ("and NN/100"), since subunit names vary per currency.
+/**
+ * Amount in words. Delegates to `@/lib/currency/amount-words`, which owns the Arabic grammar
+ * (numerals from n2words, nouns from the reviewed table) and derives the minor unit from the
+ * currency rather than assuming hundredths. Kept as a re-export so the ~10 document call sites did
+ * not all have to move at once.
+ */
 export function amountInWords(
   amount: string | number,
   locale: "en" | "ar",
   currency: { code: string; name: string } = { code: "SAR", name: "Saudi Riyal" },
 ): string {
-  const value = Number(amount) || 0;
-  const whole = Math.floor(value);
-  const frac = Math.round((value - whole) * 100);
-  const isSar = currency.code.toUpperCase() === "SAR";
-  if (locale === "ar") {
-    const wholeWords = integerToWordsAr(whole);
-    const unit = isSar ? "ريال سعودي" : currency.name;
-    const base = `فقط ${wholeWords} ${unit}`;
-    if (frac <= 0) return `${base} لا غير`;
-    return isSar
-      ? `${base} و${integerToWordsAr(frac)} هللة لا غير`
-      : `${base} و${integerToWordsAr(frac)}/100 لا غير`;
-  }
-  const wholeWords = integerToWordsEn(whole);
-  const base = `${wholeWords} ${isSar ? "Saudi Riyal" : currency.name}`;
-  if (frac <= 0) return `${base} Only`;
-  return isSar
-    ? `${base} and ${integerToWordsEn(frac)} Halalas Only`
-    : `${base} and ${integerToWordsEn(frac)}/100 Only`;
+  return locale === "ar"
+    ? amountInWordsAr(amount, currency.code, currency.name)
+    : amountInWordsEn(amount, currency.code, currency.name);
 }

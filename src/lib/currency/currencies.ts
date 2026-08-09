@@ -20,6 +20,20 @@ export type Currency = {
   symbolValue: string;   // text symbol, or an app-relative asset path when symbolType === "asset"
   symbolFallback: string; // shown when no usable symbol is available (always the ISO code)
   decimalPlaces: number; // ISO 4217 minor units (0, 2 or 3)
+  /**
+   * The name of the currency's minor unit, in English and Arabic — "halala"/"هللة", "fils"/"فلس".
+   * Used only by `amountInWords`.
+   *
+   * **Null for most currencies, deliberately.** These are populated where they can be sourced: the
+   * GCC six and the three majors. Generating bilingual subunit names for ~180 currencies would mean
+   * inventing Arabic words that cannot be verified, and a plausible-looking wrong word in a language
+   * the reader trusts is worse than an honest fallback — `amountInWords` says "and NN/100" when this
+   * is null, which is correct if unlovely.
+   *
+   * **The divisor is NOT stored here.** It is `10 ** decimalPlaces`. Storing "100" or "1000"
+   * alongside `decimalPlaces` would be the same fact in two places, free to disagree.
+   */
+  subunitName?: { en: string; ar: string } | null;
   isActive: boolean;
 };
 
@@ -69,6 +83,7 @@ function c(
   currencyName: string,
   symbol: string,
   decimalPlaces = 2,
+  subunitName: { en: string; ar: string } | null = null,
 ): Currency {
   return {
     countryCode,
@@ -79,9 +94,21 @@ function c(
     symbolValue: symbol,
     symbolFallback: currencyCode,
     decimalPlaces,
+    subunitName,
     isActive: true,
   };
 }
+
+// Minor-unit names, English and Arabic, for the currencies whose wording can actually be sourced:
+// the six GCC markets and the three majors. Everything else stays null and falls back to "and
+// NN/100" in amountInWords — see the note on Currency.subunitName for why that is the honest choice.
+// The divisor is never here: it is 10 ** decimalPlaces.
+const HALALA = { en: "halala", ar: "هللة" };
+const FILS = { en: "fils", ar: "فلس" };
+const DIRHAM_SUB = { en: "dirham", ar: "درهم" };
+const BAISA = { en: "baisa", ar: "بيسة" };
+const CENT = { en: "cent", ar: "سنت" };
+const PENNY = { en: "penny", ar: "بنس" };
 
 export const CURRENCIES: Currency[] = [
   // Saudi Arabia — official SAMA new symbol, rendered from the locally-stored asset.
@@ -94,9 +121,10 @@ export const CURRENCIES: Currency[] = [
     symbolValue: SAR_SYMBOL_ASSET,
     symbolFallback: "SAR",
     decimalPlaces: 2,
+    subunitName: HALALA,
     isActive: true,
   },
-  c("AE", "United Arab Emirates", "AED", "UAE Dirham", "د.إ"),
+  c("AE", "United Arab Emirates", "AED", "UAE Dirham", "د.إ", 2, FILS),
   c("AF", "Afghanistan", "AFN", "Afghan Afghani", "؋"),
   c("AL", "Albania", "ALL", "Albanian Lek", "L"),
   c("AM", "Armenia", "AMD", "Armenian Dram", "֏"),
@@ -110,7 +138,7 @@ export const CURRENCIES: Currency[] = [
   c("BB", "Barbados", "BBD", "Barbadian Dollar", "$"),
   c("BD", "Bangladesh", "BDT", "Bangladeshi Taka", "৳"),
   c("BG", "Bulgaria", "BGN", "Bulgarian Lev", "лв"),
-  c("BH", "Bahrain", "BHD", "Bahraini Dinar", "", 3),
+  c("BH", "Bahrain", "BHD", "Bahraini Dinar", "", 3, FILS),
   c("BI", "Burundi", "BIF", "Burundian Franc", "FBu", 0),
   c("BM", "Bermuda", "BMD", "Bermudian Dollar", "$"),
   c("BN", "Brunei", "BND", "Brunei Dollar", "$"),
@@ -138,10 +166,10 @@ export const CURRENCIES: Currency[] = [
   c("EG", "Egypt", "EGP", "Egyptian Pound", "£"),
   c("ER", "Eritrea", "ERN", "Eritrean Nakfa", "Nfk"),
   c("ET", "Ethiopia", "ETB", "Ethiopian Birr", "Br"),
-  c("EU", "European Union", "EUR", "Euro", "€"),
+  c("EU", "European Union", "EUR", "Euro", "€", 2, CENT),
   c("FJ", "Fiji", "FJD", "Fijian Dollar", "$"),
   c("FK", "Falkland Islands", "FKP", "Falkland Islands Pound", "£"),
-  c("GB", "United Kingdom", "GBP", "Pound Sterling", "£"),
+  c("GB", "United Kingdom", "GBP", "Pound Sterling", "£", 2, PENNY),
   c("GE", "Georgia", "GEL", "Georgian Lari", "₾"),
   c("GH", "Ghana", "GHS", "Ghanaian Cedi", "₵"),
   c("GI", "Gibraltar", "GIP", "Gibraltar Pound", "£"),
@@ -168,7 +196,7 @@ export const CURRENCIES: Currency[] = [
   c("KM", "Comoros", "KMF", "Comorian Franc", "CF", 0),
   c("KP", "North Korea", "KPW", "North Korean Won", "₩"),
   c("KR", "South Korea", "KRW", "South Korean Won", "₩", 0),
-  c("KW", "Kuwait", "KWD", "Kuwaiti Dinar", "", 3),
+  c("KW", "Kuwait", "KWD", "Kuwaiti Dinar", "", 3, FILS),
   c("KY", "Cayman Islands", "KYD", "Cayman Islands Dollar", "$"),
   c("KZ", "Kazakhstan", "KZT", "Kazakhstani Tenge", "₸"),
   c("LA", "Laos", "LAK", "Lao Kip", "₭"),
@@ -197,7 +225,7 @@ export const CURRENCIES: Currency[] = [
   c("NO", "Norway", "NOK", "Norwegian Krone", "kr"),
   c("NP", "Nepal", "NPR", "Nepalese Rupee", "₨"),
   c("NZ", "New Zealand", "NZD", "New Zealand Dollar", "$"),
-  c("OM", "Oman", "OMR", "Omani Rial", "", 3),
+  c("OM", "Oman", "OMR", "Omani Rial", "", 3, BAISA),
   c("PA", "Panama", "PAB", "Panamanian Balboa", "B/."),
   c("PE", "Peru", "PEN", "Peruvian Sol", "S/"),
   c("PG", "Papua New Guinea", "PGK", "Papua New Guinean Kina", "K"),
@@ -205,7 +233,7 @@ export const CURRENCIES: Currency[] = [
   c("PK", "Pakistan", "PKR", "Pakistani Rupee", "₨"),
   c("PL", "Poland", "PLN", "Polish Złoty", "zł"),
   c("PY", "Paraguay", "PYG", "Paraguayan Guaraní", "₲", 0),
-  c("QA", "Qatar", "QAR", "Qatari Riyal", "ر.ق"),
+  c("QA", "Qatar", "QAR", "Qatari Riyal", "ر.ق", 2, DIRHAM_SUB),
   c("RO", "Romania", "RON", "Romanian Leu", "lei"),
   c("RS", "Serbia", "RSD", "Serbian Dinar", "дин."),
   c("RU", "Russia", "RUB", "Russian Ruble", "₽"),
@@ -234,7 +262,7 @@ export const CURRENCIES: Currency[] = [
   c("TZ", "Tanzania", "TZS", "Tanzanian Shilling", "TSh"),
   c("UA", "Ukraine", "UAH", "Ukrainian Hryvnia", "₴"),
   c("UG", "Uganda", "UGX", "Ugandan Shilling", "USh", 0),
-  c("US", "United States", "USD", "US Dollar", "$"),
+  c("US", "United States", "USD", "US Dollar", "$", 2, CENT),
   c("UY", "Uruguay", "UYU", "Uruguayan Peso", "$U"),
   c("UZ", "Uzbekistan", "UZS", "Uzbekistani Soʻm", "soʻm"),
   c("VE", "Venezuela", "VES", "Venezuelan Bolívar", "Bs"),
@@ -355,8 +383,42 @@ export function displayCurrency(mark: CurrencyMark): string {
 // This is display formatting only; the stored value keeps its two-decimal precision.
 export type MoneyDisplayContext = "document" | "summary";
 
-export function moneyDecimals(context: MoneyDisplayContext): number {
-  return context === "summary" ? 0 : 2;
+/**
+ * How many decimal places money is shown and rounded to.
+ *
+ * This used to be `context === "summary" ? 0 : 2` — a hardcoded two, which silently truncated the
+ * third decimal of every Kuwaiti dinar, Bahraini dinar and Omani rial amount in the system. Three of
+ * the six GCC markets are 1000-fils currencies; the catalogue always knew that (`decimalPlaces`) and
+ * nothing read it.
+ *
+ * The currency decides. `summary` context still rounds to whole units — a dashboard KPI reads
+ * "1,204,000" in every currency — because that is a deliberate display choice about magnitude, not
+ * a claim about the currency's minor unit.
+ */
+export function moneyDecimals(context: MoneyDisplayContext, currencyCode?: string | null): number {
+  if (context === "summary") return 0;
+  return getCurrency(currencyCode)?.decimalPlaces ?? 2;
+}
+
+/**
+ * Round a money value to its currency's minor unit, as a decimal string.
+ *
+ * **The only place money rounding happens.** Every former `toFixed(2)` on a money path routes here,
+ * and a static verification forbids new ones, because the failure this replaces was not one bad
+ * constant — it was sixty-four of them, each individually reasonable, none of them aware of the
+ * currency. A helper that takes the currency makes the wrong version impossible to write by
+ * accident rather than merely discouraged.
+ *
+ * Rounds half away from zero, matching how every other money figure in the app is produced.
+ * An unknown currency falls back to 2 — the historical behaviour, so an unrecognised code degrades
+ * to what it did before rather than to zero decimals.
+ */
+export function roundMoney(value: string | number, currencyCode?: string | null): string {
+  const dp = getCurrency(currencyCode)?.decimalPlaces ?? 2;
+  const factor = 10 ** dp;
+  const raw = (Number(value) || 0) * factor;
+  const units = raw < 0 ? -Math.round(-raw) : Math.round(raw);
+  return (units / factor).toFixed(dp);
 }
 
 // The single shared number formatter for SUMMARY-context money (dashboards / reports / overview
