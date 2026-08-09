@@ -3,6 +3,7 @@ export * from "./users";
 export * from "./record-state";
 export * from "./document-sequences";
 export * from "./accounting";
+export * from "./exchange-rates";
 export * from "./presets";
 export * from "./customers";
 export * from "./vendors";
