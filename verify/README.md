@@ -14,10 +14,38 @@ npm run verify:all       # both of the above; the pre-commit gate
 
 Individual suites have their own script (`npm run verify:statements`, and so on).
 
-**Always run these through npm, never `npx tsx` directly.** The scripts carry
-`--conditions=react-server`, which is what makes `import "server-only"` resolve to the empty module
-the package ships for the server condition. Without it those suites throw on their first import and
-report nothing at all — which is exactly how five of them went unnoticed for a full work cycle.
+**Always run these through npm, never `npx tsx` directly.** The scripts carry two flags a suite
+cannot supply for itself:
+
+| Flag | Without it |
+|---|---|
+| `--conditions=react-server` | `import "server-only"` throws on the first import; the suite reports nothing at all. |
+| `--env-file-if-exists=.env` | `DATABASE_URL` is unset unless it happens to be exported in the shell; the suite dies before its first query. |
+
+## The standing rule behind both flags
+
+**Anything that must happen before a module's dependencies are evaluated cannot live inside that
+module — whatever it looks like it is doing.** ES modules evaluate every import before the importing
+file's own statements run. A line at the top of the file is not early; it is late.
+
+This has now been got wrong three times in this repo, each time in code that read as if it worked:
+
+1. A `createRequire` cache stub meant to neutralise `server-only`. It ran after the guard had
+   already thrown, so five suites silently did not execute — and two of their numbers were reported
+   from memory as if they had.
+2. The same shape again, after the first was diagnosed.
+3. `process.env.DATABASE_URL ||= readFileSync(".env")` at the top of every server suite — written
+   as the *portability fix for the second instance*. It never once executed. The suites only ran
+   because the variable was exported in the development shell, so the fallback looked like it was
+   holding.
+
+The third is the instructive one: a plausible-looking fallback nobody could distinguish from a
+working one, sitting inside the fix for the same mistake. The tell in all three cases is identical —
+a statement whose whole purpose is to change how a later `import` behaves.
+
+The fix is always to move the work out of the module, into the thing that launches it: a CLI flag, a
+`--import` preload, or the npm script. If you find yourself writing setup code above an import and
+hoping it lands first, it will not.
 
 ## Browser suites
 
@@ -29,7 +57,7 @@ server. Run them directly: `node verify/verify-sidebar-scroll.mjs`.
 
 | Variable | Purpose |
 |---|---|
-| `DATABASE_URL` | Required. Most suites fall back to reading it from `.env` relative to the repo root. |
+| `DATABASE_URL` | Required. The npm scripts load it from `.env` (relative to the repo root) via `--env-file-if-exists`; an already-exported value wins. No suite reads `.env` itself — see the standing rule above for why that never worked. |
 | `CHROMIUM_PATH` | Optional. Overrides the browser binary for the `.mjs` suites; defaults to this sandbox's path. Set it on any other machine. |
 
 ## What these are for

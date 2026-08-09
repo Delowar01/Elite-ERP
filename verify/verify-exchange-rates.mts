@@ -1,3 +1,15 @@
+// Run via `npm run verify:<name>`. The script supplies two flags this file cannot supply for
+// itself, both for the same reason: ESM evaluates a module's dependencies before any of its own
+// statements run, so nothing written here happens early enough to affect its own imports.
+//
+//   --conditions=react-server  makes `import "server-only"` resolve to the empty module the
+//     package ships for the server condition, so the real production code is imported with
+//     nothing intercepted. A createRequire cache stub used to sit here instead and never ran.
+//
+//   --env-file-if-exists=.env  loads DATABASE_URL before the first import. A
+//     `process.env.DATABASE_URL ||= readFileSync(".env")` line used to sit here and never ran
+//     either, so the suite only worked when the variable happened to be exported in the shell.
+
 /**
  * FX-2. The exchange rate table and `resolveRate`.
  *
@@ -21,9 +33,6 @@
  * Every "not found / not used" assertion is paired with a positive control, because an absence
  * check passes just as happily when the query is broken as when the guard works.
  */
-import { readFileSync } from "fs";
-
-process.env.DATABASE_URL ||= readFileSync(".env", "utf8").split("\n").find((l) => l.startsWith("DATABASE_URL="))!.slice(13).trim();
 
 import { Pool } from "pg";
 import { resolveRate, toBaseAmount, validateRateInput, MissingExchangeRateError } from "../src/lib/exchange-rates";

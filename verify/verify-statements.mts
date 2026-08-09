@@ -1,17 +1,14 @@
-// Run via `npm run verify:statements`, which supplies --conditions=react-server — the same module
-// resolution Next.js uses on the server, so `import "server-only"` resolves to the empty module the
-// package ships for that condition and the real production code is imported with nothing
-// intercepted. A createRequire cache stub used to sit here and never worked: ESM hoists imports
-// above statements, so it ran after the guard had already thrown, and this suite silently did not
-// execute at all.
-// Run via `npm run verify:<name>`, which supplies --conditions=react-server. That is the same
-// module resolution Next.js uses on the server, so `import "server-only"` resolves to the empty
-// module the package ships for exactly that condition — the real production code is imported
-// with nothing intercepted. A previous createRequire cache stub lived here and never worked:
-// ESM hoists imports above statements, so it ran after the guard had already thrown.
-import { readFileSync } from "fs";
-
-process.env.DATABASE_URL ||= readFileSync(".env", "utf8").split("\n").find((l) => l.startsWith("DATABASE_URL="))!.slice(13).trim();
+// Run via `npm run verify:<name>`. The script supplies two flags this file cannot supply for
+// itself, both for the same reason: ESM evaluates a module's dependencies before any of its own
+// statements run, so nothing written here happens early enough to affect its own imports.
+//
+//   --conditions=react-server  makes `import "server-only"` resolve to the empty module the
+//     package ships for the server condition, so the real production code is imported with
+//     nothing intercepted. A createRequire cache stub used to sit here instead and never ran.
+//
+//   --env-file-if-exists=.env  loads DATABASE_URL before the first import. A
+//     `process.env.DATABASE_URL ||= readFileSync(".env")` line used to sit here and never ran
+//     either, so the suite only worked when the variable happened to be exported in the shell.
 
 import { Pool } from "pg";
 import { getStatement, listStatementParties, presetRange, readFilters, statementFilename } from "../src/lib/statements";
