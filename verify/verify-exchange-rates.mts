@@ -43,11 +43,21 @@ const results: [boolean, string, string][] = [];
 const check = (name: string, cond: boolean, extra = "") => results.push([cond, name, extra]);
 
 // ---------------- fixtures ----------------
-const org = (await pool.query("insert into orgs (name, currency) values ($1,'SAR') returning id", [`FX ${uniq()}`])).rows[0].id as number;
-const other = (await pool.query("insert into orgs (name, currency) values ($1,'SAR') returning id", [`FX other ${uniq()}`])).rows[0].id as number;
+// Every fixture org carries this prefix, and anything an earlier run left behind is swept first.
+// Mutation testing deliberately makes this suite die part-way through, which skips the cleanup at
+// the end — without the sweep, orphan orgs and their rates pile up in the development database,
+// and the next person to count rows there is counting debris.
+const FIXTURE = "verifyfx_";
+await pool.query("delete from orgs where name like $1", [`${FIXTURE}%`]);
+const newOrg = async (label: string) =>
+  (await pool.query("insert into orgs (name, currency) values ($1,'SAR') returning id", [`${FIXTURE}${label}_${uniq()}`]))
+    .rows[0].id as number;
+
+const org = await newOrg("main");
+const other = await newOrg("other");
 // An org that has never entered a single rate — used to prove the base short-circuit does not
 // depend on the rates table having anything in it.
-const bare = (await pool.query("insert into orgs (name, currency) values ($1,'SAR') returning id", [`FX bare ${uniq()}`])).rows[0].id as number;
+const bare = await newOrg("bare");
 
 const addRate = (orgId: number, from: string, to: string, rate: string, date: string, source = "SAMA") =>
   pool.query(
@@ -181,7 +191,7 @@ check("a second rate for the same org/pair/date is refused", dupRejected);
 check("…and the original value is untouched", Number((await r("USD", "2026-01-01")).rate) === 3.75);
 
 // ---------------- 10. deleting an org takes its rates with it ----------------
-const doomed = (await pool.query("insert into orgs (name, currency) values ($1,'SAR') returning id", [`FX doomed ${uniq()}`])).rows[0].id as number;
+const doomed = await newOrg("doomed");
 await addRate(doomed, "USD", "SAR", "3.75000000", "2026-01-01");
 await pool.query("delete from orgs where id=$1", [doomed]);
 check("rates are removed with their org (cascade)",

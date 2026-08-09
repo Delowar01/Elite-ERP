@@ -60,7 +60,12 @@ export const exchangeRatesTable = pgTable(
     source: text("source").notNull(),
   },
   (t) => [
-    unique().on(t.orgId, t.fromCurrency, t.toCurrency, t.effectiveDate),
+    // Named explicitly. Drizzle's generated name for these four columns is 64 characters, one over
+    // Postgres's 63-byte identifier limit, so the server silently truncated the trailing "_unique"
+    // — after which drizzle-kit could never match the constraint it had just created, and every
+    // subsequent `db:push` stopped to ask whether to truncate the table. Same convention as
+    // `favorites_org_user_href_uq`.
+    unique("exchange_rates_org_pair_date_uq").on(t.orgId, t.fromCurrency, t.toCurrency, t.effectiveDate),
     // A numeric(18,8) column stores 0 and -1 perfectly happily, and a zero rate would silently
     // zero every converted total that used it. Rejected in the database as well as on write, so a
     // bad row cannot arrive through a path that skips the action layer.
