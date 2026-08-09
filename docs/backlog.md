@@ -118,6 +118,56 @@ PO/DN PDF address block, and a decision about whether existing vendors are ever 
 
 ---
 
+## ESLint does not pass, and a third of the failures are now tracked code
+
+**Status:** deferred, not started. Not urgent; the point is that it stops being ignorable.
+
+`npm run lint` reports **118 problems (76 errors, 42 warnings)**, none of them in `src/`. By
+directory: `scratchpad/` 49, `verify/` 10, `scripts/` 5, `tests/` 2, the remainder warnings.
+
+What changed is `verify/`. Until commit `6890e16` the suites lived in a gitignored folder, so their
+lint failures were nobody's problem. They are tracked code now, and a tracked file that does not
+lint is a different thing from a scratch file that does not.
+
+**Why this matters more than the count suggests.** A lint run nobody can pass clean is a signal
+people learn to ignore, and once it is ignored it stops catching what it exists for. The project's
+standing rule is that ESLint must pass; today the honest version of that rule is "ESLint must not
+get *worse*" — which is a rule no one can check mechanically.
+
+**The decision, and it is a real one:**
+
+1. **Fix them** — the `verify/` ten are mostly unused variables and a few `any`s, and the
+   `scripts/`/`tests/` seven are similar. Then `npm run lint` is a gate again.
+2. **Scope the config** — add `scratchpad/` (already gitignored) to `eslint.config.mjs`'s ignores,
+   and decide deliberately whether `verify/` is held to `src/`'s standard or a looser one. A test
+   suite is allowed to be scrappier than production code; that is a defensible position, but it
+   should be written down rather than emerging from nobody looking.
+
+Option 2 alone leaves tracked code unlinted. Option 1 alone leaves the run permanently dirty from
+`scratchpad/`. The likely answer is both, in that order.
+
+---
+
+## Two verification suites report a verdict with no check count
+
+**Status:** deferred, not started. Small, and worth doing before the suite count grows further.
+
+`verify-client-import.mts` and `verify-import.mts` end with `CLIENT IMPORT VERIFICATION PASS` /
+`QUOTATION IMPORT VERIFICATION PASS` and no `N/N checks` line. Every other suite prints a count.
+
+**Why a word is worse than a number.** A count is comparable across runs: 339/339 becoming 338/339
+is visible, and so is 339 becoming 12 because half the file stopped executing. A verdict compares
+to nothing — it reads identically whether the suite ran forty assertions or four. This project has
+already lost a work cycle to suites that reported nothing and were taken as passing, and to numbers
+recalled instead of run; a suite whose output cannot be diffed against its own last run is a smaller
+version of the same blind spot.
+
+**Scope when picked up:** give both suites the `results` array and tail block the other ten already
+use, so `verify:all` prints twelve comparable numbers instead of ten and two words. No assertion
+changes — this is about what the run reports, not what it checks.
+
+---
+
 ## Per-module and custom role permissions
 
 **Status:** deferred, not started. This is a known gap, currently documented in the product rather
