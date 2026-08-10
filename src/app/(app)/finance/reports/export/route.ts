@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { db, orgsTable } from "@/db";
 import { requireSession } from "@/lib/session";
+import { roundMoney } from "@/lib/currency/currencies";
 import { getLocale } from "@/lib/i18n/server";
 import { accountName } from "@/lib/account-names";
 import { exportResponse, type ExportColumn } from "@/lib/report-export";
@@ -14,10 +15,13 @@ import {
 // Recomputes the selected report server-side, tenant-scoped (requireSession → orgId), applying the
 // same date range / account filter the workspace shows. Read-only — no accounting effect.
 
-const money = (n: number) => n.toFixed(2);
+// Financial reports and statements are ledger figures, and the general ledger holds BASE currency
+// only — so the rounding follows the organization's base currency, resolved per request.
+const moneyFor = (currency: string) => (n: number) => roundMoney(n, currency);
 
 export async function GET(req: Request) {
   const session = await requireSession();
+  const money = moneyFor(session.orgCurrency);
   // Exports follow the viewer's language too: an Arabic session that downloads a CSV of English
   // account names is the same defect as an English screen, one layer down.
   const locale = await getLocale();

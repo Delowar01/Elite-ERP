@@ -101,17 +101,16 @@ export function VatSettingsForm({
             </SelectContent>
           </Select>
         </FormField>
-        <FormField label={t(locale, "Rounding Rule")} htmlFor="vat-rounding">
-          <Select value={rounding} onValueChange={setRounding}>
-            <SelectTrigger id="vat-rounding">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="nearest_0_01">{t(locale, "Round to nearest 0.01 (Halala)")}</SelectItem>
-              <SelectItem value="nearest_1">{t(locale, "Round to nearest 1")}</SelectItem>
-            </SelectContent>
-          </Select>
-        </FormField>
+        {/* The Rounding Rule control is deliberately not rendered.
+            Its two options were "Round to nearest 0.01 (Halala)" and "Round to nearest 1" — a
+            Saudi-shaped choice that is simply wrong for a 3-decimal currency, where the nearest
+            minor unit is 0.001, not 0.01. Nothing in the app has ever READ `vatRounding` (grep:
+            it is written here and stored, never consulted by any calculation), so hiding the
+            control changes no behaviour at all.
+            The column, the state below and the `formData.set("vatRounding", …)` write are all kept
+            intact so an existing org's stored value round-trips unchanged rather than silently
+            resetting on the next save. When rounding rules are designed properly they will be
+            expressed in minor units of the document's own currency. */}
       </div>
       <div className="flex items-center gap-2">
         <Button onClick={submit} disabled={pending}>

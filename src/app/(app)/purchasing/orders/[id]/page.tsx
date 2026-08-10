@@ -88,6 +88,7 @@ export default async function PurchaseOrderDetailPage({ params }: { params: Prom
           <DownloadPdfButton locale={locale} type="purchase-order" docId={po.id} number={po.poNumber} />
           <PoDetailActions
             locale={locale}
+            currency={po.currency ?? org.currency}
             poId={po.id}
             poNumber={po.poNumber}
             vendorName={po.vendorName}

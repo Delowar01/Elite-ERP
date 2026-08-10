@@ -12,7 +12,7 @@ import { nextDocumentNumber } from "@/lib/documents";
 import { can, evaluate } from "@/lib/document-lifecycle";
 import { snapshotDocumentBankAccounts } from "@/lib/document-bank-data";
 import { snapshotSealForDoc, applySealOverride } from "@/lib/doc-seal";
-import { normalizeDocCurrency } from "@/lib/currency/currencies";
+import { normalizeDocCurrency, roundMoney } from "@/lib/currency/currencies";
 import { computeTotals, type LineItemInput } from "../../sales/_shared/totals";
 import { persistDocumentAttachments, type AttachmentInput } from "../../sales/_shared/attachment-persist";
 
@@ -67,7 +67,8 @@ export async function createPurchaseOrderAction(
   const items = input.items.filter((l) => l.description.trim() && Number(l.quantity) > 0);
   if (items.length === 0) return { error: "Add at least one line item." };
 
-  const totals = computeTotals(items as LineItemInput[], input.discount);
+  const currency = normalizeDocCurrency(input.currency) ?? session.orgCurrency;
+  const totals = computeTotals(items as LineItemInput[], input.discount, currency);
   const bankAccounts = await snapshotDocumentBankAccounts(session.orgId, input.bankAccountIds);
   const seal = applySealOverride(await snapshotSealForDoc(db, session.orgId, "purchase_order"), { sealUrl: input.sealUrl, signatureUrl: input.signatureUrl });
 
@@ -112,7 +113,7 @@ export async function createPurchaseOrderAction(
         quantity: l.quantity,
         unitCost: l.unitPrice,
         taxRatePercent: l.taxRatePercent,
-        lineTotal: ((Number(l.quantity) || 0) * (Number(l.unitPrice) || 0)).toFixed(2),
+        lineTotal: roundMoney((Number(l.quantity) || 0) * (Number(l.unitPrice) || 0), currency),
       })),
     );
     await persistDocumentAttachments(tx, session.orgId, session.userId, "purchase_order", po.id, input.attachments);
@@ -147,7 +148,8 @@ export async function updatePurchaseOrderAction(
   if (projectId === undefined) return { error: "Project not found." };
   const items = input.items.filter((l) => l.description.trim() && Number(l.quantity) > 0);
   if (items.length === 0) return { error: "Add at least one line item." };
-  const totals = computeTotals(items as LineItemInput[], input.discount);
+  const currency = normalizeDocCurrency(input.currency) ?? session.orgCurrency;
+  const totals = computeTotals(items as LineItemInput[], input.discount, currency);
   const bankAccounts = await snapshotDocumentBankAccounts(session.orgId, input.bankAccountIds);
   const seal = applySealOverride(await snapshotSealForDoc(db, session.orgId, "purchase_order"), { sealUrl: input.sealUrl, signatureUrl: input.signatureUrl });
 
@@ -185,7 +187,7 @@ export async function updatePurchaseOrderAction(
         quantity: l.quantity,
         unitCost: l.unitPrice,
         taxRatePercent: l.taxRatePercent,
-        lineTotal: ((Number(l.quantity) || 0) * (Number(l.unitPrice) || 0)).toFixed(2),
+        lineTotal: roundMoney((Number(l.quantity) || 0) * (Number(l.unitPrice) || 0), currency),
       })),
     );
     await persistDocumentAttachments(tx, session.orgId, session.userId, "purchase_order", id, input.attachments);

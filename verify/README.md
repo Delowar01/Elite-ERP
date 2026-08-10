@@ -14,6 +14,13 @@ npm run verify:all       # both of the above; the pre-commit gate
 
 Individual suites have their own script (`npm run verify:statements`, and so on).
 
+Two of them are worth calling out because they guard the same rule from opposite sides:
+
+| Suite | Tier | Guards |
+|---|---|---|
+| `verify:money-precision` | static | That no money path rounds to a hardcoded number of decimals. It asserts **zero** occurrences of the pattern, never a ceiling — a rule that permits "no more than 64" quietly permits a swap: delete one and add another and the count never moves. |
+| `verify:money-round-trip` | server | That a three-decimal amount survives compute → store → read → re-total, and that a Kuwaiti journal entry's debits equal its credits **exactly** at the third decimal. The static suite is a claim about the source; this is a claim about the data, and only one of them would catch a `numeric(15,3)` column being written by two-decimal code. |
+
 **Always run these through npm, never `npx tsx` directly.** The scripts carry two flags a suite
 cannot supply for itself:
 
@@ -114,6 +121,18 @@ any failure. Flags: `--skip-build`, `--no-server` (drive a server you started), 
 
 Run one directly with `node verify/verify-sidebar-scroll.mjs` when iterating — you are then
 responsible for the build being current, which `assertFreshBuild` enforces.
+
+### Why the runner checks Postgres before doing anything else
+
+The database check at the top of `run-browser-suites.mjs` is not defensive boilerplate. It is there
+because the cluster stopping mid-session **interrupted three separate runs**. Every browser suite
+creates its own organization, so a stopped Postgres does not fail one suite — it fails all 23, each
+with a different-looking stack trace, none of which says "the database is down". Twenty-three
+unrelated-looking failures is a far worse signal than one refusal, and the time goes into reading
+tracebacks instead of into the one-line fix (`pg_ctlcluster 16 main start`).
+
+Same rule as the table above: the harness refuses to start rather than emitting output somebody then
+has to interpret.
 
 The tier is discovered, not listed: any `.mjs` in this folder that mentions `localhost:3000` is
 picked up, so a new suite runs without anyone remembering to register it.

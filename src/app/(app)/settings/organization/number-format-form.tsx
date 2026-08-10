@@ -108,6 +108,9 @@ export function NumberFormatForm({
             <span className="text-ink-muted">{t(locale, "Amount")}</span>
             <span className="font-mono font-semibold">{sym} {formatAmount(12345679.5, cfg)}</span>
           </div>
+          <div className="text-[11px] text-ink-faint">
+            {t(locale, "Money always follows the currency's own decimals.")}
+          </div>
           <div className="flex justify-between gap-4">
             <span className="text-ink-muted">{t(locale, "Rate")}</span>
             <span className="font-mono">{sym} {formatRate(1234.567, cfg)}</span>
@@ -131,7 +134,9 @@ export function NumberFormatForm({
         </Select>
       </FormField>
 
-      <FormField label={t(locale, "Decimal Places")} htmlFor="nf-decimals">
+      {/* Relabelled because this setting no longer touches money: how many decimals a currency has
+          is a fact about the currency, not a preference. It governs quantities and rates only. */}
+      <FormField label={t(locale, "Decimal Places (Quantities & Rates)")} htmlFor="nf-decimals">
         <Select value={decimalPlaces} onValueChange={setDecimalPlaces}>
           <SelectTrigger id="nf-decimals">
             <SelectValue />

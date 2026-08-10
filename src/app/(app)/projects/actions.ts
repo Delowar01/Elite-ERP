@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { and, eq } from "drizzle-orm";
 import { db, projectsTable, tasksTable, timeLogsTable, customersTable, employeesTable } from "@/db";
 import { requireSession } from "@/lib/session";
+import { roundMoney } from "@/lib/currency/currencies";
 import { tenantScope } from "@/lib/tenant";
 import { logActivity } from "@/lib/activity";
 
@@ -46,7 +47,7 @@ export async function createProjectAction(_prev: ActionState, formData: FormData
       status,
       startDate: String(formData.get("startDate") ?? "").trim() || null,
       endDate: String(formData.get("endDate") ?? "").trim() || null,
-      budget: budget !== null ? budget.toFixed(2) : null,
+      budget: budget !== null ? roundMoney(budget, session.orgCurrency) : null,
       description: String(formData.get("description") ?? "").trim() || null,
     })
     .returning({ id: projectsTable.id });
@@ -196,7 +197,7 @@ export async function logTimeAction(formData: FormData): Promise<ActionResult> {
     taskId,
     employeeId,
     date,
-    hours: hours.toFixed(2),
+    hours: hours.toFixed(2), // hours, not money — 2dp is the intended precision here
     notes: String(formData.get("notes") ?? "").trim() || null,
     billable,
   });

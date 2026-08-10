@@ -68,12 +68,14 @@ export type PaymentRow = {
 
 export function PaymentsListClient({
   locale,
+  currency,
   rows,
   bankAccounts,
   outstandingInvoices,
   outstandingPos,
 }: {
   locale: Locale;
+  currency: string;
   rows: PaymentRow[];
   bankAccounts: BankAccountOption[];
   outstandingInvoices: OutstandingInvoice[];
@@ -85,6 +87,7 @@ export function PaymentsListClient({
         <h3>{t(locale, "Payment Records")}</h3>
         <RecordPaymentDialog
           locale={locale}
+          currency={currency}
           bankAccounts={bankAccounts}
           invoices={outstandingInvoices}
           purchaseOrders={outstandingPos}

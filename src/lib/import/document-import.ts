@@ -2,12 +2,12 @@ import "server-only";
 import { and, eq, inArray } from "drizzle-orm";
 import {
   db, customersTable, vendorsTable, projectsTable, productsTable,
-  salesInvoicesTable, purchaseOrdersTable,
+  salesInvoicesTable, purchaseOrdersTable, orgsTable,
 } from "@/db";
 import { nextDocumentNumber } from "@/lib/documents";
 import { computeTotals } from "@/app/(app)/sales/_shared/totals";
 import { LINE_DESC_KEY } from "@/app/(app)/sales/_shared/line-item-desc";
-import { isValidCurrencyCode } from "@/lib/currency/currencies";
+import { isValidCurrencyCode, roundMoney } from "@/lib/currency/currencies";
 import { DOC_FIELD_CONFIGS, partyKeyOf, type DocFieldConfig, type DocModule } from "./document-fields";
 import { DOCUMENT_IMPORT_SPECS } from "./spec";
 import { DOC_WRITERS } from "./document-config";
@@ -467,6 +467,12 @@ export async function commitDocumentImport(
   // Re-validate server-side: the client's preview is never trusted.
   const { docs, result } = await validateDocumentImport(module, orgId, rows, formats);
   const look = await loadLookups(module, orgId, docs);
+  // Rounding follows the document's OWN currency, so a Kuwaiti row keeps its third decimal. The
+  // header's currency wins where the file supplied one; otherwise the document is in the
+  // organization's base currency — which is exactly what a null currency column means everywhere
+  // else in the schema.
+  const [org] = await db.select({ currency: orgsTable.currency }).from(orgsTable).where(eq(orgsTable.id, orgId));
+  const baseCurrency = org?.currency ?? "SAR";
   const valid = docs.filter((d) => d.errors.length === 0 && d.rowErrors.size === 0);
 
   let imported = 0, failed = 0, lineItems = 0;
@@ -477,6 +483,7 @@ export async function commitDocumentImport(
     try {
       await db.transaction(async (tx) => {
         const number = doc.number || (await nextDocumentNumber(tx, orgId, module));
+        const docCurrency = isBlank(h.currency) ? baseCurrency : h.currency.trim().toUpperCase();
 
         // Totals: quantity-only modules (Delivery Challan) carry no money at all.
         const totals = cfg.pricing
@@ -488,6 +495,7 @@ export async function commitDocumentImport(
               })),
               (isBlank(h.discount) ? 0 : num(h.discount)) +
                 doc.lines.reduce((s, l) => s + (isBlank(l.itemDiscount) ? 0 : num(l.itemDiscount)), 0),
+              docCurrency,
             )
           : { subtotal: "0", discount: "0", taxTotal: "0", total: "0" };
 
@@ -532,7 +540,7 @@ export async function commitDocumentImport(
             quantity: String(num(l.quantity)),
             unitPrice: cfg.pricing ? String(num(l.unitPrice)) : "0",
             taxRatePercent: cfg.pricing && !isBlank(l.taxRate) ? String(num(l.taxRate)) : "0",
-            lineTotal: cfg.pricing ? (num(l.quantity) * num(l.unitPrice)).toFixed(2) : "0",
+            lineTotal: cfg.pricing ? roundMoney(num(l.quantity) * num(l.unitPrice), docCurrency) : "0",
             unit: isBlank(l.unit) ? null : l.unit,
             imageUrl: isBlank(l.imageUrl) ? null : l.imageUrl,
             customFields: (isBlank(l.itemDescription) ? {} : { [LINE_DESC_KEY]: l.itemDescription }) as Record<string, string>,

@@ -80,7 +80,7 @@ export function CnForm({
   const [pendingDraft, startDraftTransition] = useTransition();
   const [pendingPrimary, startPrimaryTransition] = useTransition();
 
-  const totals = computeTotals(items);
+  const totals = computeTotals(items, 0, org.currency);
   const selectedInvoice = invoices.find((inv) => String(inv.id) === sourceInvoiceId);
 
   const previewData: PreviewData = {

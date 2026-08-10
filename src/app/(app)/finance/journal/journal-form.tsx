@@ -15,6 +15,7 @@ import { postJournalEntryAction } from "./actions";
 import { useConfirm } from "../../_shared/confirm-provider";
 import { useDirtyForm } from "../../_shared/dirty-form";
 import { accountName } from "@/lib/account-names";
+import { moneyDecimals, roundMoney } from "@/lib/currency/currencies";
 
 type Line = { accountId: string; memo: string; debit: string; credit: string };
 
@@ -24,7 +25,7 @@ const emptyLine = (): Line => ({ accountId: "", memo: "", debit: "", credit: "" 
 // user clear a project they picked by mistake.
 const NO_PROJECT = "__none__";
 
-export function JournalForm({ locale, accounts, projects = [] }: { locale: Locale; accounts: Account[]; projects?: { id: number; name: string }[] }) {
+export function JournalForm({ locale, accounts, currency, projects = [] }: { locale: Locale; accounts: Account[]; currency: string; projects?: { id: number; name: string }[] }) {
   const [entryDate, setEntryDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [memo, setMemo] = useState("");
   // Optional project tag. Only manual entries carry one — a document-sourced entry inherits its
@@ -38,8 +39,15 @@ export function JournalForm({ locale, accounts, projects = [] }: { locale: Local
 
   const totalDebit = lines.reduce((sum, l) => sum + (Number(l.debit) || 0), 0);
   const totalCredit = lines.reduce((sum, l) => sum + (Number(l.credit) || 0), 0);
-  const balanced = totalDebit > 0 && Math.round(totalDebit * 100) === Math.round(totalCredit * 100);
+  // Balance is compared at the base currency's own minor unit, not at cents. Comparing rounded
+  // halalas would call a Kuwaiti entry of 100.001 against 100.000 balanced and let it post — an
+  // out-of-balance journal entry, which is the one thing this screen exists to prevent.
+  const balanced = totalDebit > 0 && roundMoney(totalDebit, currency) === roundMoney(totalCredit, currency);
   const filledLines = lines.filter((l) => l.accountId && (Number(l.debit) > 0 || Number(l.credit) > 0));
+  // The input step is the currency's minor unit too: a hardcoded 0.01 makes a browser reject the
+  // third decimal a Kuwaiti or Bahraini entry needs, so the balance check above could never see it.
+  const moneyDp = moneyDecimals("document", currency);
+  const moneyStep = String(1 / 10 ** moneyDp);
   const canPost = balanced && filledLines.length >= 2 && memo.trim().length > 0;
 
   function updateLine(index: number, patch: Partial<Line>) {
@@ -58,8 +66,8 @@ export function JournalForm({ locale, accounts, projects = [] }: { locale: Local
       entityNumber: memo.trim(),
       details: [
         { label: "Date", value: entryDate },
-        { label: "Total Debits", value: totalDebit.toFixed(2) },
-        { label: "Total Credits", value: totalCredit.toFixed(2) },
+        { label: "Total Debits", value: roundMoney(totalDebit, currency) },
+        { label: "Total Credits", value: roundMoney(totalCredit, currency) },
         { label: "Lines", value: String(filledLines.length) },
       ],
       onConfirm: () => post(),
@@ -150,7 +158,7 @@ export function JournalForm({ locale, accounts, projects = [] }: { locale: Local
               <TableCell className="num">
                 <Input
                   type="number"
-                  step="0.01"
+                  step={moneyStep}
                   className="text-right"
                   value={line.debit}
                   onChange={(e) => updateLine(i, { debit: e.target.value, credit: e.target.value ? "" : line.credit })}
@@ -159,7 +167,7 @@ export function JournalForm({ locale, accounts, projects = [] }: { locale: Local
               <TableCell className="num">
                 <Input
                   type="number"
-                  step="0.01"
+                  step={moneyStep}
                   className="text-right"
                   value={line.credit}
                   onChange={(e) => updateLine(i, { credit: e.target.value, debit: e.target.value ? "" : line.debit })}
@@ -183,11 +191,11 @@ export function JournalForm({ locale, accounts, projects = [] }: { locale: Local
       <div className="tb-strip">
         <div className="card tb-tile">
           <div className="l">{t(locale, "Total debits")}</div>
-          <div className="v">{totalDebit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+          <div className="v">{totalDebit.toLocaleString(undefined, { minimumFractionDigits: moneyDp, maximumFractionDigits: moneyDp })}</div>
         </div>
         <div className="card tb-tile">
           <div className="l">{t(locale, "Total credits")}</div>
-          <div className="v">{totalCredit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+          <div className="v">{totalCredit.toLocaleString(undefined, { minimumFractionDigits: moneyDp, maximumFractionDigits: moneyDp })}</div>
         </div>
         <div className={cn("card tb-tile", balanced && "balanced")}>
           <div className="l">{t(locale, "Balance check")}</div>

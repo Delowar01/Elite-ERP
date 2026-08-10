@@ -14,7 +14,7 @@ import { computeTotals, type LineItemInput } from "../_shared/totals";
 import { persistDocumentAttachments, type AttachmentInput } from "../_shared/attachment-persist";
 import { snapshotDocumentBankAccounts } from "@/lib/document-bank-data";
 import { snapshotSealForDoc, applySealOverride } from "@/lib/doc-seal";
-import { normalizeDocCurrency } from "@/lib/currency/currencies";
+import { normalizeDocCurrency, roundMoney } from "@/lib/currency/currencies";
 
 export type ActionResult = { error?: string; id?: number };
 
@@ -61,7 +61,8 @@ export async function createQuotationAction(
   const items = input.items.filter((l) => l.description.trim() && Number(l.quantity) > 0);
   if (items.length === 0) return { error: "Add at least one line item." };
 
-  const totals = computeTotals(items as LineItemInput[], input.discount);
+  const currency = normalizeDocCurrency(input.currency) ?? session.orgCurrency;
+  const totals = computeTotals(items as LineItemInput[], input.discount, currency);
   const bankAccounts = await snapshotDocumentBankAccounts(session.orgId, input.bankAccountIds);
   const seal = applySealOverride(await snapshotSealForDoc(db, session.orgId, "quotation"), { sealUrl: input.sealUrl, signatureUrl: input.signatureUrl });
 
@@ -102,7 +103,7 @@ export async function createQuotationAction(
         quantity: l.quantity,
         unitPrice: l.unitPrice,
         taxRatePercent: l.taxRatePercent,
-        lineTotal: ((Number(l.quantity) || 0) * (Number(l.unitPrice) || 0)).toFixed(2),
+        lineTotal: roundMoney((Number(l.quantity) || 0) * (Number(l.unitPrice) || 0), currency),
       })),
     );
 
@@ -163,7 +164,8 @@ export async function updateQuotationAction(
   const items = input.items.filter((l) => l.description.trim() && Number(l.quantity) > 0);
   if (items.length === 0) return { error: "Add at least one line item." };
 
-  const totals = computeTotals(items as LineItemInput[], input.discount);
+  const currency = normalizeDocCurrency(input.currency) ?? session.orgCurrency;
+  const totals = computeTotals(items as LineItemInput[], input.discount, currency);
   const bankAccounts = await snapshotDocumentBankAccounts(session.orgId, input.bankAccountIds);
   const seal = applySealOverride(await snapshotSealForDoc(db, session.orgId, "quotation"), { sealUrl: input.sealUrl, signatureUrl: input.signatureUrl });
 
@@ -203,7 +205,7 @@ export async function updateQuotationAction(
         quantity: l.quantity,
         unitPrice: l.unitPrice,
         taxRatePercent: l.taxRatePercent,
-        lineTotal: ((Number(l.quantity) || 0) * (Number(l.unitPrice) || 0)).toFixed(2),
+        lineTotal: roundMoney((Number(l.quantity) || 0) * (Number(l.unitPrice) || 0), currency),
       })),
     );
 

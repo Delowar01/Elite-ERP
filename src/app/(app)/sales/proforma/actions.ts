@@ -15,7 +15,7 @@ import { computeTotals, type LineItemInput } from "../_shared/totals";
 import { persistDocumentAttachments, type AttachmentInput } from "../_shared/attachment-persist";
 import { snapshotDocumentBankAccounts } from "@/lib/document-bank-data";
 import { snapshotSealForDoc, applySealOverride } from "@/lib/doc-seal";
-import { normalizeDocCurrency } from "@/lib/currency/currencies";
+import { moneyEpsilon, normalizeDocCurrency, roundMoney } from "@/lib/currency/currencies";
 
 export type ActionResult = { error?: string; id?: number };
 
@@ -50,7 +50,8 @@ export async function createProformaAction(
   const items = input.items.filter((l) => l.description.trim() && Number(l.quantity) > 0);
   if (items.length === 0) return { error: "Add at least one line item." };
 
-  const totals = computeTotals(items as LineItemInput[], input.discount);
+  const currency = normalizeDocCurrency(input.currency) ?? session.orgCurrency;
+  const totals = computeTotals(items as LineItemInput[], input.discount, currency);
   const bankAccounts = await snapshotDocumentBankAccounts(session.orgId, input.bankAccountIds);
   const seal = applySealOverride(await snapshotSealForDoc(db, session.orgId, "proforma_invoice"), { sealUrl: input.sealUrl, signatureUrl: input.signatureUrl });
 
@@ -89,7 +90,7 @@ export async function createProformaAction(
         quantity: l.quantity,
         unitPrice: l.unitPrice,
         taxRatePercent: l.taxRatePercent,
-        lineTotal: ((Number(l.quantity) || 0) * (Number(l.unitPrice) || 0)).toFixed(2),
+        lineTotal: roundMoney((Number(l.quantity) || 0) * (Number(l.unitPrice) || 0), currency),
       })),
     );
     await persistDocumentAttachments(tx, session.orgId, session.userId, "proforma_invoice", pf.id, input.attachments);
@@ -122,7 +123,8 @@ export async function updateProformaAction(
   if (!input.issueDate) return { error: "Issue date is required." };
   const items = input.items.filter((l) => l.description.trim() && Number(l.quantity) > 0);
   if (items.length === 0) return { error: "Add at least one line item." };
-  const totals = computeTotals(items as LineItemInput[], input.discount);
+  const currency = normalizeDocCurrency(input.currency) ?? session.orgCurrency;
+  const totals = computeTotals(items as LineItemInput[], input.discount, currency);
   const bankAccounts = await snapshotDocumentBankAccounts(session.orgId, input.bankAccountIds);
   const seal = applySealOverride(await snapshotSealForDoc(db, session.orgId, "proforma_invoice"), { sealUrl: input.sealUrl, signatureUrl: input.signatureUrl });
 
@@ -158,7 +160,7 @@ export async function updateProformaAction(
         quantity: l.quantity,
         unitPrice: l.unitPrice,
         taxRatePercent: l.taxRatePercent,
-        lineTotal: ((Number(l.quantity) || 0) * (Number(l.unitPrice) || 0)).toFixed(2),
+        lineTotal: roundMoney((Number(l.quantity) || 0) * (Number(l.unitPrice) || 0), currency),
       })),
     );
     await persistDocumentAttachments(tx, session.orgId, session.userId, "proforma_invoice", id, input.attachments);
@@ -199,12 +201,17 @@ export async function convertProformaToInvoiceAction(proformaId: number): Promis
   const transferredTotal = proformaPayments.reduce((s, p) => s + Number(p.amount), 0);
   // The final Sales Invoice total drives the remaining balance. Transferred payments may not exceed
   // it (the payment system doesn't allow overpayments), so block conversion if they somehow would.
-  if (transferredTotal > Number(pf.total) + 0.005) {
+  // Tolerance and rounding follow the proforma's own currency: half a fils is 0.0005, not 0.005,
+  // so the fixed half-cent both allowed a larger overpayment through and could mark a Kuwaiti
+  // invoice fully paid while four fils were still outstanding.
+  const convCurrency = pf.currency ?? session.orgCurrency;
+  const convEps = moneyEpsilon(convCurrency);
+  if (transferredTotal > Number(pf.total) + convEps) {
     return { error: "Transferred payments exceed the sales invoice total. Conversion blocked." };
   }
-  const paidStr = transferredTotal.toFixed(2);
+  const paidStr = roundMoney(transferredTotal, convCurrency);
   // Reflect the transferred payments' status immediately (no payments → normal draft, unchanged).
-  const invoiceStatus = transferredTotal <= 0.005 ? "draft" : transferredTotal >= Number(pf.total) - 0.005 ? "paid" : "partially_paid";
+  const invoiceStatus = transferredTotal <= convEps ? "draft" : transferredTotal >= Number(pf.total) - convEps ? "paid" : "partially_paid";
 
   const id = await db.transaction(async (tx) => {
     const invoiceNumber = await nextDocumentNumber(tx, session.orgId, "sales_invoice");

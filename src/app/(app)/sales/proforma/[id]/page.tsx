@@ -117,6 +117,7 @@ export default async function ProformaDetailPage({ params }: { params: Promise<{
           <DownloadPdfButton locale={locale} type="proforma" docId={pf.id} number={pf.proformaNumber} />
           <ProformaDetailActions
             locale={locale}
+            currency={pf.currency ?? org.currency}
             proformaId={pf.id}
             proformaNumber={pf.proformaNumber}
             customerName={pf.customerName}

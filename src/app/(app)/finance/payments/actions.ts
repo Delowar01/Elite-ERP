@@ -14,6 +14,7 @@ import {
   journalLinesTable,
 } from "@/db";
 import { requireSession, requireRole } from "@/lib/session";
+import { moneyEpsilon, roundMoney } from "@/lib/currency/currencies";
 import { logActivity } from "@/lib/activity";
 import { recordAudit } from "@/lib/security/audit";
 
@@ -62,13 +63,17 @@ export async function recordPaymentAction(formData: FormData): Promise<ActionRes
     if (!pf) return { error: "Proforma invoice not found." };
     if (pf.convertedInvoiceId) return { error: "This proforma has been converted — record payments on the sales invoice instead." };
     if (pf.status !== "sent") return { error: "Only sent proforma invoices can receive a payment." };
+    // Rounding and tolerance follow the DOCUMENT's currency; the journal lines below follow the
+    // organization's base currency, because the general ledger only ever holds base amounts.
+    const docCurrency = pf.currency ?? session.orgCurrency;
+    const eps = moneyEpsilon(docCurrency);
     const balance = Number(pf.total) - Number(pf.paidAmount);
-    if (amount > balance + 0.005) return { error: "Amount cannot exceed the remaining balance." };
+    if (amount > balance + eps) return { error: "Amount cannot exceed the remaining balance." };
 
     const ar = byCode.get("1100");
     if (!ar) return { error: "Chart of accounts is missing a required system account (1100)." };
 
-    const newPaid = (Number(pf.paidAmount) + amount).toFixed(2);
+    const newPaid = roundMoney(Number(pf.paidAmount) + amount, docCurrency);
     const paymentId = await db.transaction(async (tx) => {
       const [payment] = await tx
         .insert(paymentsTable)
@@ -76,7 +81,7 @@ export async function recordPaymentAction(formData: FormData): Promise<ActionRes
           orgId: session.orgId,
           direction: "in",
           bankAccountId,
-          amount: amount.toFixed(2),
+          amount: roundMoney(amount, docCurrency),
           paymentDate,
           method,
           reference,
@@ -99,18 +104,21 @@ export async function recordPaymentAction(formData: FormData): Promise<ActionRes
         .returning({ id: journalEntriesTable.id });
 
       await tx.insert(journalLinesTable).values([
-        { journalEntryId: entry.id, accountId: bankAccount.glAccountId, debit: amount.toFixed(2), credit: "0" },
-        { journalEntryId: entry.id, accountId: ar.id, debit: "0", credit: amount.toFixed(2) },
+        // The ledger holds BASE currency only, so these two round at the base minor unit. Converting a
+        // foreign payment to base is FX-6/FX-7's job and is not done here — today the amount is
+        // posted as-is, exactly as it was before this change.
+        { journalEntryId: entry.id, accountId: bankAccount.glAccountId, debit: roundMoney(amount, session.orgCurrency), credit: "0" },
+        { journalEntryId: entry.id, accountId: ar.id, debit: "0", credit: roundMoney(amount, session.orgCurrency) },
       ]);
 
       await tx.update(proformaInvoicesTable).set({ paidAmount: newPaid, updatedAt: new Date() }).where(eq(proformaInvoicesTable.id, pf.id));
       return payment.id;
     });
 
-    await logActivity(session, { type: "payment.recorded", description: `Recorded a payment of ${amount.toFixed(2)} for proforma ${pf.proformaNumber}`, entityType: "payment", entityId: paymentId });
+    await logActivity(session, { type: "payment.recorded", description: `Recorded a payment of ${roundMoney(amount, docCurrency)} for proforma ${pf.proformaNumber}`, entityType: "payment", entityId: paymentId });
     await recordAudit({ orgId: session.orgId, userId: session.userId, userName: session.name }, {
       action: "payment.created", entityType: "payment", entityId: paymentId,
-      newValue: { amount: amount.toFixed(2), proformaInvoiceId: pf.id, bankAccountId, method },
+      newValue: { amount: roundMoney(amount, docCurrency), proformaInvoiceId: pf.id, bankAccountId, method },
     });
     revalidatePath(PATH);
     revalidatePath("/finance/bank-accounts");
@@ -132,14 +140,16 @@ export async function recordPaymentAction(formData: FormData): Promise<ActionRes
     if (invoice.status !== "sent" && invoice.status !== "partially_paid") {
       return { error: "Only sent or partially paid invoices can receive a payment." };
     }
+    const docCurrency = invoice.currency ?? session.orgCurrency;
+    const eps = moneyEpsilon(docCurrency);
     const balance = Number(invoice.total) - Number(invoice.paidAmount);
-    if (amount > balance + 0.005) return { error: "Amount cannot exceed the remaining balance." };
+    if (amount > balance + eps) return { error: "Amount cannot exceed the remaining balance." };
 
     const ar = byCode.get("1100");
     if (!ar) return { error: "Chart of accounts is missing a required system account (1100)." };
 
-    const newPaid = (Number(invoice.paidAmount) + amount).toFixed(2);
-    const newStatus = Number(newPaid) >= Number(invoice.total) - 0.005 ? "paid" : "partially_paid";
+    const newPaid = roundMoney(Number(invoice.paidAmount) + amount, docCurrency);
+    const newStatus = Number(newPaid) >= Number(invoice.total) - eps ? "paid" : "partially_paid";
 
     const invPaymentId = await db.transaction(async (tx) => {
       const [payment] = await tx
@@ -148,7 +158,7 @@ export async function recordPaymentAction(formData: FormData): Promise<ActionRes
           orgId: session.orgId,
           direction: "in",
           bankAccountId,
-          amount: amount.toFixed(2),
+          amount: roundMoney(amount, docCurrency),
           paymentDate,
           method,
           reference,
@@ -171,8 +181,11 @@ export async function recordPaymentAction(formData: FormData): Promise<ActionRes
         .returning({ id: journalEntriesTable.id });
 
       await tx.insert(journalLinesTable).values([
-        { journalEntryId: entry.id, accountId: bankAccount.glAccountId, debit: amount.toFixed(2), credit: "0" },
-        { journalEntryId: entry.id, accountId: ar.id, debit: "0", credit: amount.toFixed(2) },
+        // The ledger holds BASE currency only, so these two round at the base minor unit. Converting
+        // a foreign payment to base is FX-6/FX-7's job and is not done here — today the amount is
+        // posted as-is, exactly as it was before this change.
+        { journalEntryId: entry.id, accountId: bankAccount.glAccountId, debit: roundMoney(amount, session.orgCurrency), credit: "0" },
+        { journalEntryId: entry.id, accountId: ar.id, debit: "0", credit: roundMoney(amount, session.orgCurrency) },
       ]);
 
       await tx
@@ -184,13 +197,13 @@ export async function recordPaymentAction(formData: FormData): Promise<ActionRes
 
     await logActivity(session, {
       type: "payment.recorded",
-      description: `Recorded a payment of ${amount.toFixed(2)} for invoice ${invoice.invoiceNumber}`,
+      description: `Recorded a payment of ${roundMoney(amount, docCurrency)} for invoice ${invoice.invoiceNumber}`,
       entityType: "payment",
       entityId: invPaymentId,
     });
     await recordAudit({ orgId: session.orgId, userId: session.userId, userName: session.name }, {
       action: "payment.created", entityType: "payment", entityId: invPaymentId,
-      newValue: { amount: amount.toFixed(2), salesInvoiceId: invoice.id, bankAccountId, method },
+      newValue: { amount: roundMoney(amount, docCurrency), salesInvoiceId: invoice.id, bankAccountId, method },
     });
     revalidatePath(PATH);
     revalidatePath("/finance/bank-accounts");
@@ -209,13 +222,15 @@ export async function recordPaymentAction(formData: FormData): Promise<ActionRes
     .where(and(eq(purchaseOrdersTable.id, sourceId), eq(purchaseOrdersTable.orgId, session.orgId)));
   if (!po) return { error: "Purchase order not found." };
   if (po.status !== "received") return { error: "Only received purchase orders can be paid." };
+  const poCurrency = po.currency ?? session.orgCurrency;
+  const poEps = moneyEpsilon(poCurrency);
   const balance = Number(po.total) - Number(po.paidAmount);
-  if (amount > balance + 0.005) return { error: "Amount cannot exceed the remaining balance." };
+  if (amount > balance + poEps) return { error: "Amount cannot exceed the remaining balance." };
 
   const ap = byCode.get("2000");
   if (!ap) return { error: "Chart of accounts is missing a required system account (2000)." };
 
-  const newPaid = (Number(po.paidAmount) + amount).toFixed(2);
+  const newPaid = roundMoney(Number(po.paidAmount) + amount, poCurrency);
 
   const poPaymentId = await db.transaction(async (tx) => {
     const [payment] = await tx
@@ -224,7 +239,7 @@ export async function recordPaymentAction(formData: FormData): Promise<ActionRes
         orgId: session.orgId,
         direction: "out",
         bankAccountId,
-        amount: amount.toFixed(2),
+        amount: roundMoney(amount, poCurrency),
         paymentDate,
         method,
         reference,
@@ -247,8 +262,11 @@ export async function recordPaymentAction(formData: FormData): Promise<ActionRes
       .returning({ id: journalEntriesTable.id });
 
     await tx.insert(journalLinesTable).values([
-      { journalEntryId: entry.id, accountId: ap.id, debit: amount.toFixed(2), credit: "0" },
-      { journalEntryId: entry.id, accountId: bankAccount.glAccountId, debit: "0", credit: amount.toFixed(2) },
+      // The ledger holds BASE currency only, so these two round at the base minor unit. Converting
+      // a foreign payment to base is FX-6/FX-7's job and is not done here — today the amount is
+      // posted as-is, exactly as it was before this change.
+      { journalEntryId: entry.id, accountId: ap.id, debit: roundMoney(amount, session.orgCurrency), credit: "0" },
+      { journalEntryId: entry.id, accountId: bankAccount.glAccountId, debit: "0", credit: roundMoney(amount, session.orgCurrency) },
     ]);
 
     await tx.update(purchaseOrdersTable).set({ paidAmount: newPaid, updatedAt: new Date() }).where(eq(purchaseOrdersTable.id, po.id));
@@ -257,13 +275,13 @@ export async function recordPaymentAction(formData: FormData): Promise<ActionRes
 
   await logActivity(session, {
     type: "payment.recorded",
-    description: `Recorded a payment of ${amount.toFixed(2)} for purchase order ${po.poNumber}`,
+    description: `Recorded a payment of ${roundMoney(amount, poCurrency)} for purchase order ${po.poNumber}`,
     entityType: "payment",
     entityId: poPaymentId,
   });
   await recordAudit({ orgId: session.orgId, userId: session.userId, userName: session.name }, {
     action: "payment.created", entityType: "payment", entityId: poPaymentId,
-    newValue: { amount: amount.toFixed(2), purchaseOrderId: po.id, bankAccountId, method },
+    newValue: { amount: roundMoney(amount, poCurrency), purchaseOrderId: po.id, bankAccountId, method },
   });
   revalidatePath(PATH);
   revalidatePath("/finance/bank-accounts");
@@ -303,20 +321,24 @@ export async function deletePaymentAction(paymentId: number): Promise<ActionResu
     if (payment.salesInvoiceId) {
       const [inv] = await tx.select().from(salesInvoicesTable).where(eq(salesInvoicesTable.id, payment.salesInvoiceId));
       if (inv) {
-        const newPaid = Math.max(0, Number(inv.paidAmount) - amt).toFixed(2);
-        const newStatus = Number(newPaid) <= 0.005 ? "sent" : Number(newPaid) >= Number(inv.total) - 0.005 ? "paid" : "partially_paid";
+        // Each document is un-paid in ITS OWN currency, so both the rounding and the two status
+        // thresholds come from that document rather than from a fixed half-cent.
+        const c = inv.currency ?? session.orgCurrency;
+        const e = moneyEpsilon(c);
+        const newPaid = roundMoney(Math.max(0, Number(inv.paidAmount) - amt), c);
+        const newStatus = Number(newPaid) <= e ? "sent" : Number(newPaid) >= Number(inv.total) - e ? "paid" : "partially_paid";
         await tx.update(salesInvoicesTable).set({ paidAmount: newPaid, status: newStatus, updatedAt: new Date() }).where(eq(salesInvoicesTable.id, inv.id));
       }
     } else if (payment.proformaInvoiceId) {
       const [pf] = await tx.select().from(proformaInvoicesTable).where(eq(proformaInvoicesTable.id, payment.proformaInvoiceId));
       if (pf) {
-        const newPaid = Math.max(0, Number(pf.paidAmount) - amt).toFixed(2);
+        const newPaid = roundMoney(Math.max(0, Number(pf.paidAmount) - amt), pf.currency ?? session.orgCurrency);
         await tx.update(proformaInvoicesTable).set({ paidAmount: newPaid, updatedAt: new Date() }).where(eq(proformaInvoicesTable.id, pf.id));
       }
     } else if (payment.purchaseOrderId) {
       const [po] = await tx.select().from(purchaseOrdersTable).where(eq(purchaseOrdersTable.id, payment.purchaseOrderId));
       if (po) {
-        const newPaid = Math.max(0, Number(po.paidAmount) - amt).toFixed(2);
+        const newPaid = roundMoney(Math.max(0, Number(po.paidAmount) - amt), po.currency ?? session.orgCurrency);
         await tx.update(purchaseOrdersTable).set({ paidAmount: newPaid, updatedAt: new Date() }).where(eq(purchaseOrdersTable.id, po.id));
       }
     }
@@ -324,7 +346,7 @@ export async function deletePaymentAction(paymentId: number): Promise<ActionResu
     await tx.delete(paymentsTable).where(eq(paymentsTable.id, payment.id));
   });
 
-  await logActivity(session, { type: "payment.deleted", description: `Deleted a payment of ${amt.toFixed(2)}`, entityType: "payment", entityId: payment.id });
+  await logActivity(session, { type: "payment.deleted", description: `Deleted a payment of ${roundMoney(amt, session.orgCurrency)}`, entityType: "payment", entityId: payment.id });
   await recordAudit({ orgId: session.orgId, userId: session.userId, userName: session.name }, {
     action: "payment.deleted", entityType: "payment", entityId: payment.id,
     previousValue: { amount: payment.amount, salesInvoiceId: payment.salesInvoiceId, proformaInvoiceId: payment.proformaInvoiceId, purchaseOrderId: payment.purchaseOrderId },

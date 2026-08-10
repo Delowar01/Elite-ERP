@@ -18,16 +18,18 @@
     "verify:import": "tsx --env-file-if-exists=.env --conditions=react-server verify/verify-import.mts",
     "verify:exchange-rates": "tsx --env-file-if-exists=.env --conditions=react-server verify/verify-exchange-rates.mts",
     "verify:registration-currency": "tsx --env-file-if-exists=.env --conditions=react-server verify/verify-registration-currency.mts",
-    "verify:server": "npm run verify:statements && npm run verify:project-costing && npm run verify:docs-import && npm run verify:client-import && npm run verify:import && npm run verify:exchange-rates && npm run verify:registration-currency",
+    "verify:server": "npm run verify:statements && npm run verify:project-costing && npm run verify:docs-import && npm run verify:client-import && npm run verify:import && npm run verify:exchange-rates && npm run verify:registration-currency && npm run verify:money-round-trip",
     "verify:role-matrix": "tsx --env-file-if-exists=.env --conditions=react-server verify/verify-role-matrix.mts",
     "verify:confirm-policy": "tsx --env-file-if-exists=.env --conditions=react-server verify/verify-confirm-policy.mts",
     "verify:dirty-form": "tsx --env-file-if-exists=.env --conditions=react-server verify/verify-dirty-form.mts",
     "verify:skeletons": "tsx --env-file-if-exists=.env --conditions=react-server verify/verify-skeletons.mts",
     "verify:contrast": "tsx --env-file-if-exists=.env --conditions=react-server verify/verify-contrast.mts",
     "verify:edit-action": "tsx --env-file-if-exists=.env --conditions=react-server verify/verify-edit-action.mts",
-    "verify:static": "npm run verify:role-matrix && npm run verify:confirm-policy && npm run verify:dirty-form && npm run verify:skeletons && npm run verify:contrast && npm run verify:edit-action",
+    "verify:static": "npm run verify:role-matrix && npm run verify:confirm-policy && npm run verify:dirty-form && npm run verify:skeletons && npm run verify:contrast && npm run verify:edit-action && npm run verify:money-precision",
     "verify:all": "npm run verify:static && npm run verify:server",
-    "verify:browser": "node --env-file-if-exists=.env verify/run-browser-suites.mjs"
+    "verify:browser": "node --env-file-if-exists=.env verify/run-browser-suites.mjs",
+    "verify:money-precision": "tsx --env-file-if-exists=.env --conditions=react-server verify/verify-money-precision.mts",
+    "verify:money-round-trip": "tsx --env-file-if-exists=.env --conditions=react-server verify/verify-money-round-trip.mts"
   },
   "dependencies": {
     "@radix-ui/react-avatar": "^1.2.2",

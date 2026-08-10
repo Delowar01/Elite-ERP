@@ -11,6 +11,7 @@ import { ConvertMenu } from "../_shared/convert-menu";
 
 export function InvoiceDetailActions({
   locale,
+  currency,
   invoiceId,
   invoiceNumber,
   customerName,
@@ -20,6 +21,7 @@ export function InvoiceDetailActions({
   bankAccounts,
 }: {
   locale: Locale;
+  currency: string;
   invoiceId: number;
   invoiceNumber: string;
   customerName: string;
@@ -86,6 +88,7 @@ export function InvoiceDetailActions({
       {canRecordPayment && (
         <RecordPaymentDialog
           locale={locale}
+          currency={currency}
           bankAccounts={bankAccounts}
           invoices={[{ id: invoiceId, invoiceNumber, customerName, balance }]}
           purchaseOrders={[]}

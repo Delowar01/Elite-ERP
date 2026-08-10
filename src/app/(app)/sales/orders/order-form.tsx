@@ -106,7 +106,7 @@ export function OrderForm({
   const [pendingDraft, startDraftTransition] = useTransition();
   const [pendingPrimary, startPrimaryTransition] = useTransition();
 
-  const totals = computeTotals(items, discount);
+  const totals = computeTotals(items, discount, currency);
   const selectedCustomer = customers.find((c) => String(c.id) === customerId);
 
   // Everything that counts as this document's content. Leaving a field out would leave it

@@ -80,7 +80,7 @@ export function DnForm({
   const [pendingDraft, startDraftTransition] = useTransition();
   const [pendingPrimary, startPrimaryTransition] = useTransition();
 
-  const totals = computeTotals(items);
+  const totals = computeTotals(items, 0, org.currency);
   const selectedPo = purchaseOrders.find((po) => String(po.id) === sourcePurchaseOrderId);
 
   const previewData: PreviewData = {

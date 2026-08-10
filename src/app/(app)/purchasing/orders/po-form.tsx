@@ -120,7 +120,7 @@ export function PoForm({
   const [pendingDraft, startDraftTransition] = useTransition();
   const [pendingPrimary, startPrimaryTransition] = useTransition();
 
-  const totals = computeTotals(items, discount);
+  const totals = computeTotals(items, discount, currency);
   const selectedVendor = vendors.find((v) => String(v.id) === vendorId);
 
   // Everything that counts as this document's content. Leaving a field out would leave it

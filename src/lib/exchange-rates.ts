@@ -1,6 +1,7 @@
 import "server-only";
 import { and, desc, eq, lte } from "drizzle-orm";
 import { db, exchangeRatesTable } from "@/db";
+import { roundMoney } from "@/lib/currency/currencies";
 
 /**
  * Rate lookup for posting-time currency conversion.
@@ -93,13 +94,15 @@ export async function resolveRate(args: {
 
 /**
  * Convert a foreign amount to base currency. **Multiplies** — see the direction convention on
- * `exchangeRatesTable`. Rounds half away from zero to 2 decimals, matching how every other money
- * figure in the app is stored (`numeric(14,2)`).
+ * `exchangeRatesTable`.
+ *
+ * The result is a BASE currency amount, so it rounds at the BASE currency's minor unit — three
+ * decimals for a Kuwaiti or Bahraini organization, zero for a Japanese one. It used to round to
+ * cents unconditionally, which would have silently truncated the third decimal of every converted
+ * figure the moment FX-6 started posting them.
  */
-export function toBaseAmount(foreignAmount: string | number, rate: string | number): string {
-  const raw = (Number(foreignAmount) || 0) * (Number(rate) || 0) * 100;
-  const cents = raw < 0 ? -Math.round(-raw) : Math.round(raw);
-  return (cents / 100).toFixed(2);
+export function toBaseAmount(foreignAmount: string | number, rate: string | number, baseCurrency: string): string {
+  return roundMoney((Number(foreignAmount) || 0) * (Number(rate) || 0), baseCurrency);
 }
 
 /**

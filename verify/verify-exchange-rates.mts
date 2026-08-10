@@ -143,15 +143,24 @@ check("a date before the earliest rate throws rather than borrowing a later one"
 check("CONTROL: one day later, the same currency resolves", Number((await r("USD", "2026-01-01")).rate) === 3.75);
 
 // ---------------- 6. direction: multiply, never divide ----------------
-check("100 USD at 3.75 is 375.00 SAR (multiply)", toBaseAmount("100", "3.75") === "375.00", toBaseAmount("100", "3.75"));
-check("the inverted (divide) result is NOT what is produced", toBaseAmount("100", "3.75") !== "26.67");
-check("1 USD at 3.75 is 3.75 SAR", toBaseAmount("1", "3.75") === "3.75", toBaseAmount("1", "3.75"));
-check("a base-currency amount at rate 1 is unchanged", toBaseAmount("1234.56", "1") === "1234.56", toBaseAmount("1234.56", "1"));
+check("100 USD at 3.75 is 375.00 SAR (multiply)", toBaseAmount("100", "3.75", "SAR") === "375.00", toBaseAmount("100", "3.75", "SAR"));
+check("the inverted (divide) result is NOT what is produced", toBaseAmount("100", "3.75", "SAR") !== "26.67");
+check("1 USD at 3.75 is 3.75 SAR", toBaseAmount("1", "3.75", "SAR") === "3.75", toBaseAmount("1", "3.75", "SAR"));
+check("a base-currency amount at rate 1 is unchanged", toBaseAmount("1234.56", "1", "SAR") === "1234.56", toBaseAmount("1234.56", "1", "SAR"));
 check("the resolved rate string feeds the arithmetic directly",
-  toBaseAmount("200", (await r("USD", "2026-06-15")).rate) === "760.00", toBaseAmount("200", (await r("USD", "2026-06-15")).rate));
-check("a half-cent rounds away from zero, not down", toBaseAmount("1", "0.005") === "0.01", toBaseAmount("1", "0.005"));
-check("…and away from zero on the negative side too", toBaseAmount("-1", "0.005") === "-0.01", toBaseAmount("-1", "0.005"));
-check("a full-precision rate rounds to cents", toBaseAmount("100", "3.14159265") === "314.16", toBaseAmount("100", "3.14159265"));
+  toBaseAmount("200", (await r("USD", "2026-06-15")).rate, "SAR") === "760.00", toBaseAmount("200", (await r("USD", "2026-06-15")).rate, "SAR"));
+check("a half-cent rounds away from zero, not down", toBaseAmount("1", "0.005", "SAR") === "0.01", toBaseAmount("1", "0.005", "SAR"));
+check("…and away from zero on the negative side too", toBaseAmount("-1", "0.005", "SAR") === "-0.01", toBaseAmount("-1", "0.005", "SAR"));
+check("a full-precision rate rounds to cents", toBaseAmount("100", "3.14159265", "SAR") === "314.16", toBaseAmount("100", "3.14159265", "SAR"));
+
+// The base currency, not a constant, decides the precision. A 3-decimal base must keep its third
+// decimal, and a 0-decimal base must not invent one — the failure the old `.toFixed(2)` would have
+// caused the moment FX-6 posted a converted figure in a Kuwaiti or Japanese organization.
+check("a KWD base keeps the third decimal", toBaseAmount("100", "3.14159265", "KWD") === "314.159", toBaseAmount("100", "3.14159265", "KWD"));
+check("a BHD base keeps the third decimal", toBaseAmount("1", "0.0005", "BHD") === "0.001", toBaseAmount("1", "0.0005", "BHD"));
+check("a JPY base carries no decimals at all", toBaseAmount("100", "3.7", "JPY") === "370", toBaseAmount("100", "3.7", "JPY"));
+check("the same inputs give different precision per base currency",
+  toBaseAmount("100", "3.14159265", "SAR") !== toBaseAmount("100", "3.14159265", "KWD"));
 
 // ---------------- 7. zero / negative rejected by the DATABASE ----------------
 for (const bad of ["0", "0.00000000", "-3.75"]) {

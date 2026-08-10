@@ -14,6 +14,8 @@ import {
   vendorsTable,
   type Account,
 } from "@/db";
+import { roundMoney } from "@/lib/currency/currencies";
+import { orgBaseCurrency } from "@/lib/org-currency";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Financial Reporting data layer. Every ledger-based report is generated from the
@@ -124,7 +126,11 @@ export async function getTrialBalance(orgId: number, range: DateRange): Promise<
     }),
     { openingDr: 0, openingCr: 0, periodDr: 0, periodCr: 0, closingDr: 0, closingCr: 0 },
   );
-  const balanced = Math.round(totals.closingDr * 100) === Math.round(totals.closingCr * 100);
+  // Compared at the BASE currency's minor unit. Rounding to cents reported a Kuwaiti trial balance
+  // as balanced when closing debits and credits differed in the third decimal — the report would
+  // have said the books balanced while they did not.
+  const currency = await orgBaseCurrency(orgId);
+  const balanced = roundMoney(totals.closingDr, currency) === roundMoney(totals.closingCr, currency);
   return { rows, totals, balanced };
 }
 
@@ -193,7 +199,10 @@ export async function getBalanceSheet(orgId: number, range: DateRange): Promise<
     .reduce((s, p) => s + (p.type === "revenue" ? p.movement : -p.movement), 0);
   const totalEquity = equityAccountsTotal + retainedEarnings + currentPeriodProfit;
   const totalLiabilitiesAndEquity = totalLiabilities + totalEquity;
-  const balanced = Math.round(totalAssets * 100) === Math.round(totalLiabilitiesAndEquity * 100);
+  // Same reason as the trial balance above: a balance sheet that "balances" only at two decimals
+  // is not a balance sheet.
+  const bsCurrency = await orgBaseCurrency(orgId);
+  const balanced = roundMoney(totalAssets, bsCurrency) === roundMoney(totalLiabilitiesAndEquity, bsCurrency);
   return { currentAssets, nonCurrentAssets, totalAssets, currentLiabilities, nonCurrentLiabilities, totalLiabilities, equity, equityAccountsTotal, retainedEarnings, currentPeriodProfit, totalEquity, totalLiabilitiesAndEquity, balanced };
 }
 

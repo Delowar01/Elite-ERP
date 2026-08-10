@@ -76,8 +76,11 @@ export default async function PaymentsPage() {
   }));
 
   return (
+    // The Payment Records page can list documents in several currencies; the dialog's inputs follow
+    // the organization's base currency, which is what an unset document currency means anyway.
     <PaymentsListClient
       locale={locale}
+      currency={session.orgCurrency}
       rows={rows}
       bankAccounts={bankAccounts}
       outstandingInvoices={outstandingInvoices}

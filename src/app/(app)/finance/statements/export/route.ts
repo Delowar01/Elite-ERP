@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { db, orgsTable } from "@/db";
 import { requireSession } from "@/lib/session";
+import { roundMoney } from "@/lib/currency/currencies";
 import { exportResponse, type ExportColumn, type ExportMeta } from "@/lib/report-export";
 import { getStatement, readFilters, statementFilename, DOC_TYPE_LABEL, type PartyKind } from "@/lib/statements";
 
@@ -11,10 +12,13 @@ import { getStatement, readFilters, statementFilename, DOC_TYPE_LABEL, type Part
 // party id from another organization simply resolves to nothing (404) — export cannot be used to
 // read across tenants. Read-only: nothing is written and no accounting is affected.
 
-const money = (n: number) => n.toFixed(2);
+// Financial reports and statements are ledger figures, and the general ledger holds BASE currency
+// only — so the rounding follows the organization's base currency, resolved per request.
+const moneyFor = (currency: string) => (n: number) => roundMoney(n, currency);
 
 export async function GET(req: Request) {
   const session = await requireSession();
+  const money = moneyFor(session.orgCurrency);
   const url = new URL(req.url);
 
   const kind: PartyKind = url.searchParams.get("kind") === "vendor" ? "vendor" : "client";

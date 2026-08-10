@@ -113,7 +113,7 @@ export function QuotationForm({
   const [pendingDraft, startDraftTransition] = useTransition();
   const [pendingPrimary, startPrimaryTransition] = useTransition();
 
-  const totals = computeTotals(items, discount);
+  const totals = computeTotals(items, discount, currency);
   const selectedCustomer = customers.find((c) => String(c.id) === customerId);
 
   // Valid Till: while auto-calc is on it's derived as Issue Date + N days (recomputes whenever either

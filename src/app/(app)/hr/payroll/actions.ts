@@ -12,6 +12,7 @@ import {
   journalLinesTable,
 } from "@/db";
 import { requireRole } from "@/lib/session";
+import { roundMoney } from "@/lib/currency/currencies";
 import { logActivity } from "@/lib/activity";
 import { latestStructures } from "./queries";
 
@@ -54,11 +55,11 @@ export async function processPayrollAction(periodMonth: number, periodYear: numb
     netTotal += net;
     return {
       employeeId: e.id,
-      basicSalary: Number(s.basicSalary).toFixed(2),
-      allowances: Number(s.allowances).toFixed(2),
-      deductions: Number(s.deductions).toFixed(2),
-      grossPay: gross.toFixed(2),
-      netPay: net.toFixed(2),
+      basicSalary: roundMoney(s.basicSalary, session.orgCurrency),
+      allowances: roundMoney(s.allowances, session.orgCurrency),
+      deductions: roundMoney(s.deductions, session.orgCurrency),
+      grossPay: roundMoney(gross, session.orgCurrency),
+      netPay: roundMoney(net, session.orgCurrency),
     };
   });
 
@@ -95,8 +96,8 @@ export async function processPayrollAction(periodMonth: number, periodYear: numb
       .returning({ id: journalEntriesTable.id });
 
     await tx.insert(journalLinesTable).values([
-      { journalEntryId: entry.id, accountId: salaryExpense.id, debit: netTotal.toFixed(2), credit: "0" },
-      { journalEntryId: entry.id, accountId: salariesPayable.id, debit: "0", credit: netTotal.toFixed(2) },
+      { journalEntryId: entry.id, accountId: salaryExpense.id, debit: roundMoney(netTotal, session.orgCurrency), credit: "0" },
+      { journalEntryId: entry.id, accountId: salariesPayable.id, debit: "0", credit: roundMoney(netTotal, session.orgCurrency) },
     ]);
   });
 

@@ -2,7 +2,7 @@
 
 import { createContext, useContext } from "react";
 import { RiyalSymbol } from "@/components/ui/riyal-symbol";
-import { SAR_SYMBOL_ASSET, type CurrencyMark as Mark } from "@/lib/currency/currencies";
+import { type CurrencyMark as Mark } from "@/lib/currency/currencies";
 
 // Shared currency-rendering layer. A currency symbol is NOT always a plain character — the official
 // SAR symbol is an image asset — so this renders three cases:
@@ -12,8 +12,15 @@ import { SAR_SYMBOL_ASSET, type CurrencyMark as Mark } from "@/lib/currency/curr
 // The org's base currency is provided once via <CurrencyProvider> (fed server-side) and read by
 // <CurrencyMark>/<Money> through context, so no component has to thread the currency down manually.
 
-// Default keeps SAR behaviour if a consumer is ever rendered outside a provider.
-const DEFAULT_MARK: Mark = { type: "asset", value: SAR_SYMBOL_ASSET, fallback: "SAR", decimalPlaces: 2, code: "SAR", name: "Saudi Riyal" };
+// The provider-less default is deliberately NEUTRAL, not SAR.
+//
+// It used to be the Saudi Riyal, so a component rendered outside <CurrencyProvider> stamped the
+// Riyal symbol onto whatever it was showing — on a Kuwaiti or German organization's screen, a
+// confident claim about the wrong currency. This is a worldwide product; there is no currency it
+// is safe to guess. An empty mark renders the amount with no symbol at all, which reads as
+// "currency not stated" rather than as a false statement, and the dev warning below makes the
+// missing provider findable instead of invisible.
+const DEFAULT_MARK: Mark = { type: "text", value: "", fallback: "", decimalPlaces: 2, code: "", name: "" };
 
 const CurrencyContext = createContext<Mark>(DEFAULT_MARK);
 
@@ -22,7 +29,11 @@ export function CurrencyProvider({ mark, children }: { mark: Mark; children: Rea
 }
 
 export function useCurrency(): Mark {
-  return useContext(CurrencyContext);
+  const m = useContext(CurrencyContext);
+  if (process.env.NODE_ENV !== "production" && !m.code) {
+    console.warn("useCurrency() outside <CurrencyProvider>: the amount will render with no currency mark.");
+  }
+  return m;
 }
 
 // Renders just the currency mark. Display priority: (1) a configured custom symbol, (2) the official

@@ -44,7 +44,18 @@ export type DigitGrouping = "international" | "indian";
 
 export type NumberFormatConfig = {
   digitGrouping: DigitGrouping; // international 12,345,679  |  indian 1,23,45,679
-  decimalPlaces: number;        // 0 | 1 | 2 | 3 — how many decimals money amounts show in documents
+  /**
+   * Decimals for QUANTITIES AND RATES — NOT for money.
+   *
+   * This used to drive money too, which made an org setting able to contradict the currency: a
+   * Kuwaiti organization left on the default 2 printed 1,250.075 KWD as 1,250.08 on its own tax
+   * invoice. How many decimals a currency has is a fact about the currency, not a preference, so
+   * money now reads `currencyDecimals` below and this setting governs only the two figures where
+   * an organization genuinely does have a choice.
+   */
+  quantityRateDecimals: number;
+  /** Money decimals — the CURRENCY's minor unit. Set from the resolved mark, never from settings. */
+  currencyDecimals: number;
   roundQuantities: boolean;     // display quantities rounded to whole numbers
   roundRates: boolean;          // display rates rounded to whole numbers
   customCurrencySymbol: string | null; // optional symbol override (highest display priority)
@@ -53,7 +64,8 @@ export type NumberFormatConfig = {
 // Existing orgs default here: 2 decimals, international grouping, no rounding, no custom symbol.
 export const DEFAULT_NUMBER_FORMAT: NumberFormatConfig = {
   digitGrouping: "international",
-  decimalPlaces: 2,
+  quantityRateDecimals: 2,
+  currencyDecimals: 2,
   roundQuantities: false,
   roundRates: false,
   customCurrencySymbol: null,
@@ -421,6 +433,20 @@ export function roundMoney(value: string | number, currencyCode?: string | null)
   return (units / factor).toFixed(dp);
 }
 
+/**
+ * Half of one minor unit, for the "close enough" comparisons money code cannot avoid — an
+ * overpayment check, a paid-in-full threshold, a balance test.
+ *
+ * Every one of these was written as `0.005`, half a cent. In a Kuwaiti organization half a fils is
+ * `0.0005`, so the hardcoded constant silently allowed ten times the intended slack: an invoice
+ * could be overpaid by 0.005 KWD and still pass the check, and a balance 0.004 short could be
+ * marked paid in full. The tolerance has to come from the currency for the same reason the
+ * rounding does.
+ */
+export function moneyEpsilon(currencyCode?: string | null): number {
+  return 0.5 / 10 ** (getCurrency(currencyCode)?.decimalPlaces ?? 2);
+}
+
 // The single shared number formatter for SUMMARY-context money (dashboards / reports / overview
 // cards — always 0 decimals) and any legacy caller. Documents use the Number-Format-aware helpers
 // below (formatAmount / formatRate / formatQuantity) so the org's grouping + decimals + rounding
@@ -453,14 +479,15 @@ export function markFormat(mark?: CurrencyMark | null): NumberFormatConfig {
 // A money amount (line amount, VAT, subtotal, total, discount) — grouping + configured decimals.
 export function formatAmount(value: string | number, cfg: NumberFormatConfig = DEFAULT_NUMBER_FORMAT): string {
   const n = Number(value) || 0;
-  const d = clampDecimals(cfg.decimalPlaces);
+  // The CURRENCY's minor unit, not the org's number-format preference — see NumberFormatConfig.
+  const d = cfg.currencyDecimals;
   return n.toLocaleString(groupingLocale(cfg.digitGrouping), { minimumFractionDigits: d, maximumFractionDigits: d });
 }
 
 // A unit rate — like an amount, but rounded to a whole number when "Round rates" is enabled.
 export function formatRate(value: string | number, cfg: NumberFormatConfig = DEFAULT_NUMBER_FORMAT): string {
   const n = Number(value) || 0;
-  const d = cfg.roundRates ? 0 : clampDecimals(cfg.decimalPlaces);
+  const d = cfg.roundRates ? 0 : clampDecimals(cfg.quantityRateDecimals);
   return n.toLocaleString(groupingLocale(cfg.digitGrouping), { minimumFractionDigits: d, maximumFractionDigits: d });
 }
 
@@ -486,7 +513,10 @@ export function buildMoneyMark(opts: {
   const custom = (opts.customCurrencySymbol ?? "").trim();
   const format: NumberFormatConfig = {
     digitGrouping: opts.digitGrouping === "indian" ? "indian" : "international",
-    decimalPlaces: clampDecimals(opts.decimalPlaces ?? 2),
+    quantityRateDecimals: clampDecimals(opts.decimalPlaces ?? 2),
+    // Money follows the currency this mark resolved to. A KWD mark carries 3 here whatever the
+    // organization picked in Number Format.
+    currencyDecimals: base.decimalPlaces,
     roundQuantities: !!opts.roundQuantities,
     roundRates: !!opts.roundRates,
     customCurrencySymbol: custom || null,

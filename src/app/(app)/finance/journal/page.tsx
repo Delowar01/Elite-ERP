@@ -38,7 +38,7 @@ export default async function JournalPage() {
         <span className="org-pill">{t(locale, "Manual")}</span>
       </div>
 
-      <JournalForm locale={locale} accounts={accounts} projects={projects} />
+      <JournalForm locale={locale} accounts={accounts} currency={session.orgCurrency} projects={projects} />
 
       <div className="main-head" style={{ marginTop: 40 }}>
         <h3 style={{ fontSize: 15 }}>{t(locale, "Recent journal entries")}</h3>

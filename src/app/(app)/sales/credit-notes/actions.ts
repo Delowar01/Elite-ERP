@@ -13,6 +13,7 @@ import { can, evaluate } from "@/lib/document-lifecycle";
 import { snapshotSealForDoc } from "@/lib/doc-seal";
 import { snapshotDocumentBankAccounts } from "@/lib/document-bank-data";
 import { computeTotals, type LineItemInput } from "../_shared/totals";
+import { roundMoney } from "@/lib/currency/currencies";
 
 export type ActionResult = { error?: string; id?: number };
 
@@ -44,7 +45,8 @@ export async function createCreditNoteAction(
   const items = input.items.filter((l) => l.description.trim() && Number(l.quantity) > 0);
   if (items.length === 0) return { error: "Add at least one line item." };
 
-  const totals = computeTotals(items as LineItemInput[]);
+  const currency = session.orgCurrency;
+  const totals = computeTotals(items as LineItemInput[], 0, currency);
   const bankAccounts = await snapshotDocumentBankAccounts(session.orgId, input.bankAccountIds);
   const seal = await snapshotSealForDoc(db, session.orgId, "credit_note");
 
@@ -82,7 +84,7 @@ export async function createCreditNoteAction(
         quantity: l.quantity,
         unitPrice: l.unitPrice,
         taxRatePercent: l.taxRatePercent,
-        lineTotal: ((Number(l.quantity) || 0) * (Number(l.unitPrice) || 0)).toFixed(2),
+        lineTotal: roundMoney((Number(l.quantity) || 0) * (Number(l.unitPrice) || 0), currency),
       })),
     );
     return cn.id;
@@ -108,7 +110,8 @@ export async function updateCreditNoteAction(
 
   const items = input.items.filter((l) => l.description.trim() && Number(l.quantity) > 0);
   if (items.length === 0) return { error: "Add at least one line item." };
-  const totals = computeTotals(items as LineItemInput[]);
+  const currency = session.orgCurrency;
+  const totals = computeTotals(items as LineItemInput[], 0, currency);
   const bankAccounts = await snapshotDocumentBankAccounts(session.orgId, input.bankAccountIds);
 
   await db.transaction(async (tx) => {
@@ -135,7 +138,7 @@ export async function updateCreditNoteAction(
         quantity: l.quantity,
         unitPrice: l.unitPrice,
         taxRatePercent: l.taxRatePercent,
-        lineTotal: ((Number(l.quantity) || 0) * (Number(l.unitPrice) || 0)).toFixed(2),
+        lineTotal: roundMoney((Number(l.quantity) || 0) * (Number(l.unitPrice) || 0), currency),
       })),
     );
   });

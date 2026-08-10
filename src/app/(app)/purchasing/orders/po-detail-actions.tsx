@@ -11,6 +11,7 @@ import { ConvertMenu } from "../../sales/_shared/convert-menu";
 
 export function PoDetailActions({
   locale,
+  currency,
   poId,
   poNumber,
   vendorName,
@@ -19,6 +20,7 @@ export function PoDetailActions({
   bankAccounts,
 }: {
   locale: Locale;
+  currency: string;
   poId: number;
   poNumber: string;
   vendorName: string;
@@ -106,6 +108,7 @@ export function PoDetailActions({
         {balance > 0 && (
           <RecordPaymentDialog
             locale={locale}
+            currency={currency}
             bankAccounts={bankAccounts}
             invoices={[]}
             purchaseOrders={[{ id: poId, poNumber, vendorName, balance }]}

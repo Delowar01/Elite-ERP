@@ -1,11 +1,23 @@
 import { amountInWordsAr, amountInWordsEn } from "@/lib/currency/amount-words";
+import { moneyDecimals, roundMoney } from "@/lib/currency/currencies";
 export type LineItemInput = {
   quantity: string;
   unitPrice: string;
   taxRatePercent: string;
 };
 
-export function computeTotals(items: LineItemInput[], discount: string | number = 0) {
+/**
+ * Document totals, rounded to the document currency's minor unit.
+ *
+ * `currencyCode` is required rather than optional: an optional parameter would default to two
+ * decimals and silently truncate every Kuwaiti, Bahraini and Omani document, which is the defect
+ * this replaces. Making callers name the currency means a new one cannot be added without deciding.
+ */
+export function computeTotals(
+  items: LineItemInput[],
+  discount: string | number,
+  currencyCode: string,
+) {
   let subtotal = 0;
   let taxTotal = 0;
   for (const item of items) {
@@ -23,15 +35,23 @@ export function computeTotals(items: LineItemInput[], discount: string | number 
   const adjustedTax = taxable * taxRate;
   const total = taxable + adjustedTax;
   return {
-    subtotal: subtotal.toFixed(2),
-    discount: disc.toFixed(2),
-    taxTotal: adjustedTax.toFixed(2),
-    total: total.toFixed(2),
+    subtotal: roundMoney(subtotal, currencyCode),
+    discount: roundMoney(disc, currencyCode),
+    taxTotal: roundMoney(adjustedTax, currencyCode),
+    total: roundMoney(total, currencyCode),
   };
 }
 
-export function fmt(n: string | number) {
-  return Number(n).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+/**
+ * Group-separated money for display, at the CURRENCY's minor unit.
+ *
+ * `currencyCode` is required rather than defaulted for the same reason `computeTotals`' is: a
+ * default would silently print a Kuwaiti balance of 1,250.075 as 1,250.08 at the one call site
+ * that forgot to pass it, which is exactly the truncation this helper exists to prevent.
+ */
+export function fmt(n: string | number, currencyCode: string) {
+  const dp = moneyDecimals("document", currencyCode);
+  return Number(n).toLocaleString(undefined, { minimumFractionDigits: dp, maximumFractionDigits: dp });
 }
 
 

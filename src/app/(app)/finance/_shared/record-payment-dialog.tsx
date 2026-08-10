@@ -10,6 +10,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { t, type Locale } from "@/lib/i18n/dict";
 import { fmt } from "../../sales/_shared/totals";
+import { moneyDecimals } from "@/lib/currency/currencies";
 import { recordPaymentAction } from "../payments/actions";
 import { useConfirm } from "../../_shared/confirm-provider";
 
@@ -24,6 +25,7 @@ export type PaymentSourceType = "invoice" | "proforma" | "po";
 // from a document's own detail page. lockedSourceType targets a proforma (Issue #14) or invoice/PO.
 export function RecordPaymentDialog({
   locale,
+  currency,
   bankAccounts,
   invoices,
   purchaseOrders,
@@ -34,6 +36,8 @@ export function RecordPaymentDialog({
   lockedSourceType,
 }: {
   locale: Locale;
+  /** The currency the balances and the amount are in — the document's, not a fixed two decimals. */
+  currency: string;
   bankAccounts: BankAccountOption[];
   invoices: OutstandingInvoice[];
   purchaseOrders: OutstandingPo[];
@@ -46,6 +50,11 @@ export function RecordPaymentDialog({
   // The source type: locked value wins; otherwise derived from the direction (Payment Records page
   // records against invoices when receiving and POs when paying).
   const sourceType: PaymentSourceType = lockedSourceType ?? (lockedDirection === "out" ? "po" : "invoice");
+
+  // One minor unit of this currency: the smallest amount that can be paid, and the input's step.
+  // Hardcoding 0.01 stopped a Kuwaiti user entering 0.075 at all — the browser rejected it.
+  const minorUnit = String(1 / 10 ** moneyDecimals("document", currency));
+  const zeroPlaceholder = (0).toFixed(moneyDecimals("document", currency));
 
   function findBalance(dir: "in" | "out", id: string): number | undefined {
     if (sourceType === "proforma") return proformas.find((p) => String(p.id) === id)?.balance;
@@ -126,7 +135,7 @@ export function RecordPaymentDialog({
           ? "The payment will be posted against this document and will increase your bank balance."
           : "The payment will be posted against this document and will reduce your bank balance.",
       details: [
-        { label: "Amount", value: fmt(Number(amount) || 0) },
+        { label: "Amount", value: fmt(Number(amount) || 0, currency) },
         ...(docNumber ? [{ label: "Document", value: docNumber }] : []),
         ...(party ? [{ label: direction === "in" ? "Client" : "Vendor", value: party }] : []),
         ...(bankName ? [{ label: "Bank Account", value: bankName }] : []),
@@ -210,12 +219,12 @@ export function RecordPaymentDialog({
                     {direction === "in"
                       ? invoices.map((inv) => (
                           <SelectItem key={inv.id} value={String(inv.id)}>
-                            {inv.invoiceNumber} · {inv.customerName} · {t(locale, "Balance")} {fmt(inv.balance)}
+                            {inv.invoiceNumber} · {inv.customerName} · {t(locale, "Balance")} {fmt(inv.balance, currency)}
                           </SelectItem>
                         ))
                       : purchaseOrders.map((po) => (
                           <SelectItem key={po.id} value={String(po.id)}>
-                            {po.poNumber} · {po.vendorName} · {t(locale, "Balance")} {fmt(po.balance)}
+                            {po.poNumber} · {po.vendorName} · {t(locale, "Balance")} {fmt(po.balance, currency)}
                           </SelectItem>
                         ))}
                   </SelectContent>
@@ -243,11 +252,11 @@ export function RecordPaymentDialog({
                 id="pay-amount"
                 name="amount"
                 type="number"
-                step="0.01"
-                min="0.01"
+                step={minorUnit}
+                min={minorUnit}
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
-                placeholder={selected ? fmt(selected.balance) : "0.00"}
+                placeholder={selected ? fmt(selected.balance, currency) : zeroPlaceholder}
               />
             </FormField>
 

@@ -23,6 +23,10 @@ import {
   vendorsTable,
 } from "@/db";
 import { nextDocumentNumber } from "@/lib/documents";
+import { moneyDecimals, roundMoney } from "@/lib/currency/currencies";
+// These imports never set a document currency, so the org base IS the document's currency here —
+// the same thing a null `currency` column means everywhere else in the schema.
+import { orgBaseCurrency } from "@/lib/org-currency";
 import type { DocumentType } from "@/lib/document-lifecycle";
 import type { ListFilterState } from "@/app/(app)/documents/_workspace/filter-types";
 
@@ -78,10 +82,25 @@ async function findVendorId(orgId: number, name: string): Promise<number | null>
   return v?.id ?? null;
 }
 const isDate = (s: string) => /^\d{4}-\d{2}-\d{2}$/.test(s.trim());
-const isAmount = (s: string) => s.trim() === "" || (/^\d+(\.\d{1,2})?$/.test(s.trim()) && Number(s) >= 0);
-function totalsFromAmount(amount: string): { subtotal: string; taxTotal: string; total: string; hasItem: boolean } {
+
+/**
+ * How many decimals an imported amount may carry — the currency's, not two. The old fixed
+ * `\d{1,2}` rejected a perfectly valid Kuwaiti 100.075 as a malformed number, so a 3-decimal
+ * organization could not import its own amounts at all.
+ */
+async function isAmount(orgId: number, s: string): Promise<boolean> {
+  const t = s.trim();
+  if (t === "") return true;
+  const dp = moneyDecimals("document", await orgBaseCurrency(orgId));
+  const re = dp === 0 ? /^\d+$/ : new RegExp(`^\\d+(\\.\\d{1,${dp}})?$`);
+  return re.test(t) && Number(t) >= 0;
+}
+
+async function totalsFromAmount(orgId: number, amount: string): Promise<{ subtotal: string; taxTotal: string; total: string; hasItem: boolean }> {
+  const currency = await orgBaseCurrency(orgId);
   const a = Number(amount || "0");
-  return { subtotal: a.toFixed(2), taxTotal: "0.00", total: a.toFixed(2), hasItem: a > 0 };
+  const rounded = roundMoney(a, currency);
+  return { subtotal: rounded, taxTotal: roundMoney(0, currency), total: rounded, hasItem: a > 0 };
 }
 
 export type WorkspaceEntry = {
@@ -152,7 +171,7 @@ export const WORKSPACE: Record<DocumentType, WorkspaceEntry> = {
       if (!c.client?.trim()) errs.push("Client is required.");
       else if (!(await findCustomerId(orgId, c.client))) errs.push(`Client "${c.client}" not found.`);
       if (!isDate(c.date || "")) errs.push("Issue Date must be YYYY-MM-DD.");
-      if (!isAmount(c.amount || "")) errs.push("Amount must be a non-negative number.");
+      if (!(await isAmount(orgId, c.amount || ""))) errs.push("Amount must be a non-negative number.");
       const num = (c.number || "").trim();
       if (num) {
         if (batch.has(num.toLowerCase())) errs.push(`Duplicate document number "${num}" within the file.`);
@@ -162,7 +181,7 @@ export const WORKSPACE: Record<DocumentType, WorkspaceEntry> = {
     },
     insertRow: async (tx, orgId, userId, c) => {
       const number = (c.number || "").trim() || (await nextDocumentNumber(tx, orgId, "quotation"));
-      const t = totalsFromAmount(c.amount || "0");
+      const t = await totalsFromAmount(orgId, c.amount || "0");
       const [q] = await tx.insert(quotationsTable).values({ orgId, quotationNumber: number, customerId: (await findCustomerId(orgId, c.client))!, issueDate: c.date, title: c.title?.trim() || null, subtotal: t.subtotal, discount: "0", taxTotal: t.taxTotal, total: t.total, createdById: userId }).returning({ id: quotationsTable.id });
       if (t.hasItem) await tx.insert(quotationItemsTable).values({ quotationId: q.id, description: "Imported line", quantity: "1", unitPrice: t.subtotal, taxRatePercent: "0", lineTotal: t.subtotal });
     },
@@ -184,7 +203,7 @@ export const WORKSPACE: Record<DocumentType, WorkspaceEntry> = {
       if (!c.client?.trim()) errs.push("Client is required.");
       else if (!(await findCustomerId(orgId, c.client))) errs.push(`Client "${c.client}" not found.`);
       if (!isDate(c.date || "")) errs.push("Order Date must be YYYY-MM-DD.");
-      if (!isAmount(c.amount || "")) errs.push("Amount must be a non-negative number.");
+      if (!(await isAmount(orgId, c.amount || ""))) errs.push("Amount must be a non-negative number.");
       const num = (c.number || "").trim();
       if (num) {
         if (batch.has(num.toLowerCase())) errs.push(`Duplicate document number "${num}" within the file.`);
@@ -194,7 +213,7 @@ export const WORKSPACE: Record<DocumentType, WorkspaceEntry> = {
     },
     insertRow: async (tx, orgId, userId, c) => {
       const number = (c.number || "").trim() || (await nextDocumentNumber(tx, orgId, "sales_order"));
-      const t = totalsFromAmount(c.amount || "0");
+      const t = await totalsFromAmount(orgId, c.amount || "0");
       const [so] = await tx.insert(salesOrdersTable).values({ orgId, soNumber: number, customerId: (await findCustomerId(orgId, c.client))!, issueDate: c.date, title: c.title?.trim() || null, subtotal: t.subtotal, discount: "0", taxTotal: t.taxTotal, total: t.total, createdById: userId }).returning({ id: salesOrdersTable.id });
       if (t.hasItem) await tx.insert(salesOrderItemsTable).values({ salesOrderId: so.id, description: "Imported line", quantity: "1", unitPrice: t.subtotal, taxRatePercent: "0", lineTotal: t.subtotal });
     },
@@ -216,7 +235,7 @@ export const WORKSPACE: Record<DocumentType, WorkspaceEntry> = {
       if (!c.client?.trim()) errs.push("Client is required.");
       else if (!(await findCustomerId(orgId, c.client))) errs.push(`Client "${c.client}" not found.`);
       if (!isDate(c.date || "")) errs.push("Issue Date must be YYYY-MM-DD.");
-      if (!isAmount(c.amount || "")) errs.push("Amount must be a non-negative number.");
+      if (!(await isAmount(orgId, c.amount || ""))) errs.push("Amount must be a non-negative number.");
       const num = (c.number || "").trim();
       if (num) {
         if (batch.has(num.toLowerCase())) errs.push(`Duplicate document number "${num}" within the file.`);
@@ -226,7 +245,7 @@ export const WORKSPACE: Record<DocumentType, WorkspaceEntry> = {
     },
     insertRow: async (tx, orgId, userId, c) => {
       const number = (c.number || "").trim() || (await nextDocumentNumber(tx, orgId, "proforma_invoice"));
-      const t = totalsFromAmount(c.amount || "0");
+      const t = await totalsFromAmount(orgId, c.amount || "0");
       const [pf] = await tx.insert(proformaInvoicesTable).values({ orgId, proformaNumber: number, customerId: (await findCustomerId(orgId, c.client))!, issueDate: c.date, title: c.title?.trim() || null, subtotal: t.subtotal, discount: "0", taxTotal: t.taxTotal, total: t.total, createdById: userId }).returning({ id: proformaInvoicesTable.id });
       if (t.hasItem) await tx.insert(proformaInvoiceItemsTable).values({ proformaInvoiceId: pf.id, description: "Imported line", quantity: "1", unitPrice: t.subtotal, taxRatePercent: "0", lineTotal: t.subtotal });
     },
@@ -248,7 +267,7 @@ export const WORKSPACE: Record<DocumentType, WorkspaceEntry> = {
       if (!c.client?.trim()) errs.push("Client is required.");
       else if (!(await findCustomerId(orgId, c.client))) errs.push(`Client "${c.client}" not found.`);
       if (!isDate(c.date || "")) errs.push("Issue Date must be YYYY-MM-DD.");
-      if (!isAmount(c.amount || "")) errs.push("Amount must be a non-negative number.");
+      if (!(await isAmount(orgId, c.amount || ""))) errs.push("Amount must be a non-negative number.");
       const num = (c.number || "").trim();
       if (num) {
         if (batch.has(num.toLowerCase())) errs.push(`Duplicate document number "${num}" within the file.`);
@@ -258,7 +277,7 @@ export const WORKSPACE: Record<DocumentType, WorkspaceEntry> = {
     },
     insertRow: async (tx, orgId, userId, c) => {
       const number = (c.number || "").trim() || (await nextDocumentNumber(tx, orgId, "sales_invoice"));
-      const t = totalsFromAmount(c.amount || "0");
+      const t = await totalsFromAmount(orgId, c.amount || "0");
       const [inv] = await tx.insert(salesInvoicesTable).values({ orgId, invoiceNumber: number, customerId: (await findCustomerId(orgId, c.client))!, issueDate: c.date, title: c.title?.trim() || null, subtotal: t.subtotal, discount: "0", taxTotal: t.taxTotal, total: t.total, createdById: userId }).returning({ id: salesInvoicesTable.id });
       if (t.hasItem) await tx.insert(salesInvoiceItemsTable).values({ invoiceId: inv.id, description: "Imported line", quantity: "1", unitPrice: t.subtotal, taxRatePercent: "0", lineTotal: t.subtotal });
     },
@@ -347,7 +366,7 @@ export const WORKSPACE: Record<DocumentType, WorkspaceEntry> = {
         if (!inv) errs.push(`Source invoice "${c.sourceInvoice}" not found.`);
       }
       if (!isDate(c.date || "")) errs.push("Issue Date must be YYYY-MM-DD.");
-      if (!isAmount(c.amount || "")) errs.push("Amount must be a non-negative number.");
+      if (!(await isAmount(orgId, c.amount || ""))) errs.push("Amount must be a non-negative number.");
       const num = (c.number || "").trim();
       if (num) {
         if (batch.has(num.toLowerCase())) errs.push(`Duplicate document number "${num}" within the file.`);
@@ -358,7 +377,7 @@ export const WORKSPACE: Record<DocumentType, WorkspaceEntry> = {
     insertRow: async (tx, orgId, userId, c) => {
       const [inv] = await tx.select({ id: salesInvoicesTable.id, customerId: salesInvoicesTable.customerId }).from(salesInvoicesTable).where(and(eq(salesInvoicesTable.orgId, orgId), eq(salesInvoicesTable.invoiceNumber, c.sourceInvoice.trim())));
       const number = (c.number || "").trim() || (await nextDocumentNumber(tx, orgId, "credit_note"));
-      const t = totalsFromAmount(c.amount || "0");
+      const t = await totalsFromAmount(orgId, c.amount || "0");
       const [cn] = await tx.insert(creditNotesTable).values({ orgId, creditNoteNumber: number, customerId: inv.customerId, sourceInvoiceId: inv.id, reason: c.reason?.trim() || null, issueDate: c.date, subtotal: t.subtotal, taxTotal: t.taxTotal, total: t.total, createdById: userId }).returning({ id: creditNotesTable.id });
       if (t.hasItem) await tx.insert(creditNoteItemsTable).values({ creditNoteId: cn.id, description: "Imported line", quantity: "1", unitPrice: t.subtotal, taxRatePercent: "0", lineTotal: t.subtotal });
     },
@@ -401,7 +420,7 @@ export const WORKSPACE: Record<DocumentType, WorkspaceEntry> = {
         if (!po) errs.push(`Source purchase order "${c.sourcePo}" not found.`);
       }
       if (!isDate(c.date || "")) errs.push("Issue Date must be YYYY-MM-DD.");
-      if (!isAmount(c.amount || "")) errs.push("Amount must be a non-negative number.");
+      if (!(await isAmount(orgId, c.amount || ""))) errs.push("Amount must be a non-negative number.");
       const num = (c.number || "").trim();
       if (num) {
         if (batch.has(num.toLowerCase())) errs.push(`Duplicate document number "${num}" within the file.`);
@@ -412,7 +431,7 @@ export const WORKSPACE: Record<DocumentType, WorkspaceEntry> = {
     insertRow: async (tx, orgId, userId, c) => {
       const [po] = await tx.select({ id: purchaseOrdersTable.id, vendorId: purchaseOrdersTable.vendorId }).from(purchaseOrdersTable).where(and(eq(purchaseOrdersTable.orgId, orgId), eq(purchaseOrdersTable.poNumber, c.sourcePo.trim())));
       const number = (c.number || "").trim() || (await nextDocumentNumber(tx, orgId, "debit_note"));
-      const t = totalsFromAmount(c.amount || "0");
+      const t = await totalsFromAmount(orgId, c.amount || "0");
       const [dn] = await tx.insert(debitNotesTable).values({ orgId, debitNoteNumber: number, vendorId: po.vendorId, sourcePurchaseOrderId: po.id, reason: c.reason?.trim() || null, issueDate: c.date, subtotal: t.subtotal, taxTotal: t.taxTotal, total: t.total, createdById: userId }).returning({ id: debitNotesTable.id });
       if (t.hasItem) await tx.insert(debitNoteItemsTable).values({ debitNoteId: dn.id, description: "Imported line", quantity: "1", unitCost: t.subtotal, taxRatePercent: "0", lineTotal: t.subtotal });
     },
@@ -452,7 +471,7 @@ export const WORKSPACE: Record<DocumentType, WorkspaceEntry> = {
       if (!c.vendor?.trim()) errs.push("Vendor is required.");
       else if (!(await findVendorId(orgId, c.vendor))) errs.push(`Vendor "${c.vendor}" not found.`);
       if (!isDate(c.date || "")) errs.push("Order Date must be YYYY-MM-DD.");
-      if (!isAmount(c.amount || "")) errs.push("Amount must be a non-negative number.");
+      if (!(await isAmount(orgId, c.amount || ""))) errs.push("Amount must be a non-negative number.");
       const num = (c.number || "").trim();
       if (num) {
         if (batch.has(num.toLowerCase())) errs.push(`Duplicate document number "${num}" within the file.`);
@@ -462,7 +481,7 @@ export const WORKSPACE: Record<DocumentType, WorkspaceEntry> = {
     },
     insertRow: async (tx, orgId, userId, c) => {
       const number = (c.number || "").trim() || (await nextDocumentNumber(tx, orgId, "purchase_order"));
-      const t = totalsFromAmount(c.amount || "0");
+      const t = await totalsFromAmount(orgId, c.amount || "0");
       const [po] = await tx.insert(purchaseOrdersTable).values({ orgId, poNumber: number, vendorId: (await findVendorId(orgId, c.vendor))!, orderDate: c.date, title: c.title?.trim() || null, subtotal: t.subtotal, discount: "0", taxTotal: t.taxTotal, total: t.total, createdById: userId }).returning({ id: purchaseOrdersTable.id });
       if (t.hasItem) await tx.insert(purchaseOrderItemsTable).values({ purchaseOrderId: po.id, description: "Imported line", quantity: "1", unitCost: t.subtotal, taxRatePercent: "0", lineTotal: t.subtotal });
     },

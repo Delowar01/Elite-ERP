@@ -6,6 +6,8 @@ import {
   salesInvoicesTable, creditNotesTable, purchaseOrdersTable, debitNotesTable,
   paymentsTable, proformaInvoicesTable,
 } from "@/db";
+import { moneyEpsilon } from "@/lib/currency/currencies";
+import { orgBaseCurrency } from "@/lib/org-currency";
 
 // Client / Vendor statement of account.
 //
@@ -164,9 +166,11 @@ type Attribution = {
   docId: number | null;
 };
 
-function payStatus(total: number, paid: number): StatementLine["paymentStatus"] {
+// The "close enough to fully paid" threshold is half of the DOCUMENT's minor unit. A fixed 0.005
+// marked a Kuwaiti invoice paid while 0.004 KWD — four fils — was still outstanding.
+function payStatus(total: number, paid: number, currency: string): StatementLine["paymentStatus"] {
   if (paid <= 0) return "unpaid";
-  if (paid + 0.005 >= total) return "paid";
+  if (paid + moneyEpsilon(currency) >= total) return "paid";
   return "partial";
 }
 
@@ -177,6 +181,9 @@ function payStatus(total: number, paid: number): StatementLine["paymentStatus"] 
  * than guessed onto somebody's statement.
  */
 async function attribute(orgId: number, kind: PartyKind, raw: RawLine[]): Promise<Map<string, Attribution>> {
+  // A document with no currency of its own IS in the organization's base currency, so that is the
+  // fallback its paid/unpaid threshold uses — never a fixed two decimals.
+  const base = await orgBaseCurrency(orgId);
   const idsOf = (t: string) => [...new Set(raw.filter((r) => r.sourceType === t && r.sourceId).map((r) => r.sourceId!))];
   const out = new Map<string, Attribution>();
 
@@ -203,7 +210,7 @@ async function attribute(orgId: number, kind: PartyKind, raw: RawLine[]): Promis
       out.set(keyOf("sales_invoice", i.id), {
         partyId: i.customerId, docType: "sales_invoice", number: i.number,
         reference: i.title ?? "", currency: i.currency ?? "",
-        paymentStatus: payStatus(n(i.total), n(i.paid)), docId: i.id,
+        paymentStatus: payStatus(n(i.total), n(i.paid), i.currency || base), docId: i.id,
       });
     }
     for (const c of cns) {
@@ -256,7 +263,7 @@ async function attribute(orgId: number, kind: PartyKind, raw: RawLine[]): Promis
       out.set(keyOf("purchase_order", p.id), {
         partyId: p.vendorId, docType: "purchase_order", number: p.number,
         reference: p.title ?? "", currency: p.currency ?? "",
-        paymentStatus: payStatus(n(p.total), n(p.paid)), docId: p.id,
+        paymentStatus: payStatus(n(p.total), n(p.paid), p.currency || base), docId: p.id,
       });
     }
     for (const d of dns) {

@@ -30,7 +30,7 @@ import { getLocale } from "@/lib/i18n/server";
 import { buildZatcaTlv, invoiceHashOf, zatcaQrDataUrl } from "@/lib/zatca";
 import { amountInWords } from "../../../(app)/sales/_shared/totals";
 import { getLineDesc } from "../../../(app)/sales/_shared/line-item-desc";
-import { buildMoneyMark, markFormat } from "@/lib/currency/currencies";
+import { buildMoneyMark, markFormat, roundMoney } from "@/lib/currency/currencies";
 import { docMoneyMark } from "../../../(app)/sales/_shared/doc-currency";
 import {
   A4Page,
@@ -218,7 +218,7 @@ export default async function PrintPage({ params }: { params: Promise<{ type: st
       const pf = doc as typeof proformaInvoicesTable.$inferSelect;
       // Payment summary only (Paid Amount / Balance Due) — no internal accounting fields.
       const pfPaid = Number(pf.paidAmount) > 0;
-      const pfDue = (Number(pf.total) - Number(pf.paidAmount)).toFixed(2);
+      const pfDue = roundMoney(Number(pf.total) - Number(pf.paidAmount), mark.code);
       const pfTotalsRows: [string, React.ReactNode][] = pfPaid
         ? [...baseTotals, [`Total (${mark.code})`, money(pf.total)], ["Paid Amount", money(pf.paidAmount)]]
         : baseTotals;
@@ -247,7 +247,7 @@ export default async function PrintPage({ params }: { params: Promise<{ type: st
       const totalsRows: [string, React.ReactNode][] = paid
         ? [...baseTotals, [`Total (${mark.code})`, money(inv.total)], ["Amount Paid", money(inv.paidAmount)]]
         : baseTotals;
-      const due = (Number(inv.total) - Number(inv.paidAmount)).toFixed(2);
+      const due = roundMoney(Number(inv.total) - Number(inv.paidAmount), mark.code);
 
       // ZATCA Phase 1 QR on every non-draft tax invoice. Stored payload wins; otherwise it's
       // computed here and persisted so the hash stays stable across reprints.
@@ -259,8 +259,8 @@ export default async function PrintPage({ params }: { params: Promise<{ type: st
             sellerName: org.name,
             vatNumber: org.vatNumber ?? "",
             timestamp: `${inv.issueDate}T00:00:00Z`,
-            total: Number(inv.total).toFixed(2),
-            vatTotal: Number(inv.taxTotal).toFixed(2),
+            total: roundMoney(inv.total, mark.code),
+            vatTotal: roundMoney(inv.taxTotal, mark.code),
           });
           await db
             .update(salesInvoicesTable)

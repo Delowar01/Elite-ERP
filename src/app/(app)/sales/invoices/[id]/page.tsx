@@ -118,6 +118,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
           <DownloadPdfButton locale={locale} type="invoice" docId={invoice.id} number={invoice.invoiceNumber} />
           <InvoiceDetailActions
             locale={locale}
+            currency={invoice.currency ?? org.currency}
             invoiceId={invoice.id}
             invoiceNumber={invoice.invoiceNumber}
             customerName={invoice.customerName}

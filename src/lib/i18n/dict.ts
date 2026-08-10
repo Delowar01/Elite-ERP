@@ -66,6 +66,8 @@ const DICT: Record<string, string> = {
   International: "دولي",
   Indian: "هندي",
   "Decimal Places": "المنازل العشرية",
+  "Decimal Places (Quantities & Rates)": "المنازل العشرية (الكميات والأسعار)",
+  "Money always follows the currency's own decimals.": "تتبع المبالغ المالية دائمًا المنازل العشرية الخاصة بالعملة.",
   "Round quantities to whole numbers": "تقريب الكميات إلى أرقام صحيحة",
   "Round rates to whole numbers": "تقريب الأسعار إلى أرقام صحيحة",
   "Custom Currency Symbol": "رمز عملة مخصّص",

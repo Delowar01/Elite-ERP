@@ -15,6 +15,7 @@ const STATUSES = ["draft", "sent"];
 
 export function ProformaDetailActions({
   locale,
+  currency,
   proformaId,
   proformaNumber,
   customerName,
@@ -24,6 +25,7 @@ export function ProformaDetailActions({
   bankAccounts,
 }: {
   locale: Locale;
+  currency: string;
   proformaId: number;
   proformaNumber: string;
   customerName: string;
@@ -80,6 +82,7 @@ export function ProformaDetailActions({
       {canRecordPayment && (
         <RecordPaymentDialog
           locale={locale}
+          currency={currency}
           bankAccounts={bankAccounts}
           invoices={[]}
           purchaseOrders={[]}

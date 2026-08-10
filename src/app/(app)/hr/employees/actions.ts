@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { and, eq } from "drizzle-orm";
 import { db, employeesTable, departmentsTable, salaryStructuresTable } from "@/db";
 import { requireSession } from "@/lib/session";
+import { roundMoney } from "@/lib/currency/currencies";
 import { logActivity } from "@/lib/activity";
 
 export type ActionState = { error?: string } | undefined;
@@ -132,9 +133,9 @@ export async function saveSalaryStructureAction(employeeId: number, formData: Fo
   await db.insert(salaryStructuresTable).values({
     orgId: session.orgId,
     employeeId,
-    basicSalary: basicSalary.toFixed(2),
-    allowances: allowances.toFixed(2),
-    deductions: deductions.toFixed(2),
+    basicSalary: roundMoney(basicSalary, session.orgCurrency),
+    allowances: roundMoney(allowances, session.orgCurrency),
+    deductions: roundMoney(deductions, session.orgCurrency),
     effectiveFrom,
   });
 

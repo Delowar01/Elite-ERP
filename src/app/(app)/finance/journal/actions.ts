@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { and, eq } from "drizzle-orm";
 import { db, accountsTable, journalEntriesTable, journalLinesTable, projectsTable } from "@/db";
 import { requireSession } from "@/lib/session";
+import { roundMoney } from "@/lib/currency/currencies";
 import { logActivity } from "@/lib/activity";
 
 export type ActionResult = { error?: string };
@@ -39,7 +40,10 @@ export async function postJournalEntryAction(input: {
 
   const totalDebit = lines.reduce((sum, l) => sum + Number(l.debit || 0), 0);
   const totalCredit = lines.reduce((sum, l) => sum + Number(l.credit || 0), 0);
-  if (Math.round(totalDebit * 100) !== Math.round(totalCredit * 100)) {
+  // The server gate, and the last thing between an unbalanced entry and the ledger. It compares at
+  // the BASE currency's minor unit: rounding to cents let a Kuwaiti entry of 100.001 against
+  // 100.000 through as "balanced", posting debits that do not equal credits.
+  if (roundMoney(totalDebit, session.orgCurrency) !== roundMoney(totalCredit, session.orgCurrency)) {
     return { error: "Total debits must equal total credits." };
   }
 
@@ -68,8 +72,8 @@ export async function postJournalEntryAction(input: {
       lines.map((l) => ({
         journalEntryId: entry.id,
         accountId: l.accountId,
-        debit: String(Number(l.debit || 0)),
-        credit: String(Number(l.credit || 0)),
+        debit: roundMoney(l.debit || 0, session.orgCurrency),
+        credit: roundMoney(l.credit || 0, session.orgCurrency),
         memo: l.memo.trim() || null,
       })),
     );

@@ -14,7 +14,7 @@ import { computeTotals, type LineItemInput } from "../_shared/totals";
 import { persistDocumentAttachments, type AttachmentInput } from "../_shared/attachment-persist";
 import { snapshotDocumentBankAccounts } from "@/lib/document-bank-data";
 import { snapshotSealForDoc, applySealOverride } from "@/lib/doc-seal";
-import { normalizeDocCurrency } from "@/lib/currency/currencies";
+import { normalizeDocCurrency, roundMoney } from "@/lib/currency/currencies";
 
 export type ActionResult = { error?: string; id?: number };
 
@@ -88,7 +88,8 @@ export async function createInvoiceAction(
   const items = input.items.filter((l) => l.description.trim() && Number(l.quantity) > 0);
   if (items.length === 0) return { error: "Add at least one line item." };
 
-  const totals = computeTotals(items as LineItemInput[], input.discount);
+  const currency = normalizeDocCurrency(input.currency) ?? session.orgCurrency;
+  const totals = computeTotals(items as LineItemInput[], input.discount, currency);
   const bankAccounts = await snapshotDocumentBankAccounts(session.orgId, input.bankAccountIds);
   const seal = applySealOverride(await snapshotSealForDoc(db, session.orgId, "sales_invoice"), { sealUrl: input.sealUrl, signatureUrl: input.signatureUrl });
 
@@ -130,7 +131,7 @@ export async function createInvoiceAction(
         quantity: l.quantity,
         unitPrice: l.unitPrice,
         taxRatePercent: l.taxRatePercent,
-        lineTotal: ((Number(l.quantity) || 0) * (Number(l.unitPrice) || 0)).toFixed(2),
+        lineTotal: roundMoney((Number(l.quantity) || 0) * (Number(l.unitPrice) || 0), currency),
       })),
     );
     await persistDocumentAttachments(tx, session.orgId, session.userId, "sales_invoice", inv.id, input.attachments);
@@ -172,7 +173,8 @@ export async function updateInvoiceAction(
   if (due.error) return { error: due.error };
   const items = input.items.filter((l) => l.description.trim() && Number(l.quantity) > 0);
   if (items.length === 0) return { error: "Add at least one line item." };
-  const totals = computeTotals(items as LineItemInput[], input.discount);
+  const currency = normalizeDocCurrency(input.currency) ?? session.orgCurrency;
+  const totals = computeTotals(items as LineItemInput[], input.discount, currency);
   const bankAccounts = await snapshotDocumentBankAccounts(session.orgId, input.bankAccountIds);
   const seal = applySealOverride(await snapshotSealForDoc(db, session.orgId, "sales_invoice"), { sealUrl: input.sealUrl, signatureUrl: input.signatureUrl });
 
@@ -211,7 +213,7 @@ export async function updateInvoiceAction(
         quantity: l.quantity,
         unitPrice: l.unitPrice,
         taxRatePercent: l.taxRatePercent,
-        lineTotal: ((Number(l.quantity) || 0) * (Number(l.unitPrice) || 0)).toFixed(2),
+        lineTotal: roundMoney((Number(l.quantity) || 0) * (Number(l.unitPrice) || 0), currency),
       })),
     );
     await persistDocumentAttachments(tx, session.orgId, session.userId, "sales_invoice", id, input.attachments);
