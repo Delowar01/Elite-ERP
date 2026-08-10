@@ -14,8 +14,14 @@ import { snapshotSealForDoc } from "@/lib/doc-seal";
 import { snapshotDocumentBankAccounts } from "@/lib/document-bank-data";
 import { computeTotals, type LineItemInput } from "../../sales/_shared/totals";
 import { roundMoney } from "@/lib/currency/currencies";
+import { captureBaseAmounts } from "@/lib/posting-currency";
 
-export type ActionResult = { error?: string; id?: number };
+export type ActionResult = {
+  error?: string;
+  id?: number;
+  /** Set when a posting was blocked by a missing exchange rate — FX-3's rate-entry seam. */
+  missingRate?: { currency: string; date: string };
+};
 
 const PATH = "/purchasing/debit-notes";
 
@@ -176,6 +182,18 @@ export async function issueDebitNoteAction(debitNoteId: number): Promise<ActionR
     return { error: "Chart of accounts is missing a required system account (1200/2000)." };
   }
 
+  // FX-6: the rate date for a debit note is the NOTE's own issue date. The note inherits its PO's
+  // currency at creation; a missing rate blocks the issue rather than posting unconverted.
+  const captured = await captureBaseAmounts({
+    orgId: session.orgId,
+    baseCurrency: session.orgCurrency,
+    docCurrency: dn.currency,
+    total: dn.total,
+    taxTotal: dn.taxTotal,
+    date: dn.issueDate,
+  });
+  if (!captured.ok) return { error: captured.error, missingRate: captured.missingRate };
+
   await db.transaction(async (tx) => {
     for (const item of items) {
       if (item.productId) {
@@ -198,12 +216,21 @@ export async function issueDebitNoteAction(debitNoteId: number): Promise<ActionR
       })
       .returning({ id: journalEntriesTable.id });
 
+    // BASE currency only. Two lines of the same figure — balanced by construction.
     await tx.insert(journalLinesTable).values([
-      { journalEntryId: entry.id, accountId: accountsPayable.id, debit: dn.total, credit: "0" },
-      { journalEntryId: entry.id, accountId: inventory.id, debit: "0", credit: dn.total },
+      { journalEntryId: entry.id, accountId: accountsPayable.id, debit: captured.baseTotal, credit: "0" },
+      { journalEntryId: entry.id, accountId: inventory.id, debit: "0", credit: captured.baseTotal },
     ]);
 
-    await tx.update(debitNotesTable).set({ status: "issued" }).where(eq(debitNotesTable.id, debitNoteId));
+    await tx
+      .update(debitNotesTable)
+      .set({
+        status: "issued",
+        exchangeRate: captured.exchangeRate,
+        baseTotal: captured.baseTotal,
+        baseTaxAmount: captured.baseTaxAmount,
+      })
+      .where(eq(debitNotesTable.id, debitNoteId));
   });
 
   await logActivity(session, { type: "debit_note.issued", description: `Issued debit note ${dn.debitNoteNumber} — posted reversing entry to ledger`, entityType: "debit_note", entityId: debitNoteId });
@@ -231,13 +258,8 @@ export async function reverseDebitNoteAction(debitNoteId: number): Promise<Actio
   if (!decision.allowed) return { error: decision.reason };
 
   const items = await db.select().from(debitNoteItemsTable).where(eq(debitNoteItemsTable.debitNoteId, debitNoteId));
-  const accounts = await db.select().from(accountsTable).where(eq(accountsTable.orgId, session.orgId));
-  const byCode = new Map(accounts.map((a) => [a.code, a]));
-  const inventory = byCode.get("1200");
-  const accountsPayable = byCode.get("2000");
-  if (!inventory || !accountsPayable) {
-    return { error: "Chart of accounts is missing a required system account (1200/2000)." };
-  }
+  // No chart-of-accounts lookup: the reversal mirrors the issue entry's own lines (FX-6), so the
+  // accounts come from what was actually posted and the stored conversion cannot be re-derived.
 
   await db.transaction(async (tx) => {
     for (const item of items) {
@@ -249,22 +271,39 @@ export async function reverseDebitNoteAction(debitNoteId: number): Promise<Actio
       }
     }
 
-    const [entry] = await tx
-      .insert(journalEntriesTable)
-      .values({
-        orgId: session.orgId,
-        entryDate: new Date().toISOString().slice(0, 10),
-        memo: `Debit note ${dn.debitNoteNumber} reversed`,
-        sourceType: "debit_note",
-        sourceId: dn.id,
-        createdById: session.userId,
-      })
-      .returning({ id: journalEntriesTable.id });
+    const [posting] = await tx
+      .select({ id: journalEntriesTable.id })
+      .from(journalEntriesTable)
+      .where(and(
+        eq(journalEntriesTable.orgId, session.orgId),
+        eq(journalEntriesTable.sourceType, "debit_note"),
+        eq(journalEntriesTable.sourceId, dn.id),
+      ))
+      .orderBy(journalEntriesTable.id)
+      .limit(1);
 
-    await tx.insert(journalLinesTable).values([
-      { journalEntryId: entry.id, accountId: inventory.id, debit: dn.total, credit: "0" },
-      { journalEntryId: entry.id, accountId: accountsPayable.id, debit: "0", credit: dn.total },
-    ]);
+    if (posting) {
+      const originalLines = await tx
+        .select({ accountId: journalLinesTable.accountId, debit: journalLinesTable.debit, credit: journalLinesTable.credit })
+        .from(journalLinesTable)
+        .where(eq(journalLinesTable.journalEntryId, posting.id));
+
+      const [entry] = await tx
+        .insert(journalEntriesTable)
+        .values({
+          orgId: session.orgId,
+          entryDate: new Date().toISOString().slice(0, 10),
+          memo: `Debit note ${dn.debitNoteNumber} reversed`,
+          sourceType: "debit_note",
+          sourceId: dn.id,
+          createdById: session.userId,
+        })
+        .returning({ id: journalEntriesTable.id });
+
+      await tx.insert(journalLinesTable).values(
+        originalLines.map((l) => ({ journalEntryId: entry.id, accountId: l.accountId, debit: l.credit, credit: l.debit })),
+      );
+    }
 
     await tx.update(debitNotesTable).set({ status: "reversed" }).where(eq(debitNotesTable.id, debitNoteId));
   });

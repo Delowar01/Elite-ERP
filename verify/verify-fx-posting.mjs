@@ -383,6 +383,79 @@ check("invoice paidAmount restored", i2AfterRev.paid_amount === "0.000", String(
 check("…and basePaidAmount restored by the STORED baseTotal", i2AfterRev.base_paid_amount === "0.000", String(i2AfterRev.base_paid_amount));
 await checkLedgerBalanced(A.org, "after CN reversal");
 
+// ================= Path 4: debit note issue (rate date = NOTE date) =================
+// Mirrors the credit-note rules on the purchasing side: the note inherits its PO's currency,
+// converts at its own issue date, posts a two-line entry in base, and its reversal mirrors the
+// stored posting. The USD PO above was received today at 3.80; its July-dated debit note must
+// carry 3.75 — a THIRD distinct stored rate for the same currency in this org, all three correct.
+const mkDn = async ({ number, poId, currency, issueDate, subtotal, tax, total }) => {
+  const dn = (await db.query(
+    `insert into debit_notes (org_id, debit_note_number, vendor_id, source_purchase_order_id, currency, issue_date, subtotal, tax_total, total, status, created_by_id)
+     values ($1,$2,$3,$4,$5,$6,$7,$8,$9,'draft',$10) returning id`,
+    [A.org, number, vendA, poId, currency, issueDate, subtotal, tax, total, A.uid])).rows[0].id;
+  await db.query(
+    `insert into debit_note_items (debit_note_id, description, quantity, unit_cost, tax_rate_percent, line_total)
+     values ($1,'Return','1',$2,'15',$2)`, [dn, subtotal]);
+  return dn;
+};
+const issueDn = async (dnId) => {
+  await A.page.goto(`${BASE}/purchasing/debit-notes/${dnId}`, { waitUntil: "networkidle" });
+  await A.page.getByRole("button", { name: "Issue Debit Note", exact: true }).click();
+  await A.page.waitForTimeout(400);
+  await dialogOf(A.page).getByRole("button", { name: "Issue Debit Note", exact: true }).click();
+  await A.page.waitForTimeout(2000);
+};
+
+// ---- base-currency DN against the SAR PO ----
+const dnBase = await mkDn({ number: `FXDN-${uniq()}`, poId: poBase, currency: null, issueDate: "2026-07-01",
+  subtotal: "400.000", tax: "60.000", total: "460.000" });
+await checkLedgerBalanced(A.org, "before base DN issue");
+await issueDn(dnBase);
+const d1 = (await db.query("select status, exchange_rate, base_total, base_tax_amount from debit_notes where id=$1", [dnBase])).rows[0];
+check("base-currency DN issued", d1.status === "issued", d1.status);
+check("DN identity rate stored", Number(d1.exchange_rate) === 1, String(d1.exchange_rate));
+check("DN baseTotal = total", d1.base_total === "460.000", String(d1.base_total));
+const dnE = (await entriesFor(A.org, "debit_note", dnBase))[0];
+check("DN entry: Dr AP 460.000 / Cr Inventory 460.000",
+  line(dnE, "2000")?.debit === "460.000" && line(dnE, "1200")?.credit === "460.000", JSON.stringify(dnE?.lines));
+await checkLedgerBalanced(A.org, "after base DN issue");
+
+// ---- foreign DN converts at the NOTE date (3.75), not the PO's receipt rate (3.80) ----
+const dnUsd = await mkDn({ number: `FXDNU-${uniq()}`, poId: poUsd, currency: "USD", issueDate: "2026-07-01",
+  subtotal: "200.000", tax: "30.000", total: "230.000" });
+await issueDn(dnUsd);
+const d2 = (await db.query("select status, exchange_rate, base_total, base_tax_amount from debit_notes where id=$1", [dnUsd])).rows[0];
+check("USD DN issued at the NOTE date's rate 3.75 — its PO was received at 3.80",
+  d2.exchange_rate === "3.75000000", String(d2.exchange_rate));
+check("DN baseTotal = 230 × 3.75 = 862.50", d2.base_total === "862.500", String(d2.base_total));
+check("DN baseTaxAmount = 112.50", d2.base_tax_amount === "112.500", String(d2.base_tax_amount));
+const dnuE = (await entriesFor(A.org, "debit_note", dnUsd))[0];
+check("USD DN posts in BASE: Dr AP 862.500 / Cr Inventory 862.500",
+  line(dnuE, "2000")?.debit === "862.500" && line(dnuE, "1200")?.credit === "862.500", JSON.stringify(dnuE?.lines));
+await checkLedgerBalanced(A.org, "after foreign DN issue");
+
+// ---- a DN dated before any rate BLOCKS ----
+const dnEarly = await mkDn({ number: `FXDNE-${uniq()}`, poId: poUsd, currency: "USD", issueDate: "2025-12-01",
+  subtotal: "50.000", tax: "7.500", total: "57.500" });
+await issueDn(dnEarly);
+const d3 = (await db.query("select status, base_total from debit_notes where id=$1", [dnEarly])).rows[0];
+check("USD DN dated before any rate BLOCKS: still draft", d3.status === "draft", d3.status);
+check("…no entry, base stays null", d3.base_total === null && (await entriesFor(A.org, "debit_note", dnEarly)).length === 0);
+await checkLedgerBalanced(A.org, "after blocked DN issue (unchanged)");
+
+// ---- reversing the foreign DN mirrors its STORED 3.75 figures ----
+await A.page.goto(`${BASE}/purchasing/debit-notes/${dnUsd}`, { waitUntil: "networkidle" });
+await A.page.getByRole("button", { name: "Reverse Debit Note", exact: true }).click();
+await A.page.waitForTimeout(400);
+await dialogOf(A.page).getByRole("button", { name: "Reverse", exact: true }).click();
+await A.page.waitForTimeout(2000);
+const dnRevEntries = await entriesFor(A.org, "debit_note", dnUsd);
+check("DN reversal added exactly one entry", dnRevEntries.length === 2, `n=${dnRevEntries.length}`);
+const dnR = dnRevEntries[1];
+check("DN reversal mirrors stored figures: Cr AP 862.500 / Dr Inventory 862.500 (3.80 never consulted)",
+  line(dnR, "2000")?.credit === "862.500" && line(dnR, "1200")?.debit === "862.500", JSON.stringify(dnR?.lines));
+await checkLedgerBalanced(A.org, "after DN reversal");
+
 // ================= Org B: BHD base (3 decimals) =================
 const B = await registerOrg("FX Posting BHD", "Bahrain");
 const orgBCur = (await db.query("select currency from orgs where id=$1", [B.org])).rows[0].currency;
