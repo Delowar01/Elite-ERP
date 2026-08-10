@@ -14,8 +14,14 @@ import { snapshotSealForDoc } from "@/lib/doc-seal";
 import { snapshotDocumentBankAccounts } from "@/lib/document-bank-data";
 import { computeTotals, type LineItemInput } from "../_shared/totals";
 import { roundMoney } from "@/lib/currency/currencies";
+import { captureBaseAmounts, subtractMoney } from "@/lib/posting-currency";
 
-export type ActionResult = { error?: string; id?: number };
+export type ActionResult = {
+  error?: string;
+  id?: number;
+  /** Set when a posting was blocked by a missing exchange rate — FX-3's rate-entry seam. */
+  missingRate?: { currency: string; date: string };
+};
 
 const PATH = "/sales/credit-notes";
 
@@ -171,6 +177,22 @@ export async function issueCreditNoteAction(creditNoteId: number): Promise<Actio
     return { error: "Chart of accounts is missing a required system account (1100/4000/2100)." };
   }
 
+  // FX-6: the rate date for a credit note is the NOTE's own issue date. The note inherits its
+  // invoice's currency at creation, so this converts the same currency the invoice was in — but at
+  // the note date's rate, which is the model's rule: each posting event converts at its own date.
+  const captured = await captureBaseAmounts({
+    orgId: session.orgId,
+    baseCurrency: session.orgCurrency,
+    docCurrency: cn.currency,
+    total: cn.total,
+    taxTotal: cn.taxTotal,
+    date: cn.issueDate,
+  });
+  if (!captured.ok) return { error: captured.error, missingRate: captured.missingRate };
+  // Derived, so the entry balances by construction — the pre-FX-6 lines debited the full subtotal
+  // against a discounted total, the same latent hole the invoice send had.
+  const baseRevenue = subtractMoney(captured.baseTotal, captured.baseTaxAmount, session.orgCurrency);
+
   await db.transaction(async (tx) => {
     const [entry] = await tx
       .insert(journalEntriesTable)
@@ -184,19 +206,35 @@ export async function issueCreditNoteAction(creditNoteId: number): Promise<Actio
       })
       .returning({ id: journalEntriesTable.id });
 
+    // BASE currency only, mirroring the invoice-send shape in reverse.
     const lines: { accountId: number; debit: string; credit: string }[] = [
-      { accountId: revenue.id, debit: cn.subtotal, credit: "0" },
-      { accountId: ar.id, debit: "0", credit: cn.total },
+      { accountId: revenue.id, debit: baseRevenue, credit: "0" },
+      { accountId: ar.id, debit: "0", credit: captured.baseTotal },
     ];
-    if (Number(cn.taxTotal) > 0) {
-      lines.push({ accountId: vatPayable.id, debit: cn.taxTotal, credit: "0" });
+    if (Number(captured.baseTaxAmount) > 0) {
+      lines.push({ accountId: vatPayable.id, debit: captured.baseTaxAmount, credit: "0" });
     }
     await tx.insert(journalLinesTable).values(lines.map((l) => ({ journalEntryId: entry.id, ...l })));
 
-    await tx.update(creditNotesTable).set({ status: "issued" }).where(eq(creditNotesTable.id, creditNoteId));
+    await tx
+      .update(creditNotesTable)
+      .set({
+        status: "issued",
+        exchangeRate: captured.exchangeRate,
+        baseTotal: captured.baseTotal,
+        baseTaxAmount: captured.baseTaxAmount,
+      })
+      .where(eq(creditNotesTable.id, creditNoteId));
+    // The document-currency paidAmount moves by the note's total, exactly as before; the BASE twin
+    // moves by the note's baseTotal — but only where the invoice HAS base amounts. An unconverted
+    // legacy invoice keeps null rather than being handed a mixed figure.
     await tx
       .update(salesInvoicesTable)
-      .set({ paidAmount: sql`${salesInvoicesTable.paidAmount} + ${cn.total}`, updatedAt: new Date() })
+      .set({
+        paidAmount: sql`${salesInvoicesTable.paidAmount} + ${cn.total}`,
+        basePaidAmount: sql`case when ${salesInvoicesTable.basePaidAmount} is null then null else ${salesInvoicesTable.basePaidAmount} + ${captured.baseTotal} end`,
+        updatedAt: new Date(),
+      })
       .where(eq(salesInvoicesTable.id, cn.sourceInvoiceId));
   });
 
@@ -223,41 +261,56 @@ export async function reverseCreditNoteAction(creditNoteId: number): Promise<Act
   const decision = evaluate("credit_note", cn.status, "reverse");
   if (!decision.allowed) return { error: decision.reason };
 
-  const accounts = await db.select().from(accountsTable).where(eq(accountsTable.orgId, session.orgId));
-  const byCode = new Map(accounts.map((a) => [a.code, a]));
-  const ar = byCode.get("1100");
-  const revenue = byCode.get("4000");
-  const vatPayable = byCode.get("2100");
-  if (!ar || !revenue || !vatPayable) {
-    return { error: "Chart of accounts is missing a required system account (1100/4000/2100)." };
-  }
+  // No chart-of-accounts lookup: the reversal mirrors the issue entry's own lines (FX-6), so the
+  // accounts come from what was actually posted, and the stored conversion cannot be re-derived.
 
   await db.transaction(async (tx) => {
-    const [entry] = await tx
-      .insert(journalEntriesTable)
-      .values({
-        orgId: session.orgId,
-        entryDate: new Date().toISOString().slice(0, 10),
-        memo: `Credit note ${cn.creditNoteNumber} reversed`,
-        sourceType: "credit_note",
-        sourceId: cn.id,
-        createdById: session.userId,
-      })
-      .returning({ id: journalEntriesTable.id });
+    const [posting] = await tx
+      .select({ id: journalEntriesTable.id })
+      .from(journalEntriesTable)
+      .where(and(
+        eq(journalEntriesTable.orgId, session.orgId),
+        eq(journalEntriesTable.sourceType, "credit_note"),
+        eq(journalEntriesTable.sourceId, cn.id),
+      ))
+      .orderBy(journalEntriesTable.id)
+      .limit(1);
 
-    const lines: { accountId: number; debit: string; credit: string }[] = [
-      { accountId: ar.id, debit: cn.total, credit: "0" },
-      { accountId: revenue.id, debit: "0", credit: cn.subtotal },
-    ];
-    if (Number(cn.taxTotal) > 0) {
-      lines.push({ accountId: vatPayable.id, debit: "0", credit: cn.taxTotal });
+    if (posting) {
+      const originalLines = await tx
+        .select({ accountId: journalLinesTable.accountId, debit: journalLinesTable.debit, credit: journalLinesTable.credit })
+        .from(journalLinesTable)
+        .where(eq(journalLinesTable.journalEntryId, posting.id));
+
+      const [entry] = await tx
+        .insert(journalEntriesTable)
+        .values({
+          orgId: session.orgId,
+          entryDate: new Date().toISOString().slice(0, 10),
+          memo: `Credit note ${cn.creditNoteNumber} reversed`,
+          sourceType: "credit_note",
+          sourceId: cn.id,
+          createdById: session.userId,
+        })
+        .returning({ id: journalEntriesTable.id });
+
+      await tx.insert(journalLinesTable).values(
+        originalLines.map((l) => ({ journalEntryId: entry.id, accountId: l.accountId, debit: l.credit, credit: l.debit })),
+      );
     }
-    await tx.insert(journalLinesTable).values(lines.map((l) => ({ journalEntryId: entry.id, ...l })));
 
     await tx.update(creditNotesTable).set({ status: "reversed" }).where(eq(creditNotesTable.id, creditNoteId));
+    // Un-does the issue's adjustment: doc-currency paidAmount by cn.total, the base twin by the
+    // note's STORED baseTotal — guarded the same way it was applied, so a null stays null.
     await tx
       .update(salesInvoicesTable)
-      .set({ paidAmount: sql`GREATEST(0, ${salesInvoicesTable.paidAmount} - ${cn.total})`, updatedAt: new Date() })
+      .set({
+        paidAmount: sql`GREATEST(0, ${salesInvoicesTable.paidAmount} - ${cn.total})`,
+        basePaidAmount: cn.baseTotal === null
+          ? sql`${salesInvoicesTable.basePaidAmount}`
+          : sql`case when ${salesInvoicesTable.basePaidAmount} is null then null else GREATEST(0, ${salesInvoicesTable.basePaidAmount} - ${cn.baseTotal}) end`,
+        updatedAt: new Date(),
+      })
       .where(eq(salesInvoicesTable.id, cn.sourceInvoiceId));
   });
 

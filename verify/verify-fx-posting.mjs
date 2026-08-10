@@ -285,6 +285,104 @@ check("USD PO posts in BASE: Dr Inventory 4370.000 / Cr AP 4370.000",
   JSON.stringify(puEntries[0]?.lines));
 await checkLedgerBalanced(A.org, "after foreign PO receive");
 
+// ================= Path 3: credit note issue (rate date = NOTE date) =================
+// A credit note inherits its invoice's currency but converts at ITS OWN issue date — each posting
+// event converts at its own date. The foreign case makes that visible: the invoice below posted at
+// 3.70 (March); its credit note is dated July, where the rate is 3.75, so the two documents carry
+// DIFFERENT stored rates for the same currency, both correct.
+const mkCn = async ({ number, invoiceId, currency, issueDate, subtotal, tax, total }) => {
+  const cn = (await db.query(
+    `insert into credit_notes (org_id, credit_note_number, customer_id, source_invoice_id, currency, issue_date, subtotal, tax_total, total, status, created_by_id)
+     values ($1,$2,$3,$4,$5,$6,$7,$8,$9,'draft',$10) returning id`,
+    [A.org, number, custA, invoiceId, currency, issueDate, subtotal, tax, total, A.uid])).rows[0].id;
+  await db.query(
+    `insert into credit_note_items (credit_note_id, description, quantity, unit_price, tax_rate_percent, line_total)
+     values ($1,'Adjustment','1',$2,'15',$2)`, [cn, subtotal]);
+  return cn;
+};
+const issueCn = async (cnId) => {
+  await A.page.goto(`${BASE}/sales/credit-notes/${cnId}`, { waitUntil: "networkidle" });
+  await A.page.getByRole("button", { name: "Issue Credit Note", exact: true }).click();
+  await A.page.waitForTimeout(400);
+  await dialogOf(A.page).getByRole("button", { name: "Issue Credit Note", exact: true }).click();
+  await A.page.waitForTimeout(2000);
+};
+
+// ---- base-currency CN against the SAR invoice ----
+const cnBase = await mkCn({ number: `FXCN-${uniq()}`, invoiceId: invBase, currency: null, issueDate: "2026-07-01",
+  subtotal: "200.000", tax: "30.000", total: "230.000" });
+await checkLedgerBalanced(A.org, "before base CN issue");
+await issueCn(cnBase);
+const n1 = (await db.query("select status, exchange_rate, base_total, base_tax_amount from credit_notes where id=$1", [cnBase])).rows[0];
+check("base-currency CN issued", n1.status === "issued", n1.status);
+check("CN identity rate stored", Number(n1.exchange_rate) === 1, String(n1.exchange_rate));
+check("CN baseTotal = total", n1.base_total === "230.000", String(n1.base_total));
+const cnE = (await entriesFor(A.org, "credit_note", cnBase))[0];
+check("CN entry: Dr Revenue 200.000 (derived) / Dr VAT 30.000 / Cr AR 230.000",
+  line(cnE, "4000")?.debit === "200.000" && line(cnE, "2100")?.debit === "30.000" && line(cnE, "1100")?.credit === "230.000",
+  JSON.stringify(cnE?.lines));
+const iAfterCn = (await db.query("select paid_amount, base_paid_amount from sales_invoices where id=$1", [invBase])).rows[0];
+check("invoice paidAmount moved by the CN total", iAfterCn.paid_amount === "230.000", String(iAfterCn.paid_amount));
+check("…and basePaidAmount by the CN's baseTotal", iAfterCn.base_paid_amount === "230.000", String(iAfterCn.base_paid_amount));
+await checkLedgerBalanced(A.org, "after base CN issue");
+
+// ---- a second USD invoice to credit (the first was voided in Case D) ----
+const invUsd2 = await mkInvoice(A.org, A.uid, custA, {
+  number: `FXU2-${uniq()}`, currency: "USD", issueDate: "2026-03-15",
+  subtotal: "1000.000", discount: "0", tax: "150.000", total: "1150.000",
+});
+await A.page.goto(`${BASE}/sales/invoices/${invUsd2}`, { waitUntil: "networkidle" });
+await A.page.getByRole("button", { name: "Send Invoice", exact: true }).click();
+await A.page.waitForTimeout(400);
+await dialogOf(A.page).getByRole("button", { name: "Send Invoice", exact: true }).click();
+await A.page.waitForTimeout(2000);
+check("fixture: the second USD invoice posted at ITS date's rate (3.70)",
+  (await db.query("select exchange_rate from sales_invoices where id=$1", [invUsd2])).rows[0].exchange_rate === "3.70000000");
+
+// ---- foreign CN converts at the NOTE date, not the invoice's ----
+const cnUsd = await mkCn({ number: `FXCNU-${uniq()}`, invoiceId: invUsd2, currency: "USD", issueDate: "2026-07-01",
+  subtotal: "100.000", tax: "15.000", total: "115.000" });
+await issueCn(cnUsd);
+const n2 = (await db.query("select status, exchange_rate, base_total, base_tax_amount from credit_notes where id=$1", [cnUsd])).rows[0];
+check("USD CN issued at the NOTE date's rate 3.75 — the invoice it credits carries 3.70",
+  n2.exchange_rate === "3.75000000", String(n2.exchange_rate));
+check("CN baseTotal = 115 × 3.75 = 431.25", n2.base_total === "431.250", String(n2.base_total));
+check("CN baseTaxAmount = 56.25", n2.base_tax_amount === "56.250", String(n2.base_tax_amount));
+const cnuE = (await entriesFor(A.org, "credit_note", cnUsd))[0];
+check("USD CN posts in BASE: Dr Rev 375.000 / Dr VAT 56.250 / Cr AR 431.250",
+  line(cnuE, "4000")?.debit === "375.000" && line(cnuE, "2100")?.debit === "56.250" && line(cnuE, "1100")?.credit === "431.250",
+  JSON.stringify(cnuE?.lines));
+const i2AfterCn = (await db.query("select paid_amount, base_paid_amount from sales_invoices where id=$1", [invUsd2])).rows[0];
+check("USD invoice paidAmount moved by 115 (document currency)", i2AfterCn.paid_amount === "115.000", String(i2AfterCn.paid_amount));
+check("…and basePaidAmount by 431.250 (base currency)", i2AfterCn.base_paid_amount === "431.250", String(i2AfterCn.base_paid_amount));
+await checkLedgerBalanced(A.org, "after foreign CN issue");
+
+// ---- a CN dated before any rate exists BLOCKS ----
+const cnEarly = await mkCn({ number: `FXCNE-${uniq()}`, invoiceId: invUsd2, currency: "USD", issueDate: "2025-12-01",
+  subtotal: "50.000", tax: "7.500", total: "57.500" });
+await issueCn(cnEarly);
+const n3 = (await db.query("select status, base_total from credit_notes where id=$1", [cnEarly])).rows[0];
+check("USD CN dated before any rate BLOCKS: still draft", n3.status === "draft", n3.status);
+check("…no entry, base stays null", n3.base_total === null && (await entriesFor(A.org, "credit_note", cnEarly)).length === 0);
+await checkLedgerBalanced(A.org, "after blocked CN issue (unchanged)");
+
+// ---- reversing the foreign CN mirrors its STORED 3.75 figures ----
+await A.page.goto(`${BASE}/sales/credit-notes/${cnUsd}`, { waitUntil: "networkidle" });
+await A.page.getByRole("button", { name: "Reverse Credit Note", exact: true }).click();
+await A.page.waitForTimeout(400);
+await dialogOf(A.page).getByRole("button", { name: "Reverse", exact: true }).click();
+await A.page.waitForTimeout(2000);
+const cnRevEntries = await entriesFor(A.org, "credit_note", cnUsd);
+check("CN reversal added exactly one entry", cnRevEntries.length === 2, `n=${cnRevEntries.length}`);
+const cnR = cnRevEntries[1];
+check("CN reversal mirrors stored figures: Cr Rev 375.000 / Cr VAT 56.250 / Dr AR 431.250 (3.80 never consulted)",
+  line(cnR, "4000")?.credit === "375.000" && line(cnR, "2100")?.credit === "56.250" && line(cnR, "1100")?.debit === "431.250",
+  JSON.stringify(cnR?.lines));
+const i2AfterRev = (await db.query("select paid_amount, base_paid_amount from sales_invoices where id=$1", [invUsd2])).rows[0];
+check("invoice paidAmount restored", i2AfterRev.paid_amount === "0.000", String(i2AfterRev.paid_amount));
+check("…and basePaidAmount restored by the STORED baseTotal", i2AfterRev.base_paid_amount === "0.000", String(i2AfterRev.base_paid_amount));
+await checkLedgerBalanced(A.org, "after CN reversal");
+
 // ================= Org B: BHD base (3 decimals) =================
 const B = await registerOrg("FX Posting BHD", "Bahrain");
 const orgBCur = (await db.query("select currency from orgs where id=$1", [B.org])).rows[0].currency;
