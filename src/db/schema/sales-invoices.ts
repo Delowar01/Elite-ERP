@@ -9,6 +9,7 @@ import { usersTable } from "./users";
 import { projectsTable } from "./projects";
 import { salesOrdersTable } from "./sales-orders";
 import { paymentTermPresetsTable } from "./presets";
+import { baseAmountColumns, basePaidAmountColumn } from "./_base-amounts";
 
 export const salesInvoicesTable = pgTable("sales_invoices", {
   id: serial("id").primaryKey(),
@@ -38,6 +39,8 @@ export const salesInvoicesTable = pgTable("sales_invoices", {
   terms: jsonb("terms").$type<{ text: string; groupId: number | null; groupName: string | null }[]>(),
   bankAccounts: jsonb("bank_accounts").$type<DocBankAccount[]>(),
   currency: text("currency"), // per-document currency code (ISO); null = org base currency
+  ...baseAmountColumns,
+  ...basePaidAmountColumn,
   // Seal/signature snapshot (Preset Management → Seal & Signature). Captured at save so editing a
   // preset never changes already-saved documents; null on legacy rows falls back to the org default.
   sealUrl: text("seal_url"),

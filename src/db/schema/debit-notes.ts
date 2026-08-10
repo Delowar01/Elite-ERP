@@ -7,6 +7,7 @@ import { vendorsTable } from "./vendors";
 import { productsTable } from "./products";
 import { usersTable } from "./users";
 import { purchaseOrdersTable } from "./purchase-orders";
+import { baseAmountColumns } from "./_base-amounts";
 
 export const debitNotesTable = pgTable("debit_notes", {
   id: serial("id").primaryKey(),
@@ -25,6 +26,7 @@ export const debitNotesTable = pgTable("debit_notes", {
   terms: jsonb("terms").$type<{ text: string; groupId: number | null; groupName: string | null }[]>(),
   bankAccounts: jsonb("bank_accounts").$type<DocBankAccount[]>(),
   currency: text("currency"), // per-document currency code (ISO); null = org base currency
+  ...baseAmountColumns,
   status: text("status").notNull().default("draft"), // draft | issued
   issueDate: date("issue_date").notNull(),
   subtotal: numeric("subtotal", { precision: 15, scale: 3 }).notNull().default("0"),
