@@ -219,6 +219,72 @@ check("reversal Dr Revenue 3700.000", line(dE, "4000")?.debit === "3700.000", li
 check("reversal Dr VAT 555.000", line(dE, "2100")?.debit === "555.000", line(dE, "2100")?.debit);
 await checkLedgerBalanced(A.org, "after void");
 
+// ================= Path 2: PO receive (rate date = RECEIPT date) =================
+// The mirror-image date rule to the invoice: a receipt converts at the day the goods arrive, not
+// the day they were ordered. Org A now holds rates 3.70 (Jan), 3.75 (Jun) and 3.80 (Aug); a PO
+// ORDERED back in March but received TODAY must use today's best rate, 3.80 — the exact opposite
+// of the invoice case above, asserted against the same rate table.
+const vendA = (await db.query("insert into vendors (org_id,name) values ($1,'FX Vendor') returning id", [A.org])).rows[0].id;
+
+const mkPo = async ({ number, currency, subtotal, tax, total }) => {
+  const po = (await db.query(
+    `insert into purchase_orders (org_id, po_number, vendor_id, order_date, subtotal, discount, tax_total, total, currency, status, created_by_id)
+     values ($1,$2,$3,'2026-03-15',$4,'0',$5,$6,$7,'ordered',$8) returning id`,
+    [A.org, number, vendA, subtotal, tax, total, currency, A.uid])).rows[0].id;
+  await db.query(
+    `insert into purchase_order_items (purchase_order_id, product_id, description, quantity, unit_cost, line_total)
+     values ($1,$2,'Stock','5',$3,$4)`, [po, prodA, subtotal, subtotal]);
+  return po;
+};
+
+const receivePo = async (poId) => {
+  await A.page.goto(`${BASE}/purchasing/orders/${poId}`, { waitUntil: "networkidle" });
+  await A.page.getByRole("button", { name: "Receive", exact: true }).click();
+  await A.page.waitForTimeout(400);
+  await dialogOf(A.page).getByRole("button", { name: "Receive", exact: true }).click();
+  await A.page.waitForTimeout(2000);
+};
+
+// ---- base-currency PO: identity, no rate involvement ----
+const poBase = await mkPo({ number: `FXPO-${uniq()}`, currency: null, subtotal: "2000.000", tax: "300.000", total: "2300.000" });
+await checkLedgerBalanced(A.org, "before base PO receive");
+await receivePo(poBase);
+const p1 = (await db.query("select status, exchange_rate, base_total, base_tax_amount, base_paid_amount from purchase_orders where id=$1", [poBase])).rows[0];
+check("base-currency PO received (no-regression)", p1.status === "received", p1.status);
+check("PO identity rate stored", Number(p1.exchange_rate) === 1, String(p1.exchange_rate));
+check("PO baseTotal = total", p1.base_total === "2300.000", String(p1.base_total));
+check("PO baseTaxAmount = taxTotal", p1.base_tax_amount === "300.000", String(p1.base_tax_amount));
+check("PO basePaidAmount initialised to zero", p1.base_paid_amount === "0.000", String(p1.base_paid_amount));
+const pEntries = await entriesFor(A.org, "purchase_order", poBase);
+check("PO posting: Dr Inventory 2300.000 / Cr AP 2300.000",
+  line(pEntries[0], "1200")?.debit === "2300.000" && line(pEntries[0], "2000")?.credit === "2300.000",
+  JSON.stringify(pEntries[0]?.lines));
+await checkLedgerBalanced(A.org, "after base PO receive");
+
+// ---- foreign PO with NO rate for its currency blocks the receipt ----
+const poEur = await mkPo({ number: `FXPE-${uniq()}`, currency: "EUR", subtotal: "1000.000", tax: "150.000", total: "1150.000" });
+await receivePo(poEur);
+const p2 = (await db.query("select status, base_total from purchase_orders where id=$1", [poEur])).rows[0];
+check("EUR PO with no EUR rate BLOCKS: still ordered", p2.status === "ordered", p2.status);
+check("…base stays null", p2.base_total === null, String(p2.base_total));
+check("…no journal entry", (await entriesFor(A.org, "purchase_order", poEur)).length === 0);
+await checkLedgerBalanced(A.org, "after blocked PO receive (unchanged)");
+
+// ---- the RECEIPT date's rate, not the order date's ----
+const poUsd = await mkPo({ number: `FXPU-${uniq()}`, currency: "USD", subtotal: "1000.000", tax: "150.000", total: "1150.000" });
+await receivePo(poUsd);
+const p3 = (await db.query("select status, exchange_rate, base_total, base_tax_amount from purchase_orders where id=$1", [poUsd])).rows[0];
+check("USD PO received", p3.status === "received", p3.status);
+check("the RECEIPT date's rate (3.80, today's best) — NOT the order date's 3.70",
+  p3.exchange_rate === "3.80000000", String(p3.exchange_rate));
+check("PO baseTotal = 1150 × 3.80 = 4370.00", p3.base_total === "4370.000", String(p3.base_total));
+check("PO baseTaxAmount = 570.00", p3.base_tax_amount === "570.000", String(p3.base_tax_amount));
+const puEntries = await entriesFor(A.org, "purchase_order", poUsd);
+check("USD PO posts in BASE: Dr Inventory 4370.000 / Cr AP 4370.000",
+  line(puEntries[0], "1200")?.debit === "4370.000" && line(puEntries[0], "2000")?.credit === "4370.000",
+  JSON.stringify(puEntries[0]?.lines));
+await checkLedgerBalanced(A.org, "after foreign PO receive");
+
 // ================= Org B: BHD base (3 decimals) =================
 const B = await registerOrg("FX Posting BHD", "Bahrain");
 const orgBCur = (await db.query("select currency from orgs where id=$1", [B.org])).rows[0].currency;

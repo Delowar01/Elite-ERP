@@ -13,10 +13,16 @@ import { can, evaluate } from "@/lib/document-lifecycle";
 import { snapshotDocumentBankAccounts } from "@/lib/document-bank-data";
 import { snapshotSealForDoc, applySealOverride } from "@/lib/doc-seal";
 import { normalizeDocCurrency, roundMoney } from "@/lib/currency/currencies";
+import { captureBaseAmounts } from "@/lib/posting-currency";
 import { computeTotals, type LineItemInput } from "../../sales/_shared/totals";
 import { persistDocumentAttachments, type AttachmentInput } from "../../sales/_shared/attachment-persist";
 
-export type ActionResult = { error?: string; id?: number };
+export type ActionResult = {
+  error?: string;
+  id?: number;
+  /** Set when a posting was blocked by a missing exchange rate — FX-3's rate-entry seam. */
+  missingRate?: { currency: string; date: string };
+};
 
 const PATH = "/purchasing/orders";
 
@@ -249,6 +255,21 @@ export async function receivePurchaseOrderAction(poId: number): Promise<ActionRe
     return { error: "Chart of accounts is missing a required system account (1200/2000)." };
   }
 
+  // FX-6: the rate date for a receipt is the RECEIPT date — today, the day the goods and the
+  // liability actually arrive — not the PO's order date. (The journal entry itself keeps its
+  // existing orderDate, deliberately untouched: changing what date receipts post under is not an
+  // FX question.) Base case short-circuits; a missing rate blocks the receipt.
+  const receiptDate = new Date().toISOString().slice(0, 10);
+  const captured = await captureBaseAmounts({
+    orgId: session.orgId,
+    baseCurrency: session.orgCurrency,
+    docCurrency: po.currency,
+    total: po.total,
+    taxTotal: po.taxTotal,
+    date: receiptDate,
+  });
+  if (!captured.ok) return { error: captured.error, missingRate: captured.missingRate };
+
   await db.transaction(async (tx) => {
     for (const item of items) {
       if (item.productId) {
@@ -271,12 +292,24 @@ export async function receivePurchaseOrderAction(poId: number): Promise<ActionRe
       })
       .returning({ id: journalEntriesTable.id });
 
+    // The ledger holds BASE currency only. Two lines of the same figure — balanced by construction.
     await tx.insert(journalLinesTable).values([
-      { journalEntryId: entry.id, accountId: inventory.id, debit: po.total, credit: "0" },
-      { journalEntryId: entry.id, accountId: accountsPayable.id, debit: "0", credit: po.total },
+      { journalEntryId: entry.id, accountId: inventory.id, debit: captured.baseTotal, credit: "0" },
+      { journalEntryId: entry.id, accountId: accountsPayable.id, debit: "0", credit: captured.baseTotal },
     ]);
 
-    await tx.update(purchaseOrdersTable).set({ status: "received", updatedAt: new Date() }).where(eq(purchaseOrdersTable.id, poId));
+    await tx
+      .update(purchaseOrdersTable)
+      .set({
+        status: "received",
+        exchangeRate: captured.exchangeRate,
+        baseTotal: captured.baseTotal,
+        baseTaxAmount: captured.baseTaxAmount,
+        // Nothing is paid at receipt; payments follow (FX-7 owns their conversion).
+        basePaidAmount: roundMoney(0, session.orgCurrency),
+        updatedAt: new Date(),
+      })
+      .where(eq(purchaseOrdersTable.id, poId));
   });
 
   await logActivity(session, {
