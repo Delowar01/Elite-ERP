@@ -61,6 +61,13 @@ itself:
 When you add a suite, ask what it would print if it silently did not run — and if the answer is
 "something plausible", fix the harness, not the suite.
 
+One more rule for the assertions themselves: **compare values, not storage representations.** A
+suite that pinned a copied amount to the literal string `"500.00"` broke when the column widened to
+`numeric(15,3)` and started returning `"500.000"` — the duplication it tested was working, and the
+red run read as a product bug until someone traced it to the text form of a numeric. If the claim
+is "the value was copied" or "the total is X", assert the number; pin the string only when the
+representation itself IS the claim (e.g. roundMoney's output format).
+
 ### The mirror image: a failing suite that is also not telling you what it looks like
 
 The same trap runs the other way, and it nearly produced a much worse report than any of the four
