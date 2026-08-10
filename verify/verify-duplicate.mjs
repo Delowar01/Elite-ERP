@@ -125,7 +125,11 @@ check("copy is created by the acting user", qCopy.created_by_id === uid);
 const qItems = (await db.query(`select * from quotation_items where quotation_id=$1`, [qCopy.id])).rows;
 check("line items copied", qItems.length === 1, `n=${qItems.length}`);
 check("long-form line description copied", qItems[0]?.custom_fields?.__desc === "<b>Rich</b> description", JSON.stringify(qItems[0]?.custom_fields));
-check("line unit + rate + tax copied", qItems[0]?.unit === "pcs" && qItems[0]?.unit_price === "500.00" && qItems[0]?.tax_rate_percent === "15.00",
+// Compared numerically, not as strings: the stored text form follows the column's scale
+// ("500.00" under numeric(14,2), "500.000" under numeric(15,3)), and this suite's claim is that
+// the VALUE was copied — pinning the representation made the assertion fail on a column widening
+// that changed nothing about duplication.
+check("line unit + rate + tax copied", qItems[0]?.unit === "pcs" && Number(qItems[0]?.unit_price) === 500 && Number(qItems[0]?.tax_rate_percent) === 15,
   `${qItems[0]?.unit}/${qItems[0]?.unit_price}/${qItems[0]?.tax_rate_percent}`);
 
 const qAtt = (await db.query(`select count(*)::int n from document_attachments where document_type='quotation' and document_id=$1`, [qCopy.id])).rows[0].n;
@@ -151,7 +155,7 @@ check("PO copy is a draft with paid amount zero", pCopy.status === "draft" && Nu
 check("PO conversion/source links all null",
   !pCopy.source_quotation_id && !pCopy.source_sales_order_id && !pCopy.source_proforma_id && !pCopy.source_invoice_id);
 const pItems = (await db.query(`select * from purchase_order_items where purchase_order_id=$1`, [pCopy.id])).rows;
-check("PO line copied with unit cost", pItems.length === 1 && pItems[0].unit_cost === "500.00", pItems[0]?.unit_cost);
+check("PO line copied with unit cost", pItems.length === 1 && Number(pItems[0].unit_cost) === 500, pItems[0]?.unit_cost);
 
 // --- The backwards-window guard ---
 const b = await duplicateViaUi("/sales/quotations", "QTN-BACKWARDS");
