@@ -30,6 +30,7 @@ export default async function EditDebitNotePage({ params }: { params: Promise<{ 
       .select({
         id: purchaseOrdersTable.id,
         poNumber: purchaseOrdersTable.poNumber,
+        currency: purchaseOrdersTable.currency,
         vendorName: vendorsTable.name,
         vendorAddress: vendorsTable.address,
         vendorEmail: vendorsTable.email,

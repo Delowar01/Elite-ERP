@@ -27,7 +27,7 @@ import { getProfileByCountryName } from "@/lib/geo/country-profiles";
 import type { Product, Org } from "@/db";
 import { createCreditNoteAction, updateCreditNoteAction } from "./actions";
 
-type InvoiceOption = { id: number; invoiceNumber: string; customerName: string; customerAddress?: string | null; customerEmail?: string | null; customerPhone?: string | null };
+type InvoiceOption = { id: number; invoiceNumber: string; currency?: string | null; customerName: string; customerAddress?: string | null; customerEmail?: string | null; customerPhone?: string | null };
 
 export type CnFormInitial = {
   sourceInvoiceId: string;
@@ -80,8 +80,11 @@ export function CnForm({
   const [pendingDraft, startDraftTransition] = useTransition();
   const [pendingPrimary, startPrimaryTransition] = useTransition();
 
-  const totals = computeTotals(items, 0, org.currency);
   const selectedInvoice = invoices.find((inv) => String(inv.id) === sourceInvoiceId);
+  // The note is denominated in its source invoice's currency (the action enforces the same rule
+  // server-side), so the on-screen totals round at that currency — not at the org base.
+  const docCurrency = selectedInvoice?.currency ?? org.currency;
+  const totals = computeTotals(items, 0, docCurrency);
 
   const previewData: PreviewData = {
     docLabel: t(locale, "Credit Note"),
@@ -96,7 +99,7 @@ export function CnForm({
     showPricing: true,
     totals: { subtotal: totals.subtotal, discount: totals.discount, taxTotal: totals.taxTotal, total: totals.total },
     terms,
-    currency: org.currency,
+    currency: docCurrency,
     bankAccounts: snapshotSelectedBankAccounts(bankAccountIds, bankAccounts),
   };
 

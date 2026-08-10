@@ -251,6 +251,9 @@ export async function convertSoToProformaAction(soId: number): Promise<ActionRes
         customerId: data.so.customerId,
         sourceSalesOrderId: data.so.id,
         issueDate: new Date().toISOString().slice(0, 10),
+        // The totals below are copied verbatim, so the currency that qualifies them must
+        // travel with them — dropping it re-denominates the amounts in the base currency.
+        currency: data.so.currency,
         subtotal: data.so.subtotal,
         discount: data.so.discount,
         taxTotal: data.so.taxTotal,
@@ -297,6 +300,9 @@ export async function convertSoToInvoiceAction(soId: number): Promise<ActionResu
         customerId: data.so.customerId,
         sourceSalesOrderId: data.so.id,
         issueDate: new Date().toISOString().slice(0, 10),
+        // The totals below are copied verbatim, so the currency that qualifies them must
+        // travel with them — dropping it re-denominates the amounts in the base currency.
+        currency: data.so.currency,
         subtotal: data.so.subtotal,
         discount: data.so.discount,
         taxTotal: data.so.taxTotal,
@@ -335,6 +341,8 @@ export async function convertSoToDeliveryChallanAction(soId: number): Promise<Ac
   const id = await db.transaction(async (tx) => {
     const dcNumber = await nextDocumentNumber(tx, session.orgId, "delivery_challan");
     const [dc] = await tx
+      // No currency here, deliberately: a delivery challan is quantity-only and carries no
+      // money, so there is nothing for a currency to qualify.
       .insert(deliveryChallansTable)
       .values({
         orgId: session.orgId,

@@ -225,6 +225,9 @@ export async function convertProformaToInvoiceAction(proformaId: number): Promis
         sourceSalesOrderId: pf.sourceSalesOrderId,
         status: invoiceStatus,
         issueDate: new Date().toISOString().slice(0, 10),
+        // The totals below are copied verbatim, so the currency that qualifies them must
+        // travel with them — dropping it re-denominates the amounts in the base currency.
+        currency: pf.currency,
         subtotal: pf.subtotal,
         discount: pf.discount,
         taxTotal: pf.taxTotal,
@@ -289,6 +292,8 @@ export async function convertProformaToDeliveryChallanAction(proformaId: number)
   const id = await db.transaction(async (tx) => {
     const dcNumber = await nextDocumentNumber(tx, session.orgId, "delivery_challan");
     const [dc] = await tx
+      // No currency here, deliberately: a delivery challan is quantity-only and carries no
+      // money, so there is nothing for a currency to qualify.
       .insert(deliveryChallansTable)
       .values({
         orgId: session.orgId,

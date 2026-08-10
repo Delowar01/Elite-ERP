@@ -45,7 +45,11 @@ export async function createCreditNoteAction(
   const items = input.items.filter((l) => l.description.trim() && Number(l.quantity) > 0);
   if (items.length === 0) return { error: "Add at least one line item." };
 
-  const currency = session.orgCurrency;
+  // A credit note reverses a specific invoice, so it is denominated in THAT invoice's currency —
+  // never chosen independently, never the org default. A reversal in a different currency from the
+  // document it reverses is not a meaningful object, and FX-6 cannot convert a note whose currency
+  // was never written.
+  const currency = invoice.currency ?? session.orgCurrency;
   const totals = computeTotals(items as LineItemInput[], 0, currency);
   const bankAccounts = await snapshotDocumentBankAccounts(session.orgId, input.bankAccountIds);
   const seal = await snapshotSealForDoc(db, session.orgId, "credit_note");
@@ -60,6 +64,7 @@ export async function createCreditNoteAction(
         title: input.title.trim() || null,
         customerId: invoice.customerId,
         sourceInvoiceId: invoice.id,
+        currency: invoice.currency,
         reason: input.reason.trim() || null,
         terms: normalizeDocumentTerms(input.terms),
         bankAccounts,
@@ -110,7 +115,8 @@ export async function updateCreditNoteAction(
 
   const items = input.items.filter((l) => l.description.trim() && Number(l.quantity) > 0);
   if (items.length === 0) return { error: "Add at least one line item." };
-  const currency = session.orgCurrency;
+  // Editing never changes the note's currency — it stays what it inherited from its invoice.
+  const currency = existing.currency ?? session.orgCurrency;
   const totals = computeTotals(items as LineItemInput[], 0, currency);
   const bankAccounts = await snapshotDocumentBankAccounts(session.orgId, input.bankAccountIds);
 

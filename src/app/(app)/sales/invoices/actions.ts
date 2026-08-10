@@ -302,6 +302,8 @@ export async function convertInvoiceToDeliveryChallanAction(invoiceId: number): 
   const id = await db.transaction(async (tx) => {
     const dcNumber = await nextDocumentNumber(tx, session.orgId, "delivery_challan");
     const [dc] = await tx
+      // No currency here, deliberately: a delivery challan is quantity-only and carries no
+      // money, so there is nothing for a currency to qualify.
       .insert(deliveryChallansTable)
       .values({
         orgId: session.orgId,

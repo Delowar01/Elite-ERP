@@ -18,6 +18,7 @@ export default async function NewDebitNotePage({ searchParams }: { searchParams:
       .select({
         id: purchaseOrdersTable.id,
         poNumber: purchaseOrdersTable.poNumber,
+        currency: purchaseOrdersTable.currency,
         vendorName: vendorsTable.name,
         vendorAddress: vendorsTable.address,
         vendorEmail: vendorsTable.email,

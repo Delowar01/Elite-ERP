@@ -56,6 +56,7 @@ export function PoForm({
   projects = [],
   initialTitle,
   initialItems,
+  initialCurrency,
   sourceQuotationId,
   sourceSalesOrderId,
   sourceProformaId,
@@ -80,6 +81,8 @@ export function PoForm({
   projects?: { id: number; name: string }[];
   initialTitle?: string;
   initialItems?: LineItemDraft[];
+  /** Prefill from a converted source document. The copied amounts are in THIS currency. */
+  initialCurrency?: string | null;
   sourceQuotationId?: string;
   sourceSalesOrderId?: string;
   sourceProformaId?: string;
@@ -106,7 +109,7 @@ export function PoForm({
   const [notes, setNotes] = useState(initial?.notes ?? defaultNote?.content ?? "");
   const [terms, setTerms] = useState<DocumentTerm[]>(initial?.terms ?? []);
   const [bankAccountIds, setBankAccountIds] = useState<number[]>(initial?.bankAccountIds ?? (mode === "create" ? defaultBankAccountIds : []));
-  const [currency, setCurrency] = useState<string>(initial?.currency ?? org.currency);
+  const [currency, setCurrency] = useState<string>(initial?.currency ?? initialCurrency ?? org.currency);
   const [sealOverride, setSealOverride] = useState<string | undefined>(undefined);
   const [signatureOverride, setSignatureOverride] = useState<string | undefined>(undefined);
   const docMark = docMoneyMark(org, currency);

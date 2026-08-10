@@ -18,6 +18,7 @@ export default async function NewCreditNotePage({ searchParams }: { searchParams
       .select({
         id: salesInvoicesTable.id,
         invoiceNumber: salesInvoicesTable.invoiceNumber,
+        currency: salesInvoicesTable.currency,
         customerName: customersTable.name,
         customerAddress: customersTable.address,
         customerEmail: customersTable.email,

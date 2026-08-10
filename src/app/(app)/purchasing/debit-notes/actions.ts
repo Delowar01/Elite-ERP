@@ -45,7 +45,8 @@ export async function createDebitNoteAction(
   const items = input.items.filter((l) => l.description.trim() && Number(l.quantity) > 0);
   if (items.length === 0) return { error: "Add at least one line item." };
 
-  const currency = session.orgCurrency;
+  // Denominated in the purchase order it reverses — same rule as the credit note.
+  const currency = po.currency ?? session.orgCurrency;
   const totals = computeTotals(items as LineItemInput[], 0, currency);
   const bankAccounts = await snapshotDocumentBankAccounts(session.orgId, input.bankAccountIds);
   const seal = await snapshotSealForDoc(db, session.orgId, "debit_note");
@@ -60,6 +61,7 @@ export async function createDebitNoteAction(
         title: input.title.trim() || null,
         vendorId: po.vendorId,
         sourcePurchaseOrderId: po.id,
+        currency: po.currency,
         reason: input.reason.trim() || null,
         terms: normalizeDocumentTerms(input.terms),
         bankAccounts,
@@ -110,7 +112,8 @@ export async function updateDebitNoteAction(
 
   const items = input.items.filter((l) => l.description.trim() && Number(l.quantity) > 0);
   if (items.length === 0) return { error: "Add at least one line item." };
-  const currency = session.orgCurrency;
+  // Editing never changes the note's currency — it stays what it inherited from its PO.
+  const currency = existing.currency ?? session.orgCurrency;
   const totals = computeTotals(items as LineItemInput[], 0, currency);
   const bankAccounts = await snapshotDocumentBankAccounts(session.orgId, input.bankAccountIds);
 

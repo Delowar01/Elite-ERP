@@ -30,6 +30,7 @@ export default async function EditCreditNotePage({ params }: { params: Promise<{
       .select({
         id: salesInvoicesTable.id,
         invoiceNumber: salesInvoicesTable.invoiceNumber,
+        currency: salesInvoicesTable.currency,
         customerName: customersTable.name,
         customerAddress: customersTable.address,
         customerEmail: customersTable.email,

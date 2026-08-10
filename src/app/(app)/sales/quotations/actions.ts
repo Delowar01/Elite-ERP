@@ -258,6 +258,9 @@ export async function convertToSalesOrderAction(quotationId: number): Promise<Ac
         customerId: data.quotation.customerId,
         sourceQuotationId: data.quotation.id,
         issueDate: new Date().toISOString().slice(0, 10),
+        // The totals below are copied verbatim, so the currency that qualifies them must
+        // travel with them — dropping it re-denominates the amounts in the base currency.
+        currency: data.quotation.currency,
         subtotal: data.quotation.subtotal,
         discount: data.quotation.discount,
         taxTotal: data.quotation.taxTotal,
@@ -303,6 +306,9 @@ export async function convertToProformaAction(quotationId: number): Promise<Acti
         title: data.quotation.title,
         customerId: data.quotation.customerId,
         issueDate: new Date().toISOString().slice(0, 10),
+        // The totals below are copied verbatim, so the currency that qualifies them must
+        // travel with them — dropping it re-denominates the amounts in the base currency.
+        currency: data.quotation.currency,
         subtotal: data.quotation.subtotal,
         discount: data.quotation.discount,
         taxTotal: data.quotation.taxTotal,
@@ -348,6 +354,9 @@ export async function convertToInvoiceAction(quotationId: number): Promise<Actio
         title: data.quotation.title,
         customerId: data.quotation.customerId,
         issueDate: new Date().toISOString().slice(0, 10),
+        // The totals below are copied verbatim, so the currency that qualifies them must
+        // travel with them — dropping it re-denominates the amounts in the base currency.
+        currency: data.quotation.currency,
         subtotal: data.quotation.subtotal,
         discount: data.quotation.discount,
         taxTotal: data.quotation.taxTotal,
@@ -386,6 +395,8 @@ export async function convertToDeliveryChallanAction(quotationId: number): Promi
   const id = await db.transaction(async (tx) => {
     const dcNumber = await nextDocumentNumber(tx, session.orgId, "delivery_challan");
     const [dc] = await tx
+      // No currency here, deliberately: a delivery challan is quantity-only and carries no
+      // money, so there is nothing for a currency to qualify.
       .insert(deliveryChallansTable)
       .values({
         orgId: session.orgId,

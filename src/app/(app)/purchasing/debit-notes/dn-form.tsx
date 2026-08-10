@@ -27,7 +27,7 @@ import { getProfileByCountryName } from "@/lib/geo/country-profiles";
 import type { Product, Org } from "@/db";
 import { createDebitNoteAction, updateDebitNoteAction } from "./actions";
 
-type PoOption = { id: number; poNumber: string; vendorName: string; vendorAddress?: string | null; vendorEmail?: string | null; vendorPhone?: string | null };
+type PoOption = { id: number; poNumber: string; currency?: string | null; vendorName: string; vendorAddress?: string | null; vendorEmail?: string | null; vendorPhone?: string | null };
 
 export type DnFormInitial = {
   sourcePurchaseOrderId: string;
@@ -80,8 +80,10 @@ export function DnForm({
   const [pendingDraft, startDraftTransition] = useTransition();
   const [pendingPrimary, startPrimaryTransition] = useTransition();
 
-  const totals = computeTotals(items, 0, org.currency);
   const selectedPo = purchaseOrders.find((po) => String(po.id) === sourcePurchaseOrderId);
+  // Denominated in the source PO's currency — same rule as the credit note, enforced server-side.
+  const docCurrency = selectedPo?.currency ?? org.currency;
+  const totals = computeTotals(items, 0, docCurrency);
 
   const previewData: PreviewData = {
     docLabel: t(locale, "Debit Note"),
@@ -96,7 +98,7 @@ export function DnForm({
     showPricing: true,
     totals: { subtotal: totals.subtotal, discount: totals.discount, taxTotal: totals.taxTotal, total: totals.total },
     terms,
-    currency: org.currency,
+    currency: docCurrency,
     bankAccounts: snapshotSelectedBankAccounts(bankAccountIds, bankAccounts),
   };
 

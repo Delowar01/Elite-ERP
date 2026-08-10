@@ -57,12 +57,18 @@ export default async function NewPurchaseOrderPage({
 
   let initialTitle: string | undefined;
   let initialItems: LineItemDraft[] | undefined;
+  // The prefilled amounts are copied verbatim from the source document, so the currency that
+  // qualifies them must come too — a USD quotation prefilling a base-currency PO form would show
+  // the right numbers under the wrong mark. Still editable: a PO to a vendor may genuinely be
+  // negotiated in a different currency, in which case the amounts are the user's to change.
+  let initialCurrency: string | null | undefined;
 
   if (fromQuotation) {
     const qid = Number(fromQuotation);
     const [quotation] = await db.select().from(quotationsTable).where(and(tenantScope(session.orgId, quotationsTable), eq(quotationsTable.id, qid)));
     if (quotation) {
       initialTitle = quotation.title ?? undefined;
+      initialCurrency = quotation.currency;
       const items = await db.select().from(quotationItemsTable).where(eq(quotationItemsTable.quotationId, qid));
       initialItems = toDrafts(items);
     }
@@ -71,6 +77,7 @@ export default async function NewPurchaseOrderPage({
     const [so] = await db.select().from(salesOrdersTable).where(and(tenantScope(session.orgId, salesOrdersTable), eq(salesOrdersTable.id, soId)));
     if (so) {
       initialTitle = so.title ?? undefined;
+      initialCurrency = so.currency;
       const items = await db.select().from(salesOrderItemsTable).where(eq(salesOrderItemsTable.salesOrderId, soId));
       initialItems = toDrafts(items);
     }
@@ -79,6 +86,7 @@ export default async function NewPurchaseOrderPage({
     const [pf] = await db.select().from(proformaInvoicesTable).where(and(tenantScope(session.orgId, proformaInvoicesTable), eq(proformaInvoicesTable.id, pfId)));
     if (pf) {
       initialTitle = pf.title ?? undefined;
+      initialCurrency = pf.currency;
       const items = await db.select().from(proformaInvoiceItemsTable).where(eq(proformaInvoiceItemsTable.proformaInvoiceId, pfId));
       initialItems = toDrafts(items);
     }
@@ -87,6 +95,7 @@ export default async function NewPurchaseOrderPage({
     const [inv] = await db.select().from(salesInvoicesTable).where(and(tenantScope(session.orgId, salesInvoicesTable), eq(salesInvoicesTable.id, invId)));
     if (inv) {
       initialTitle = inv.title ?? undefined;
+      initialCurrency = inv.currency;
       const items = await db.select().from(salesInvoiceItemsTable).where(eq(salesInvoiceItemsTable.invoiceId, invId));
       initialItems = toDrafts(items);
     }
@@ -115,6 +124,7 @@ export default async function NewPurchaseOrderPage({
         projects={projects}
         initialTitle={initialTitle}
         initialItems={initialItems}
+        initialCurrency={initialCurrency}
         sourceQuotationId={fromQuotation}
         sourceSalesOrderId={fromSalesOrder}
         sourceInvoiceId={fromInvoice}
