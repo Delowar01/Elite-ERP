@@ -15,8 +15,14 @@ import { persistDocumentAttachments, type AttachmentInput } from "../_shared/att
 import { snapshotDocumentBankAccounts } from "@/lib/document-bank-data";
 import { snapshotSealForDoc, applySealOverride } from "@/lib/doc-seal";
 import { normalizeDocCurrency, roundMoney } from "@/lib/currency/currencies";
+import { captureBaseAmounts, subtractMoney } from "@/lib/posting-currency";
 
-export type ActionResult = { error?: string; id?: number };
+export type ActionResult = {
+  error?: string;
+  id?: number;
+  /** Set when a posting was blocked by a missing exchange rate — FX-3's rate-entry seam. */
+  missingRate?: { currency: string; date: string };
+};
 
 const PATH = "/sales/invoices";
 
@@ -249,6 +255,24 @@ export async function sendInvoiceAction(invoiceId: number): Promise<ActionResult
     return { error: "Chart of accounts is missing a required system account (1100/4000/2100)." };
   }
 
+  // FX-6: convert once, at the invoice's own date, and store the result. A base-currency invoice
+  // short-circuits to the identity with no rate lookup; a foreign one with no usable rate BLOCKS —
+  // posting unconverted or at a guessed rate writes a wrong ledger, and a block is recoverable.
+  const captured = await captureBaseAmounts({
+    orgId: session.orgId,
+    baseCurrency: session.orgCurrency,
+    docCurrency: invoice.currency,
+    total: invoice.total,
+    taxTotal: invoice.taxTotal,
+    date: invoice.issueDate,
+  });
+  if (!captured.ok) return { error: captured.error, missingRate: captured.missingRate };
+  // The revenue line is DERIVED so the entry balances by construction — Dr baseTotal always equals
+  // Cr revenue + Cr VAT exactly. (The old lines credited the full subtotal against a discounted
+  // total, which unbalanced the entry by the discount; deriving the middle line closes that hole
+  // for base-currency invoices too.)
+  const baseRevenue = subtractMoney(captured.baseTotal, captured.baseTaxAmount, session.orgCurrency);
+
   await db.transaction(async (tx) => {
     for (const item of items) {
       if (item.productId) {
@@ -271,16 +295,28 @@ export async function sendInvoiceAction(invoiceId: number): Promise<ActionResult
       })
       .returning({ id: journalEntriesTable.id });
 
+    // The ledger holds BASE currency only.
     const lines: { accountId: number; debit: string; credit: string }[] = [
-      { accountId: ar.id, debit: invoice.total, credit: "0" },
-      { accountId: revenue.id, debit: "0", credit: invoice.subtotal },
+      { accountId: ar.id, debit: captured.baseTotal, credit: "0" },
+      { accountId: revenue.id, debit: "0", credit: baseRevenue },
     ];
-    if (Number(invoice.taxTotal) > 0) {
-      lines.push({ accountId: vatPayable.id, debit: "0", credit: invoice.taxTotal });
+    if (Number(captured.baseTaxAmount) > 0) {
+      lines.push({ accountId: vatPayable.id, debit: "0", credit: captured.baseTaxAmount });
     }
     await tx.insert(journalLinesTable).values(lines.map((l) => ({ journalEntryId: entry.id, ...l })));
 
-    await tx.update(salesInvoicesTable).set({ status: "sent", updatedAt: new Date() }).where(eq(salesInvoicesTable.id, invoiceId));
+    await tx
+      .update(salesInvoicesTable)
+      .set({
+        status: "sent",
+        exchangeRate: captured.exchangeRate,
+        baseTotal: captured.baseTotal,
+        baseTaxAmount: captured.baseTaxAmount,
+        // paidAmount is zero at send (payments only follow a sent invoice), so its base twin is too.
+        basePaidAmount: roundMoney(0, session.orgCurrency),
+        updatedAt: new Date(),
+      })
+      .where(eq(salesInvoicesTable.id, invoiceId));
   });
 
   await logActivity(session, { type: "sales_invoice.sent", description: `Sent invoice ${invoice.invoiceNumber} — posted to ledger and decremented stock`, entityType: "sales_invoice", entityId: invoiceId });
@@ -334,8 +370,8 @@ export async function convertInvoiceToDeliveryChallanAction(invoiceId: number): 
 }
 
 // Batch A4 — void a posted, unpaid invoice: the exact reversal of sendInvoiceAction, in one
-// transaction. Restores stock and posts a reversing journal entry (Dr Revenue + Dr VAT
-// Payable / Cr Accounts Receivable), then marks the invoice void. The lifecycle rule refuses
+// transaction. Restores stock and posts a reversing journal entry that mirrors the original
+// posting entry line for line (FX-6), then marks the invoice void. The lifecycle rule refuses
 // void once any payment exists (partially_paid / paid — correct those with a Credit Note) and
 // refuses a second void (a void invoice is terminal), so no double-reversal is possible.
 export async function voidInvoiceAction(invoiceId: number): Promise<ActionResult> {
@@ -348,14 +384,8 @@ export async function voidInvoiceAction(invoiceId: number): Promise<ActionResult
   if (!decision.allowed) return { error: decision.reason };
 
   const items = await db.select().from(salesInvoiceItemsTable).where(eq(salesInvoiceItemsTable.invoiceId, invoiceId));
-  const accounts = await db.select().from(accountsTable).where(eq(accountsTable.orgId, session.orgId));
-  const byCode = new Map(accounts.map((a) => [a.code, a]));
-  const ar = byCode.get("1100");
-  const revenue = byCode.get("4000");
-  const vatPayable = byCode.get("2100");
-  if (!ar || !revenue || !vatPayable) {
-    return { error: "Chart of accounts is missing a required system account (1100/4000/2100)." };
-  }
+  // No chart-of-accounts lookup here any more: the reversal mirrors the posting entry's own
+  // lines, so the accounts come from what was actually posted.
 
   await db.transaction(async (tx) => {
     for (const item of items) {
@@ -367,26 +397,47 @@ export async function voidInvoiceAction(invoiceId: number): Promise<ActionResult
       }
     }
 
-    const [entry] = await tx
-      .insert(journalEntriesTable)
-      .values({
-        orgId: session.orgId,
-        entryDate: new Date().toISOString().slice(0, 10),
-        memo: `Invoice ${invoice.invoiceNumber} voided (reversal)`,
-        sourceType: "sales_invoice",
-        sourceId: invoice.id,
-        createdById: session.userId,
-      })
-      .returning({ id: journalEntriesTable.id });
+    // FX-6: the reversal MIRRORS the posting entry's own stored lines instead of recomputing from
+    // the document. That is what "reverse at the stored rate" means made literal — whatever was
+    // posted (today's base-currency figures, a pre-FX-6 foreign posting at face value, a
+    // discounted invoice) is negated line for line, so the reversal balances iff the original did
+    // and a rate entered since the posting can never leak in. A document with NO posting entry
+    // (fixtures inserted as "sent" by SQL) reverses nothing — the old code recomputed from the
+    // document's columns here and, fed one inconsistent fixture, wrote eleven one-sided entries
+    // into the dev ledger before anyone noticed.
+    const [posting] = await tx
+      .select({ id: journalEntriesTable.id })
+      .from(journalEntriesTable)
+      .where(and(
+        eq(journalEntriesTable.orgId, session.orgId),
+        eq(journalEntriesTable.sourceType, "sales_invoice"),
+        eq(journalEntriesTable.sourceId, invoice.id),
+      ))
+      .orderBy(journalEntriesTable.id)
+      .limit(1);
 
-    const lines: { accountId: number; debit: string; credit: string }[] = [
-      { accountId: revenue.id, debit: invoice.subtotal, credit: "0" },
-      { accountId: ar.id, debit: "0", credit: invoice.total },
-    ];
-    if (Number(invoice.taxTotal) > 0) {
-      lines.push({ accountId: vatPayable.id, debit: invoice.taxTotal, credit: "0" });
+    if (posting) {
+      const originalLines = await tx
+        .select({ accountId: journalLinesTable.accountId, debit: journalLinesTable.debit, credit: journalLinesTable.credit })
+        .from(journalLinesTable)
+        .where(eq(journalLinesTable.journalEntryId, posting.id));
+
+      const [entry] = await tx
+        .insert(journalEntriesTable)
+        .values({
+          orgId: session.orgId,
+          entryDate: new Date().toISOString().slice(0, 10),
+          memo: `Invoice ${invoice.invoiceNumber} voided (reversal)`,
+          sourceType: "sales_invoice",
+          sourceId: invoice.id,
+          createdById: session.userId,
+        })
+        .returning({ id: journalEntriesTable.id });
+
+      await tx.insert(journalLinesTable).values(
+        originalLines.map((l) => ({ journalEntryId: entry.id, accountId: l.accountId, debit: l.credit, credit: l.debit })),
+      );
     }
-    await tx.insert(journalLinesTable).values(lines.map((l) => ({ journalEntryId: entry.id, ...l })));
 
     await tx.update(salesInvoicesTable).set({ status: "void", updatedAt: new Date() }).where(eq(salesInvoicesTable.id, invoiceId));
   });
