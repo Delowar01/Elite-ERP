@@ -18,7 +18,7 @@
     "verify:import": "tsx --env-file-if-exists=.env --conditions=react-server verify/verify-import.mts",
     "verify:exchange-rates": "tsx --env-file-if-exists=.env --conditions=react-server verify/verify-exchange-rates.mts",
     "verify:registration-currency": "tsx --env-file-if-exists=.env --conditions=react-server verify/verify-registration-currency.mts",
-    "verify:server": "npm run verify:statements && npm run verify:project-costing && npm run verify:docs-import && npm run verify:client-import && npm run verify:import && npm run verify:exchange-rates && npm run verify:registration-currency && npm run verify:money-round-trip",
+    "verify:server": "npm run verify:statements && npm run verify:project-costing && npm run verify:docs-import && npm run verify:client-import && npm run verify:import && npm run verify:exchange-rates && npm run verify:registration-currency && npm run verify:money-round-trip && npm run verify:base-backfill",
     "verify:role-matrix": "tsx --env-file-if-exists=.env --conditions=react-server verify/verify-role-matrix.mts",
     "verify:confirm-policy": "tsx --env-file-if-exists=.env --conditions=react-server verify/verify-confirm-policy.mts",
     "verify:dirty-form": "tsx --env-file-if-exists=.env --conditions=react-server verify/verify-dirty-form.mts",
@@ -29,7 +29,9 @@
     "verify:all": "npm run verify:static && npm run verify:server",
     "verify:browser": "node --env-file-if-exists=.env verify/run-browser-suites.mjs",
     "verify:money-precision": "tsx --env-file-if-exists=.env --conditions=react-server verify/verify-money-precision.mts",
-    "verify:money-round-trip": "tsx --env-file-if-exists=.env --conditions=react-server verify/verify-money-round-trip.mts"
+    "verify:money-round-trip": "tsx --env-file-if-exists=.env --conditions=react-server verify/verify-money-round-trip.mts",
+    "verify:base-backfill": "tsx --env-file-if-exists=.env --conditions=react-server verify/verify-base-backfill.mts",
+    "backfill:base-amounts": "tsx --env-file-if-exists=.env scripts/backfill-base-amounts.ts"
   },
   "dependencies": {
     "@radix-ui/react-avatar": "^1.2.2",
