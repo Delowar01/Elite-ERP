@@ -303,3 +303,41 @@ actions inside a copy fix would have produced an arbitrary line nobody had agree
 **What protects the current state meanwhile:** `scratchpad/verify-role-matrix.mts` asserts the
 declared matrix against the guards in the code in both directions, so a gate added or removed
 without updating the matrix fails the check.
+
+---
+
+## Credit and debit notes do not inherit their source document's currency
+
+**Status:** open, found while making rounding currency-aware (FX-0). Not fixed there, because it is
+a behaviour change to what a document *is*, not a rounding fix.
+
+`credit_notes` and `debit_notes` both carry a `currency` column, and nothing ever writes it. The
+forms display `org.currency` and the actions round at `session.orgCurrency`, so a credit note is
+always treated as being in the organization's base currency.
+
+**The consequence:** a credit note raised against a USD invoice is recorded as though it were in the
+base currency. The number is copied across unchanged, so the credit is wrong by the exchange rate —
+not by a rounding step. Today every document is effectively base-currency so nothing is visibly
+broken, but this becomes a real defect the moment FX-6 posts a foreign invoice.
+
+**The fix** is that a note inherits the currency of the document it reverses — an invoice's for a
+credit note, a purchase order's for a debit note — and that the inherited value is not editable,
+since a reversal in a different currency from the thing it reverses is not meaningful. Belongs with
+FX-1b (locking currency once a base amount is stored), which is where the same "this field is now
+fixed" machinery lands.
+
+---
+
+## `payments` has no currency column
+
+**Status:** open, found while making rounding currency-aware (FX-0). In scope for FX-7.
+
+A payment row records an amount with no statement of what currency it is in. The amount is
+implicitly in the source document's currency, and the journal lines post it to the ledger
+**unconverted** — so a payment against a foreign invoice writes a foreign number into a
+base-currency ledger.
+
+FX-0 rounded the two sides correctly for what they are (the document's currency for `paidAmount`,
+the base currency for the journal lines) and left the missing conversion alone: converting at
+payment time is exactly the FX-7 question, and the answer determines whether the column stores the
+payment's own currency plus a rate, or only a base amount.
