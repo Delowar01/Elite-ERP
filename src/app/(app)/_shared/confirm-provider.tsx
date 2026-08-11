@@ -26,6 +26,17 @@ import {
  * message, and leaves the button usable so the user can retry; only success closes it.
  */
 
+/**
+ * A failed action may offer a one-click way out (e.g. "no exchange rate" → "Fetch rate & retry").
+ * The recovery renders as an extra button next to the error, runs under the same double-execution
+ * guard as the main action, and its own result feeds back through the same contract — success
+ * closes the dialog, an error (with or without a further recovery) keeps it open.
+ */
+export type ConfirmRecovery = {
+  label: string;
+  run: () => Promise<{ error?: string; recovery?: ConfirmRecovery } | void>;
+};
+
 export type ConfirmRequest = {
   /** Policy key — decides severity, default wording and the confirm button's label. */
   action: SensitiveActionKind;
@@ -39,8 +50,11 @@ export type ConfirmRequest = {
   confirmLabel?: string;
   /** Key figures shown as a small table: amount, currency, party, account, counts. */
   details?: ConfirmDetail[];
-  /** Runs on confirm. Return `{ error }` (or throw) to keep the dialog open and show the message. */
-  onConfirm: () => Promise<{ error?: string } | void> | void;
+  /**
+   * Runs on confirm. Return `{ error }` (or throw) to keep the dialog open and show the message;
+   * include `recovery` alongside the error to offer a one-click fix.
+   */
+  onConfirm: () => Promise<{ error?: string; recovery?: ConfirmRecovery } | void> | void;
   /**
    * Set when the action navigates away on success (the page unmounts before we could close). The
    * dialog then stays in its working state instead of flashing back to idle.
@@ -77,12 +91,14 @@ export function ConfirmProvider({ locale, children }: { locale: Locale; children
   const [request, setRequest] = useState<ConfirmRequest | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [recovery, setRecovery] = useState<ConfirmRecovery | null>(null);
   // Guards a second confirm slipping through between the click and the disabled re-render.
   const running = useRef(false);
 
   const confirm = useCallback<ConfirmFn>((next) => {
     running.current = false;
     setError(null);
+    setRecovery(null);
     setBusy(false);
     setRequest(next);
   }, []);
@@ -92,18 +108,22 @@ export function ConfirmProvider({ locale, children }: { locale: Locale; children
     running.current = false;
     setRequest(null);
     setError(null);
+    setRecovery(null);
   }
 
-  async function run() {
+  // One executor for the main action AND any recovery it offered — same double-run guard, same
+  // stay-open-on-error contract, so a recovery cannot double-post any more than a confirm can.
+  async function execute(fn: () => Promise<{ error?: string; recovery?: ConfirmRecovery } | void> | void) {
     if (!request || running.current) return;
     running.current = true;
     setBusy(true);
     setError(null);
     try {
-      const result = await request.onConfirm();
+      const result = await fn();
       if (result && "error" in result && result.error) {
         // Server refused (permissions, status, workflow, accounting rules) — stay open and retry-able.
         setError(result.error);
+        setRecovery(result.recovery ?? null);
         running.current = false;
         setBusy(false);
         return;
@@ -112,12 +132,16 @@ export function ConfirmProvider({ locale, children }: { locale: Locale; children
       setRequest(null);
       setBusy(false);
       running.current = false;
+      setRecovery(null);
     } catch (err) {
       setError(err instanceof Error && err.message ? err.message : t(locale, "Something went wrong. Please try again."));
+      setRecovery(null);
       running.current = false;
       setBusy(false);
     }
   }
+
+  const run = () => request && execute(request.onConfirm);
 
   const content = useMemo(
     () =>
@@ -180,6 +204,11 @@ export function ConfirmProvider({ locale, children }: { locale: Locale; children
             <Button variant="ghost" onClick={close} disabled={busy} autoFocus>
               {content?.cancelLabel ?? t(locale, "Cancel")}
             </Button>
+            {error && recovery && (
+              <Button variant="glass" onClick={() => execute(recovery.run)} disabled={busy} aria-busy={busy}>
+                {busy ? t(locale, "Working…") : recovery.label}
+              </Button>
+            )}
             <Button variant={destructive ? "destructive" : "primary"} onClick={run} disabled={busy} aria-busy={busy}>
               {busy ? t(locale, "Working…") : content?.confirmLabel}
             </Button>

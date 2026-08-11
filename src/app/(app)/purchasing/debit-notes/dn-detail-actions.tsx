@@ -4,6 +4,7 @@ import { useTransition } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { useConfirm } from "../../_shared/confirm-provider";
+import { withRateRescue, type RescuableResult } from "../../_shared/missing-rate";
 import { t, type Locale } from "@/lib/i18n/dict";
 import { issueDebitNoteAction, reverseDebitNoteAction } from "./actions";
 
@@ -12,17 +13,19 @@ export function DnDetailActions({ locale, debitNoteId, debitNoteNumber, status }
   const confirm = useConfirm();
 
   function issue() {
+    // A missing-rate block maps to "Fetch rate & retry", which re-runs this same attempt.
+    const attempt = async (): Promise<RescuableResult> => {
+      const result = await issueDebitNoteAction(debitNoteId);
+      if (result?.error) return withRateRescue(locale, result, attempt);
+      toast.success(t(locale, "Debit note issued — posted to ledger."));
+    };
     confirm({
       action: "document.submit",
       entityType: "Debit Note",
       entityNumber: debitNoteNumber,
       confirmLabel: "Issue Debit Note",
       description: "Issuing posts a reversing entry against the source purchase order and returns the stock.",
-      onConfirm: async () => {
-        const result = await issueDebitNoteAction(debitNoteId);
-        if (result?.error) return result;
-        toast.success(t(locale, "Debit note issued — posted to ledger."));
-      },
+      onConfirm: attempt,
     });
   }
 

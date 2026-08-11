@@ -4,6 +4,7 @@ import { useTransition } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { useConfirm } from "../../_shared/confirm-provider";
+import { withRateRescue, type RescuableResult } from "../../_shared/missing-rate";
 import { RecordPaymentDialog, type BankAccountOption } from "../../finance/_shared/record-payment-dialog";
 import { t, type Locale } from "@/lib/i18n/dict";
 import { sendInvoiceAction, voidInvoiceAction } from "./actions";
@@ -35,6 +36,13 @@ export function InvoiceDetailActions({
 
   // Sending posts to the ledger and moves stock, so it is confirmed as a financial action.
   function send() {
+    // Recursive on purpose: a missing-rate block maps to a "Fetch rate & retry" recovery that
+    // re-runs this same attempt after the fetch — so the retry posts through the identical path.
+    const attempt = async (): Promise<RescuableResult> => {
+      const result = await sendInvoiceAction(invoiceId);
+      if (result?.error) return withRateRescue(locale, result, attempt);
+      toast.success(t(locale, "Invoice sent — posted to ledger and stock updated."));
+    };
     confirm({
       action: "document.submit",
       entityType: "Invoice",
@@ -42,11 +50,7 @@ export function InvoiceDetailActions({
       confirmLabel: "Send Invoice",
       description: "Sending posts this invoice to the ledger and reduces stock on hand.",
       details: [{ label: "Client", value: customerName }],
-      onConfirm: async () => {
-        const result = await sendInvoiceAction(invoiceId);
-        if (result?.error) return result;
-        toast.success(t(locale, "Invoice sent — posted to ledger and stock updated."));
-      },
+      onConfirm: attempt,
     });
   }
 

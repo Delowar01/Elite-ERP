@@ -96,6 +96,9 @@ const DICT: Record<string, string> = {
   "per one unit of each currency. Posting always uses the rate dated on or before the document's own date.": "لكل وحدة واحدة من كل عملة. يعتمد الترحيل دائمًا السعر المؤرَّخ في تاريخ المستند أو قبله.",
   "No exchange rates yet. Rates appear here once a foreign-currency document exists or a rate is added manually.": "لا توجد أسعار صرف بعد. تظهر الأسعار هنا عند وجود مستند بعملة أجنبية أو عند إضافة سعر يدويًا.",
   "No rate history yet.": "لا يوجد سجل أسعار بعد.",
+  "Fetch rate & retry": "جلب السعر وإعادة المحاولة",
+  "Automatic fetch could not get a rate — enter it manually in Preset Management → Exchange Rates.": "تعذّر جلب السعر تلقائيًا — أدخِله يدويًا في إدارة الإعدادات المسبقة ← أسعار الصرف.",
+  "The fetched rate is dated after this document, so it cannot apply. Enter a rate manually in Preset Management → Exchange Rates for": "السعر المجلوب مؤرَّخ بعد تاريخ هذا المستند فلا يمكن تطبيقه. أدخِل سعرًا يدويًا في إدارة الإعدادات المسبقة ← أسعار الصرف للعملة",
   "A manual rate replaces any fetched rate for the same currency and date, and automatic fetches never overwrite it.": "السعر اليدوي يحل محل أي سعر مجلوب لنفس العملة والتاريخ، ولا يستبدله الجلب التلقائي أبدًا.",
   "Leave empty to use the official symbol": "اتركه فارغًا لاستخدام الرمز الرسمي",
   "When set, this symbol is shown instead of the official currency symbol. Leave empty to keep the official symbol (or the currency code when none exists).":

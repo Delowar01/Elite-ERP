@@ -4,6 +4,7 @@ import { useTransition } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { useConfirm } from "../../_shared/confirm-provider";
+import { withRateRescue, type RescuableResult } from "../../_shared/missing-rate";
 import { RecordPaymentDialog, type BankAccountOption } from "../../finance/_shared/record-payment-dialog";
 import { t, type Locale } from "@/lib/i18n/dict";
 import { sendPurchaseOrderAction, receivePurchaseOrderAction, cancelPurchaseOrderAction } from "./actions";
@@ -48,16 +49,19 @@ export function PoDetailActions({
   }
 
   function receive() {
+    // Receiving converts at TODAY's rate, so the one-click fetch (which lands today's bulletin)
+    // can always unblock this path; the recovery re-runs this same attempt after the fetch.
+    const attempt = async (): Promise<RescuableResult> => {
+      const result = await receivePurchaseOrderAction(poId);
+      if (result?.error) return withRateRescue(locale, result, attempt);
+      toast.success(t(locale, "Purchase order received — posted to ledger and stock updated."));
+    };
     confirm({
       action: "document.receive",
       entityType: "Purchase Order",
       entityNumber: poNumber,
       details: [{ label: "Vendor", value: vendorName }],
-      onConfirm: async () => {
-        const result = await receivePurchaseOrderAction(poId);
-        if (result?.error) return result;
-        toast.success(t(locale, "Purchase order received — posted to ledger and stock updated."));
-      },
+      onConfirm: attempt,
     });
   }
 

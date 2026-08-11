@@ -72,7 +72,15 @@ async function startServer() {
   }
 
   console.log("• starting the server…");
-  server = spawn("npm", ["start"], { stdio: ["ignore", "pipe", "pipe"], detached: true });
+  // The tier's server always points the rate provider at localhost:12750 (see verify/README.md).
+  // Suites that need the happy fetch path host a mock er-api there (verify-rate-oneclick); for
+  // every other suite the port is dark, so background rate fetches fail instantly (ECONNREFUSED)
+  // instead of hanging on the sandbox's blocked egress — same degraded behaviour, no 5s stalls.
+  server = spawn("npm", ["start"], {
+    stdio: ["ignore", "pipe", "pipe"],
+    detached: true,
+    env: { ...process.env, RATE_API_BASE: process.env.RATE_API_BASE ?? "http://127.0.0.1:12750/v6" },
+  });
   let log = "";
   server.stdout.on("data", (d) => { log += d; });
   server.stderr.on("data", (d) => { log += d; });
