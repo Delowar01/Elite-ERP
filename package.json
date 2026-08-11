@@ -32,7 +32,8 @@
     "verify:money-round-trip": "tsx --env-file-if-exists=.env --conditions=react-server verify/verify-money-round-trip.mts",
     "verify:base-backfill": "tsx --env-file-if-exists=.env --conditions=react-server verify/verify-base-backfill.mts",
     "backfill:base-amounts": "tsx --env-file-if-exists=.env scripts/backfill-base-amounts.ts",
-    "verify:rate-fetch": "tsx --env-file-if-exists=.env --conditions=react-server verify/verify-rate-fetch.mts"
+    "verify:rate-fetch": "tsx --env-file-if-exists=.env --conditions=react-server verify/verify-rate-fetch.mts",
+    "smoke:rates": "tsx --conditions=react-server scripts/smoke-rates.ts"
   },
   "dependencies": {
     "@radix-ui/react-avatar": "^1.2.2",

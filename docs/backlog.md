@@ -363,3 +363,42 @@ not a one-liner:
 
 Base-currency invoices — every production document today — are unaffected: their base figures equal
 their document figures.
+
+---
+
+## SAMA as the KSA rate provider — fill the slot once its API doc is readable
+
+**Status:** deferred behind the provider interface. `providerForCountry` in
+`src/lib/rates/provider.ts` carries a commented-out `case "Saudi Arabia"` — that line is the whole
+integration surface. Filling it is a new `RateProvider` implementation; nothing else in the fetch
+engine, screen, or one-click path changes.
+
+**Why it's deferred rather than built:** SAMA (the Saudi Central Bank) is the right source for a
+KSA org that wants ZATCA-exact figures, and it visibly runs an open-data operation — but this
+development environment cannot inspect it. The egress proxy returns CONNECT 403 for sama.gov.sa
+(as it does for every rate API), and no public documentation seen from here proves a
+machine-readable daily FX feed with a stable shape. Building a provider against an endpoint nobody
+has inspected would be guesswork wearing a class definition, in the code path that feeds the
+ledger.
+
+**What was found (the trail for whoever picks this up):**
+
+- [SAMA Open Data Portal — statistics summary](https://www.sama.gov.sa/en-US/Statistics/pages/summary.aspx) —
+  the portal exists and publishes exchange-rate statistics.
+- [SAMA API service document](https://www.sama.gov.sa/en-US/EconomicReports/Pages/ServiceDocument.aspx) —
+  SAMA documents an API service for its published data. This is the page to actually read; it was
+  unreachable from the sandbox.
+- [Fluentax "SAMA exchange rates API"](https://www.fluentax.com/products/exchange-rates-api/banks/saudi-central-bank-sama) —
+  a commercial vendor reselling "SAMA daily rates", which is decent evidence a consumable daily
+  feed exists in some form.
+
+**The unblock:** open the SAMA portal and the API service document from an unblocked network and
+check whether it serves dated daily FX rates in a stable machine-readable shape. Delowar can open
+the SAMA portal from his own machine when it matters — that is the unblock, not any code change
+here. If the answer is yes, implement `samaProvider` against the documented shape (store rates
+under SAMA's own bulletin date, attribution per its terms if any) and uncomment the case.
+
+**Why nothing is waiting on this:** Saudi orgs currently use the general provider
+(open.er-api.com) for convenience, and manual entry always wins over fetched rates — so an org
+that needs ZATCA-exact SAMA figures today enters them by hand and no automatic fetch will ever
+overwrite them. The gap costs convenience, not correctness.

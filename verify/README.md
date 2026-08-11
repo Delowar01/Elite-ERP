@@ -150,12 +150,37 @@ browser, and refuses to run if the server is answering with a build other than t
 for the run it exists to prevent. If it fires, the fix is to stop every running server
 (`pkill -f next-server`), confirm the port is free, rebuild, start again.
 
+### The rate-provider mock (`RATE_API_BASE`)
+
+The runner starts the tier's server with `RATE_API_BASE=http://127.0.0.1:12750/v6`, pointing the
+real exchange-rate provider (`src/lib/rates/open-er-api.ts`) at localhost instead of the live
+service. Two reasons:
+
+1. **The happy fetch path is testable end-to-end.** `verify-rate-oneclick.mjs` hosts a mock er-api
+   on that port for the duration of its run, so the one-click "Fetch rate & retry" flow exercises
+   the production HTTP/parsing/validation code against a controlled response — localhost bypasses
+   this sandbox's egress proxy, which blocks every real rate API.
+2. **Every other suite fails fast instead of stalling.** When no mock is listening the port is
+   simply dark, so any background rate fetch a suite happens to trigger gets an instant
+   ECONNREFUSED rather than a 5-second-per-currency timeout against blocked egress. Same degraded
+   behaviour the app is designed for, no wasted wall-clock.
+
+`verify-rate-screen.mjs` depends on the endpoint being UNREACHABLE (it asserts the degraded UX), so
+do not host anything on 12750 outside the one-click suite's own lifetime.
+
+**The live service is smoked separately**: `npm run smoke:rates` calls the real open.er-api.com
+through the real provider code. It is excluded from every tier on purpose — it depends on outbound
+network and someone else's uptime, and the sandbox cannot reach it at all — and belongs on the
+deployment box, run by hand. That script is the production-side proof the provider was built on
+paper here.
+
 ## Environment
 
 | Variable | Purpose |
 |---|---|
 | `DATABASE_URL` | Required. The npm scripts load it from `.env` (relative to the repo root) via `--env-file-if-exists`; an already-exported value wins. No suite reads `.env` itself — see the standing rule above for why that never worked. |
 | `CHROMIUM_PATH` | Optional. Overrides the browser binary for the `.mjs` suites; defaults to this sandbox's path. Set it on any other machine. |
+| `RATE_API_BASE` | Optional. Overrides the exchange-rate provider's endpoint. The browser-tier runner sets it to `http://127.0.0.1:12750/v6` for the server it starts (see "The rate-provider mock" above); leave it unset everywhere else so production talks to the live service. |
 
 ## What these are for
 
