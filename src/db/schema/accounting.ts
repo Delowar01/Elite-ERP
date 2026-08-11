@@ -80,6 +80,11 @@ export const DEFAULT_CHART_OF_ACCOUNTS: Array<{
   { code: "2200", name: "Salaries Payable", type: "liability", normalBalance: "credit", isSystem: true },
   { code: "3000", name: "Owner's Equity", type: "equity", normalBalance: "credit", isSystem: true },
   { code: "4000", name: "Sales Revenue", type: "revenue", normalBalance: "credit", isSystem: true },
+  // FX-7: realized currency differences on payments. One account for both directions — gains
+  // credit it, losses debit it — classified as revenue (credit-normal), so a net loss simply shows
+  // negative in the revenue section rather than needing a paired expense account. Existing orgs
+  // get it via scripts/migrations/2026-08-11-fx-gain-loss-account.ts.
+  { code: "4900", name: "Exchange Gain/Loss", type: "revenue", normalBalance: "credit", isSystem: true },
   { code: "5000", name: "Cost of Goods Sold", type: "expense", normalBalance: "debit", isSystem: true },
   { code: "5100", name: "Operating Expenses", type: "expense", normalBalance: "debit", isSystem: true },
   { code: "5200", name: "Salary Expense", type: "expense", normalBalance: "debit", isSystem: true },
