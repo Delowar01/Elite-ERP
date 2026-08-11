@@ -341,3 +341,25 @@ FX-0 rounded the two sides correctly for what they are (the document's currency 
 the base currency for the journal lines) and left the missing conversion alone: converting at
 payment time is exactly the FX-7 question, and the answer determines whether the column stores the
 payment's own currency plus a rate, or only a base amount.
+
+---
+
+## ZATCA QR encodes document-currency figures on foreign invoices
+
+**Status:** open, found during FX-6 (posting-time capture). Reported rather than fixed, because the
+TLV is persisted on first print and a change here alters an existing compliance artefact.
+
+The QR's tag 4 (total) and tag 5 (VAT amount) are built in `src/app/print/[type]/[id]/page.tsx`
+from `inv.total` / `inv.taxTotal` rounded at the DOCUMENT's currency. For a USD invoice in a KSA
+org, the QR therefore encodes USD figures where ZATCA expects SAR. The correct inputs now exist —
+`baseTotal` and `baseTaxAmount`, captured at posting — but two things make this a deliberate fix,
+not a one-liner:
+
+- The TLV and its hash are **persisted on first print** so reprints stay stable. Any foreign
+  invoice printed before the fix keeps a wrong-currency QR permanently; the fix needs a decision
+  about whether to regenerate those.
+- A foreign invoice printed while still DRAFT has no base amounts at all (they are captured at
+  send), so the print path needs a rule for that state.
+
+Base-currency invoices — every production document today — are unaffected: their base figures equal
+their document figures.
