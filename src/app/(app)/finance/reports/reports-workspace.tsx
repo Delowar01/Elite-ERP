@@ -420,12 +420,30 @@ function GlView({ locale, blocks, search }: { locale: Locale; blocks: GlAccountB
 }
 
 // ── Aging (AR / AP) ───────────────────────────────────────────────────────────
+// FX-8: the data-quality line under document-based reports — the totals above have EXCLUDED
+// these documents (foreign, no stored base conversion), so the omission is named, never silent.
+function ExcludedNote({ locale, count }: { locale: Locale; count: number }) {
+  if (count <= 0) return null;
+  return (
+    <div
+      role="status"
+      data-testid="report-excluded"
+      className="mb-3 flex items-center gap-2 rounded-[10px] border border-warning/40 bg-warning-bg px-3 py-2 text-[12.5px]"
+    >
+      <span className="font-semibold">{count}</span>
+      <span>{t(locale, "documents excluded — missing exchange rate.")}</span>
+      <span className="text-ink-muted">{t(locale, "Add the missing rates in Preset Management → Exchange Rates.")}</span>
+    </div>
+  );
+}
+
 function AgingView({ locale, d, search, kind }: { locale: Locale; d: Aging; search: string; kind: "ar" | "ap" }) {
   const rows = d.rows.filter((r) => inSearch(search, r.number, r.party));
   const buckets: AgingBucketKey[] = ["current", "d1_30", "d31_60", "d61_90", "d90p"];
   const hrefFor = (id: number) => (kind === "ar" ? `/sales/invoices/${id}` : `/purchasing/orders/${id}`);
   return (
     <>
+      <ExcludedNote locale={locale} count={d.excluded} />
       <div className="grid gap-2.5 mb-4" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))" }}>
         {buckets.map((b) => (
           <div key={b} className="card" style={{ padding: "10px 12px" }}>
@@ -475,6 +493,7 @@ function AgingView({ locale, d, search, kind }: { locale: Locale; d: Aging; sear
 function VatView({ locale, d, prev }: { locale: Locale; d: VatSummary; prev?: VatSummary }) {
   return (
     <>
+      <ExcludedNote locale={locale} count={d.excluded} />
       <Cards items={[
         { label: t(locale, "Output VAT"), value: d.outputVat, delta: prev ? d.outputVat - prev.outputVat : undefined },
         { label: t(locale, "Input VAT"), value: d.inputVat, delta: prev ? d.inputVat - prev.inputVat : undefined },

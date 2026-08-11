@@ -59,6 +59,11 @@ export function unconvertedTotalPred(t: CurrencyDoc & { baseTotal: PgColumn }, b
   return sql<boolean>`(not ${isBaseCurrencyPred(t, base)} and ${t.baseTotal} is null)`;
 }
 
+/** The document's paid amount in base currency, or NULL when foreign and unconverted. */
+export function basePaidExpr(t: CurrencyDoc & { paidAmount: PgColumn; basePaidAmount: PgColumn }, base: string): SQL<string | null> {
+  return sql`case when ${isBaseCurrencyPred(t, base)} then ${t.paidAmount} else ${t.basePaidAmount} end`;
+}
+
 /** Foreign document whose outstanding balance cannot be stated in base (either column missing). */
 export function unconvertedOutstandingPred(
   t: CurrencyDoc & { baseTotal: PgColumn; basePaidAmount: PgColumn },

@@ -16,6 +16,7 @@ import {
 } from "@/db";
 import { roundMoney } from "@/lib/currency/currencies";
 import { orgBaseCurrency } from "@/lib/org-currency";
+import { baseTotalExpr, baseTaxExpr, basePaidExpr, unconvertedOutstandingPred, unconvertedTotalPred } from "@/lib/base-amounts-sql";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Financial Reporting data layer. Every ledger-based report is generated from the
@@ -312,7 +313,13 @@ export type AgingRow = {
 };
 export type AgingBucketKey = "current" | "d1_30" | "d31_60" | "d61_90" | "d90p";
 export const AGING_BUCKETS: AgingBucketKey[] = ["current", "d1_30", "d31_60", "d61_90", "d90p"];
-export type Aging = { rows: AgingRow[]; buckets: Record<AgingBucketKey, number>; totalOutstanding: number };
+export type Aging = {
+  rows: AgingRow[];
+  buckets: Record<AgingBucketKey, number>;
+  totalOutstanding: number;
+  /** FX-8: posted documents EXCLUDED from every figure above — foreign with no stored base conversion. */
+  excluded: number;
+};
 
 function bucketFor(overdueDays: number): AgingBucketKey {
   if (overdueDays <= 0) return "current";
@@ -324,10 +331,17 @@ function bucketFor(overdueDays: number): AgingBucketKey {
 function daysBetween(a: string, b: string): number {
   return Math.round((new Date(b + "T00:00:00Z").getTime() - new Date(a + "T00:00:00Z").getTime()) / 86400000);
 }
-function agingFrom(asOf: string, docs: { id: number; number: string; party: string; date: string; due: string | null; total: number; paid: number }[]): Aging {
+function agingFrom(asOf: string, docs: { id: number; number: string; party: string; date: string; due: string | null; total: number; paid: number; unconverted?: boolean }[]): Aging {
   const buckets: Record<AgingBucketKey, number> = { current: 0, d1_30: 0, d31_60: 0, d61_90: 0, d90p: 0 };
   const rows: AgingRow[] = [];
+  // FX-8: a foreign document with no stored base conversion has no honest base figure — excluded
+  // from rows and buckets, COUNTED so the report can say so instead of totalling quietly short.
+  let excluded = 0;
   for (const d of docs) {
+    if (d.unconverted) {
+      excluded += 1;
+      continue;
+    }
     const outstanding = Math.round((d.total - d.paid) * 100) / 100;
     if (outstanding <= 0) continue;
     const dueDate = d.due || d.date;
@@ -338,14 +352,18 @@ function agingFrom(asOf: string, docs: { id: number; number: string; party: stri
   }
   rows.sort((a, b) => b.overdueDays - a.overdueDays);
   const totalOutstanding = AGING_BUCKETS.reduce((s, k) => s + buckets[k], 0);
-  return { rows, buckets, totalOutstanding };
+  return { rows, buckets, totalOutstanding, excluded };
 }
 
 export async function getReceivableAging(orgId: number, asOf: string): Promise<Aging> {
+  // FX-8: BOTH sides in base — baseTotal − basePaidAmount — never a base total minus a foreign
+  // paid amount, which is the mix basePaidAmount exists to prevent.
+  const base = await orgBaseCurrency(orgId);
   const rows = await db.select({
     id: salesInvoicesTable.id, number: salesInvoicesTable.invoiceNumber, party: customersTable.name,
     date: salesInvoicesTable.issueDate, due: salesInvoicesTable.dueDate,
-    total: salesInvoicesTable.total, paid: salesInvoicesTable.paidAmount,
+    total: baseTotalExpr(salesInvoicesTable, base), paid: basePaidExpr(salesInvoicesTable, base),
+    unconverted: unconvertedOutstandingPred(salesInvoicesTable, base),
   }).from(salesInvoicesTable)
     .leftJoin(customersTable, eq(customersTable.id, salesInvoicesTable.customerId))
     .where(and(
@@ -355,14 +373,16 @@ export async function getReceivableAging(orgId: number, asOf: string): Promise<A
       isNull(salesInvoicesTable.deletedAt),
       lte(salesInvoicesTable.issueDate, asOf),
     ));
-  return agingFrom(asOf, rows.map((r) => ({ id: r.id, number: r.number, party: r.party ?? "—", date: r.date, due: r.due, total: n(r.total), paid: n(r.paid) })));
+  return agingFrom(asOf, rows.map((r) => ({ id: r.id, number: r.number, party: r.party ?? "—", date: r.date, due: r.due, total: n(r.total), paid: n(r.paid), unconverted: !!r.unconverted })));
 }
 
 export async function getPayableAging(orgId: number, asOf: string): Promise<Aging> {
+  const base = await orgBaseCurrency(orgId);
   const rows = await db.select({
     id: purchaseOrdersTable.id, number: purchaseOrdersTable.poNumber, party: vendorsTable.name,
     date: purchaseOrdersTable.orderDate, due: purchaseOrdersTable.expectedDate,
-    total: purchaseOrdersTable.total, paid: purchaseOrdersTable.paidAmount,
+    total: baseTotalExpr(purchaseOrdersTable, base), paid: basePaidExpr(purchaseOrdersTable, base),
+    unconverted: unconvertedOutstandingPred(purchaseOrdersTable, base),
   }).from(purchaseOrdersTable)
     .leftJoin(vendorsTable, eq(vendorsTable.id, purchaseOrdersTable.vendorId))
     .where(and(
@@ -372,43 +392,57 @@ export async function getPayableAging(orgId: number, asOf: string): Promise<Agin
       isNull(purchaseOrdersTable.deletedAt),
       lte(purchaseOrdersTable.orderDate, asOf),
     ));
-  return agingFrom(asOf, rows.map((r) => ({ id: r.id, number: r.number, party: r.party ?? "—", date: r.date, due: r.due, total: n(r.total), paid: n(r.paid) })));
+  return agingFrom(asOf, rows.map((r) => ({ id: r.id, number: r.number, party: r.party ?? "—", date: r.date, due: r.due, total: n(r.total), paid: n(r.paid), unconverted: !!r.unconverted })));
 }
 
 // ── VAT Summary (Phase 1 document data) ──────────────────────────────────────
+// FX-8: all figures in BASE currency via the stored base columns. The taxable base is DERIVED as
+// baseTotal − baseTaxAmount (the same derived-middle-figure rule posting follows) rather than
+// converting `subtotal` separately. Foreign documents with no stored conversion contribute NULL —
+// dropped by sum() — and are counted into `excluded` so the report names the omission.
 export type VatSummary = {
   outputVat: number; inputVat: number; netVat: number;
   creditNoteVat: number; debitNoteVat: number;
   taxableSales: number; zeroRatedSales: number; taxablePurchases: number;
+  /** Posted documents excluded from every figure above — foreign with no stored base conversion. */
+  excluded: number;
 };
-async function sumTax(orgId: number, table: typeof salesInvoicesTable | typeof purchaseOrdersTable, dateCol: typeof salesInvoicesTable.issueDate, statusIn: string[], range: DateRange) {
+async function sumTax(orgId: number, base: string, table: typeof salesInvoicesTable | typeof purchaseOrdersTable, dateCol: typeof salesInvoicesTable.issueDate, statusIn: string[], range: DateRange) {
+  const baseTotal = baseTotalExpr(table, base);
+  const baseTax = baseTaxExpr(table, base);
   const [r] = await db.select({
-    tax: sql<string>`coalesce(sum(${table.taxTotal}), 0)`,
-    subtotal: sql<string>`coalesce(sum(${table.subtotal}), 0)`,
-    zero: sql<string>`coalesce(sum(case when ${table.taxTotal} = 0 then ${table.total} else 0 end), 0)`,
+    tax: sql<string>`coalesce(sum(${baseTax}), 0)`,
+    subtotal: sql<string>`coalesce(sum(${baseTotal} - ${baseTax}), 0)`,
+    zero: sql<string>`coalesce(sum(case when ${table.taxTotal} = 0 then ${baseTotal} else 0 end), 0)`,
+    excluded: sql<number>`count(*) filter (where ${unconvertedTotalPred(table, base)})::int`,
   }).from(table)
     .where(and(eq(table.orgId, orgId), inArray(table.status, statusIn), isNull(table.archivedAt), isNull(table.deletedAt), gte(dateCol, range.from), lte(dateCol, range.to)));
-  return { tax: n(r?.tax), subtotal: n(r?.subtotal), zero: n(r?.zero) };
+  return { tax: n(r?.tax), subtotal: n(r?.subtotal), zero: n(r?.zero), excluded: r?.excluded ?? 0 };
 }
-async function sumNoteTax(orgId: number, table: typeof creditNotesTable | typeof debitNotesTable, range: DateRange) {
-  const [r] = await db.select({ tax: sql<string>`coalesce(sum(${table.taxTotal}), 0)` }).from(table)
+async function sumNoteTax(orgId: number, base: string, table: typeof creditNotesTable | typeof debitNotesTable, range: DateRange) {
+  const [r] = await db.select({
+    tax: sql<string>`coalesce(sum(${baseTaxExpr(table, base)}), 0)`,
+    excluded: sql<number>`count(*) filter (where ${unconvertedTotalPred(table, base)})::int`,
+  }).from(table)
     .where(and(eq(table.orgId, orgId), eq(table.status, "issued"), isNull(table.archivedAt), isNull(table.deletedAt), gte(table.issueDate, range.from), lte(table.issueDate, range.to)));
-  return n(r?.tax);
+  return { tax: n(r?.tax), excluded: r?.excluded ?? 0 };
 }
 export async function getVatSummary(orgId: number, range: DateRange): Promise<VatSummary> {
-  const [sales, purchases, creditNoteVat, debitNoteVat] = await Promise.all([
-    sumTax(orgId, salesInvoicesTable, salesInvoicesTable.issueDate, ["sent", "partially_paid", "paid"], range),
-    sumTax(orgId, purchaseOrdersTable as unknown as typeof salesInvoicesTable, purchaseOrdersTable.orderDate as unknown as typeof salesInvoicesTable.issueDate, ["received"], range),
-    sumNoteTax(orgId, creditNotesTable, range),
-    sumNoteTax(orgId, debitNotesTable, range),
+  const base = await orgBaseCurrency(orgId);
+  const [sales, purchases, cn, dn] = await Promise.all([
+    sumTax(orgId, base, salesInvoicesTable, salesInvoicesTable.issueDate, ["sent", "partially_paid", "paid"], range),
+    sumTax(orgId, base, purchaseOrdersTable as unknown as typeof salesInvoicesTable, purchaseOrdersTable.orderDate as unknown as typeof salesInvoicesTable.issueDate, ["received"], range),
+    sumNoteTax(orgId, base, creditNotesTable, range),
+    sumNoteTax(orgId, base, debitNotesTable, range),
   ]);
   // Credit notes reduce output VAT; debit notes reduce input VAT.
-  const outputVat = sales.tax - creditNoteVat;
-  const inputVat = purchases.tax - debitNoteVat;
+  const outputVat = sales.tax - cn.tax;
+  const inputVat = purchases.tax - dn.tax;
   return {
     outputVat, inputVat, netVat: outputVat - inputVat,
-    creditNoteVat, debitNoteVat,
+    creditNoteVat: cn.tax, debitNoteVat: dn.tax,
     taxableSales: sales.subtotal, zeroRatedSales: sales.zero, taxablePurchases: purchases.subtotal,
+    excluded: sales.excluded + purchases.excluded + cn.excluded + dn.excluded,
   };
 }
 

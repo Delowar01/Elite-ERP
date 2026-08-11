@@ -299,6 +299,7 @@ export function StatementView({
                     <th className="text-start p-2.5">{t(locale, "Document type")}</th>
                     <th className="text-start p-2.5">{t(locale, "Number")}</th>
                     <th className="text-start p-2.5">{t(locale, "Description")}</th>
+                    <th className="text-start p-2.5">{t(locale, "Currency")}</th>
                     <th className="text-end p-2.5">{t(locale, "Debit")}</th>
                     <th className="text-end p-2.5">{t(locale, "Credit")}</th>
                     <th className="text-end p-2.5">{t(locale, "Balance")}</th>
@@ -306,7 +307,7 @@ export function StatementView({
                 </thead>
                 <tbody>
                   <tr className="border-t border-line bg-canvas/50">
-                    <td className="p-2.5 text-ink-muted" colSpan={6}>{t(locale, "Opening balance")}</td>
+                    <td className="p-2.5 text-ink-muted" colSpan={7}>{t(locale, "Opening balance")}</td>
                     <td className="p-2.5 text-end font-semibold"><Money amount={statement.opening} /></td>
                   </tr>
                   {statement.lines.map((l, i) => (
@@ -319,13 +320,16 @@ export function StatementView({
                           : (l.number || "—")}
                       </td>
                       <td className="p-2.5 text-ink-muted">{l.reference || l.description}</td>
+                      {/* FX-8: the transaction's OWN currency; the amounts beside it are the ledger's
+                          base-currency figures, so a USD invoice reads "USD" with its SAR posting. */}
+                      <td className="p-2.5 font-mono text-ink-muted">{l.currency || "—"}</td>
                       <td className="p-2.5 text-end">{l.debit ? <Money amount={l.debit} /> : "—"}</td>
                       <td className="p-2.5 text-end">{l.credit ? <Money amount={l.credit} /> : "—"}</td>
                       <td className="p-2.5 text-end font-semibold"><Money amount={l.running} /></td>
                     </tr>
                   ))}
                   <tr className="border-t border-line-strong bg-canvas/50">
-                    <td className="p-2.5 font-bold" colSpan={4}>{t(locale, "Closing balance")}</td>
+                    <td className="p-2.5 font-bold" colSpan={5}>{t(locale, "Closing balance")}</td>
                     <td className="p-2.5 text-end font-semibold"><Money amount={statement.totalDebit} /></td>
                     <td className="p-2.5 text-end font-semibold"><Money amount={statement.totalCredit} /></td>
                     <td className="p-2.5 text-end font-bold"><Money amount={statement.closing} /></td>

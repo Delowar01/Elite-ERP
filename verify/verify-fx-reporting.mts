@@ -21,6 +21,7 @@
  */
 import { Pool } from "pg";
 import { getKpis, getRevenueSeries, getBaseDataQuality } from "../src/app/(app)/dashboard/_shared/queries";
+import { getReceivableAging, getPayableAging, getVatSummary } from "../src/lib/finance-reports";
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const uniq = () => Math.random().toString(36).slice(2, 8);
@@ -43,19 +44,19 @@ const cust = (await pool.query("insert into customers (org_id,name) values ($1,'
 const vend = (await pool.query("insert into vendors (org_id,name) values ($1,'V') returning id", [org])).rows[0].id;
 
 const today = new Date().toISOString().slice(0, 10);
-type Inv = { currency: string | null; status: string; total: string; paid?: string; rate?: string | null; baseTotal?: string | null; basePaid?: string | null };
-const mkInvoice = async (o: number, u: number, c: number, i: Inv) =>
-  pool.query(
+type Inv = { currency: string | null; status: string; total: string; paid?: string; tax?: string; rate?: string | null; baseTotal?: string | null; baseTax?: string | null; basePaid?: string | null };
+const mkInvoice = async (o: number, u: number, c: number, i: Inv): Promise<number> =>
+  (await pool.query(
     `insert into sales_invoices (org_id, invoice_number, customer_id, issue_date, due_date, subtotal, discount, tax_total, total, paid_amount,
-                                 currency, status, exchange_rate, base_total, base_paid_amount, created_by_id)
-     values ($1,$2,$3,$4,$4,$5,'0','0',$5,$6,$7,$8,$9,$10,$11,$12)`,
-    [o, `FXR-${uniq()}`, c, today, i.total, i.paid ?? "0", i.currency, i.status, i.rate ?? null, i.baseTotal ?? null, i.basePaid ?? null, u]);
+                                 currency, status, exchange_rate, base_total, base_tax_amount, base_paid_amount, created_by_id)
+     values ($1,$2,$3,$4,$4,$5,'0',$6,$5,$7,$8,$9,$10,$11,$12,$13,$14) returning id`,
+    [o, `FXR-${uniq()}`, c, today, i.total, i.tax ?? "0", i.paid ?? "0", i.currency, i.status, i.rate ?? null, i.baseTotal ?? null, i.baseTax ?? null, i.basePaid ?? null, u])).rows[0].id;
 const mkPo = async (o: number, u: number, v: number, i: Inv) =>
   pool.query(
     `insert into purchase_orders (org_id, po_number, vendor_id, order_date, subtotal, discount, tax_total, total, paid_amount,
-                                  currency, status, exchange_rate, base_total, base_paid_amount, created_by_id)
-     values ($1,$2,$3,$4,$5,'0','0',$5,$6,$7,$8,$9,$10,$11,$12)`,
-    [o, `FXRP-${uniq()}`, v, today, i.total, i.paid ?? "0", i.currency, i.status, i.rate ?? null, i.baseTotal ?? null, i.basePaid ?? null, u]);
+                                  currency, status, exchange_rate, base_total, base_tax_amount, base_paid_amount, created_by_id)
+     values ($1,$2,$3,$4,$5,'0',$6,$5,$7,$8,$9,$10,$11,$12,$13,$14)`,
+    [o, `FXRP-${uniq()}`, v, today, i.total, i.tax ?? "0", i.paid ?? "0", i.currency, i.status, i.rate ?? null, i.baseTotal ?? null, i.baseTax ?? null, i.basePaid ?? null, u]);
 
 // ---- fixtures, with the expected figures worked out BY HAND from the stated rates ----
 // A1  SAR sent, 1000, unpaid, identity columns present        → sales 1000.00, recv 1000.00
@@ -93,7 +94,46 @@ const dq = await getBaseDataQuality(org);
 check("data quality counts EXACTLY the two seeded bad rows (1 invoice + 1 PO)",
   dq.invoices === 1 && dq.purchaseOrders === 1 && dq.total === 2, JSON.stringify(dq));
 
-// ---- 3. pure-SAR org: document sums, zero count — the common case regresses nowhere ----
+// ---- 3. AR/AP aging: baseTotal − basePaidAmount on BOTH sides, excluded rows counted ----
+const ar = await getReceivableAging(org, today);
+check("AR aging outstanding = 1000 + 300 + 3750 + 596.40 = 5646.40 (N1 excluded)", ar.totalOutstanding === 5646.4, String(ar.totalOutstanding));
+check("AR aging names the 1 excluded document", ar.excluded === 1, String(ar.excluded));
+const b1 = ar.rows.find((r) => r.total === 994);
+check("the BHD-denominated row ages at BASE figures: 994.00 total, 397.60 paid, 596.40 outstanding",
+  !!b1 && b1.paid === 397.6 && b1.outstanding === 596.4, JSON.stringify(b1));
+const ap = await getPayableAging(org, today);
+check("AP aging outstanding = 6123 + 700 = 6823.00, 1 excluded", ap.totalOutstanding === 6823 && ap.excluded === 1, `${ap.totalOutstanding}/${ap.excluded}`);
+
+// ---- 4. VAT summary in base, taxable base DERIVED as baseTotal − baseTax ----
+// Its own org so the hand-computed VAT figures stand alone:
+//  V1 SAR 1150 (tax 150, identity)                → output 150.00, taxable 1000.00
+//  V2 USD 460 (tax 60) @3.75 → base 1725/225      → output 225.00, taxable 1500.00
+//  VZ USD 500 (tax 0) @3.80 → base 1900           → zero-rated 1900.00, taxable +1900.00
+//  V3 USD 345 (tax 45), NO conversion             → excluded 1, contributes nothing
+//  CN vs V2, tax 15 @3.75 → baseTax 56.25         → output −56.25
+//  P4 GBP 575 (tax 75) @4.70 → base 2702.50/352.50 → input 352.50, taxable purchases 2350.00
+//  ⇒ output 318.75, input 352.50, net −33.75, taxableSales 4400.00
+const orgV = await newOrg("vat", "SAR");
+const uidV = await newUser(orgV);
+const custV = (await pool.query("insert into customers (org_id,name) values ($1,'C') returning id", [orgV])).rows[0].id;
+const vendV = (await pool.query("insert into vendors (org_id,name) values ($1,'V') returning id", [orgV])).rows[0].id;
+await mkInvoice(orgV, uidV, custV, { currency: null, status: "sent", total: "1150.00", tax: "150.00", rate: "1", baseTotal: "1150.00", baseTax: "150.00", basePaid: "0" });
+const v2 = await mkInvoice(orgV, uidV, custV, { currency: "USD", status: "sent", total: "460.00", tax: "60.00", rate: "3.75", baseTotal: "1725.00", baseTax: "225.00", basePaid: "0" });
+await mkInvoice(orgV, uidV, custV, { currency: "USD", status: "sent", total: "500.00", tax: "0", rate: "3.80", baseTotal: "1900.00", baseTax: "0", basePaid: "0" });
+await mkInvoice(orgV, uidV, custV, { currency: "USD", status: "sent", total: "345.00", tax: "45.00" });
+await pool.query(
+  `insert into credit_notes (org_id, credit_note_number, customer_id, source_invoice_id, status, issue_date, subtotal, tax_total, total, currency, exchange_rate, base_total, base_tax_amount, created_by_id)
+   values ($1,$2,$3,$4,'issued',$5,'100.00','15.00','115.00','USD','3.75','431.25','56.25',$6)`,
+  [orgV, `FXRCN-${uniq()}`, custV, v2, today, uidV]);
+await mkPo(orgV, uidV, vendV, { currency: "GBP", status: "received", total: "575.00", tax: "75.00", rate: "4.70", baseTotal: "2702.50", baseTax: "352.50", basePaid: "0" });
+const vat = await getVatSummary(orgV, { from: today, to: today });
+check("VAT output = 150 + 225 − 56.25 = 318.75 (unconverted V3 contributes nothing)", vat.outputVat === 318.75, String(vat.outputVat));
+check("VAT input = 352.50, net = −33.75", vat.inputVat === 352.5 && vat.netVat === -33.75, `${vat.inputVat}/${vat.netVat}`);
+check("taxable sales DERIVED = 1000 + 1500 + 1900 = 4400.00; zero-rated 1900.00; purchases 2350.00",
+  vat.taxableSales === 4400 && vat.zeroRatedSales === 1900 && vat.taxablePurchases === 2350, JSON.stringify(vat));
+check("VAT names the 1 excluded document", vat.excluded === 1, String(vat.excluded));
+
+// ---- 5. pure-SAR org: document sums, zero count — the common case regresses nowhere ----
 const orgS = await newOrg("sar", "SAR");
 const uidS = await newUser(orgS);
 const custS = (await pool.query("insert into customers (org_id,name) values ($1,'C') returning id", [orgS])).rows[0].id;
@@ -105,6 +145,8 @@ const dqS = await getBaseDataQuality(orgS);
 check("pure-SAR org: sales 900, receivables 900, payables 400 — unchanged semantics",
   kpisS.totalSalesThisMonth === 900 && kpisS.totalReceivables === 900 && kpisS.totalPayables === 400, JSON.stringify(kpisS));
 check("pure-SAR org: data-quality count is zero", dqS.total === 0, JSON.stringify(dqS));
+const arS = await getReceivableAging(orgS, today);
+check("pure-SAR org: aging unchanged (900 outstanding, zero excluded)", arS.totalOutstanding === 900 && arS.excluded === 0, `${arS.totalOutstanding}/${arS.excluded}`);
 
 // ---------------- cleanup ----------------
 await pool.query("delete from orgs where name like $1", [`${FIXTURE}%`]);
