@@ -1,4 +1,4 @@
-import { pgTable, serial, integer, text, numeric, date, unique, check } from "drizzle-orm/pg-core";
+import { pgTable, serial, integer, text, numeric, date, unique, check, timestamp } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -76,3 +76,20 @@ export const exchangeRatesTable = pgTable(
 export const insertExchangeRateSchema = createInsertSchema(exchangeRatesTable).omit({ id: true });
 export type InsertExchangeRate = z.infer<typeof insertExchangeRateSchema>;
 export type ExchangeRate = typeof exchangeRatesTable.$inferSelect;
+
+/**
+ * One row per org: when a rate fetch was last ATTEMPTED, and how it went.
+ *
+ * This is the failure-backoff's memory. The on-demand trigger (`ensureFreshRates`) refuses to
+ * re-attempt within its backoff window of `lastAttemptedAt` — measured from the attempt, success
+ * or failure, so a provider outage plus a busy org never means one fetch per click. `lastError`
+ * is kept so the rate screen can say WHY rates are stale rather than just that they are.
+ */
+export const rateFetchAttemptsTable = pgTable("rate_fetch_attempts", {
+  orgId: integer("org_id")
+    .primaryKey()
+    .references(() => orgsTable.id, { onDelete: "cascade" }),
+  lastAttemptedAt: timestamp("last_attempted_at").notNull(),
+  lastSucceededAt: timestamp("last_succeeded_at"),
+  lastError: text("last_error"),
+});
