@@ -308,7 +308,10 @@ without updating the matrix fails the check.
 
 ## Credit and debit notes do not inherit their source document's currency
 
-**Status:** open, found while making rounding currency-aware (FX-0). Not fixed there, because it is
+**Status: RESOLVED** in the FX-4 currency-inheritance audit (commit cbfab25): all ten conversion
+actions and the PO prefill now carry the source currency, CN/DN inherit their source document's
+currency in create/update/forms, and verify-fx-posting exercises foreign CN/DN issue at stored
+rates. Kept for the trail. Originally: open, found while making rounding currency-aware (FX-0). Not fixed there, because it is
 a behaviour change to what a document *is*, not a rounding fix.
 
 `credit_notes` and `debit_notes` both carry a `currency` column, and nothing ever writes it. The
@@ -330,7 +333,9 @@ fixed" machinery lands.
 
 ## `payments` has no currency column
 
-**Status:** open, found while making rounding currency-aware (FX-0). In scope for FX-7.
+**Status: RESOLVED** by FX-7 (commits 8519736..62c1311): payments carry currency, exchangeRate,
+baseAmount, baseAppliedAmount and rateSource, written at posting, with realized FX to 4900 and
+basePaidAmount maintained everywhere. Kept for the trail. Originally: **Status:** open, found while making rounding currency-aware (FX-0). In scope for FX-7.
 
 A payment row records an amount with no statement of what currency it is in. The amount is
 implicitly in the source document's currency, and the journal lines post it to the ledger
