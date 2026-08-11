@@ -185,7 +185,7 @@ const inFlight = new Map<number, Promise<FetchOutcome>>();
 
 export async function ensureFreshRates(
   orgId: number,
-  opts: { provider?: RateProvider; force?: boolean } = {},
+  opts: { provider?: RateProvider; force?: boolean; only?: string[] } = {},
 ): Promise<FetchOutcome> {
   const existing = inFlight.get(orgId);
   if (existing) return opts.force ? existing : { status: "in-flight" };
@@ -198,7 +198,13 @@ export async function ensureFreshRates(
     if (!org) return { status: "failed", error: "Organization not found." };
     const base = org.currency ?? "SAR";
 
-    const pairs = await pairsInUse(orgId, base);
+    let pairs = await pairsInUse(orgId, base);
+    // The screen's per-pair "fetch now". An INTERSECTION with pairs-in-use, never a way to widen
+    // scope: a currency the org does not use cannot be fetched by naming it here.
+    if (opts.only?.length) {
+      const wanted = new Set(opts.only.map((c) => c.toUpperCase()));
+      pairs = pairs.filter((p) => wanted.has(p));
+    }
     if (pairs.length === 0) return { status: "no-pairs" };
 
     const today = new Date().toISOString().slice(0, 10);

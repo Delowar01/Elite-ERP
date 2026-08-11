@@ -20,6 +20,11 @@ import {
   DOCUMENT_TYPES,
 } from "@/db";
 import { requireRole } from "@/lib/session";
+import { exchangeRatesTable, rateFetchAttemptsTable } from "@/db";
+import { desc } from "drizzle-orm";
+import { fireEnsureFreshRates, STALE_AFTER_DAYS } from "@/lib/rates/fetch-rates";
+import { providerForCountry } from "@/lib/rates/provider";
+import { ExchangeRatesPanel, type LatestRate } from "./exchange-rates-panel";
 import { getLocale } from "@/lib/i18n/server";
 import { t } from "@/lib/i18n/dict";
 import { tenantScope } from "@/lib/tenant";
@@ -32,6 +37,7 @@ import { NumberingPanel } from "./numbering-panel";
 import { DefaultBankAccountsPanel } from "./default-bank-accounts-panel";
 import { PrintLayoutPanel } from "./print-layout-panel";
 import { SealSignaturePresetPanel } from "./seal-signature-panel";
+import { after } from "next/server";
 import {
   createTaxPresetAction,
   updateTaxPresetAction,
@@ -120,6 +126,36 @@ export default async function PresetsPage() {
   }));
   const defaultBankAccountIds = (org?.defaultBankAccountIds ?? []).filter((id) => bankAccountOptions.some((b) => b.id === id));
 
+  // Exchange Rates tab data. Loading this screen is also the org's on-demand fetch trigger —
+  // scheduled via after() so it runs once the response has finished streaming — off the request
+  // path entirely; the page shows stored rates
+  // plus staleness, and the fetch fills in for next time.
+  after(() => fireEnsureFreshRates(orgId));
+  const [rateHistory, [fetchAttempt]] = await Promise.all([
+    db
+      .select()
+      .from(exchangeRatesTable)
+      .where(eq(exchangeRatesTable.orgId, orgId))
+      .orderBy(desc(exchangeRatesTable.effectiveDate), asc(exchangeRatesTable.fromCurrency)),
+    db.select().from(rateFetchAttemptsTable).where(eq(rateFetchAttemptsTable.orgId, orgId)),
+  ]);
+  const latestByPair = new Map<string, (typeof rateHistory)[number]>();
+  for (const r of rateHistory) {
+    if (!latestByPair.has(r.fromCurrency)) latestByPair.set(r.fromCurrency, r); // history is date-desc
+  }
+  const now = new Date();
+  const staleCutoff = new Date(now.getTime() - STALE_AFTER_DAYS * 86_400_000).toISOString().slice(0, 10);
+  const latestRates: LatestRate[] = [...latestByPair.values()]
+    .sort((a, b) => a.fromCurrency.localeCompare(b.fromCurrency))
+    .map((r) => ({
+      fromCurrency: r.fromCurrency,
+      rate: r.rate,
+      effectiveDate: r.effectiveDate,
+      source: r.source,
+      stale: r.effectiveDate < staleCutoff,
+    }));
+  const rateAttribution = providerForCountry(org?.country).attribution;
+
   const bundlesWithItems = bundles.map((bundle) => ({
     ...bundle,
     items: bundleItems.filter((item) => item.bundleId === bundle.id),
@@ -145,6 +181,7 @@ export default async function PresetsPage() {
           <TabsTrigger value="terms-groups">{t(locale, "Terms & Conditions Groups")}</TabsTrigger>
           <TabsTrigger value="bundles">{t(locale, "Bundles")}</TabsTrigger>
           <TabsTrigger value="numbering">{t(locale, "Numbering")}</TabsTrigger>
+          <TabsTrigger value="exchange-rates">{t(locale, "Exchange Rates")}</TabsTrigger>
           <TabsTrigger value="print-layout">{t(locale, "Print Layout")}</TabsTrigger>
           <TabsTrigger value="seal-signature">{t(locale, "Seal & Signature")}</TabsTrigger>
           <TabsTrigger value="default-bank-accounts">{t(locale, "Default Bank Accounts")}</TabsTrigger>
@@ -191,6 +228,18 @@ export default async function PresetsPage() {
             create={createUnitAction}
             update={updateUnitAction}
             remove={deleteUnitAction}
+          />
+        </TabsContent>
+
+        <TabsContent value="exchange-rates">
+          <ExchangeRatesPanel
+            locale={locale}
+            baseCurrency={org?.currency ?? "SAR"}
+            latest={latestRates}
+            history={rateHistory.map((r) => ({ id: r.id, fromCurrency: r.fromCurrency, rate: r.rate, effectiveDate: r.effectiveDate, source: r.source }))}
+            attribution={rateAttribution}
+            lastError={fetchAttempt?.lastError ?? null}
+            staleAfterDays={STALE_AFTER_DAYS}
           />
         </TabsContent>
 

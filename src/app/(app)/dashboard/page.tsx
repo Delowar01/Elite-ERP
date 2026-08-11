@@ -15,6 +15,8 @@ import { DashboardToolbar } from "./dashboard-toolbar";
 import { BaseCurrencyNotice } from "./base-currency-notice";
 import { getBaseCurrencyConfirmation } from "@/lib/base-currency";
 import { getKpis, getRevenueSeries, getInvoicesOverview, getCashFlow, getRecentActivity, getProjectsOverview, getHrSnapshot } from "./_shared/queries";
+import { fireEnsureFreshRates } from "@/lib/rates/fetch-rates";
+import { after } from "next/server";
 
 function DashWidget({ col, row, children }: { col: number; row: number; children: React.ReactNode }) {
   return (
@@ -31,6 +33,9 @@ function fmt(n: number) {
 
 export default async function DashboardPage({ searchParams }: { searchParams: Promise<{ range?: string }> }) {
   const session = await requireSession();
+  // The other daily-fetch surface: the first dashboard load of the day refreshes the org's
+  // exchange rates. after() runs it once the response has streamed — off the request path entirely.
+  after(() => fireEnsureFreshRates(session.orgId));
   const locale = await getLocale();
   const prefs = await getDashboardPrefs(session.orgId, session.userId);
 

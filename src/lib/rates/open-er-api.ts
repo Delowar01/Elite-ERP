@@ -80,6 +80,13 @@ export const openErApiProvider: RateProvider = {
       }
     }
 
+    // Nothing usable at all is a FAILURE, not an empty success: a dead or unreachable API must
+    // surface as "failed" (recorded lastError, failure toast, backoff) rather than "fetched 0" —
+    // otherwise the degraded path would stamp lastSucceededAt while fetching nothing. A partial
+    // result (some rates, some unavailable) is still a success with the unavailable list attached.
+    if (rates.length === 0 && currencies.length > 0) {
+      throw new Error(`rate service unreachable — all ${currencies.length} currencies failed`);
+    }
     return { rates, rateDate: rateDate ?? new Date().toISOString().slice(0, 10), unavailable };
   },
 };
