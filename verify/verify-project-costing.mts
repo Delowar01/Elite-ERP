@@ -73,7 +73,8 @@ await q(QUO, [org, "QUO-4", cust, proj, "2026-01-08", "rejected", 88888, "SAR", 
 await q(QUO, [org, "QUO-5", cust, proj, "2026-01-09", "expired", 77777, "SAR", user, null, null]);
 await q(QUO, [org, "QUO-6", cust, proj, "2026-01-10", "sent", 66666, "SAR", user, new Date(), null]);
 await q(QUO, [org, "QUO-7", cust, proj, "2026-01-11", "sent", 55555, "SAR", user, null, new Date()]);
-// foreign currency: excluded from totals, counted as excluded
+// FX-9: a foreign QUOTATION has no stored base conversion (quotations never post), so it stays
+// excluded from totals and lands in the excludedUnconverted count.
 await q(QUO, [org, "QUO-8", cust, proj, "2026-01-12", "sent", 44444, "USD", user, null, null]);
 // another project's quotation must never leak in
 await q(QUO, [org, "QUO-9", cust, other, "2026-01-13", "sent", 12345, "SAR", user, null, null]);
@@ -93,6 +94,11 @@ await q(INV, [org, "INV-5", cust, proj, "2026-02-05", "void", 60000, 0, "SAR", u
 await q(INV, [org, "INV-6", cust, proj, "2026-02-06", "sent", 50000, 0, "SAR", user, new Date(), null]);
 // invoice with no project tag: never counted
 await q(INV, [org, "INV-7", cust, null, "2026-02-07", "sent", 45000, 0, "SAR", user, null, null]);
+// FX-9: a POSTED foreign invoice carries its posting-time base columns and is INCLUDED at the
+// stored base amount (1000 USD @ 3.75 = 3750.00) — never at the document figure, never re-converted.
+await pool.query(
+  `insert into sales_invoices (org_id,invoice_number,customer_id,project_id,issue_date,status,total,paid_amount,currency,exchange_rate,base_total,base_paid_amount,created_by_id)
+   values ($1,'INV-8',$2,$3,'2026-02-08','sent',1000,0,'USD','3.75','3750.00','0',$4)`, [org, cust, proj, user]);
 
 // --- credit note against a project invoice: issued nets off, draft does not ---
 await pool.query(
@@ -175,14 +181,14 @@ check("another project's quotation never leaks in", !JSON.stringify(r.rows.reven
 check("Confirmed Sales Value counts confirmed + fulfilled sales orders only", near(r.revenue.confirmed, 65000), String(r.revenue.confirmed));
 
 // 2. actual revenue
-check("Invoiced Amount counts posted invoices, net of the issued credit note",
-  near(r.revenue.invoiced, 20000 + 30000 + 15000 - 5000), String(r.revenue.invoiced));
+check("Invoiced Amount counts posted invoices at BASE figures, net of the issued credit note (incl. 3750 = 1000 USD @ 3.75)",
+  near(r.revenue.invoiced, 20000 + 30000 + 15000 + 3750 - 5000), String(r.revenue.invoiced));
 check("draft, void and archived invoices are excluded", !JSON.stringify(r.rows.revenue).includes("INV-4") && !JSON.stringify(r.rows.revenue).includes("INV-5") && !JSON.stringify(r.rows.revenue).includes("INV-6"));
 check("an untagged invoice is excluded", !JSON.stringify(r.rows.revenue).includes("INV-7"));
 check("a draft credit note does not reduce revenue", !JSON.stringify(r.rows.revenue).includes("CN-2"));
 check("the issued credit note appears as a deduction row", r.rows.revenue.some((x) => x.number === "CN-1" && x.amount === -5000 && x.negative === true));
 check("Received Payments counts only payments against this project's invoices", near(r.revenue.received, 25000), String(r.revenue.received));
-check("Outstanding Receivables = invoiced − received", near(r.revenue.outstandingReceivable, 60000 - 25000), String(r.revenue.outstandingReceivable));
+check("Outstanding Receivables = invoiced − received", near(r.revenue.outstandingReceivable, 63750 - 25000), String(r.revenue.outstandingReceivable));
 
 // 3. committed vs actual cost, kept separate
 check("Purchase / Supplier Cost counts ordered + received POs, net of the issued debit note",
@@ -210,13 +216,16 @@ check("a tagged manual entry with no expense line contributes nothing", !JSON.st
 check("Total Project Cost = purchase cost + other direct cost", near(r.cost.total, 28000 + 3000), String(r.cost.total));
 check("the labour estimate is reported separately and excluded from Total Project Cost",
   r.labourEstimate.cost === 0 && near(r.cost.total, r.cost.purchase + r.cost.other));
-check("Gross Profit = invoiced − total cost", near(r.profit, 60000 - 31000), String(r.profit));
-check("Profit Margin % = profit ÷ invoiced", near(r.marginPercent!, (29000 / 60000) * 100), String(r.marginPercent));
+check("Gross Profit = invoiced − total cost", near(r.profit, 63750 - 31000), String(r.profit));
+check("Profit Margin % = profit ÷ invoiced", near(r.marginPercent!, (32750 / 63750) * 100), String(r.marginPercent));
 check("health reads Profitable when profit is positive", r.health === "profitable", r.health);
 
-// 6. currency safety
-check("a foreign-currency document is excluded from the totals", !JSON.stringify(r.rows.revenue).includes("QUO-8"));
-check("excluded foreign-currency documents are reported as a count", r.excludedForeignCurrency === 1, String(r.excludedForeignCurrency));
+// 6. currency handling (FX-9): stored base amounts cross currencies; nothing else does
+const inv8 = r.rows.revenue.find((x) => x.number === "INV-8");
+check("REPLACED ASSERTION: a posted foreign document is now INCLUDED — at its STORED base amount (3750), not its document figure (1000)",
+  !!inv8 && near(inv8.amount, 3750), JSON.stringify(inv8));
+check("a foreign document with NO stored conversion (the non-posting quotation) stays excluded", !JSON.stringify(r.rows.revenue).includes("QUO-8"));
+check("…and is reported as the unconverted count", r.excludedUnconverted === 1, String(r.excludedUnconverted));
 
 // 7. drill-through
 check("every revenue row links to its own document", r.rows.revenue.every((x) => x.href.startsWith("/")));

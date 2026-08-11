@@ -1684,8 +1684,6 @@ const DICT: Record<string, string> = {
   "Show source documents": "عرض المستندات المصدر",
   "No revenue records linked to this project yet.": "لا توجد سجلات إيرادات مرتبطة بهذا المشروع بعد.",
   "No cost records linked to this project yet.": "لا توجد سجلات تكاليف مرتبطة بهذا المشروع بعد.",
-  "Some linked documents are in another currency and are excluded from these totals:":
-    "بعض المستندات المرتبطة بعملة أخرى ومستبعدة من هذه الإجماليات:",
   "Hours logged": "الساعات المسجَّلة",
   "No project": "بدون مشروع",
   posted: "مُرحَّل",

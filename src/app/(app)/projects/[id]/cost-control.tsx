@@ -86,7 +86,7 @@ function DrillTable({ locale, rows, empty }: { locale: Locale; rows: CostDrillRo
 }
 
 export function ProjectCostControlSection({ locale, data }: { locale: Locale; data: ProjectCostControl }) {
-  const { revenue, cost, profit, marginPercent, health, rows, labourEstimate, excludedForeignCurrency } = data;
+  const { revenue, cost, profit, marginPercent, health, rows, labourEstimate, excludedUnconverted } = data;
   const profitTone = health === "loss" ? "var(--accent-red)" : health === "profitable" ? "var(--accent-green)" : "var(--ink-muted)";
   const healthLabel = health === "profitable" ? "Profitable" : health === "loss" ? "Loss" : "No Revenue Yet";
   const healthVariant = health === "profitable" ? "success" : health === "loss" ? "danger" : "neutral";
@@ -152,10 +152,10 @@ export function ProjectCostControlSection({ locale, data }: { locale: Locale; da
         </div>
       </div>
 
-      {excludedForeignCurrency > 0 && (
-        <p className="text-[11.5px] mb-4" style={{ color: "var(--warning-ink)" }}>
-          {t(locale, "Some linked documents are in another currency and are excluded from these totals:")}{" "}
-          {excludedForeignCurrency}
+      {excludedUnconverted > 0 && (
+        <p className="text-[11.5px] mb-4" role="status" style={{ color: "var(--warning-ink)" }}>
+          {excludedUnconverted} {t(locale, "documents excluded — missing exchange rate.")}{" "}
+          {t(locale, "Add the missing rates in Preset Management → Exchange Rates.")}
         </p>
       )}
     </section>
