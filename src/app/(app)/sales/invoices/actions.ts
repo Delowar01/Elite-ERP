@@ -5,7 +5,7 @@ import { sanitizeIfHtml } from "@/lib/sanitize-html";
 import { normalizeDocumentTerms, type DocumentTerm } from "../_shared/document-terms";
 import { redirect } from "next/navigation";
 import { and, eq, sql } from "drizzle-orm";
-import { db, customersTable, projectsTable, salesInvoicesTable, salesInvoiceItemsTable, productsTable, accountsTable, journalEntriesTable, journalLinesTable, deliveryChallansTable, deliveryChallanItemsTable, paymentTermPresetsTable } from "@/db";
+import { db, customersTable, projectsTable, salesInvoicesTable, salesInvoiceItemsTable, productsTable, accountsTable, journalEntriesTable, journalLinesTable, deliveryChallansTable, deliveryChallanItemsTable, paymentTermPresetsTable, paymentsTable } from "@/db";
 import { requireSession } from "@/lib/session";
 import { logActivity } from "@/lib/activity";
 import { nextDocumentNumber } from "@/lib/documents";
@@ -267,6 +267,27 @@ export async function sendInvoiceAction(invoiceId: number): Promise<ActionResult
     date: invoice.issueDate,
   });
   if (!captured.ok) return { error: captured.error, missingRate: captured.missingRate };
+
+  // FX-7: basePaidAmount at send. Zero for every reachable flow today — a draft cannot receive
+  // payments, and a conversion WITH advances is born partially_paid and never sends (its
+  // basePaidAmount is set at conversion, from the same stored figures as here). This guard exists
+  // so that if any future flow ever does bring a paid draft to send, the flat 0 the old code wrote
+  // cannot silently erase a real paid figure: base currency mirrors paidAmount verbatim; foreign
+  // sums the payments' STORED baseAppliedAmount, poisoned to null by any pre-FX-7 payment.
+  let basePaidAtSend: string | null = roundMoney(0, session.orgCurrency);
+  if (Number(invoice.paidAmount) > 0) {
+    if (!invoice.currency || invoice.currency.toUpperCase() === session.orgCurrency.toUpperCase()) {
+      basePaidAtSend = invoice.paidAmount;
+    } else {
+      const transferred = await db
+        .select({ baseAppliedAmount: paymentsTable.baseAppliedAmount })
+        .from(paymentsTable)
+        .where(and(eq(paymentsTable.orgId, session.orgId), eq(paymentsTable.salesInvoiceId, invoiceId)));
+      basePaidAtSend = transferred.some((p) => p.baseAppliedAmount === null)
+        ? null
+        : roundMoney(transferred.reduce((sum, p) => sum + Number(p.baseAppliedAmount), 0), session.orgCurrency);
+    }
+  }
   // The revenue line is DERIVED so the entry balances by construction — Dr baseTotal always equals
   // Cr revenue + Cr VAT exactly. (The old lines credited the full subtotal against a discounted
   // total, which unbalanced the entry by the discount; deriving the middle line closes that hole
@@ -312,8 +333,7 @@ export async function sendInvoiceAction(invoiceId: number): Promise<ActionResult
         exchangeRate: captured.exchangeRate,
         baseTotal: captured.baseTotal,
         baseTaxAmount: captured.baseTaxAmount,
-        // paidAmount is zero at send (payments only follow a sent invoice), so its base twin is too.
-        basePaidAmount: roundMoney(0, session.orgCurrency),
+        basePaidAmount: basePaidAtSend,
         updatedAt: new Date(),
       })
       .where(eq(salesInvoicesTable.id, invoiceId));

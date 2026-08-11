@@ -15,10 +15,47 @@ import {
 } from "@/db";
 import { requireSession, requireRole } from "@/lib/session";
 import { moneyEpsilon, roundMoney } from "@/lib/currency/currencies";
+import { capturePaymentBase } from "@/lib/payment-currency";
+import { subtractMoney } from "@/lib/posting-currency";
 import { logActivity } from "@/lib/activity";
 import { recordAudit } from "@/lib/security/audit";
 
-export type ActionResult = { error?: string };
+export type ActionResult = {
+  error?: string;
+  /** Set when the block is a missing payment-date rate — the one-click fetch seam (FX-3). */
+  missingRate?: { currency: string; date: string };
+};
+
+/** Integer thousandths — every base column is numeric(15,3), so this comparison is exact. */
+const mils = (v: string | number) => Math.round(Number(v) * 1000);
+
+/**
+ * The realized-FX journal line, shared by the invoice and PO branches. `baseAmount` (what the bank
+ * moved) minus `baseApplied` (what the document is credited with, at its booked rate) is the
+ * realized gain/loss — DERIVED, never independently converted, so the 3-line entry balances by
+ * construction. Returns null when the difference is zero (same rate, or a base-currency payment).
+ *
+ * Sign: for money IN, receiving more base than booked is a gain; for money OUT, paying less base
+ * than booked is a gain. Gains CREDIT 4900 (credit-normal), losses debit it.
+ */
+function fxLine(args: {
+  baseAmount: string;
+  baseApplied: string;
+  direction: "in" | "out";
+  baseCurrency: string;
+  fxAccountId: number;
+}): { accountId: number; debit: string; credit: string } | null {
+  const diff = mils(args.baseAmount) - mils(args.baseApplied);
+  if (diff === 0) return null;
+  const magnitude =
+    diff > 0
+      ? subtractMoney(args.baseAmount, args.baseApplied, args.baseCurrency)
+      : subtractMoney(args.baseApplied, args.baseAmount, args.baseCurrency);
+  const gain = args.direction === "in" ? diff > 0 : diff < 0;
+  return gain
+    ? { accountId: args.fxAccountId, debit: "0", credit: magnitude }
+    : { accountId: args.fxAccountId, debit: magnitude, credit: "0" };
+}
 
 const PATH = "/finance/payments";
 
@@ -37,12 +74,20 @@ export async function recordPaymentAction(formData: FormData): Promise<ActionRes
   const notes = String(formData.get("notes") ?? "").trim() || null;
   // "invoice" | "proforma" | "po". Defaulted from direction for backward compatibility.
   const sourceType = String(formData.get("sourceType") ?? "") || (direction === "in" ? "invoice" : "po");
+  // FX-7: the user-typed received figure in BASE currency. The dialog sends it only when the user
+  // edited the field — an untouched pre-fill is omitted, so the server resolves the rate itself
+  // and records the rate row's own source. A typed figure IS the rate; nothing looks one up.
+  const baseReceivedRaw = String(formData.get("baseReceived") ?? "").trim();
+  const baseReceived = baseReceivedRaw === "" ? null : Number(baseReceivedRaw);
 
   if (direction !== "in" && direction !== "out") return { error: "Invalid payment direction." };
   if (!sourceId) return { error: direction === "in" ? "Choose an invoice." : "Choose a purchase order." };
   if (!bankAccountId) return { error: "Choose a bank account." };
   if (!paymentDate) return { error: "Payment date is required." };
   if (!amount || amount <= 0) return { error: "Amount must be greater than zero." };
+  if (baseReceived !== null && (!Number.isFinite(baseReceived) || baseReceived <= 0)) {
+    return { error: "The received amount in base currency must be greater than zero." };
+  }
 
   const [bankAccount] = await db
     .select()
@@ -73,7 +118,27 @@ export async function recordPaymentAction(formData: FormData): Promise<ActionRes
     const ar = byCode.get("1100");
     if (!ar) return { error: "Chart of accounts is missing a required system account (1100)." };
 
+    // FX-7: a proforma has no booked rate (it never posts), so there is nothing to clear AGAINST —
+    // the advance converts BOTH lines at the payment-date rate. Internally consistent, no FX line;
+    // the settlement mismatch on conversion belongs to the filed proforma-accounting question.
+    const captured = await capturePaymentBase({
+      orgId: session.orgId, baseCurrency: session.orgCurrency,
+      docCurrency: pf.currency, amount, paymentDate, baseReceived,
+    });
+    if (!captured.ok) return { error: captured.error, missingRate: captured.missingRate };
+
     const newPaid = roundMoney(Number(pf.paidAmount) + amount, docCurrency);
+    // Base-currency proformas keep basePaidAmount as paidAmount's identity mirror. Foreign ones
+    // accumulate the payment-date base values, guarded: a null (unknown, pre-FX-7 history with
+    // prior payments) stays null rather than absorbing a number that would understate it — but a
+    // never-paid document's null genuinely means zero, so it starts accumulating from here.
+    const newBasePaid =
+      captured.currency === null
+        ? newPaid
+        : pf.basePaidAmount === null && Number(pf.paidAmount) > 0
+          ? null
+          : roundMoney(Number(pf.basePaidAmount ?? 0) + Number(captured.baseAmount), session.orgCurrency);
+
     const paymentId = await db.transaction(async (tx) => {
       const [payment] = await tx
         .insert(paymentsTable)
@@ -82,6 +147,12 @@ export async function recordPaymentAction(formData: FormData): Promise<ActionRes
           direction: "in",
           bankAccountId,
           amount: roundMoney(amount, docCurrency),
+          currency: captured.currency,
+          exchangeRate: captured.exchangeRate,
+          baseAmount: captured.baseAmount,
+          // No booked rate to apply against — the advance's applied figure IS its received figure.
+          baseAppliedAmount: captured.baseAmount,
+          rateSource: captured.rateSource,
           paymentDate,
           method,
           reference,
@@ -104,14 +175,15 @@ export async function recordPaymentAction(formData: FormData): Promise<ActionRes
         .returning({ id: journalEntriesTable.id });
 
       await tx.insert(journalLinesTable).values([
-        // The ledger holds BASE currency only, so these two round at the base minor unit. Converting a
-        // foreign payment to base is FX-6/FX-7's job and is not done here — today the amount is
-        // posted as-is, exactly as it was before this change.
-        { journalEntryId: entry.id, accountId: bankAccount.glAccountId, debit: roundMoney(amount, session.orgCurrency), credit: "0" },
-        { journalEntryId: entry.id, accountId: ar.id, debit: "0", credit: roundMoney(amount, session.orgCurrency) },
+        // Both lines at the payment-date rate — the ledger holds base currency only (FX-7).
+        { journalEntryId: entry.id, accountId: bankAccount.glAccountId, debit: captured.baseAmount, credit: "0" },
+        { journalEntryId: entry.id, accountId: ar.id, debit: "0", credit: captured.baseAmount },
       ]);
 
-      await tx.update(proformaInvoicesTable).set({ paidAmount: newPaid, updatedAt: new Date() }).where(eq(proformaInvoicesTable.id, pf.id));
+      await tx
+        .update(proformaInvoicesTable)
+        .set({ paidAmount: newPaid, basePaidAmount: newBasePaid, updatedAt: new Date() })
+        .where(eq(proformaInvoicesTable.id, pf.id));
       return payment.id;
     });
 
@@ -148,8 +220,46 @@ export async function recordPaymentAction(formData: FormData): Promise<ActionRes
     const ar = byCode.get("1100");
     if (!ar) return { error: "Chart of accounts is missing a required system account (1100)." };
 
+    const captured = await capturePaymentBase({
+      orgId: session.orgId, baseCurrency: session.orgCurrency,
+      docCurrency: invoice.currency, amount, paymentDate, baseReceived,
+    });
+    if (!captured.ok) return { error: captured.error, missingRate: captured.missingRate };
+
     const newPaid = roundMoney(Number(invoice.paidAmount) + amount, docCurrency);
     const newStatus = Number(newPaid) >= Number(invoice.total) - eps ? "paid" : "partially_paid";
+
+    // What the invoice is credited with, at its BOOKED rate — the AR line. The closing payment's
+    // figure is DERIVED (baseTotal − basePaidAmount), never converted again, so a fully paid
+    // invoice lands at exactly basePaidAmount === baseTotal with no accumulated rounding drift.
+    let baseApplied: string;
+    if (captured.currency === null) {
+      baseApplied = captured.baseAmount;
+    } else {
+      if (invoice.exchangeRate === null || invoice.baseTotal === null) {
+        // A foreign invoice with no stored conversion (pre-FX-6 history). Its AR was never booked
+        // in base, so there is no figure to clear against — an honest refusal, not a guess.
+        return { error: "This invoice has no stored base-currency conversion, so a payment cannot be applied against it." };
+      }
+      baseApplied =
+        newStatus === "paid"
+          ? subtractMoney(invoice.baseTotal, invoice.basePaidAmount ?? "0", session.orgCurrency)
+          : roundMoney(amount * Number(invoice.exchangeRate), session.orgCurrency);
+    }
+    const newBasePaid =
+      captured.currency === null
+        ? newPaid
+        : invoice.basePaidAmount === null && Number(invoice.paidAmount) > 0
+          ? null
+          : roundMoney(Number(invoice.basePaidAmount ?? 0) + Number(baseApplied), session.orgCurrency);
+
+    const fx = fxLine({
+      baseAmount: captured.baseAmount, baseApplied, direction: "in",
+      baseCurrency: session.orgCurrency, fxAccountId: byCode.get("4900")?.id ?? -1,
+    });
+    if (fx && !byCode.get("4900")) {
+      return { error: "Chart of accounts is missing a required system account (4900 Exchange Gain/Loss)." };
+    }
 
     const invPaymentId = await db.transaction(async (tx) => {
       const [payment] = await tx
@@ -159,6 +269,11 @@ export async function recordPaymentAction(formData: FormData): Promise<ActionRes
           direction: "in",
           bankAccountId,
           amount: roundMoney(amount, docCurrency),
+          currency: captured.currency,
+          exchangeRate: captured.exchangeRate,
+          baseAmount: captured.baseAmount,
+          baseAppliedAmount: baseApplied,
+          rateSource: captured.rateSource,
           paymentDate,
           method,
           reference,
@@ -181,16 +296,16 @@ export async function recordPaymentAction(formData: FormData): Promise<ActionRes
         .returning({ id: journalEntriesTable.id });
 
       await tx.insert(journalLinesTable).values([
-        // The ledger holds BASE currency only, so these two round at the base minor unit. Converting
-        // a foreign payment to base is FX-6/FX-7's job and is not done here — today the amount is
-        // posted as-is, exactly as it was before this change.
-        { journalEntryId: entry.id, accountId: bankAccount.glAccountId, debit: roundMoney(amount, session.orgCurrency), credit: "0" },
-        { journalEntryId: entry.id, accountId: ar.id, debit: "0", credit: roundMoney(amount, session.orgCurrency) },
+        // Dr Bank at what was truly received; Cr AR at the booked rate; the difference — realized
+        // FX gain/loss — is the DERIVED third line, so the entry balances by construction (FX-7).
+        { journalEntryId: entry.id, accountId: bankAccount.glAccountId, debit: captured.baseAmount, credit: "0" },
+        { journalEntryId: entry.id, accountId: ar.id, debit: "0", credit: baseApplied },
+        ...(fx ? [{ journalEntryId: entry.id, accountId: fx.accountId, debit: fx.debit, credit: fx.credit }] : []),
       ]);
 
       await tx
         .update(salesInvoicesTable)
-        .set({ paidAmount: newPaid, status: newStatus, updatedAt: new Date() })
+        .set({ paidAmount: newPaid, basePaidAmount: newBasePaid, status: newStatus, updatedAt: new Date() })
         .where(eq(salesInvoicesTable.id, invoice.id));
       return payment.id;
     });
@@ -230,7 +345,42 @@ export async function recordPaymentAction(formData: FormData): Promise<ActionRes
   const ap = byCode.get("2000");
   if (!ap) return { error: "Chart of accounts is missing a required system account (2000)." };
 
+  const captured = await capturePaymentBase({
+    orgId: session.orgId, baseCurrency: session.orgCurrency,
+    docCurrency: po.currency, amount, paymentDate, baseReceived,
+  });
+  if (!captured.ok) return { error: captured.error, missingRate: captured.missingRate };
+
   const newPaid = roundMoney(Number(po.paidAmount) + amount, poCurrency);
+  const closing = Number(newPaid) >= Number(po.total) - poEps;
+
+  // What the PO is debited against AP, at its BOOKED (receipt-time) rate; the closing payment's
+  // figure is derived so basePaidAmount lands at exactly baseTotal. Same construction as invoices.
+  let baseApplied: string;
+  if (captured.currency === null) {
+    baseApplied = captured.baseAmount;
+  } else {
+    if (po.exchangeRate === null || po.baseTotal === null) {
+      return { error: "This purchase order has no stored base-currency conversion, so a payment cannot be applied against it." };
+    }
+    baseApplied = closing
+      ? subtractMoney(po.baseTotal, po.basePaidAmount ?? "0", session.orgCurrency)
+      : roundMoney(amount * Number(po.exchangeRate), session.orgCurrency);
+  }
+  const newBasePaid =
+    captured.currency === null
+      ? newPaid
+      : po.basePaidAmount === null && Number(po.paidAmount) > 0
+        ? null
+        : roundMoney(Number(po.basePaidAmount ?? 0) + Number(baseApplied), session.orgCurrency);
+
+  const fx = fxLine({
+    baseAmount: captured.baseAmount, baseApplied, direction: "out",
+    baseCurrency: session.orgCurrency, fxAccountId: byCode.get("4900")?.id ?? -1,
+  });
+  if (fx && !byCode.get("4900")) {
+    return { error: "Chart of accounts is missing a required system account (4900 Exchange Gain/Loss)." };
+  }
 
   const poPaymentId = await db.transaction(async (tx) => {
     const [payment] = await tx
@@ -240,6 +390,11 @@ export async function recordPaymentAction(formData: FormData): Promise<ActionRes
         direction: "out",
         bankAccountId,
         amount: roundMoney(amount, poCurrency),
+        currency: captured.currency,
+        exchangeRate: captured.exchangeRate,
+        baseAmount: captured.baseAmount,
+        baseAppliedAmount: baseApplied,
+        rateSource: captured.rateSource,
         paymentDate,
         method,
         reference,
@@ -262,14 +417,17 @@ export async function recordPaymentAction(formData: FormData): Promise<ActionRes
       .returning({ id: journalEntriesTable.id });
 
     await tx.insert(journalLinesTable).values([
-      // The ledger holds BASE currency only, so these two round at the base minor unit. Converting
-      // a foreign payment to base is FX-6/FX-7's job and is not done here — today the amount is
-      // posted as-is, exactly as it was before this change.
-      { journalEntryId: entry.id, accountId: ap.id, debit: roundMoney(amount, session.orgCurrency), credit: "0" },
-      { journalEntryId: entry.id, accountId: bankAccount.glAccountId, debit: "0", credit: roundMoney(amount, session.orgCurrency) },
+      // Dr AP at the booked rate; Cr Bank at what was truly paid; the difference is the derived
+      // realized-FX line, so the entry balances by construction (FX-7).
+      { journalEntryId: entry.id, accountId: ap.id, debit: baseApplied, credit: "0" },
+      { journalEntryId: entry.id, accountId: bankAccount.glAccountId, debit: "0", credit: captured.baseAmount },
+      ...(fx ? [{ journalEntryId: entry.id, accountId: fx.accountId, debit: fx.debit, credit: fx.credit }] : []),
     ]);
 
-    await tx.update(purchaseOrdersTable).set({ paidAmount: newPaid, updatedAt: new Date() }).where(eq(purchaseOrdersTable.id, po.id));
+    await tx
+      .update(purchaseOrdersTable)
+      .set({ paidAmount: newPaid, basePaidAmount: newBasePaid, updatedAt: new Date() })
+      .where(eq(purchaseOrdersTable.id, po.id));
     return payment.id;
   });
 
@@ -307,6 +465,17 @@ export async function deletePaymentAction(paymentId: number): Promise<ActionResu
 
   const amt = Number(payment.amount);
 
+  // FX-7: un-pay basePaidAmount from the STORED baseAppliedAmount — never a fresh conversion,
+  // mirroring the never-recompute rule reversals follow everywhere. Base-currency documents keep
+  // the identity (basePaidAmount === paidAmount). Deleting a pre-FX-7 payment (no stored base)
+  // from a foreign document poisons basePaidAmount to null — honestly unknown beats a guess.
+  const unpaidBase = (doc: { currency: string | null; basePaidAmount: string | null }, newPaid: string): string | null => {
+    if ((doc.currency ?? session.orgCurrency).toUpperCase() === session.orgCurrency.toUpperCase()) return newPaid;
+    if (payment.baseAppliedAmount === null) return null;
+    if (doc.basePaidAmount === null) return null;
+    return roundMoney(Math.max(0, Number(doc.basePaidAmount) - Number(payment.baseAppliedAmount)), session.orgCurrency);
+  };
+
   await db.transaction(async (tx) => {
     // Remove the single journal posting for this payment.
     const entries = await tx
@@ -327,19 +496,28 @@ export async function deletePaymentAction(paymentId: number): Promise<ActionResu
         const e = moneyEpsilon(c);
         const newPaid = roundMoney(Math.max(0, Number(inv.paidAmount) - amt), c);
         const newStatus = Number(newPaid) <= e ? "sent" : Number(newPaid) >= Number(inv.total) - e ? "paid" : "partially_paid";
-        await tx.update(salesInvoicesTable).set({ paidAmount: newPaid, status: newStatus, updatedAt: new Date() }).where(eq(salesInvoicesTable.id, inv.id));
+        await tx
+          .update(salesInvoicesTable)
+          .set({ paidAmount: newPaid, basePaidAmount: unpaidBase(inv, newPaid), status: newStatus, updatedAt: new Date() })
+          .where(eq(salesInvoicesTable.id, inv.id));
       }
     } else if (payment.proformaInvoiceId) {
       const [pf] = await tx.select().from(proformaInvoicesTable).where(eq(proformaInvoicesTable.id, payment.proformaInvoiceId));
       if (pf) {
         const newPaid = roundMoney(Math.max(0, Number(pf.paidAmount) - amt), pf.currency ?? session.orgCurrency);
-        await tx.update(proformaInvoicesTable).set({ paidAmount: newPaid, updatedAt: new Date() }).where(eq(proformaInvoicesTable.id, pf.id));
+        await tx
+          .update(proformaInvoicesTable)
+          .set({ paidAmount: newPaid, basePaidAmount: unpaidBase(pf, newPaid), updatedAt: new Date() })
+          .where(eq(proformaInvoicesTable.id, pf.id));
       }
     } else if (payment.purchaseOrderId) {
       const [po] = await tx.select().from(purchaseOrdersTable).where(eq(purchaseOrdersTable.id, payment.purchaseOrderId));
       if (po) {
         const newPaid = roundMoney(Math.max(0, Number(po.paidAmount) - amt), po.currency ?? session.orgCurrency);
-        await tx.update(purchaseOrdersTable).set({ paidAmount: newPaid, updatedAt: new Date() }).where(eq(purchaseOrdersTable.id, po.id));
+        await tx
+          .update(purchaseOrdersTable)
+          .set({ paidAmount: newPaid, basePaidAmount: unpaidBase(po, newPaid), updatedAt: new Date() })
+          .where(eq(purchaseOrdersTable.id, po.id));
       }
     }
 

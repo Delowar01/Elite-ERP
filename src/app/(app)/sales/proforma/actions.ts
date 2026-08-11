@@ -212,6 +212,22 @@ export async function convertProformaToInvoiceAction(proformaId: number): Promis
   const paidStr = roundMoney(transferredTotal, convCurrency);
   // Reflect the transferred payments' status immediately (no payments → normal draft, unchanged).
   const invoiceStatus = transferredTotal <= convEps ? "draft" : transferredTotal >= Number(pf.total) - convEps ? "paid" : "partially_paid";
+  // FX-7: an invoice born with transferred advances never passes through send (it starts
+  // partially_paid/paid), so its basePaidAmount must be set HERE, from the transferred payments'
+  // STORED baseAppliedAmount — never a fresh conversion. Base-currency documents keep the
+  // paidAmount identity; a transferred payment without a stored base figure (pre-FX-7) poisons
+  // the sum to null, honestly unknown rather than plausibly wrong. Advance-free conversions stay
+  // null, exactly like any other draft — send initializes them.
+  let basePaidStr: string | null = null;
+  if (transferredTotal > convEps) {
+    if (!pf.currency || pf.currency.toUpperCase() === session.orgCurrency.toUpperCase()) {
+      basePaidStr = paidStr;
+    } else {
+      basePaidStr = proformaPayments.some((p) => p.baseAppliedAmount === null)
+        ? null
+        : roundMoney(proformaPayments.reduce((s, p) => s + Number(p.baseAppliedAmount), 0), session.orgCurrency);
+    }
+  }
 
   const id = await db.transaction(async (tx) => {
     const invoiceNumber = await nextDocumentNumber(tx, session.orgId, "sales_invoice");
@@ -233,6 +249,7 @@ export async function convertProformaToInvoiceAction(proformaId: number): Promis
         taxTotal: pf.taxTotal,
         total: pf.total,
         paidAmount: paidStr,
+        basePaidAmount: basePaidStr,
         notes: pf.notes,
         createdById: session.userId,
       })
