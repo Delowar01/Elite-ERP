@@ -2,10 +2,17 @@ import "server-only";
 import { and, eq, gte, lte, ne, inArray, sql, desc } from "drizzle-orm";
 import { db, salesInvoicesTable, quotationsTable, bankAccountsTable, journalLinesTable, journalEntriesTable, customersTable, purchaseOrdersTable, projectsTable, employeesTable, attendanceRecordsTable } from "@/db";
 import { rangeBuckets, type ResolvedRange } from "@/lib/dashboard-range";
+import { orgBaseCurrency } from "@/lib/org-currency";
+import { baseTotalExpr, baseOutstandingExpr, unconvertedOutstandingPred } from "@/lib/base-amounts-sql";
 
-async function invoiceTotalBetween(orgId: number, start: string, end: string): Promise<number> {
+// FX-8: every money figure on the dashboard sums STORED base amounts through base-amounts-sql.ts —
+// identity for base-currency documents, the posting-time base columns for foreign ones, and NULL
+// (excluded from the sum, counted by getBaseDataQuality) for a foreign document that was never
+// converted. No conversion happens here; that is the whole point of storing the amounts.
+
+async function invoiceTotalBetween(orgId: number, base: string, start: string, end: string): Promise<number> {
   const [row] = await db
-    .select({ total: sql<string>`coalesce(sum(${salesInvoicesTable.total}), 0)` })
+    .select({ total: sql<string>`coalesce(sum(${baseTotalExpr(salesInvoicesTable, base)}), 0)` })
     .from(salesInvoicesTable)
     .where(
       and(
@@ -28,9 +35,10 @@ function trend(current: number, previous: number): { pct: string; up: boolean } 
 // KPIs for the selected date range, with a period-over-period trend vs. the preceding window.
 // Receivables/Payables are point-in-time balances (all outstanding), not range-scoped.
 export async function getKpis(orgId: number, range: ResolvedRange) {
+  const base = await orgBaseCurrency(orgId);
   const [salesThis, salesPrev] = await Promise.all([
-    invoiceTotalBetween(orgId, range.start, range.end),
-    invoiceTotalBetween(orgId, range.prevStart, range.prevEnd),
+    invoiceTotalBetween(orgId, base, range.start, range.end),
+    invoiceTotalBetween(orgId, base, range.prevStart, range.prevEnd),
   ]);
 
   const countBetween = async (start: string, end: string) => {
@@ -43,12 +51,12 @@ export async function getKpis(orgId: number, range: ResolvedRange) {
   const [invoicesThis, invoicesPrev] = await Promise.all([countBetween(range.start, range.end), countBetween(range.prevStart, range.prevEnd)]);
 
   const [{ receivables } = { receivables: "0" }] = await db
-    .select({ receivables: sql<string>`coalesce(sum(${salesInvoicesTable.total} - ${salesInvoicesTable.paidAmount}), 0)` })
+    .select({ receivables: sql<string>`coalesce(sum(${baseOutstandingExpr(salesInvoicesTable, base)}), 0)` })
     .from(salesInvoicesTable)
     .where(and(eq(salesInvoicesTable.orgId, orgId), inArray(salesInvoicesTable.status, ["sent", "partially_paid"])));
 
   const [{ payables } = { payables: "0" }] = await db
-    .select({ payables: sql<string>`coalesce(sum(${purchaseOrdersTable.total} - ${purchaseOrdersTable.paidAmount}), 0)` })
+    .select({ payables: sql<string>`coalesce(sum(${baseOutstandingExpr(purchaseOrdersTable, base)}), 0)` })
     .from(purchaseOrdersTable)
     .where(and(eq(purchaseOrdersTable.orgId, orgId), eq(purchaseOrdersTable.status, "received")));
 
@@ -64,9 +72,10 @@ export async function getKpis(orgId: number, range: ResolvedRange) {
 
 // Revenue series for the range's chart buckets (day or month). One query, bucketed in JS.
 export async function getRevenueSeries(orgId: number, range: ResolvedRange): Promise<{ label: string; total: number }[]> {
+  const base = await orgBaseCurrency(orgId);
   const buckets = rangeBuckets(range);
   const rows = await db
-    .select({ date: salesInvoicesTable.issueDate, total: salesInvoicesTable.total })
+    .select({ date: salesInvoicesTable.issueDate, total: baseTotalExpr(salesInvoicesTable, base) })
     .from(salesInvoicesTable)
     .where(
       and(
@@ -79,9 +88,42 @@ export async function getRevenueSeries(orgId: number, range: ResolvedRange): Pro
     );
   return buckets.map((b) => {
     let sum = 0;
-    for (const r of rows) if (r.date >= b.start && r.date <= b.end) sum += Number(r.total);
+    // A null total is an unconverted foreign document — excluded here, counted by getBaseDataQuality.
+    for (const r of rows) if (r.date >= b.start && r.date <= b.end && r.total !== null) sum += Number(r.total);
     return { label: b.label, total: sum };
   });
+}
+
+/**
+ * FX-8's data-quality warning: posted documents whose base amounts were never captured, so every
+ * money widget above has EXCLUDED them. Zero in production today (FX-6 blocks unconverted
+ * postings); non-zero means historical bad data that needs a rate entered. Drafts and void/
+ * cancelled documents are deliberately not counted — a draft's null base columns are by design,
+ * not bad data. Point-in-time and org-wide, like the receivables/payables it annotates.
+ */
+export async function getBaseDataQuality(orgId: number) {
+  const base = await orgBaseCurrency(orgId);
+  const [[inv], [po]] = await Promise.all([
+    db
+      .select({ n: sql<number>`count(*)::int` })
+      .from(salesInvoicesTable)
+      .where(and(
+        eq(salesInvoicesTable.orgId, orgId),
+        inArray(salesInvoicesTable.status, ["sent", "partially_paid", "paid"]),
+        // The broad predicate on purpose: missing baseTotal drops the row from every widget,
+        // missing basePaidAmount alone drops it from receivables — both deserve the warning.
+        unconvertedOutstandingPred(salesInvoicesTable, base),
+      )),
+    db
+      .select({ n: sql<number>`count(*)::int` })
+      .from(purchaseOrdersTable)
+      .where(and(
+        eq(purchaseOrdersTable.orgId, orgId),
+        eq(purchaseOrdersTable.status, "received"),
+        unconvertedOutstandingPred(purchaseOrdersTable, base),
+      )),
+  ]);
+  return { invoices: inv?.n ?? 0, purchaseOrders: po?.n ?? 0, total: (inv?.n ?? 0) + (po?.n ?? 0) };
 }
 
 export async function getInvoicesOverview(orgId: number, range: ResolvedRange) {

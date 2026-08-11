@@ -14,7 +14,7 @@ import { KpiCard } from "./_shared/kpi-card";
 import { DashboardToolbar } from "./dashboard-toolbar";
 import { BaseCurrencyNotice } from "./base-currency-notice";
 import { getBaseCurrencyConfirmation } from "@/lib/base-currency";
-import { getKpis, getRevenueSeries, getInvoicesOverview, getCashFlow, getRecentActivity, getProjectsOverview, getHrSnapshot } from "./_shared/queries";
+import { getKpis, getRevenueSeries, getInvoicesOverview, getCashFlow, getRecentActivity, getProjectsOverview, getHrSnapshot, getBaseDataQuality } from "./_shared/queries";
 import { fireEnsureFreshRates } from "@/lib/rates/fetch-rates";
 import { after } from "next/server";
 
@@ -44,7 +44,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const range = resolveRange(rangeKey);
   const rangeLabel = t(locale, RANGE_LABELS[rangeKey]);
 
-  const [kpis, revenue, invoicesOverview, cashFlow, recentActivity, projectsOverview, hrSnapshot] = await Promise.all([
+  const [kpis, revenue, invoicesOverview, cashFlow, recentActivity, projectsOverview, hrSnapshot, baseDataQuality] = await Promise.all([
     getKpis(session.orgId, range),
     getRevenueSeries(session.orgId, range),
     getInvoicesOverview(session.orgId, range),
@@ -52,6 +52,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     getRecentActivity(session.orgId, range),
     getProjectsOverview(session.orgId),
     getHrSnapshot(session.orgId),
+    getBaseDataQuality(session.orgId),
   ]);
 
   const baseCurrency = await getBaseCurrencyConfirmation(session.orgId, session.role);
@@ -265,6 +266,31 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           Renders above the dashboard and blocks none of it. */}
       {baseCurrency && (
         <BaseCurrencyNotice locale={locale} currency={baseCurrency.currency} country={baseCurrency.country} />
+      )}
+      {/* FX-8 data quality: every money widget below has EXCLUDED these documents (no stored base
+          conversion), so the shortfall is named and linked instead of silently absorbed. Zero rows
+          in healthy data — FX-6 blocks unconverted postings. */}
+      {baseDataQuality.total > 0 && (
+        <div
+          role="status"
+          data-testid="base-data-quality"
+          className="mb-4 flex flex-wrap items-center gap-2 rounded-[10px] border border-warning/40 bg-warning-bg px-3 py-2 text-[12.5px]"
+        >
+          <span className="font-semibold">
+            {baseDataQuality.total} {t(locale, "documents excluded from the totals below — missing exchange rate.")}
+          </span>
+          {baseDataQuality.invoices > 0 && (
+            <Link href="/sales/invoices" className="underline">
+              {baseDataQuality.invoices} {t(locale, "invoices")}
+            </Link>
+          )}
+          {baseDataQuality.purchaseOrders > 0 && (
+            <Link href="/purchasing/orders" className="underline">
+              {baseDataQuality.purchaseOrders} {t(locale, "purchase orders")}
+            </Link>
+          )}
+          <span className="text-ink-muted">{t(locale, "Add the missing rates in Preset Management → Exchange Rates.")}</span>
+        </div>
       )}
       <DashboardToolbar locale={locale} range={rangeKey} layout={prefs.layout} />
 
