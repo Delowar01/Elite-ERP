@@ -45,6 +45,7 @@ export default async function PaymentsPage() {
         customerName: customersTable.name,
         total: salesInvoicesTable.total,
         paidAmount: salesInvoicesTable.paidAmount,
+        currency: salesInvoicesTable.currency,
       })
       .from(salesInvoicesTable)
       .innerJoin(customersTable, eq(customersTable.id, salesInvoicesTable.customerId))
@@ -56,6 +57,7 @@ export default async function PaymentsPage() {
         vendorName: vendorsTable.name,
         total: purchaseOrdersTable.total,
         paidAmount: purchaseOrdersTable.paidAmount,
+        currency: purchaseOrdersTable.currency,
       })
       .from(purchaseOrdersTable)
       .innerJoin(vendorsTable, eq(vendorsTable.id, purchaseOrdersTable.vendorId))
@@ -67,12 +69,14 @@ export default async function PaymentsPage() {
     invoiceNumber: r.invoiceNumber,
     customerName: r.customerName,
     balance: Number(r.total) - Number(r.paidAmount),
+    currency: r.currency,
   }));
   const outstandingPos = outstandingPoRows.map((r) => ({
     id: r.id,
     poNumber: r.poNumber,
     vendorName: r.vendorName,
     balance: Number(r.total) - Number(r.paidAmount),
+    currency: r.currency,
   }));
 
   return (

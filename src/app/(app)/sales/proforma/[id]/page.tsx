@@ -118,6 +118,7 @@ export default async function ProformaDetailPage({ params }: { params: Promise<{
           <ProformaDetailActions
             locale={locale}
             currency={pf.currency ?? org.currency}
+            baseCurrency={org.currency}
             proformaId={pf.id}
             proformaNumber={pf.proformaNumber}
             customerName={pf.customerName}

@@ -88,6 +88,7 @@ export function PaymentsListClient({
         <RecordPaymentDialog
           locale={locale}
           currency={currency}
+          baseCurrency={currency}
           bankAccounts={bankAccounts}
           invoices={outstandingInvoices}
           purchaseOrders={outstandingPos}

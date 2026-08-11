@@ -13,6 +13,7 @@ import { ConvertMenu } from "../_shared/convert-menu";
 export function InvoiceDetailActions({
   locale,
   currency,
+  baseCurrency,
   invoiceId,
   invoiceNumber,
   customerName,
@@ -23,6 +24,7 @@ export function InvoiceDetailActions({
 }: {
   locale: Locale;
   currency: string;
+  baseCurrency: string;
   invoiceId: number;
   invoiceNumber: string;
   customerName: string;
@@ -93,8 +95,9 @@ export function InvoiceDetailActions({
         <RecordPaymentDialog
           locale={locale}
           currency={currency}
+          baseCurrency={baseCurrency}
           bankAccounts={bankAccounts}
-          invoices={[{ id: invoiceId, invoiceNumber, customerName, balance }]}
+          invoices={[{ id: invoiceId, invoiceNumber, customerName, balance, currency }]}
           purchaseOrders={[]}
           lockedDirection="in"
           lockedSourceId={invoiceId}

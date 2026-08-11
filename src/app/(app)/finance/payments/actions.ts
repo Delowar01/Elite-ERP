@@ -16,6 +16,7 @@ import {
 import { requireSession, requireRole } from "@/lib/session";
 import { moneyEpsilon, roundMoney } from "@/lib/currency/currencies";
 import { capturePaymentBase } from "@/lib/payment-currency";
+import { resolveRate, MissingExchangeRateError } from "@/lib/exchange-rates";
 import { subtractMoney } from "@/lib/posting-currency";
 import { logActivity } from "@/lib/activity";
 import { recordAudit } from "@/lib/security/audit";
@@ -58,6 +59,30 @@ function fxLine(args: {
 }
 
 const PATH = "/finance/payments";
+
+/**
+ * FX-7: the Record Payment dialog's pre-fill — the rate on file for this currency at a payment
+ * date (most recent on or before). Read-only and org-scoped via the session; returns null when no
+ * rate exists, which the dialog renders as an empty received-amount field for the user to fill —
+ * a typed figure IS the rate, so nothing blocks on a lookup the user can supersede.
+ */
+export async function resolvePaymentRateAction(
+  currency: string,
+  date: string,
+): Promise<{ rate: string; source: string } | null> {
+  const session = await requireSession();
+  const cur = currency.trim().toUpperCase();
+  if (!cur || !date || cur === session.orgCurrency.toUpperCase()) return null;
+  try {
+    const resolved = await resolveRate({
+      orgId: session.orgId, baseCurrency: session.orgCurrency, fromCurrency: cur, date,
+    });
+    return { rate: resolved.rate, source: resolved.source };
+  } catch (e) {
+    if (e instanceof MissingExchangeRateError) return null;
+    throw e;
+  }
+}
 
 // Mirrors sendInvoiceAction / receivePurchaseOrderAction's transactional shape: one journal
 // entry posted alongside the paidAmount/status update, in the same transaction, so a failure

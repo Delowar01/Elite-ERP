@@ -119,6 +119,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
           <InvoiceDetailActions
             locale={locale}
             currency={invoice.currency ?? org.currency}
+            baseCurrency={org.currency}
             invoiceId={invoice.id}
             invoiceNumber={invoice.invoiceNumber}
             customerName={invoice.customerName}

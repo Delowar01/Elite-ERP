@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
-import { Wallet } from "lucide-react";
+import { Wallet, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FormField } from "@/components/ui/form-field";
@@ -11,12 +11,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { t, type Locale } from "@/lib/i18n/dict";
 import { fmt } from "../../sales/_shared/totals";
 import { moneyDecimals } from "@/lib/currency/currencies";
-import { recordPaymentAction } from "../payments/actions";
+import { recordPaymentAction, resolvePaymentRateAction } from "../payments/actions";
 import { useConfirm } from "../../_shared/confirm-provider";
+import { withRateRescue, type RescuableResult } from "../../_shared/missing-rate";
 
-export type OutstandingInvoice = { id: number; invoiceNumber: string; customerName: string; balance: number };
-export type OutstandingProforma = { id: number; proformaNumber: string; customerName: string; balance: number };
-export type OutstandingPo = { id: number; poNumber: string; vendorName: string; balance: number };
+export type OutstandingInvoice = { id: number; invoiceNumber: string; customerName: string; balance: number; currency?: string | null };
+export type OutstandingProforma = { id: number; proformaNumber: string; customerName: string; balance: number; currency?: string | null };
+export type OutstandingPo = { id: number; poNumber: string; vendorName: string; balance: number; currency?: string | null };
 export type BankAccountOption = { id: number; name: string };
 export type PaymentSourceType = "invoice" | "proforma" | "po";
 
@@ -26,6 +27,7 @@ export type PaymentSourceType = "invoice" | "proforma" | "po";
 export function RecordPaymentDialog({
   locale,
   currency,
+  baseCurrency,
   bankAccounts,
   invoices,
   purchaseOrders,
@@ -38,6 +40,8 @@ export function RecordPaymentDialog({
   locale: Locale;
   /** The currency the balances and the amount are in — the document's, not a fixed two decimals. */
   currency: string;
+  /** The organization's base currency — when the document's differs, the received-in-base field shows (FX-7). */
+  baseCurrency: string;
   bankAccounts: BankAccountOption[];
   invoices: OutstandingInvoice[];
   purchaseOrders: OutstandingPo[];
@@ -71,6 +75,13 @@ export function RecordPaymentDialog({
   const [bankAccountId, setBankAccountId] = useState("");
   const [amount, setAmount] = useState(initialBalance !== undefined ? String(initialBalance) : "");
   const [method, setMethod] = useState("bank_transfer");
+  const [paymentDate, setPaymentDate] = useState(() => new Date().toISOString().slice(0, 10));
+  // FX-7 (received-amount-first): the base figure the bank statement shows. Pre-filled from the
+  // rate on file at the payment date; once the USER edits it, it is the override — the effective
+  // rate follows it, and neither a date change nor a fresh resolve overwrites it.
+  const [baseReceived, setBaseReceived] = useState("");
+  const [baseEdited, setBaseEdited] = useState(false);
+  const [fetched, setFetched] = useState<{ rate: string; source: string } | null>(null);
   const [pending, startTransition] = useTransition();
   const confirm = useConfirm();
 
@@ -85,10 +96,46 @@ export function RecordPaymentDialog({
     [sourceType, direction, sourceId, invoices, purchaseOrders, proformas],
   );
 
+  // The SELECTED document's currency decides whether the second field exists at all.
+  const docCurrency = (selected?.currency ?? currency ?? baseCurrency).toUpperCase();
+  const foreign = docCurrency !== baseCurrency.toUpperCase();
+  const baseDp = moneyDecimals("document", baseCurrency);
+
+  // Re-resolve the pre-fill rate whenever the dialog opens, the document changes, or the payment
+  // date changes (async state only — the React compiler forbids synchronous setState in effects).
+  // A user-edited base amount is never overwritten (the override rule) — but the fetched rate is
+  // still refreshed, because the deviation warning compares against it.
+  useEffect(() => {
+    if (!open || !foreign) return;
+    let stale = false;
+    void resolvePaymentRateAction(docCurrency, paymentDate)
+      .then((r) => { if (!stale) setFetched(r); })
+      .catch(() => { if (!stale) setFetched(null); });
+    return () => { stale = true; };
+  }, [open, foreign, docCurrency, paymentDate]);
+
+  // The visible base figure: the user's own value once edited (pinned — nothing overwrites it),
+  // otherwise DERIVED at render from amount × the fetched rate. No state tracks the pre-fill, so
+  // there is nothing to keep in sync when the amount or the date's rate changes.
+  const shownBase = baseEdited
+    ? baseReceived
+    : foreign && fetched && Number(amount) > 0
+      ? (Number(amount) * Number(fetched.rate)).toFixed(baseDp)
+      : "";
+
+  // The effective rate is always DERIVED from the two visible figures — the bank statement is
+  // ground truth, the rate follows it, never the other way around.
+  const effectiveRate = foreign && Number(amount) > 0 && Number(shownBase) > 0 ? Number(shownBase) / Number(amount) : null;
+  const deviates =
+    effectiveRate !== null && fetched !== null &&
+    Math.abs(effectiveRate - Number(fetched.rate)) / Number(fetched.rate) > 0.1;
+
   function selectSource(id: string) {
     setSourceId(id);
     const balance = findBalance(direction, id);
     if (balance !== undefined) setAmount(String(balance));
+    setBaseEdited(false);
+    setBaseReceived("");
   }
 
   // Recomputes every field from the *current* invoices/purchaseOrders props (not a value
@@ -100,16 +147,28 @@ export function RecordPaymentDialog({
     setBankAccountId("");
     setAmount(initialBalance !== undefined ? String(initialBalance) : "");
     setMethod("bank_transfer");
+    setPaymentDate(new Date().toISOString().slice(0, 10));
+    setBaseReceived("");
+    setBaseEdited(false);
+    setFetched(null);
   }
 
   // Recording a payment moves cash and the ledger, so it is confirmed with the figures that matter
   // (amount, document, party, bank account) before anything is posted. Nothing runs until confirm.
+  // Invoked from onSubmit rather than a form action DELIBERATELY: React resets a form when its
+  // action completes, and this "action" completes instantly (it only opens the confirmation) — the
+  // reset was blanking the bank-account select and the typed fields behind the confirm dialog, so
+  // a user returning from a refused attempt found a half-cleared form.
   function submit(formData: FormData) {
     formData.set("direction", direction);
     formData.set("sourceType", sourceType);
     formData.set("sourceId", sourceId);
     formData.set("bankAccountId", bankAccountId);
     formData.set("method", method);
+    // Only a USER-EDITED base figure travels: an untouched pre-fill is omitted so the server
+    // resolves the rate itself and records the rate row's own source; a typed figure IS the rate.
+    if (foreign && baseEdited && shownBase.trim() !== "") formData.set("baseReceived", shownBase.trim());
+    else formData.delete("baseReceived");
 
     const docNumber =
       sourceType === "proforma"
@@ -140,19 +199,24 @@ export function RecordPaymentDialog({
         ...(party ? [{ label: direction === "in" ? "Client" : "Vendor", value: party }] : []),
         ...(bankName ? [{ label: "Bank Account", value: bankName }] : []),
       ],
-      onConfirm: () =>
-        new Promise<{ error?: string } | void>((resolve) => {
-          startTransition(async () => {
-            const result = await recordPaymentAction(formData);
-            if (result.error) {
-              resolve({ error: result.error });
-              return;
-            }
-            toast.success(t(locale, "Payment recorded — posted to ledger."));
-            setOpen(false);
-            resolve();
+      onConfirm: () => {
+        // Recursive on purpose: a missing payment-date rate maps to "Fetch rate & retry", which
+        // re-runs this same attempt after the fetch — the identical seam as the posting paths.
+        const attempt = (): Promise<RescuableResult> =>
+          new Promise((resolve) => {
+            startTransition(async () => {
+              const result = await recordPaymentAction(formData);
+              if (result.error) {
+                resolve(withRateRescue(locale, result, attempt));
+                return;
+              }
+              toast.success(t(locale, "Payment recorded — posted to ledger."));
+              setOpen(false);
+              resolve(undefined);
+            });
           });
-        }),
+        return attempt();
+      },
     });
   }
 
@@ -174,7 +238,13 @@ export function RecordPaymentDialog({
               {t(locale, "Record Payment")}
             </DialogTitle>
           </DialogHeader>
-          <form action={submit} className="flex flex-col gap-4">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              submit(new FormData(e.currentTarget));
+            }}
+            className="flex flex-col gap-4"
+          >
             {!locked && (
               <FormField label={t(locale, "Direction")} htmlFor="pay-direction">
                 <Select
@@ -260,8 +330,46 @@ export function RecordPaymentDialog({
               />
             </FormField>
 
+            {foreign && (
+              <FormField
+                label={`${t(locale, direction === "in" ? "Amount Received in" : "Amount Paid in")} ${baseCurrency.toUpperCase()}`}
+                htmlFor="pay-base-received"
+              >
+                <Input
+                  id="pay-base-received"
+                  type="number"
+                  step={String(1 / 10 ** baseDp)}
+                  min="0"
+                  value={shownBase}
+                  onChange={(e) => {
+                    setBaseReceived(e.target.value);
+                    setBaseEdited(true);
+                  }}
+                  placeholder={fetched ? undefined : t(locale, "No rate on file — enter the bank statement figure")}
+                />
+                {effectiveRate !== null && (
+                  <div className="mt-1 text-[12px] text-ink-muted" data-testid="effective-rate">
+                    1 {docCurrency} = {effectiveRate.toFixed(4)} {baseCurrency.toUpperCase()}
+                  </div>
+                )}
+                {deviates && (
+                  <div className="mt-1 flex items-center gap-1.5 text-[12px]" style={{ color: "var(--warning)" }} role="status">
+                    <AlertTriangle className="size-3.5 shrink-0" />
+                    {t(locale, "This is more than 10% away from the rate on file for this date — check the received amount.")}
+                  </div>
+                )}
+              </FormField>
+            )}
+
             <FormField label={t(locale, "Date")} htmlFor="pay-date">
-              <Input id="pay-date" name="paymentDate" type="date" defaultValue={new Date().toISOString().slice(0, 10)} required />
+              <Input
+                id="pay-date"
+                name="paymentDate"
+                type="date"
+                value={paymentDate}
+                onChange={(e) => setPaymentDate(e.target.value)}
+                required
+              />
             </FormField>
 
             <FormField label={t(locale, "Method")} htmlFor="pay-method">
