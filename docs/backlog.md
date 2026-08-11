@@ -402,3 +402,22 @@ under SAMA's own bulletin date, attribution per its terms if any) and uncomment 
 (open.er-api.com) for convenience, and manual entry always wins over fetched rates — so an org
 that needs ZATCA-exact SAMA figures today enters them by hand and no automatic fetch will ever
 overwrite them. The gap costs convenience, not correctness.
+
+---
+
+## Payment fees: the reference dialog's "transaction charge" field — deliberately not built
+
+**Status:** open question, deferred out of FX-7 by decision. The Refrens reference screenshot that
+shaped the two-field Record Payment dialog also shows a transaction-charge field (bank fees taken
+out of the received amount). FX-7 shipped without it.
+
+Building it is an accounting decision before it is a UI one: a fee means the bank credited LESS
+than the customer paid, so the entry needs a fee-expense line (Dr Bank net / Dr Bank Charges fee /
+Cr AR gross) and a decision about which figure the payment row's `amount` means — gross or net —
+which ripples into `paidAmount`, balances, and receipts. There is also no bank-charges expense
+account in the seeded chart yet.
+
+Meanwhile nothing is blocked: the received-amount-first design already absorbs the common case
+honestly — the user types what the bank statement shows (net of FX spread), and any true FEE can
+be recorded as what it is once an Expenses flow exists. Whoever picks this up should decide the
+gross-vs-net question first, then the account, then the field.
