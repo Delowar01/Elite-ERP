@@ -97,6 +97,8 @@ const DICT: Record<string, string> = {
   "No exchange rates yet. Rates appear here once a foreign-currency document exists or a rate is added manually.": "لا توجد أسعار صرف بعد. تظهر الأسعار هنا عند وجود مستند بعملة أجنبية أو عند إضافة سعر يدويًا.",
   "No rate history yet.": "لا يوجد سجل أسعار بعد.",
   "Fetch rate & retry": "جلب السعر وإعادة المحاولة",
+  "Base currency cannot be changed: this organization has": "لا يمكن تغيير العملة الأساسية: لدى هذه المنشأة",
+  "posted transactions.": "معاملة مُرحَّلة.",
   "documents excluded from the totals below — missing exchange rate.": "مستندات مستبعدة من الإجماليات أدناه — سعر الصرف مفقود.",
   "documents excluded — missing exchange rate.": "مستندات مستبعدة — سعر الصرف مفقود.",
   "invoices": "فواتير",

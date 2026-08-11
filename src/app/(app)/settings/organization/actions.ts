@@ -1,8 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { and, eq } from "drizzle-orm";
-import { db, orgsTable, bankAccountsTable } from "@/db";
+import { and, eq, sql } from "drizzle-orm";
+import { db, orgsTable, bankAccountsTable, journalEntriesTable } from "@/db";
 import { requireRole, requireSession } from "@/lib/session";
 import { logActivity } from "@/lib/activity";
 import { recordAudit } from "@/lib/security/audit";
@@ -27,6 +27,27 @@ export async function updateBusinessDetailsAction(formData: FormData): Promise<A
   // Currency must be a known ISO 4217 code from the shared catalog.
   const currency = String(formData.get("currency") ?? "SAR").trim().toUpperCase() || "SAR";
   if (!isValidCurrencyCode(currency)) return { error: "Choose a valid currency." };
+
+  // FX-1b: the base currency locks the moment ANYTHING posts to the ledger. The signal is a
+  // posted journal entry — not a stored base amount, not a document — so an org with fifteen
+  // draft quotations and nothing posted can still fix a wrongly chosen currency, and the first
+  // posting makes it immutable. Enforced HERE, independent of the UI: a raw action replay with
+  // the select rendered read-only must be refused all the same. A submit that does not change
+  // the currency is never blocked — the count is only consulted on an actual change.
+  const [current] = await db
+    .select({ currency: orgsTable.currency })
+    .from(orgsTable)
+    .where(eq(orgsTable.id, session.orgId));
+  const currentCurrency = (current?.currency ?? "SAR").trim().toUpperCase();
+  if (currency !== currentCurrency) {
+    const [posted] = await db
+      .select({ n: sql<number>`count(*)::int` })
+      .from(journalEntriesTable)
+      .where(eq(journalEntriesTable.orgId, session.orgId));
+    if ((posted?.n ?? 0) > 0) {
+      return { error: `Base currency cannot be changed: this organization has ${posted?.n} posted transactions.` };
+    }
+  }
 
   await db
     .update(orgsTable)

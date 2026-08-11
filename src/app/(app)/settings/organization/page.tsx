@@ -1,5 +1,5 @@
-import { eq, asc } from "drizzle-orm";
-import { db, orgsTable, bankAccountsTable, usersTable } from "@/db";
+import { eq, asc, sql } from "drizzle-orm";
+import { db, orgsTable, bankAccountsTable, usersTable, journalEntriesTable } from "@/db";
 import { requireRole } from "@/lib/session";
 import { getProfileByCountryName, profileHasFeature } from "@/lib/geo/country-profiles";
 import { getLocale } from "@/lib/i18n/server";
@@ -25,6 +25,11 @@ export default async function OrganizationSettingsPage({ searchParams }: { searc
   const { tab } = await searchParams;
 
   const [org] = await db.select().from(orgsTable).where(eq(orgsTable.id, session.orgId));
+  // FX-1b: one posted journal entry locks the base currency; the panel shows why, with this count.
+  const [{ n: postedCount } = { n: 0 }] = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(journalEntriesTable)
+    .where(eq(journalEntriesTable.orgId, session.orgId));
   // Country-specific settings: ZATCA E-Invoicing only appears for profiles that enable it (Saudi Arabia).
   const countryProfile = getProfileByCountryName(org.country);
   const showZatca = profileHasFeature(countryProfile, "zatca_phase1");
@@ -65,7 +70,7 @@ export default async function OrganizationSettingsPage({ searchParams }: { searc
         </SettingsNavList>
 
         <SettingsNavContent value="business-details">
-          <BusinessDetailsForm locale={locale} org={org} />
+          <BusinessDetailsForm locale={locale} org={org} postedCount={postedCount} />
         </SettingsNavContent>
         <SettingsNavContent value="logo">
           <LogoPanel locale={locale} org={org} />

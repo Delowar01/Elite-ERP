@@ -45,7 +45,11 @@ import { t, type Locale } from "@/lib/i18n/dict";
 import type { Org } from "@/db";
 import { updateBusinessDetailsAction, updateColorThemeAction, uploadLogoAction } from "./actions";
 
-export function BusinessDetailsForm({ locale, org }: { locale: Locale; org: Org }) {
+export function BusinessDetailsForm({ locale, org, postedCount }: { locale: Locale; org: Org; postedCount: number }) {
+  // FX-1b: one posted journal entry locks the base currency for good. The select is disabled AND
+  // the reason is written out with the count — greying out without saying why reads as a bug. The
+  // server refuses a changed currency independently of this; the UI is only the explanation.
+  const currencyLocked = postedCount > 0;
   const [pending, startTransition] = useTransition();
   // No fallback here. This used to read `org.country ?? "Saudi Arabia"`, which displayed a country
   // that was not stored: every org registered before the country question existed has
@@ -67,8 +71,10 @@ export function BusinessDetailsForm({ locale, org }: { locale: Locale; org: Org 
 
   function onCountryChange(name: string) {
     setCountry(name);
-    // Follow the new country's default currency (user can still change it afterwards).
-    setCurrency(getProfileByCountryName(name).defaultCurrencyCode);
+    // Follow the new country's default currency (user can still change it afterwards) — unless the
+    // currency is locked: country stays freely editable (it drives the tax profile), but it must
+    // not drag a locked currency along and turn every country edit into a refused submit.
+    if (!currencyLocked) setCurrency(getProfileByCountryName(name).defaultCurrencyCode);
   }
 
   function submit(formData: FormData) {
@@ -114,7 +120,7 @@ export function BusinessDetailsForm({ locale, org }: { locale: Locale; org: Org 
           <Input id="org-phone" name="phone" defaultValue={org.phone ?? ""} />
         </FormField>
         <FormField label={t(locale, "Currency")} htmlFor="org-currency">
-          <Select value={currency} onValueChange={setCurrency}>
+          <Select value={currency} onValueChange={setCurrency} disabled={currencyLocked}>
             <SelectTrigger id="org-currency">
               <SelectValue />
             </SelectTrigger>
@@ -131,6 +137,11 @@ export function BusinessDetailsForm({ locale, org }: { locale: Locale; org: Org 
               ))}
             </SelectContent>
           </Select>
+          {currencyLocked && (
+            <p className="mt-1 text-[12px]" role="status" data-testid="currency-locked" style={{ color: "var(--warning-ink)" }}>
+              {t(locale, "Base currency cannot be changed: this organization has")} {postedCount} {t(locale, "posted transactions.")}
+            </p>
+          )}
         </FormField>
         {/* Tax-number + registration labels follow the country profile (VAT Number/CR, TRN/Trade License…). */}
         <FormField label={t(locale, labels.taxNumberLabel)} htmlFor="org-vat">
