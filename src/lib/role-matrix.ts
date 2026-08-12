@@ -94,6 +94,11 @@ export const RESTRICTED_ACTIONS: RestrictedAction[] = [
     reason: "Reverses a posted ledger entry and restores the document's outstanding balance.",
   },
   {
+    action: "Refund a customer advance",
+    allowed: ["owner", "admin"],
+    reason: "Pays money out of a bank account and releases the customer-advance liability.",
+  },
+  {
     action: "Approve or reject leave",
     allowed: ["owner", "admin"],
     reason: "Decides another member's time off and feeds attendance.",

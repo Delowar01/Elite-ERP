@@ -457,6 +457,147 @@ export async function recordPaymentAction(formData: FormData): Promise<ActionRes
   return {};
 }
 
+/**
+ * Refund an unused customer advance (§11): Dr 2300 Customer Advances / Cr Bank — the liability is
+ * returned as cash, and neither AR nor revenue moves (the advance never touched either).
+ *
+ * Granularity mirrors the application model: a refund returns ONE advance receipt IN FULL, so the
+ * refund row carries the receipt's own stored figures — both journal lines post at the advance's
+ * CARRIED base value (what 2300 was credited at receipt), which extinguishes the liability at
+ * exactly the figure it was booked at, with no FX line. (A payout-date revaluation would need a
+ * received-amount input and an FX leg; if that fidelity is ever needed it can be added on top —
+ * the carried-value refund is internally consistent and never mis-states 2300.)
+ *
+ * Only an AVAILABLE advance can be refunded: kind='advance_receipt', never applied
+ * (salesInvoiceId null — applied advances are settled history) and not already refunded (no
+ * advance_refund row referencing it — the refundsPaymentId link makes double-refund structurally
+ * impossible). Owner/admin only, same as deleting financial records.
+ */
+export async function refundAdvanceAction(paymentId: number, bankAccountId?: number): Promise<ActionResult> {
+  const session = await requireRole("owner", "admin");
+  const [receipt] = await db
+    .select()
+    .from(paymentsTable)
+    .where(and(eq(paymentsTable.id, paymentId), eq(paymentsTable.orgId, session.orgId)));
+  if (!receipt) return { error: "Payment not found." };
+  if (receipt.kind !== "advance_receipt") return { error: "Only customer advance receipts can be refunded." };
+  if (receipt.salesInvoiceId) return { error: "This advance has been applied to a sales invoice and can no longer be refunded." };
+  const [existingRefund] = await db
+    .select({ id: paymentsTable.id })
+    .from(paymentsTable)
+    .where(and(eq(paymentsTable.orgId, session.orgId), eq(paymentsTable.refundsPaymentId, receipt.id)));
+  if (existingRefund) return { error: "This advance has already been refunded." };
+
+  // Money goes back the way it came unless another org bank account is chosen explicitly.
+  const refundBankId = bankAccountId ?? receipt.bankAccountId;
+  const [bankAccount] = await db
+    .select()
+    .from(bankAccountsTable)
+    .where(and(eq(bankAccountsTable.id, refundBankId), eq(bankAccountsTable.orgId, session.orgId)));
+  if (!bankAccount) return { error: "Bank account not found." };
+
+  const accounts = await db.select().from(accountsTable).where(eq(accountsTable.orgId, session.orgId));
+  const byCode = new Map(accounts.map((a) => [a.code, a]));
+  const advances = byCode.get("2300");
+  if (!advances) return { error: "Chart of accounts is missing a required system account (2300 Customer Advances)." };
+
+  // The advance's carried base value — the same figure its receipt credited to 2300. A pre-FX-7
+  // base-currency receipt carries the identity; a pre-FX-7 foreign one stored no base, so the
+  // refund cannot be constructed — an honest refusal, not a guess.
+  const isBase = !receipt.currency || receipt.currency.toUpperCase() === session.orgCurrency.toUpperCase();
+  const carried = receipt.baseAppliedAmount ?? (isBase ? receipt.amount : null);
+  if (carried === null) {
+    return { error: "This advance has no stored base-currency value (it was recorded before currency capture), so it cannot be refunded. Delete and re-record it first." };
+  }
+
+  const today = new Date().toISOString().slice(0, 10);
+  const [pf] = receipt.proformaInvoiceId
+    ? await db.select().from(proformaInvoicesTable).where(and(eq(proformaInvoicesTable.id, receipt.proformaInvoiceId), eq(proformaInvoicesTable.orgId, session.orgId)))
+    : [];
+
+  const refundId = await db.transaction(async (tx) => {
+    const [refund] = await tx
+      .insert(paymentsTable)
+      .values({
+        orgId: session.orgId,
+        direction: "out",
+        bankAccountId: bankAccount.id,
+        amount: receipt.amount,
+        kind: "advance_refund",
+        refundsPaymentId: receipt.id,
+        // The receipt's own stored figures, verbatim — the refund extinguishes exactly what was
+        // booked, so nothing is looked up and nothing can drift.
+        currency: receipt.currency,
+        exchangeRate: receipt.exchangeRate,
+        baseAmount: carried,
+        baseAppliedAmount: carried,
+        rateSource: receipt.rateSource,
+        paymentDate: today,
+        method: receipt.method,
+        reference: receipt.reference,
+        proformaInvoiceId: receipt.proformaInvoiceId,
+        createdById: session.userId,
+      })
+      .returning({ id: paymentsTable.id });
+
+    const [entry] = await tx
+      .insert(journalEntriesTable)
+      .values({
+        orgId: session.orgId,
+        entryDate: today,
+        memo: pf ? `Advance refunded for proforma ${pf.proformaNumber}` : "Customer advance refunded",
+        sourceType: "payment",
+        sourceId: refund.id,
+        createdById: session.userId,
+      })
+      .returning({ id: journalEntriesTable.id });
+
+    await tx.insert(journalLinesTable).values([
+      // Dr 2300 / Cr Bank at the carried value: the liability leaves as the cash does. Never AR,
+      // never revenue — the advance touched neither coming in, and touches neither going out.
+      { journalEntryId: entry.id, accountId: advances.id, debit: carried, credit: "0" },
+      { journalEntryId: entry.id, accountId: bankAccount.glAccountId, debit: "0", credit: carried },
+    ]);
+
+    // The proforma's paid figures track the NET advance held against it, so a refund releases
+    // what the receipt added — same stored-figure arithmetic as deletion, opposite sign to receipt.
+    if (pf) {
+      const pfCurrency = pf.currency ?? session.orgCurrency;
+      const newPaid = roundMoney(Math.max(0, Number(pf.paidAmount) - Number(receipt.amount)), pfCurrency);
+      const newBasePaid = pf.basePaidAmount === null
+        ? null
+        : roundMoney(Math.max(0, Number(pf.basePaidAmount) - Number(carried)), session.orgCurrency);
+      await tx
+        .update(proformaInvoicesTable)
+        .set({ paidAmount: newPaid, basePaidAmount: pfCurrency.toUpperCase() === session.orgCurrency.toUpperCase() ? newPaid : newBasePaid, updatedAt: new Date() })
+        .where(eq(proformaInvoicesTable.id, pf.id));
+    }
+    return refund.id;
+  });
+
+  await logActivity(session, {
+    type: "payment.recorded",
+    description: pf
+      ? `Refunded a customer advance of ${receipt.amount} for proforma ${pf.proformaNumber}`
+      : `Refunded a customer advance of ${receipt.amount}`,
+    entityType: "payment",
+    entityId: refundId,
+  });
+  await recordAudit({ orgId: session.orgId, userId: session.userId, userName: session.name }, {
+    action: "payment.created", entityType: "payment", entityId: refundId,
+    newValue: { kind: "advance_refund", refundsPaymentId: receipt.id, amount: receipt.amount, bankAccountId: bankAccount.id },
+  });
+  revalidatePath(PATH);
+  revalidatePath("/finance/bank-accounts");
+  revalidatePath("/finance/chart-of-accounts");
+  revalidatePath("/finance/ledger");
+  revalidatePath("/finance/reports");
+  revalidatePath("/sales/proforma");
+  if (receipt.proformaInvoiceId) revalidatePath(`/sales/proforma/${receipt.proformaInvoiceId}`);
+  revalidatePath("/dashboard");
+  return {};
+}
+
 // Delete a payment and reverse its accounting in one transaction: remove the payment's journal
 // entry + lines, decrement the source document's paidAmount (recomputing an invoice's status), then
 // delete the payment. Gated to owner/admin (deleting financial records) and audit-logged.
@@ -476,6 +617,15 @@ export async function deletePaymentAction(paymentId: number): Promise<ActionResu
   // delete cleanly as before.
   if (payment.kind === "advance_receipt" && payment.salesInvoiceId) {
     return { error: "This advance has been applied to a sales invoice and can no longer be deleted. Correct it with a credit note or a manual journal instead." };
+  }
+  // A refunded receipt is one half of a pair — deleting it would orphan the refund row that
+  // references it. Delete the refund first (which restores the advance), then the receipt.
+  if (payment.kind === "advance_receipt") {
+    const [standingRefund] = await db
+      .select({ id: paymentsTable.id })
+      .from(paymentsTable)
+      .where(and(eq(paymentsTable.orgId, session.orgId), eq(paymentsTable.refundsPaymentId, payment.id)));
+    if (standingRefund) return { error: "This advance has been refunded. Delete the refund first if you need to remove the receipt." };
   }
 
   const amt = Number(payment.amount);
@@ -519,10 +669,19 @@ export async function deletePaymentAction(paymentId: number): Promise<ActionResu
     } else if (payment.proformaInvoiceId) {
       const [pf] = await tx.select().from(proformaInvoicesTable).where(eq(proformaInvoicesTable.id, payment.proformaInvoiceId));
       if (pf) {
-        const newPaid = roundMoney(Math.max(0, Number(pf.paidAmount) - amt), pf.currency ?? session.orgCurrency);
+        // Deleting a RECEIPT un-pays the proforma; deleting a REFUND restores the advance the
+        // refund had released — the proforma's paid figures track the NET advance held, so the
+        // signs are opposite. Same stored-figure arithmetic either way.
+        const restore = payment.kind === "advance_refund";
+        const c = pf.currency ?? session.orgCurrency;
+        const newPaid = roundMoney(Math.max(0, Number(pf.paidAmount) + (restore ? amt : -amt)), c);
+        let newBase: string | null;
+        if (c.toUpperCase() === session.orgCurrency.toUpperCase()) newBase = newPaid;
+        else if (payment.baseAppliedAmount === null || pf.basePaidAmount === null) newBase = null;
+        else newBase = roundMoney(Math.max(0, Number(pf.basePaidAmount) + (restore ? 1 : -1) * Number(payment.baseAppliedAmount)), session.orgCurrency);
         await tx
           .update(proformaInvoicesTable)
-          .set({ paidAmount: newPaid, basePaidAmount: unpaidBase(pf, newPaid), updatedAt: new Date() })
+          .set({ paidAmount: newPaid, basePaidAmount: newBase, updatedAt: new Date() })
           .where(eq(proformaInvoicesTable.id, pf.id));
       }
     } else if (payment.purchaseOrderId) {

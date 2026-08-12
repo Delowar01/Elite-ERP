@@ -37,6 +37,7 @@ export const SENSITIVE_ACTIONS = [
   // --- money ----------------------------------------------------------------------------------
   "payment.record",
   "payment.delete",
+  "payment.refund",
   "journal.post",
   // --- master data ----------------------------------------------------------------------------
   "record.delete",
@@ -150,6 +151,11 @@ const POLICY: Record<SensitiveActionKind, PolicyEntry> = {
     verb: "Delete Payment",
     consequence: "The payment will be removed and its ledger posting reversed.",
     irreversible: true,
+  },
+  "payment.refund": {
+    severity: "financial",
+    verb: "Refund Advance",
+    consequence: "The advance will be returned from the bank account and the customer advance liability released.",
   },
   "journal.post": {
     severity: "financial",

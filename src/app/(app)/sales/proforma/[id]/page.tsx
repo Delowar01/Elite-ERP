@@ -85,6 +85,9 @@ export default async function ProformaDetailPage({ params }: { params: Promise<{
   const balanceDue = Number(pf.total) - paidAmount;
   const showPayments = paidAmount > 0 || pf.status === "sent";
   const canDeletePayments = (session.role === "owner" || session.role === "admin") && pf.convertedInvoiceId == null;
+  // Refunds stay possible AFTER conversion: a §10 excess advance (left unapplied by the cap) lives
+  // on a converted proforma, and refunding it is the way that liability is released.
+  const canRefundAdvances = session.role === "owner" || session.role === "admin";
 
   const relNodes: { label: string; sub?: string }[] = [];
   if (sourceQuotation) relNodes.push({ label: "Quotation", sub: sourceQuotation.quotationNumber });
@@ -193,7 +196,7 @@ export default async function ProformaDetailPage({ params }: { params: Promise<{
         />
       </div>
 
-      {showPayments && <PaymentHistory locale={locale} orgId={session.orgId} source={{ type: "proforma", id: pf.id }} canDelete={canDeletePayments} />}
+      {showPayments && <PaymentHistory locale={locale} orgId={session.orgId} source={{ type: "proforma", id: pf.id }} canDelete={canDeletePayments} canRefund={canRefundAdvances} />}
 
       <BankAccountBlocks locale={locale} accounts={pf.bankAccounts} className="mt-5" />
 

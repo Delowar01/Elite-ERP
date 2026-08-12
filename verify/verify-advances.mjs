@@ -43,12 +43,22 @@
  *  - **H. AR reconciliation**: GL 1100 equals the invoice subledger Σ(baseTotal − basePaidAmount),
  *    WITH a seeded-divergence control proving the check can fail.
  *
+ * Commit 5 scope (case F — refunds: accounting layer + the payment-history Refund button):
+ *  - **F. refund posts Dr 2300 / Cr Bank at the advance's CARRIED value** — never AR, never
+ *    revenue, no FX line (the liability leaves at exactly what it was booked at). Happy paths
+ *    through the real Refund button + confirmation; server-side refusals via Next-Action replay
+ *    with the genuine owner cookie (the UI guard is button absence, which proves nothing).
+ *  - Double refund and refunding an APPLIED advance are refused; the §10 excess refunds cleanly
+ *    (2300 to zero); a fully-refunded proforma converts to a plain draft; deleting a refunded
+ *    receipt is refused while deleting the refund itself restores the advance.
+ *
  * Mutation-proofed (per the review instruction): reverting the credit to 1100 must FAIL here
  * naming the wrong account — the suite asserts the new rule, it does not merely tolerate it.
  * Commit 3's mutation: suppressing the conversion-path posting must FAIL case D naming the
  * missing revenue. Commit 4's mutations: suppressing the application journals must FAIL C/D/E/H;
  * re-converting the closing application instead of deriving it must FAIL G naming both figures.
  */
+import { readFile } from "fs/promises";
 import { chromium } from "playwright";
 import { Client } from "pg";
 import { assertFreshBuild } from "./assert-fresh-build.mjs";
@@ -439,6 +449,139 @@ check("…and nothing was deleted: payment, receipt entry and application entry 
     && (await applicationLines(ePays[0].id)).length === 2);
 await dialogs().last().getByRole("button", { name: /^Cancel$/ }).click();
 await page.waitForTimeout(300);
+
+// ================= F. refund of an unused advance: Dr 2300 / Cr Bank, never AR, never revenue =================
+// Happy paths run through the REAL UI (the payment-history Refund button + "Refund Advance"
+// confirmation); the server-side refusals are exercised through Next-Action replay with the
+// genuine owner cookie — the same protocol the staff-replay suite uses — because the UI's guard
+// is button absence, and absence proves nothing about the server.
+const refundViaUi = async (pfId) => {
+  await page.goto(`${BASE}/sales/proforma/${pfId}`, { waitUntil: "networkidle" });
+  await page.getByLabel("Refund").first().click();
+  await page.waitForTimeout(400);
+  await dialogs().last().getByRole("button", { name: /^Refund Advance$/ }).click();
+  await page.waitForTimeout(1500);
+};
+const manifest = JSON.parse(await readFile(".next/server/server-reference-manifest.json", "utf8"));
+const idFor = (name) => {
+  for (const [id, entry] of Object.entries(manifest.node)) {
+    for (const w of Object.values(entry.workers ?? {})) {
+      if (w.exportedName === name) return id;
+    }
+  }
+  return null;
+};
+const refundActionId = idFor("refundAdvanceAction");
+check("found the Next-Action id for refundAdvanceAction", !!refundActionId, String(refundActionId));
+const cookieHeader = (await ctx.cookies()).map((c) => `${c.name}=${c.value}`).join("; ");
+const refund = async (args) => {
+  const res = await fetch(`${BASE}/finance/payments`, {
+    method: "POST",
+    headers: { "Next-Action": refundActionId, "Content-Type": "text/plain;charset=UTF-8", Cookie: cookieHeader },
+    body: JSON.stringify(args),
+    redirect: "manual",
+  });
+  return { status: res.status, body: (await res.text()).replaceAll("<!-- -->", "") };
+};
+const refundRowFor = async (receiptId) => (await db.query(
+  `select id, kind, direction, amount::text, currency, base_amount::text, refunds_payment_id
+     from payments where org_id=$1 and refunds_payment_id=$2`, [org, receiptId])).rows;
+const paymentEntryLines = async (paymentId) => (await db.query(
+  `select l.account_id, l.debit::text, l.credit::text from journal_lines l
+     join journal_entries e on e.id = l.journal_entry_id
+    where e.org_id=$1 and e.source_type='payment' and e.source_id=$2 order by l.id`, [org, paymentId])).rows;
+const revCrTotal = async () => num((await accountLines(REV)).cr);
+
+const pfF = await mkProforma({ currency: null, total: "3000.00" });
+await recordPayment(`${BASE}/sales/proforma/${pfF}`, 3000);
+const fReceipt = (await db.query("select id from payments where org_id=$1 and proforma_invoice_id=$2", [org, pfF])).rows[0].id;
+check("F fixture: 2300 now carries the excess 2,000 + the new 3,000 advance", (await advNet()) === 5000000);
+const revBeforeF = await revCrTotal();
+await balanced("before the refund");
+await refundViaUi(pfF);
+const fRefunds = await refundRowFor(fReceipt);
+check("CASE F: the refund row exists — kind='advance_refund', direction out, linked by refundsPaymentId",
+  fRefunds.length === 1 && fRefunds[0]?.kind === "advance_refund" && fRefunds[0]?.direction === "out"
+    && num(fRefunds[0]?.amount) === 3000000, JSON.stringify(fRefunds));
+const fLines = fRefunds.length ? await paymentEntryLines(fRefunds[0].id) : [];
+check("CASE F: Dr 2300 Customer Advances 3,000 / Cr Bank 3,000 — two lines, nothing else",
+  fLines.length === 2 && num(fLines.find((l) => l.account_id === ADV)?.debit) === 3000000
+    && num(fLines.find((l) => l.account_id === bank.gl_account_id)?.credit) === 3000000, JSON.stringify(fLines));
+check("CASE F: the refund touches NEITHER AR nor revenue",
+  fLines.every((l) => l.account_id !== AR && l.account_id !== REV) && (await revCrTotal()) === revBeforeF);
+check("CASE F: the liability is released (2300 back to the 2,000 excess only)", (await advNet()) === 2000000);
+const pfFAfter = (await db.query("select paid_amount, base_paid_amount from proforma_invoices where id=$1", [pfF])).rows[0];
+check("CASE F: the proforma's paid figures release the refunded advance (0 / 0)",
+  num(pfFAfter.paid_amount) === 0 && num(pfFAfter.base_paid_amount) === 0, JSON.stringify(pfFAfter));
+await balanced("after the refund");
+
+// double refund is structurally impossible; applied advances refuse refund. UI-side the guard is
+// button absence, so the SERVER guard is what replay attacks here.
+check("the refunded receipt no longer offers a Refund button",
+  (await page.goto(`${BASE}/sales/proforma/${pfF}`, { waitUntil: "networkidle" }), await page.getByLabel("Refund").count()) === 0);
+const r2 = await refund([fReceipt]);
+check("a second refund of the same receipt is refused server-side, naming the reason",
+  /already been refunded/.test(r2.body) && (await refundRowFor(fReceipt)).length === 1, r2.body.slice(0, 200));
+const r3 = await refund([dPayId]);
+check("refunding an APPLIED advance is refused server-side — settled history stays settled",
+  /has been applied/.test(r3.body) && (await refundRowFor(dPayId)).length === 0, r3.body.slice(0, 200));
+
+// the §10 excess from case E is exactly what refunds are FOR — refundable through the UI even
+// though the proforma is CONVERTED (read-only history, no delete): the excess is live liability.
+await balanced("before refunding the excess advance");
+await refundViaUi(pfE);
+const eRefund = await refundRowFor(ePays[1].id);
+const eRefLines = eRefund.length ? await paymentEntryLines(eRefund[0].id) : [];
+check("the case-E excess refunds cleanly: Dr 2300 2,000 / Cr Bank 2,000",
+  eRefLines.length === 2 && num(eRefLines.find((l) => l.account_id === ADV)?.debit) === 2000000
+    && num(eRefLines.find((l) => l.account_id === bank.gl_account_id)?.credit) === 2000000, JSON.stringify(eRefLines));
+check("…and 2300 nets to ZERO — every advance is now applied or refunded", (await advNet()) === 0);
+await balanced("after refunding the excess advance");
+
+// a FOREIGN refund extinguishes the liability at its CARRIED value — no FX line
+const pfFx = await mkProforma({ currency: "USD", total: "200.00" });
+await recordPayment(`${BASE}/sales/proforma/${pfFx}`, 200); // carried at 4.71 → 942.00
+const fxReceipt = (await db.query("select id, base_amount::text from payments where org_id=$1 and proforma_invoice_id=$2", [org, pfFx])).rows[0];
+check("foreign refund fixture: USD 200 advance carried at 4.71 = 942.00", num(fxReceipt.base_amount) === 942000, JSON.stringify(fxReceipt));
+await refundViaUi(pfFx);
+const fxRefund = await refundRowFor(fxReceipt.id);
+const fxLines2 = fxRefund.length ? await paymentEntryLines(fxRefund[0].id) : [];
+check("foreign refund: Dr 2300 942.00 / Cr Bank 942.00 at the CARRIED value — two lines, NO FX line",
+  fxLines2.length === 2 && num(fxLines2.find((l) => l.account_id === ADV)?.debit) === 942000
+    && num(fxLines2.find((l) => l.account_id === bank.gl_account_id)?.credit) === 942000
+    && fxLines2.every((l) => l.account_id !== FX), JSON.stringify(fxLines2));
+await balanced("after the foreign refund");
+
+// a fully-refunded proforma converts to a plain DRAFT — refunded value is not transferable
+const invF = await convertViaUi(pfF);
+const fInv = (await db.query("select status, paid_amount::text from sales_invoices where id=$1", [invF])).rows[0];
+check("converting a fully-refunded proforma yields a DRAFT (paid 0) — the refunded pair transfers nothing",
+  fInv.status === "draft" && num(fInv.paid_amount) === 0, JSON.stringify(fInv));
+check("…the receipt and its refund both keep salesInvoiceId null",
+  (await db.query("select count(*)::int n from payments where org_id=$1 and proforma_invoice_id=$2 and sales_invoice_id is not null", [org, pfF])).rows[0].n === 0);
+check("…and no journal posted at conversion", (await invoiceEntry(invF)).length === 0);
+
+// deleting a REFUNDED receipt is refused; deleting the refund restores the advance
+await page.goto(`${BASE}/sales/proforma/${pfFx}`, { waitUntil: "networkidle" });
+// History orders by date desc, id desc: row 0 is the refund, row 1 the receipt.
+await page.getByLabel("Delete").nth(1).click();
+await page.waitForTimeout(400);
+await dialogs().last().getByRole("button", { name: /^Delete Payment$/ }).click();
+await page.waitForTimeout(1200);
+check("deleting a REFUNDED receipt is refused — delete the refund first",
+  (await dialogs().last().getByText(/Delete the refund first/).count()) >= 1
+    && (await db.query("select count(*)::int n from payments where id=$1", [fxReceipt.id])).rows[0].n === 1);
+await dialogs().last().getByRole("button", { name: /^Cancel$/ }).click();
+await page.waitForTimeout(400);
+await page.getByLabel("Delete").first().click();
+await page.waitForTimeout(400);
+await dialogs().last().getByRole("button", { name: /^Delete Payment$/ }).click();
+await page.waitForTimeout(1200);
+const pfFxAfter = (await db.query("select paid_amount, base_paid_amount from proforma_invoices where id=$1", [pfFx])).rows[0];
+check("deleting the refund RESTORES the advance: refund journal gone, 2300 back to 942, proforma re-paid 200/942.00",
+  (await refundRowFor(fxReceipt.id)).length === 0 && (await advNet()) === 942000
+    && num(pfFxAfter.paid_amount) === 200000 && num(pfFxAfter.base_paid_amount) === 942000, JSON.stringify(pfFxAfter));
+await balanced("after deleting the refund");
 
 // ================= H. AR reconciliation: GL 1100 = invoice subledger, with a divergence control =================
 const gl1100 = async () => Number((await db.query(

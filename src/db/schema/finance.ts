@@ -1,4 +1,4 @@
-import { pgTable, serial, integer, text, numeric, date, boolean, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, serial, integer, text, numeric, date, boolean, timestamp, type AnyPgColumn } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { orgsTable } from "./orgs";
@@ -79,6 +79,12 @@ export const paymentsTable = pgTable("payments", {
    * those fields into ambiguity the moment refunds exist.
    */
   kind: text("kind"),
+  /**
+   * For kind='advance_refund' rows only: the advance_receipt payment this refund returns. The
+   * link makes "already refunded" a stored fact rather than an inference — an advance receipt is
+   * AVAILABLE iff unapplied (salesInvoiceId null) and unrefunded (no refund row referencing it).
+   */
+  refundsPaymentId: integer("refunds_payment_id").references((): AnyPgColumn => paymentsTable.id),
   paymentDate: date("payment_date").notNull(),
   method: text("method"), // cash | bank_transfer | card | cheque
   reference: text("reference"),

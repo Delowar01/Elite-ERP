@@ -697,6 +697,13 @@ const DICT: Record<string, string> = {
   "Delete this payment? Its ledger posting will be reversed.": "حذف هذه الدفعة؟ سيتم عكس قيدها في دفتر الأستاذ.",
   "Payment deleted.": "تم حذف الدفعة.",
 
+  // ---- Customer advances: refunds ----
+  "Refund": "رد المبلغ",
+  "Refund Advance": "رد الدفعة المقدَّمة",
+  "The advance will be returned from the bank account and the customer advance liability released.":
+    "سيُعاد مبلغ الدفعة المقدَّمة من الحساب البنكي ويُخفَّض التزام دفعات العملاء المقدَّمة.",
+  "Advance refunded.": "تم رد الدفعة المقدَّمة.",
+
   // ---- Color Theme (Issue #16) ----
   "Auto": "تلقائي",
   "Background": "الخلفية",

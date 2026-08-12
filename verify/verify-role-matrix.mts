@@ -83,6 +83,9 @@ for (const [label, fn] of [["client", "permanentlyDeleteClientAction"], ["vendor
 const delPay = guards.find((g) => g.fn === "deletePaymentAction");
 check("declared: delete a payment is owner+admin — guard agrees", !!delPay && owns(delPay, ["owner", "admin"]), delPay ? delPay.roles.join("+") : "no guard");
 
+const refundAdv = guards.find((g) => g.fn === "refundAdvanceAction");
+check("declared: refund a customer advance is owner+admin — guard agrees", !!refundAdv && owns(refundAdv, ["owner", "admin"]), refundAdv ? refundAdv.roles.join("+") : "no guard");
+
 for (const fn of ["approveLeaveAction", "rejectLeaveAction"]) {
   const g = guards.find((x) => x.fn === fn);
   check(`declared: ${fn} is owner+admin — guard agrees`, !!g && owns(g, ["owner", "admin"]), g ? g.roles.join("+") : "no guard");
@@ -106,7 +109,7 @@ for (const fn of ["updateOrgContactAction", "saveDocumentSequenceAction", "updat
 // Anything the matrix does not account for is drift and must be declared before this passes.
 const DECLARED_FNS = new Set([
   "permanentlyDeleteClientAction", "permanentlyDeleteVendorAction", "permanentlyDeleteProductAction",
-  "deletePaymentAction", "approveLeaveAction", "rejectLeaveAction",
+  "deletePaymentAction", "refundAdvanceAction", "approveLeaveAction", "rejectLeaveAction",
   "updateOrgContactAction", "saveDocumentSequenceAction", "updateValidityDaysAction",
   // Dismissing the one-time base-currency notice writes an org-level column, and only owners and
   // admins can change the currency it concerns — so the notice is shown to nobody else, and this

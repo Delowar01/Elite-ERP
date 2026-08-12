@@ -204,7 +204,11 @@ export async function convertProformaToInvoiceAction(proformaId: number): Promis
   const items = await db.select().from(proformaInvoiceItemsTable).where(eq(proformaInvoiceItemsTable.proformaInvoiceId, proformaId));
 
   // Payments recorded against the proforma, to be transferred to the new invoice (Issue #14).
-  const proformaPayments = await db.select().from(paymentsTable).where(and(eq(paymentsTable.orgId, session.orgId), eq(paymentsTable.proformaInvoiceId, proformaId)));
+  // A refunded advance is NOT transferable value — the cash went back — so both halves of that
+  // pair (the refund row and the receipt it returned) are excluded from the applicable set.
+  const allProformaPayments = await db.select().from(paymentsTable).where(and(eq(paymentsTable.orgId, session.orgId), eq(paymentsTable.proformaInvoiceId, proformaId)));
+  const refundedIds = new Set(allProformaPayments.filter((p) => p.kind === "advance_refund" && p.refundsPaymentId !== null).map((p) => p.refundsPaymentId));
+  const proformaPayments = allProformaPayments.filter((p) => p.kind !== "advance_refund" && !refundedIds.has(p.id));
   // §10 cap, in the DOCUMENT's currency: advances apply to the new invoice only up to its total,
   // in the order they were received, WHOLE payments only — one application per payment is what
   // lets each application carry its own advance's stored base figure (the per-payment FX shape).
