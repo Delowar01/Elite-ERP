@@ -18,7 +18,7 @@
     "verify:import": "tsx --env-file-if-exists=.env --conditions=react-server verify/verify-import.mts",
     "verify:exchange-rates": "tsx --env-file-if-exists=.env --conditions=react-server verify/verify-exchange-rates.mts",
     "verify:registration-currency": "tsx --env-file-if-exists=.env --conditions=react-server verify/verify-registration-currency.mts",
-    "verify:server": "npm run verify:statements && npm run verify:project-costing && npm run verify:docs-import && npm run verify:client-import && npm run verify:import && npm run verify:exchange-rates && npm run verify:registration-currency && npm run verify:money-round-trip && npm run verify:base-backfill && npm run verify:rate-fetch && npm run verify:fx-reporting",
+    "verify:server": "npm run verify:statements && npm run verify:project-costing && npm run verify:docs-import && npm run verify:client-import && npm run verify:import && npm run verify:exchange-rates && npm run verify:registration-currency && npm run verify:money-round-trip && npm run verify:base-backfill && npm run verify:rate-fetch && npm run verify:fx-reporting && npm run verify:advances-audit",
     "verify:role-matrix": "tsx --env-file-if-exists=.env --conditions=react-server verify/verify-role-matrix.mts",
     "verify:confirm-policy": "tsx --env-file-if-exists=.env --conditions=react-server verify/verify-confirm-policy.mts",
     "verify:dirty-form": "tsx --env-file-if-exists=.env --conditions=react-server verify/verify-dirty-form.mts",
@@ -34,6 +34,7 @@
     "backfill:base-amounts": "tsx --env-file-if-exists=.env scripts/backfill-base-amounts.ts",
     "verify:rate-fetch": "tsx --env-file-if-exists=.env --conditions=react-server verify/verify-rate-fetch.mts",
     "verify:fx-reporting": "tsx --env-file-if-exists=.env --conditions=react-server verify/verify-fx-reporting.mts",
+    "verify:advances-audit": "tsx --env-file-if-exists=.env --conditions=react-server verify/verify-advances-audit.mts",
     "smoke:rates": "tsx --conditions=react-server scripts/smoke-rates.ts"
   },
   "dependencies": {

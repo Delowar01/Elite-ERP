@@ -145,56 +145,66 @@ and `verify-proforma-payments` all click through dialogs on fixed timeouts.
 
 ---
 
-## Customer advances post to Accounts Receivable, and the subledger cannot be reconciled
+## Customer advances — RESOLVED, except the Saudi advance-VAT question (still open)
 
-**Status:** open, blocked on an accountant. **Sequenced between FX-6 and FX-7** — deliberately not
-part of FX-7. Do not fold it in.
+**Status:** the accounting-placement defect and the conversion revenue bug are **fixed and
+verified** (the seven "Advances (n/7)" commits). **One thing remains deliberately unresolved: the
+Saudi VAT treatment of advances — see below. Do not treat it as solved.**
 
-Recording a payment against a proforma invoice posts **`Dr 1000 Cash / Cr 1100 Accounts
-Receivable`** (`finance/payments/actions.ts`, the `sourceType === "proforma"` branch). The entry
-balances, and the mechanism works correctly — this was confirmed by driving the flow by hand. The
-problem is which account it lands in.
+**What was implemented:**
 
-**Why AR is the wrong account.** A proforma never created a receivable: no invoice was posted, so
-nothing ever debited AR for that customer. Crediting AR on the advance therefore drives that
-customer's receivable **negative** for something that was never a receivable. A customer advance is
-a liability — the business owes goods, not money — and conventionally belongs in Customer Deposits
-or Unearned Revenue.
-
-**The reconciliation gap, which is the proof rather than the opinion.** `getReceivableAging`
-(`src/lib/finance-reports.ts`) reads **`sales_invoices` only** — proformas appear in it at no
-status. So GL account 1100 and the AR aging subledger disagree by the total of all proforma
-advances, and nothing in the app can explain the difference. That is a subledger that cannot be
-reconciled to its control account, which is a defect rather than a stylistic preference.
-
-**Two things to establish before anyone writes code:**
-
-1. **Get it confirmed by an accountant.** The account structure and the reclassification-on-
-   conversion mechanics deserve a professional eye; nobody on this side is one.
-2. **Ask about the Saudi VAT treatment of advance payments, explicitly.** Receiving an advance may
-   trigger a tax point in KSA — meaning output VAT could be due **on receipt**, not on the later
-   invoice. If so, a proforma advance is not only a liability posting but also needs a VAT entry,
-   which changes the design materially. Ask the question directly rather than deriving an answer
-   from this codebase.
-
-**Why it sits between FX-6 and FX-7 rather than inside FX-7:**
-
-- Fixing account placement *after* payments store base amounts means re-posting entries that carry
-  conversion data. Getting the account right first, then adding currency to a correct posting, is
-  cheaper.
-- FX-7 is a currency question with a clean answer once decided. This is an accounting-design
-  question with a VAT dependency and an outside party in the loop. Bundling them makes the currency
-  work wait on an accountant.
-- Production has essentially no data — one posted journal entry and no known proforma advances. The
-  migration cost is zero today and non-zero the moment a customer records an advance. Same
-  free-hand argument as the base-currency lock: spend it while it is free.
-
-**Scope when picked up:** the account (likely a new `2300 Customer Advances` liability), the
-reclassification when a proforma converts to an invoice — the conversion-transfer path in
-`recordPaymentAction` moves with it — whatever the VAT answer requires, and a decision about
-whether advances should appear in any aging report at all.
+- **`2300 Customer Advances`** (liability, credit-normal, system) — «دفعات مقدَّمة من العملاء» —
+  in `DEFAULT_CHART_OF_ACCOUNTS` for new orgs and seeded into existing ones by
+  `scripts/migrations/2026-08-12-customer-advances-account.ts` (idempotent; never touches a
+  user-created 2300).
+- **Advance receipts post `Dr Bank / Cr 2300`** — never AR (a proforma never created a
+  receivable), never revenue (cash receipt is not revenue recognition). `payments.kind`
+  discriminates `advance_receipt` / `advance_refund` from ordinary payments.
+- **The conversion revenue bug is fixed:** an invoice born partially_paid/paid from a proforma
+  with advances never passed through Send, so its revenue/AR/VAT never posted and its stock never
+  decremented. Conversion now posts the shared invoice journal (`prepareInvoicePosting`)
+  transactionally for any invoice born non-draft, idempotent by the `(sales_invoice, id)` journal
+  identity; a foreign proforma with no usable rate refuses to convert (FX-6 rule, one-click fetch
+  seam). Advance-free conversions still post at Send — one posting moment per path.
+- **Advance application:** one journal per applied payment, `(advance_application, payment.id)` —
+  `Dr 2300` at the advance's carried base value, `Cr 1100` at the invoice's booked rate, the
+  difference derived to `4900` (FX-7's construction; no second FX model), the closing application
+  derived so a fully-advanced invoice lands at `basePaidAmount === baseTotal` exactly. §10 cap in
+  document currency; a payment that does not fit stays unapplied (`salesInvoiceId` null) as the
+  customer's available advance.
+- **Refunds:** `refundAdvanceAction` (owner/admin) posts `Dr 2300 / Cr Bank` at the carried value
+  for one available receipt in full, linked by `payments.refundsPaymentId` (double-refund
+  structurally impossible).
+- **Statements** read 1100 AND 2300 with one sign rule (the balance column is the customer's net
+  position), distinct line types (advance receipt / application / refund) and an
+  "Advance available" figure; AR Aging remains invoice-only, so advances can never show as
+  negative receivables. Balance Sheet / P&L pick 2300 up through the normal account machinery.
+- **Historical audit** (`scripts/migrations/2026-08-12-customer-advances-audit.ts`): read-only by
+  default, reports **two populations separately** — (A) converted invoices missing their revenue
+  journal, (B) unapplied advance receipts credited to 1100 that belong in 2300 — and `--apply`
+  repairs only rows with a provable, unambiguous journal shape (everything else to a printed
+  manual-review list; idempotent, transactional, never duplicates cash/revenue/VAT, never touches
+  stock). **Run the dry run against production before and after deploying**, and run the 2300 seed
+  migration first.
 
 ---
+
+### STILL OPEN — Saudi advance VAT (blocked on an accountant, deliberately unresolved)
+
+Receiving an advance may trigger a tax point in KSA, meaning output VAT could be due **on
+receipt**, not on the later invoice. **Nothing was guessed:** advances post NO VAT anywhere. The
+country-profile capability `advance_vat_on_receipt` exists as a documented stub and is **OFF for
+every profile including Saudi Arabia** (pinned by `verify-registration-currency`); the future
+posting's location is documented in `recordPaymentAction`'s proforma branch (a `Cr 2100` line
+carved out of the receipt entry, gated by `profileHasFeature`).
+
+**The two questions for the accountant, verbatim:**
+
+1. Does receiving a customer advance create the VAT tax point in Saudi Arabia?
+2. If yes, must a VAT-bearing tax document be issued at the time the advance is received?
+
+Until both are answered and an implementation is deliberately built behind the capability, the
+code must keep behaving exactly as the non-VAT model — and does.
 
 ## Two Saudi-shaped defaults in `seedOrgDefaults` (pre-existing, not fallout)
 
