@@ -140,12 +140,18 @@ export async function recordPaymentAction(formData: FormData): Promise<ActionRes
     const balance = Number(pf.total) - Number(pf.paidAmount);
     if (amount > balance + eps) return { error: "Amount cannot exceed the remaining balance." };
 
-    const ar = byCode.get("1100");
-    if (!ar) return { error: "Chart of accounts is missing a required system account (1100)." };
+    // CUSTOMER ADVANCES: money against a proforma is a LIABILITY — the business owes goods, not
+    // cash back. It credits 2300 Customer Advances, never 1100 (a proforma never created a
+    // receivable to credit; the old Cr-AR posting drove customer AR negative and broke the
+    // control-account/subledger reconciliation) and never revenue (cash receipt is not revenue
+    // recognition). The advance is applied Dr 2300 / Cr 1100 when the proforma converts and the
+    // real invoice posts.
+    const advances = byCode.get("2300");
+    if (!advances) return { error: "Chart of accounts is missing a required system account (2300 Customer Advances)." };
 
     // FX-7: a proforma has no booked rate (it never posts), so there is nothing to clear AGAINST —
     // the advance converts BOTH lines at the payment-date rate. Internally consistent, no FX line;
-    // the settlement mismatch on conversion belongs to the filed proforma-accounting question.
+    // any realized difference materialises at application time, against the invoice's booked rate.
     const captured = await capturePaymentBase({
       orgId: session.orgId, baseCurrency: session.orgCurrency,
       docCurrency: pf.currency, amount, paymentDate, baseReceived,
@@ -172,6 +178,7 @@ export async function recordPaymentAction(formData: FormData): Promise<ActionRes
           direction: "in",
           bankAccountId,
           amount: roundMoney(amount, docCurrency),
+          kind: "advance_receipt",
           currency: captured.currency,
           exchangeRate: captured.exchangeRate,
           baseAmount: captured.baseAmount,
@@ -192,7 +199,7 @@ export async function recordPaymentAction(formData: FormData): Promise<ActionRes
         .values({
           orgId: session.orgId,
           entryDate: paymentDate,
-          memo: `Payment received for proforma ${pf.proformaNumber}`,
+          memo: `Advance received for proforma ${pf.proformaNumber}`,
           sourceType: "payment",
           sourceId: payment.id,
           createdById: session.userId,
@@ -201,8 +208,9 @@ export async function recordPaymentAction(formData: FormData): Promise<ActionRes
 
       await tx.insert(journalLinesTable).values([
         // Both lines at the payment-date rate — the ledger holds base currency only (FX-7).
+        // Dr Bank / Cr 2300 Customer Advances: a liability received, not a receivable settled.
         { journalEntryId: entry.id, accountId: bankAccount.glAccountId, debit: captured.baseAmount, credit: "0" },
-        { journalEntryId: entry.id, accountId: ar.id, debit: "0", credit: captured.baseAmount },
+        { journalEntryId: entry.id, accountId: advances.id, debit: "0", credit: captured.baseAmount },
       ]);
 
       await tx

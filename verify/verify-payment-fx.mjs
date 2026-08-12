@@ -67,7 +67,7 @@ const cust = (await db.query("insert into customers (org_id,name) values ($1,'FX
 const vend = (await db.query("insert into vendors (org_id,name) values ($1,'FX Payee') returning id", [org])).rows[0].id;
 const bank = (await db.query("select id, gl_account_id, name from bank_accounts where org_id=$1 limit 1", [org])).rows[0];
 const acct = async (code) => (await db.query("select id from accounts where org_id=$1 and code=$2", [org, code])).rows[0]?.id;
-const AR = await acct("1100"), AP = await acct("2000"), FX = await acct("4900");
+const AR = await acct("1100"), AP = await acct("2000"), FX = await acct("4900"), ADV = await acct("2300");
 check("the org has the 4900 Exchange Gain/Loss system account seeded", !!FX, String(FX));
 
 const today = new Date().toISOString().slice(0, 10);
@@ -220,7 +220,8 @@ const fPay = (await paymentRow("proforma_invoice_id", pf))[0];
 check("advance: applied figure IS the received figure (no booked rate exists)",
   fPay && num(fPay.base_amount) === 810000 && num(fPay.base_applied_amount) === 810000 && fPay.currency === "EUR", JSON.stringify(fPay));
 const fLines = await linesOf(fPay.id);
-check("…two lines only — no FX line on an advance", fLines.length === 2 && num(line(fLines, bank.gl_account_id)?.debit) === 810000 && num(line(fLines, AR)?.credit) === 810000, JSON.stringify(fLines));
+// Advances model: the receipt credits 2300 Customer Advances, never AR.
+check("…two lines only — no FX line on an advance, credited to 2300", fLines.length === 2 && num(line(fLines, bank.gl_account_id)?.debit) === 810000 && num(line(fLines, ADV)?.credit) === 810000, JSON.stringify(fLines));
 check("proforma basePaidAmount accumulates the payment-date base value",
   num((await db.query("select base_paid_amount from proforma_invoices where id=$1", [pf])).rows[0].base_paid_amount) === 810000);
 await balanced("after proforma advance");

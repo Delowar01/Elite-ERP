@@ -71,6 +71,14 @@ export const paymentsTable = pgTable("payments", {
    * accepted untouched, or "derived-from-received" when the user typed the base amount themselves.
    */
   rateSource: text("rate_source"),
+  /**
+   * What this payment IS, accounting-wise: null = ordinary invoice/PO payment (every pre-advances
+   * row), "advance_receipt" = customer money against a proforma (credits 2300, never AR),
+   * "advance_refund" = returning unapplied advance (debits 2300, credits Bank). An explicit
+   * discriminator rather than inferring from direction+proformaInvoiceId, which would overload
+   * those fields into ambiguity the moment refunds exist.
+   */
+  kind: text("kind"),
   paymentDate: date("payment_date").notNull(),
   method: text("method"), // cash | bank_transfer | card | cheque
   reference: text("reference"),

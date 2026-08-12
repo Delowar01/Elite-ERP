@@ -63,6 +63,22 @@ const {rows:pfpaid}=await pool.query("select paid_amount from proforma_invoices 
 ok("Proforma paidAmount = 700", Number(pfpaid[0].paid_amount)===700);
 const {rows:je}=await pool.query("select count(*)::int c from journal_entries where source_type='payment' and source_id in (select id from payments where proforma_invoice_id=$1)",[A]);
 ok("One journal entry per payment (2 total)", je[0].c===2);
+// Customer-advances model: an advance receipt CREDITS 2300 Customer Advances, never 1100 AR (a
+// proforma never created a receivable to credit). Asserted at the ACCOUNT level so this suite
+// enforces the new rule rather than merely tolerating it — a posting reverted to Cr 1100 fails
+// here naming the wrong account.
+const {rows:advCr}=await pool.query(
+  `select a.code, coalesce(sum(l.credit),0)::numeric cr from journal_lines l
+     join journal_entries e on e.id=l.journal_entry_id
+     join accounts a on a.id=l.account_id
+    where e.source_type='payment'
+      and e.source_id in (select id from payments where proforma_invoice_id=$1)
+      and l.credit > 0
+    group by a.code order by a.code`,[A]);
+ok(`Advance receipts credit 2300 Customer Advances ONLY (found: ${advCr.map(r=>`${r.code}=${r.cr}`).join(", ")||"none"})`,
+  advCr.length===1 && advCr[0].code==="2300" && Number(advCr[0].cr)===700);
+const {rows:advKind}=await pool.query("select count(*)::int c from payments where proforma_invoice_id=$1 and kind='advance_receipt'",[A]);
+ok("Both payments are tagged kind='advance_receipt'", advKind[0].c===2);
 // refresh → history persists
 await p.goto(`${BASE}/sales/proforma/${A}`,{waitUntil:"networkidle"}); await p.waitForTimeout(400);
 ok("Payment history visible after refresh (2 rows)", (await p.locator("text=Payment History").count())>=1 && (await p.locator("table tr, table tbody tr").filter({hasText:bankName}).count())>=2);
