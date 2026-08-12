@@ -4,8 +4,8 @@ import { revalidatePath } from "next/cache";
 import { sanitizeIfHtml } from "@/lib/sanitize-html";
 import { normalizeDocumentTerms, type DocumentTerm } from "../_shared/document-terms";
 import { redirect } from "next/navigation";
-import { and, eq } from "drizzle-orm";
-import { db, customersTable, proformaInvoicesTable, proformaInvoiceItemsTable, salesInvoicesTable, salesInvoiceItemsTable, deliveryChallansTable, deliveryChallanItemsTable, paymentsTable } from "@/db";
+import { and, eq, inArray } from "drizzle-orm";
+import { db, customersTable, proformaInvoicesTable, proformaInvoiceItemsTable, salesInvoicesTable, salesInvoiceItemsTable, deliveryChallansTable, deliveryChallanItemsTable, paymentsTable, accountsTable, journalEntriesTable, journalLinesTable } from "@/db";
 import { requireSession } from "@/lib/session";
 import { logActivity } from "@/lib/activity";
 import { recordAudit } from "@/lib/security/audit";
@@ -17,6 +17,7 @@ import { snapshotDocumentBankAccounts } from "@/lib/document-bank-data";
 import { snapshotSealForDoc, applySealOverride } from "@/lib/doc-seal";
 import { moneyEpsilon, normalizeDocCurrency, roundMoney } from "@/lib/currency/currencies";
 import { prepareInvoicePosting, type PreparedInvoicePosting } from "@/lib/invoice-posting";
+import { fxLine, mils } from "@/lib/payment-currency";
 
 export type ActionResult = {
   error?: string;
@@ -204,36 +205,29 @@ export async function convertProformaToInvoiceAction(proformaId: number): Promis
 
   // Payments recorded against the proforma, to be transferred to the new invoice (Issue #14).
   const proformaPayments = await db.select().from(paymentsTable).where(and(eq(paymentsTable.orgId, session.orgId), eq(paymentsTable.proformaInvoiceId, proformaId)));
-  const transferredTotal = proformaPayments.reduce((s, p) => s + Number(p.amount), 0);
-  // The final Sales Invoice total drives the remaining balance. Transferred payments may not exceed
-  // it (the payment system doesn't allow overpayments), so block conversion if they somehow would.
-  // Tolerance and rounding follow the proforma's own currency: half a fils is 0.0005, not 0.005,
-  // so the fixed half-cent both allowed a larger overpayment through and could mark a Kuwaiti
-  // invoice fully paid while four fils were still outstanding.
+  // §10 cap, in the DOCUMENT's currency: advances apply to the new invoice only up to its total,
+  // in the order they were received, WHOLE payments only — one application per payment is what
+  // lets each application carry its own advance's stored base figure (the per-payment FX shape).
+  // A payment that will not fit inside the remaining balance is NOT transferred: it keeps
+  // salesInvoiceId null and stays in 2300 as the customer's available advance (for a future
+  // invoice or a refund — which also makes "advance available" a plain query), so AR can never be
+  // over-credited. Tolerance and rounding follow the proforma's own currency: half a fils is
+  // 0.0005, not 0.005.
   const convCurrency = pf.currency ?? session.orgCurrency;
   const convEps = moneyEpsilon(convCurrency);
-  if (transferredTotal > Number(pf.total) + convEps) {
-    return { error: "Transferred payments exceed the sales invoice total. Conversion blocked." };
-  }
-  const paidStr = roundMoney(transferredTotal, convCurrency);
-  // Reflect the transferred payments' status immediately (no payments → normal draft, unchanged).
-  const invoiceStatus = transferredTotal <= convEps ? "draft" : transferredTotal >= Number(pf.total) - convEps ? "paid" : "partially_paid";
-  // FX-7: an invoice born with transferred advances never passes through send (it starts
-  // partially_paid/paid), so its basePaidAmount must be set HERE, from the transferred payments'
-  // STORED baseAppliedAmount — never a fresh conversion. Base-currency documents keep the
-  // paidAmount identity; a transferred payment without a stored base figure (pre-FX-7) poisons
-  // the sum to null, honestly unknown rather than plausibly wrong. Advance-free conversions stay
-  // null, exactly like any other draft — send initializes them.
-  let basePaidStr: string | null = null;
-  if (transferredTotal > convEps) {
-    if (!pf.currency || pf.currency.toUpperCase() === session.orgCurrency.toUpperCase()) {
-      basePaidStr = paidStr;
-    } else {
-      basePaidStr = proformaPayments.some((p) => p.baseAppliedAmount === null)
-        ? null
-        : roundMoney(proformaPayments.reduce((s, p) => s + Number(p.baseAppliedAmount), 0), session.orgCurrency);
+  const ordered = [...proformaPayments].sort((a, b) =>
+    a.paymentDate < b.paymentDate ? -1 : a.paymentDate > b.paymentDate ? 1 : a.id - b.id);
+  const applied: typeof proformaPayments = [];
+  let appliedTotal = 0;
+  for (const p of ordered) {
+    if (appliedTotal + Number(p.amount) <= Number(pf.total) + convEps) {
+      applied.push(p);
+      appliedTotal += Number(p.amount);
     }
   }
+  const paidStr = roundMoney(appliedTotal, convCurrency);
+  // Reflect the applied payments' status immediately (no payments → normal draft, unchanged).
+  const invoiceStatus = appliedTotal <= convEps ? "draft" : appliedTotal >= Number(pf.total) - convEps ? "paid" : "partially_paid";
 
   const issueDate = new Date().toISOString().slice(0, 10);
   // An invoice born non-draft (it carries transferred advances) NEVER passes through send — that
@@ -257,6 +251,64 @@ export async function convertProformaToInvoiceAction(proformaId: number): Promis
     });
     if (!prep.ok) return { error: prep.error, missingRate: prep.missingRate };
     posting = prep;
+  }
+
+  // Advance applications (§7): one journal per applied payment, keyed (advance_application,
+  // payment.id) — Dr 2300 at the advance's CARRIED base value (what 2300 was credited at receipt,
+  // the payment-date rate), Cr 1100 at the invoice's BOOKED rate × the applied amount, difference
+  // derived to 4900 — FX-7's exact construction with 2300 standing where Bank stood; the
+  // application itself moves no cash. The CLOSING application is derived (baseTotal − prior
+  // credits) so a fully-advanced invoice lands at basePaidAmount === baseTotal exactly, the same
+  // rule as invoice payments. basePaidAmount is the sum of the AR-clearing figures, so the 1100
+  // ledger and the document column agree by construction.
+  type AdvanceApplication = {
+    paymentId: number;
+    dr2300: string;
+    crAr: string;
+    fx: { accountId: number; debit: string; credit: string } | null;
+  };
+  const applications: AdvanceApplication[] = [];
+  let basePaidStr: string | null = null;
+  let advAccountId = 0;
+  let arAccountId = 0;
+  if (applied.length > 0 && posting) {
+    const accounts = await db.select().from(accountsTable).where(eq(accountsTable.orgId, session.orgId));
+    const byCode = new Map(accounts.map((a) => [a.code, a]));
+    const advances = byCode.get("2300");
+    const arAccount = byCode.get("1100");
+    if (!advances) return { error: "Chart of accounts is missing a required system account (2300 Customer Advances)." };
+    if (!arAccount) return { error: "Chart of accounts is missing a required system account (1100)." };
+    advAccountId = advances.id;
+    arAccountId = arAccount.id;
+
+    const bookedRate = Number(posting.captured.exchangeRate);
+    const fullyAdvanced = appliedTotal >= Number(pf.total) - convEps;
+    let crSumMils = 0;
+    for (const [i, p] of applied.entries()) {
+      // The advance's carried base value is its stored baseAppliedAmount (= its payment-date base;
+      // for advances the applied figure IS the received figure). A pre-FX-7 base-currency payment
+      // carries the identity; a pre-FX-7 FOREIGN payment stored no base at all, so the application
+      // cannot be constructed — an honest refusal, not a guess.
+      const isBase = !p.currency || p.currency.toUpperCase() === session.orgCurrency.toUpperCase();
+      const carried = p.baseAppliedAmount ?? (isBase ? p.amount : null);
+      if (carried === null) {
+        return { error: "A transferred advance has no stored base-currency value (it was recorded before currency capture), so it cannot be applied. Delete and re-record that payment first." };
+      }
+      const closing = fullyAdvanced && i === applied.length - 1;
+      const crAr = closing
+        ? roundMoney(Number(posting.captured.baseTotal) - crSumMils / 1000, session.orgCurrency)
+        : roundMoney(Number(p.amount) * bookedRate, session.orgCurrency);
+      crSumMils += mils(crAr);
+      const fx = fxLine({
+        baseAmount: carried, baseApplied: crAr, direction: "in",
+        baseCurrency: session.orgCurrency, fxAccountId: byCode.get("4900")?.id ?? -1,
+      });
+      if (fx && !byCode.get("4900")) {
+        return { error: "Chart of accounts is missing a required system account (4900 Exchange Gain/Loss)." };
+      }
+      applications.push({ paymentId: p.id, dr2300: carried, crAr, fx });
+    }
+    basePaidStr = roundMoney(crSumMils / 1000, session.orgCurrency);
   }
 
   const id = await db.transaction(async (tx) => {
@@ -306,14 +358,15 @@ export async function convertProformaToInvoiceAction(proformaId: number): Promis
       );
     }
 
-    // Transfer the payments: re-point each to the new invoice while keeping proformaInvoiceId as
-    // the origin reference. No new payment rows and no new journal entries are created — each
-    // payment keeps its single existing accounting posting.
-    if (proformaPayments.length > 0) {
+    // Transfer the APPLIED payments: re-point each to the new invoice while keeping
+    // proformaInvoiceId as the origin reference. No new payment rows — each keeps its single
+    // receipt posting. A §10-capped excess payment is left untouched (salesInvoiceId null): it
+    // was never applied and remains the customer's available advance.
+    if (applied.length > 0) {
       await tx
         .update(paymentsTable)
         .set({ salesInvoiceId: inv.id })
-        .where(and(eq(paymentsTable.orgId, session.orgId), eq(paymentsTable.proformaInvoiceId, proformaId)));
+        .where(and(eq(paymentsTable.orgId, session.orgId), inArray(paymentsTable.id, applied.map((p) => p.id))));
     }
 
     // Post the born-non-draft invoice inside the same transaction — invoice, items, transferred
@@ -323,6 +376,27 @@ export async function convertProformaToInvoiceAction(proformaId: number): Promis
         invoiceId: inv.id,
         memo: `Invoice ${invoiceNumber} issued (converted from proforma ${pf.proformaNumber})`,
       });
+    }
+
+    // Apply the advances (§7) — after the invoice posting, so the AR being cleared exists. The
+    // application is not cash: the money posted once, at receipt.
+    for (const app of applications) {
+      const [entry] = await tx
+        .insert(journalEntriesTable)
+        .values({
+          orgId: session.orgId,
+          entryDate: issueDate,
+          memo: `Advance applied to invoice ${invoiceNumber} (received against proforma ${pf.proformaNumber})`,
+          sourceType: "advance_application",
+          sourceId: app.paymentId,
+          createdById: session.userId,
+        })
+        .returning({ id: journalEntriesTable.id });
+      await tx.insert(journalLinesTable).values([
+        { journalEntryId: entry.id, accountId: advAccountId, debit: app.dr2300, credit: "0" },
+        { journalEntryId: entry.id, accountId: arAccountId, debit: "0", credit: app.crAr },
+        ...(app.fx ? [{ journalEntryId: entry.id, ...app.fx }] : []),
+      ]);
     }
 
     // Link the proforma to the invoice; its payment history stays visible read-only.
@@ -339,10 +413,17 @@ export async function convertProformaToInvoiceAction(proformaId: number): Promis
     entityId: id,
   });
   if (proformaPayments.length > 0) {
+    const unapplied = proformaPayments.filter((p) => !applied.some((a) => a.id === p.id));
     await recordAudit({ orgId: session.orgId, userId: session.userId, userName: session.name }, {
       action: "payment.transferred", entityType: "sales_invoice", entityId: id,
       previousValue: { proformaInvoiceId: proformaId, paymentIds: proformaPayments.map((p) => p.id) },
-      newValue: { salesInvoiceId: id, transferredTotal: paidStr },
+      newValue: {
+        salesInvoiceId: id,
+        appliedPaymentIds: applied.map((p) => p.id),
+        appliedTotal: paidStr,
+        // §10: payments the cap left behind — still the customer's available advance.
+        unappliedPaymentIds: unapplied.map((p) => p.id),
+      },
     });
   }
   revalidatePath("/sales/invoices");

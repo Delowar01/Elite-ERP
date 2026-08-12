@@ -32,6 +32,39 @@ import { roundMoney } from "@/lib/currency/currencies";
 /** `rateSource` when the user typed the received base figure and the rate was derived from it. */
 export const DERIVED_RATE_SOURCE = "derived-from-received";
 
+/** Integer thousandths — every base column is numeric(15,3), so this comparison is exact. */
+export const mils = (v: string | number) => Math.round(Number(v) * 1000);
+
+/**
+ * The realized-FX journal line, shared by every path that clears a booked figure with a payment's
+ * carried value: invoice/PO payments (Bank vs booked AR/AP) and advance applications on conversion
+ * (2300's carried payment-date value vs booked AR). `baseAmount` (what was truly carried) minus
+ * `baseApplied` (what the document is credited with, at its booked rate) is the realized
+ * gain/loss — DERIVED, never independently converted, so the entry balances by construction.
+ * Returns null when the difference is zero (same rate, or a base-currency payment).
+ *
+ * Sign: for money IN, carrying more base than booked is a gain; for money OUT, paying less base
+ * than booked is a gain. Gains CREDIT 4900 (credit-normal), losses debit it.
+ */
+export function fxLine(args: {
+  baseAmount: string;
+  baseApplied: string;
+  direction: "in" | "out";
+  baseCurrency: string;
+  fxAccountId: number;
+}): { accountId: number; debit: string; credit: string } | null {
+  const diff = mils(args.baseAmount) - mils(args.baseApplied);
+  if (diff === 0) return null;
+  const magnitude =
+    diff > 0
+      ? roundMoney(Number(args.baseAmount) - Number(args.baseApplied), args.baseCurrency)
+      : roundMoney(Number(args.baseApplied) - Number(args.baseAmount), args.baseCurrency);
+  const gain = args.direction === "in" ? diff > 0 : diff < 0;
+  return gain
+    ? { accountId: args.fxAccountId, debit: "0", credit: magnitude }
+    : { accountId: args.fxAccountId, debit: magnitude, credit: "0" };
+}
+
 export type PaymentCapture =
   | {
       ok: true;

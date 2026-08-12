@@ -15,7 +15,7 @@ import {
 } from "@/db";
 import { requireSession, requireRole } from "@/lib/session";
 import { moneyEpsilon, roundMoney } from "@/lib/currency/currencies";
-import { capturePaymentBase } from "@/lib/payment-currency";
+import { capturePaymentBase, fxLine } from "@/lib/payment-currency";
 import { resolveRate, MissingExchangeRateError } from "@/lib/exchange-rates";
 import { subtractMoney } from "@/lib/posting-currency";
 import { logActivity } from "@/lib/activity";
@@ -27,36 +27,8 @@ export type ActionResult = {
   missingRate?: { currency: string; date: string };
 };
 
-/** Integer thousandths — every base column is numeric(15,3), so this comparison is exact. */
-const mils = (v: string | number) => Math.round(Number(v) * 1000);
-
-/**
- * The realized-FX journal line, shared by the invoice and PO branches. `baseAmount` (what the bank
- * moved) minus `baseApplied` (what the document is credited with, at its booked rate) is the
- * realized gain/loss — DERIVED, never independently converted, so the 3-line entry balances by
- * construction. Returns null when the difference is zero (same rate, or a base-currency payment).
- *
- * Sign: for money IN, receiving more base than booked is a gain; for money OUT, paying less base
- * than booked is a gain. Gains CREDIT 4900 (credit-normal), losses debit it.
- */
-function fxLine(args: {
-  baseAmount: string;
-  baseApplied: string;
-  direction: "in" | "out";
-  baseCurrency: string;
-  fxAccountId: number;
-}): { accountId: number; debit: string; credit: string } | null {
-  const diff = mils(args.baseAmount) - mils(args.baseApplied);
-  if (diff === 0) return null;
-  const magnitude =
-    diff > 0
-      ? subtractMoney(args.baseAmount, args.baseApplied, args.baseCurrency)
-      : subtractMoney(args.baseApplied, args.baseAmount, args.baseCurrency);
-  const gain = args.direction === "in" ? diff > 0 : diff < 0;
-  return gain
-    ? { accountId: args.fxAccountId, debit: "0", credit: magnitude }
-    : { accountId: args.fxAccountId, debit: magnitude, credit: "0" };
-}
+// fxLine (the derived realized-FX journal line) moved to @/lib/payment-currency when advance
+// applications gained the same construction — one implementation for every clearing path.
 
 const PATH = "/finance/payments";
 
@@ -495,6 +467,16 @@ export async function deletePaymentAction(paymentId: number): Promise<ActionResu
     .from(paymentsTable)
     .where(and(eq(paymentsTable.id, paymentId), eq(paymentsTable.orgId, session.orgId)));
   if (!payment) return { error: "Payment not found." };
+
+  // An APPLIED advance is settled history: its receipt entry (Dr Bank / Cr 2300) and its
+  // application entry (Dr 2300 / Cr 1100, keyed advance_application) both stand behind a posted
+  // invoice's basePaidAmount. Deleting the receipt would orphan the application and corrupt both
+  // control accounts, so it is refused outright — corrections go through a credit note or a
+  // manual journal. Unapplied advances (still on the proforma, or left behind by the §10 cap)
+  // delete cleanly as before.
+  if (payment.kind === "advance_receipt" && payment.salesInvoiceId) {
+    return { error: "This advance has been applied to a sales invoice and can no longer be deleted. Correct it with a credit note or a manual journal instead." };
+  }
 
   const amt = Number(payment.amount);
 
