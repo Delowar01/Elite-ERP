@@ -271,12 +271,15 @@ export function StatementView({
       {/* ---------- statement ---------- */}
       {!error && statement && (
         <>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <div className={`grid grid-cols-2 gap-2 ${statement.advancesHeld > 0 ? "sm:grid-cols-5" : "sm:grid-cols-4"}`}>
             {[
               { label: "Opening balance", value: statement.opening },
               { label: "Total debit", value: statement.totalDebit },
               { label: "Total credit", value: statement.totalCredit },
               { label: "Closing balance", value: statement.closing, strong: true },
+              // Available customer credit — the 2300 balance held for this client at the period
+              // end, shown in its own tile so an advance is never read as a negative receivable.
+              ...(statement.advancesHeld > 0 ? [{ label: "Advance available", value: statement.advancesHeld }] : []),
             ].map((k) => (
               <div key={k.label} className="rounded-xl border border-line p-2.5">
                 <div className="text-[10.5px] text-ink-faint uppercase tracking-wide">{t(locale, k.label)}</div>

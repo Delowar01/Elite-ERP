@@ -5,7 +5,7 @@ import { DocumentTermsView } from "../../_shared/terms-view";
 import { SafeRichText } from "../../_shared/safe-rich-text";
 import { LineItemCell, LineDescRow } from "../../_shared/line-item-cell";
 import { Info } from "lucide-react";
-import { db, proformaInvoicesTable, proformaInvoiceItemsTable, customersTable, salesOrdersTable, quotationsTable, orgsTable, bankAccountsTable, salesInvoicesTable } from "@/db";
+import { db, proformaInvoicesTable, proformaInvoiceItemsTable, customersTable, salesOrdersTable, quotationsTable, orgsTable, bankAccountsTable, salesInvoicesTable, paymentsTable } from "@/db";
 import { PaymentHistory } from "../../../finance/_shared/payment-history";
 import { requireSession } from "@/lib/session";
 import { getLocale } from "@/lib/i18n/server";
@@ -83,6 +83,19 @@ export default async function ProformaDetailPage({ params }: { params: Promise<{
   ]);
   const paidAmount = Number(pf.paidAmount);
   const balanceDue = Number(pf.total) - paidAmount;
+  // §17 advance figures. Received is GROSS receipts (refunds do not erase that money arrived);
+  // Available is what is still the customer's to use — never applied to an invoice, never
+  // refunded. paidAmount stays the NET advance held, which is what the balance tracks.
+  const advPayments = await db
+    .select({ id: paymentsTable.id, amount: paymentsTable.amount, kind: paymentsTable.kind, salesInvoiceId: paymentsTable.salesInvoiceId, refundsPaymentId: paymentsTable.refundsPaymentId })
+    .from(paymentsTable)
+    .where(and(eq(paymentsTable.orgId, session.orgId), eq(paymentsTable.proformaInvoiceId, pf.id)));
+  const refundedIds = new Set(advPayments.filter((r) => r.kind === "advance_refund" && r.refundsPaymentId !== null).map((r) => r.refundsPaymentId));
+  const receipts = advPayments.filter((r) => r.kind === "advance_receipt");
+  const advanceReceived = receipts.reduce((sum, r) => sum + Number(r.amount), 0);
+  const advanceAvailable = receipts
+    .filter((r) => r.salesInvoiceId === null && !refundedIds.has(r.id))
+    .reduce((sum, r) => sum + Number(r.amount), 0);
   const showPayments = paidAmount > 0 || pf.status === "sent";
   const canDeletePayments = (session.role === "owner" || session.role === "admin") && pf.convertedInvoiceId == null;
   // Refunds stay possible AFTER conversion: a §10 excess advance (left unapplied by the cap) lives
@@ -192,7 +205,11 @@ export default async function ProformaDetailPage({ params }: { params: Promise<{
           taxTotal={pf.taxTotal}
           finalLabel={paidAmount > 0 ? "Balance Due" : "Total"}
           finalValue={paidAmount > 0 ? String(balanceDue) : pf.total}
-          extraRows={paidAmount > 0 ? [{ label: "Paid Amount", value: pf.paidAmount, colorClass: "text-success" }] : undefined}
+          extraRows={advanceReceived > 0 ? [
+            // §17: the proforma reads in advance terms — received, still available, balance.
+            { label: "Advance Received", value: String(advanceReceived), colorClass: "text-success" },
+            { label: "Advance Available", value: String(advanceAvailable) },
+          ] : paidAmount > 0 ? [{ label: "Paid Amount", value: pf.paidAmount, colorClass: "text-success" }] : undefined}
         />
       </div>
 

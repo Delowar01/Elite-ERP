@@ -704,6 +704,14 @@ const DICT: Record<string, string> = {
     "سيُعاد مبلغ الدفعة المقدَّمة من الحساب البنكي ويُخفَّض التزام دفعات العملاء المقدَّمة.",
   "Advance refunded.": "تم رد الدفعة المقدَّمة.",
 
+  // ---- Customer advances: statements + document summaries ----
+  "Advance Received": "دفعة مقدَّمة مقبوضة",
+  "Advance Applied": "دفعة مقدَّمة مخصومة من الفاتورة",
+  "Advance Refunded": "دفعة مقدَّمة مردودة",
+  "Advance available": "الدفعات المقدَّمة المتاحة",
+  "Advance Available": "الدفعات المقدَّمة المتاحة",
+  "Customer Advance Applied": "الدفعة المقدَّمة المخصومة",
+
   // ---- Color Theme (Issue #16) ----
   "Auto": "تلقائي",
   "Background": "الخلفية",

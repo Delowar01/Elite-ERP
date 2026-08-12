@@ -4,7 +4,7 @@ import { eq, and } from "drizzle-orm";
 import { DocumentTermsView } from "../../_shared/terms-view";
 import { SafeRichText } from "../../_shared/safe-rich-text";
 import { LineItemCell, LineDescRow } from "../../_shared/line-item-cell";
-import { db, salesInvoicesTable, salesInvoiceItemsTable, customersTable, salesOrdersTable, quotationsTable, orgsTable, bankAccountsTable } from "@/db";
+import { db, salesInvoicesTable, salesInvoiceItemsTable, customersTable, salesOrdersTable, quotationsTable, orgsTable, bankAccountsTable, paymentsTable } from "@/db";
 import { requireSession } from "@/lib/session";
 import { getLocale } from "@/lib/i18n/server";
 import { t } from "@/lib/i18n/dict";
@@ -84,6 +84,18 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
   ]);
   const balanceDue = Number(invoice.total) - Number(invoice.paidAmount);
   const showPayments = invoice.status !== "draft" && invoice.status !== "void";
+  // §18: an invoice born from a proforma with advances breaks its receipts out — Total = Advance
+  // Applied + Paid + Due, with "Paid" reduced to the DIRECT payments so the same transferred
+  // advance is never counted twice. The payment rows themselves stay in the shared history below
+  // (tagged "from Proforma") — one record, no second ledger.
+  const advanceApplied = showPayments
+    ? (await db
+        .select({ amount: paymentsTable.amount })
+        .from(paymentsTable)
+        .where(and(eq(paymentsTable.orgId, session.orgId), eq(paymentsTable.salesInvoiceId, invoice.id), eq(paymentsTable.kind, "advance_receipt"))))
+        .reduce((sum, r) => sum + Number(r.amount), 0)
+    : 0;
+  const directPaid = Number(invoice.paidAmount) - advanceApplied;
   const canDeletePayments = (session.role === "owner" || session.role === "admin") && invoice.status !== "void";
 
   const relNodes: { label: string; sub?: string }[] = [];
@@ -175,7 +187,10 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
             taxTotal={invoice.taxTotal}
             finalLabel={showPayments ? "Balance due" : "Total"}
             finalValue={showPayments ? String(balanceDue) : invoice.total}
-            extraRows={showPayments ? [{ label: "Paid", value: invoice.paidAmount, colorClass: "text-success" }] : undefined}
+            extraRows={showPayments ? (advanceApplied > 0 ? [
+              { label: "Customer Advance Applied", value: String(advanceApplied), colorClass: "text-success" },
+              { label: "Paid", value: String(directPaid), colorClass: "text-success" },
+            ] : [{ label: "Paid", value: invoice.paidAmount, colorClass: "text-success" }]) : undefined}
           />
 
           {showPayments && <PaymentHistory locale={locale} orgId={session.orgId} source={{ type: "invoice", id: invoice.id }} canDelete={canDeletePayments} />}

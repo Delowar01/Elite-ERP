@@ -52,6 +52,16 @@
  *    (2300 to zero); a fully-refunded proforma converts to a plain draft; deleting a refunded
  *    receipt is refused while deleting the refund itself restores the advance.
  *
+ * Commit 6 scope (§12/§16/§17/§18 — the figures reach the screens):
+ *  - **§17** proforma totals read in advance terms (Advance Received / Advance Available);
+ *  - **§18** a converted invoice breaks out Customer Advance Applied with Paid reduced to the
+ *    direct payments — the same transferred advance never counted twice;
+ *  - **§12** the statement page types advance rows distinctly and shows the Advance available
+ *    tile (the deep statement arithmetic lives in verify-statements.mts §8);
+ *  - **§16** this suite's org IS Saudi Arabia (pickCountry default), so every "two lines only —
+ *    no VAT" assertion above doubles as the behavioural proof that advance VAT stays OFF for
+ *    Saudi orgs; the static capability check lives in verify-registration-currency.mts.
+ *
  * Mutation-proofed (per the review instruction): reverting the credit to 1100 must FAIL here
  * naming the wrong account — the suite asserts the new rule, it does not merely tolerate it.
  * Commit 3's mutation: suppressing the conversion-path posting must FAIL case D naming the
@@ -582,6 +592,24 @@ check("deleting the refund RESTORES the advance: refund journal gone, 2300 back 
   (await refundRowFor(fxReceipt.id)).length === 0 && (await advNet()) === 942000
     && num(pfFxAfter.paid_amount) === 200000 && num(pfFxAfter.base_paid_amount) === 942000, JSON.stringify(pfFxAfter));
 await balanced("after deleting the refund");
+
+// ================= the figures reach the screens (§17 proforma, §18 invoice, §12 statement) =================
+await page.goto(`${BASE}/sales/proforma/${pfFx}`, { waitUntil: "networkidle" });
+const pfxBody = (await page.locator("body").innerText()).replace(/\s+/g, " ");
+check("§17: the proforma reads in ADVANCE terms — Advance Received and Advance Available shown (200 each)",
+  /Advance Received/.test(pfxBody) && /Advance Available/.test(pfxBody) && /200\.00/.test(pfxBody),
+  pfxBody.match(/Advance [\s\S]{0,40}/)?.[0] ?? "no match");
+await page.goto(`${BASE}/sales/invoices/${invD}`, { waitUntil: "networkidle" });
+const invDBody = (await page.locator("body").innerText()).replace(/\s+/g, " ");
+check("§18: the converted invoice breaks out Customer Advance Applied (6,000) — never counted twice",
+  /Customer Advance Applied/.test(invDBody) && /6,?000\.00/.test(invDBody),
+  invDBody.match(/Customer Advance[\s\S]{0,40}/)?.[0] ?? "no match");
+await page.goto(`${BASE}/finance/statements?kind=client&party=${cust}`, { waitUntil: "networkidle" });
+await page.waitForTimeout(600);
+const stmtBody = (await page.locator("body").innerText()).replace(/\s+/g, " ");
+check("§12: the statement page types advance rows distinctly and shows the Advance available tile (942.00 held)",
+  /Advance Received/.test(stmtBody) && /Advance available/i.test(stmtBody) && /942\.00/.test(stmtBody),
+  stmtBody.match(/Advance available[\s\S]{0,30}/i)?.[0] ?? "no match");
 
 // ================= H. AR reconciliation: GL 1100 = invoice subledger, with a divergence control =================
 const gl1100 = async () => Number((await db.query(

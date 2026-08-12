@@ -21,22 +21,35 @@ import { orgBaseCurrency } from "@/lib/org-currency";
 
 export const AR_CODE = "1100"; // Accounts Receivable — debit-normal
 export const AP_CODE = "2000"; // Accounts Payable — credit-normal
+// Customer Advances — credit-normal. A client statement reads BOTH 1100 and 2300, because a
+// customer's position with the business has two sides: what they owe us (AR) and what we hold for
+// them (advances). See the sign-convention note in getStatement for how one balance column carries
+// both coherently.
+export const ADVANCES_CODE = "2300";
 
 export type PartyKind = "client" | "vendor";
 
 /** Document families a statement line can come from. Used by the Document Type filter. */
 export type StatementDocType =
   | "sales_invoice" | "credit_note" | "payment_in"
+  | "advance_receipt" | "advance_application" | "advance_refund"
   | "purchase_order" | "debit_note" | "payment_out"
   | "journal";
 
-export const CLIENT_DOC_TYPES: StatementDocType[] = ["sales_invoice", "credit_note", "payment_in", "journal"];
+export const CLIENT_DOC_TYPES: StatementDocType[] = [
+  "sales_invoice", "credit_note", "payment_in",
+  "advance_receipt", "advance_application", "advance_refund",
+  "journal",
+];
 export const VENDOR_DOC_TYPES: StatementDocType[] = ["purchase_order", "debit_note", "payment_out", "journal"];
 
 export const DOC_TYPE_LABEL: Record<StatementDocType, string> = {
   sales_invoice: "Invoice",
   credit_note: "Credit Note",
   payment_in: "Payment Received",
+  advance_receipt: "Advance Received",
+  advance_application: "Advance Applied",
+  advance_refund: "Advance Refunded",
   purchase_order: "Purchase Order",
   debit_note: "Debit Note",
   payment_out: "Payment Made",
@@ -50,6 +63,9 @@ const DOC_PATH: Record<StatementDocType, (id: number) => string | null> = {
   purchase_order: (id) => `/purchasing/orders/${id}`,
   debit_note: (id) => `/purchasing/debit-notes/${id}`,
   payment_in: () => "/finance/payments",
+  advance_receipt: (id) => `/sales/proforma/${id}`,   // docId = the proforma the advance was received against
+  advance_application: (id) => `/sales/invoices/${id}`, // docId = the invoice the advance settled
+  advance_refund: (id) => `/sales/proforma/${id}`,    // docId = the proforma whose advance was returned
   payment_out: () => "/finance/payments",
   journal: () => "/finance/ledger",
 };
@@ -102,6 +118,12 @@ export type Statement = {
   lines: StatementLine[];
   /** Currencies present on the party's documents, for the currency filter. */
   currencies: string[];
+  /**
+   * Clients only (0 for vendors): the customer's advance still held at `to` — the 2300 balance of
+   * their lines (credits − debits). Available customer credit, shown beside the closing balance so
+   * an advance is never mistaken for a negative receivable.
+   */
+  advancesHeld: number;
 };
 
 const n = (v: unknown) => Number(v ?? 0);
@@ -113,6 +135,8 @@ type RawLine = {
   memo: string | null;
   sourceType: string;
   sourceId: number | null;
+  /** The control account this line hit — "1100", "2000" or "2300". */
+  account: string;
   debit: number;
   credit: number;
 };
@@ -150,6 +174,7 @@ async function controlAccountLines(orgId: number, code: string, to: string): Pro
     memo: r.memo,
     sourceType: r.sourceType,
     sourceId: r.sourceId,
+    account: code,
     debit: n(r.debit),
     credit: n(r.credit),
   }));
@@ -188,7 +213,11 @@ async function attribute(orgId: number, kind: PartyKind, raw: RawLine[]): Promis
   const out = new Map<string, Attribution>();
 
   if (kind === "client") {
-    const invIds = idsOf("sales_invoice"), cnIds = idsOf("credit_note"), payIds = idsOf("payment");
+    const invIds = idsOf("sales_invoice"), cnIds = idsOf("credit_note");
+    // An advance application's sourceId IS the applied payment's id, so those ids join the payment
+    // batch and their rows are resolved through the same walk (payment → invoice/proforma → party).
+    const appIds = idsOf("advance_application");
+    const payIds = [...new Set([...idsOf("payment"), ...appIds])];
     const [invs, cns, pays] = await Promise.all([
       invIds.length ? db.select({
         id: salesInvoicesTable.id, customerId: salesInvoicesTable.customerId, number: salesInvoicesTable.invoiceNumber,
@@ -200,21 +229,31 @@ async function attribute(orgId: number, kind: PartyKind, raw: RawLine[]): Promis
         reason: creditNotesTable.reason, currency: creditNotesTable.currency,
       }).from(creditNotesTable).where(and(eq(creditNotesTable.orgId, orgId), inArray(creditNotesTable.id, cnIds))) : [],
       payIds.length ? db.select({
-        id: paymentsTable.id, reference: paymentsTable.reference, method: paymentsTable.method,
+        id: paymentsTable.id, reference: paymentsTable.reference, method: paymentsTable.method, kind: paymentsTable.kind,
         salesInvoiceId: paymentsTable.salesInvoiceId, proformaInvoiceId: paymentsTable.proformaInvoiceId,
       }).from(paymentsTable).where(and(eq(paymentsTable.orgId, orgId), inArray(paymentsTable.id, payIds))) : [],
     ]);
+    // Applied payments' invoices may not have their own raw line in scope (e.g. filtered dates), so
+    // fetch any invoice an application points at that the first batch missed.
+    const missingInvIds = [...new Set(pays.map((p) => p.salesInvoiceId).filter((x): x is number => x != null && !invIds.includes(x)))];
+    const extraInvs = missingInvIds.length
+      ? await db.select({
+          id: salesInvoicesTable.id, customerId: salesInvoicesTable.customerId, number: salesInvoicesTable.invoiceNumber,
+          title: salesInvoicesTable.title, currency: salesInvoicesTable.currency,
+          total: salesInvoicesTable.total, paid: salesInvoicesTable.paidAmount,
+        }).from(salesInvoicesTable).where(and(eq(salesInvoicesTable.orgId, orgId), inArray(salesInvoicesTable.id, missingInvIds)))
+      : [];
 
-    const invById = new Map(invs.map((i) => [i.id, i]));
+    const invById = new Map([...invs, ...extraInvs].map((i) => [i.id, i]));
     for (const i of invs) {
-      out.set(keyOf("sales_invoice", i.id), {
+      out.set(keyOf("sales_invoice", i.id, AR_CODE), {
         partyId: i.customerId, docType: "sales_invoice", number: i.number,
         reference: i.title ?? "", currency: i.currency ?? "",
         paymentStatus: payStatus(n(i.total), n(i.paid), i.currency || base), docId: i.id,
       });
     }
     for (const c of cns) {
-      out.set(keyOf("credit_note", c.id), {
+      out.set(keyOf("credit_note", c.id, AR_CODE), {
         partyId: c.customerId, docType: "credit_note", number: c.number,
         reference: c.reason ?? "", currency: c.currency ?? "", paymentStatus: "", docId: c.id,
       });
@@ -232,13 +271,32 @@ async function attribute(orgId: number, kind: PartyKind, raw: RawLine[]): Promis
       const partyId = inv?.customerId ?? pf?.customerId ?? null;
       if (partyId == null) continue;
       const against = inv?.number ?? pf?.number ?? "";
-      out.set(keyOf("payment", p.id), {
+      // The same payment id can carry lines on BOTH control accounts (its receipt on 2300, its
+      // application on 1100 and 2300), so each (account, sourceType) pairing gets its own
+      // attribution and a line only ever resolves through the account it actually hit.
+      out.set(keyOf("payment", p.id, AR_CODE), {
         // No internal id is ever surfaced — the number column shows the payment reference when one
         // was recorded, and the row still carries its date, method and the document it settled.
         partyId, docType: "payment_in", number: p.reference?.trim() || "",
         reference: against ? `Against ${against}` : (p.method ?? ""),
         currency: inv?.currency ?? pf?.currency ?? "", paymentStatus: "", docId: p.id,
       });
+      if (p.kind === "advance_receipt" || p.kind === "advance_refund") {
+        out.set(keyOf("payment", p.id, ADVANCES_CODE), {
+          partyId, docType: p.kind, number: p.reference?.trim() || "",
+          reference: pf ? `Against ${pf.number}` : (p.method ?? ""),
+          currency: pf?.currency ?? inv?.currency ?? "", paymentStatus: "", docId: p.proformaInvoiceId,
+        });
+      }
+      // The application entry (advance_application, payment.id) touches both accounts; both rows
+      // read "Advance Applied" and link to the invoice the advance settled.
+      const app: Attribution = {
+        partyId, docType: "advance_application", number: inv?.number ?? "",
+        reference: pf ? `Advance from ${pf.number}` : "", currency: inv?.currency ?? "",
+        paymentStatus: "", docId: p.salesInvoiceId,
+      };
+      out.set(keyOf("advance_application", p.id, AR_CODE), app);
+      out.set(keyOf("advance_application", p.id, ADVANCES_CODE), app);
     }
   } else {
     const poIds = idsOf("purchase_order"), dnIds = idsOf("debit_note"), payIds = idsOf("payment");
@@ -260,14 +318,14 @@ async function attribute(orgId: number, kind: PartyKind, raw: RawLine[]): Promis
 
     const poById = new Map(pos.map((p) => [p.id, p]));
     for (const p of pos) {
-      out.set(keyOf("purchase_order", p.id), {
+      out.set(keyOf("purchase_order", p.id, AP_CODE), {
         partyId: p.vendorId, docType: "purchase_order", number: p.number,
         reference: p.title ?? "", currency: p.currency ?? "",
         paymentStatus: payStatus(n(p.total), n(p.paid), p.currency || base), docId: p.id,
       });
     }
     for (const d of dns) {
-      out.set(keyOf("debit_note", d.id), {
+      out.set(keyOf("debit_note", d.id, AP_CODE), {
         partyId: d.vendorId, docType: "debit_note", number: d.number,
         reference: d.reason ?? "", currency: d.currency ?? "", paymentStatus: "", docId: d.id,
       });
@@ -275,7 +333,7 @@ async function attribute(orgId: number, kind: PartyKind, raw: RawLine[]): Promis
     for (const p of pays) {
       const po = p.purchaseOrderId ? poById.get(p.purchaseOrderId) : undefined;
       if (!po) continue;
-      out.set(keyOf("payment", p.id), {
+      out.set(keyOf("payment", p.id, AP_CODE), {
         partyId: po.vendorId, docType: "payment_out", number: p.reference?.trim() || "",
         reference: `Against ${po.number}`, currency: po.currency ?? "", paymentStatus: "", docId: p.id,
       });
@@ -284,8 +342,8 @@ async function attribute(orgId: number, kind: PartyKind, raw: RawLine[]): Promis
   return out;
 }
 
-/** Stable key for the attribution map — source type + source id. */
-const keyOf = (type: string, id: number) => `${type}:${id}`;
+/** Stable key for the attribution map — source type + source id + the control account hit. */
+const keyOf = (type: string, id: number, account: string) => `${type}:${id}:${account}`;
 
 async function loadParty(orgId: number, kind: PartyKind, partyId: number): Promise<StatementParty | null> {
   if (kind === "client") {
@@ -321,17 +379,35 @@ export async function getStatement(
   const party = await loadParty(orgId, kind, partyId);
   if (!party) return null;
 
-  const code = kind === "client" ? AR_CODE : AP_CODE;
-  const raw = await controlAccountLines(orgId, code, filters.to);
+  // A client statement reads BOTH control accounts the customer's position lives on: 1100 (what
+  // they owe us) and 2300 (what we hold for them). Merged in one ledger order so one balance
+  // column carries the whole relationship.
+  const raw = kind === "client"
+    ? [
+        ...(await controlAccountLines(orgId, AR_CODE, filters.to)),
+        ...(await controlAccountLines(orgId, ADVANCES_CODE, filters.to)),
+      ].sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.entryId - b.entryId))
+    : await controlAccountLines(orgId, AP_CODE, filters.to);
   const attr = await attribute(orgId, kind, raw);
 
-  // Sign convention: a client statement grows with what they owe us (debit-normal AR); a vendor
-  // statement grows with what we owe them (credit-normal AP).
+  // Sign convention: a vendor statement grows with what we owe them (credit-normal AP). A client
+  // statement is the customer's NET POSITION, and the same `debit − credit` rule carries BOTH
+  // accounts coherently: an invoice (Dr 1100) raises it, a payment (Cr 1100) lowers it, an advance
+  // receipt (Cr 2300) lowers it below zero — we hold their money, honestly shown as credit, never
+  // as a negative invoice receivable (the typed line + advancesHeld make the distinction visible) —
+  // a refund (Dr 2300) releases that, and an application (Dr 2300 / Cr 1100) nets to ~zero: it
+  // moves value from "advance held" to "invoice settled" without changing what the relationship is
+  // worth. One meaning throughout: positive = they owe us, negative = we owe them.
   const signed = (debit: number, credit: number) => (kind === "client" ? debit - credit : credit - debit);
 
   const mine = raw
-    .map((r) => ({ r, a: r.sourceId != null ? attr.get(keyOf(r.sourceType, r.sourceId)) : undefined }))
+    .map((r) => ({ r, a: r.sourceId != null ? attr.get(keyOf(r.sourceType, r.sourceId, r.account)) : undefined }))
     .filter((x): x is { r: RawLine; a: Attribution } => !!x.a && x.a.partyId === partyId);
+
+  // Advance still held at `to` — the party's 2300 balance. Point-in-time, never affected by the
+  // display filters below.
+  let advancesHeld = 0;
+  for (const { r } of mine.filter((x) => x.r.account === ADVANCES_CODE)) advancesHeld += r.credit - r.debit;
 
   const currencies = [...new Set(mine.map((x) => x.a.currency).filter(Boolean))].sort();
 
@@ -377,6 +453,7 @@ export async function getStatement(
   return {
     kind, party, from: filters.from, to: filters.to,
     opening, closing: running, totalDebit, totalCredit, lines, currencies,
+    advancesHeld: kind === "client" ? advancesHeld : 0,
   };
 }
 

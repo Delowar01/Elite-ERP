@@ -200,6 +200,21 @@ check("Business Settings no longer defaults the country display to Saudi Arabia"
   !/org\.country \?\? "Saudi Arabia"/.test(panels));
 check("…and falls back to empty instead", /useState\(org\.country \?\? ""\)/.test(panels));
 
+// ---------------- 7. §16: advance VAT on receipt is OFF for EVERY country, including Saudi ----------------
+// The customer-advances work added the "advance_vat_on_receipt" capability as a deliberate stub:
+// whether receiving an advance creates a Saudi VAT tax point is UNRESOLVED (two accountant
+// questions open — docs/backlog.md). Until an answer is deliberately implemented, no profile may
+// enable it. This check is what turns that sentence into a rule.
+{
+  const { COUNTRY_PROFILES, GLOBAL_PROFILE, profileHasFeature } = await import("../src/lib/geo/country-profiles");
+  const enabled = [...COUNTRY_PROFILES, GLOBAL_PROFILE].filter((pr) => profileHasFeature(pr, "advance_vat_on_receipt"));
+  check("§16: advance_vat_on_receipt is OFF for every profile (Saudi Arabia included)",
+    enabled.length === 0, enabled.map((pr) => pr.countryName).join(", "));
+  const sa = COUNTRY_PROFILES.find((pr) => pr.countryCode === "SA");
+  check("§16: Saudi Arabia's profile exists and does NOT enable advance VAT",
+    !!sa && !profileHasFeature(sa, "advance_vat_on_receipt"), sa ? sa.enabledFeatures.join(",") : "no SA profile");
+}
+
 // ---------------- cleanup ----------------
 await sweep();
 await pool.end();

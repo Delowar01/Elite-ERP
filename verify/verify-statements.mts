@@ -31,7 +31,7 @@ async function seedAccounts(o: number) {
   for (const [code, name, type, nb] of [
     ["1000", "Cash", "asset", "debit"], ["1100", "Accounts Receivable", "asset", "debit"],
     ["2000", "Accounts Payable", "liability", "credit"], ["4000", "Sales Revenue", "revenue", "credit"],
-    ["1200", "Inventory", "asset", "debit"],
+    ["1200", "Inventory", "asset", "debit"], ["2300", "Customer Advances", "liability", "credit"],
   ] as const) {
     await pool.query(
       "insert into accounts (org_id,code,name,type,normal_balance,is_system) values ($1,$2,$3,$4,$5,true) on conflict do nothing",
@@ -291,6 +291,88 @@ check("a party with no activity in the period returns an empty statement, not an
     check(`${fmt} export carries no chart-of-accounts name, in either language`,
       !names.some((x) => body.includes(x)), names.find((x) => body.includes(x)) ?? "none");
   }
+}
+
+// ---------- 8. customer advances on the client statement ----------
+// A dedicated customer so the figures are hand-computable in isolation. Timeline:
+//   Jan 10  advance receipt 400 (Dr Cash / Cr 2300)          -> net position -400 (we hold it)
+//   Jan 12  invoice 1,000 posts (Dr 1100 / Cr 4000)          -> +1,000
+//   Jan 12  application (Dr 2300 400 / Cr 1100 400)          -> nets to 0: advance -> settlement
+//   Jan 15  advance receipt 150 (unapplied)                  -> -150
+//   Jan 20  refund of the 150 (Dr 2300 / Cr Cash)            -> +150
+// Closing = 600 = AR outstanding (1,000 - 400) with zero advances held. One sign rule
+// (debit - credit) carries BOTH control accounts: the balance column means the customer's net
+// position throughout.
+{
+  const advCust = (await pool.query("insert into customers (org_id,name) values ($1,'Adv Client') returning id", [org])).rows[0].id;
+  const pfx = (await pool.query(
+    "insert into proforma_invoices (org_id,proforma_number,customer_id,status,issue_date,subtotal,tax_total,total,created_by_id) values ($1,'PI-ADV',$2,'sent','2026-01-08',1000,0,1000,$3) returning id",
+    [org, advCust, user])).rows[0].id;
+  const invAdv = (await pool.query(
+    "insert into sales_invoices (org_id,invoice_number,customer_id,issue_date,status,total,paid_amount,currency,created_by_id) values ($1,'INV-ADV',$2,'2026-01-12','partially_paid',1000,400,'SAR',$3) returning id",
+    [org, advCust, user])).rows[0].id;
+  const r1 = (await pool.query(
+    "insert into payments (org_id,direction,bank_account_id,amount,payment_date,method,reference,kind,proforma_invoice_id,sales_invoice_id,created_by_id) values ($1,'in',$2,400,'2026-01-10','bank_transfer','ADV-1','advance_receipt',$3,$4,$5) returning id",
+    [org, bank, pfx, invAdv, user])).rows[0].id;
+  const r2 = (await pool.query(
+    "insert into payments (org_id,direction,bank_account_id,amount,payment_date,method,reference,kind,proforma_invoice_id,created_by_id) values ($1,'in',$2,150,'2026-01-15','bank_transfer','ADV-2','advance_receipt',$3,$4) returning id",
+    [org, bank, pfx, user])).rows[0].id;
+  const rf = (await pool.query(
+    "insert into payments (org_id,direction,bank_account_id,amount,payment_date,method,reference,kind,refunds_payment_id,proforma_invoice_id,created_by_id) values ($1,'out',$2,150,'2026-01-20','bank_transfer','ADV-2','advance_refund',$3,$4,$5) returning id",
+    [org, bank, r2, pfx, user])).rows[0].id;
+
+  await post(org, "2026-01-10", "Advance received for proforma PI-ADV", "payment", r1, [[acc.get("1000")!, 400, 0], [acc.get("2300")!, 0, 400]]);
+  await post(org, "2026-01-12", "Invoice INV-ADV issued (converted from proforma PI-ADV)", "sales_invoice", invAdv, [[acc.get("1100")!, 1000, 0], [acc.get("4000")!, 0, 1000]]);
+  await post(org, "2026-01-12", "Advance applied to invoice INV-ADV (received against proforma PI-ADV)", "advance_application", r1, [[acc.get("2300")!, 400, 0], [acc.get("1100")!, 0, 400]]);
+  await post(org, "2026-01-15", "Advance received for proforma PI-ADV", "payment", r2, [[acc.get("1000")!, 150, 0], [acc.get("2300")!, 0, 150]]);
+  await post(org, "2026-01-20", "Advance refunded for proforma PI-ADV", "payment", rf, [[acc.get("2300")!, 150, 0], [acc.get("1000")!, 0, 150]]);
+
+  const advJan = (await getStatement(org, "client", advCust, JAN))!;
+  check("advances: all six ledger movements appear (2 receipts, invoice, 2 application sides, refund)",
+    advJan.lines.length === 6, advJan.lines.map((l) => `${l.docType}:${l.debit}/${l.credit}`).join(","));
+  const types = advJan.lines.map((l) => l.docType);
+  check("advances: each movement carries its OWN document type — receipt / application / refund are distinct",
+    types.filter((x) => x === "advance_receipt").length === 2
+      && types.filter((x) => x === "advance_application").length === 2
+      && types.filter((x) => x === "advance_refund").length === 1
+      && types.filter((x) => x === "sales_invoice").length === 1, types.join(","));
+  check("advances: the receipt is LABELLED an advance, never an invoice or plain payment",
+    advJan.lines.find((l) => l.docType === "advance_receipt")?.docTypeLabel === "Advance Received");
+  let run = advJan.opening;
+  let coherent = true;
+  for (const l of advJan.lines) { run += l.debit - l.credit; if (!near(run, l.running)) coherent = false; }
+  check("advances: ONE sign rule (debit − credit) carries both control accounts — running is coherent at every row",
+    coherent, advJan.lines.map((l) => l.running).join(","));
+  check("advances: closing 600 = AR outstanding (1,000 − 400 applied), advances held 0",
+    near(advJan.closing, 600) && near(advJan.advancesHeld, 0), `${advJan.closing}/${advJan.advancesHeld}`);
+  check("advances: the application rows net to zero — applying an advance does not change the relationship's worth",
+    near(advJan.lines.filter((l) => l.docType === "advance_application").reduce((sum, l) => sum + l.debit - l.credit, 0), 0));
+  check("advances: application rows link to the settled invoice; receipts link to the proforma",
+    advJan.lines.find((l) => l.docType === "advance_application")?.href === `/sales/invoices/${invAdv}`
+      && advJan.lines.find((l) => l.docType === "advance_receipt")?.href === `/sales/proforma/${pfx}`,
+    advJan.lines.map((l) => `${l.docType}=${l.href}`).join(","));
+
+  // point-in-time: before the refund the 150 is still HELD
+  const mid = (await getStatement(org, "client", advCust, { from: "2026-01-01", to: "2026-01-16" }))!;
+  check("advances: closing = AR outstanding − advances held (450 = 600 − 150) mid-period",
+    near(mid.closing, 450) && near(mid.advancesHeld, 150), `${mid.closing}/${mid.advancesHeld}`);
+
+  // an advance with NO invoice: customer credit, typed as an advance — never a negative receivable
+  const early = (await getStatement(org, "client", advCust, { from: "2026-01-01", to: "2026-01-11" }))!;
+  check("advances: an unapplied advance alone shows as customer credit (net −400, held 400), typed advance_receipt — no invoice row",
+    near(early.closing, -400) && near(early.advancesHeld, 400)
+      && early.lines.length === 1 && early.lines[0].docType === "advance_receipt",
+    `${early.closing}/${early.advancesHeld}/${early.lines.map((l) => l.docType).join(",")}`);
+
+  // the docType filter treats the advance families as first-class
+  const onlyReceipts = (await getStatement(org, "client", advCust, { ...JAN, docTypes: ["advance_receipt"] }))!;
+  check("advances: filtering by Advance Received keeps exactly the two receipts",
+    onlyReceipts.lines.length === 2 && onlyReceipts.lines.every((l) => l.docType === "advance_receipt"),
+    onlyReceipts.lines.map((l) => l.docType).join(","));
+
+  // vendors have no advances model — the figure is pinned to zero
+  const vs8 = (await getStatement(org, "vendor", vend, JAN))!;
+  check("advances: a vendor statement's advancesHeld is 0", vs8.advancesHeld === 0, String(vs8.advancesHeld));
 }
 
 await pool.end();

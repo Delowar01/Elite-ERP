@@ -47,7 +47,16 @@ export type TaxSystem = "VAT" | "GST" | "Sales Tax" | "None";
 
 // A country-specific capability toggle. Kept as opaque strings so new features slot in without a
 // type change. Currently only "zatca_phase1" is meaningful (Saudi Arabia only).
-export type CountryFeature = "zatca_phase1";
+//
+// "advance_vat_on_receipt" — §16 of the customer-advances work, DELIBERATELY UNRESOLVED. In some
+// jurisdictions receiving a customer advance may itself create the VAT tax point. Whether that is
+// true for Saudi Arabia — and whether a VAT-bearing tax document must be issued at receipt — is
+// pending TWO accountant answers (recorded in docs/backlog.md). Until a deliberate implementation
+// lands, this capability is OFF for EVERY profile INCLUDING Saudi Arabia: no enabledFeatures array
+// lists it, nothing at runtime reads it, and advance receipts post Dr Bank / Cr 2300 with no VAT
+// line anywhere (see the §16 note in recordPaymentAction's proforma branch, which names where the
+// future posting belongs). Do not add it to a profile without implementing the posting behind it.
+export type CountryFeature = "zatca_phase1" | "advance_vat_on_receipt";
 
 export type CountryProfile = {
   countryCode: string;

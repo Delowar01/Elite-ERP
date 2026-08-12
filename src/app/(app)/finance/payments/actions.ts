@@ -121,6 +121,13 @@ export async function recordPaymentAction(formData: FormData): Promise<ActionRes
     const advances = byCode.get("2300");
     if (!advances) return { error: "Chart of accounts is missing a required system account (2300 Customer Advances)." };
 
+    // §16 SAUDI ADVANCE VAT — DELIBERATELY UNRESOLVED, DO NOT GUESS. If an accountant ever
+    // confirms that receiving an advance creates the VAT tax point (two questions are open — see
+    // docs/backlog.md), the posting belongs HERE: a Cr 2100 line carved out of this receipt's
+    // entry, gated by profileHasFeature(orgProfile, "advance_vat_on_receipt"). That capability is
+    // OFF for every country INCLUDING Saudi Arabia, nothing reads it at runtime, and this branch
+    // posts the pure non-VAT model: Dr Bank / Cr 2300, nothing else.
+
     // FX-7: a proforma has no booked rate (it never posts), so there is nothing to clear AGAINST —
     // the advance converts BOTH lines at the payment-date rate. Internally consistent, no FX line;
     // any realized difference materialises at application time, against the invoice's booked rate.
