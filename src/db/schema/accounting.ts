@@ -78,6 +78,11 @@ export const DEFAULT_CHART_OF_ACCOUNTS: Array<{
   { code: "2000", name: "Accounts Payable", type: "liability", normalBalance: "credit", isSystem: true },
   { code: "2100", name: "VAT Payable", type: "liability", normalBalance: "credit", isSystem: true },
   { code: "2200", name: "Salaries Payable", type: "liability", normalBalance: "credit", isSystem: true },
+  // Customer-advances model: money received against a proforma is a LIABILITY (the business owes
+  // goods, not cash back) — never AR, never revenue. Advance receipts credit this account; the
+  // advance application on conversion debits it against AR. Existing orgs get it via
+  // scripts/migrations/2026-08-12-customer-advances-account.ts.
+  { code: "2300", name: "Customer Advances", type: "liability", normalBalance: "credit", isSystem: true },
   { code: "3000", name: "Owner's Equity", type: "equity", normalBalance: "credit", isSystem: true },
   { code: "4000", name: "Sales Revenue", type: "revenue", normalBalance: "credit", isSystem: true },
   // FX-7: realized currency differences on payments. One account for both directions — gains
