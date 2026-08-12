@@ -28,7 +28,10 @@ export type ConvertTarget = {
   key: string;
   labelKey: string; // i18n key (existing dict entries)
   icon: LucideIcon;
-  action?: (id: number) => Promise<{ error?: string }>;
+  // Conversions that post to the ledger (proforma → invoice with advances) can be blocked by a
+  // missing exchange rate; the structured block rides along so the confirm dialog can offer the
+  // one-click "Fetch rate & retry" recovery, same as every other posting path.
+  action?: (id: number) => Promise<{ error?: string; missingRate?: { currency: string; date: string } }>;
   href?: (id: number) => string;
 };
 
@@ -78,12 +81,13 @@ export function getConvertTargets(source: ConvertSource, ctx: ConvertCtx): Conve
 }
 
 // Execute a conversion the same way from every menu: navigate for href targets, or run the server
-// action (which redirects to the new document on success) and surface any error via onError.
+// action (which redirects to the new document on success) and surface any error — with its
+// missingRate block, when the action returned one — via onError.
 export function runConvertTarget(
   target: ConvertTarget,
   id: number,
   start: (fn: () => void) => void,
-  onError: (message: string) => void,
+  onError: (result: { error: string; missingRate?: { currency: string; date: string } }) => void,
 ): void {
   if (target.href) {
     window.location.assign(target.href(id));
@@ -93,6 +97,6 @@ export function runConvertTarget(
   if (!action) return;
   start(async () => {
     const result = await action(id);
-    if (result?.error) onError(result.error);
+    if (result?.error) onError({ error: result.error, missingRate: result.missingRate });
   });
 }

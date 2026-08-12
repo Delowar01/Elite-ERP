@@ -16,8 +16,14 @@ import { persistDocumentAttachments, type AttachmentInput } from "../_shared/att
 import { snapshotDocumentBankAccounts } from "@/lib/document-bank-data";
 import { snapshotSealForDoc, applySealOverride } from "@/lib/doc-seal";
 import { moneyEpsilon, normalizeDocCurrency, roundMoney } from "@/lib/currency/currencies";
+import { prepareInvoicePosting, type PreparedInvoicePosting } from "@/lib/invoice-posting";
 
-export type ActionResult = { error?: string; id?: number };
+export type ActionResult = {
+  error?: string;
+  id?: number;
+  /** Set when a conversion's posting was blocked by a missing exchange rate — FX-3's rate-entry seam. */
+  missingRate?: { currency: string; date: string };
+};
 
 const PATH = "/sales/proforma";
 const VALID_STATUSES = ["draft", "sent"];
@@ -229,6 +235,30 @@ export async function convertProformaToInvoiceAction(proformaId: number): Promis
     }
   }
 
+  const issueDate = new Date().toISOString().slice(0, 10);
+  // An invoice born non-draft (it carries transferred advances) NEVER passes through send — that
+  // status is a payment fact, not a posting fact — so its one posting moment is here: revenue, AR
+  // and VAT post and stock decrements inside the conversion transaction, via the same shared
+  // function send uses. Skipping this (as the pre-advances code did) silently dropped the revenue
+  // of every advance-carrying conversion from the P&L forever. A foreign proforma with no usable
+  // rate REFUSES to convert (missingRate → the one-click fetch seam) rather than posting a wrong
+  // ledger; advance-free conversions still produce a plain draft and post nothing until send.
+  let posting: PreparedInvoicePosting | null = null;
+  if (invoiceStatus !== "draft") {
+    const prep = await prepareInvoicePosting({
+      orgId: session.orgId,
+      userId: session.userId,
+      baseCurrency: session.orgCurrency,
+      docCurrency: pf.currency,
+      total: pf.total,
+      taxTotal: pf.taxTotal,
+      issueDate,
+      items: items.map((it) => ({ productId: it.productId, quantity: it.quantity })),
+    });
+    if (!prep.ok) return { error: prep.error, missingRate: prep.missingRate };
+    posting = prep;
+  }
+
   const id = await db.transaction(async (tx) => {
     const invoiceNumber = await nextDocumentNumber(tx, session.orgId, "sales_invoice");
     const [inv] = await tx
@@ -240,7 +270,7 @@ export async function convertProformaToInvoiceAction(proformaId: number): Promis
         customerId: pf.customerId,
         sourceSalesOrderId: pf.sourceSalesOrderId,
         status: invoiceStatus,
-        issueDate: new Date().toISOString().slice(0, 10),
+        issueDate,
         // The totals below are copied verbatim, so the currency that qualifies them must
         // travel with them — dropping it re-denominates the amounts in the base currency.
         currency: pf.currency,
@@ -250,6 +280,11 @@ export async function convertProformaToInvoiceAction(proformaId: number): Promis
         total: pf.total,
         paidAmount: paidStr,
         basePaidAmount: basePaidStr,
+        // A posted-at-conversion invoice stores its FX capture exactly as send would have;
+        // a draft conversion leaves them null until send fills them.
+        exchangeRate: posting?.captured.exchangeRate,
+        baseTotal: posting?.captured.baseTotal,
+        baseTaxAmount: posting?.captured.baseTaxAmount,
         notes: pf.notes,
         createdById: session.userId,
       })
@@ -281,12 +316,28 @@ export async function convertProformaToInvoiceAction(proformaId: number): Promis
         .where(and(eq(paymentsTable.orgId, session.orgId), eq(paymentsTable.proformaInvoiceId, proformaId)));
     }
 
+    // Post the born-non-draft invoice inside the same transaction — invoice, items, transferred
+    // payments and the revenue/AR/VAT entry commit or roll back as one.
+    if (posting) {
+      await posting.post(tx, {
+        invoiceId: inv.id,
+        memo: `Invoice ${invoiceNumber} issued (converted from proforma ${pf.proformaNumber})`,
+      });
+    }
+
     // Link the proforma to the invoice; its payment history stays visible read-only.
     await tx.update(proformaInvoicesTable).set({ convertedInvoiceId: inv.id, updatedAt: new Date() }).where(eq(proformaInvoicesTable.id, proformaId));
     return inv.id;
   });
 
-  await logActivity(session, { type: "sales_invoice.created", description: `Converted from proforma ${pf.proformaNumber}`, entityType: "sales_invoice", entityId: id });
+  await logActivity(session, {
+    type: "sales_invoice.created",
+    description: posting
+      ? `Converted from proforma ${pf.proformaNumber} — posted to ledger and decremented stock`
+      : `Converted from proforma ${pf.proformaNumber}`,
+    entityType: "sales_invoice",
+    entityId: id,
+  });
   if (proformaPayments.length > 0) {
     await recordAudit({ orgId: session.orgId, userId: session.userId, userName: session.name }, {
       action: "payment.transferred", entityType: "sales_invoice", entityId: id,
@@ -297,6 +348,13 @@ export async function convertProformaToInvoiceAction(proformaId: number): Promis
   revalidatePath("/sales/invoices");
   revalidatePath("/sales/proforma");
   revalidatePath(`/sales/proforma/${proformaId}`);
+  if (posting) {
+    // A posting happened, so the finance surfaces changed too — same set send revalidates.
+    revalidatePath("/finance/chart-of-accounts");
+    revalidatePath("/finance/ledger");
+    revalidatePath("/finance/reports");
+    revalidatePath("/inventory/products");
+  }
   redirect(`/sales/invoices/${id}`);
 }
 

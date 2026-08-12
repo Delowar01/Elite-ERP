@@ -15,8 +15,24 @@
  *  - **Deleting an advance receipt** reverses cleanly: entry gone, 2300 back to zero, proforma
  *    un-paid — from stored figures, like every deletion.
  *
+ * Commit 3 scope (cases D and I — the conversion revenue fix):
+ *  - **D. A conversion born non-draft POSTS**: a fully-advanced proforma converts to a paid
+ *    invoice whose revenue/AR entry exists (exactly once), whose stock decremented, and whose cash
+ *    posted exactly once (the advance's own entry — conversion moves no money). The partial-advance
+ *    case posts identically with status partially_paid.
+ *  - **Advance-free conversions still post NOTHING at conversion** (control): a plain draft whose
+ *    one posting moment stays at send — and send still posts, via the same extracted function.
+ *  - **I. The P&L carries the converted revenue** — read from the real reports page, which is
+ *    account-driven, so this is the ledger speaking.
+ *  - **A missing conversion-date rate REFUSES the conversion** (FX-6 rule): no invoice, no
+ *    journal, the confirm dialog offers "Fetch rate & retry"; after a rate exists the same
+ *    conversion posts at the conversion-date rate while basePaidAmount keeps the advance's STORED
+ *    payment-date base — never a fresh conversion.
+ *
  * Mutation-proofed (per the review instruction): reverting the credit to 1100 must FAIL here
  * naming the wrong account — the suite asserts the new rule, it does not merely tolerate it.
+ * Commit 3's mutation: suppressing the conversion-path posting must FAIL case D naming the
+ * missing revenue.
  */
 import { chromium } from "playwright";
 import { Client } from "pg";
@@ -166,6 +182,130 @@ check("…2300 back to the SAR advance only (Cr 4,000 net)", num(advAfterDel.cr)
 const pfUAfter = (await db.query("select paid_amount, base_paid_amount from proforma_invoices where id=$1", [pfU])).rows[0];
 check("…the proforma is un-paid from stored figures", num(pfUAfter.paid_amount) === 0 && num(pfUAfter.base_paid_amount) === 0, JSON.stringify(pfUAfter));
 await balanced("after deleting the USD advance");
+
+// ================= D. conversion born non-draft POSTS: full advance → paid invoice with revenue =================
+const convertViaUi = async (pfId) => {
+  await page.goto(`${BASE}/sales/proforma/${pfId}`, { waitUntil: "networkidle" });
+  await page.getByRole("button", { name: /^Convert to…$/ }).click();
+  await page.waitForTimeout(400);
+  await page.getByRole("menuitem", { name: /Invoice/ }).first().click();
+  await page.waitForTimeout(500);
+  await dialogs().last().getByRole("button", { name: /^Convert$/ }).click();
+  await page.waitForURL(/\/sales\/invoices\/\d+$/, { timeout: 20000 });
+  return Number(page.url().match(/\/(\d+)$/)[1]);
+};
+const invoiceEntry = async (invId) => (await db.query(
+  "select id from journal_entries where org_id=$1 and source_type='sales_invoice' and source_id=$2", [org, invId])).rows;
+const invoiceLines = async (invId) => (await db.query(
+  `select l.account_id, l.debit::text, l.credit::text from journal_lines l
+     join journal_entries e on e.id = l.journal_entry_id
+    where e.org_id=$1 and e.source_type='sales_invoice' and e.source_id=$2 order by l.id`, [org, invId])).rows;
+
+const prod = (await db.query(
+  "insert into products (org_id, sku, name, quantity_on_hand) values ($1,'ADV-SKU','Adv Widget',50) returning id", [org])).rows[0].id;
+const pfD = (await db.query(
+  `insert into proforma_invoices (org_id, proforma_number, customer_id, status, issue_date, subtotal, tax_total, total, created_by_id)
+   values ($1,$2,$3,'sent',$4,'6000.00','0','6000.00',$5) returning id`, [org, `ADV-${uniq()}`, cust, today, u.id])).rows[0].id;
+await db.query(
+  `insert into proforma_invoice_items (proforma_invoice_id, product_id, description, quantity, unit_price, tax_rate_percent, line_total)
+   values ($1,$2,'Adv Widget',2,'3000.00','0','6000.00')`, [pfD, prod]);
+await recordPayment(`${BASE}/sales/proforma/${pfD}`, 6000);
+await balanced("before the fully-advanced conversion");
+const cashEntriesBefore = (await db.query("select count(*)::int n from journal_entries where org_id=$1 and source_type='payment'", [org])).rows[0].n;
+const invD = await convertViaUi(pfD);
+const dInv = (await db.query(
+  "select status, paid_amount::text, base_paid_amount::text, exchange_rate::text, base_total::text from sales_invoices where id=$1", [invD])).rows[0];
+check("CASE D: fully-advanced proforma converts to a PAID invoice (6,000 / 6,000, identity FX)",
+  dInv.status === "paid" && num(dInv.paid_amount) === 6000000 && num(dInv.base_paid_amount) === 6000000
+    && Number(dInv.exchange_rate) === 1 && num(dInv.base_total) === 6000000, JSON.stringify(dInv));
+check("CASE D: the invoice journal EXISTS exactly once — born-paid no longer skips posting", (await invoiceEntry(invD)).length === 1);
+const dLines = await invoiceLines(invD);
+check("CASE D: conversion posted REVENUE — Dr 1100 AR 6,000 / Cr 4000 Sales Revenue 6,000, two lines",
+  dLines.length === 2 && num(dLines.find((l) => l.account_id === AR)?.debit) === 6000000
+    && num(dLines.find((l) => l.account_id === REV)?.credit) === 6000000, JSON.stringify(dLines));
+check("CASE D: cash posted exactly ONCE — conversion moved no money (payment entries unchanged)",
+  (await db.query("select count(*)::int n from journal_entries where org_id=$1 and source_type='payment'", [org])).rows[0].n === cashEntriesBefore);
+check("CASE D: stock decremented at conversion (50 − 2 = 48)",
+  (await db.query("select quantity_on_hand from products where id=$1", [prod])).rows[0].quantity_on_hand === 48);
+await balanced("after the fully-advanced conversion");
+
+// ---- the partial-advance case posts identically, with status partially_paid ----
+// pfA carries the 4,000 SAR advance against a 10,000 total from case B.
+const invA = await convertViaUi(pfA);
+const aInv = (await db.query("select status, paid_amount::text, base_paid_amount::text from sales_invoices where id=$1", [invA])).rows[0];
+check("partial advance: born partially_paid (4,000 of 10,000) and posted",
+  aInv.status === "partially_paid" && num(aInv.paid_amount) === 4000000 && num(aInv.base_paid_amount) === 4000000, JSON.stringify(aInv));
+const aLines = await invoiceLines(invA);
+check("partial advance: Dr 1100 AR 10,000 / Cr 4000 Revenue 10,000 — the FULL total, not the paid part",
+  aLines.length === 2 && num(aLines.find((l) => l.account_id === AR)?.debit) === 10000000
+    && num(aLines.find((l) => l.account_id === REV)?.credit) === 10000000, JSON.stringify(aLines));
+await balanced("after the partial-advance conversion");
+
+// ================= I. the P&L carries the converted revenue (account-driven report) =================
+await page.goto(`${BASE}/finance/reports?report=pl`, { waitUntil: "networkidle" });
+await page.waitForTimeout(600);
+const plBody = await page.locator("body").innerText();
+check("CASE I: P&L page shows Total Revenue", /Total Revenue/.test(plBody));
+check("CASE I: P&L revenue includes both conversions (6,000 + 10,000 = 16,000)", /16[,.]?000/.test(plBody),
+  plBody.match(/Total Revenue[\s\S]{0,80}/)?.[0]?.replace(/\s+/g, " ") ?? "no match");
+
+// ================= an advance-free conversion still posts NOTHING at conversion (control) =================
+const pfN = await mkProforma({ currency: null, total: "800.00" });
+const invN = await convertViaUi(pfN);
+const nInv = (await db.query("select status, base_total from sales_invoices where id=$1", [invN])).rows[0];
+check("advance-free conversion stays a plain DRAFT — one posting moment per path",
+  nInv.status === "draft" && nInv.base_total === null, JSON.stringify(nInv));
+check("…and posted no journal at conversion", (await invoiceEntry(invN)).length === 0);
+// send still posts, through the same extracted function — the refactor left the send path whole
+await page.goto(`${BASE}/sales/invoices/${invN}`, { waitUntil: "networkidle" });
+await page.waitForTimeout(400);
+await page.getByRole("button", { name: "Send Invoice", exact: true }).click();
+await page.waitForTimeout(400);
+await dialogs().last().getByRole("button", { name: "Send Invoice", exact: true }).click();
+await page.waitForTimeout(1500);
+const nLines = await invoiceLines(invN);
+check("…send then posts Dr AR 800 / Cr Revenue 800 exactly as before the extraction",
+  nLines.length === 2 && num(nLines.find((l) => l.account_id === AR)?.debit) === 800000
+    && num(nLines.find((l) => l.account_id === REV)?.credit) === 800000, JSON.stringify(nLines));
+await balanced("after sending the advance-free conversion");
+
+// ================= a missing conversion-date rate REFUSES the conversion =================
+const pfU2 = await mkProforma({ currency: "USD", total: "2000.00" });
+await recordPayment(`${BASE}/sales/proforma/${pfU2}`, 500); // captured at 3.76 → base 1,880
+await db.query("delete from exchange_rates where org_id=$1 and from_currency='USD'", [org]);
+const invCountBefore = (await db.query("select count(*)::int n from sales_invoices where org_id=$1", [org])).rows[0].n;
+await page.goto(`${BASE}/sales/proforma/${pfU2}`, { waitUntil: "networkidle" });
+await page.getByRole("button", { name: /^Convert to…$/ }).click();
+await page.waitForTimeout(400);
+await page.getByRole("menuitem", { name: /Invoice/ }).first().click();
+await page.waitForTimeout(500);
+await dialogs().last().getByRole("button", { name: /^Convert$/ }).click();
+await page.waitForTimeout(1500);
+check("missing rate REFUSES the conversion — the dialog names the missing rate",
+  (await dialogs().last().getByText(/No USD → SAR exchange rate/).count()) >= 1);
+check("…and offers the one-click 'Fetch rate & retry' seam",
+  (await dialogs().last().getByRole("button", { name: /Fetch rate & retry/ }).count()) === 1);
+check("…no invoice was created and the proforma stays unconverted",
+  (await db.query("select count(*)::int n from sales_invoices where org_id=$1", [org])).rows[0].n === invCountBefore
+    && (await db.query("select converted_invoice_id from proforma_invoices where id=$1", [pfU2])).rows[0].converted_invoice_id === null);
+await dialogs().last().getByRole("button", { name: /^Cancel$/ }).click();
+await page.waitForTimeout(400);
+// after a rate exists (deliberately DIFFERENT from the advance's 3.76), the same conversion posts
+await db.query(
+  `insert into exchange_rates (org_id, from_currency, to_currency, rate, effective_date, source)
+   values ($1,'USD','SAR','3.80',current_date,'manual')`, [org]);
+const invU2 = await convertViaUi(pfU2);
+const u2Inv = (await db.query(
+  "select status, exchange_rate::text, base_total::text, base_paid_amount::text from sales_invoices where id=$1", [invU2])).rows[0];
+check("foreign conversion posts at the CONVERSION-date rate (3.80 → baseTotal 7,600)",
+  u2Inv.status === "partially_paid" && Number(u2Inv.exchange_rate) === 3.8 && num(u2Inv.base_total) === 7600000, JSON.stringify(u2Inv));
+check("…while basePaidAmount keeps the advance's STORED payment-date base (1,880, NOT 500×3.80=1,900)",
+  num(u2Inv.base_paid_amount) === 1880000, JSON.stringify(u2Inv));
+const u2Lines = await invoiceLines(invU2);
+check("…journal: Dr 1100 AR 7,600 / Cr 4000 Revenue 7,600",
+  u2Lines.length === 2 && num(u2Lines.find((l) => l.account_id === AR)?.debit) === 7600000
+    && num(u2Lines.find((l) => l.account_id === REV)?.credit) === 7600000, JSON.stringify(u2Lines));
+await balanced("after the foreign conversion");
 
 await db.end();
 await browser.close();

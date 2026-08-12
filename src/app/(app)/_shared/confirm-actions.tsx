@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { t, type Locale } from "@/lib/i18n/dict";
 import { getConvertTargets, runConvertTarget, type ConvertSource, type ConvertCtx, type ConvertTarget } from "../sales/_shared/convert-config";
 import { useConfirm } from "./confirm-provider";
+import { withRateRescue, type RescuableResult } from "./missing-rate";
 
 /**
  * Confirmation wrappers around flows that already have one shared implementation, so the popup is
@@ -26,12 +27,18 @@ export function useConvertConfirm(locale: Locale) {
       details: [{ label: "Creates", value: t(locale, target.labelKey) }],
       // href targets navigate to a prefilled create page; action targets redirect on success.
       navigatesOnSuccess: true,
-      onConfirm: () =>
-        new Promise<{ error?: string } | void>((resolve) => {
-          runConvertTarget(target, id, startTransition, (message) => resolve({ error: message }));
-          // Successful conversions redirect, so nothing resolves on the happy path — the dialog
-          // stays in its working state until the new page takes over.
-        }),
+      onConfirm: () => {
+        // Recursive on purpose: a conversion that posts (proforma with advances) can be blocked by
+        // a missing rate, which maps to "Fetch rate & retry" re-running this same attempt — the
+        // identical seam as the posting paths.
+        const attempt = (): Promise<RescuableResult> =>
+          new Promise((resolve) => {
+            runConvertTarget(target, id, startTransition, (result) => resolve(withRateRescue(locale, result, attempt)));
+            // Successful conversions redirect, so nothing resolves on the happy path — the dialog
+            // stays in its working state until the new page takes over.
+          });
+        return attempt();
+      },
     });
   }
 

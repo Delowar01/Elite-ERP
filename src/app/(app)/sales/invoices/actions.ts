@@ -5,7 +5,7 @@ import { sanitizeIfHtml } from "@/lib/sanitize-html";
 import { normalizeDocumentTerms, type DocumentTerm } from "../_shared/document-terms";
 import { redirect } from "next/navigation";
 import { and, eq, sql } from "drizzle-orm";
-import { db, customersTable, projectsTable, salesInvoicesTable, salesInvoiceItemsTable, productsTable, accountsTable, journalEntriesTable, journalLinesTable, deliveryChallansTable, deliveryChallanItemsTable, paymentTermPresetsTable, paymentsTable } from "@/db";
+import { db, customersTable, projectsTable, salesInvoicesTable, salesInvoiceItemsTable, productsTable, journalEntriesTable, journalLinesTable, deliveryChallansTable, deliveryChallanItemsTable, paymentTermPresetsTable, paymentsTable } from "@/db";
 import { requireSession } from "@/lib/session";
 import { logActivity } from "@/lib/activity";
 import { nextDocumentNumber } from "@/lib/documents";
@@ -15,7 +15,7 @@ import { persistDocumentAttachments, type AttachmentInput } from "../_shared/att
 import { snapshotDocumentBankAccounts } from "@/lib/document-bank-data";
 import { snapshotSealForDoc, applySealOverride } from "@/lib/doc-seal";
 import { normalizeDocCurrency, roundMoney } from "@/lib/currency/currencies";
-import { captureBaseAmounts, subtractMoney } from "@/lib/posting-currency";
+import { prepareInvoicePosting } from "@/lib/invoice-posting";
 
 export type ActionResult = {
   error?: string;
@@ -233,7 +233,9 @@ export async function updateInvoiceAction(
 
 // The single most important correctness path in the sales chain: sending an invoice is the one
 // moment stock decrements and revenue/AR/VAT post to the ledger — everything happens in one
-// transaction so a failure partway through never leaves stock and books out of sync.
+// transaction so a failure partway through never leaves stock and books out of sync. The posting
+// itself lives in prepareInvoicePosting (shared with proforma conversion, whose invoices can be
+// born non-draft and never pass through here).
 export async function sendInvoiceAction(invoiceId: number): Promise<ActionResult> {
   const session = await requireSession();
 
@@ -246,27 +248,18 @@ export async function sendInvoiceAction(invoiceId: number): Promise<ActionResult
 
   const items = await db.select().from(salesInvoiceItemsTable).where(eq(salesInvoiceItemsTable.invoiceId, invoiceId));
 
-  const accounts = await db.select().from(accountsTable).where(eq(accountsTable.orgId, session.orgId));
-  const byCode = new Map(accounts.map((a) => [a.code, a]));
-  const ar = byCode.get("1100");
-  const revenue = byCode.get("4000");
-  const vatPayable = byCode.get("2100");
-  if (!ar || !revenue || !vatPayable) {
-    return { error: "Chart of accounts is missing a required system account (1100/4000/2100)." };
-  }
-
-  // FX-6: convert once, at the invoice's own date, and store the result. A base-currency invoice
-  // short-circuits to the identity with no rate lookup; a foreign one with no usable rate BLOCKS —
-  // posting unconverted or at a guessed rate writes a wrong ledger, and a block is recoverable.
-  const captured = await captureBaseAmounts({
+  const posting = await prepareInvoicePosting({
     orgId: session.orgId,
+    userId: session.userId,
     baseCurrency: session.orgCurrency,
     docCurrency: invoice.currency,
     total: invoice.total,
     taxTotal: invoice.taxTotal,
-    date: invoice.issueDate,
+    issueDate: invoice.issueDate,
+    items,
   });
-  if (!captured.ok) return { error: captured.error, missingRate: captured.missingRate };
+  if (!posting.ok) return { error: posting.error, missingRate: posting.missingRate };
+  const captured = posting.captured;
 
   // FX-7: basePaidAmount at send. Zero for every reachable flow today — a draft cannot receive
   // payments, and a conversion WITH advances is born partially_paid and never sends (its
@@ -288,43 +281,8 @@ export async function sendInvoiceAction(invoiceId: number): Promise<ActionResult
         : roundMoney(transferred.reduce((sum, p) => sum + Number(p.baseAppliedAmount), 0), session.orgCurrency);
     }
   }
-  // The revenue line is DERIVED so the entry balances by construction — Dr baseTotal always equals
-  // Cr revenue + Cr VAT exactly. (The old lines credited the full subtotal against a discounted
-  // total, which unbalanced the entry by the discount; deriving the middle line closes that hole
-  // for base-currency invoices too.)
-  const baseRevenue = subtractMoney(captured.baseTotal, captured.baseTaxAmount, session.orgCurrency);
-
   await db.transaction(async (tx) => {
-    for (const item of items) {
-      if (item.productId) {
-        await tx
-          .update(productsTable)
-          .set({ quantityOnHand: sql`${productsTable.quantityOnHand} - ${Math.trunc(Number(item.quantity))}` })
-          .where(and(eq(productsTable.id, item.productId), eq(productsTable.orgId, session.orgId)));
-      }
-    }
-
-    const [entry] = await tx
-      .insert(journalEntriesTable)
-      .values({
-        orgId: session.orgId,
-        entryDate: invoice.issueDate,
-        memo: `Invoice ${invoice.invoiceNumber} sent`,
-        sourceType: "sales_invoice",
-        sourceId: invoice.id,
-        createdById: session.userId,
-      })
-      .returning({ id: journalEntriesTable.id });
-
-    // The ledger holds BASE currency only.
-    const lines: { accountId: number; debit: string; credit: string }[] = [
-      { accountId: ar.id, debit: captured.baseTotal, credit: "0" },
-      { accountId: revenue.id, debit: "0", credit: baseRevenue },
-    ];
-    if (Number(captured.baseTaxAmount) > 0) {
-      lines.push({ accountId: vatPayable.id, debit: "0", credit: captured.baseTaxAmount });
-    }
-    await tx.insert(journalLinesTable).values(lines.map((l) => ({ journalEntryId: entry.id, ...l })));
+    await posting.post(tx, { invoiceId: invoice.id, memo: `Invoice ${invoice.invoiceNumber} sent` });
 
     await tx
       .update(salesInvoicesTable)
