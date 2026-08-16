@@ -24,6 +24,8 @@ import {
   sameCustomerRefusal, sameCurrencyRefusal, type AdvancePot,
 } from "../src/lib/advance-allocations";
 import { roundMoney, moneyEpsilon } from "../src/lib/currency/currencies";
+import { toBaseAmount } from "../src/lib/exchange-rates";
+import { subtractMoney } from "../src/lib/posting-currency";
 
 const results: [boolean, string, string][] = [];
 const check = (name: string, cond: boolean, extra = "") => results.push([cond, name, extra]);
@@ -190,6 +192,36 @@ check("a released allocation restores availability with no compensating write (i
   mils(released.availableAmount) === 10000000 && mils(released.availableCarried) === 37500000, JSON.stringify(released));
 const exhausted = availabilityOf(pot({ consumedAmount: "10000.000", consumedCarried: "37500.000" }), "SAR");
 check("a fully consumed advance reads zero on both figures", mils(exhausted.availableAmount) === 0 && mils(exhausted.availableCarried) === 0);
+
+// ================= 7. the SAME sweep against FX-6's derived revenue line =================
+// The residual sweep above found that hand-picked figures hide drift, and FX-6's invoice posting
+// uses the same derived-middle-line construction: Dr AR baseTotal / Cr revenue (baseTotal −
+// baseTax) / Cr VAT baseTax. Converting the subtotal independently — the natural alternative —
+// would unbalance the entry by a rounding unit on awkward rates, and an unbalanced entry in the
+// ledger is the one failure this model cannot recover from. Swept here rather than assumed.
+let revenueWorst = 0;
+let revenueCase = "";
+let revenueSweeps = 0;
+for (const base of ["SAR", "KWD"]) {
+  for (const total of [10000, 999.99, 1, 333.33, 87654.32, 0.05]) {
+    for (const taxPct of [0, 5, 15, 7.5]) {
+      for (const rate of ["3.75", "4.71", "0.267", "11.0031", "1"]) {
+        const tax = Number(roundMoney((total * taxPct) / (100 + taxPct), "USD"));
+        const baseTotal = toBaseAmount(String(total), rate, base);
+        const baseTax = toBaseAmount(String(tax), rate, base);
+        const baseRevenue = subtractMoney(baseTotal, baseTax, base);
+        // Exactly the posting sendInvoiceAction / the conversion writes.
+        const debits = mils(baseTotal);
+        const credits = mils(baseRevenue) + (Number(baseTax) > 0 ? mils(baseTax) : 0);
+        revenueSweeps++;
+        const drift = Math.abs(debits - credits);
+        if (drift > revenueWorst) { revenueWorst = drift; revenueCase = `base=${base} total=${total} tax%=${taxPct} rate=${rate}: Dr ${debits} vs Cr ${credits}`; }
+      }
+    }
+  }
+}
+check(`FX-6 SWEEP: across ${revenueSweeps} invoice postings (six totals × four tax rates × five FX rates × 2- and 3-decimal bases) the entry balances EXACTLY`,
+  revenueWorst === 0, revenueCase || "no imbalance in any case");
 
 let allOk = true;
 for (const [c, n, x] of results) { if (!c) allOk = false; console.log(`${c ? "PASS" : "FAIL"}  ${n}${x ? "  << " + x : ""}`); }

@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import {
   db,
   paymentsTable,
@@ -12,6 +12,7 @@ import {
   accountsTable,
   journalEntriesTable,
   journalLinesTable,
+  advanceApplicationsTable,
 } from "@/db";
 import { requireSession, requireRole } from "@/lib/session";
 import { moneyEpsilon, roundMoney } from "@/lib/currency/currencies";
@@ -488,7 +489,20 @@ export async function refundAdvanceAction(paymentId: number, bankAccountId?: num
     .where(and(eq(paymentsTable.id, paymentId), eq(paymentsTable.orgId, session.orgId)));
   if (!receipt) return { error: "Payment not found." };
   if (receipt.kind !== "advance_receipt") return { error: "Only customer advance receipts can be refunded." };
-  if (receipt.salesInvoiceId) return { error: "This advance has been applied to a sales invoice and can no longer be refunded." };
+  // Partial allocation means "applied" is no longer all-or-nothing, so the question is whether ANY
+  // of this advance is still unspent. Partial refunds land in commit 7; until then a refund is
+  // whole-receipt, so any active allocation blocks it — but the reason names the real state.
+  const [allocated] = await db
+    .select({ applied: sql<string>`coalesce(sum(${advanceApplicationsTable.appliedAmount}), 0)::text` })
+    .from(advanceApplicationsTable)
+    .where(and(
+      eq(advanceApplicationsTable.orgId, session.orgId),
+      eq(advanceApplicationsTable.advancePaymentId, receipt.id),
+      isNull(advanceApplicationsTable.releasedAt),
+    ));
+  if (Number(allocated?.applied ?? 0) > 0) {
+    return { error: "This advance has been applied to a sales invoice and can no longer be refunded." };
+  }
   const [existingRefund] = await db
     .select({ id: paymentsTable.id })
     .from(paymentsTable)
@@ -622,8 +636,21 @@ export async function deletePaymentAction(paymentId: number): Promise<ActionResu
   // control accounts, so it is refused outright — corrections go through a credit note or a
   // manual journal. Unapplied advances (still on the proforma, or left behind by the §10 cap)
   // delete cleanly as before.
-  if (payment.kind === "advance_receipt" && payment.salesInvoiceId) {
-    return { error: "This advance has been applied to a sales invoice and can no longer be deleted. Correct it with a credit note or a manual journal instead." };
+  if (payment.kind === "advance_receipt") {
+    // Any ACTIVE allocation stands behind a posted invoice's basePaidAmount; deleting the receipt
+    // under it would orphan the allocation and corrupt both control accounts. A partially applied
+    // advance is just as unsafe as a fully applied one, which `salesInvoiceId` could not express.
+    const [live] = await db
+      .select({ n: sql<number>`count(*)::int` })
+      .from(advanceApplicationsTable)
+      .where(and(
+        eq(advanceApplicationsTable.orgId, session.orgId),
+        eq(advanceApplicationsTable.advancePaymentId, payment.id),
+        isNull(advanceApplicationsTable.releasedAt),
+      ));
+    if ((live?.n ?? 0) > 0) {
+      return { error: "This advance has been applied to a sales invoice and can no longer be deleted. Correct it with a credit note or a manual journal instead." };
+    }
   }
   // A refunded receipt is one half of a pair — deleting it would orphan the refund row that
   // references it. Delete the refund first (which restores the advance), then the receipt.

@@ -4,8 +4,8 @@ import { revalidatePath } from "next/cache";
 import { sanitizeIfHtml } from "@/lib/sanitize-html";
 import { normalizeDocumentTerms, type DocumentTerm } from "../_shared/document-terms";
 import { redirect } from "next/navigation";
-import { and, eq, inArray } from "drizzle-orm";
-import { db, customersTable, proformaInvoicesTable, proformaInvoiceItemsTable, salesInvoicesTable, salesInvoiceItemsTable, deliveryChallansTable, deliveryChallanItemsTable, paymentsTable, accountsTable, journalEntriesTable, journalLinesTable } from "@/db";
+import { and, eq, sql } from "drizzle-orm";
+import { db, customersTable, proformaInvoicesTable, proformaInvoiceItemsTable, salesInvoicesTable, salesInvoiceItemsTable, deliveryChallansTable, deliveryChallanItemsTable, paymentsTable, accountsTable, journalEntriesTable, journalLinesTable, advanceApplicationsTable } from "@/db";
 import { requireSession } from "@/lib/session";
 import { logActivity } from "@/lib/activity";
 import { recordAudit } from "@/lib/security/audit";
@@ -17,7 +17,10 @@ import { snapshotDocumentBankAccounts } from "@/lib/document-bank-data";
 import { snapshotSealForDoc, applySealOverride } from "@/lib/doc-seal";
 import { moneyEpsilon, normalizeDocCurrency, roundMoney } from "@/lib/currency/currencies";
 import { prepareInvoicePosting, type PreparedInvoicePosting } from "@/lib/invoice-posting";
-import { fxLine, mils } from "@/lib/payment-currency";
+import {
+  lockAdvanceAndReadPot, planAllocations, sameCustomerRefusal, sameCurrencyRefusal,
+  type AdvancePot,
+} from "@/lib/advance-allocations";
 
 export type ActionResult = {
   error?: string;
@@ -209,29 +212,19 @@ export async function convertProformaToInvoiceAction(proformaId: number): Promis
   const allProformaPayments = await db.select().from(paymentsTable).where(and(eq(paymentsTable.orgId, session.orgId), eq(paymentsTable.proformaInvoiceId, proformaId)));
   const refundedIds = new Set(allProformaPayments.filter((p) => p.kind === "advance_refund" && p.refundsPaymentId !== null).map((p) => p.refundsPaymentId));
   const proformaPayments = allProformaPayments.filter((p) => p.kind !== "advance_refund" && !refundedIds.has(p.id));
-  // §10 cap, in the DOCUMENT's currency: advances apply to the new invoice only up to its total,
-  // in the order they were received, WHOLE payments only — one application per payment is what
-  // lets each application carry its own advance's stored base figure (the per-payment FX shape).
-  // A payment that will not fit inside the remaining balance is NOT transferred: it keeps
-  // salesInvoiceId null and stays in 2300 as the customer's available advance (for a future
-  // invoice or a refund — which also makes "advance available" a plain query), so AR can never be
-  // over-credited. Tolerance and rounding follow the proforma's own currency: half a fils is
-  // 0.0005, not 0.005.
   const convCurrency = pf.currency ?? session.orgCurrency;
   const convEps = moneyEpsilon(convCurrency);
-  const ordered = [...proformaPayments].sort((a, b) =>
+  // Consumption order is OLDEST RECEIPT FIRST and must be deterministic: with two advances taken
+  // at different rates the order decides the realized FX, so an arbitrary order would make the
+  // same conversion produce different numbers on different runs.
+  const consumeOrder = [...proformaPayments].sort((a, b) =>
     a.paymentDate < b.paymentDate ? -1 : a.paymentDate > b.paymentDate ? 1 : a.id - b.id);
-  const applied: typeof proformaPayments = [];
-  let appliedTotal = 0;
-  for (const p of ordered) {
-    if (appliedTotal + Number(p.amount) <= Number(pf.total) + convEps) {
-      applied.push(p);
-      appliedTotal += Number(p.amount);
-    }
-  }
-  const paidStr = roundMoney(appliedTotal, convCurrency);
-  // Reflect the applied payments' status immediately (no payments → normal draft, unchanged).
-  const invoiceStatus = appliedTotal <= convEps ? "draft" : appliedTotal >= Number(pf.total) - convEps ? "paid" : "partially_paid";
+  // Whether anything CAN be applied decides whether this invoice is born posted. Real availability
+  // is re-read under lock inside the transaction; this outer read only answers "prepare a
+  // posting?". A stale yes is harmless (the plan comes back empty and the invoice stays a draft);
+  // a stale no cannot happen, because nothing can ADD availability to these advances while this
+  // proforma is unconverted.
+  const roughAvailable = proformaPayments.reduce((sum, p) => sum + Number(p.amount), 0);
 
   const issueDate = new Date().toISOString().slice(0, 10);
   // An invoice born non-draft (it carries transferred advances) NEVER passes through send — that
@@ -242,7 +235,7 @@ export async function convertProformaToInvoiceAction(proformaId: number): Promis
   // rate REFUSES to convert (missingRate → the one-click fetch seam) rather than posting a wrong
   // ledger; advance-free conversions still produce a plain draft and post nothing until send.
   let posting: PreparedInvoicePosting | null = null;
-  if (invoiceStatus !== "draft") {
+  if (roughAvailable > convEps) {
     const prep = await prepareInvoicePosting({
       orgId: session.orgId,
       userId: session.userId,
@@ -257,65 +250,72 @@ export async function convertProformaToInvoiceAction(proformaId: number): Promis
     posting = prep;
   }
 
-  // Advance applications (§7): one journal per applied payment, keyed (advance_application,
-  // payment.id) — Dr 2300 at the advance's CARRIED base value (what 2300 was credited at receipt,
-  // the payment-date rate), Cr 1100 at the invoice's BOOKED rate × the applied amount, difference
-  // derived to 4900 — FX-7's exact construction with 2300 standing where Bank stood; the
-  // application itself moves no cash. The CLOSING application is derived (baseTotal − prior
-  // credits) so a fully-advanced invoice lands at basePaidAmount === baseTotal exactly, the same
-  // rule as invoice payments. basePaidAmount is the sum of the AR-clearing figures, so the 1100
-  // ledger and the document column agree by construction.
-  type AdvanceApplication = {
-    paymentId: number;
-    dr2300: string;
-    crAr: string;
-    fx: { accountId: number; debit: string; credit: string } | null;
-  };
-  const applications: AdvanceApplication[] = [];
-  let basePaidStr: string | null = null;
-  let advAccountId = 0;
-  let arAccountId = 0;
-  if (applied.length > 0 && posting) {
-    const accounts = await db.select().from(accountsTable).where(eq(accountsTable.orgId, session.orgId));
-    const byCode = new Map(accounts.map((a) => [a.code, a]));
-    const advances = byCode.get("2300");
-    const arAccount = byCode.get("1100");
-    if (!advances) return { error: "Chart of accounts is missing a required system account (2300 Customer Advances)." };
-    if (!arAccount) return { error: "Chart of accounts is missing a required system account (1100)." };
-    advAccountId = advances.id;
-    arAccountId = arAccount.id;
+  const accounts = await db.select().from(accountsTable).where(eq(accountsTable.orgId, session.orgId));
+  const byCode = new Map(accounts.map((a) => [a.code, a]));
+  if (posting && !byCode.get("2300")) return { error: "Chart of accounts is missing a required system account (2300 Customer Advances)." };
+  if (posting && !byCode.get("1100")) return { error: "Chart of accounts is missing a required system account (1100)." };
 
-    const bookedRate = Number(posting.captured.exchangeRate);
-    const fullyAdvanced = appliedTotal >= Number(pf.total) - convEps;
-    let crSumMils = 0;
-    for (const [i, p] of applied.entries()) {
-      // The advance's carried base value is its stored baseAppliedAmount (= its payment-date base;
-      // for advances the applied figure IS the received figure). A pre-FX-7 base-currency payment
-      // carries the identity; a pre-FX-7 FOREIGN payment stored no base at all, so the application
-      // cannot be constructed — an honest refusal, not a guess.
-      const isBase = !p.currency || p.currency.toUpperCase() === session.orgCurrency.toUpperCase();
-      const carried = p.baseAppliedAmount ?? (isBase ? p.amount : null);
-      if (carried === null) {
-        return { error: "A transferred advance has no stored base-currency value (it was recorded before currency capture), so it cannot be applied. Delete and re-record that payment first." };
+  const result = await db.transaction(async (tx) => {
+    // Double-submit guard on the SERVER, not only in the confirm dialog: two clicks can both pass
+    // the convertedInvoiceId check above before either commits. Locking the proforma row and
+    // re-reading it here makes the second one lose deterministically.
+    const pfLocked = await tx.execute(sql`
+      select converted_invoice_id from proforma_invoices
+       where id = ${proformaId} and org_id = ${session.orgId} for update
+    `);
+    const pfRow = (pfLocked.rows as unknown as { converted_invoice_id: number | null }[])[0];
+    if (!pfRow) return { error: "Proforma invoice not found." } as const;
+    if (pfRow.converted_invoice_id) return { error: "This proforma has already been converted to a sales invoice." } as const;
+
+    // Lock every advance BEFORE reading availability, in ASCENDING ID order so two callers can
+    // never take the same pair of locks in opposite orders and deadlock. Availability read outside
+    // a lock is a guess: two allocators could each see the same 2,000 as available and both spend
+    // it, driving 2300 negative.
+    const potById = new Map<number, AdvancePot>();
+    for (const p of [...consumeOrder].sort((a, b) => a.id - b.id)) {
+      const locked = await lockAdvanceAndReadPot(tx, { orgId: session.orgId, advancePaymentId: p.id });
+      if (!locked) {
+        // Not an advance receipt, or a pre-FX-7 foreign receipt with no stored base value — there
+        // is no carried figure to release, and inventing one would misstate 2300.
+        return { error: "An advance on this proforma has no stored base-currency value (it was recorded before currency capture), so it cannot be applied. Delete and re-record that payment first." } as const;
       }
-      const closing = fullyAdvanced && i === applied.length - 1;
-      const crAr = closing
-        ? roundMoney(Number(posting.captured.baseTotal) - crSumMils / 1000, session.orgCurrency)
-        : roundMoney(Number(p.amount) * bookedRate, session.orgCurrency);
-      crSumMils += mils(crAr);
-      const fx = fxLine({
-        baseAmount: carried, baseApplied: crAr, direction: "in",
-        baseCurrency: session.orgCurrency, fxAccountId: byCode.get("4900")?.id ?? -1,
-      });
-      if (fx && !byCode.get("4900")) {
-        return { error: "Chart of accounts is missing a required system account (4900 Exchange Gain/Loss)." };
-      }
-      applications.push({ paymentId: p.id, dr2300: carried, crAr, fx });
+      potById.set(p.id, locked.pot);
     }
-    basePaidStr = roundMoney(crSumMils / 1000, session.orgCurrency);
-  }
+    const pots = consumeOrder.map((p) => ({ paymentId: p.id, pot: potById.get(p.id)! }));
 
-  const id = await db.transaction(async (tx) => {
+    // §5 and the same-currency rule hold by construction at conversion (the invoice IS this
+    // proforma) and are checked anyway — this is the same engine that will apply an advance to a
+    // DIFFERENT invoice, where neither holds for free.
+    for (const p of proformaPayments) {
+      const cur = sameCurrencyRefusal(p.currency, pf.currency, session.orgCurrency);
+      if (cur) return { error: cur } as const;
+    }
+    const party = sameCustomerRefusal(pf.customerId, pf.customerId);
+    if (party) return { error: party } as const;
+
+    const planned = posting
+      ? planAllocations({
+          pots,
+          invoice: {
+            currency: pf.currency,
+            exchangeRate: posting.captured.exchangeRate,
+            baseTotal: posting.captured.baseTotal,
+            basePaidAmount: "0",
+            total: pf.total,
+            paidAmount: "0",
+          },
+          baseCurrency: session.orgCurrency,
+          advancesAccountId: byCode.get("2300")!.id,
+          arAccountId: byCode.get("1100")!.id,
+          fxAccountId: byCode.get("4900")?.id ?? null,
+        })
+      : ({ ok: true, plan: [], totalApplied: "0", totalArCleared: "0" } as const);
+    if (!planned.ok) return { error: planned.error } as const;
+
+    const paidStr = roundMoney(Number(planned.totalApplied), convCurrency);
+    const willPost = planned.plan.length > 0;
+    const invoiceStatus = !willPost ? "draft" : Number(paidStr) >= Number(pf.total) - convEps ? "paid" : "partially_paid";
+
     const invoiceNumber = await nextDocumentNumber(tx, session.orgId, "sales_invoice");
     const [inv] = await tx
       .insert(salesInvoicesTable)
@@ -335,12 +335,12 @@ export async function convertProformaToInvoiceAction(proformaId: number): Promis
         taxTotal: pf.taxTotal,
         total: pf.total,
         paidAmount: paidStr,
-        basePaidAmount: basePaidStr,
+        basePaidAmount: willPost ? planned.totalArCleared : null,
         // A posted-at-conversion invoice stores its FX capture exactly as send would have;
         // a draft conversion leaves them null until send fills them.
-        exchangeRate: posting?.captured.exchangeRate,
-        baseTotal: posting?.captured.baseTotal,
-        baseTaxAmount: posting?.captured.baseTaxAmount,
+        exchangeRate: willPost ? posting!.captured.exchangeRate : null,
+        baseTotal: willPost ? posting!.captured.baseTotal : null,
+        baseTaxAmount: willPost ? posting!.captured.baseTaxAmount : null,
         notes: pf.notes,
         createdById: session.userId,
       })
@@ -362,29 +362,34 @@ export async function convertProformaToInvoiceAction(proformaId: number): Promis
       );
     }
 
-    // Transfer the APPLIED payments: re-point each to the new invoice while keeping
-    // proformaInvoiceId as the origin reference. No new payment rows — each keeps its single
-    // receipt posting. A §10-capped excess payment is left untouched (salesInvoiceId null): it
-    // was never applied and remains the customer's available advance.
-    if (applied.length > 0) {
-      await tx
-        .update(paymentsTable)
-        .set({ salesInvoiceId: inv.id })
-        .where(and(eq(paymentsTable.orgId, session.orgId), inArray(paymentsTable.id, applied.map((p) => p.id))));
-    }
-
-    // Post the born-non-draft invoice inside the same transaction — invoice, items, transferred
-    // payments and the revenue/AR/VAT entry commit or roll back as one.
-    if (posting) {
+    // Post the born-non-draft invoice inside the same transaction — invoice, items, allocations
+    // and the revenue/AR/VAT entry commit or roll back as one.
+    if (willPost && posting) {
       await posting.post(tx, {
         invoiceId: inv.id,
         memo: `Invoice ${invoiceNumber} issued (converted from proforma ${pf.proformaNumber})`,
       });
     }
 
-    // Apply the advances (§7) — after the invoice posting, so the AR being cleared exists. The
-    // application is not cash: the money posted once, at receipt.
-    for (const app of applications) {
+    // Apply the advances (§7) — AFTER the invoice posting, so the AR being cleared exists. Each
+    // allocation is its own row and its own journal, keyed by the ALLOCATION and no longer by the
+    // payment: one advance can now settle several invoices, so a payment id is not unique per
+    // application, and keying by it would make the second application collide with the first and
+    // be suppressed by the idempotency check.
+    for (const step of planned.plan) {
+      const [alloc] = await tx
+        .insert(advanceApplicationsTable)
+        .values({
+          orgId: session.orgId,
+          advancePaymentId: step.advancePaymentId,
+          salesInvoiceId: inv.id,
+          appliedAmount: step.appliedAmount,
+          carriedBase: step.carriedBase,
+          arCleared: step.arCleared,
+          appliedDate: issueDate,
+          createdById: session.userId,
+        })
+        .returning({ id: advanceApplicationsTable.id });
       const [entry] = await tx
         .insert(journalEntriesTable)
         .values({
@@ -392,48 +397,57 @@ export async function convertProformaToInvoiceAction(proformaId: number): Promis
           entryDate: issueDate,
           memo: `Advance applied to invoice ${invoiceNumber} (received against proforma ${pf.proformaNumber})`,
           sourceType: "advance_application",
-          sourceId: app.paymentId,
+          sourceId: alloc.id,
           createdById: session.userId,
         })
         .returning({ id: journalEntriesTable.id });
-      await tx.insert(journalLinesTable).values([
-        { journalEntryId: entry.id, accountId: advAccountId, debit: app.dr2300, credit: "0" },
-        { journalEntryId: entry.id, accountId: arAccountId, debit: "0", credit: app.crAr },
-        ...(app.fx ? [{ journalEntryId: entry.id, ...app.fx }] : []),
-      ]);
+      await tx.insert(journalLinesTable).values(step.lines.map((l) => ({ journalEntryId: entry.id, ...l })));
+
+      // Interim, until commit 8 moves the remaining readers onto allocations: a FULLY consumed
+      // advance keeps the old salesInvoiceId linkage, so statements, print and project costing
+      // behave exactly as before. A PARTIALLY consumed one must not be linked — that field means
+      // "this whole receipt settled that invoice", which a partial draw makes untrue.
+      if (step.emptiesAdvance) {
+        await tx.update(paymentsTable).set({ salesInvoiceId: inv.id })
+          .where(and(eq(paymentsTable.orgId, session.orgId), eq(paymentsTable.id, step.advancePaymentId)));
+      }
     }
 
     // Link the proforma to the invoice; its payment history stays visible read-only.
     await tx.update(proformaInvoicesTable).set({ convertedInvoiceId: inv.id, updatedAt: new Date() }).where(eq(proformaInvoicesTable.id, proformaId));
-    return inv.id;
+    return { id: inv.id, allocations: planned.plan, posted: willPost, paidStr } as const;
   });
+  if ("error" in result) return { error: result.error };
+  const { id, allocations, posted } = result;
 
   await logActivity(session, {
     type: "sales_invoice.created",
-    description: posting
+    description: posted
       ? `Converted from proforma ${pf.proformaNumber} — posted to ledger and decremented stock`
       : `Converted from proforma ${pf.proformaNumber}`,
     entityType: "sales_invoice",
     entityId: id,
   });
   if (proformaPayments.length > 0) {
-    const unapplied = proformaPayments.filter((p) => !applied.some((a) => a.id === p.id));
     await recordAudit({ orgId: session.orgId, userId: session.userId, userName: session.name }, {
       action: "payment.transferred", entityType: "sales_invoice", entityId: id,
       previousValue: { proformaInvoiceId: proformaId, paymentIds: proformaPayments.map((p) => p.id) },
       newValue: {
         salesInvoiceId: id,
-        appliedPaymentIds: applied.map((p) => p.id),
-        appliedTotal: paidStr,
-        // §10: payments the cap left behind — still the customer's available advance.
-        unappliedPaymentIds: unapplied.map((p) => p.id),
+        // Each allocation names how much of which advance settled this invoice. A partial draw is
+        // now expressible, so the audit records amounts rather than a list of consumed payments —
+        // "payment 12 was used" no longer says how much of it.
+        allocations: allocations.map((a) => ({
+          advancePaymentId: a.advancePaymentId, applied: a.appliedAmount, carriedBase: a.carriedBase, arCleared: a.arCleared,
+        })),
+        appliedTotal: result.paidStr,
       },
     });
   }
   revalidatePath("/sales/invoices");
   revalidatePath("/sales/proforma");
   revalidatePath(`/sales/proforma/${proformaId}`);
-  if (posting) {
+  if (posted) {
     // A posting happened, so the finance surfaces changed too — same set send revalidates.
     revalidatePath("/finance/chart-of-accounts");
     revalidatePath("/finance/ledger");

@@ -237,16 +237,42 @@ const invoiceLines = async (invId) => (await db.query(
     where e.org_id=$1 and e.source_type='sales_invoice' and e.source_id=$2 order by l.id`, [org, invId])).rows;
 // Commit 4 helpers: the application entry keyed (advance_application, payment.id); the AR ledger
 // position of one invoice (its posting Dr minus its applications' and payments' Cr); net 2300.
+// Application journals are keyed by the ALLOCATION row now, not by the payment — one advance can
+// settle several invoices, so the payment id stopped being unique per application. Resolving
+// through advance_applications is what makes these assertions still mean "this advance's
+// application lines".
 const applicationLines = async (paymentId) => (await db.query(
   `select l.account_id, l.debit::text, l.credit::text from journal_lines l
      join journal_entries e on e.id = l.journal_entry_id
-    where e.org_id=$1 and e.source_type='advance_application' and e.source_id=$2 order by l.id`, [org, paymentId])).rows;
+     join advance_applications a on a.id = e.source_id and a.org_id = e.org_id
+    where e.org_id=$1 and e.source_type='advance_application' and a.advance_payment_id=$2
+    order by a.id, l.id`, [org, paymentId])).rows;
+const allocationsOf = async (paymentId) => (await db.query(
+  `select id, sales_invoice_id, applied_amount::text, carried_base::text, ar_cleared::text, released_at
+     from advance_applications where org_id=$1 and advance_payment_id=$2 order by id`, [org, paymentId])).rows;
+const availableOf = async (paymentId) => {
+  const pay = (await db.query("select amount::text, base_applied_amount::text from payments where id=$1", [paymentId])).rows[0];
+  const alloc = (await db.query(
+    `select coalesce(sum(applied_amount),0)::text a, coalesce(sum(carried_base),0)::text c
+       from advance_applications where org_id=$1 and advance_payment_id=$2 and released_at is null`, [org, paymentId])).rows[0];
+  const ref = (await db.query(
+    `select coalesce(sum(amount),0)::text a, coalesce(sum(base_applied_amount),0)::text c
+       from payments where org_id=$1 and refunds_payment_id=$2`, [org, paymentId])).rows[0];
+  return {
+    doc: num(pay.amount) - num(alloc.a) - num(ref.a),
+    carried: num(pay.base_applied_amount) - num(alloc.c) - num(ref.c),
+  };
+};
+// Every AR movement belonging to ONE invoice: its own posting, the applications that settled it
+// (keyed by allocation now), and any ordinary payments against it.
 const arNetFor = async (invId) => Number((await db.query(
   `select coalesce(sum(l.debit),0) - coalesce(sum(l.credit),0) as net
      from journal_lines l join journal_entries e on e.id = l.journal_entry_id
     where e.org_id=$1 and l.account_id=$2
       and ((e.source_type='sales_invoice' and e.source_id=$3)
-        or (e.source_type in ('advance_application','payment') and e.source_id in (select id from payments where sales_invoice_id=$3)))`,
+        or (e.source_type='advance_application'
+            and e.source_id in (select id from advance_applications where org_id=$1 and sales_invoice_id=$3))
+        or (e.source_type='payment' and e.source_id in (select id from payments where org_id=$1 and sales_invoice_id=$3)))`,
   [org, AR, invId])).rows[0].net);
 const advNet = async () => { const a = await accountLines(ADV); return num(a.cr) - num(a.dr); };
 
@@ -411,7 +437,8 @@ check("G-closing: the closing application's AR credit is the DERIVED 1,570.04 �
   num(gApp3.find((l) => l.account_id === AR)?.credit) === 1570040, JSON.stringify(gApp3));
 const gFx = (await db.query(
   `select coalesce(sum(l.debit),0)::text dr from journal_lines l join journal_entries e on e.id=l.journal_entry_id
-    where e.org_id=$1 and e.source_type='advance_application' and e.source_id = any($2) and l.account_id=$3`,
+    where e.org_id=$1 and e.source_type='advance_application' and l.account_id=$3
+      and e.source_id in (select id from advance_applications where org_id=$1 and advance_payment_id = any($2))`,
   [org, gPays.map((r) => r.id), FX])).rows[0].dr;
 check("G-closing: total realized loss across the three applications = 910.01 (4,710.00 booked − 3,799.99 carried)",
   num(gFx) === 910010, gFx);
@@ -610,6 +637,117 @@ const stmtBody = (await page.locator("body").innerText()).replace(/\s+/g, " ");
 check("§12: the statement page types advance rows distinctly and shows the Advance available tile (942.00 held)",
   /Advance Received/.test(stmtBody) && /Advance available/i.test(stmtBody) && /942\.00/.test(stmtBody),
   stmtBody.match(/Advance available[\s\S]{0,30}/i)?.[0] ?? "no match");
+
+// ================= §2/§3 PARTIAL DRAW: an advance larger than the invoice is split =================
+// Spec case A. The old whole-payment model could not express this at all: a 10,000 advance against
+// an 8,000 invoice did not fit, so NOTHING was applied and the invoice was born a draft with the
+// customer's money sitting untouched in 2300. Now 8,000 is drawn and 2,000 stays available.
+// (Recorded against a 10,000 proforma, whose total is then corrected down — the payment dialog
+// caps a receipt at the proforma balance, so that is the only way this state arises.)
+const pfPart = await mkProforma({ currency: null, total: "10000.00" });
+await recordPayment(`${BASE}/sales/proforma/${pfPart}`, 10000);
+const partPay = (await db.query("select id from payments where org_id=$1 and proforma_invoice_id=$2", [org, pfPart])).rows[0].id;
+await db.query("update proforma_invoices set total='8000.00', subtotal='8000.00' where id=$1", [pfPart]);
+await balanced("before the partial-draw conversion");
+const invPart = await convertViaUi(pfPart);
+const partInv = (await db.query("select status, paid_amount::text, base_paid_amount::text from sales_invoices where id=$1", [invPart])).rows[0];
+check("CASE A: a 10,000 advance against an 8,000 invoice DRAWS 8,000 — the invoice is paid, not left a draft",
+  partInv.status === "paid" && num(partInv.paid_amount) === 8000000 && num(partInv.base_paid_amount) === 8000000, JSON.stringify(partInv));
+const partAllocs = await allocationsOf(partPay);
+check("CASE A: exactly one allocation row for 8,000 against that invoice",
+  partAllocs.length === 1 && num(partAllocs[0].applied_amount) === 8000000 && num(partAllocs[0].carried_base) === 8000000
+    && num(partAllocs[0].ar_cleared) === 8000000 && partAllocs[0].sales_invoice_id === invPart, JSON.stringify(partAllocs));
+const partAvail = await availableOf(partPay);
+check("CASE A: 2,000 REMAINS available on the advance — receipt 10,000 minus the 8,000 drawn",
+  partAvail.doc === 2000000 && partAvail.carried === 2000000, JSON.stringify(partAvail));
+check("CASE A: the partially drawn receipt keeps salesInvoiceId NULL — it did not wholly settle that invoice",
+  (await db.query("select sales_invoice_id from payments where id=$1", [partPay])).rows[0].sales_invoice_id === null);
+check("CASE A: AR = 0 and the application posted Dr 2300 8,000 / Cr 1100 8,000",
+  (await arNetFor(invPart)) === 0 && (await applicationLines(partPay)).length === 2);
+await page.goto(`${BASE}/sales/proforma/${pfPart}`, { waitUntil: "networkidle" });
+const partBody = (await page.locator("body").innerText()).replace(/\s+/g, " ");
+check("CASE A: the proforma screen shows 2,000 still available, not 0 and not 10,000",
+  /Advance Available/.test(partBody) && /2,?000\.00/.test(partBody),
+  partBody.match(/Advance Available[\s\S]{0,40}/)?.[0] ?? "no match");
+await balanced("after the partial-draw conversion");
+
+// ================= the deterministic LOCK proof =================
+// A race test can pass by luck; this cannot. A second connection holds the advance row, and the
+// conversion must BLOCK on it rather than reading availability around it.
+//
+// Two things this proof got wrong before they were fixed, both of which made it pass while the
+// lock was REMOVED:
+//   1. it used a fully consumed advance — whose salesInvoiceId UPDATE blocks on the held row all
+//      by itself, so the block proved nothing about the read. It now uses a PARTIAL draw, where
+//      the availability read is the only statement that touches the row;
+//   2. it drove the conversion through the UI, which spends ~3s on scripted waits before the
+//      action is even issued — a 4s window that any conversion would "fail" to finish. It now
+//      REPLAYS the action directly, so the request is in flight immediately and every millisecond
+//      of delay is the lock.
+const pfLock = await mkProforma({ currency: null, total: "500.00" });
+await recordPayment(`${BASE}/sales/proforma/${pfLock}`, 500);
+const lockPay = (await db.query("select id from payments where org_id=$1 and proforma_invoice_id=$2", [org, pfLock])).rows[0].id;
+await db.query("update proforma_invoices set total='300.00', subtotal='300.00' where id=$1", [pfLock]);
+
+const convertActionId = idFor("convertProformaToInvoiceAction");
+check("found the Next-Action id for convertProformaToInvoiceAction", !!convertActionId, String(convertActionId));
+const holder = new Client({ connectionString: process.env.DATABASE_URL });
+await holder.connect();
+await holder.query("begin");
+await holder.query("select id from payments where id=$1 for update", [lockPay]);
+
+let convSettled = false;
+const convStarted = Date.now();
+const convPromise = fetch(`${BASE}/sales/proforma/${pfLock}`, {
+  method: "POST",
+  headers: { "Next-Action": convertActionId, "Content-Type": "text/plain;charset=UTF-8", Cookie: cookieHeader },
+  body: JSON.stringify([pfLock]),
+  redirect: "manual",
+}).then(async (r) => { await r.text(); convSettled = true; return r.status; });
+
+await new Promise((r) => setTimeout(r, 3000));
+const invDuringLock = (await db.query("select converted_invoice_id from proforma_invoices where id=$1", [pfLock])).rows[0].converted_invoice_id;
+check("LOCK PROOF: with another transaction holding the advance row, the replayed conversion is STILL IN FLIGHT after 3s",
+  convSettled === false && invDuringLock === null, `settled=${convSettled} converted=${invDuringLock}`);
+// WHICH statement is waiting matters, and blocking alone does not answer it: inserting an
+// advance_applications row takes an FK lock on the referenced payment, so a conversion with NO
+// explicit lock ALSO blocks — just later, after it has already read availability, which is exactly
+// the read that two concurrent allocators must not both perform. So the waiter's current query is
+// what gets asserted: it must be the availability SELECT … FOR UPDATE, not the allocation INSERT.
+const waiter = (await db.query(
+  `select query, wait_event_type from pg_stat_activity
+    where datname = current_database() and state = 'active' and wait_event_type = 'Lock'`)).rows;
+check("LOCK PROOF: the statement waiting on the row is the availability read itself (SELECT … FOR UPDATE on payments), not a later insert",
+  waiter.some((w) => /for update/i.test(w.query) && /from payments/i.test(w.query)),
+  waiter.map((w) => `${w.wait_event_type}: ${String(w.query).replace(/\s+/g, " ").slice(0, 120)}`).join(" | ") || "(nothing waiting on a lock)");
+await holder.query("rollback");
+await holder.end();
+await convPromise;
+const heldFor = Date.now() - convStarted;
+const invLock = (await db.query("select converted_invoice_id from proforma_invoices where id=$1", [pfLock])).rows[0].converted_invoice_id;
+check("LOCK PROOF: releasing the row lets the SAME request finish — it was waiting on the lock, not failing",
+  invLock > 0, `invoice=${invLock} after ${heldFor}ms`);
+check("LOCK PROOF: and it was a PARTIAL draw — 300 of 500 — so only the locked read could have blocked it",
+  (await allocationsOf(lockPay)).length === 1 && num((await allocationsOf(lockPay))[0].applied_amount) === 300000
+    && (await db.query("select sales_invoice_id from payments where id=$1", [lockPay])).rows[0].sales_invoice_id === null,
+  JSON.stringify(await allocationsOf(lockPay)));
+await balanced("after the lock-proof conversion");
+
+// ================= L. GL 2300 = the carried value of every remaining available advance ==========
+const gl2300 = async () => Number((await db.query(
+  `select coalesce(sum(l.credit),0) - coalesce(sum(l.debit),0) as net
+     from journal_lines l join journal_entries e on e.id = l.journal_entry_id
+    where e.org_id=$1 and l.account_id=$2`, [org, ADV])).rows[0].net);
+const availableCarriedTotal = async () => {
+  const receipts = (await db.query(
+    "select id from payments where org_id=$1 and kind='advance_receipt'", [org])).rows;
+  let total = 0;
+  for (const r of receipts) total += (await availableOf(r.id)).carried;
+  return total / 1000;
+};
+const glAdv = await gl2300(), availAdv = await availableCarriedTotal();
+check(`INVARIANT L: GL 2300 (${glAdv}) = carried value of all remaining available advances (${availAdv})`,
+  Math.round(glAdv * 1000) === Math.round(availAdv * 1000), `${glAdv} vs ${availAdv}`);
 
 // ================= H. AR reconciliation: GL 1100 = invoice subledger, with a divergence control =================
 const gl1100 = async () => Number((await db.query(

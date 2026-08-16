@@ -192,6 +192,91 @@ export function buildAllocationPosting(args: {
   };
 }
 
+export type PlannedAllocation = {
+  advancePaymentId: number;
+  appliedAmount: string;
+  carriedBase: string;
+  arCleared: string;
+  lines: { accountId: number; debit: string; credit: string }[];
+  /** True when this allocation exhausted its advance — the receipt is then fully spent. */
+  emptiesAdvance: boolean;
+};
+
+/**
+ * Plan a run of allocations against ONE invoice, drawing from advances in the order given.
+ *
+ * Shared by conversion and by applying an advance to an existing invoice, so both produce the same
+ * accounting from the same rules. The invoice's running paid figures are threaded through the plan,
+ * which is what lets the LAST draw against an invoice derive its AR figure against `baseTotal`
+ * instead of reconverting — the invoice-side residual. The advance-side residual is handled per
+ * pot inside `buildAllocationPosting`.
+ *
+ * Callers must have LOCKED every pot first (see `lockAdvanceAndReadPot`) — the availability inside
+ * each pot is only trustworthy while its row is held.
+ */
+export function planAllocations(args: {
+  /** Advances in the order they should be consumed — oldest receipt first. */
+  pots: { paymentId: number; pot: AdvancePot }[];
+  /** The invoice as it stands BEFORE any of these allocations. */
+  invoice: AllocationInvoice;
+  baseCurrency: string;
+  advancesAccountId: number;
+  arAccountId: number;
+  fxAccountId: number | null;
+}):
+  | { ok: true; plan: PlannedAllocation[]; totalApplied: string; totalArCleared: string }
+  | { ok: false; error: string } {
+  const { pots, invoice, baseCurrency, advancesAccountId, arAccountId, fxAccountId } = args;
+  const docCurrency = invoice.currency ?? baseCurrency;
+  const eps = moneyEpsilon(docCurrency);
+
+  const plan: PlannedAllocation[] = [];
+  let paidAmount = Number(invoice.paidAmount);
+  let basePaidAmount = Number(invoice.basePaidAmount ?? invoice.paidAmount);
+
+  for (const { paymentId, pot } of pots) {
+    const due = Number(invoice.total) - paidAmount;
+    if (due <= eps) break; // the invoice is settled — later advances stay available
+    const { availableAmount } = availabilityOf(pot, baseCurrency);
+    const applyAmount = roundMoney(Math.min(Number(availableAmount), due), docCurrency);
+    if (Number(applyAmount) <= eps) continue; // an exhausted advance contributes nothing
+
+    const built = buildAllocationPosting({
+      pot,
+      invoice: { ...invoice, paidAmount: roundMoney(paidAmount, docCurrency), basePaidAmount: roundMoney(basePaidAmount, baseCurrency) },
+      applyAmount,
+      baseCurrency,
+      advancesAccountId,
+      arAccountId,
+      fxAccountId,
+    });
+    if (!built.ok) return { ok: false, error: built.error };
+    if (!postingIsBalanced(built.posting.lines)) {
+      // Unreachable by construction; asserted anyway, because an unbalanced entry reaching the
+      // ledger is the one failure this whole model cannot recover from.
+      return { ok: false, error: "Internal error: the advance application entry did not balance." };
+    }
+
+    plan.push({
+      advancePaymentId: paymentId,
+      appliedAmount: applyAmount,
+      carriedBase: built.posting.carriedBase,
+      arCleared: built.posting.arCleared,
+      lines: built.posting.lines,
+      emptiesAdvance: built.posting.emptiesAdvance,
+    });
+    paidAmount += Number(applyAmount);
+    basePaidAmount += Number(built.posting.arCleared);
+  }
+
+  return {
+    ok: true,
+    plan,
+    totalApplied: roundMoney(paidAmount - Number(invoice.paidAmount), docCurrency),
+    totalArCleared: roundMoney(basePaidAmount - Number(invoice.basePaidAmount ?? invoice.paidAmount), baseCurrency),
+  };
+}
+
 /** Debits must equal credits at the base currency's minor unit — asserted at build time, not hoped for. */
 export function postingIsBalanced(lines: { debit: string; credit: string }[]): boolean {
   return lines.reduce((s, l) => s + mils(l.debit), 0) === lines.reduce((s, l) => s + mils(l.credit), 0);

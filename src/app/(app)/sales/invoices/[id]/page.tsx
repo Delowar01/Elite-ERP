@@ -1,10 +1,10 @@
 import { Fragment } from "react";
 import { notFound } from "next/navigation";
-import { eq, and } from "drizzle-orm";
+import { eq, and, isNull } from "drizzle-orm";
 import { DocumentTermsView } from "../../_shared/terms-view";
 import { SafeRichText } from "../../_shared/safe-rich-text";
 import { LineItemCell, LineDescRow } from "../../_shared/line-item-cell";
-import { db, salesInvoicesTable, salesInvoiceItemsTable, customersTable, salesOrdersTable, quotationsTable, orgsTable, bankAccountsTable, paymentsTable } from "@/db";
+import { db, salesInvoicesTable, salesInvoiceItemsTable, customersTable, salesOrdersTable, quotationsTable, orgsTable, bankAccountsTable, advanceApplicationsTable } from "@/db";
 import { requireSession } from "@/lib/session";
 import { getLocale } from "@/lib/i18n/server";
 import { t } from "@/lib/i18n/dict";
@@ -88,12 +88,18 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
   // Applied + Paid + Due, with "Paid" reduced to the DIRECT payments so the same transferred
   // advance is never counted twice. The payment rows themselves stay in the shared history below
   // (tagged "from Proforma") — one record, no second ledger.
+  // From ALLOCATIONS, not from payments linked by salesInvoiceId: an advance can now settle this
+  // invoice partially, and a partial draw never carries that link.
   const advanceApplied = showPayments
     ? (await db
-        .select({ amount: paymentsTable.amount })
-        .from(paymentsTable)
-        .where(and(eq(paymentsTable.orgId, session.orgId), eq(paymentsTable.salesInvoiceId, invoice.id), eq(paymentsTable.kind, "advance_receipt"))))
-        .reduce((sum, r) => sum + Number(r.amount), 0)
+        .select({ applied: advanceApplicationsTable.appliedAmount })
+        .from(advanceApplicationsTable)
+        .where(and(
+          eq(advanceApplicationsTable.orgId, session.orgId),
+          eq(advanceApplicationsTable.salesInvoiceId, invoice.id),
+          isNull(advanceApplicationsTable.releasedAt),
+        )))
+        .reduce((sum, r) => sum + Number(r.applied), 0)
     : 0;
   const directPaid = Number(invoice.paidAmount) - advanceApplied;
   const canDeletePayments = (session.role === "owner" || session.role === "admin") && invoice.status !== "void";

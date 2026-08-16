@@ -1,11 +1,11 @@
 import { Fragment } from "react";
 import { notFound } from "next/navigation";
-import { eq, and } from "drizzle-orm";
+import { eq, and, inArray, isNull } from "drizzle-orm";
 import { DocumentTermsView } from "../../_shared/terms-view";
 import { SafeRichText } from "../../_shared/safe-rich-text";
 import { LineItemCell, LineDescRow } from "../../_shared/line-item-cell";
 import { Info } from "lucide-react";
-import { db, proformaInvoicesTable, proformaInvoiceItemsTable, customersTable, salesOrdersTable, quotationsTable, orgsTable, bankAccountsTable, salesInvoicesTable, paymentsTable } from "@/db";
+import { db, proformaInvoicesTable, proformaInvoiceItemsTable, customersTable, salesOrdersTable, quotationsTable, orgsTable, bankAccountsTable, salesInvoicesTable, paymentsTable, advanceApplicationsTable } from "@/db";
 import { PaymentHistory } from "../../../finance/_shared/payment-history";
 import { requireSession } from "@/lib/session";
 import { getLocale } from "@/lib/i18n/server";
@@ -93,9 +93,23 @@ export default async function ProformaDetailPage({ params }: { params: Promise<{
   const refundedIds = new Set(advPayments.filter((r) => r.kind === "advance_refund" && r.refundsPaymentId !== null).map((r) => r.refundsPaymentId));
   const receipts = advPayments.filter((r) => r.kind === "advance_receipt");
   const advanceReceived = receipts.reduce((sum, r) => sum + Number(r.amount), 0);
-  const advanceAvailable = receipts
-    .filter((r) => r.salesInvoiceId === null && !refundedIds.has(r.id))
-    .reduce((sum, r) => sum + Number(r.amount), 0);
+  // Available is receipts MINUS what allocations and refunds have consumed. Reading
+  // `salesInvoiceId === null` instead would count a partially applied advance as fully available,
+  // because that field can only say "all of it went to that invoice" or nothing at all.
+  const allocatedByPayment = new Map<number, number>();
+  if (receipts.length > 0) {
+    const rows = await db
+      .select({ advancePaymentId: advanceApplicationsTable.advancePaymentId, applied: advanceApplicationsTable.appliedAmount })
+      .from(advanceApplicationsTable)
+      .where(and(
+        eq(advanceApplicationsTable.orgId, session.orgId),
+        inArray(advanceApplicationsTable.advancePaymentId, receipts.map((r) => r.id)),
+        isNull(advanceApplicationsTable.releasedAt),
+      ));
+    for (const r of rows) allocatedByPayment.set(r.advancePaymentId, (allocatedByPayment.get(r.advancePaymentId) ?? 0) + Number(r.applied));
+  }
+  const advanceAvailable = receipts.reduce(
+    (sum, r) => sum + (refundedIds.has(r.id) ? 0 : Math.max(0, Number(r.amount) - (allocatedByPayment.get(r.id) ?? 0))), 0);
   const showPayments = paidAmount > 0 || pf.status === "sent";
   const canDeletePayments = (session.role === "owner" || session.role === "admin") && pf.convertedInvoiceId == null;
   // Refunds stay possible AFTER conversion: a §10 excess advance (left unapplied by the cap) lives
