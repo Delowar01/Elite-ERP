@@ -99,6 +99,28 @@ seven ways strands 0.03 SAR without the residual rule.
 a bug — and when it reports success, check the same thing before treating it as evidence.** Put
 every currency (or unit, or scale) in the case label; the ambiguity is what makes this hide.
 
+### A suite asserts on its own fixtures, never on a whole-database total
+
+Migration scripts sweep every organization, because that is what a migration is for. A suite that
+pins the script's printed total is therefore asserting about **the database**, not about the thing
+it set up — and on a shared development database, other suites' leftovers decide whether it passes.
+
+This has now been got wrong twice in three commits, both times the same way:
+
+1. `verify-advances-audit` pinned `Totals: A=2 B=2` and read `A=17` — sixteen of them other orgs'
+   pre-fix fixtures.
+2. `verify-advance-backfill` pinned `migrated=2` and read `migrated=120`.
+
+Neither was a product bug, and neither failure told the truth about what it had tested. The reverse
+is the dangerous half: had the totals happened to match, the suite would have reported a pass it had
+not earned, because the number it checked was mostly other people's rows.
+
+**Scope every assertion to the fixture's own org** — count that org's rows, or match the script's
+per-row log lines for the ids the suite created. Where the global figure genuinely matters (a
+migration reporting zero on production, say), assert what it *means* rather than what it equals: the
+script printing "nothing to migrate" is a claim; `candidates=0` alone is a number that a script
+which never ran would also produce.
+
 ### The mirror image: a failing suite that is also not telling you what it looks like
 
 The same trap runs the other way, and it nearly produced a much worse report than any of the four
