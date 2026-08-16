@@ -68,6 +68,37 @@ red run read as a product bug until someone traced it to the text form of a nume
 is "the value was copied" or "the total is X", assert the number; pin the string only when the
 representation itself IS the claim (e.g. roundMoney's output format).
 
+### A generated input must be a state the system can actually produce
+
+The same trap has a generator-shaped form, and it is subtler because the suite genuinely runs and
+genuinely asserts. `verify-advance-allocations` sweeps hundreds of ways of splitting an advance and
+asserts the carried base its consumers take sums to the original exactly. The first version of that
+sweep reported a drift — and the drift was not real. **The generator was feeding it amounts the
+system cannot store.**
+
+Two different minor units are in play, and they are not the same one:
+
+- a payment's **document amount** and every split of it are stored at the **advance currency's**
+  unit, because `recordPaymentAction` rounds them there — so a USD draw can never be `333.333`;
+- the **carried base** is stored at the **base currency's** unit, because `capturePaymentBase`
+  rounds it there — so a SAR carried base can never be `4,709.995`.
+
+Rounding both at one unit produced inputs `recordPaymentAction` would have rejected, so part of the
+sweep was proving a property about data that cannot exist, and its "failure" sent someone chasing a
+bug that cannot occur. The label hid it: the case printed as `SAR 999.999`, which reads as an
+impossible 3-decimal SAR amount but actually meant *base currency SAR, document currency USD*.
+Ambiguous labelling is what let an impossible input look like a real one.
+
+The fix is not to narrow the sweep but to generate honestly: round each figure at the unit for its
+own role, and cross a 2-decimal document currency with a 3-decimal one against a 2-decimal and a
+3-decimal base. The proof that this mattered is that the mutation it guards is still caught
+afterwards, now by a case a customer can actually produce — a USD 10,000 advance in a SAR org split
+seven ways strands 0.03 SAR without the residual rule.
+
+**When a sweep or fuzzer reports a failure, check that the input is reachable before treating it as
+a bug — and when it reports success, check the same thing before treating it as evidence.** Put
+every currency (or unit, or scale) in the case label; the ambiguity is what makes this hide.
+
 ### The mirror image: a failing suite that is also not telling you what it looks like
 
 The same trap runs the other way, and it nearly produced a much worse report than any of the four
