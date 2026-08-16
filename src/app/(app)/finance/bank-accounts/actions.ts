@@ -5,6 +5,7 @@ import { and, eq } from "drizzle-orm";
 import { db, bankAccountsTable, accountsTable } from "@/db";
 import { requireSession } from "@/lib/session";
 import { logActivity } from "@/lib/activity";
+import { bankGlRefusal } from "@/lib/bank-gl-accounts";
 
 export type ActionResult = { error?: string; id?: number };
 
@@ -34,10 +35,14 @@ export async function createBankAccountAction(formData: FormData): Promise<Actio
   if (Number.isNaN(glAccountId)) return { error: "Choose a linked GL account." };
 
   const [glAccount] = await db
-    .select({ id: accountsTable.id })
+    .select({ id: accountsTable.id, code: accountsTable.code, name: accountsTable.name, type: accountsTable.type })
     .from(accountsTable)
     .where(and(eq(accountsTable.id, glAccountId), eq(accountsTable.orgId, session.orgId)));
   if (!glAccount) return { error: "GL account not found." };
+  // The server decides, not the dropdown: linking a bank account to a control account posts every
+  // receipt into that control account instead of a bank balance (see lib/bank-gl-accounts.ts).
+  const refusal = bankGlRefusal(glAccount);
+  if (refusal) return { error: refusal };
 
   const [row] = await db
     .insert(bankAccountsTable)
@@ -69,7 +74,7 @@ export async function updateBankAccountAction(id: number, formData: FormData): P
   if (!name) return { error: "Account name is required." };
 
   const [existing] = await db
-    .select({ id: bankAccountsTable.id })
+    .select({ id: bankAccountsTable.id, glAccountId: bankAccountsTable.glAccountId })
     .from(bankAccountsTable)
     .where(and(eq(bankAccountsTable.id, id), eq(bankAccountsTable.orgId, session.orgId)));
   if (!existing) return { error: "Bank account not found." };
@@ -80,10 +85,17 @@ export async function updateBankAccountAction(id: number, formData: FormData): P
   if (glRaw != null && String(glRaw).trim() !== "") {
     const glAccountId = Number(glRaw);
     const [glAccount] = await db
-      .select({ id: accountsTable.id })
+      .select({ id: accountsTable.id, code: accountsTable.code, name: accountsTable.name, type: accountsTable.type })
       .from(accountsTable)
       .where(and(eq(accountsTable.id, glAccountId), eq(accountsTable.orgId, session.orgId)));
     if (!glAccount) return { error: "GL account not found." };
+    // Refuse a CHANGE to an ineligible account, but let an unchanged legacy mapping through so the
+    // other fields stay editable — the same rule the base-currency lock follows. Grandfathered bad
+    // mappings are surfaced by scripts/audit-bank-gl-mappings.ts rather than by blocking edits.
+    if (glAccountId !== existing.glAccountId) {
+      const refusal = bankGlRefusal(glAccount);
+      if (refusal) return { error: refusal };
+    }
     set.glAccountId = glAccountId;
   }
   const openingRaw = formData.get("openingBalance");

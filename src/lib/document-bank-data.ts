@@ -1,6 +1,7 @@
 import "server-only";
 import { and, asc, eq } from "drizzle-orm";
 import { db, bankAccountsTable, accountsTable, orgsTable } from "@/db";
+import { eligibleBankGlAccounts } from "@/lib/bank-gl-accounts";
 import { snapshotSelectedBankAccounts, normalizeDocBankAccounts, type DocBankAccount } from "./document-bank-accounts";
 
 export type DocBankAccountOption = {
@@ -31,7 +32,7 @@ export async function getDocumentBankData(orgId: number): Promise<{
       .where(and(eq(bankAccountsTable.orgId, orgId), eq(bankAccountsTable.isActive, true)))
       .orderBy(asc(bankAccountsTable.name)),
     db
-      .select({ id: accountsTable.id, code: accountsTable.code, name: accountsTable.name })
+      .select({ id: accountsTable.id, code: accountsTable.code, name: accountsTable.name, type: accountsTable.type })
       .from(accountsTable)
       .where(eq(accountsTable.orgId, orgId))
       .orderBy(asc(accountsTable.code)),
@@ -51,7 +52,10 @@ export async function getDocumentBankData(orgId: number): Promise<{
   }));
   const validIds = new Set(bankAccounts.map((b) => b.id));
   const defaultBankAccountIds = (orgRows[0]?.defaultBankAccountIds ?? []).filter((id) => validIds.has(id));
-  return { bankAccounts, glAccounts, defaultBankAccountIds };
+  // The in-document "new bank account" dialog offers the same eligible GL accounts as the Finance
+  // screen — one rule, both entry points (lib/bank-gl-accounts.ts). It only ever creates, never
+  // edits an existing mapping, so no legacy-mapping carve-out is needed here.
+  return { bankAccounts, glAccounts: eligibleBankGlAccounts(glAccounts), defaultBankAccountIds };
 }
 
 // Snapshot the selected bank accounts (ordered ids) at document save time. Tenant-scoped; only the

@@ -11,6 +11,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@
 import { Money } from "../../sales/_shared/money";
 import { BankAccountFormDialog } from "./bank-account-form-dialog";
 import { accountName } from "@/lib/account-names";
+import { eligibleBankGlAccounts } from "@/lib/bank-gl-accounts";
 
 export default async function BankAccountsPage() {
   const session = await requireSession();
@@ -38,6 +39,18 @@ export default async function BankAccountsPage() {
   ]);
 
   const accountByGl = new Map(accounts.map((a) => [a.id, a]));
+  // The selector offers only accounts a bank account MAY back — never a control account the system
+  // posts to (see lib/bank-gl-accounts.ts). The server refuses the rest regardless; this keeps the
+  // wrong choice from being offered in the first place.
+  const glOptions = eligibleBankGlAccounts(accounts);
+  // Editing an existing account keeps its CURRENT mapping in the list even when that mapping is a
+  // legacy bad one — otherwise the select would silently show a different account than the row is
+  // actually linked to. The server allows an unchanged legacy mapping through, so other fields
+  // stay editable while the audit script surfaces the row for correction.
+  const glOptionsFor = (currentGlId: number) =>
+    glOptions.some((a) => a.id === currentGlId)
+      ? glOptions
+      : [...glOptions, ...accounts.filter((a) => a.id === currentGlId)];
 
   return (
     <div className="max-w-5xl mx-auto">
@@ -45,7 +58,7 @@ export default async function BankAccountsPage() {
         <h3>{t(locale, "Bank Accounts")}</h3>
         <BankAccountFormDialog
           locale={locale}
-          glAccounts={accounts}
+          glAccounts={glOptions}
           trigger={
             <Button style={{ width: "auto" }}>
               <Landmark className="size-4" /> {t(locale, "New Account")}
@@ -81,7 +94,7 @@ export default async function BankAccountsPage() {
                     <Badge variant={ba.isActive ? "success" : "neutral"}>{ba.isActive ? t(locale, "Active") : t(locale, "Inactive")}</Badge>
                     <BankAccountFormDialog
                       locale={locale}
-                      glAccounts={accounts}
+                      glAccounts={glOptionsFor(ba.glAccountId)}
                       account={{
                         id: ba.id,
                         name: ba.name,
