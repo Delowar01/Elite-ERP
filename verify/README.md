@@ -121,6 +121,41 @@ migration reporting zero on production, say), assert what it *means* rather than
 script printing "nothing to migrate" is a claim; `candidates=0` alone is a number that a script
 which never ran would also produce.
 
+### An assertion that observes the right outcome for the WRONG CAUSE
+
+The instances above are assertions that could not fail. This one could, and did observe a real
+effect — it was simply the wrong effect, three times running.
+
+The proof: hold an advance's row in a second transaction, then assert an allocation BLOCKS on it,
+which shows the availability read is taking the row lock. It passed with the lock deliberately
+removed, three times, for three different reasons:
+
+1. **The fixture consumed the advance in full.** Such a conversion also updates that payment's
+   `salesInvoiceId`, and *that* statement blocks on the held row all by itself. Fixed by drawing
+   only PART of the advance, so the availability read is the only statement touching the row.
+2. **The conversion was driven through the UI**, which spends ~3s on scripted waits before the
+   action is even issued — inside a 4s observation window. Any conversion would have looked
+   blocked. Fixed by replaying the server action directly, so the request is in flight at once.
+3. **Inserting the allocation takes an FK lock on the referenced payment.** A conversion with no
+   explicit lock blocks too — just LATER, after it has already read availability, which is exactly
+   the read two concurrent allocators must not both perform.
+
+**Both states block; blocking alone cannot distinguish them.** That is the whole lesson. The
+symptom was identical in the healthy and the broken build, so observing the symptom proved nothing
+however carefully it was measured.
+
+The fix is to assert on the MECHANISM rather than the symptom: the suite now reads
+`pg_stat_activity` and requires that the statement waiting on the lock is the availability
+`SELECT … FOR UPDATE` against `payments` — and under the mutation it fails naming the real waiter,
+`Lock: insert into "advance_applications" …`.
+
+**When an assertion depends on a cause rather than an outcome — a lock, a cache hit, a specific
+query path, an index being used — assert the cause.** "It was slow", "it blocked", "it errored" are
+all satisfiable by mechanisms other than the one under test. And state plainly what the proof does
+NOT establish: this one shows the read takes the lock, not that the lock is necessary, because a
+conversion serialises on its proforma row anyway. That proof needs two invoices drawing on one
+advance concurrently, and belongs where that is possible.
+
 ### The mirror image: a failing suite that is also not telling you what it looks like
 
 The same trap runs the other way, and it nearly produced a much worse report than any of the four
