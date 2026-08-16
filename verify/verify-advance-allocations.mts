@@ -23,7 +23,7 @@ import {
   availabilityOf, carriedBaseFor, arClearedFor, buildAllocationPosting, postingIsBalanced,
   sameCustomerRefusal, sameCurrencyRefusal, type AdvancePot,
 } from "../src/lib/advance-allocations";
-import { roundMoney } from "../src/lib/currency/currencies";
+import { roundMoney, moneyEpsilon } from "../src/lib/currency/currencies";
 
 const results: [boolean, string, string][] = [];
 const check = (name: string, cond: boolean, extra = "") => results.push([cond, name, extra]);
@@ -48,38 +48,51 @@ check("§6: applied + remaining sum EXACTLY to the original carried base",
 
 // ================= 2. the property: ANY split lands exactly, including awkward thirds ==========
 // Reconverting each piece independently is the natural wrong implementation; it drifts here.
-// The pot's carried base is whatever capturePaymentBase STORED, which is always rounded at the
-// BASE currency's minor unit — so the sweep generates it the same way (roundMoney), not with an
-// arbitrary third decimal a 2-decimal base currency can never hold. Both a 2-decimal base (SAR)
-// and a 3-decimal one (KWD, where numeric(15,3) actually earns its scale) are swept.
+// EVERY figure the sweep feeds in must be one the system could actually store, or a failure would
+// send someone chasing a bug that cannot occur — which is exactly what an earlier version of this
+// generator did. Two separate minor units are in play and they are NOT the same one:
+//   - the DOCUMENT amount and each split are stored at the ADVANCE currency's unit
+//     (recordPaymentAction rounds them), so a USD draw can never be 333.333;
+//   - the CARRIED BASE is stored at the BASE currency's unit (capturePaymentBase rounds it),
+//     so a SAR carried base can never be 4,709.995.
+// The matrix therefore crosses a 2-decimal document currency with a 3-decimal one, against a
+// 2-decimal base and a 3-decimal base, and generates every amount through roundMoney at the right
+// unit for its role. (moneyDecimals is deliberately not used: its "document" context is fixed at 2
+// decimals for presentation, which is not the storage precision.)
 let worstDrift = 0;
 let driftCase = "";
 let sweeps = 0;
-const splitsOf = (total: number, parts: number) => {
-  const each = Math.floor((total / parts) * 1000) / 1000;
+const minorUnit = (code: string) => Math.round(-Math.log10(moneyEpsilon(code) * 2));
+const splitsOf = (total: number, parts: number, docCurrency: string) => {
+  const f = 10 ** minorUnit(docCurrency);
+  const each = Math.floor((total / parts) * f) / f;
   const head = Array.from({ length: parts - 1 }, () => each);
-  return [...head, Math.round((total - head.reduce((a, b) => a + b, 0)) * 1000) / 1000];
+  return [...head, Number(roundMoney(total - head.reduce((a, b) => a + b, 0), docCurrency))];
 };
 for (const base of ["SAR", "KWD"]) {
-  for (const amount of [10000, 999.999, 1, 333.333, 87654.321]) {
-    for (const rate of [3.75, 4.71, 0.267, 11.0031]) {
-      for (const parts of [2, 3, 5, 7]) {
-        const carried = roundMoney(amount * rate, base);
-        let p: AdvancePot = { amount: amount.toFixed(3), carriedBase: carried, consumedAmount: "0", consumedCarried: "0", currency: "USD" };
-        let sum = 0;
-        for (const draw of splitsOf(amount, parts)) {
-          const c = carriedBaseFor({ pot: p, drawAmount: draw.toFixed(3), baseCurrency: base });
-          sum += mils(c);
-          p = { ...p, consumedAmount: String(Number(p.consumedAmount) + draw), consumedCarried: String(Number(p.consumedCarried) + Number(c)) };
+  for (const doc of ["USD", "KWD"]) {
+    if (doc === base) continue; // a base-currency advance is the identity: nothing to apportion
+    for (const rawAmount of [10000, 999.999, 1, 333.333, 87654.321]) {
+      for (const rate of [3.75, 4.71, 0.267, 11.0031]) {
+        for (const parts of [2, 3, 5, 7]) {
+          const amount = Number(roundMoney(rawAmount, doc));     // as a payment would store it
+          const carried = roundMoney(amount * rate, base);        // as capturePaymentBase would store it
+          let p: AdvancePot = { amount: roundMoney(amount, doc), carriedBase: carried, consumedAmount: "0", consumedCarried: "0", currency: doc };
+          let sum = 0;
+          for (const draw of splitsOf(amount, parts, doc)) {
+            const c = carriedBaseFor({ pot: p, drawAmount: roundMoney(draw, doc), baseCurrency: base });
+            sum += mils(c);
+            p = { ...p, consumedAmount: String(Number(p.consumedAmount) + draw), consumedCarried: String(Number(p.consumedCarried) + Number(c)) };
+          }
+          sweeps++;
+          const drift = Math.abs(sum - mils(carried));
+          if (drift > worstDrift) { worstDrift = drift; driftCase = `base=${base} doc=${doc} ${amount} @ ${rate} in ${parts} parts: ${sum} vs ${mils(carried)}`; }
         }
-        sweeps++;
-        const drift = Math.abs(sum - mils(carried));
-        if (drift > worstDrift) { worstDrift = drift; driftCase = `${base} ${amount} @ ${rate} in ${parts} parts: ${sum} vs ${mils(carried)}`; }
       }
     }
   }
 }
-check(`§6 PROPERTY: across ${sweeps} splits (2/3/5/7 ways, five amounts, four rates, 2- and 3-decimal base currencies) the drift is ZERO thousandths`,
+check(`§6 PROPERTY: across ${sweeps} splits — 2/3/5/7 ways × five amounts × four rates × three currency-pair shapes, every figure rounded as the system stores it — the drift is ZERO thousandths`,
   worstDrift === 0, driftCase || "no drift in any case");
 
 // a refund is a consumer too: an advance emptied by a REFUND must also take the residual
