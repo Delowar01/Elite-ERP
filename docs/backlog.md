@@ -145,11 +145,13 @@ and `verify-proforma-payments` all click through dialogs on fixed timeouts.
 
 ---
 
-## Customer advances — RESOLVED, except the Saudi advance-VAT question (still open)
+## Customer advances — RESOLVED, and the Saudi advance-VAT question is now answered too
 
 **Status:** the accounting-placement defect and the conversion revenue bug are **fixed and
-verified** (the seven "Advances (n/7)" commits). **One thing remains deliberately unresolved: the
-Saudi VAT treatment of advances — see below. Do not treat it as solved.**
+verified** (the seven "Advances (n/7)" commits), and **partial allocation** replaced the
+whole-payment model on top of them (the nine "Allocations (n/9)" commits — see the section below).
+The Saudi advance-VAT questions are now **answered**, and the work they unlock is **blocked on
+Phase 2 e-invoicing** rather than on an accountant.
 
 **What was implemented:**
 
@@ -189,22 +191,222 @@ Saudi VAT treatment of advances — see below. Do not treat it as solved.**
 
 ---
 
-### STILL OPEN — Saudi advance VAT (blocked on an accountant, deliberately unresolved)
+### RESOLVED — Saudi advance VAT: both questions answered YES, and the work is BLOCKED ON PHASE 2
 
-Receiving an advance may trigger a tax point in KSA, meaning output VAT could be due **on
-receipt**, not on the later invoice. **Nothing was guessed:** advances post NO VAT anywhere. The
-country-profile capability `advance_vat_on_receipt` exists as a documented stub and is **OFF for
-every profile including Saudi Arabia** (pinned by `verify-registration-currency`); the future
-posting's location is documented in `recordPaymentAction`'s proforma branch (a `Cr 2100` line
-carved out of the receipt entry, gated by `profileHasFeature`).
+Both questions are answered. Nothing in the code changes yet, and `advance_vat_on_receipt` stays
+**OFF for every profile including Saudi Arabia** (pinned by `verify-registration-currency`) —
+because the implementation cannot be built to spec ahead of Phase 2 e-invoicing. See the dependency
+below.
 
-**The two questions for the accountant, verbatim:**
+**1. Does receiving a customer advance create the VAT tax point in Saudi Arabia? — YES.** VAT
+becomes due at the earliest of the supply date, the tax-invoice date, or **receipt of
+consideration**, and then only to the extent of the amount received (Article 23, GCC VAT Agreement
+as adopted by KSA). An advance against a taxable supply cannot sit VAT-free in 2300 until final
+invoicing.
 
-1. Does receiving a customer advance create the VAT tax point in Saudi Arabia?
-2. If yes, must a VAT-bearing tax document be issued at the time the advance is received?
+**2. Must a VAT-bearing tax document be issued when the advance is received? — YES.** A Tax Invoice
+is required for the advance for standard-invoice customers; a Simplified Tax Invoice at the earlier
+of supply date or receipt for simplified-invoice customers (Article 53, VAT Implementing
+Regulations).
 
-Until both are answered and an implementation is deliberately built behind the capability, the
-code must keep behaving exactly as the non-VAT model — and does.
+**The accounting shape** for a VAT-inclusive SAR 10,000 advance at 15% (VAT = 10,000 × 15/115):
+
+```text
+Dr Bank                      10,000.00
+Cr Customer Advances (2300)   8,695.65
+Cr VAT Payable (2100)         1,304.35
+```
+
+**§9's invariant CHANGES.** Today GL 2300 equals the base-currency carried value of all remaining
+available advances. Under advance VAT, 2300 would hold the **net** advance liability — the VAT
+portion is already owed to ZATCA and lives in 2100. Every assertion of the §9 invariant
+(`verify-advances` invariant L, `verify-credit-note-release`, `verify-advance-clear`) is written
+against the current definition and would have to be restated, not merely re-run.
+
+**Open design questions for that phase — not for this one:**
+
+- **Scope condition.** This applies only where the money is genuinely consideration in advance for
+  a **taxable supply**. A refundable security deposit may need different treatment; exempt and
+  out-of-scope supplies differ.
+- **Rate selection.** Which rate to extract when a proforma carries mixed or zero-rated lines.
+- **Refunds.** A refunded advance needs a credit note against the advance tax invoice, reversing
+  VAT already recognised.
+- **VAT return.** Advance tax invoices must appear without double-counting the final invoice.
+- **Customer type.** Standard versus simplified decides the document, so the customer record needs
+  that distinction.
+- **The offsetting mechanism is already specified, not to be designed.** Pre-Paid amount (BT-113)
+  equals the sum of Prepayment VAT Category Taxable Amount (KSA-31) and Prepayment VAT Category Tax
+  Amount (KSA-32), with advance-adjustment amounts rounded to two decimals. It is implemented to
+  spec.
+
+**DEPENDENCY — advance VAT depends on Phase 2 e-invoicing.** Those fields live in the invoice XML,
+so the offsetting mechanism cannot be built to spec before Phase 2 exists. Sequence it after, not
+alongside.
+
+Until then the code keeps behaving exactly as the non-VAT model — and does: advances post no VAT
+anywhere, and the future posting's location is documented in `recordPaymentAction`'s proforma branch
+(a `Cr 2100` line carved out of the receipt entry, gated by `profileHasFeature`).
+
+## Partial advance allocation — SHIPPED (Allocations 1/9 … 9/9)
+
+**Status:** shipped and verified. `advance_applications` is the record of what an advance settles;
+`advance_application_releases` records partial releases of those allocations. `payments.salesInvoiceId`
+is no longer the applied-marker for advance receipts.
+
+**§11 — the cancellation lifecycle, documented explicitly because it is not obvious.**
+
+Cancelling or deleting a proforma touches **neither the pot nor its allocations**. An advance that
+outlives its proforma stays in 2300 as a liability — neither erased nor recognised as revenue —
+and remains:
+
+- **refundable**, in whole or in part, through the payment-history Refund dialog (owner/admin), and
+- **applicable** to any other invoice for the **same customer** in the **same currency**.
+
+The reasoning: cancellation is a *document* event, the money is a *ledger* fact. The customer paid;
+until that money is returned or consumed, the business owes them goods or cash, and 2300 is where
+that obligation lives. A converted proforma is read-only history, and refunds stay available on it
+precisely because a §10 excess advance lives there. `verify-advances` asserts the excess refunds
+cleanly from a converted proforma.
+
+**Deletion rules that follow from it:** an advance receipt with any ACTIVE allocation refuses
+deletion (it stands behind a posted invoice's `basePaidAmount`); a refunded receipt refuses deletion
+while its refund exists (delete the refund first, which restores the advance); a released allocation
+never disappears — `releasedAt` marks it and the release row records what went back, to whom and
+why.
+
+---
+
+## DEPLOY RUNBOOK — the two advance migrations, whose orderings are OPPOSITE
+
+Both migrations ship in the same phase and **their deploy orders are mirror images**. Getting either
+backwards is silent, and one of them is a one-way door. Read both rows before running either.
+
+| | `2026-08-16-advance-applications-backfill.ts` | `2026-08-17-clear-advance-sales-invoice-id.ts` |
+|---|---|---|
+| **Order** | schema → **backfill** → deploy code | deploy code → **clear** |
+| **Why that order** | The backfill CREATES the allocation rows the new code reads. Run it *after* the code is live and every already-applied advance reads as **fully available** until the backfill catches up — a **double-spend window**: the same money can be applied twice. | The readers must ALREADY be reading allocations before the field goes null. Clear first and deployed code reads `salesInvoiceId`, finds nothing, and reports **advance-applied 0**, a payment history missing rows, project costing missing advance cash — wrong figures, silently. |
+| **Failure mode** | double-spend (loud in the ledger, eventually) | wrong figures (silent) |
+| **Reversible?** | yes — allocation rows can be deleted and re-derived from the journals | **NO. One-way door.** The field's value is not recoverable once null. |
+| **Guard** | rows with ≠1 application entry go to a printed manual-review list, no mutation | REFUSES while any advance receipt has the field set and **no allocation row** — see below |
+
+**The clear's refusal, and what to do about it.** An advance receipt with `salesInvoiceId` set and
+no allocation row records its applied-ness in exactly one place: the field about to be erased.
+Clearing it destroys the fact with no record anywhere. So the script counts that population first,
+**refuses and reports if it is non-zero, and exits 2**.
+
+> A non-zero count means **run the backfill first**. It does not mean force the clear. There is no
+> force flag, deliberately.
+
+**Recommended sequence, end to end:**
+
+1. `npx tsx … 2026-08-12-customer-advances-account.ts` — seed 2300 if this org predates it.
+2. `npx tsx … 2026-08-12-customer-advances-audit.ts` — read-only; repair only what it calls
+   repairable, review the rest.
+3. `npm run db:push` — `advance_applications` + `advance_application_releases` (additive).
+4. `npx tsx … 2026-08-16-advance-applications-backfill.ts` — dry run, then `--apply`.
+5. **Deploy the application code.**
+6. `npx tsx … 2026-08-17-clear-advance-sales-invoice-id.ts` — dry run (expect a zero refusal count
+   after step 4), then `--apply`. `--org N` rolls it out one tenant at a time.
+
+Steps 4 and 6 are both idempotent; re-running either finds nothing to do.
+
+**Why step 5 sits between them safely:** every migrated reader produces the SAME figure before and
+after the clear — advance receipts are excluded from the `salesInvoiceId` path and read through
+allocations instead — so the window between deploy and clear is not a degraded state.
+`verify-advance-clear` asserts statement, project-costing and payment-history figures across the
+clear rather than trusting the ordering.
+
+---
+
+## Credit notes on a CASH-paid invoice still drive AR negative (high priority)
+
+**Status:** unfixed, deliberately out of scope for the allocation phase. This is the same defect
+class 2300 exists to eliminate, reached through a door the credit-note release rule does not open.
+
+A credit note releases advance allocations back to 2300, capped at the over-settlement AND at the
+active allocations behind the invoice. Where an invoice was settled in **cash**, there is no
+allocation to release, so the note's `Cr 1100` stands alone:
+
+```text
+invoice 10,000 paid in cash, credit note 2,000
+  → GL 1100 = −2,000 for that customer, while they genuinely hold 2,000 of value
+  → getReceivableAging computes total − paid = −2,000, hits `if (outstanding <= 0) continue`,
+    and DROPS the invoice from aging entirely
+  → control account says −2,000, aging subledger says 0
+```
+
+**The consistent answer is 2300**: value the customer holds with us is a liability regardless of
+whether it arrived as an advance or as an over-credit. Adopting it changes **non-advance**
+credit-note behaviour and the tests that pin it, which is why it is its own decision rather than
+something smuggled into the allocation phase.
+
+The credit-note **cap** (Σ active notes ≤ invoice total, shipped in Allocations 6/9) bounds the
+damage but cannot reach this: a 2,000 note on a fully cash-paid 10,000 invoice is entirely within
+the cap.
+
+---
+
+## A credit note converts at ITS OWN date's rate — a foreign-currency defect (high priority)
+
+**Status:** unfixed, latent (zero issued credit notes on foreign invoices in the database audited).
+Found while verifying the credit-note release rule.
+
+`issueCreditNoteAction` converts through `captureBaseAmounts({ date: cn.issueDate })`. But a credit
+note **moves no cash**. It reverses part of an invoice whose AR *and revenue* were both booked at
+that invoice's stored rate, so clearing them at a different rate invents a difference that never
+happened.
+
+**Two independent lines of reasoning reach the same answer:**
+
+1. **The codebase's own principle.** Every other reversal here MIRRORS stored lines rather than
+   reconverting — invoice void, credit-note reversal, allocation release. The credit note is the
+   only reversal that re-converts.
+2. **The tax rule.** A credit note is an adjustment to the **original supply**, so its SAR amounts
+   should mirror the original invoice's conversion. (This also matters for Phase 2: the e-invoice
+   references the original document.)
+
+**What it produces today**, for a USD invoice booked at 3.80 and credited at 3.90:
+
+- **AR that cannot be cleared, ever.** The document-currency balance reaches zero, so no payment or
+  allocation can be made against it, while GL 1100 keeps a base-currency tail (−33.33 in the
+  verification fixture). Ledger and subledger agree — both are wrong together — so invariant K
+  still passes, which is why nothing caught it.
+- **A misstated P&L, which is worse.** 4000 is debited at the note-date rate, so crediting 100% of a
+  foreign invoice does NOT return base revenue to zero. The residue is a phantom FX gain or loss
+  buried **inside revenue**, where no FX account can explain it.
+
+**THE FIX, stated so it cannot be misread:** inherit the **source document's stored
+`exchangeRate`** and post **NO 4900 line**. There is no realized FX to recognise, because no cash
+moved. Converting at the note date and adding a compensating FX line would balance and still be
+wrong — it would book a gain that did not occur. A pre-FX-6 legacy invoice with no stored rate must
+**refuse** (the construction `arClearedFor` already uses), never fall back to a fresh conversion.
+
+**The debit-note twin is part of the same task.** `purchasing/debit-notes/actions.ts` has the
+identical construction against its source purchase order. Fixing one and finding the other later is
+the worse outcome.
+
+---
+
+## Project costing omits an entire revenue path: proformas have no `projectId` (high priority)
+
+**Status:** unfixed, pre-existing, and silently wrong in production today.
+
+`proforma_invoices` has **no `projectId` column at all**, and `convertProformaToInvoiceAction` never
+sets one on the invoice it creates. So **every invoice born from a proforma belongs to no project**,
+and project cost control under-reports revenue for any project whose work came through a proforma —
+which, for a business that quotes and takes advances, is the normal path rather than the exception.
+
+This is not a rounding difference or a display gap: it is a **cost-control report that omits an
+entire revenue path**, the kind of thing discovered by someone quietly not trusting a number.
+
+The allocation work is careful not to make it worse: project cash-in now reads applied advances
+through allocations (Allocations 8/9), which counts a manually applied advance against a real
+project invoice correctly. Converted invoices are unchanged — still no project — because the gap is
+upstream of anything allocations can see.
+
+**The fix needs a decision, not just a column:** add `projectId` to proformas and carry it through
+conversion, and decide whether existing converted invoices are backfilled (from what? the proforma
+has no project either) or left as history. Treat the backfill question as part of the task.
 
 ## Two Saudi-shaped defaults in `seedOrgDefaults` (pre-existing, not fallout)
 
@@ -321,7 +523,12 @@ without updating the matrix fails the check.
 **Status: RESOLVED** in the FX-4 currency-inheritance audit (commit cbfab25): all ten conversion
 actions and the PO prefill now carry the source currency, CN/DN inherit their source document's
 currency in create/update/forms, and verify-fx-posting exercises foreign CN/DN issue at stored
-rates. Kept for the trail. Originally: open, found while making rounding currency-aware (FX-0). Not fixed there, because it is
+rates. Kept for the trail.
+
+**Sequel, still open:** the note inherits the source document's CURRENCY but not its **rate** — it
+converts at its own issue date, which invents an FX difference on a reversal that moves no cash. See
+"A credit note converts at ITS OWN date's rate" above; same two files, and the fix is the same
+shape (inherit the stored figure rather than re-deriving it). Originally: open, found while making rounding currency-aware (FX-0). Not fixed there, because it is
 a behaviour change to what a document *is*, not a rounding fix.
 
 `credit_notes` and `debit_notes` both carry a `currency` column, and nothing ever writes it. The
