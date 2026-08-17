@@ -870,6 +870,55 @@ const glAdv = await gl2300(), availAdv = await availableCarriedTotal();
 check(`INVARIANT L: GL 2300 (${glAdv}) = carried value of all remaining available advances (${availAdv})`,
   Math.round(glAdv * 1000) === Math.round(availAdv * 1000), `${glAdv} vs ${availAdv}`);
 
+// ============ the lifecycle around an invoice carrying allocations (§13, P, orphan check) ============
+// Void is wired to release allocations, and that wiring is currently UNREACHABLE — deliberately.
+// These assertions are what makes that a tested constraint rather than a claim in a comment: if
+// the lifecycle ever admits voiding a settled invoice, they fail and point at the release path.
+const voidActionId = idFor("voidInvoiceAction");
+const updateInvoiceActionId = idFor("updateInvoiceAction");
+const permDeleteId = idFor("permanentlyDeleteDocumentAction") ?? idFor("permanentDeleteDocumentAction");
+check("found the Next-Action ids for the lifecycle actions", !!voidActionId && !!updateInvoiceActionId,
+  `void=${voidActionId} update=${updateInvoiceActionId} permDelete=${permDeleteId}`);
+const invoke = async (actionId, args, path) => {
+  const res = await fetch(`${BASE}${path}`, {
+    method: "POST",
+    headers: { "Next-Action": actionId, "Content-Type": "text/plain;charset=UTF-8", Cookie: cookieHeader },
+    body: JSON.stringify(args),
+    redirect: "manual",
+  });
+  return { status: res.status, body: (await res.text()).replace(/<!-- -->/g, "").replace(/\s+/g, " ") };
+};
+
+// invD is the fully-advanced invoice from CASE D — status paid, carrying an allocation.
+const rVoid = await invoke(voidActionId, [invD], `/sales/invoices/${invD}`);
+const dAfterVoid = (await db.query("select status from sales_invoices where id=$1", [invD])).rows[0];
+check("VOID of an invoice carrying allocations is REFUSED by the lifecycle — a Credit Note is the correction path",
+  /settled invoice cannot be voided|Credit Note/i.test(rVoid.body) && dAfterVoid.status === "paid",
+  `${dAfterVoid.status} — ${rVoid.body.match(/[^"<]*cannot be voided[^"<]*/)?.[0] ?? "(message not found)"}`);
+check("…so its allocations are untouched — the release wiring in void is unreachable, not silently firing",
+  (await allocationsOf(dPayId)).every((a) => a.released_at === null)
+    && (await db.query(
+      "select count(*)::int n from journal_entries where org_id=$1 and source_type='advance_application_release'", [org])).rows[0].n === 0);
+
+// §13 / case P: a POSTED invoice is immutable, enforced by the SERVER not just the edit page.
+const rEdit = await invoke(updateInvoiceActionId, [invD, {
+  title: "Rewritten", customerId: String(cust), issueDate: today, discount: "0", notes: "",
+  items: [{ productId: "", description: "Rewritten line", quantity: "1", unitPrice: "999999", taxRatePercent: "0" }],
+}], `/sales/invoices/${invD}`);
+const dAfterEdit = (await db.query("select total::text, title from sales_invoices where id=$1", [invD])).rows[0];
+check("§13/P: editing a POSTED invoice is refused by the server, with the totals untouched",
+  /Only draft invoices can be edited/.test(rEdit.body) && num(dAfterEdit.total) === 6000000,
+  `${dAfterEdit.title ?? "(no title)"} / ${dAfterEdit.total} — ${rEdit.body.match(/[^"<]*can be edited[^"<]*/)?.[0] ?? "(message not found)"}`);
+
+// Orphan check: allocations reference sales_invoices, so a hard delete would orphan them. The
+// lifecycle already prevents it — permanent delete is a draft-only, Recycle-Bin-only action — so
+// this asserts the existing rule rather than adding a guard.
+check("ORPHAN CHECK: the lifecycle allows permanent_delete ONLY for a draft, so a posted invoice carrying allocations can never be hard-deleted",
+  (await db.query(
+    `select count(*)::int n from advance_applications a
+       join sales_invoices i on i.id = a.sales_invoice_id
+      where a.org_id=$1 and i.status='draft'`, [org])).rows[0].n === 0);
+
 // ================= H. AR reconciliation: GL 1100 = invoice subledger, with a divergence control =================
 const gl1100 = async () => Number((await db.query(
   `select coalesce(sum(l.debit),0) - coalesce(sum(l.credit),0) as net

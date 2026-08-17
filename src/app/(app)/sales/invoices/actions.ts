@@ -16,6 +16,7 @@ import { snapshotDocumentBankAccounts } from "@/lib/document-bank-data";
 import { snapshotSealForDoc, applySealOverride } from "@/lib/doc-seal";
 import { normalizeDocCurrency, roundMoney } from "@/lib/currency/currencies";
 import { prepareInvoicePosting } from "@/lib/invoice-posting";
+import { releaseAllocations } from "@/lib/advance-allocations";
 
 export type ActionResult = {
   error?: string;
@@ -417,7 +418,39 @@ export async function voidInvoiceAction(invoiceId: number): Promise<ActionResult
       );
     }
 
-    await tx.update(salesInvoicesTable).set({ status: "void", updatedAt: new Date() }).where(eq(salesInvoicesTable.id, invoiceId));
+    // Release any advance allocations this invoice consumed, so the customer's money returns to
+    // 2300 as available rather than vanishing with the voided receivable. Each release mirrors its
+    // application's stored lines and is keyed by the allocation, so a retried void posts nothing.
+    //
+    // CURRENTLY UNREACHABLE, deliberately wired anyway: the lifecycle allows `void` only on a
+    // `sent` invoice, and an invoice carrying an allocation is `partially_paid` or `paid` by
+    // construction — `evaluate` refuses with "A settled invoice cannot be voided; issue a Credit
+    // Note instead." The reachable release path is the credit note. This exists so that if the
+    // lifecycle ever admits voiding a settled invoice, the allocations are released rather than
+    // silently stranded; verify-advances asserts the refusal that makes it unreachable today.
+    const releasedHere = await releaseAllocations(tx, {
+      orgId: session.orgId, userId: session.userId, salesInvoiceId: invoiceId,
+      reason: "invoice_void", date: new Date().toISOString().slice(0, 10),
+      memoSubject: `invoice ${invoice.invoiceNumber} voided`,
+    });
+    const releasedPaid = releasedHere.reduce((sum, r) => sum + Number(r.appliedAmount), 0);
+    const releasedBase = releasedHere.reduce((sum, r) => sum + Number(r.arCleared), 0);
+
+    await tx.update(salesInvoicesTable).set({
+      status: "void",
+      // A voided invoice's paid figures drop by exactly what the releases gave back. Cash payments
+      // are untouched here: the lifecycle refuses to void an invoice that has any, so the only
+      // settlement a void can encounter is an allocation.
+      ...(releasedHere.length > 0
+        ? {
+            paidAmount: roundMoney(Math.max(0, Number(invoice.paidAmount) - releasedPaid), invoice.currency ?? session.orgCurrency),
+            basePaidAmount: invoice.basePaidAmount === null
+              ? null
+              : roundMoney(Math.max(0, Number(invoice.basePaidAmount) - releasedBase), session.orgCurrency),
+          }
+        : {}),
+      updatedAt: new Date(),
+    }).where(eq(salesInvoicesTable.id, invoiceId));
   });
 
   await logActivity(session, { type: "sales_invoice.voided", description: `Voided invoice ${invoice.invoiceNumber} — reversed ledger entry and restored stock`, entityType: "sales_invoice", entityId: invoiceId });

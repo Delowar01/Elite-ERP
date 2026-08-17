@@ -1,7 +1,7 @@
 import "server-only";
-import { and, eq, isNull, sql } from "drizzle-orm";
+import { and, desc, eq, isNull, sql } from "drizzle-orm";
 import type { Tx } from "@/db";
-import { advanceApplicationsTable, paymentsTable } from "@/db";
+import { advanceApplicationsTable, paymentsTable, journalEntriesTable, journalLinesTable } from "@/db";
 import { moneyEpsilon, roundMoney } from "@/lib/currency/currencies";
 import { fxLine, mils } from "@/lib/payment-currency";
 
@@ -390,4 +390,119 @@ export async function lockAdvanceAndReadPot(
       currency: row.currency,
     },
   };
+}
+
+// ---------------------------------------------------------------------------------------------
+// Releasing allocations (D).
+// ---------------------------------------------------------------------------------------------
+
+export type ReleasedAllocation = {
+  allocationId: number;
+  appliedAmount: string;
+  carriedBase: string;
+  arCleared: string;
+};
+
+/**
+ * Release an invoice's active allocations, newest first.
+ *
+ * The reversal MIRRORS each application's own stored journal lines rather than recomputing them —
+ * the rule every reversal in this codebase follows. Recomputing would re-derive residuals and FX
+ * against today's figures, so an apply→release round-trip would not return 2300 to where it
+ * started; mirroring makes the round-trip exact by construction, which is the whole reason LIFO
+ * ordering is worth specifying at all.
+ *
+ * Keyed `(advance_application_release, allocation.id)` and existence-checked, so a retried void or
+ * a second credit note cannot double-release. The allocation row is MARKED released, never
+ * deleted: financial history is not erased, and `releasedAt` is what makes the advance's
+ * availability rise again with no compensating write anywhere.
+ *
+ * Whole allocations only. A partial release — releasing 2,000 of an 8,000 allocation — needs the
+ * allocation split with the same residual discipline the pot uses, and lands with the credit-note
+ * path that first requires it.
+ */
+export async function releaseAllocations(
+  tx: Tx,
+  args: {
+    orgId: number;
+    userId: number;
+    salesInvoiceId: number;
+    reason: "invoice_void" | "credit_note";
+    /** Entry date for the reversing journals. */
+    date: string;
+    /** Memo prefix, e.g. the invoice number. */
+    memoSubject: string;
+  },
+): Promise<ReleasedAllocation[]> {
+  const active = await tx
+    .select({
+      id: advanceApplicationsTable.id,
+      appliedAmount: advanceApplicationsTable.appliedAmount,
+      carriedBase: advanceApplicationsTable.carriedBase,
+      arCleared: advanceApplicationsTable.arCleared,
+    })
+    .from(advanceApplicationsTable)
+    .where(and(
+      eq(advanceApplicationsTable.orgId, args.orgId),
+      eq(advanceApplicationsTable.salesInvoiceId, args.salesInvoiceId),
+      isNull(advanceApplicationsTable.releasedAt),
+    ))
+    .orderBy(desc(advanceApplicationsTable.id)); // LIFO — the exact inverse of oldest-first application
+
+  const released: ReleasedAllocation[] = [];
+  for (const alloc of active) {
+    // Idempotency: a release already posted for this allocation means this is a retry.
+    const existing = await tx
+      .select({ id: journalEntriesTable.id })
+      .from(journalEntriesTable)
+      .where(and(
+        eq(journalEntriesTable.orgId, args.orgId),
+        eq(journalEntriesTable.sourceType, "advance_application_release"),
+        eq(journalEntriesTable.sourceId, alloc.id),
+      ))
+      .limit(1);
+    if (existing.length > 0) continue;
+
+    const [application] = await tx
+      .select({ id: journalEntriesTable.id })
+      .from(journalEntriesTable)
+      .where(and(
+        eq(journalEntriesTable.orgId, args.orgId),
+        eq(journalEntriesTable.sourceType, "advance_application"),
+        eq(journalEntriesTable.sourceId, alloc.id),
+      ))
+      .limit(1);
+    if (application) {
+      const originalLines = await tx
+        .select({ accountId: journalLinesTable.accountId, debit: journalLinesTable.debit, credit: journalLinesTable.credit })
+        .from(journalLinesTable)
+        .where(eq(journalLinesTable.journalEntryId, application.id));
+      const [entry] = await tx
+        .insert(journalEntriesTable)
+        .values({
+          orgId: args.orgId,
+          entryDate: args.date,
+          memo: `Advance application released — ${args.memoSubject}`,
+          sourceType: "advance_application_release",
+          sourceId: alloc.id,
+          createdById: args.userId,
+        })
+        .returning({ id: journalEntriesTable.id });
+      await tx.insert(journalLinesTable).values(
+        originalLines.map((l) => ({ journalEntryId: entry.id, accountId: l.accountId, debit: l.credit, credit: l.debit })),
+      );
+    }
+
+    await tx
+      .update(advanceApplicationsTable)
+      .set({ releasedAt: new Date(), releaseReason: args.reason })
+      .where(eq(advanceApplicationsTable.id, alloc.id));
+    released.push({
+      allocationId: alloc.id,
+      appliedAmount: alloc.appliedAmount,
+      carriedBase: alloc.carriedBase,
+      arCleared: alloc.arCleared,
+    });
+  }
+  return released;
 }

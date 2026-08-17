@@ -34,8 +34,12 @@ export type ActionResult = { error?: string };
  * liability, and produces a journal of exactly the same significance as recording a payment, which
  * every role including staff may do. The restricted tier (owner/admin, per the role matrix) is for
  * REMOVING financial history — deleting a payment, refunding an advance — and this adds history
- * rather than removing it. Releasing an allocation, when that lands, belongs on the restricted
- * tier for the same reason.
+ * rather than removing it.
+ *
+ * There is deliberately NO direct "release this allocation" action to gate: an allocation is
+ * released only as a consequence of voiding its invoice or issuing a credit note against it, so
+ * the gate is whichever gate those already carry. Adding a standalone release action would be new
+ * surface, not a permission decision.
  *
  * ## Double submit
  *
