@@ -4,7 +4,7 @@ import {
   db, accountsTable, journalEntriesTable, journalLinesTable,
   customersTable, vendorsTable,
   salesInvoicesTable, creditNotesTable, purchaseOrdersTable, debitNotesTable,
-  paymentsTable, proformaInvoicesTable,
+  paymentsTable, proformaInvoicesTable, advanceApplicationsTable, advanceApplicationReleasesTable,
 } from "@/db";
 import { moneyEpsilon } from "@/lib/currency/currencies";
 import { orgBaseCurrency } from "@/lib/org-currency";
@@ -32,13 +32,13 @@ export type PartyKind = "client" | "vendor";
 /** Document families a statement line can come from. Used by the Document Type filter. */
 export type StatementDocType =
   | "sales_invoice" | "credit_note" | "payment_in"
-  | "advance_receipt" | "advance_application" | "advance_refund"
+  | "advance_receipt" | "advance_application" | "advance_release" | "advance_refund"
   | "purchase_order" | "debit_note" | "payment_out"
   | "journal";
 
 export const CLIENT_DOC_TYPES: StatementDocType[] = [
   "sales_invoice", "credit_note", "payment_in",
-  "advance_receipt", "advance_application", "advance_refund",
+  "advance_receipt", "advance_application", "advance_release", "advance_refund",
   "journal",
 ];
 export const VENDOR_DOC_TYPES: StatementDocType[] = ["purchase_order", "debit_note", "payment_out", "journal"];
@@ -49,6 +49,7 @@ export const DOC_TYPE_LABEL: Record<StatementDocType, string> = {
   payment_in: "Payment Received",
   advance_receipt: "Advance Received",
   advance_application: "Advance Applied",
+  advance_release: "Advance Released",
   advance_refund: "Advance Refunded",
   purchase_order: "Purchase Order",
   debit_note: "Debit Note",
@@ -65,6 +66,7 @@ const DOC_PATH: Record<StatementDocType, (id: number) => string | null> = {
   payment_in: () => "/finance/payments",
   advance_receipt: (id) => `/sales/proforma/${id}`,   // docId = the proforma the advance was received against
   advance_application: (id) => `/sales/invoices/${id}`, // docId = the invoice the advance settled
+  advance_release: (id) => `/sales/invoices/${id}`,   // docId = the invoice whose allocation was released
   advance_refund: (id) => `/sales/proforma/${id}`,    // docId = the proforma whose advance was returned
   payment_out: () => "/finance/payments",
   journal: () => "/finance/ledger",
@@ -214,10 +216,15 @@ async function attribute(orgId: number, kind: PartyKind, raw: RawLine[]): Promis
 
   if (kind === "client") {
     const invIds = idsOf("sales_invoice"), cnIds = idsOf("credit_note");
-    // An advance application's sourceId IS the applied payment's id, so those ids join the payment
-    // batch and their rows are resolved through the same walk (payment → invoice/proforma → party).
+    // An advance application's sourceId is its ALLOCATION's id — it used to be the payment's, and
+    // the partial-allocation work re-keyed those entries. Attributing them through the payment
+    // batch silently dropped every applied-advance line from the statement (an unattributed line is
+    // filtered out, not shown unattributed), so a client appeared to owe an invoice their advance
+    // had already settled AND to still hold that advance. Worse, where an allocation id happened to
+    // equal an unrelated payment id, the line landed on that payment's party.
     const appIds = idsOf("advance_application");
-    const payIds = [...new Set([...idsOf("payment"), ...appIds])];
+    const releaseIds = [...new Set([...idsOf("advance_application_release"), ...idsOf("advance_application_release_reversal")])];
+    const payIds = idsOf("payment");
     const [invs, cns, pays] = await Promise.all([
       invIds.length ? db.select({
         id: salesInvoicesTable.id, customerId: salesInvoicesTable.customerId, number: salesInvoicesTable.invoiceNumber,
@@ -288,15 +295,65 @@ async function attribute(orgId: number, kind: PartyKind, raw: RawLine[]): Promis
           currency: pf?.currency ?? inv?.currency ?? "", paymentStatus: "", docId: p.proformaInvoiceId,
         });
       }
-      // The application entry (advance_application, payment.id) touches both accounts; both rows
-      // read "Advance Applied" and link to the invoice the advance settled.
-      const app: Attribution = {
-        partyId, docType: "advance_application", number: inv?.number ?? "",
-        reference: pf ? `Advance from ${pf.number}` : "", currency: inv?.currency ?? "",
-        paymentStatus: "", docId: p.salesInvoiceId,
-      };
-      out.set(keyOf("advance_application", p.id, AR_CODE), app);
-      out.set(keyOf("advance_application", p.id, ADVANCES_CODE), app);
+    }
+
+    // Applications and their releases are attributed through the ALLOCATION, which is what those
+    // journal entries are keyed by. An allocation names its own invoice, so this no longer depends
+    // on `payments.salesInvoiceId` at all — the field can be cleared for advance receipts without
+    // any statement row changing, and a PARTIAL application (which never carried that link) is
+    // attributed for the first time.
+    // Releases resolve to their allocation first, so one query covers both key spaces.
+    const releaseRows = releaseIds.length
+      ? await db
+          .select({ id: advanceApplicationReleasesTable.id, allocationId: advanceApplicationReleasesTable.allocationId })
+          .from(advanceApplicationReleasesTable)
+          .where(and(eq(advanceApplicationReleasesTable.orgId, orgId), inArray(advanceApplicationReleasesTable.id, releaseIds)))
+      : [];
+    const allocIds = [...new Set([...appIds, ...releaseRows.map((r) => r.allocationId)])];
+    const allocs = allocIds.length
+      ? await db
+          .select({
+            id: advanceApplicationsTable.id,
+            invoiceId: salesInvoicesTable.id,
+            invoiceNumber: salesInvoicesTable.invoiceNumber,
+            invoiceCurrency: salesInvoicesTable.currency,
+            customerId: salesInvoicesTable.customerId,
+            proformaNumber: proformaInvoicesTable.proformaNumber,
+          })
+          .from(advanceApplicationsTable)
+          .innerJoin(salesInvoicesTable, eq(salesInvoicesTable.id, advanceApplicationsTable.salesInvoiceId))
+          .leftJoin(paymentsTable, eq(paymentsTable.id, advanceApplicationsTable.advancePaymentId))
+          .leftJoin(proformaInvoicesTable, eq(proformaInvoicesTable.id, paymentsTable.proformaInvoiceId))
+          .where(and(eq(advanceApplicationsTable.orgId, orgId), inArray(advanceApplicationsTable.id, allocIds)))
+      : [];
+    const allocById = new Map(allocs.map((a) => [a.id, a]));
+    const attrFor = (a: (typeof allocs)[number], docType: StatementDocType): Attribution => ({
+      partyId: a.customerId, docType, number: a.invoiceNumber,
+      reference: a.proformaNumber ? `Advance from ${a.proformaNumber}` : "",
+      currency: a.invoiceCurrency ?? "", paymentStatus: "", docId: a.invoiceId,
+    });
+    for (const id of appIds) {
+      const a = allocById.get(id);
+      if (!a) continue;
+      out.set(keyOf("advance_application", id, AR_CODE), attrFor(a, "advance_application"));
+      out.set(keyOf("advance_application", id, ADVANCES_CODE), attrFor(a, "advance_application"));
+    }
+    {
+      for (const r of releaseRows) {
+        const a = allocById.get(r.allocationId);
+        if (!a) continue;
+        // A release reads as an application in reverse: the value goes back from "invoice settled"
+        // to "advance held", against the same invoice.
+        // A release reads as "Advance Released" (value going back from settled invoice to held
+        // advance); its reversal is a re-application, so it reads as one.
+        for (const [sourceType, docType] of [
+          ["advance_application_release", "advance_release"],
+          ["advance_application_release_reversal", "advance_application"],
+        ] as const) {
+          out.set(keyOf(sourceType, r.id, AR_CODE), attrFor(a, docType));
+          out.set(keyOf(sourceType, r.id, ADVANCES_CODE), attrFor(a, docType));
+        }
+      }
     }
   } else {
     const poIds = idsOf("purchase_order"), dnIds = idsOf("debit_note"), payIds = idsOf("payment");

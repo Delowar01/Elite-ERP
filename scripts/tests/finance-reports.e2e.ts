@@ -24,8 +24,12 @@ async function main() {
   const range = { from: "1900-01-01", to: "2999-12-31" }; // all-time
 
   // Pick the org with the most journal entries so the checks exercise real data.
-  const [org] = await db.select({ id: orgsTable.id, count: sql<number>`(select count(*) from journal_entries je where je.org_id = ${orgsTable.id})` })
-    .from(orgsTable).orderBy(sql`(select count(*) from journal_entries je where je.org_id = ${orgsTable.id}) desc`).limit(1);
+  // The correlated column is written out QUALIFIED. Interpolated, drizzle renders it as a bare
+  // `"id"` in this single-table SELECT list, which binds to `journal_entries.id` inside the
+  // subquery — the count came back 9 for an org with 47 entries. Harmless only because the value is
+  // printed and never used; left in place it becomes load-bearing the moment somebody uses it.
+  const [org] = await db.select({ id: orgsTable.id, count: sql<number>`(select count(*) from journal_entries je where je.org_id = orgs.id)` })
+    .from(orgsTable).orderBy(sql`(select count(*) from journal_entries je where je.org_id = orgs.id) desc`).limit(1);
   if (!org) throw new Error("no org");
   console.log(`  (using org #${org.id})`);
 

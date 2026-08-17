@@ -151,7 +151,15 @@ async function main() {
          FROM payments pay
          JOIN proforma_invoices p ON p.id = pay.proforma_invoice_id AND p.org_id = pay.org_id
          JOIN journal_entries e ON e.org_id = pay.org_id AND e.source_type = 'payment' AND e.source_id = pay.id
+        -- "Not applied" reads BOTH records of applied-ness, because during the migration window
+        -- either one can be the only one. sales_invoice_id IS NULL alone stops meaning anything
+        -- once the 2026-08-17 clear runs (it becomes true of every advance receipt); an allocation
+        -- check alone would widen this population to include old-style receipts that WERE applied
+        -- through the field, which the clear deliberately refuses to erase until they are
+        -- backfilled. Requiring both keeps the population identical in every state.
         WHERE pay.direction = 'in' AND pay.sales_invoice_id IS NULL
+          AND NOT EXISTS (SELECT 1 FROM advance_applications aa
+                           WHERE aa.advance_payment_id = pay.id AND aa.released_at IS NULL)
           AND EXISTS (SELECT 1 FROM journal_lines l JOIN accounts a ON a.id = l.account_id
                        WHERE l.journal_entry_id = e.id AND a.org_id = pay.org_id AND a.code = '1100' AND l.credit > 0)
         ORDER BY pay.org_id, pay.id`,

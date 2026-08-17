@@ -1,4 +1,5 @@
 import "server-only";
+import { projectAdvanceCashSql } from "@/lib/advance-payment-links";
 import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import {
   db,
@@ -138,6 +139,7 @@ export async function getProjectCostControl(
     otherCostRows,
     labourRows,
     structures,
+    advanceCashInRows,
   ] = await Promise.all([
     db
       .select({
@@ -236,6 +238,16 @@ export async function getProjectCostControl(
         and(
           eq(paymentsTable.orgId, orgId),
           eq(paymentsTable.direction, "in"),
+          // Advance receipts are counted through their ALLOCATIONS below, never through this
+          // join. Excluding them explicitly is what makes this reader produce the same figure
+          // before and after `salesInvoiceId` is cleared for advance receipts: today the field is
+          // still set on fully-applied advances and would double-count; once cleared it would
+          // simply drop them. Neither happens.
+          //
+          // NULL-SAFE deliberately: an ordinary payment carries `kind = NULL` (only advances are
+          // tagged), and `kind <> 'advance_receipt'` evaluates to NULL for those rows, which SQL
+          // treats as not-true — plain inequality dropped every ordinary payment from the report.
+          sql`${paymentsTable.kind} is distinct from 'advance_receipt'`,
           eq(salesInvoicesTable.projectId, projectId),
           activeOnly(salesInvoicesTable),
         ),
@@ -330,7 +342,18 @@ export async function getProjectCostControl(
       .where(and(eq(tasksTable.projectId, projectId), eq(timeLogsTable.orgId, orgId)))
       .groupBy(timeLogsTable.employeeId),
     latestStructures(orgId),
+    // Cash-in through APPLIED ADVANCES. Read from allocations, which is the only place a partial
+    // application exists: `payments.salesInvoiceId` could only ever say "all of this receipt went
+    // to that one invoice", so a split advance contributed nothing here even before the field is
+    // cleared. The figure is the allocation's carried base — the base cash apportioned to it.
+    db.execute(projectAdvanceCashSql(orgId, projectId)),
   ]);
+  const advanceCashIn = (advanceCashInRows.rows as unknown as {
+    id: number; reference: string | null; date: string; amount: string | null; invoice_number: string; party: string | null;
+  }[]).map((r) => ({
+    id: r.id, reference: r.reference, date: String(r.date).slice(0, 10), amount: r.amount,
+    invoiceNumber: r.invoice_number, party: r.party,
+  }));
 
   // FX-9: a NULL base figure means "no stored conversion" — the row is dropped from every total
   // and drill list, and COUNTED, so the report says what it left out instead of totalling short.
@@ -346,7 +369,10 @@ export async function getProjectCostControl(
   const cCreditNotes = converted(creditNotes, "total");
   const cPurchaseOrders = converted(purchaseOrders, "total");
   const cDebitNotes = converted(debitNotes, "total");
-  const cPaymentsIn = converted(paymentsIn, "amount");
+  // Applied advances are cash received against this project's invoices too — they simply arrived
+  // before the invoice existed. An allocation's `carriedBase` is the base cash apportioned to it,
+  // which is the same figure a direct payment contributes, so the two merge into one list.
+  const cPaymentsIn = converted([...paymentsIn, ...advanceCashIn], "amount");
   const cPaymentsOut = converted(paymentsOut, "amount");
 
   const sum = <T>(rows: T[], pick: (r: T) => number) => rows.reduce((acc, r) => acc + pick(r), 0);

@@ -468,8 +468,11 @@ check("CASE E: invoice closes at its own total — paid 8,000 of 8,000, never ov
 check("CASE E: AR = 0 — the cap stops exactly at the invoice total", (await arNetFor(invE)) === 0);
 const ePays = (await db.query(
   "select id, amount::text, sales_invoice_id, kind from payments where org_id=$1 and proforma_invoice_id=$2 order by id", [org, pfE])).rows;
-check("CASE E: the 2,000 excess payment was NEVER applied — salesInvoiceId null, still an advance receipt",
-  ePays.length === 2 && num(ePays[1].amount) === 2000000 && ePays[1].sales_invoice_id === null && ePays[1].kind === "advance_receipt",
+// Stated in ALLOCATION terms, not by the old marker: `salesInvoiceId is null` will be true of every
+// advance receipt once the clearing migration runs, so it would keep passing while meaning nothing.
+check("CASE E: the 2,000 excess payment was NEVER applied — no allocation row for it, still an advance receipt",
+  ePays.length === 2 && num(ePays[1].amount) === 2000000 && ePays[1].kind === "advance_receipt"
+    && (await db.query("select count(*)::int n from advance_applications where org_id=$1 and advance_payment_id=$2", [org, ePays[1].id])).rows[0].n === 0,
   JSON.stringify(ePays));
 check("CASE E: no application entry exists for the excess payment", (await applicationLines(ePays[1].id)).length === 0);
 check("CASE E: 2,000 remains in 2300 as the customer's available advance", (await advNet()) === 2000000);
@@ -655,8 +658,11 @@ const invF = await convertViaUi(pfF);
 const fInv = (await db.query("select status, paid_amount::text from sales_invoices where id=$1", [invF])).rows[0];
 check("converting a fully-refunded proforma yields a DRAFT (paid 0) — the refunded pair transfers nothing",
   fInv.status === "draft" && num(fInv.paid_amount) === 0, JSON.stringify(fInv));
-check("…the receipt and its refund both keep salesInvoiceId null",
-  (await db.query("select count(*)::int n from payments where org_id=$1 and proforma_invoice_id=$2 and sales_invoice_id is not null", [org, pfF])).rows[0].n === 0);
+check("…neither the receipt nor its refund produced an allocation — refunded value settles nothing",
+  (await db.query(
+    `select count(*)::int n from advance_applications a
+      where a.org_id=$1 and a.advance_payment_id in (select id from payments where org_id=$1 and proforma_invoice_id=$2)`,
+    [org, pfF])).rows[0].n === 0);
 check("…and no journal posted at conversion", (await invoiceEntry(invF)).length === 0);
 
 // deleting a REFUNDED receipt is refused; deleting a refund restores that much of the advance
@@ -724,7 +730,9 @@ const partAvail = await availableOf(partPay);
 check("CASE A: 2,000 REMAINS available on the advance — receipt 10,000 minus the 8,000 drawn",
   partAvail.doc === 2000000 && partAvail.carried === 2000000, JSON.stringify(partAvail));
 check("CASE A: the partially drawn receipt keeps salesInvoiceId NULL — it did not wholly settle that invoice",
-  (await db.query("select sales_invoice_id from payments where id=$1", [partPay])).rows[0].sales_invoice_id === null);
+  // Allocation terms: after the clearing migration every advance receipt has a null field, so the
+  // claim "a partial draw does not re-point the receipt" has to be made about what DID happen.
+  (await db.query("select count(*)::int n from advance_applications where org_id=$1 and advance_payment_id=$2 and applied_amount <> (select amount from payments where id=$2)", [org, partPay])).rows[0].n === 1);
 check("CASE A: AR = 0 and the application posted Dr 2300 8,000 / Cr 1100 8,000",
   (await arNetFor(invPart)) === 0 && (await applicationLines(partPay)).length === 2);
 await page.goto(`${BASE}/sales/proforma/${pfPart}`, { waitUntil: "networkidle" });

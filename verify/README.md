@@ -68,6 +68,20 @@ red run read as a product bug until someone traced it to the text form of a nume
 is "the value was copied" or "the total is X", assert the number; pin the string only when the
 representation itself IS the claim (e.g. roundMoney's output format).
 
+**Second instance, and it names the tell.** A sweep over the derived FX line compared each figure
+to `roundMoney(figure, currency)` as strings, to prove it was storable. It failed on a perfectly
+storable KWD amount, because the untouched side of a journal line is the literal `"0"` and
+`roundMoney` returns `"0.000"` in a three-decimal currency. The output read:
+
+```
+FAIL  SWEEP A … the derived 4900 line is EXACTLY the difference
+      << derived 12.015 vs difference 12.015
+```
+
+**A failing assertion whose own output shows the values agreeing is a representation comparison,
+almost every time.** Read the printed pair before hunting in the product code: two identical numbers
+next to a red line means the suite is comparing how they are written, not what they are.
+
 ### A generated input must be a state the system can actually produce
 
 The same trap has a generator-shaped form, and it is subtler because the suite genuinely runs and

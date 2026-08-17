@@ -1,9 +1,10 @@
-import { and, eq, desc, sql } from "drizzle-orm";
+import { and, eq, or, desc, inArray, sql } from "drizzle-orm";
 import { db, paymentsTable, bankAccountsTable, proformaInvoicesTable } from "@/db";
 import { t, type Locale } from "@/lib/i18n/dict";
 import { DocNum } from "../../sales/_shared/money";
 import { DeletePaymentButton } from "./delete-payment-button";
 import { RefundAdvanceButton } from "./refund-advance-button";
+import { advancePaymentIdsForInvoice } from "@/lib/advance-payment-links";
 
 const METHOD_LABEL: Record<string, string> = {
   bank_transfer: "Bank Transfer",
@@ -37,7 +38,17 @@ export async function PaymentHistory({
    */
   canRefund?: boolean;
 }) {
+  // An invoice's history is the payments recorded against it PLUS the advance receipts settling it
+  // through an allocation. `salesInvoiceId` alone could only ever name a fully-applied advance, so
+  // a partial draw was already missing here — and once the field is cleared for advance receipts,
+  // every transferred advance would vanish from the invoice it settled.
+  const allocationPaymentIds = source.type === "invoice"
+    ? await advancePaymentIdsForInvoice(orgId, source.id)
+    : [];
   const col = source.type === "invoice" ? paymentsTable.salesInvoiceId : paymentsTable.proformaInvoiceId;
+  const belongsHere = allocationPaymentIds.length > 0
+    ? or(eq(col, source.id), inArray(paymentsTable.id, allocationPaymentIds))
+    : eq(col, source.id);
   const rows = await db
     .select({
       id: paymentsTable.id,
@@ -68,7 +79,7 @@ export async function PaymentHistory({
     .from(paymentsTable)
     .leftJoin(bankAccountsTable, eq(bankAccountsTable.id, paymentsTable.bankAccountId))
     .leftJoin(proformaInvoicesTable, eq(proformaInvoicesTable.id, paymentsTable.proformaInvoiceId))
-    .where(and(eq(paymentsTable.orgId, orgId), eq(col, source.id)))
+    .where(and(eq(paymentsTable.orgId, orgId), belongsHere))
     .orderBy(desc(paymentsTable.paymentDate), desc(paymentsTable.id));
 
   // Refundable is now a QUESTION OF BALANCE, not of state. "Never applied and never refunded" was

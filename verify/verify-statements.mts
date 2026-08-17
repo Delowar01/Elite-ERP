@@ -323,7 +323,13 @@ check("a party with no activity in the period returns an empty statement, not an
 
   await post(org, "2026-01-10", "Advance received for proforma PI-ADV", "payment", r1, [[acc.get("1000")!, 400, 0], [acc.get("2300")!, 0, 400]]);
   await post(org, "2026-01-12", "Invoice INV-ADV issued (converted from proforma PI-ADV)", "sales_invoice", invAdv, [[acc.get("1100")!, 1000, 0], [acc.get("4000")!, 0, 1000]]);
-  await post(org, "2026-01-12", "Advance applied to invoice INV-ADV (received against proforma PI-ADV)", "advance_application", r1, [[acc.get("2300")!, 400, 0], [acc.get("1100")!, 0, 400]]);
+  // Keyed by the ALLOCATION, which is what the app posts since the partial-allocation work re-keyed
+  // these entries. Seeding the old payment-id key made this suite pass against a shape the system no
+  // longer produces — and hid that statements were dropping every applied-advance line.
+  const allocAdv = (await pool.query(
+    `insert into advance_applications (org_id,advance_payment_id,sales_invoice_id,applied_amount,carried_base,ar_cleared,applied_date,created_by_id)
+     values ($1,$2,$3,'400.00','400.00','400.00','2026-01-12',$4) returning id`, [org, r1, invAdv, user])).rows[0].id as number;
+  await post(org, "2026-01-12", "Advance applied to invoice INV-ADV (received against proforma PI-ADV)", "advance_application", allocAdv, [[acc.get("2300")!, 400, 0], [acc.get("1100")!, 0, 400]]);
   await post(org, "2026-01-15", "Advance received for proforma PI-ADV", "payment", r2, [[acc.get("1000")!, 150, 0], [acc.get("2300")!, 0, 150]]);
   await post(org, "2026-01-20", "Advance refunded for proforma PI-ADV", "payment", rf, [[acc.get("2300")!, 150, 0], [acc.get("1000")!, 0, 150]]);
 

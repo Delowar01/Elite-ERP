@@ -25,6 +25,7 @@ import {
   debitNoteItemsTable,
   paymentsTable,
 } from "@/db";
+import { advanceInvoiceLinks } from "@/lib/advance-payment-links";
 import { requireSession } from "@/lib/session";
 import { getLocale } from "@/lib/i18n/server";
 import { buildZatcaTlv, invoiceHashOf, zatcaQrDataUrl } from "@/lib/zatca";
@@ -448,18 +449,26 @@ export default async function PrintPage({ params }: { params: Promise<{ type: st
     let partyName = "—";
     let partyLines: PartyLine[] = [];
     let refText = "";
-    if (payment.direction === "in" && payment.salesInvoiceId) {
+    // An advance receipt names its invoice through its ALLOCATIONS — it may have settled several,
+    // and a partial draw never set `salesInvoiceId` at all. Ordinary payments keep the field.
+    const advanceLink = payment.kind === "advance_receipt"
+      ? (await advanceInvoiceLinks(session.orgId, [payment.id])).get(payment.id)
+      : undefined;
+    const receiptInvoiceId = advanceLink?.invoiceId ?? payment.salesInvoiceId;
+    if (payment.direction === "in" && receiptInvoiceId) {
       const [inv] = await db
         .select({ invoiceNumber: salesInvoicesTable.invoiceNumber, customerId: salesInvoicesTable.customerId })
         .from(salesInvoicesTable)
-        .where(eq(salesInvoicesTable.id, payment.salesInvoiceId));
+        .where(eq(salesInvoicesTable.id, receiptInvoiceId));
       if (inv) {
         const [customer] = await db.select().from(customersTable).where(eq(customersTable.id, inv.customerId));
         if (customer) {
           partyName = customer.name;
           partyLines = customerLines(customer);
         }
-        refText = `Payment received against Invoice ${inv.invoiceNumber}`;
+        refText = advanceLink && advanceLink.invoiceCount > 1
+          ? `Advance received, applied to Invoice ${inv.invoiceNumber} and ${advanceLink.invoiceCount - 1} more`
+          : `Payment received against Invoice ${inv.invoiceNumber}`;
       }
     } else if (payment.direction === "out" && payment.purchaseOrderId) {
       const [po] = await db

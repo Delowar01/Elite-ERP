@@ -707,6 +707,7 @@ const DICT: Record<string, string> = {
   // ---- Customer advances: statements + document summaries ----
   "Advance Received": "دفعة مقدَّمة مقبوضة",
   "Advance Applied": "دفعة مقدَّمة مخصومة من الفاتورة",
+  "Advance Released": "إعادة الدفعة المقدَّمة إلى رصيد العميل",
   "Advance Refunded": "دفعة مقدَّمة مردودة",
   "Advance available": "الدفعات المقدَّمة المتاحة",
   "Advance Available": "الدفعات المقدَّمة المتاحة",

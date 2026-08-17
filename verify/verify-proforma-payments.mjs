@@ -97,8 +97,13 @@ const {rows:inv}=await pool.query("select paid_amount,total,status from sales_in
 ok("Invoice paidAmount = 700 (transferred)", Number(inv[0].paid_amount)===700);
 ok("Invoice balance correct (total 1000 - 700 = 300)", Number(inv[0].total)-Number(inv[0].paid_amount)===300);
 ok("Invoice status = partially_paid", inv[0].status==="partially_paid");
-const {rows:moved}=await pool.query("select count(*)::int c from payments where sales_invoice_id=$1 and proforma_invoice_id=$2",[invId,A]);
-ok("Both payments re-pointed to the invoice, proforma origin kept", moved[0].c===2);
+// Transfer is expressed as ALLOCATIONS now, not as a re-pointed salesInvoiceId: an advance can
+// settle several invoices and a partial draw never set that field, so it stops being the record of
+// what was applied (and is cleared outright by the 2026-08-17 migration). The proforma origin
+// pointer is what still ties the receipt to where it came from.
+const {rows:moved}=await pool.query(
+  "select count(*)::int c from advance_applications a join payments p on p.id=a.advance_payment_id where a.sales_invoice_id=$1 and p.proforma_invoice_id=$2",[invId,A]);
+ok("Both advances applied to the invoice through allocations, proforma origin kept", moved[0].c===2);
 const {rows:tot}=await pool.query("select count(*)::int c from payments where proforma_invoice_id=$1",[A]);
 ok("No duplicate payment rows created (still 2)", tot[0].c===2);
 const {rows:je2}=await pool.query("select count(*)::int c from journal_entries where source_type='payment' and source_id in (select id from payments where proforma_invoice_id=$1)",[A]);

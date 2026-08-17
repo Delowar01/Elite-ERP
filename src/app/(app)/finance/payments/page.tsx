@@ -1,5 +1,6 @@
-import { eq, and, desc, inArray } from "drizzle-orm";
+import { eq, and, desc, inArray, sql } from "drizzle-orm";
 import { db, paymentsTable, bankAccountsTable, salesInvoicesTable, customersTable, purchaseOrdersTable, vendorsTable } from "@/db";
+import { advanceInvoiceLinks } from "@/lib/advance-payment-links";
 import { requireSession } from "@/lib/session";
 import { getLocale } from "@/lib/i18n/server";
 import { PaymentsListClient } from "./payments-list-client";
@@ -18,6 +19,7 @@ export default async function PaymentsPage() {
         method: paymentsTable.method,
         reference: paymentsTable.reference,
         amount: paymentsTable.amount,
+        kind: paymentsTable.kind,
         bankAccountName: bankAccountsTable.name,
         invoiceId: salesInvoicesTable.id,
         invoiceNumber: salesInvoicesTable.invoiceNumber,
@@ -28,7 +30,12 @@ export default async function PaymentsPage() {
       })
       .from(paymentsTable)
       .innerJoin(bankAccountsTable, eq(bankAccountsTable.id, paymentsTable.bankAccountId))
-      .leftJoin(salesInvoicesTable, eq(salesInvoicesTable.id, paymentsTable.salesInvoiceId))
+      // Ordinary payments name their invoice through this join; an ADVANCE receipt's invoices come
+      // from its allocations below, because one advance can settle several and a partial draw never
+      // set the field at all.
+      // NULL-safe: ordinary payments carry `kind = NULL`, and `kind <> 'advance_receipt'` is NULL
+      // for them, which would drop their invoice columns entirely.
+      .leftJoin(salesInvoicesTable, and(eq(salesInvoicesTable.id, paymentsTable.salesInvoiceId), sql`${paymentsTable.kind} is distinct from 'advance_receipt'`))
       .leftJoin(customersTable, eq(customersTable.id, salesInvoicesTable.customerId))
       .leftJoin(purchaseOrdersTable, eq(purchaseOrdersTable.id, paymentsTable.purchaseOrderId))
       .leftJoin(vendorsTable, eq(vendorsTable.id, purchaseOrdersTable.vendorId))
@@ -64,6 +71,22 @@ export default async function PaymentsPage() {
       .where(and(eq(purchaseOrdersTable.orgId, orgId), eq(purchaseOrdersTable.status, "received"))),
   ]);
 
+  // Fill the invoice columns for advance receipts from their ALLOCATIONS. The register shows the
+  // most recent invoice an advance settled, and says when there are more, rather than showing one
+  // of several as though it were the whole story — or, once the field is cleared, showing none.
+  const advanceLinks = await advanceInvoiceLinks(orgId, rows.filter((r) => r.kind === "advance_receipt").map((r) => r.id));
+  const rowsWithLinks = rows.map((r) => {
+    const link = r.kind === "advance_receipt" ? advanceLinks.get(r.id) : undefined;
+    return link
+      ? {
+          ...r,
+          invoiceId: link.invoiceId,
+          invoiceNumber: link.invoiceCount > 1 ? `${link.invoiceNumber} +${link.invoiceCount - 1}` : link.invoiceNumber,
+          customerName: link.customerName,
+        }
+      : r;
+  });
+
   const outstandingInvoices = outstandingInvoiceRows.map((r) => ({
     id: r.id,
     invoiceNumber: r.invoiceNumber,
@@ -85,7 +108,7 @@ export default async function PaymentsPage() {
     <PaymentsListClient
       locale={locale}
       currency={session.orgCurrency}
-      rows={rows}
+      rows={rowsWithLinks}
       bankAccounts={bankAccounts}
       outstandingInvoices={outstandingInvoices}
       outstandingPos={outstandingPos}
