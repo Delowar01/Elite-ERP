@@ -223,6 +223,13 @@ export function planAllocations(args: {
   advancesAccountId: number;
   arAccountId: number;
   fxAccountId: number | null;
+  /**
+   * Cap on the TOTAL document amount drawn across this plan — a user applying part of an advance
+   * by hand. Passed explicitly rather than faked by shrinking `invoice.total`, because the total
+   * is also what decides `closesInvoice`: a shrunken total would make a 2,000 draw on a 10,000
+   * invoice look like the closing one and derive its AR figure against the real baseTotal.
+   */
+  limitAmount?: string;
 }):
   | { ok: true; plan: PlannedAllocation[]; totalApplied: string; totalArCleared: string }
   | { ok: false; error: string } {
@@ -234,11 +241,13 @@ export function planAllocations(args: {
   let paidAmount = Number(invoice.paidAmount);
   let basePaidAmount = Number(invoice.basePaidAmount ?? invoice.paidAmount);
 
+  let remainingLimit = args.limitAmount === undefined ? Infinity : Number(args.limitAmount);
   for (const { paymentId, pot } of pots) {
     const due = Number(invoice.total) - paidAmount;
     if (due <= eps) break; // the invoice is settled — later advances stay available
+    if (remainingLimit <= eps) break; // the caller's explicit cap is spent
     const { availableAmount } = availabilityOf(pot, baseCurrency);
-    const applyAmount = roundMoney(Math.min(Number(availableAmount), due), docCurrency);
+    const applyAmount = roundMoney(Math.min(Number(availableAmount), due, remainingLimit), docCurrency);
     if (Number(applyAmount) <= eps) continue; // an exhausted advance contributes nothing
 
     const built = buildAllocationPosting({
@@ -267,6 +276,7 @@ export function planAllocations(args: {
     });
     paidAmount += Number(applyAmount);
     basePaidAmount += Number(built.posting.arCleared);
+    remainingLimit -= Number(applyAmount);
   }
 
   return {

@@ -20,6 +20,8 @@ import { EInvoicePreviewPanel } from "../../_shared/einvoice-preview-panel";
 import { DocRelationships } from "../../_shared/doc-relationships";
 import { DocNum } from "../../_shared/money";
 import { InvoiceDetailActions } from "../invoice-detail-actions";
+import { ApplyAdvanceDialog } from "../apply-advance-dialog";
+import { listAvailableAdvancesForInvoice } from "../advance-actions";
 import { DownloadPdfButton } from "../../_shared/download-pdf-button";
 import { EditDocumentButton } from "../../../_shared/edit-document";
 import { PaymentHistory } from "../../../finance/_shared/payment-history";
@@ -102,6 +104,11 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
         .reduce((sum, r) => sum + Number(r.applied), 0)
     : 0;
   const directPaid = Number(invoice.paidAmount) - advanceApplied;
+  // The customer's advances that still carry a balance. Ineligible ones come back WITH a reason so
+  // the dialog can explain rather than show an empty list.
+  const availableAdvances = showPayments && (invoice.status === "sent" || invoice.status === "partially_paid")
+    ? await listAvailableAdvancesForInvoice(invoice.id)
+    : [];
   const canDeletePayments = (session.role === "owner" || session.role === "admin") && invoice.status !== "void";
 
   const relNodes: { label: string; sub?: string }[] = [];
@@ -134,6 +141,15 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
         <div className="flex items-center gap-2.5">
           <EditDocumentButton locale={locale} docType="sales_invoice" id={invoice.id} number={invoice.invoiceNumber} status={invoice.status} recordState={invoice.deletedAt ? "deleted" : invoice.archivedAt ? "archived" : "active"} />
           <DownloadPdfButton locale={locale} type="invoice" docId={invoice.id} number={invoice.invoiceNumber} />
+          {availableAdvances.length > 0 && (
+            <ApplyAdvanceDialog
+              locale={locale}
+              invoiceId={invoice.id}
+              currency={invoice.currency ?? org.currency}
+              due={balanceDue}
+              advances={availableAdvances}
+            />
+          )}
           <InvoiceDetailActions
             locale={locale}
             currency={invoice.currency ?? org.currency}

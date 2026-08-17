@@ -712,6 +712,17 @@ const DICT: Record<string, string> = {
   "Advance Available": "الدفعات المقدَّمة المتاحة",
   "Customer Advance Applied": "الدفعة المقدَّمة المخصومة",
 
+  // ---- Customer advances: applying an available advance to an invoice ----
+  "Apply Advance": "خصم دفعة مقدَّمة",
+  "Customer Advance": "دفعة مقدَّمة من العميل",
+  "Select an advance": "اختر دفعة مقدَّمة",
+  "Advance applied.": "تم خصم الدفعة المقدَّمة.",
+  "Up to": "بحد أقصى",
+  "the lower of the advance available and the amount outstanding.": "الأقل بين الرصيد المتاح من الدفعة والمبلغ المتبقٍّ على الفاتورة.",
+  "Enter an amount greater than zero.": "أدخل مبلغًا أكبر من صفر.",
+  "The advance will be applied to this invoice and its outstanding balance reduced. No new payment is recorded — the money was received when the advance was taken.":
+    "سيتم خصم الدفعة المقدَّمة من هذه الفاتورة وتخفيض رصيدها المستحق. لا تُسجَّل دفعة جديدة — فالمبلغ قُبض عند استلام الدفعة المقدَّمة.",
+
   // ---- Color Theme (Issue #16) ----
   "Auto": "تلقائي",
   "Background": "الخلفية",

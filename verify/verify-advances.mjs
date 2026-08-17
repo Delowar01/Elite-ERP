@@ -733,6 +733,127 @@ check("LOCK PROOF: and it was a PARTIAL draw — 300 of 500 — so only the lock
   JSON.stringify(await allocationsOf(lockPay)));
 await balanced("after the lock-proof conversion");
 
+// ================= §3/§4 APPLY AN ADVANCE TO A LATER INVOICE (cases B, D, E) =================
+// The other half of allocation: an advance that outlived its proforma settling a DIFFERENT invoice.
+// Nothing holds by construction here — at conversion the invoice IS the proforma, so same-customer
+// and same-currency are free; on this path both must be enforced.
+const applyActionId = idFor("applyAdvanceToInvoiceAction");
+check("found the Next-Action id for applyAdvanceToInvoiceAction", !!applyActionId, String(applyActionId));
+const applyAdvance = async (invoiceId, paymentId, amount) => {
+  const res = await fetch(`${BASE}/sales/invoices/${invoiceId}`, {
+    method: "POST",
+    headers: { "Next-Action": applyActionId, "Content-Type": "text/plain;charset=UTF-8", Cookie: cookieHeader },
+    body: JSON.stringify([invoiceId, paymentId, String(amount)]),
+    redirect: "manual",
+  });
+  return { status: res.status, body: (await res.text()).replace(/<!-- -->/g, "").replace(/\s+/g, " ") };
+};
+// A second, independent invoice for the SAME customer, posted through the normal Send path.
+const mkSentInvoice = async (total) => {
+  const inv = (await db.query(
+    `insert into sales_invoices (org_id, invoice_number, customer_id, issue_date, status, subtotal, discount, tax_total, total, created_by_id)
+     values ($1,$2,$3,$4,'draft',$5,'0','0',$5,$6) returning id`,
+    [org, `INV-${uniq()}`, cust, today, total, u.id])).rows[0].id;
+  await db.query(
+    `insert into sales_invoice_items (invoice_id, description, quantity, unit_price, tax_rate_percent, line_total)
+     values ($1,'Later work',1,$2,'0',$2)`, [inv, total]);
+  await page.goto(`${BASE}/sales/invoices/${inv}`, { waitUntil: "networkidle" });
+  await page.getByRole("button", { name: "Send Invoice", exact: true }).click();
+  await page.waitForTimeout(400);
+  await dialogs().last().getByRole("button", { name: "Send Invoice", exact: true }).click();
+  await page.waitForTimeout(1500);
+  return inv;
+};
+
+// CASE B: one advance settles TWO invoices — 8,000 went to the first at conversion, 2,000 remains.
+const invB2 = await mkSentInvoice("5000.00");
+await balanced("before applying the remainder to a second invoice");
+const rB = await applyAdvance(invB2, partPay, 2000);
+const b2 = (await db.query("select status, paid_amount::text, base_paid_amount::text from sales_invoices where id=$1", [invB2])).rows[0];
+check("CASE B: the SAME advance settles a second invoice — 2,000 applied, invoice partially paid",
+  rB.status === 200 && num(b2.paid_amount) === 2000000 && num(b2.base_paid_amount) === 2000000 && b2.status === "partially_paid",
+  JSON.stringify({ status: rB.status, ...b2 }));
+const bAllocs = await allocationsOf(partPay);
+check("CASE B: the advance now carries TWO allocations, 8,000 + 2,000, against two different invoices",
+  bAllocs.length === 2 && num(bAllocs[0].applied_amount) === 8000000 && num(bAllocs[1].applied_amount) === 2000000
+    && bAllocs[0].sales_invoice_id !== bAllocs[1].sales_invoice_id, JSON.stringify(bAllocs));
+check("CASE B: each allocation has its OWN journal — keyed by allocation, so the second is not suppressed",
+  (await db.query(
+    `select count(*)::int n from journal_entries where org_id=$1 and source_type='advance_application'
+      and source_id in (select id from advance_applications where org_id=$1 and advance_payment_id=$2)`,
+    [org, partPay])).rows[0].n === 2);
+check("CASE B: the advance is now fully consumed — nothing available", (await availableOf(partPay)).doc === 0);
+await balanced("after applying the remainder to a second invoice");
+
+// CASE E: a DIFFERENT customer's invoice is refused, with no mutation at all
+const otherCust = (await db.query("insert into customers (org_id,name) values ($1,'Other Client') returning id", [org])).rows[0].id;
+const invOther = (await db.query(
+  `insert into sales_invoices (org_id, invoice_number, customer_id, issue_date, status, subtotal, discount, tax_total, total, base_total, exchange_rate, created_by_id)
+   values ($1,$2,$3,$4,'sent','5000.00','0','0','5000.00','5000.00','1',$5) returning id`,
+  [org, `INV-${uniq()}`, otherCust, today, u.id])).rows[0].id;
+const pfSpare = await mkProforma({ currency: null, total: "3000.00" });
+await recordPayment(`${BASE}/sales/proforma/${pfSpare}`, 3000);
+const sparePay = (await db.query("select id from payments where org_id=$1 and proforma_invoice_id=$2", [org, pfSpare])).rows[0].id;
+const entriesBeforeE = (await db.query("select count(*)::int n from journal_entries where org_id=$1", [org])).rows[0].n;
+const rE = await applyAdvance(invOther, sparePay, 1000);
+check("CASE E: applying one client's advance to ANOTHER client's invoice is REFUSED, naming the reason",
+  /belongs to a different client/.test(rE.body), rE.body.match(/[^"<]*different client[^"<]*/)?.[0] ?? "(message not found)");
+check("CASE E: and nothing moved — no allocation, no journal, the invoice untouched",
+  (await allocationsOf(sparePay)).length === 0
+    && (await db.query("select count(*)::int n from journal_entries where org_id=$1", [org])).rows[0].n === entriesBeforeE
+    && num((await db.query("select paid_amount from sales_invoices where id=$1", [invOther])).rows[0].paid_amount) === 0);
+
+// CASE D (same customer) is the happy path proven by CASE B above; here is its refusal twin for
+// currency, which the UI must EXPLAIN rather than hide.
+await db.query(
+  `insert into exchange_rates (org_id, from_currency, to_currency, rate, effective_date, source)
+   values ($1,'USD','SAR','3.90',current_date,'manual') on conflict do nothing`, [org]);
+const pfUsdSpare = await mkProforma({ currency: "USD", total: "400.00" });
+await recordPayment(`${BASE}/sales/proforma/${pfUsdSpare}`, 400);
+const usdSparePay = (await db.query("select id from payments where org_id=$1 and proforma_invoice_id=$2", [org, pfUsdSpare])).rows[0].id;
+const invSar = await mkSentInvoice("900.00");
+const rCur = await applyAdvance(invSar, usdSparePay, 100);
+check("cross-currency application is REFUSED server-side, naming BOTH currencies",
+  /USD/.test(rCur.body) && /SAR/.test(rCur.body) && /same currency/.test(rCur.body),
+  rCur.body.match(/[^"<]*same currency[^"<]*/)?.[0] ?? "(message not found)");
+await page.goto(`${BASE}/sales/invoices/${invSar}`, { waitUntil: "networkidle" });
+await page.getByRole("button", { name: /^Apply Advance$/ }).first().click();
+await page.waitForTimeout(500);
+const blockedNote = await page.getByTestId("apply-advance-blocked").innerText().catch(() => "");
+check("…and the DIALOG EXPLAINS it — the USD advance is listed with its reason, not silently hidden",
+  /USD/.test(blockedNote) && /same currency/.test(blockedNote), blockedNote.replace(/\s+/g, " ").slice(0, 160) || "(no blocked note rendered)");
+await page.keyboard.press("Escape");
+await page.waitForTimeout(300);
+
+// ================= the NECESSITY proof the conversion path could not make =================
+// Commit 3 showed the availability read TAKES the lock; it could not show the lock was NEEDED,
+// because conversions serialise on their proforma row anyway. Here two DIFFERENT invoices draw on
+// ONE advance at the same time, which is only safe because availability is computed under the lock.
+const pfRace = await mkProforma({ currency: null, total: "1000.00" });
+await recordPayment(`${BASE}/sales/proforma/${pfRace}`, 1000);
+const racePay = (await db.query("select id from payments where org_id=$1 and proforma_invoice_id=$2", [org, pfRace])).rows[0].id;
+const raceInvA = await mkSentInvoice("1000.00");
+const raceInvB = await mkSentInvoice("1000.00");
+await balanced("before the concurrent draws");
+const [raceA, raceB] = await Promise.all([
+  applyAdvance(raceInvA, racePay, 1000),
+  applyAdvance(raceInvB, racePay, 1000),
+]);
+const raceAllocs = await allocationsOf(racePay);
+const raceAvail = await availableOf(racePay);
+check("CONCURRENCY: two invoices drawing the SAME 1,000 advance at once produce exactly ONE allocation",
+  raceAllocs.length === 1 && num(raceAllocs[0].applied_amount) === 1000000, JSON.stringify(raceAllocs));
+check("CONCURRENCY: the loser is REFUSED with the real reason — availability, not a generic error",
+  /no available balance left|Only .* of this advance is still available/.test(raceA.body + raceB.body),
+  (raceA.body + raceB.body).match(/[^"<]*available[^"<]*/)?.[0] ?? "(no availability message)");
+check("CONCURRENCY: the advance is not oversubscribed — 0 available, never negative",
+  raceAvail.doc === 0 && raceAvail.carried === 0, JSON.stringify(raceAvail));
+check("CONCURRENCY: exactly one of the two invoices was settled",
+  [(await db.query("select paid_amount::text p from sales_invoices where id=$1", [raceInvA])).rows[0].p,
+   (await db.query("select paid_amount::text p from sales_invoices where id=$1", [raceInvB])).rows[0].p]
+    .filter((v) => num(v) === 1000000).length === 1);
+await balanced("after the concurrent draws");
+
 // ================= L. GL 2300 = the carried value of every remaining available advance ==========
 const gl2300 = async () => Number((await db.query(
   `select coalesce(sum(l.credit),0) - coalesce(sum(l.debit),0) as net
@@ -758,8 +879,12 @@ const subledger = async () => Number((await db.query(
   `select coalesce(sum(base_total::numeric - base_paid_amount::numeric),0) as s
      from sales_invoices where org_id=$1 and status in ('sent','partially_paid','paid')`, [org])).rows[0].s);
 const glH = await gl1100(), slH = await subledger();
+// The claim is the EQUALITY, not any particular total: pinning an absolute figure here made the
+// check fail the moment later cases added invoices, while the invariant itself was intact. The
+// non-zero guard keeps it from passing trivially on an empty ledger, and the seeded-divergence
+// control below proves it can still fail.
 check(`INVARIANT H: GL 1100 (${glH}) = AR subledger Σ(baseTotal − basePaidAmount) (${slH}) — advances never diverge them`,
-  Math.round(glH * 1000) === Math.round(slH * 1000) && Math.round(glH * 1000) === 12500000, `${glH} vs ${slH}`);
+  Math.round(glH * 1000) === Math.round(slH * 1000) && Math.round(glH * 1000) > 0, `${glH} vs ${slH}`);
 // Divergence CONTROL: a rogue 1100 credit must break the equality — proving the invariant check
 // can fail — and equality must return once it is removed.
 const rogue = (await db.query(
