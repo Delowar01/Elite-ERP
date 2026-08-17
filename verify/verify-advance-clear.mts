@@ -111,10 +111,17 @@ const allocEntry = (await pool.query(
 await pool.query("insert into journal_lines (journal_entry_id,account_id,debit,credit) values ($1,$2,'4000.000','0'),($1,$3,'0','4000.000')",
   [allocEntry, acc.get("2300"), acc.get("1100")]);
 
-/** An ORDINARY payment on the same invoice — the population that must survive untouched. */
+/**
+ * An ORDINARY payment on the same invoice — the population that must survive untouched.
+ *
+ * Inserted with `kind` NULL, which is what the application actually writes: only advances are
+ * tagged. An earlier version of this fixture set `kind='invoice_payment'`, a shape production never
+ * produces — and a NULL-kind row is precisely what a `kind <> 'advance_receipt'` guard fails to
+ * see, so the fixture would have been testing the safe case.
+ */
 const ordinary = (await pool.query(
-  `insert into payments (org_id,direction,bank_account_id,amount,payment_date,kind,base_amount,base_applied_amount,sales_invoice_id,created_by_id)
-   values ($1,'in',$2,'1000.00','2026-08-07','invoice_payment','1000.00','1000.00',$3,$4) returning id`,
+  `insert into payments (org_id,direction,bank_account_id,amount,payment_date,base_amount,base_applied_amount,sales_invoice_id,created_by_id)
+   values ($1,'in',$2,'1000.00','2026-08-07','1000.00','1000.00',$3,$4) returning id`,
   [org, bank, invoice, user])).rows[0].id as number;
 
 /** An advance receipt with the field set and NO allocation — the refusal population. */

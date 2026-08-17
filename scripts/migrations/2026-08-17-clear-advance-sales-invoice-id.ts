@@ -70,8 +70,14 @@ async function main() {
        and not exists (select 1 from advance_applications a where a.advance_payment_id = p.id)
      order by p.org_id, p.id`)).rows;
 
+  // NULL-SAFE, and it matters here more than anywhere: ordinary payments carry `kind = NULL`
+  // (only advances are tagged), so `kind <> 'advance_receipt'` is NULL for them and counts ZERO.
+  // The post-check below compares this figure before and after the UPDATE — with the plain
+  // inequality it compared 0 to 0 and would have reported "unchanged" while every ordinary payment
+  // in the database lost its invoice link.
   const ordinary = (await pool.query<Row>(`
-    select count(*)::int as n from payments where kind <> 'advance_receipt' and sales_invoice_id is not null${orgFilter}`)).rows[0];
+    select count(*)::int as n from payments
+     where kind is distinct from 'advance_receipt' and sales_invoice_id is not null${orgFilter}`)).rows[0];
 
   console.log(`  advance receipts still carrying salesInvoiceId : ${total}`);
   console.log(`  …of those, with NO allocation row              : ${unbacked.length}`);
@@ -106,7 +112,8 @@ async function main() {
   const after = (await pool.query<Row>(`
     select
       (select count(*)::int from payments where kind = 'advance_receipt' and sales_invoice_id is not null${orgFilter}) as advances_left,
-      (select count(*)::int from payments where kind <> 'advance_receipt' and sales_invoice_id is not null${orgFilter}) as ordinary_left`)).rows[0];
+      (select count(*)::int from payments
+        where kind is distinct from 'advance_receipt' and sales_invoice_id is not null${orgFilter}) as ordinary_left`)).rows[0];
   console.log(`  advance receipts still carrying it : ${Number(after.advances_left)} (expected 0)`);
   console.log(`  ordinary payments still carrying it: ${Number(after.ordinary_left)} (expected ${Number(ordinary.n)})\n`);
   if (Number(after.ordinary_left) !== Number(ordinary.n)) {

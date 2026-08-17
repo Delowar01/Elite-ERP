@@ -35,7 +35,32 @@ export const journalEntriesTable = pgTable("journal_entries", {
     .references(() => orgsTable.id, { onDelete: "cascade" }),
   entryDate: date("entry_date").notNull(),
   memo: text("memo").notNull(),
-  sourceType: text("source_type").notNull(), // sales_invoice | credit_note | purchase_order | debit_note | payment | payroll_run | expense | manual
+  /**
+   * WHAT this entry came from. `sourceType` is HALF of the identity — never resolve `sourceId`
+   * without it.
+   *
+   * Known values: sales_invoice | credit_note | purchase_order | debit_note | payment |
+   * advance_application | advance_application_release | advance_application_release_reversal |
+   * payroll_run | expense | manual.
+   *
+   * ## The hazard for whoever adds the next source type
+   *
+   * `sourceId` is drawn from a DIFFERENT table for each source type, and those tables have
+   * independent sequences. So the same integer is a valid id in several of them at once, and a
+   * reader that resolves attribution by id while assuming the wrong table does not find nothing —
+   * it finds an UNRELATED ROW and reports it confidently.
+   *
+   * This is not hypothetical. When advance-application entries were re-keyed from the payment to
+   * the allocation, the statements reader kept resolving them as payment ids: most lines lost their
+   * attribution and were dropped from the statement, and 70 of them landed on a stranger's party
+   * because an allocation id happened to equal a payment id. Nothing errored.
+   *
+   * So: a reader must branch on `sourceType` FIRST and look the id up in that type's own table, and
+   * a re-key of any source type is a change to every reader of it. `verify-statements` asserts the
+   * attribution of each type against the shape the app actually posts — seed fixtures from the
+   * writing code path, never from a remembered shape.
+   */
+  sourceType: text("source_type").notNull(),
   sourceId: integer("source_id"),
   // Optional project tag for MANUAL entries, so a direct project cost posted straight to the ledger
   // can be attributed. Document-sourced entries leave this NULL — their project comes from the

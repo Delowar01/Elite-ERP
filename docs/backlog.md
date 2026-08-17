@@ -310,6 +310,13 @@ Clearing it destroys the fact with no record anywhere. So the script counts that
 
 Steps 4 and 6 are both idempotent; re-running either finds nothing to do.
 
+**Deploy the phase WHOLE — steps 5 is not divisible.** The switch to allocation-keyed application
+journals happens in Allocations 3/9; the statements reader that resolves them is fixed in 8/9.
+Deploying 1–7 without 8 puts production in the one configuration that breaks client statements:
+new applications write allocation-keyed entries while attribution still resolves them as payment
+ids, so those lines vanish from statements — or, where an allocation id collides with a payment id,
+land on an unrelated party. There is no partial-deploy story here; ship 1–9 together.
+
 **Why step 5 sits between them safely:** every migrated reader produces the SAME figure before and
 after the clear — advance receipts are excluded from the `salesInvoiceId` path and read through
 allocations instead — so the window between deploy and clear is not a degraded state.
