@@ -19,6 +19,7 @@ import { moneyEpsilon, roundMoney } from "@/lib/currency/currencies";
 import { capturePaymentBase, fxLine } from "@/lib/payment-currency";
 import { resolveRate, MissingExchangeRateError } from "@/lib/exchange-rates";
 import { subtractMoney } from "@/lib/posting-currency";
+import { lockAdvanceAndReadPot, availabilityOf, carriedBaseFor } from "@/lib/advance-allocations";
 import { logActivity } from "@/lib/activity";
 import { recordAudit } from "@/lib/security/audit";
 
@@ -466,22 +467,52 @@ export async function recordPaymentAction(formData: FormData): Promise<ActionRes
 }
 
 /**
- * Refund an unused customer advance (§11): Dr 2300 Customer Advances / Cr Bank — the liability is
- * returned as cash, and neither AR nor revenue moves (the advance never touched either).
+ * Refund a customer advance, in whole or in part (§10): Dr 2300 Customer Advances / Cr Bank — the
+ * liability is returned as cash, and neither AR nor revenue moves (the advance never touched
+ * either).
  *
- * Granularity mirrors the application model: a refund returns ONE advance receipt IN FULL, so the
- * refund row carries the receipt's own stored figures — both journal lines post at the advance's
- * CARRIED base value (what 2300 was credited at receipt), which extinguishes the liability at
- * exactly the figure it was booked at, with no FX line. (A payout-date revaluation would need a
- * received-amount input and an FX leg; if that fidelity is ever needed it can be added on top —
- * the carried-value refund is internally consistent and never mis-states 2300.)
+ * ## Partial, and allocation-aware
  *
- * Only an AVAILABLE advance can be refunded: kind='advance_receipt', never applied
- * (salesInvoiceId null — applied advances are settled history) and not already refunded (no
- * advance_refund row referencing it — the refundsPaymentId link makes double-refund structurally
- * impossible). Owner/admin only, same as deleting financial records.
+ * What can be refunded is what is AVAILABLE: the receipt less what allocations still consume and
+ * less what earlier refunds already returned. A 10,000 advance with 8,000 applied to an invoice can
+ * refund 2,000 — the old rule (any application at all blocks the refund, and one refund per
+ * receipt) belonged to the whole-payment model and would strand the client's own money.
+ * Availability is read INSIDE the advance's row lock, so two refunds racing for the same 2,000
+ * serialise and the loser sees what the winner left.
+ *
+ * ## The FX shape, which changed
+ *
+ * A refund is a real cash payment out. It was previously posted at the advance's CARRIED value on
+ * both lines, which is right for 2300 and wrong for the bank: if the rate moved since receipt, the
+ * bank pays a different base amount than the liability was carried at, and the difference is
+ * realized FX. It was the one cash movement in the system booked at a stale rate.
+ *
+ * ```text
+ * Dr 2300  at the advance's carried value (apportioned, exact residual when this empties it)
+ * Cr Bank  at what the bank ACTUALLY paid out
+ * 4900     the derived difference — realized gain or loss
+ * ```
+ *
+ * The payout figure follows the received-amount pattern in reverse: the caller may state what the
+ * bank actually paid in base currency, and the effective rate is derived from it. Omitted, it is
+ * converted at the payout DATE's rate, which is the model's rule for a cash event — never the
+ * receipt's rate, which belongs to a different day.
+ *
+ * `rateSource` now records the payout's own provenance rather than copying the receipt's, which
+ * claimed a rate lookup that never happened for this movement.
+ *
+ * Owner/admin only, same as deleting financial records.
  */
-export async function refundAdvanceAction(paymentId: number, bankAccountId?: number): Promise<ActionResult> {
+export async function refundAdvanceAction(
+  paymentId: number,
+  opts?: {
+    bankAccountId?: number;
+    /** Document-currency amount to refund. Omitted = the whole available balance. */
+    amount?: string;
+    /** What the bank actually paid out, in base currency. Omitted = the payout date's rate. */
+    basePaidOut?: string;
+  },
+): Promise<ActionResult> {
   const session = await requireRole("owner", "admin");
   const [receipt] = await db
     .select()
@@ -489,31 +520,9 @@ export async function refundAdvanceAction(paymentId: number, bankAccountId?: num
     .where(and(eq(paymentsTable.id, paymentId), eq(paymentsTable.orgId, session.orgId)));
   if (!receipt) return { error: "Payment not found." };
   if (receipt.kind !== "advance_receipt") return { error: "Only customer advance receipts can be refunded." };
-  // Partial allocation means "applied" is no longer all-or-nothing, so the question is whether ANY
-  // of this advance is still unspent. Partial refunds land in commit 7; until then a refund is
-  // whole-receipt, so any active allocation blocks it — but the reason names the real state.
-  // Deliberately the GROSS applied figure, not net of releases: an allocation released down to
-  // nothing is marked `releasedAt` and leaves this sum entirely, so gross and net agree on the only
-  // question asked here — is any of it still applied. Commit 7 needs the net figure and derives it.
-  const [allocated] = await db
-    .select({ applied: sql<string>`coalesce(sum(${advanceApplicationsTable.appliedAmount}), 0)::text` })
-    .from(advanceApplicationsTable)
-    .where(and(
-      eq(advanceApplicationsTable.orgId, session.orgId),
-      eq(advanceApplicationsTable.advancePaymentId, receipt.id),
-      isNull(advanceApplicationsTable.releasedAt),
-    ));
-  if (Number(allocated?.applied ?? 0) > 0) {
-    return { error: "This advance has been applied to a sales invoice and can no longer be refunded." };
-  }
-  const [existingRefund] = await db
-    .select({ id: paymentsTable.id })
-    .from(paymentsTable)
-    .where(and(eq(paymentsTable.orgId, session.orgId), eq(paymentsTable.refundsPaymentId, receipt.id)));
-  if (existingRefund) return { error: "This advance has already been refunded." };
 
   // Money goes back the way it came unless another org bank account is chosen explicitly.
-  const refundBankId = bankAccountId ?? receipt.bankAccountId;
+  const refundBankId = opts?.bankAccountId ?? receipt.bankAccountId;
   const [bankAccount] = await db
     .select()
     .from(bankAccountsTable)
@@ -525,37 +534,90 @@ export async function refundAdvanceAction(paymentId: number, bankAccountId?: num
   const advances = byCode.get("2300");
   if (!advances) return { error: "Chart of accounts is missing a required system account (2300 Customer Advances)." };
 
-  // The advance's carried base value — the same figure its receipt credited to 2300. A pre-FX-7
-  // base-currency receipt carries the identity; a pre-FX-7 foreign one stored no base, so the
-  // refund cannot be constructed — an honest refusal, not a guess.
-  const isBase = !receipt.currency || receipt.currency.toUpperCase() === session.orgCurrency.toUpperCase();
-  const carried = receipt.baseAppliedAmount ?? (isBase ? receipt.amount : null);
-  if (carried === null) {
-    return { error: "This advance has no stored base-currency value (it was recorded before currency capture), so it cannot be refunded. Delete and re-record it first." };
-  }
-
+  const docCurrency = receipt.currency ?? session.orgCurrency;
+  const eps = moneyEpsilon(docCurrency);
   const today = new Date().toISOString().slice(0, 10);
   const [pf] = receipt.proformaInvoiceId
     ? await db.select().from(proformaInvoicesTable).where(and(eq(proformaInvoicesTable.id, receipt.proformaInvoiceId), eq(proformaInvoicesTable.orgId, session.orgId)))
     : [];
 
-  const refundId = await db.transaction(async (tx) => {
+  const outcome = await db.transaction(async (tx) => {
+    const locked = await lockAdvanceAndReadPot(tx, { orgId: session.orgId, advancePaymentId: paymentId });
+    if (!locked) {
+      // A pre-FX-7 foreign receipt stored no base value, so there is no carried figure to release.
+      return { error: "This advance has no stored base-currency value (it was recorded before currency capture), so it cannot be refunded. Delete and re-record it first." } as const;
+    }
+    const { availableAmount } = availabilityOf(locked.pot, session.orgCurrency);
+    if (Number(availableAmount) <= eps) {
+      // Nothing is available — but the REASON matters to whoever clicked, so it is read from the
+      // two things that consume an advance rather than reported as a bare unavailability.
+      const [applied] = await tx
+        .select({ n: sql<string>`coalesce(sum(${advanceApplicationsTable.appliedAmount}), 0)::text` })
+        .from(advanceApplicationsTable)
+        .where(and(
+          eq(advanceApplicationsTable.orgId, session.orgId),
+          eq(advanceApplicationsTable.advancePaymentId, receipt.id),
+          isNull(advanceApplicationsTable.releasedAt),
+        ));
+      if (Number(applied?.n ?? 0) > 0) {
+        return { error: "This advance has been applied to a sales invoice and can no longer be refunded." } as const;
+      }
+      return { error: "This advance has already been refunded." } as const;
+    }
+
+    const requested = opts?.amount === undefined ? availableAmount : roundMoney(opts.amount, docCurrency);
+    if (!Number.isFinite(Number(requested)) || Number(requested) <= 0) {
+      return { error: "Enter a refund amount greater than zero." } as const;
+    }
+    if (Number(requested) > Number(availableAmount) + eps) {
+      return { error: `Only ${availableAmount} of this advance is still available to refund.` } as const;
+    }
+
+    // The liability leaves at the advance's own carried value — apportioned while the advance
+    // survives, the EXACT residual when this refund empties it, so a receipt consumed by any mix of
+    // allocations and refunds strands nothing in 2300. A refund is a consumer of the pot like any
+    // other.
+    const carried = carriedBaseFor({ pot: locked.pot, drawAmount: requested, baseCurrency: session.orgCurrency });
+
+    // What the bank actually paid, in base. A typed figure IS the rate; otherwise the payout date's.
+    const captured = await capturePaymentBase({
+      orgId: session.orgId,
+      baseCurrency: session.orgCurrency,
+      docCurrency: receipt.currency,
+      amount: Number(requested),
+      paymentDate: today,
+      baseReceived: opts?.basePaidOut === undefined || opts.basePaidOut.trim() === "" ? null : Number(opts.basePaidOut),
+    });
+    if (!captured.ok) return { error: captured.error, missingRate: captured.missingRate } as const;
+
+    // Dr 2300 at carried, Cr Bank at paid-out, 4900 takes the difference — the same construction a
+    // purchase-order payment uses, which is what makes this a normal cash movement rather than a
+    // special case.
+    const fx = fxLine({
+      baseAmount: captured.baseAmount, baseApplied: carried, direction: "out",
+      baseCurrency: session.orgCurrency, fxAccountId: byCode.get("4900")?.id ?? -1,
+    });
+    if (fx && !byCode.get("4900")) {
+      return { error: "Chart of accounts is missing a required system account (4900 Exchange Gain/Loss)." } as const;
+    }
+
     const [refund] = await tx
       .insert(paymentsTable)
       .values({
         orgId: session.orgId,
         direction: "out",
         bankAccountId: bankAccount.id,
-        amount: receipt.amount,
+        amount: requested,
         kind: "advance_refund",
         refundsPaymentId: receipt.id,
-        // The receipt's own stored figures, verbatim — the refund extinguishes exactly what was
-        // booked, so nothing is looked up and nothing can drift.
-        currency: receipt.currency,
-        exchangeRate: receipt.exchangeRate,
-        baseAmount: carried,
+        currency: captured.currency,
+        exchangeRate: captured.exchangeRate,
+        // baseAmount is the CASH (what left the bank); baseAppliedAmount is the LIABILITY released
+        // (what 2300 was carrying). They differ by the realized FX, and the pot reads the second —
+        // so a refund consumes exactly what it relieved, never what it happened to cost.
+        baseAmount: captured.baseAmount,
         baseAppliedAmount: carried,
-        rateSource: receipt.rateSource,
+        rateSource: captured.rateSource,
         paymentDate: today,
         method: receipt.method,
         reference: receipt.reference,
@@ -577,17 +639,18 @@ export async function refundAdvanceAction(paymentId: number, bankAccountId?: num
       .returning({ id: journalEntriesTable.id });
 
     await tx.insert(journalLinesTable).values([
-      // Dr 2300 / Cr Bank at the carried value: the liability leaves as the cash does. Never AR,
-      // never revenue — the advance touched neither coming in, and touches neither going out.
+      // Never AR, never revenue — the advance touched neither coming in, and touches neither going out.
       { journalEntryId: entry.id, accountId: advances.id, debit: carried, credit: "0" },
-      { journalEntryId: entry.id, accountId: bankAccount.glAccountId, debit: "0", credit: carried },
+      { journalEntryId: entry.id, accountId: bankAccount.glAccountId, debit: "0", credit: captured.baseAmount },
+      ...(fx ? [{ journalEntryId: entry.id, accountId: fx.accountId, debit: fx.debit, credit: fx.credit }] : []),
     ]);
 
-    // The proforma's paid figures track the NET advance held against it, so a refund releases
-    // what the receipt added — same stored-figure arithmetic as deletion, opposite sign to receipt.
+    // The proforma's paid figures track the NET advance held against it, so a refund releases what
+    // it returned — the document amount refunded, and the CARRIED base it relieved (not the cash,
+    // which includes an FX difference the proforma never booked).
     if (pf) {
       const pfCurrency = pf.currency ?? session.orgCurrency;
-      const newPaid = roundMoney(Math.max(0, Number(pf.paidAmount) - Number(receipt.amount)), pfCurrency);
+      const newPaid = roundMoney(Math.max(0, Number(pf.paidAmount) - Number(requested)), pfCurrency);
       const newBasePaid = pf.basePaidAmount === null
         ? null
         : roundMoney(Math.max(0, Number(pf.basePaidAmount) - Number(carried)), session.orgCurrency);
@@ -596,20 +659,25 @@ export async function refundAdvanceAction(paymentId: number, bankAccountId?: num
         .set({ paidAmount: newPaid, basePaidAmount: pfCurrency.toUpperCase() === session.orgCurrency.toUpperCase() ? newPaid : newBasePaid, updatedAt: new Date() })
         .where(eq(proformaInvoicesTable.id, pf.id));
     }
-    return refund.id;
+    return { refundId: refund.id, amount: requested, carried, paidOut: captured.baseAmount } as const;
   });
+
+  if ("error" in outcome) return { error: outcome.error, missingRate: outcome.missingRate };
 
   await logActivity(session, {
     type: "payment.recorded",
     description: pf
-      ? `Refunded a customer advance of ${receipt.amount} for proforma ${pf.proformaNumber}`
-      : `Refunded a customer advance of ${receipt.amount}`,
+      ? `Refunded a customer advance of ${outcome.amount} for proforma ${pf.proformaNumber}`
+      : `Refunded a customer advance of ${outcome.amount}`,
     entityType: "payment",
-    entityId: refundId,
+    entityId: outcome.refundId,
   });
   await recordAudit({ orgId: session.orgId, userId: session.userId, userName: session.name }, {
-    action: "payment.created", entityType: "payment", entityId: refundId,
-    newValue: { kind: "advance_refund", refundsPaymentId: receipt.id, amount: receipt.amount, bankAccountId: bankAccount.id },
+    action: "payment.created", entityType: "payment", entityId: outcome.refundId,
+    newValue: {
+      kind: "advance_refund", refundsPaymentId: receipt.id, amount: outcome.amount,
+      carried: outcome.carried, paidOut: outcome.paidOut, bankAccountId: bankAccount.id,
+    },
   });
   revalidatePath(PATH);
   revalidatePath("/finance/bank-accounts");
@@ -620,6 +688,28 @@ export async function refundAdvanceAction(paymentId: number, bankAccountId?: num
   if (receipt.proformaInvoiceId) revalidatePath(`/sales/proforma/${receipt.proformaInvoiceId}`);
   revalidatePath("/dashboard");
   return {};
+}
+
+/**
+ * What is left of an advance, for the Refund dialog — the same figures the action recomputes under
+ * its lock, so the dialog can pre-fill rather than guess. Read-only, so no lock is taken here; the
+ * action is the authority and refuses anything the pre-fill got wrong.
+ */
+export async function advanceAvailabilityAction(paymentId: number): Promise<{
+  available: string; carried: string; currency: string | null;
+} | null> {
+  // The org comes from the SESSION, never from an argument — every export of a "use server" module
+  // is callable by anyone holding its action id.
+  const session = await requireSession();
+  const [receipt] = await db
+    .select()
+    .from(paymentsTable)
+    .where(and(eq(paymentsTable.id, paymentId), eq(paymentsTable.orgId, session.orgId)));
+  if (!receipt || receipt.kind !== "advance_receipt") return null;
+  const read = await db.transaction((tx) => lockAdvanceAndReadPot(tx, { orgId: session.orgId, advancePaymentId: paymentId }));
+  if (!read) return null;
+  const { availableAmount, availableCarried } = availabilityOf(read.pot, session.orgCurrency);
+  return { available: availableAmount, carried: availableCarried, currency: receipt.currency };
 }
 
 // Delete a payment and reverse its accounting in one transaction: remove the payment's journal

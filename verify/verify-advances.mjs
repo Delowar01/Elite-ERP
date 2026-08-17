@@ -497,9 +497,16 @@ await page.waitForTimeout(300);
 // confirmation); the server-side refusals are exercised through Next-Action replay with the
 // genuine owner cookie — the same protocol the staff-replay suite uses — because the UI's guard
 // is button absence, and absence proves nothing about the server.
-const refundViaUi = async (pfId) => {
+// The Refund button now opens a DIALOG (amount, and a payout figure for a foreign advance) before
+// the confirmation. Passing no amount accepts the pre-fill, which is the whole available balance.
+const refundViaUi = async (pfId, opts = {}) => {
   await page.goto(`${BASE}/sales/proforma/${pfId}`, { waitUntil: "networkidle" });
   await page.getByLabel("Refund").first().click();
+  await page.waitForTimeout(400);
+  if (opts.amount !== undefined) await page.locator("#refund-amount").fill(String(opts.amount));
+  if (opts.paidOut !== undefined) await page.locator("#refund-base").fill(String(opts.paidOut));
+  await page.waitForTimeout(200);
+  await dialogs().last().getByRole("button", { name: /^Refund Advance$/ }).click();
   await page.waitForTimeout(400);
   await dialogs().last().getByRole("button", { name: /^Refund Advance$/ }).click();
   await page.waitForTimeout(1500);
@@ -561,10 +568,10 @@ await balanced("after the refund");
 // button absence, so the SERVER guard is what replay attacks here.
 check("the refunded receipt no longer offers a Refund button",
   (await page.goto(`${BASE}/sales/proforma/${pfF}`, { waitUntil: "networkidle" }), await page.getByLabel("Refund").count()) === 0);
-const r2 = await refund([fReceipt]);
+const r2 = await refund([fReceipt, {}]);
 check("a second refund of the same receipt is refused server-side, naming the reason",
   /already been refunded/.test(r2.body) && (await refundRowFor(fReceipt)).length === 1, r2.body.slice(0, 200));
-const r3 = await refund([dPayId]);
+const r3 = await refund([dPayId, {}]);
 check("refunding an APPLIED advance is refused server-side — settled history stays settled",
   /has been applied/.test(r3.body) && (await refundRowFor(dPayId)).length === 0, r3.body.slice(0, 200));
 
@@ -580,18 +587,67 @@ check("the case-E excess refunds cleanly: Dr 2300 2,000 / Cr Bank 2,000",
 check("…and 2300 nets to ZERO — every advance is now applied or refunded", (await advNet()) === 0);
 await balanced("after refunding the excess advance");
 
-// a FOREIGN refund extinguishes the liability at its CARRIED value — no FX line
+// ---- PARTIAL refunds of a base-currency advance ----
+// §10: what can be refunded is what is AVAILABLE, so an advance can go back in pieces, and an
+// advance partly applied to an invoice can still refund its remainder.
+const pfP = await mkProforma({ currency: null, total: "5000.00" });
+await recordPayment(`${BASE}/sales/proforma/${pfP}`, 5000);
+const pReceipt = (await db.query("select id from payments where org_id=$1 and proforma_invoice_id=$2", [org, pfP])).rows[0].id;
+const advBeforeP = await advNet();
+await balanced("before the partial refunds");
+await refundViaUi(pfP, { amount: 1500 });
+check("PARTIAL REFUND: 1,500 of a 5,000 advance goes back — the rest stays available",
+  (await availableOf(pReceipt)).doc === 3500000 && (await advNet()) === advBeforeP - 1500000,
+  JSON.stringify({ available: (await availableOf(pReceipt)).doc, adv: await advNet() }));
+const pRefunds1 = await refundRowFor(pReceipt);
+check("…as its own refund row for 1,500, leaving the receipt untouched at 5,000",
+  pRefunds1.length === 1 && num(pRefunds1[0].amount) === 1500000
+    && num((await db.query("select amount::text from payments where id=$1", [pReceipt])).rows[0].amount) === 5000000,
+  JSON.stringify(pRefunds1));
+await balanced("after the first partial refund");
+await refundViaUi(pfP, { amount: 2000 });
+check("a SECOND partial refund is allowed — the old one-refund-per-receipt rule was the whole-payment model's",
+  (await refundRowFor(pReceipt)).length === 2 && (await availableOf(pReceipt)).doc === 1500000);
+const rOver = await refund([pReceipt, { amount: "9999" }]);
+check("refunding MORE than is available is refused server-side, naming what is left",
+  /Only 1500\.00.*available to refund/.test(rOver.body) && (await refundRowFor(pReceipt)).length === 2,
+  rOver.body.match(/[^"<]*available to refund[^"<]*/)?.[0] ?? rOver.body.slice(0, 160));
+await refundViaUi(pfP);
+check("the final refund empties the advance exactly — 2300 back to where it stood, nothing stranded",
+  (await availableOf(pReceipt)).doc === 0 && (await availableOf(pReceipt)).carried === 0
+    && (await advNet()) === advBeforeP - 5000000, JSON.stringify(await availableOf(pReceipt)));
+await balanced("after the advance is fully refunded in three parts");
+
+// ---- a FOREIGN refund is a real cash movement: Dr 2300 at CARRIED, Cr Bank at PAID OUT ----
 const pfFx = await mkProforma({ currency: "USD", total: "200.00" });
 await recordPayment(`${BASE}/sales/proforma/${pfFx}`, 200); // carried at 4.71 → 942.00
 const fxReceipt = (await db.query("select id, base_amount::text from payments where org_id=$1 and proforma_invoice_id=$2", [org, pfFx])).rows[0];
 check("foreign refund fixture: USD 200 advance carried at 4.71 = 942.00", num(fxReceipt.base_amount) === 942000, JSON.stringify(fxReceipt));
+// Half of it, with the payout figure OVERRIDDEN — the bank statement is ground truth and the
+// effective rate follows it, exactly as the received-amount field works for money coming in.
+await refundViaUi(pfFx, { amount: 100, paidOut: 500 });
+const fxPartial = await refundRowFor(fxReceipt.id);
+const fxPartialLines = fxPartial.length ? await paymentEntryLines(fxPartial[0].id) : [];
+check("foreign PARTIAL refund: Dr 2300 471.00 at the carried value / Cr Bank 500.00 as actually paid / Dr 4900 29.00 realized loss",
+  fxPartialLines.length === 3
+    && num(fxPartialLines.find((l) => l.account_id === ADV)?.debit) === 471000
+    && num(fxPartialLines.find((l) => l.account_id === bank.gl_account_id)?.credit) === 500000
+    && num(fxPartialLines.find((l) => l.account_id === FX)?.debit) === 29000, JSON.stringify(fxPartialLines));
+check("…the refund row records the CASH in baseAmount and the LIABILITY in baseAppliedAmount — they differ by the FX",
+  num((await db.query("select base_amount::text ba, base_applied_amount::text bap from payments where id=$1", [fxPartial[0].id])).rows[0].ba) === 500000
+    && num((await db.query("select base_applied_amount::text bap from payments where id=$1", [fxPartial[0].id])).rows[0].bap) === 471000);
+check("…and its rateSource is the PAYOUT's own provenance, not the receipt's copied label",
+  (await db.query("select rate_source from payments where id=$1", [fxPartial[0].id])).rows[0].rate_source
+    !== (await db.query("select rate_source from payments where id=$1", [fxReceipt.id])).rows[0].rate_source,
+  `${(await db.query("select rate_source from payments where id=$1", [fxPartial[0].id])).rows[0].rate_source} vs receipt ${(await db.query("select rate_source from payments where id=$1", [fxReceipt.id])).rows[0].rate_source}`);
+await balanced("after the foreign partial refund");
+// The rest, at the payout DATE's rate (unchanged here), takes the carried RESIDUAL — 942 − 471.
 await refundViaUi(pfFx);
 const fxRefund = await refundRowFor(fxReceipt.id);
-const fxLines2 = fxRefund.length ? await paymentEntryLines(fxRefund[0].id) : [];
-check("foreign refund: Dr 2300 942.00 / Cr Bank 942.00 at the CARRIED value — two lines, NO FX line",
-  fxLines2.length === 2 && num(fxLines2.find((l) => l.account_id === ADV)?.debit) === 942000
-    && num(fxLines2.find((l) => l.account_id === bank.gl_account_id)?.credit) === 942000
-    && fxLines2.every((l) => l.account_id !== FX), JSON.stringify(fxLines2));
+const fxLines2 = fxRefund.length === 2 ? await paymentEntryLines(fxRefund[1].id) : [];
+check("the closing foreign refund takes the carried RESIDUAL 471.00, and 2300 gives up exactly the 942.00 it carried",
+  num(fxLines2.find((l) => l.account_id === ADV)?.debit) === 471000
+    && (await availableOf(fxReceipt.id)).carried === 0, JSON.stringify(fxLines2));
 await balanced("after the foreign refund");
 
 // a fully-refunded proforma converts to a plain DRAFT — refunded value is not transferable
@@ -603,10 +659,10 @@ check("…the receipt and its refund both keep salesInvoiceId null",
   (await db.query("select count(*)::int n from payments where org_id=$1 and proforma_invoice_id=$2 and sales_invoice_id is not null", [org, pfF])).rows[0].n === 0);
 check("…and no journal posted at conversion", (await invoiceEntry(invF)).length === 0);
 
-// deleting a REFUNDED receipt is refused; deleting the refund restores the advance
+// deleting a REFUNDED receipt is refused; deleting a refund restores that much of the advance
 await page.goto(`${BASE}/sales/proforma/${pfFx}`, { waitUntil: "networkidle" });
-// History orders by date desc, id desc: row 0 is the refund, row 1 the receipt.
-await page.getByLabel("Delete").nth(1).click();
+// History orders by date desc, id desc: rows 0 and 1 are the two refunds, row 2 the receipt.
+await page.getByLabel("Delete").nth(2).click();
 await page.waitForTimeout(400);
 await dialogs().last().getByRole("button", { name: /^Delete Payment$/ }).click();
 await page.waitForTimeout(1200);
@@ -620,9 +676,11 @@ await page.waitForTimeout(400);
 await dialogs().last().getByRole("button", { name: /^Delete Payment$/ }).click();
 await page.waitForTimeout(1200);
 const pfFxAfter = (await db.query("select paid_amount, base_paid_amount from proforma_invoices where id=$1", [pfFx])).rows[0];
-check("deleting the refund RESTORES the advance: refund journal gone, 2300 back to 942, proforma re-paid 200/942.00",
-  (await refundRowFor(fxReceipt.id)).length === 0 && (await advNet()) === 942000
-    && num(pfFxAfter.paid_amount) === 200000 && num(pfFxAfter.base_paid_amount) === 942000, JSON.stringify(pfFxAfter));
+check("deleting the closing refund restores exactly ITS share: one refund left, 2300 back to 471.00, proforma re-paid 100/471.00",
+  (await refundRowFor(fxReceipt.id)).length === 1 && (await advNet()) === 471000
+    && num(pfFxAfter.paid_amount) === 100000 && num(pfFxAfter.base_paid_amount) === 471000, JSON.stringify(pfFxAfter));
+check("…restored from the LIABILITY it released (471.00), never from the cash it cost (500.00) — the stored-figure rule",
+  num(pfFxAfter.base_paid_amount) === 471000 && (await availableOf(fxReceipt.id)).carried === 471000);
 await balanced("after deleting the refund");
 
 // ================= the figures reach the screens (§17 proforma, §18 invoice, §12 statement) =================

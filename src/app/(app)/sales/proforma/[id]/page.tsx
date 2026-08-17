@@ -90,7 +90,14 @@ export default async function ProformaDetailPage({ params }: { params: Promise<{
     .select({ id: paymentsTable.id, amount: paymentsTable.amount, kind: paymentsTable.kind, salesInvoiceId: paymentsTable.salesInvoiceId, refundsPaymentId: paymentsTable.refundsPaymentId })
     .from(paymentsTable)
     .where(and(eq(paymentsTable.orgId, session.orgId), eq(paymentsTable.proformaInvoiceId, pf.id)));
-  const refundedIds = new Set(advPayments.filter((r) => r.kind === "advance_refund" && r.refundsPaymentId !== null).map((r) => r.refundsPaymentId));
+  // Refunds are PARTIAL now, so a receipt is no longer simply "refunded or not": what each refund
+  // returned is summed against its receipt, and the remainder stays available.
+  const refundedByPayment = new Map<number, number>();
+  for (const r of advPayments) {
+    if (r.kind === "advance_refund" && r.refundsPaymentId !== null) {
+      refundedByPayment.set(r.refundsPaymentId, (refundedByPayment.get(r.refundsPaymentId) ?? 0) + Number(r.amount));
+    }
+  }
   const receipts = advPayments.filter((r) => r.kind === "advance_receipt");
   const advanceReceived = receipts.reduce((sum, r) => sum + Number(r.amount), 0);
   // Available is receipts MINUS what allocations and refunds have consumed. Reading
@@ -117,7 +124,7 @@ export default async function ProformaDetailPage({ params }: { params: Promise<{
     for (const r of rows) allocatedByPayment.set(r.advancePaymentId, (allocatedByPayment.get(r.advancePaymentId) ?? 0) + Number(r.applied));
   }
   const advanceAvailable = receipts.reduce(
-    (sum, r) => sum + (refundedIds.has(r.id) ? 0 : Math.max(0, Number(r.amount) - (allocatedByPayment.get(r.id) ?? 0))), 0);
+    (sum, r) => sum + Math.max(0, Number(r.amount) - (allocatedByPayment.get(r.id) ?? 0) - (refundedByPayment.get(r.id) ?? 0)), 0);
   const showPayments = paidAmount > 0 || pf.status === "sent";
   const canDeletePayments = (session.role === "owner" || session.role === "admin") && pf.convertedInvoiceId == null;
   // Refunds stay possible AFTER conversion: a §10 excess advance (left unapplied by the cap) lives
@@ -235,7 +242,7 @@ export default async function ProformaDetailPage({ params }: { params: Promise<{
         />
       </div>
 
-      {showPayments && <PaymentHistory locale={locale} orgId={session.orgId} source={{ type: "proforma", id: pf.id }} canDelete={canDeletePayments} canRefund={canRefundAdvances} />}
+      {showPayments && <PaymentHistory locale={locale} orgId={session.orgId} baseCurrency={session.orgCurrency} source={{ type: "proforma", id: pf.id }} canDelete={canDeletePayments} canRefund={canRefundAdvances} />}
 
       <BankAccountBlocks locale={locale} accounts={pf.bankAccounts} className="mt-5" />
 

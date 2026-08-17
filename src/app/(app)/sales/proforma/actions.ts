@@ -207,11 +207,19 @@ export async function convertProformaToInvoiceAction(proformaId: number): Promis
   const items = await db.select().from(proformaInvoiceItemsTable).where(eq(proformaInvoiceItemsTable.proformaInvoiceId, proformaId));
 
   // Payments recorded against the proforma, to be transferred to the new invoice (Issue #14).
-  // A refunded advance is NOT transferable value — the cash went back — so both halves of that
-  // pair (the refund row and the receipt it returned) are excluded from the applicable set.
+  // A refunded advance is NOT transferable value — the cash went back — but refunds are PARTIAL
+  // now, so a refunded receipt is no longer simply excluded: what came back is subtracted and the
+  // remainder still converts. Refund rows themselves are never consumers. A receipt refunded in
+  // full contributes zero here and zero inside the lock, which is the old behaviour arrived at by
+  // the general rule instead of a special case.
   const allProformaPayments = await db.select().from(paymentsTable).where(and(eq(paymentsTable.orgId, session.orgId), eq(paymentsTable.proformaInvoiceId, proformaId)));
-  const refundedIds = new Set(allProformaPayments.filter((p) => p.kind === "advance_refund" && p.refundsPaymentId !== null).map((p) => p.refundsPaymentId));
-  const proformaPayments = allProformaPayments.filter((p) => p.kind !== "advance_refund" && !refundedIds.has(p.id));
+  const refundedByReceipt = new Map<number, number>();
+  for (const p of allProformaPayments) {
+    if (p.kind === "advance_refund" && p.refundsPaymentId !== null) {
+      refundedByReceipt.set(p.refundsPaymentId, (refundedByReceipt.get(p.refundsPaymentId) ?? 0) + Number(p.amount));
+    }
+  }
+  const proformaPayments = allProformaPayments.filter((p) => p.kind !== "advance_refund");
   const convCurrency = pf.currency ?? session.orgCurrency;
   const convEps = moneyEpsilon(convCurrency);
   // Consumption order is OLDEST RECEIPT FIRST and must be deterministic: with two advances taken
@@ -224,7 +232,8 @@ export async function convertProformaToInvoiceAction(proformaId: number): Promis
   // posting?". A stale yes is harmless (the plan comes back empty and the invoice stays a draft);
   // a stale no cannot happen, because nothing can ADD availability to these advances while this
   // proforma is unconverted.
-  const roughAvailable = proformaPayments.reduce((sum, p) => sum + Number(p.amount), 0);
+  const roughAvailable = proformaPayments.reduce(
+    (sum, p) => sum + Math.max(0, Number(p.amount) - (refundedByReceipt.get(p.id) ?? 0)), 0);
 
   const issueDate = new Date().toISOString().slice(0, 10);
   // An invoice born non-draft (it carries transferred advances) NEVER passes through send — that

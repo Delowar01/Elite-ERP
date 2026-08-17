@@ -223,7 +223,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
             ] : [{ label: "Paid", value: invoice.paidAmount, colorClass: "text-success" }]) : undefined}
           />
 
-          {showPayments && <PaymentHistory locale={locale} orgId={session.orgId} source={{ type: "invoice", id: invoice.id }} canDelete={canDeletePayments} />}
+          {showPayments && <PaymentHistory locale={locale} orgId={session.orgId} baseCurrency={session.orgCurrency} source={{ type: "invoice", id: invoice.id }} canDelete={canDeletePayments} />}
 
           <BankAccountBlocks locale={locale} accounts={invoice.bankAccounts} className="mt-5" />
 

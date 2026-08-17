@@ -1,4 +1,4 @@
-import { and, eq, desc } from "drizzle-orm";
+import { and, eq, desc, sql } from "drizzle-orm";
 import { db, paymentsTable, bankAccountsTable, proformaInvoicesTable } from "@/db";
 import { t, type Locale } from "@/lib/i18n/dict";
 import { DocNum } from "../../sales/_shared/money";
@@ -19,12 +19,15 @@ const METHOD_LABEL: Record<string, string> = {
 export async function PaymentHistory({
   locale,
   orgId,
+  baseCurrency,
   source,
   canDelete = false,
   canRefund = false,
 }: {
   locale: Locale;
   orgId: number;
+  /** The org's base currency — the refund dialog denominates its payout figure in it. */
+  baseCurrency: string;
   source: { type: "invoice" | "proforma"; id: number };
   canDelete?: boolean;
   /**
@@ -49,6 +52,18 @@ export async function PaymentHistory({
       bankName: bankAccountsTable.name,
       proformaInvoiceId: paymentsTable.proformaInvoiceId,
       proformaNumber: proformaInvoicesTable.proformaNumber,
+      currency: paymentsTable.currency,
+      // What is still refundable: the receipt less what allocations consume (net of releases) and
+      // less what earlier refunds returned. Column names are written out QUALIFIED rather than
+      // interpolated — drizzle renders an interpolated column as a bare name, which inside these
+      // subqueries would bind to the subquery's own table and silently return zero.
+      available: sql<string>`(payments.amount
+        - coalesce((select sum(a.applied_amount - coalesce((
+              select sum(r.released_amount) from advance_application_releases r
+               where r.allocation_id = a.id and r.reversed_at is null), 0))
+             from advance_applications a
+            where a.advance_payment_id = payments.id and a.released_at is null), 0)
+        - coalesce((select sum(f.amount) from payments f where f.refunds_payment_id = payments.id), 0))::text`,
     })
     .from(paymentsTable)
     .leftJoin(bankAccountsTable, eq(bankAccountsTable.id, paymentsTable.bankAccountId))
@@ -56,11 +71,12 @@ export async function PaymentHistory({
     .where(and(eq(paymentsTable.orgId, orgId), eq(col, source.id)))
     .orderBy(desc(paymentsTable.paymentDate), desc(paymentsTable.id));
 
-  // Refund rows for these receipts appear in the same history (same proforma), so the refunded
-  // set falls out of the rows themselves — no second query.
-  const refunded = new Set(rows.filter((r) => r.kind === "advance_refund" && r.refundsPaymentId !== null).map((r) => r.refundsPaymentId));
+  // Refundable is now a QUESTION OF BALANCE, not of state. "Never applied and never refunded" was
+  // the whole-payment model's rule; under partial allocation an advance can be 80% applied and 20%
+  // refundable, or refunded twice in halves. The server recomputes this under the row lock — this
+  // decides whether the button is worth offering, nothing more.
   const refundable = (p: (typeof rows)[number]) =>
-    p.kind === "advance_receipt" && p.salesInvoiceId === null && !refunded.has(p.id);
+    p.kind === "advance_receipt" && Number(p.available) > 0;
 
   return (
     <div className="mt-6">
@@ -99,7 +115,7 @@ export async function PaymentHistory({
                   <td className="px-3 py-2 text-end font-mono"><DocNum value={p.amount} kind="amount" /></td>
                   {canRefund && (
                     <td className="px-2 py-2 text-center">
-                      {refundable(p) && <RefundAdvanceButton locale={locale} paymentId={p.id} reference={p.reference ?? undefined} amount={p.amount} />}
+                      {refundable(p) && <RefundAdvanceButton locale={locale} paymentId={p.id} reference={p.reference ?? undefined} available={p.available} currency={p.currency} baseCurrency={baseCurrency} />}
                     </td>
                   )}
                   {canDelete && (
