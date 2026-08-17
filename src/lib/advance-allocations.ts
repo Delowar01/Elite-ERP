@@ -1,7 +1,7 @@
 import "server-only";
 import { and, desc, eq, isNull, sql } from "drizzle-orm";
 import type { Tx } from "@/db";
-import { advanceApplicationsTable, paymentsTable, journalEntriesTable, journalLinesTable } from "@/db";
+import { advanceApplicationsTable, advanceApplicationReleasesTable, paymentsTable, journalEntriesTable, journalLinesTable } from "@/db";
 import { moneyEpsilon, roundMoney } from "@/lib/currency/currencies";
 import { fxLine, mils } from "@/lib/payment-currency";
 
@@ -351,6 +351,11 @@ export async function lockAdvanceAndReadPot(
   }[])[0];
   if (!row || row.kind !== "advance_receipt") return null;
 
+  // Consumption is the ACTIVE allocations' posted figures MINUS their live releases: a partially
+  // released allocation still settles part of its invoice, so neither counting it in full nor
+  // dropping it is right. A fully released allocation contributes nothing from either side — its
+  // row is excluded by `released_at`, and so are its release rows, which is why the subtraction
+  // joins back through the same filter instead of summing releases independently.
   const [alloc] = await tx
     .select({
       amount: sql<string>`coalesce(sum(${advanceApplicationsTable.appliedAmount}), 0)::text`,
@@ -361,6 +366,19 @@ export async function lockAdvanceAndReadPot(
       eq(advanceApplicationsTable.orgId, args.orgId),
       eq(advanceApplicationsTable.advancePaymentId, args.advancePaymentId),
       isNull(advanceApplicationsTable.releasedAt),
+    ));
+  const [releasedBack] = await tx
+    .select({
+      amount: sql<string>`coalesce(sum(${advanceApplicationReleasesTable.releasedAmount}), 0)::text`,
+      carried: sql<string>`coalesce(sum(${advanceApplicationReleasesTable.releasedCarried}), 0)::text`,
+    })
+    .from(advanceApplicationReleasesTable)
+    .innerJoin(advanceApplicationsTable, eq(advanceApplicationsTable.id, advanceApplicationReleasesTable.allocationId))
+    .where(and(
+      eq(advanceApplicationReleasesTable.orgId, args.orgId),
+      eq(advanceApplicationsTable.advancePaymentId, args.advancePaymentId),
+      isNull(advanceApplicationsTable.releasedAt),
+      isNull(advanceApplicationReleasesTable.reversedAt),
     ));
 
   const [refunded] = await tx
@@ -385,8 +403,8 @@ export async function lockAdvanceAndReadPot(
     pot: {
       amount: row.amount,
       carriedBase,
-      consumedAmount: String(Number(alloc?.amount ?? 0) + Number(refunded?.amount ?? 0)),
-      consumedCarried: String(Number(alloc?.carried ?? 0) + Number(refunded?.carried ?? 0)),
+      consumedAmount: String(Number(alloc?.amount ?? 0) - Number(releasedBack?.amount ?? 0) + Number(refunded?.amount ?? 0)),
+      consumedCarried: String(Number(alloc?.carried ?? 0) - Number(releasedBack?.carried ?? 0) + Number(refunded?.carried ?? 0)),
       currency: row.currency,
     },
   };
@@ -398,28 +416,158 @@ export async function lockAdvanceAndReadPot(
 
 export type ReleasedAllocation = {
   allocationId: number;
+  releaseId: number;
+  /** Document amount returned to the advance. */
+  appliedAmount: string;
+  /** Base carried value returned to 2300. */
+  carriedBase: string;
+  /** Base AR restored to 1100 — what the invoice's `basePaidAmount` must give back. */
+  arCleared: string;
+  /** True when this release consumed the whole remaining allocation. */
+  fullyReleased: boolean;
+};
+
+/** An allocation as it currently STANDS: what it posted, minus what has been released from it. */
+type EffectiveAllocation = {
+  id: number;
   appliedAmount: string;
   carriedBase: string;
   arCleared: string;
 };
 
 /**
- * Release an invoice's active allocations, newest first.
+ * The share of an allocation a release takes — proportional, or the EXACT remainder when the
+ * release closes the allocation out.
  *
- * The reversal MIRRORS each application's own stored journal lines rather than recomputing them —
- * the rule every reversal in this codebase follows. Recomputing would re-derive residuals and FX
- * against today's figures, so an apply→release round-trip would not return 2300 to where it
- * started; mirroring makes the round-trip exact by construction, which is the whole reason LIFO
- * ordering is worth specifying at all.
+ * The same construction `carriedBaseFor` uses on the pot, one level down, and for the same reason:
+ * three partial releases of one allocation must give back exactly what the allocation took, to the
+ * fils, or an apply → release round-trip strands rounding in 2300 forever. Both base figures derive
+ * from the same ratio, so an allocation with no FX difference (carried === AR) cannot acquire one
+ * by being released in pieces.
+ */
+export function releaseShareOf(args: {
+  effective: EffectiveAllocation;
+  releaseAmount: string;
+  baseCurrency: string;
+  docCurrency: string;
+}): { carried: string; arCleared: string; full: boolean } {
+  const { effective, releaseAmount, baseCurrency, docCurrency } = args;
+  const full = Number(releaseAmount) >= Number(effective.appliedAmount) - moneyEpsilon(docCurrency);
+  // Rounded even in the exact-remainder case: the effective figures are a subtraction of two stored
+  // numerics, which carries float noise a numeric column would silently absorb and a comparison
+  // would not.
+  if (full) {
+    return { carried: roundMoney(effective.carriedBase, baseCurrency), arCleared: roundMoney(effective.arCleared, baseCurrency), full: true };
+  }
+  const ratio = Number(releaseAmount) / Number(effective.appliedAmount);
+  return {
+    carried: roundMoney(ratio * Number(effective.carriedBase), baseCurrency),
+    arCleared: roundMoney(ratio * Number(effective.arCleared), baseCurrency),
+    full: false,
+  };
+}
+
+/**
+ * Read an invoice's live allocations, newest first, with their EFFECTIVE figures.
  *
- * Keyed `(advance_application_release, allocation.id)` and existence-checked, so a retried void or
- * a second credit note cannot double-release. The allocation row is MARKED released, never
- * deleted: financial history is not erased, and `releasedAt` is what makes the advance's
- * availability rise again with no compensating write anywhere.
+ * LIFO is the exact inverse of oldest-first application, which is what makes a round-trip restore
+ * the prior state including its FX residuals rather than a differently-apportioned equivalent.
+ */
+async function liveAllocationsOf(tx: Tx, orgId: number, salesInvoiceId: number): Promise<EffectiveAllocation[]> {
+  const rows = await tx
+    .select({
+      id: advanceApplicationsTable.id,
+      appliedAmount: advanceApplicationsTable.appliedAmount,
+      carriedBase: advanceApplicationsTable.carriedBase,
+      arCleared: advanceApplicationsTable.arCleared,
+      // The outer column is written out QUALIFIED, not interpolated. Drizzle renders
+      // `${advanceApplicationsTable.id}` as a bare `"id"`, which inside this subquery binds to the
+      // RELEASE table's own id — a correlated reference that silently points at the wrong table,
+      // matches nothing, and returns a plausible zero instead of an error.
+      releasedAmount: sql<string>`coalesce((
+        select sum(r.released_amount) from advance_application_releases r
+         where r.allocation_id = advance_applications.id and r.reversed_at is null), 0)::text`,
+      releasedCarried: sql<string>`coalesce((
+        select sum(r.released_carried) from advance_application_releases r
+         where r.allocation_id = advance_applications.id and r.reversed_at is null), 0)::text`,
+      releasedAr: sql<string>`coalesce((
+        select sum(r.released_ar_cleared) from advance_application_releases r
+         where r.allocation_id = advance_applications.id and r.reversed_at is null), 0)::text`,
+    })
+    .from(advanceApplicationsTable)
+    .where(and(
+      eq(advanceApplicationsTable.orgId, orgId),
+      eq(advanceApplicationsTable.salesInvoiceId, salesInvoiceId),
+      isNull(advanceApplicationsTable.releasedAt),
+    ))
+    .orderBy(desc(advanceApplicationsTable.id));
+
+  return rows.map((r) => ({
+    id: r.id,
+    appliedAmount: String(Number(r.appliedAmount) - Number(r.releasedAmount)),
+    carriedBase: String(Number(r.carriedBase) - Number(r.releasedCarried)),
+    arCleared: String(Number(r.arCleared) - Number(r.releasedAr)),
+  }));
+}
+
+/** The accounts an allocation actually posted to: [0] 2300, [1] 1100, [2] 4900 if it carried FX. */
+async function applicationAccountsOf(
+  tx: Tx,
+  orgId: number,
+  allocationId: number,
+): Promise<{ advancesAccountId: number; arAccountId: number; fxAccountId: number | null } | null> {
+  const [application] = await tx
+    .select({ id: journalEntriesTable.id })
+    .from(journalEntriesTable)
+    .where(and(
+      eq(journalEntriesTable.orgId, orgId),
+      eq(journalEntriesTable.sourceType, "advance_application"),
+      eq(journalEntriesTable.sourceId, allocationId),
+    ))
+    .limit(1);
+  if (!application) return null;
+  const lines = await tx
+    .select({ accountId: journalLinesTable.accountId, debit: journalLinesTable.debit, credit: journalLinesTable.credit })
+    .from(journalLinesTable)
+    .where(eq(journalLinesTable.journalEntryId, application.id))
+    .orderBy(journalLinesTable.id);
+  // The accounts come from what POSTED, not from today's chart: a remapped account code must not
+  // send the release to a different account from the application it reverses. The shape is the one
+  // `buildAllocationPosting` writes — Dr 2300, Cr 1100, optional 4900 — in that order.
+  if (lines.length < 2 || Number(lines[0].debit) <= 0 || Number(lines[1].credit) <= 0) return null;
+  return {
+    advancesAccountId: lines[0].accountId,
+    arAccountId: lines[1].accountId,
+    fxAccountId: lines[2]?.accountId ?? null,
+  };
+}
+
+/**
+ * Release allocations from an invoice — all of them, or only as much as `limitAmount` allows.
  *
- * Whole allocations only. A partial release — releasing 2,000 of an 8,000 allocation — needs the
- * allocation split with the same residual discipline the pot uses, and lands with the credit-note
- * path that first requires it.
+ * A void gives everything back. A credit note gives back only what it over-settles by, which is
+ * usually PART of one allocation, so the release is apportioned with the same residual discipline
+ * the pot uses (`releaseShareOf`). The journal is built application-shaped from those shares and
+ * then mirrored, so a full release reproduces the application's own lines exactly and a run of
+ * partial releases sums to them exactly — the round-trip property, by construction rather than by
+ * arithmetic luck.
+ *
+ * Idempotency is keyed on the CAUSE, `(causeType, causeId)`, not on the allocation: one allocation
+ * can legitimately be released twice in two parts by two different credit notes, so "a release
+ * already exists for this allocation" is not evidence of a retry, while "a release already exists
+ * for THIS credit note" is exactly that.
+ *
+ * The allocation row is never rewritten and never deleted. It is marked `releasedAt` only when
+ * nothing of it is left, which keeps `appliedAmount` meaning "what this application posted" — the
+ * property the mirroring depends on.
+ *
+ * ## Locking
+ *
+ * Callers hold the INVOICE row, which is what serialises two releases against the same allocations.
+ * The advance rows are deliberately NOT locked here: a release only ever RAISES availability, so an
+ * apply computing availability under the payment lock is conservative if a release commits beside
+ * it. Taking the payment lock too would invert the apply path's order (payment → invoice) and open
+ * a deadlock for no gain.
  */
 export async function releaseAllocations(
   tx: Tx,
@@ -428,55 +576,82 @@ export async function releaseAllocations(
     userId: number;
     salesInvoiceId: number;
     reason: "invoice_void" | "credit_note";
+    /** What this release is attributable to — the idempotency key and the handle a reversal uses. */
+    causeType: "sales_invoice" | "credit_note";
+    causeId: number;
     /** Entry date for the reversing journals. */
     date: string;
     /** Memo prefix, e.g. the invoice number. */
     memoSubject: string;
+    baseCurrency: string;
+    /** The invoice's own currency — allocations are same-currency by invariant. */
+    docCurrency: string;
+    /** Cap on the total DOCUMENT amount released. Omitted = release everything. */
+    limitAmount?: string;
   },
 ): Promise<ReleasedAllocation[]> {
-  const active = await tx
-    .select({
-      id: advanceApplicationsTable.id,
-      appliedAmount: advanceApplicationsTable.appliedAmount,
-      carriedBase: advanceApplicationsTable.carriedBase,
-      arCleared: advanceApplicationsTable.arCleared,
-    })
-    .from(advanceApplicationsTable)
+  const eps = moneyEpsilon(args.docCurrency);
+  // A retry of the same cause finds its own work already done and adds nothing.
+  const already = await tx
+    .select({ id: advanceApplicationReleasesTable.id })
+    .from(advanceApplicationReleasesTable)
     .where(and(
-      eq(advanceApplicationsTable.orgId, args.orgId),
-      eq(advanceApplicationsTable.salesInvoiceId, args.salesInvoiceId),
-      isNull(advanceApplicationsTable.releasedAt),
+      eq(advanceApplicationReleasesTable.orgId, args.orgId),
+      eq(advanceApplicationReleasesTable.causeType, args.causeType),
+      eq(advanceApplicationReleasesTable.causeId, args.causeId),
+      isNull(advanceApplicationReleasesTable.reversedAt),
     ))
-    .orderBy(desc(advanceApplicationsTable.id)); // LIFO — the exact inverse of oldest-first application
+    .limit(1);
+  if (already.length > 0) return [];
+
+  let remaining = args.limitAmount === undefined ? Infinity : Number(args.limitAmount);
+  if (remaining <= eps) return [];
 
   const released: ReleasedAllocation[] = [];
-  for (const alloc of active) {
-    // Idempotency: a release already posted for this allocation means this is a retry.
-    const existing = await tx
-      .select({ id: journalEntriesTable.id })
-      .from(journalEntriesTable)
-      .where(and(
-        eq(journalEntriesTable.orgId, args.orgId),
-        eq(journalEntriesTable.sourceType, "advance_application_release"),
-        eq(journalEntriesTable.sourceId, alloc.id),
-      ))
-      .limit(1);
-    if (existing.length > 0) continue;
+  for (const alloc of await liveAllocationsOf(tx, args.orgId, args.salesInvoiceId)) {
+    if (remaining <= eps) break;
+    if (Number(alloc.appliedAmount) <= eps) continue;
+    const releaseAmount = roundMoney(Math.min(Number(alloc.appliedAmount), remaining), args.docCurrency);
+    const share = releaseShareOf({ effective: alloc, releaseAmount, baseCurrency: args.baseCurrency, docCurrency: args.docCurrency });
 
-    const [application] = await tx
-      .select({ id: journalEntriesTable.id })
-      .from(journalEntriesTable)
-      .where(and(
-        eq(journalEntriesTable.orgId, args.orgId),
-        eq(journalEntriesTable.sourceType, "advance_application"),
-        eq(journalEntriesTable.sourceId, alloc.id),
-      ))
-      .limit(1);
-    if (application) {
-      const originalLines = await tx
-        .select({ accountId: journalLinesTable.accountId, debit: journalLinesTable.debit, credit: journalLinesTable.credit })
-        .from(journalLinesTable)
-        .where(eq(journalLinesTable.journalEntryId, application.id));
+    const [row] = await tx
+      .insert(advanceApplicationReleasesTable)
+      .values({
+        orgId: args.orgId,
+        allocationId: alloc.id,
+        releasedAmount: releaseAmount,
+        releasedCarried: share.carried,
+        releasedArCleared: share.arCleared,
+        reason: args.reason,
+        causeType: args.causeType,
+        causeId: args.causeId,
+        releasedDate: args.date,
+        createdById: args.userId,
+      })
+      .returning({ id: advanceApplicationReleasesTable.id });
+
+    const accounts = await applicationAccountsOf(tx, args.orgId, alloc.id);
+    if (accounts) {
+      const fx = fxLine({
+        baseAmount: share.carried,
+        baseApplied: share.arCleared,
+        direction: "in",
+        baseCurrency: args.baseCurrency,
+        fxAccountId: accounts.fxAccountId ?? -1,
+      });
+      if (fx && accounts.fxAccountId === null) {
+        // Unreachable: a share carries an FX difference only where the application did, and an
+        // application with an FX difference posted a 4900 line to take it.
+        throw new Error("Internal error: releasing an advance application needs a 4900 line the application never posted.");
+      }
+      const applied = [
+        { accountId: accounts.advancesAccountId, debit: share.carried, credit: "0" },
+        { accountId: accounts.arAccountId, debit: "0", credit: share.arCleared },
+        ...(fx ? [fx] : []),
+      ];
+      if (!postingIsBalanced(applied)) {
+        throw new Error("Internal error: the advance release entry did not balance.");
+      }
       const [entry] = await tx
         .insert(journalEntriesTable)
         .values({
@@ -484,25 +659,180 @@ export async function releaseAllocations(
           entryDate: args.date,
           memo: `Advance application released — ${args.memoSubject}`,
           sourceType: "advance_application_release",
-          sourceId: alloc.id,
+          sourceId: row.id,
           createdById: args.userId,
         })
         .returning({ id: journalEntriesTable.id });
       await tx.insert(journalLinesTable).values(
-        originalLines.map((l) => ({ journalEntryId: entry.id, accountId: l.accountId, debit: l.credit, credit: l.debit })),
+        applied.map((l) => ({ journalEntryId: entry.id, accountId: l.accountId, debit: l.credit, credit: l.debit })),
+      );
+    }
+
+    if (share.full) {
+      await tx
+        .update(advanceApplicationsTable)
+        .set({ releasedAt: new Date(), releaseReason: args.reason })
+        .where(eq(advanceApplicationsTable.id, alloc.id));
+    }
+    released.push({
+      allocationId: alloc.id,
+      releaseId: row.id,
+      appliedAmount: releaseAmount,
+      carriedBase: share.carried,
+      arCleared: share.arCleared,
+      fullyReleased: share.full,
+    });
+    remaining -= Number(releaseAmount);
+  }
+  return released;
+}
+
+/**
+ * Undo the releases a cause created — a reversed credit note re-applying what it released.
+ *
+ * The mirror of a mirror: each release entry's own lines are inverted, so the ledger returns to the
+ * state the application left it in, FX line included. The release row is marked reversed rather
+ * than deleted, and the allocation's `releasedAt` is lifted where the reversal leaves something of
+ * it live again.
+ */
+export async function reverseReleasesOfCause(
+  tx: Tx,
+  args: {
+    orgId: number;
+    userId: number;
+    causeType: "sales_invoice" | "credit_note";
+    causeId: number;
+    date: string;
+    memoSubject: string;
+  },
+): Promise<ReleasedAllocation[]> {
+  const live = await tx
+    .select({
+      id: advanceApplicationReleasesTable.id,
+      allocationId: advanceApplicationReleasesTable.allocationId,
+      releasedAmount: advanceApplicationReleasesTable.releasedAmount,
+      releasedCarried: advanceApplicationReleasesTable.releasedCarried,
+      releasedArCleared: advanceApplicationReleasesTable.releasedArCleared,
+    })
+    .from(advanceApplicationReleasesTable)
+    .where(and(
+      eq(advanceApplicationReleasesTable.orgId, args.orgId),
+      eq(advanceApplicationReleasesTable.causeType, args.causeType),
+      eq(advanceApplicationReleasesTable.causeId, args.causeId),
+      isNull(advanceApplicationReleasesTable.reversedAt),
+    ))
+    .orderBy(desc(advanceApplicationReleasesTable.id));
+
+  const undone: ReleasedAllocation[] = [];
+  for (const rel of live) {
+    const [releaseEntry] = await tx
+      .select({ id: journalEntriesTable.id })
+      .from(journalEntriesTable)
+      .where(and(
+        eq(journalEntriesTable.orgId, args.orgId),
+        eq(journalEntriesTable.sourceType, "advance_application_release"),
+        eq(journalEntriesTable.sourceId, rel.id),
+      ))
+      .limit(1);
+    const alreadyReversed = await tx
+      .select({ id: journalEntriesTable.id })
+      .from(journalEntriesTable)
+      .where(and(
+        eq(journalEntriesTable.orgId, args.orgId),
+        eq(journalEntriesTable.sourceType, "advance_application_release_reversal"),
+        eq(journalEntriesTable.sourceId, rel.id),
+      ))
+      .limit(1);
+    if (releaseEntry && alreadyReversed.length === 0) {
+      const lines = await tx
+        .select({ accountId: journalLinesTable.accountId, debit: journalLinesTable.debit, credit: journalLinesTable.credit })
+        .from(journalLinesTable)
+        .where(eq(journalLinesTable.journalEntryId, releaseEntry.id));
+      const [entry] = await tx
+        .insert(journalEntriesTable)
+        .values({
+          orgId: args.orgId,
+          entryDate: args.date,
+          memo: `Advance application re-applied — ${args.memoSubject}`,
+          sourceType: "advance_application_release_reversal",
+          sourceId: rel.id,
+          createdById: args.userId,
+        })
+        .returning({ id: journalEntriesTable.id });
+      await tx.insert(journalLinesTable).values(
+        lines.map((l) => ({ journalEntryId: entry.id, accountId: l.accountId, debit: l.credit, credit: l.debit })),
       );
     }
 
     await tx
+      .update(advanceApplicationReleasesTable)
+      .set({ reversedAt: new Date() })
+      .where(eq(advanceApplicationReleasesTable.id, rel.id));
+    // Something of the allocation is live again, so it is no longer a released allocation.
+    await tx
       .update(advanceApplicationsTable)
-      .set({ releasedAt: new Date(), releaseReason: args.reason })
-      .where(eq(advanceApplicationsTable.id, alloc.id));
-    released.push({
-      allocationId: alloc.id,
-      appliedAmount: alloc.appliedAmount,
-      carriedBase: alloc.carriedBase,
-      arCleared: alloc.arCleared,
+      .set({ releasedAt: null, releaseReason: null })
+      .where(eq(advanceApplicationsTable.id, rel.allocationId));
+
+    undone.push({
+      allocationId: rel.allocationId,
+      releaseId: rel.id,
+      appliedAmount: rel.releasedAmount,
+      carriedBase: rel.releasedCarried,
+      arCleared: rel.releasedArCleared,
+      fullyReleased: false,
     });
   }
-  return released;
+  return undone;
+}
+
+// ---------------------------------------------------------------------------------------------
+// Credit notes.
+// ---------------------------------------------------------------------------------------------
+
+/**
+ * How much of an invoice's allocations a credit note releases.
+ *
+ * A credit note reduces what the customer owes. Where the invoice was settled by an advance, that
+ * reduction has to go somewhere: leaving it in AR drives the receivable NEGATIVE while the customer
+ * genuinely holds value — the exact state 2300 exists to prevent, arriving through a different
+ * door. So the over-settlement goes back to 2300 as available advance, and AR stays put:
+ *
+ * ```text
+ * invoice 10,000 settled by a 10,000 advance, credit note 2,000
+ *   note:    Dr 4000 revenue 2,000 / Cr 1100 AR 2,000
+ *   release: Dr 1100 AR 2,000      / Cr 2300 advances 2,000
+ *   net:     Dr 4000 2,000 / Cr 2300 2,000 — revenue down, customer credit up, AR untouched at 0
+ * ```
+ *
+ * Two caps, and BOTH are needed:
+ *
+ *  - **The over-settlement.** Only what the note over-pays the invoice by is released. A 5,000 note
+ *    against a 10,000 invoice with a 3,000 advance applied leaves the invoice owing 2,000 with the
+ *    advance still settling its share — releasing the 3,000 there would strand the customer's money
+ *    as a floating advance while their invoice showed 5,000 outstanding, and put the aging report
+ *    at odds with the relationship.
+ *  - **The active allocations.** Only advance money can go back to 2300. Where an invoice was
+ *    settled in CASH, the over-settlement has no allocation behind it and this returns less than the
+ *    note over-pays by — the cash-paid remainder, which still drives AR negative and is a separate
+ *    decision recorded in the backlog, not something this cap can reach.
+ */
+export function creditNoteReleaseAmount(args: {
+  invoiceTotal: string;
+  invoicePaidAmount: string;
+  creditNoteTotal: string;
+  activeAllocationTotal: string;
+  docCurrency: string;
+}): string {
+  const overSettlement = Number(args.invoicePaidAmount) + Number(args.creditNoteTotal) - Number(args.invoiceTotal);
+  return roundMoney(
+    Math.max(0, Math.min(overSettlement, Number(args.activeAllocationTotal))),
+    args.docCurrency,
+  );
+}
+
+/** The invoice's live allocation total, in document currency — what `creditNoteReleaseAmount` caps against. */
+export async function activeAllocationTotal(tx: Tx, orgId: number, salesInvoiceId: number, docCurrency: string): Promise<string> {
+  const live = await liveAllocationsOf(tx, orgId, salesInvoiceId);
+  return roundMoney(live.reduce((sum, a) => sum + Number(a.appliedAmount), 0), docCurrency);
 }

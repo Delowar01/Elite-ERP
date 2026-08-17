@@ -20,6 +20,7 @@ export * from "./purchase-orders";
 export * from "./debit-notes";
 export * from "./finance";
 export * from "./advance-applications";
+export * from "./advance-application-releases";
 export * from "./activity-log";
 export * from "./security";
 export * from "./saved-views";

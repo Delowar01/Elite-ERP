@@ -156,6 +156,36 @@ NOT establish: this one shows the read takes the lock, not that the lock is nece
 conversion serialises on its proforma row anyway. That proof needs two invoices drawing on one
 advance concurrently, and belongs where that is possible.
 
+### A query that silently answers a different question than it asks
+
+Not an assertion flaw — the flaw the assertions caught, and it is worth writing down because the
+code reviewed as correct and the query ran without error.
+
+Drizzle interpolates a column reference inside a raw `sql` template as a BARE name. This:
+
+```ts
+.select({ released: sql`coalesce((select sum(r.released_amount) from advance_application_releases r
+                          where r.allocation_id = ${advanceApplicationsTable.id}), 0)::text` })
+.from(advanceApplicationsTable)
+```
+
+renders as `where r.allocation_id = "id"` — and inside that subquery, `"id"` resolves to the
+RELEASE table's own `id`, because `r` is the only table in scope there. The correlated reference
+points at the wrong table. Postgres does not complain: the predicate is well-typed, matches nothing,
+and the query returns a confident `0`.
+
+Nothing about the failure looked like a SQL bug. Releases posted, the ledger balanced, 2300 landed
+on the right figure — only the *effective* allocation figures were wrong, so the visible symptoms
+were "an allocation that should have been marked fully released was not" and one FX residual
+landing a fils out. Three named assertions failed; the fourth, an exactness sum, passed by
+coincidence of rounding.
+
+**Two lessons.** Write the qualified name (`advance_applications.id`) in raw SQL rather than
+interpolating a column, and if a raw fragment computes a figure the app depends on, assert the
+figure against an independently written query. The suite here computes availability twice, once
+through the shipped helper and once through hand-written SQL in the fixture; the mismatch is what
+exposed it. A single source of truth in a test is only a test of itself.
+
 ### The mirror image: a failing suite that is also not telling you what it looks like
 
 The same trap runs the other way, and it nearly produced a much worse report than any of the four

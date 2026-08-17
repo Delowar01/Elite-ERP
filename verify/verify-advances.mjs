@@ -252,9 +252,14 @@ const allocationsOf = async (paymentId) => (await db.query(
      from advance_applications where org_id=$1 and advance_payment_id=$2 order by id`, [org, paymentId])).rows;
 const availableOf = async (paymentId) => {
   const pay = (await db.query("select amount::text, base_applied_amount::text from payments where id=$1", [paymentId])).rows[0];
+  // Applied MINUS live releases: a credit note can hand part of an allocation back, so the gross
+  // applied figure would understate what is available.
   const alloc = (await db.query(
-    `select coalesce(sum(applied_amount),0)::text a, coalesce(sum(carried_base),0)::text c
-       from advance_applications where org_id=$1 and advance_payment_id=$2 and released_at is null`, [org, paymentId])).rows[0];
+    `select coalesce(sum(a.applied_amount - coalesce((select sum(r.released_amount) from advance_application_releases r
+                        where r.allocation_id = a.id and r.reversed_at is null), 0)),0)::text a,
+            coalesce(sum(a.carried_base - coalesce((select sum(r.released_carried) from advance_application_releases r
+                        where r.allocation_id = a.id and r.reversed_at is null), 0)),0)::text c
+       from advance_applications a where a.org_id=$1 and a.advance_payment_id=$2 and a.released_at is null`, [org, paymentId])).rows[0];
   const ref = (await db.query(
     `select coalesce(sum(amount),0)::text a, coalesce(sum(base_applied_amount),0)::text c
        from payments where org_id=$1 and refunds_payment_id=$2`, [org, paymentId])).rows[0];
@@ -854,6 +859,91 @@ check("CONCURRENCY: exactly one of the two invoices was settled",
     .filter((v) => num(v) === 1000000).length === 1);
 await balanced("after the concurrent draws");
 
+// ============ credit notes against an advance-settled invoice (the negative-AR door) ============
+// The arithmetic lives in verify-credit-note-release; what only THIS tier can prove is that the
+// real action — session, cap, decision, release, paid figures — is wired together, driven through
+// the actual Issue Credit Note button rather than a library call.
+// `advNet()` (defined with the other account readers) returns 2300's net credit in mils.
+const invCN = await mkSentInvoice("4000.00");
+const pfCN = await mkProforma({ currency: null, total: "4000.00" });
+await recordPayment(`${BASE}/sales/proforma/${pfCN}`, 4000);
+const payCN = (await db.query("select id from payments where org_id=$1 and proforma_invoice_id=$2", [org, pfCN])).rows[0].id;
+await applyAdvance(invCN, payCN, 4000);
+const cnInvBefore = (await db.query("select status, paid_amount::text from sales_invoices where id=$1", [invCN])).rows[0];
+check("CN fixture: a 4,000 advance settles a 4,000 invoice in full — AR on it is zero",
+  cnInvBefore.status === "paid" && num(cnInvBefore.paid_amount) === 4000000, JSON.stringify(cnInvBefore));
+const arBeforeCN = await accountLines(AR);
+const advBeforeCN = await advNet();
+await balanced("before the credit note");
+
+/** Fill and submit the credit-note builder for an invoice — the real form, the real button. */
+async function issueCreditNote(invoiceId, unitPrice) {
+  await page.goto(`${BASE}/sales/credit-notes/new?invoice=${invoiceId}`, { waitUntil: "networkidle" });
+  const row = page.locator(".doc-items-table tr.item-row").first();
+  await row.locator("input, textarea").first().fill("Partial credit");
+  const nums = row.locator('input[type="number"]');
+  await nums.nth(0).fill("1");
+  await nums.nth(1).fill(String(unitPrice));
+  await page.waitForTimeout(200);
+  await page.getByRole("button", { name: "Issue Credit Note", exact: true }).first().click();
+  await page.waitForTimeout(2500);
+}
+
+await issueCreditNote(invCN, 1000);
+const cn1 = (await db.query(
+  "select id, status, total::text, base_total::text from credit_notes where org_id=$1 and source_invoice_id=$2 order by id desc limit 1", [org, invCN])).rows[0];
+check("the credit note issued through the real builder", cn1?.status === "issued", JSON.stringify(cn1));
+const rel1 = (await db.query(
+  `select r.id, r.released_amount::text, r.released_ar_cleared::text, r.cause_type, r.cause_id, a.applied_amount::text applied, a.released_at
+     from advance_application_releases r join advance_applications a on a.id = r.allocation_id
+    where r.org_id=$1 and r.cause_type='credit_note' and r.cause_id=$2`, [org, cn1.id])).rows;
+check("it released exactly its own total from the allocation — a PARTIAL release, the allocation still live",
+  rel1.length === 1 && num(rel1[0].released_amount) === num(cn1.total) && num(rel1[0].applied) === 4000000 && rel1[0].released_at === null,
+  JSON.stringify(rel1));
+const arAfterCN = await accountLines(AR);
+check("THE DEFECT IS CLOSED: AR is unmoved — the note's credit and the release's debit answer each other",
+  num(arAfterCN.dr) - num(arAfterCN.cr) === num(arBeforeCN.dr) - num(arBeforeCN.cr),
+  `${num(arAfterCN.dr) - num(arAfterCN.cr)} vs ${num(arBeforeCN.dr) - num(arBeforeCN.cr)}`);
+check("2300 rose by exactly the note's value — the client holds that credit as an available advance",
+  (await advNet()) - advBeforeCN === num(cn1.total), `${await advNet()} vs ${advBeforeCN}`);
+const cnInvAfter = (await db.query("select paid_amount::text, base_paid_amount::text from sales_invoices where id=$1", [invCN])).rows[0];
+check("the invoice's paid figures did NOT grow past its total — the release nets against the note",
+  num(cnInvAfter.paid_amount) === 4000000 && num(cnInvAfter.base_paid_amount) === 4000000, JSON.stringify(cnInvAfter));
+check("the advance is available again, by the note's value", (await availableOf(payCN)).doc === num(cn1.total));
+await balanced("after the credit note released part of the allocation");
+
+// ---- the cap: credit notes may not exceed the invoice they credit ----
+const advBeforeCap = await advNet();
+await issueCreditNote(invCN, 4000);
+const capToast = (await page.locator("body").innerText()).replace(/\s+/g, " ");
+const cnAll = (await db.query(
+  "select id, status, total::text from credit_notes where org_id=$1 and source_invoice_id=$2 order by id", [org, invCN])).rows;
+check("CAP: a note that would push the credited total past the invoice value is REFUSED server-side",
+  cnAll.filter((c) => c.status === "issued").length === 1, JSON.stringify(cnAll));
+check("…and the refusal reaches the user with the headroom named, rather than a silent draft",
+  /already total|cannot exceed/i.test(capToast) && /draft/i.test(capToast), capToast.slice(0, 220));
+check("…the refused note posted NOTHING — 2300 unmoved, no release row for it",
+  (await advNet()) === advBeforeCap
+    && (await db.query("select count(*)::int n from advance_application_releases where org_id=$1 and cause_id=$2",
+      [org, cnAll[cnAll.length - 1].id])).rows[0].n === 0);
+await balanced("after the refused credit note");
+
+// ---- reversing the note re-applies what it released ----
+await page.goto(`${BASE}/sales/credit-notes/${cn1.id}`, { waitUntil: "networkidle" });
+await page.getByRole("button", { name: /Reverse Credit Note/ }).click();
+await page.waitForTimeout(400);
+await dialogs().last().getByRole("button", { name: /^Reverse$/ }).click();
+await page.waitForTimeout(2000);
+const cn1After = (await db.query("select status from credit_notes where id=$1", [cn1.id])).rows[0];
+check("reversing the note re-applies the release — the advance is not left available AND settling the invoice",
+  cn1After.status === "reversed" && (await availableOf(payCN)).doc === 0, JSON.stringify(cn1After));
+check("2300 is back where it stood before the note", (await advNet()) === advBeforeCN, `${await advNet()} vs ${advBeforeCN}`);
+check("AR is unmoved across the whole issue → reverse round trip",
+  num((await accountLines(AR)).dr) - num((await accountLines(AR)).cr) === num(arBeforeCN.dr) - num(arBeforeCN.cr));
+const cnInvReversed = (await db.query("select paid_amount::text from sales_invoices where id=$1", [invCN])).rows[0];
+check("the invoice is settled again at exactly its total", num(cnInvReversed.paid_amount) === 4000000, JSON.stringify(cnInvReversed));
+await balanced("after reversing the credit note");
+
 // ================= L. GL 2300 = the carried value of every remaining available advance ==========
 const gl2300 = async () => Number((await db.query(
   `select coalesce(sum(l.credit),0) - coalesce(sum(l.debit),0) as net
@@ -895,10 +985,16 @@ const dAfterVoid = (await db.query("select status from sales_invoices where id=$
 check("VOID of an invoice carrying allocations is REFUSED by the lifecycle — a Credit Note is the correction path",
   /settled invoice cannot be voided|Credit Note/i.test(rVoid.body) && dAfterVoid.status === "paid",
   `${dAfterVoid.status} — ${rVoid.body.match(/[^"<]*cannot be voided[^"<]*/)?.[0] ?? "(message not found)"}`);
+// Scoped to THIS invoice's allocations. The clause used to count release entries across the whole
+// org, which was zero only while nothing could release at all; the credit-note section above now
+// releases legitimately in the same org, so an org-wide count would fail for a reason that has
+// nothing to do with void — the catalogued "asserts on a total wider than its own fixture" trap.
 check("…so its allocations are untouched — the release wiring in void is unreachable, not silently firing",
   (await allocationsOf(dPayId)).every((a) => a.released_at === null)
     && (await db.query(
-      "select count(*)::int n from journal_entries where org_id=$1 and source_type='advance_application_release'", [org])).rows[0].n === 0);
+      `select count(*)::int n from advance_application_releases r
+         join advance_applications a on a.id = r.allocation_id
+        where a.org_id=$1 and a.sales_invoice_id=$2`, [org, invD])).rows[0].n === 0);
 
 // §13 / case P: a POSTED invoice is immutable, enforced by the SERVER not just the edit page.
 const rEdit = await invoke(updateInvoiceActionId, [invD, {

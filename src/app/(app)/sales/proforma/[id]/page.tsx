@@ -1,6 +1,6 @@
 import { Fragment } from "react";
 import { notFound } from "next/navigation";
-import { eq, and, inArray, isNull } from "drizzle-orm";
+import { eq, and, inArray, isNull, sql } from "drizzle-orm";
 import { DocumentTermsView } from "../../_shared/terms-view";
 import { SafeRichText } from "../../_shared/safe-rich-text";
 import { LineItemCell, LineDescRow } from "../../_shared/line-item-cell";
@@ -99,7 +99,15 @@ export default async function ProformaDetailPage({ params }: { params: Promise<{
   const allocatedByPayment = new Map<number, number>();
   if (receipts.length > 0) {
     const rows = await db
-      .select({ advancePaymentId: advanceApplicationsTable.advancePaymentId, applied: advanceApplicationsTable.appliedAmount })
+      .select({
+        advancePaymentId: advanceApplicationsTable.advancePaymentId,
+        // Net of releases — a credit note can return part of an allocation to the advance. Columns
+        // written out qualified: drizzle interpolates `${table.column}` as a bare name, which
+        // inside the subquery would bind to the release table's own id.
+        applied: sql<string>`(advance_applications.applied_amount - coalesce((
+          select sum(r.released_amount) from advance_application_releases r
+           where r.allocation_id = advance_applications.id and r.reversed_at is null), 0))::text`,
+      })
       .from(advanceApplicationsTable)
       .where(and(
         eq(advanceApplicationsTable.orgId, session.orgId),

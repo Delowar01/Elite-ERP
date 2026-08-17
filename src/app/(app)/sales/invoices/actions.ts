@@ -420,7 +420,7 @@ export async function voidInvoiceAction(invoiceId: number): Promise<ActionResult
 
     // Release any advance allocations this invoice consumed, so the customer's money returns to
     // 2300 as available rather than vanishing with the voided receivable. Each release mirrors its
-    // application's stored lines and is keyed by the allocation, so a retried void posts nothing.
+    // application's stored lines and is keyed by the VOID, so a retried void posts nothing.
     //
     // CURRENTLY UNREACHABLE, deliberately wired anyway: the lifecycle allows `void` only on a
     // `sent` invoice, and an invoice carrying an allocation is `partially_paid` or `paid` by
@@ -430,8 +430,11 @@ export async function voidInvoiceAction(invoiceId: number): Promise<ActionResult
     // silently stranded; verify-advances asserts the refusal that makes it unreachable today.
     const releasedHere = await releaseAllocations(tx, {
       orgId: session.orgId, userId: session.userId, salesInvoiceId: invoiceId,
-      reason: "invoice_void", date: new Date().toISOString().slice(0, 10),
+      reason: "invoice_void", causeType: "sales_invoice", causeId: invoiceId,
+      date: new Date().toISOString().slice(0, 10),
       memoSubject: `invoice ${invoice.invoiceNumber} voided`,
+      baseCurrency: session.orgCurrency, docCurrency: invoice.currency ?? session.orgCurrency,
+      // No `limitAmount`: a void gives back everything the invoice consumed.
     });
     const releasedPaid = releasedHere.reduce((sum, r) => sum + Number(r.appliedAmount), 0);
     const releasedBase = releasedHere.reduce((sum, r) => sum + Number(r.arCleared), 0);

@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { sanitizeIfHtml } from "@/lib/sanitize-html";
 import { normalizeDocumentTerms, type DocumentTerm } from "../_shared/document-terms";
 import { redirect } from "next/navigation";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import { db, creditNotesTable, creditNoteItemsTable, salesInvoicesTable, accountsTable, journalEntriesTable, journalLinesTable } from "@/db";
 import { requireSession } from "@/lib/session";
 import { logActivity } from "@/lib/activity";
@@ -13,8 +13,11 @@ import { can, evaluate } from "@/lib/document-lifecycle";
 import { snapshotSealForDoc } from "@/lib/doc-seal";
 import { snapshotDocumentBankAccounts } from "@/lib/document-bank-data";
 import { computeTotals, type LineItemInput } from "../_shared/totals";
-import { roundMoney } from "@/lib/currency/currencies";
+import { moneyEpsilon, roundMoney } from "@/lib/currency/currencies";
 import { captureBaseAmounts, subtractMoney } from "@/lib/posting-currency";
+import {
+  activeAllocationTotal, creditNoteReleaseAmount, releaseAllocations, reverseReleasesOfCause,
+} from "@/lib/advance-allocations";
 
 export type ActionResult = {
   error?: string;
@@ -103,7 +106,14 @@ export async function createCreditNoteAction(
 
   await logActivity(session, { type: "credit_note.created", description: `Created a credit note against invoice ${invoice.invoiceNumber}`, entityType: "credit_note", entityId: id });
   if (andIssue) {
-    await issueCreditNoteAction(id);
+    // Create-and-issue used to DISCARD the issue's result and redirect regardless, so a refusal —
+    // a missing exchange rate then, the credit-note cap now — left a silent draft and a screen that
+    // looked like success. The note is saved either way; the reason has to reach the user.
+    const issued = await issueCreditNoteAction(id);
+    if (issued.error) {
+      revalidatePath(PATH);
+      return { ...issued, error: `${issued.error} The credit note has been saved as a draft.`, id };
+    }
   }
   revalidatePath(PATH);
   redirect(`/sales/credit-notes/${id}`);
@@ -161,6 +171,17 @@ export async function updateCreditNoteAction(
   redirect(`/sales/credit-notes/${id}`);
 }
 
+/**
+ * Issue a credit note: post its reversing entry, and release whatever advance it over-settles.
+ *
+ * Two things were previously missing, and both produce an invoice that disagrees with the ledger:
+ *
+ *  1. **No cap.** Nothing stopped 12,000 of credit notes against a 10,000 invoice — `paidAmount`
+ *     simply grew past the total. Capped server-side at the invoice's own value.
+ *  2. **No release.** On an invoice settled by an advance, crediting 2,000 drove AR to −2,000 while
+ *     the customer genuinely held 2,000 of value. Now the over-settled portion goes back to 2300 as
+ *     available advance and AR stays where it was — see `creditNoteReleaseAmount`.
+ */
 export async function issueCreditNoteAction(creditNoteId: number): Promise<ActionResult> {
   const session = await requireSession();
 
@@ -193,7 +214,51 @@ export async function issueCreditNoteAction(creditNoteId: number): Promise<Actio
   // against a discounted total, the same latent hole the invoice send had.
   const baseRevenue = subtractMoney(captured.baseTotal, captured.baseTaxAmount, session.orgCurrency);
 
-  await db.transaction(async (tx) => {
+  const docCurrency = cn.currency ?? session.orgCurrency;
+  const eps = moneyEpsilon(docCurrency);
+
+  const outcome = await db.transaction(async (tx) => {
+    // Lock the note, then the invoice. Two clicks on Issue can both pass the outer status check;
+    // the second finds the note already issued here and stops before writing anything. The invoice
+    // lock is what makes the cap and the release a single decision rather than a read-then-write
+    // race with a second credit note against the same invoice.
+    const noteLock = await tx.execute(sql`select status from credit_notes where id = ${cn.id} and org_id = ${session.orgId} for update`);
+    if ((noteLock.rows as unknown as { status: string }[])[0]?.status !== "draft") {
+      return { error: "Only draft credit notes can be issued." } as const;
+    }
+    const invoiceLock = await tx.execute(sql`
+      select invoice_number, total::text as total, paid_amount::text as paid_amount,
+             base_paid_amount::text as base_paid_amount, currency
+        from sales_invoices where id = ${cn.sourceInvoiceId} and org_id = ${session.orgId}
+         for update`);
+    const invoice = (invoiceLock.rows as unknown as {
+      invoice_number: string; total: string; paid_amount: string; base_paid_amount: string | null; currency: string | null;
+    }[])[0];
+    if (!invoice) return { error: "Invoice not found." } as const;
+
+    // §Cap — the sum of ACTIVE credit notes against an invoice may not exceed the invoice's value.
+    // Reversed and draft notes do not count: a reversed note has given its credit back, and a draft
+    // has not posted. Without this, `paidAmount` grows past `total` and the invoice's own arithmetic
+    // stops meaning anything — independent of advances.
+    const [issued] = await tx
+      .select({ total: sql<string>`coalesce(sum(${creditNotesTable.total}), 0)::text` })
+      .from(creditNotesTable)
+      .where(and(
+        eq(creditNotesTable.orgId, session.orgId),
+        eq(creditNotesTable.sourceInvoiceId, cn.sourceInvoiceId),
+        eq(creditNotesTable.status, "issued"),
+        isNull(creditNotesTable.deletedAt),
+      ));
+    const alreadyCredited = Number(issued?.total ?? 0);
+    if (alreadyCredited + Number(cn.total) > Number(invoice.total) + eps) {
+      const headroom = roundMoney(Math.max(0, Number(invoice.total) - alreadyCredited), docCurrency);
+      return {
+        error: alreadyCredited > 0
+          ? `Credit notes against invoice ${invoice.invoice_number} already total ${roundMoney(alreadyCredited, docCurrency)} of its ${invoice.total} value. At most ${headroom} more can be credited.`
+          : `A credit note cannot exceed the invoice it credits — invoice ${invoice.invoice_number} is ${invoice.total}.`,
+      } as const;
+    }
+
     const [entry] = await tx
       .insert(journalEntriesTable)
       .values({
@@ -225,20 +290,55 @@ export async function issueCreditNoteAction(creditNoteId: number): Promise<Actio
         baseTaxAmount: captured.baseTaxAmount,
       })
       .where(eq(creditNotesTable.id, creditNoteId));
-    // The document-currency paidAmount moves by the note's total, exactly as before; the BASE twin
-    // moves by the note's baseTotal — but only where the invoice HAS base amounts. An unconverted
-    // legacy invoice keeps null rather than being handed a mixed figure.
+
+    // Release what this note over-settles the invoice by, capped at the advance money actually
+    // behind it. LIFO, apportioned, and keyed to THIS note so a replay releases nothing twice.
+    const allocated = await activeAllocationTotal(tx, session.orgId, cn.sourceInvoiceId, docCurrency);
+    const releaseAmount = creditNoteReleaseAmount({
+      invoiceTotal: invoice.total,
+      invoicePaidAmount: invoice.paid_amount,
+      creditNoteTotal: cn.total,
+      activeAllocationTotal: allocated,
+      docCurrency,
+    });
+    const releases = Number(releaseAmount) > eps
+      ? await releaseAllocations(tx, {
+          orgId: session.orgId, userId: session.userId, salesInvoiceId: cn.sourceInvoiceId,
+          reason: "credit_note", causeType: "credit_note", causeId: cn.id,
+          date: cn.issueDate, memoSubject: `credit note ${cn.creditNoteNumber}`,
+          baseCurrency: session.orgCurrency, docCurrency, limitAmount: releaseAmount,
+        })
+      : [];
+    const releasedDoc = releases.reduce((sum, r) => sum + Number(r.appliedAmount), 0);
+    const releasedAr = releases.reduce((sum, r) => sum + Number(r.arCleared), 0);
+
+    // The document-currency paidAmount moves by the note's total NET of what the release gave back;
+    // the BASE twin by the note's baseTotal net of the AR the release restored — which is exactly
+    // the AR the two entries moved between them, so GL 1100 still equals `baseTotal − basePaidAmount`
+    // to the fils. An unconverted legacy invoice keeps null rather than being handed a mixed figure.
     await tx
       .update(salesInvoicesTable)
       .set({
-        paidAmount: sql`${salesInvoicesTable.paidAmount} + ${cn.total}`,
-        basePaidAmount: sql`case when ${salesInvoicesTable.basePaidAmount} is null then null else ${salesInvoicesTable.basePaidAmount} + ${captured.baseTotal} end`,
+        paidAmount: roundMoney(Number(invoice.paid_amount) + Number(cn.total) - releasedDoc, docCurrency),
+        basePaidAmount: invoice.base_paid_amount === null
+          ? null
+          : roundMoney(Number(invoice.base_paid_amount) + Number(captured.baseTotal) - releasedAr, session.orgCurrency),
         updatedAt: new Date(),
       })
       .where(eq(salesInvoicesTable.id, cn.sourceInvoiceId));
+    return { released: roundMoney(releasedDoc, docCurrency) } as const;
   });
 
-  await logActivity(session, { type: "credit_note.issued", description: `Issued credit note ${cn.creditNoteNumber} — posted reversing entry to ledger`, entityType: "credit_note", entityId: creditNoteId });
+  if ("error" in outcome) return { error: outcome.error };
+
+  await logActivity(session, {
+    type: "credit_note.issued",
+    description: Number(outcome.released) > 0
+      ? `Issued credit note ${cn.creditNoteNumber} — posted reversing entry and returned ${outcome.released} of applied advance to the client's balance`
+      : `Issued credit note ${cn.creditNoteNumber} — posted reversing entry to ledger`,
+    entityType: "credit_note",
+    entityId: creditNoteId,
+  });
   revalidatePath(PATH);
   revalidatePath(`/sales/credit-notes/${creditNoteId}`);
   revalidatePath(`/sales/invoices/${cn.sourceInvoiceId}`);
@@ -300,15 +400,29 @@ export async function reverseCreditNoteAction(creditNoteId: number): Promise<Act
     }
 
     await tx.update(creditNotesTable).set({ status: "reversed" }).where(eq(creditNotesTable.id, creditNoteId));
-    // Un-does the issue's adjustment: doc-currency paidAmount by cn.total, the base twin by the
-    // note's STORED baseTotal — guarded the same way it was applied, so a null stays null.
+
+    // Re-apply whatever this note released. A reversal that restored `paidAmount` but left the
+    // advance released would give the customer their money twice: available in 2300 AND back on
+    // the invoice as outstanding. The re-application is the mirror of the release's own lines.
+    const reapplied = await reverseReleasesOfCause(tx, {
+      orgId: session.orgId, userId: session.userId,
+      causeType: "credit_note", causeId: cn.id,
+      date: new Date().toISOString().slice(0, 10),
+      memoSubject: `credit note ${cn.creditNoteNumber} reversed`,
+    });
+    const reappliedDoc = reapplied.reduce((sum, r) => sum + Number(r.appliedAmount), 0);
+    const reappliedAr = reapplied.reduce((sum, r) => sum + Number(r.arCleared), 0);
+
+    // Un-does the issue's adjustment exactly as it was made: the note's total LESS what it released
+    // then, which is what it has just re-applied. The base twin uses the note's STORED baseTotal —
+    // never a fresh conversion — guarded the same way it was applied, so a null stays null.
     await tx
       .update(salesInvoicesTable)
       .set({
-        paidAmount: sql`GREATEST(0, ${salesInvoicesTable.paidAmount} - ${cn.total})`,
+        paidAmount: sql`GREATEST(0, ${salesInvoicesTable.paidAmount} - ${cn.total} + ${String(reappliedDoc)})`,
         basePaidAmount: cn.baseTotal === null
           ? sql`${salesInvoicesTable.basePaidAmount}`
-          : sql`case when ${salesInvoicesTable.basePaidAmount} is null then null else GREATEST(0, ${salesInvoicesTable.basePaidAmount} - ${cn.baseTotal}) end`,
+          : sql`case when ${salesInvoicesTable.basePaidAmount} is null then null else GREATEST(0, ${salesInvoicesTable.basePaidAmount} - ${cn.baseTotal} + ${String(reappliedAr)}) end`,
         updatedAt: new Date(),
       })
       .where(eq(salesInvoicesTable.id, cn.sourceInvoiceId));

@@ -1,6 +1,6 @@
 import { Fragment } from "react";
 import { notFound } from "next/navigation";
-import { eq, and, isNull } from "drizzle-orm";
+import { eq, and, isNull, sql } from "drizzle-orm";
 import { DocumentTermsView } from "../../_shared/terms-view";
 import { SafeRichText } from "../../_shared/safe-rich-text";
 import { LineItemCell, LineDescRow } from "../../_shared/line-item-cell";
@@ -91,10 +91,18 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
   // advance is never counted twice. The payment rows themselves stay in the shared history below
   // (tagged "from Proforma") — one record, no second ledger.
   // From ALLOCATIONS, not from payments linked by salesInvoiceId: an advance can now settle this
-  // invoice partially, and a partial draw never carries that link.
+  // invoice partially, and a partial draw never carries that link. Net of releases, because a
+  // credit note can hand part of an allocation back and `paidAmount` already reflects that — the
+  // gross figure would make the cash half of a mixed settlement look larger than it is.
   const advanceApplied = showPayments
     ? (await db
-        .select({ applied: advanceApplicationsTable.appliedAmount })
+        .select({
+          // Columns written out qualified: drizzle interpolates `${table.column}` as a bare name,
+          // which inside the subquery would bind to the release table's own id.
+          applied: sql<string>`(advance_applications.applied_amount - coalesce((
+            select sum(r.released_amount) from advance_application_releases r
+             where r.allocation_id = advance_applications.id and r.reversed_at is null), 0))::text`,
+        })
         .from(advanceApplicationsTable)
         .where(and(
           eq(advanceApplicationsTable.orgId, session.orgId),

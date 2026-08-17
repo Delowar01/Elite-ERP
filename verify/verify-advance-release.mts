@@ -36,6 +36,7 @@ const mils = (v: string | number) => Math.round(Number(v) * 1000);
 
 const FIXTURE = "verifyallocrel_";
 async function sweep() {
+  await pool.query(`delete from advance_application_releases where org_id in (select id from orgs where name like $1)`, [`${FIXTURE}%`]);
   await pool.query(`delete from advance_applications where org_id in (select id from orgs where name like $1)`, [`${FIXTURE}%`]);
   await pool.query(
     `delete from journal_lines where journal_entry_id in
@@ -159,7 +160,8 @@ check("LEDGER BALANCED after both applications", await ledgerBalanced());
 
 // ---- release both, newest first ----
 const released = await db.transaction((tx) =>
-  releaseAllocations(tx, { orgId: org, userId: user, salesInvoiceId: invoice, reason: "invoice_void", date: "2026-08-07", memoSubject: "round-trip test" }));
+  releaseAllocations(tx, { orgId: org, userId: user, salesInvoiceId: invoice, reason: "invoice_void", causeType: "sales_invoice", causeId: invoice,
+    date: "2026-08-07", memoSubject: "round-trip test", baseCurrency: "SAR", docCurrency: "USD" }));
 check("both allocations released, NEWEST FIRST (LIFO — the inverse of application order)",
   released.length === 2 && released[0].allocationId > released[1].allocationId,
   released.map((r) => `${r.allocationId}:${r.appliedAmount}`).join(", "));
@@ -179,7 +181,8 @@ check("availability is restored with NO compensating write — released rows sim
 // ---- releasing again is inert ----
 const entriesBefore = (await pool.query("select count(*)::int n from journal_entries where org_id=$1", [org])).rows[0].n;
 const again = await db.transaction((tx) =>
-  releaseAllocations(tx, { orgId: org, userId: user, salesInvoiceId: invoice, reason: "invoice_void", date: "2026-08-07", memoSubject: "retry" }));
+  releaseAllocations(tx, { orgId: org, userId: user, salesInvoiceId: invoice, reason: "invoice_void", causeType: "sales_invoice", causeId: invoice,
+    date: "2026-08-07", memoSubject: "retry", baseCurrency: "SAR", docCurrency: "USD" }));
 check("a repeated release is INERT — no allocation re-released, no second reversing entry",
   again.length === 0 && (await pool.query("select count(*)::int n from journal_entries where org_id=$1", [org])).rows[0].n === entriesBefore);
 

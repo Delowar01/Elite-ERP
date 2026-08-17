@@ -249,9 +249,16 @@ export async function listAvailableAdvancesForInvoice(invoiceId: number): Promis
       paymentDate: paymentsTable.paymentDate,
       proformaNumber: proformaInvoicesTable.proformaNumber,
       customerId: proformaInvoicesTable.customerId,
+      // Applied MINUS released: a credit note can hand part of an allocation back, and an advance
+      // whose allocation was partly released is partly available again.
+      // The release subquery sits INSIDE the sum, per allocation row: correlating it outside the
+      // aggregate would reference an ungrouped column and Postgres would refuse the query.
       allocated: sql<string>`coalesce((
-        select sum(a.applied_amount) from advance_applications a
-         where a.org_id = ${orgId} and a.advance_payment_id = ${paymentsTable.id} and a.released_at is null), 0)::text`,
+        select sum(a.applied_amount - coalesce((
+                 select sum(r.released_amount) from advance_application_releases r
+                  where r.allocation_id = a.id and r.reversed_at is null), 0))
+           from advance_applications a
+          where a.org_id = ${orgId} and a.advance_payment_id = ${paymentsTable.id} and a.released_at is null), 0)::text`,
       refunded: sql<string>`coalesce((
         select sum(r.amount) from payments r
          where r.org_id = ${orgId} and r.refunds_payment_id = ${paymentsTable.id}), 0)::text`,

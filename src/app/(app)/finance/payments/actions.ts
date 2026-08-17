@@ -492,6 +492,9 @@ export async function refundAdvanceAction(paymentId: number, bankAccountId?: num
   // Partial allocation means "applied" is no longer all-or-nothing, so the question is whether ANY
   // of this advance is still unspent. Partial refunds land in commit 7; until then a refund is
   // whole-receipt, so any active allocation blocks it — but the reason names the real state.
+  // Deliberately the GROSS applied figure, not net of releases: an allocation released down to
+  // nothing is marked `releasedAt` and leaves this sum entirely, so gross and net agree on the only
+  // question asked here — is any of it still applied. Commit 7 needs the net figure and derives it.
   const [allocated] = await db
     .select({ applied: sql<string>`coalesce(sum(${advanceApplicationsTable.appliedAmount}), 0)::text` })
     .from(advanceApplicationsTable)
