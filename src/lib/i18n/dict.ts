@@ -862,7 +862,6 @@ const DICT: Record<string, string> = {
   "ZATCA Phase 1 QR": "رمز QR — المرحلة الأولى",
   "On printed tax invoices": "على الفواتير الضريبية المطبوعة",
   "Secure & Reliable": "آمن وموثوق",
-  "Your data is encrypted": "بياناتك مشفّرة",
   "Real-time Insights": "رؤى فورية",
   "Data driven decisions": "قرارات مبنية على البيانات",
   "Automated Processes": "عمليات آلية",
@@ -1125,7 +1124,36 @@ const DICT: Record<string, string> = {
 
   // ---- Compliance Center (Stage 11 Part 5) ----
   "Compliance Center": "مركز الامتثال",
-  Compliant: "متوافق",
+  "Security & Compliance Readiness": "جاهزية الأمان والامتثال",
+  GDPR: "اللائحة العامة لحماية البيانات (GDPR)",
+  "An internal checklist of what this build implements. It is not a certification: no external audit has been carried out, and no framework compliance is claimed.":
+    "قائمة داخلية لما تنفّذه هذه النسخة. ليست شهادة اعتماد: لم يُجرَ أي تدقيق خارجي، ولا يُدّعى الامتثال لأي إطار.",
+  "Internal privacy framework — self-assessed, not certified.": "إطار خصوصية داخلي — تقييم ذاتي وليس معتمداً.",
+  "ISO 27001 — roadmap": "أيزو 27001 — ضمن خطة التطوير",
+  "Readiness only. No certification is held and no external audit has been engaged.":
+    "جاهزية فقط. لا توجد شهادة اعتماد ولم يُتعاقد على أي تدقيق خارجي.",
+  "Platform security": "أمان المنصة",
+  "Security features shipped in this build. Not mapped to any external framework.":
+    "ميزات أمان متوفّرة في هذه النسخة. غير مرتبطة بأي إطار خارجي.",
+  Implemented: "مُنفَّذ",
+  "Verified in this deployment": "تم التحقق منه في هذا التثبيت",
+  "Not detected in this deployment": "غير مكتشَف في هذا التثبيت",
+  Informational: "للعلم فقط",
+  "A.12.4 Logging & monitoring — append-only audit log (application-level)":
+    "A.12.4 التسجيل والمراقبة — سجل تدقيق للإضافة فقط (على مستوى التطبيق)",
+  "A.12.4 Database-level immutability trigger installed": "A.12.4 مُشغّل منع التعديل على مستوى قاعدة البيانات مثبَّت",
+  "A.10 Cryptography — field-level encryption with versioned keys (rotation-capable)":
+    "A.10 التشفير — تشفير على مستوى الحقل بمفاتيح مُصدَّرة (يدعم التدوير)",
+  "A.16 Security event feed (detection only — no incident-response process)":
+    "A.16 تغذية أحداث الأمان (كشف فقط — لا توجد عملية استجابة للحوادث)",
+  "Signed URLs, security headers, rate limiting": "روابط موقّعة، ترويسات أمان، تحديد المعدل",
+  "Tenant isolation on every query": "عزل المستأجرين في كل استعلام",
+  "MFA secrets and recovery codes encrypted at rest (AES-256-GCM)":
+    "أسرار المصادقة الثنائية ورموز الاسترداد مشفّرة أثناء التخزين (AES-256-GCM)",
+  "Transactional ledger posting": "ترحيل دفتر الأستاذ ضمن معاملة",
+  "Backup/DR runbook documented — backup execution is not verified by the product":
+    "دليل النسخ الاحتياطي والتعافي موثّق — لا يتحقق المنتج من تنفيذ النسخ الاحتياطي",
+  "Encrypted connection, encrypted credentials": "اتصال مشفّر وبيانات اعتماد مشفّرة",
   "Data Subject Rights": "حقوق صاحب البيانات",
   "Export all personal data held by your organization, or erase an individual's personal data on request.":
     "صدّر جميع البيانات الشخصية التي تحتفظ بها مؤسستك، أو احذف بيانات فرد عند الطلب.",
@@ -1156,15 +1184,7 @@ const DICT: Record<string, string> = {
   "Right to data portability (Art. 20) — JSON export": "حق نقل البيانات (المادة 20) — تصدير JSON",
   "Right to erasure (Art. 17) — customer anonymisation": "حق المحو (المادة 17) — إخفاء هوية العميل",
   "Consent records with audit trail": "سجلات الموافقة مع مسار تدقيق",
-  "Encryption of personal data at rest (AES-256-GCM)": "تشفير البيانات الشخصية أثناء التخزين (AES-256-GCM)",
   "A.9 Access control — RBAC + MFA": "A.9 التحكم في الوصول — RBAC + المصادقة الثنائية",
-  "A.12.4 Logging & monitoring — immutable audit log": "A.12.4 التسجيل والمراقبة — سجل تدقيق غير قابل للتعديل",
-  "A.10 Cryptography — field-level encryption + key rotation": "A.10 التشفير — تشفير على مستوى الحقل + تدوير المفاتيح",
-  "A.16 Incident management — threat detection feed": "A.16 إدارة الحوادث — تغذية كشف التهديدات",
-  "Security — signed URLs, security headers, rate limiting": "الأمان — روابط موقّعة، ترويسات أمان، تحديد المعدل",
-  "Confidentiality — tenant isolation on every query": "السرية — عزل المستأجرين في كل استعلام",
-  "Availability — backup/DR runbook": "التوفّر — دليل النسخ الاحتياطي والتعافي",
-  "Processing integrity — transactional ledger posting": "سلامة المعالجة — ترحيل دفتر الأستاذ ضمن معاملة",
 
   // ---- Topbar: command palette + notifications (audit polish) ----
   "Jump to a page…": "الانتقال إلى صفحة…",

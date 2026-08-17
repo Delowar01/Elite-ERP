@@ -635,10 +635,69 @@ asserting compliance it does not have.
 
 ---
 
-## Compliance Center asserts certifications the product does not hold (NEXT cleanup)
+## The append-only audit trigger was written and never installed (security gap)
 
-**Status:** open, found during the ZATCA audit, out of that commit's approved scope. This is the
-next cleanup, not a someday item — it is a **stronger** claim than any of the ZATCA wording.
+**Status:** open. Found while adding a live check to the readiness screen. This is a real security
+gap, not a labelling one — filed separately from the claims cleanup that surfaced it.
+
+`drizzle/immutable_audit.sql` creates BEFORE UPDATE/DELETE triggers on `audit_logs` and
+`security_events` that raise an exception, so even a compromised application account cannot rewrite
+history. **In the development database, neither trigger exists** — `pg_trigger` returns no
+non-internal triggers at all. The protection is written and unapplied.
+
+**What installs it, and what does not:**
+
+| path | installs the trigger? |
+|---|---|
+| `npm run db:push` (drizzle) | **No.** Drizzle pushes the schema; this file is separate SQL. |
+| `scripts/restore.sh:50` | **Yes** — a restored database gets it automatically. |
+| Fresh deploy | **A human checklist item only**: `docs/security/infrastructure.md:84` lists "`drizzle/immutable_audit.sql` applied; `UPDATE audit_logs` is rejected" as a manual box to tick. |
+| `tests/security/crypto-policy.test.mjs:55` | Reads the FILE and asserts its contents — it does not check whether the trigger is installed anywhere. A test pinning the artefact, not the state. |
+
+**Whether production has it is unknown from here.** Nothing in this repository records it, and this
+environment cannot reach production. It must be checked directly:
+
+```sql
+select tgname from pg_trigger where tgname in ('audit_logs_immutable','security_events_immutable');
+```
+
+**Installing it against an existing database is safe**, on the evidence available: the script is
+idempotent (`CREATE OR REPLACE FUNCTION`, `DROP TRIGGER IF EXISTS` before each `CREATE TRIGGER`), it
+only adds triggers, and a grep across `src/` and `scripts/` finds **no UPDATE or DELETE anywhere**
+against `audit_logs` or `security_events` — so nothing in the application would start failing. The
+one thing to confirm before running it in production is that no retention or pruning job deletes
+audit rows on a schedule; none exists in this repository.
+
+**Direction:** make the install part of the deploy path rather than a checklist item, and have the
+readiness screen keep asking (it now does — the control reads `pg_trigger` live and shows "Not
+detected in this deployment" when the trigger is absent, which is how this was found).
+
+---
+
+## Compliance Center asserted certifications the product does not hold — RESOLVED
+
+**Status: RESOLVED** in the compliance-claims cleanup. Kept for the trail, because the shape recurs.
+Originally: found during the ZATCA audit, out of that commit's scope — a **stronger** claim than any
+of the ZATCA wording.
+
+**What shipped:** the screen is now "Security & Compliance Readiness", an internal checklist that
+states plainly it is not a certification. The blanket "Compliant" pill is gone; the SOC 2 card is
+gone (its four controls were real, the trust-services mapping was not — they are listed under
+"Platform security", unmapped); ISO 27001 is labelled **roadmap**, with no "in progress" or
+"pursuing certification" wording, since no programme and no external audit has started. **No control
+is hardcoded satisfied**: each is `implemented` (present in this codebase), `live` (the deployment
+was actually asked — field encryption and the audit trigger), or `informational` (the product cannot
+see the state, e.g. backup execution). Both languages, and `verify-compliance-claims` asserts the
+claims absent — including the structural check that no group renders a full-marks badge, which is
+how the claim could return through a data change rather than a wording change.
+
+**The finding that mattered most:** "Encryption of personal data at rest (AES-256-GCM)" covered
+exactly two columns — `users.mfaSecret` and `users.mfaRecoveryCodes`. Customer names, emails,
+addresses and phone numbers are stored in **plaintext**. That was a false statement about a security
+property, not an overstated capability. It now names what is actually encrypted and no longer sits
+under GDPR. **Encrypting customer PII at rest is not on any list yet** — if it is wanted, it is its
+own task with a searchability problem to solve first (an encrypted column cannot be queried with
+`LIKE`).
 
 `settings/compliance/compliance-client.tsx` shows a green **"Compliant"** pill and three framework
 cards — **GDPR**, **ISO 27001**, **SOC 2** — with twelve controls between them.

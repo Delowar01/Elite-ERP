@@ -1,5 +1,6 @@
-import { desc } from "drizzle-orm";
+import { desc, sql } from "drizzle-orm";
 import { db, consentRecordsTable, customersTable } from "@/db";
+import { encryptionConfigured } from "@/lib/crypto/field-encryption";
 import { requireRole } from "@/lib/session";
 import { tenantScope } from "@/lib/tenant";
 import { getLocale } from "@/lib/i18n/server";
@@ -24,8 +25,21 @@ export default async function ComplianceCenterPage() {
     .orderBy(customersTable.name)
     .limit(500);
 
+  // The two controls whose real state this deployment can actually be asked about. Everything else
+  // on that screen is either build-time truth (the feature is in this codebase or it is not) or
+  // genuinely outside the application's view (backups, key rotation, incident process) — and those
+  // are shown as informational, never as satisfied.
+  const [fieldEncryption, auditTrigger] = await Promise.all([
+    Promise.resolve(encryptionConfigured()),
+    db
+      .execute(sql`select count(*)::int as n from pg_trigger where tgname in ('audit_logs_immutable','security_events_immutable')`)
+      .then((r) => Number((r.rows as unknown as { n: number }[])[0]?.n ?? 0) >= 2)
+      .catch(() => false),
+  ]);
+
   return (
     <ComplianceCenterClient
+      liveState={{ fieldEncryption, auditTrigger }}
       locale={locale}
       consents={consents.map((c) => ({
         id: c.id,

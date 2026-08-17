@@ -317,7 +317,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           )}
           <div className="feature-card">
             <div className="f-icon"><Lock className="size-4.5" /></div>
-            <div><div className="f-title">{t(locale, "Secure & Reliable")}</div><div className="f-sub">{t(locale, "Your data is encrypted")}</div></div>
+            <div><div className="f-title">{t(locale, "Secure & Reliable")}</div><div className="f-sub">{t(locale, "Encrypted connection, encrypted credentials")}</div></div>
           </div>
           <div className="feature-card">
             <div className="f-icon"><TrendingUp className="size-4.5" /></div>

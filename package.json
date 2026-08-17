@@ -40,6 +40,7 @@
     "verify:advance-release": "tsx --env-file-if-exists=.env --conditions=react-server verify/verify-advance-release.mts",
     "verify:credit-note-release": "tsx --env-file-if-exists=.env --conditions=react-server verify/verify-credit-note-release.mts",
     "verify:advance-refunds": "tsx --env-file-if-exists=.env --conditions=react-server verify/verify-advance-refunds.mts",
+    "verify:compliance-claims": "node --env-file-if-exists=.env verify/verify-compliance-claims.mjs",
     "verify:advance-clear": "tsx --env-file-if-exists=.env --conditions=react-server verify/verify-advance-clear.mts",
     "smoke:rates": "tsx --conditions=react-server scripts/smoke-rates.ts"
   },

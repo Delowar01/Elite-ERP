@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { ShieldCheck, Download, UserX, FileCheck2, CheckCircle2, Circle } from "lucide-react";
+import { Download, UserX, FileCheck2, CheckCircle2, Circle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -14,36 +14,84 @@ import { recordConsentAction, exportOrgDataAction, anonymizeCustomerAction, dele
 type ConsentRow = { id: number; subject: string; granted: boolean; version: string | null; createdAt: string };
 type CustomerRow = { id: number; name: string; email: string | null; isActive: boolean };
 
-// Control coverage shown to the operator — each maps to a feature actually shipped in the app.
-const FRAMEWORKS: { name: string; controls: { label: string; done: boolean }[] }[] = [
-  {
-    name: "GDPR",
-    controls: [
-      { label: "Right to data portability (Art. 20) — JSON export", done: true },
-      { label: "Right to erasure (Art. 17) — customer anonymisation", done: true },
-      { label: "Consent records with audit trail", done: true },
-      { label: "Encryption of personal data at rest (AES-256-GCM)", done: true },
-    ],
-  },
-  {
-    name: "ISO 27001",
-    controls: [
-      { label: "A.9 Access control — RBAC + MFA", done: true },
-      { label: "A.12.4 Logging & monitoring — immutable audit log", done: true },
-      { label: "A.10 Cryptography — field-level encryption + key rotation", done: true },
-      { label: "A.16 Incident management — threat detection feed", done: true },
-    ],
-  },
-  {
-    name: "SOC 2",
-    controls: [
-      { label: "Security — signed URLs, security headers, rate limiting", done: true },
-      { label: "Confidentiality — tenant isolation on every query", done: true },
-      { label: "Availability — backup/DR runbook", done: true },
-      { label: "Processing integrity — transactional ledger posting", done: true },
-    ],
-  },
-];
+/**
+ * An internal READINESS CHECKLIST — not a compliance certification, and not a claim about any
+ * external standard.
+ *
+ * What this screen used to do: show a green "Compliant" pill over twelve controls hardcoded
+ * `done: true`, under GDPR / ISO 27001 / SOC 2 headings. It therefore could not display anything
+ * but compliant, whatever the deployment's real state — and two of those three are CERTIFICATIONS
+ * issued by accredited auditors after a formal audit, not self-assessments. No certification is
+ * held. ISO 27001 is a roadmap item: no certification programme and no external audit engagement
+ * has started.
+ *
+ * The rules this list now follows:
+ *
+ *  - **No control is ever hardcoded satisfied.** `implemented` means the feature is present in this
+ *    codebase and can be pointed at; `live` means the deployment was actually asked (see
+ *    `liveState`); `informational` means the product cannot see the state and says so.
+ *  - **A control that maps to nothing real is dropped, not dressed.** The four SOC 2 controls were
+ *    real features under a trust-services mapping that was not; they are listed under "Platform
+ *    security", unmapped.
+ *  - **A control names what it actually covers.** "Encryption of personal data at rest" covered
+ *    `users.mfaSecret` and `users.mfaRecoveryCodes` only — customer names, emails, addresses and
+ *    phone numbers are stored in plaintext — so it now says what is encrypted and has left GDPR.
+ */
+type ControlState = "implemented" | "live-yes" | "live-no" | "informational";
+type Control = { label: string; state: ControlState };
+type Group = { name: string; note: string; controls: Control[] };
+
+function groupsFor(live: { fieldEncryption: boolean; auditTrigger: boolean }): Group[] {
+  return [
+    {
+      name: "GDPR",
+      note: "Internal privacy framework — self-assessed, not certified.",
+      controls: [
+        { label: "Right to data portability (Art. 20) — JSON export", state: "implemented" },
+        { label: "Right to erasure (Art. 17) — customer anonymisation", state: "implemented" },
+        { label: "Consent records with audit trail", state: "implemented" },
+      ],
+    },
+    {
+      name: "ISO 27001 — roadmap",
+      note: "Readiness only. No certification is held and no external audit has been engaged.",
+      controls: [
+        { label: "A.9 Access control — RBAC + MFA", state: "implemented" },
+        {
+          label: "A.12.4 Logging & monitoring — append-only audit log (application-level)",
+          state: "implemented",
+        },
+        {
+          // The one control whose state genuinely varies per deployment, so it is asked rather than
+          // asserted: drizzle/immutable_audit.sql has to be applied by hand after db:push.
+          label: "A.12.4 Database-level immutability trigger installed",
+          state: live.auditTrigger ? "live-yes" : "live-no",
+        },
+        { label: "A.10 Cryptography — field-level encryption with versioned keys (rotation-capable)", state: live.fieldEncryption ? "live-yes" : "live-no" },
+        { label: "A.16 Security event feed (detection only — no incident-response process)", state: "informational" },
+      ],
+    },
+    {
+      name: "Platform security",
+      note: "Security features shipped in this build. Not mapped to any external framework.",
+      controls: [
+        { label: "Signed URLs, security headers, rate limiting", state: "implemented" },
+        { label: "Tenant isolation on every query", state: "implemented" },
+        { label: "MFA secrets and recovery codes encrypted at rest (AES-256-GCM)", state: live.fieldEncryption ? "live-yes" : "live-no" },
+        { label: "Transactional ledger posting", state: "implemented" },
+        { label: "Backup/DR runbook documented — backup execution is not verified by the product", state: "informational" },
+      ],
+    },
+  ];
+}
+
+const STATE_LABEL: Record<ControlState, string> = {
+  implemented: "Implemented",
+  "live-yes": "Verified in this deployment",
+  "live-no": "Not detected in this deployment",
+  informational: "Informational",
+};
+
 
 const CONSENT_SUBJECTS = ["privacy_policy", "data_processing", "marketing_communications"];
 
@@ -51,8 +99,11 @@ function fmtDate(iso: string): string {
   return new Date(iso).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
-export function ComplianceCenterClient(props: { locale: Locale; consents: ConsentRow[]; customers: CustomerRow[] }) {
+export function ComplianceCenterClient(props: {
+  liveState: { fieldEncryption: boolean; auditTrigger: boolean };
+  locale: Locale; consents: ConsentRow[]; customers: CustomerRow[] }) {
   const { locale } = props;
+  const groups = groupsFor(props.liveState);
   const [pending, startTransition] = useTransition();
   const confirm = useConfirm();
 
@@ -132,38 +183,40 @@ export function ComplianceCenterClient(props: { locale: Locale; consents: Consen
   return (
     <div className="max-w-5xl mx-auto">
       <div className="main-head">
-        <h3>{t(locale, "Compliance Center")}</h3>
-        <span className="pill" style={{ background: "var(--good-bg)", color: "var(--good)", fontWeight: 700 }}>
-          <ShieldCheck className="size-3.5" /> {t(locale, "Compliant")}
-        </span>
+        <h3>{t(locale, "Security & Compliance Readiness")}</h3>
       </div>
 
-      {/* Framework posture */}
+      {/* Readiness groups. Deliberately NO "n/n" success badge: a full-marks badge is the visual
+          claim that drifted into certification theatre, and it can come back through a data change
+          rather than a wording change. Each control carries its own honest state instead. */}
+      <p className="text-[12.5px] text-ink-muted mb-4">
+        {t(locale, "An internal checklist of what this build implements. It is not a certification: no external audit has been carried out, and no framework compliance is claimed.")}
+      </p>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        {FRAMEWORKS.map((fw) => {
-          const done = fw.controls.filter((c) => c.done).length;
-          return (
-            <div key={fw.name} className="card" style={{ padding: "18px 20px" }}>
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <FileCheck2 className="size-4" style={{ color: "var(--brand-orange)" }} />
-                  <span className="text-[14px] font-bold">{fw.name}</span>
-                </div>
-                <Badge variant={done === fw.controls.length ? "success" : "warning"}>
-                  {done}/{fw.controls.length}
-                </Badge>
-              </div>
-              <ul className="flex flex-col gap-2">
-                {fw.controls.map((c, i) => (
-                  <li key={i} className="flex items-start gap-2 text-[12px] text-ink-muted">
-                    {c.done ? <CheckCircle2 className="size-3.5 mt-0.5 shrink-0" style={{ color: "var(--good)" }} /> : <Circle className="size-3.5 mt-0.5 shrink-0" />}
-                    <span>{t(locale, c.label)}</span>
-                  </li>
-                ))}
-              </ul>
+        {groups.map((g) => (
+          <div key={g.name} className="card" style={{ padding: "18px 20px" }}>
+            <div className="flex items-center gap-2 mb-1">
+              <FileCheck2 className="size-4" style={{ color: "var(--brand-orange)" }} />
+              <span className="text-[14px] font-bold">{t(locale, g.name)}</span>
             </div>
-          );
-        })}
+            <p className="text-[11.5px] text-ink-faint mb-3">{t(locale, g.note)}</p>
+            <ul className="flex flex-col gap-2">
+              {g.controls.map((c, i) => (
+                <li key={i} className="flex items-start gap-2 text-[12px] text-ink-muted">
+                  {c.state === "implemented" || c.state === "live-yes" ? (
+                    <CheckCircle2 className="size-3.5 mt-0.5 shrink-0" style={{ color: "var(--good)" }} />
+                  ) : (
+                    <Circle className="size-3.5 mt-0.5 shrink-0" />
+                  )}
+                  <span>
+                    {t(locale, c.label)}
+                    <span className="ms-1 text-[11px] text-ink-faint">— {t(locale, STATE_LABEL[c.state])}</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
       </div>
 
       {/* GDPR data subject rights */}
