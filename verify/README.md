@@ -180,11 +180,32 @@ were "an allocation that should have been marked fully released was not" and one
 landing a fils out. Three named assertions failed; the fourth, an exactness sum, passed by
 coincidence of rounding.
 
-**Two lessons.** Write the qualified name (`advance_applications.id`) in raw SQL rather than
-interpolating a column, and if a raw fragment computes a figure the app depends on, assert the
-figure against an independently written query. The suite here computes availability twice, once
-through the shipped helper and once through hand-written SQL in the fixture; the mismatch is what
-exposed it. A single source of truth in a test is only a test of itself.
+**You cannot judge an instance by reading the TypeScript.** A codebase-wide audit rendered every
+raw fragment that interpolates a column, and the same column object renders differently depending
+on where it sits:
+
+| context | renders as | safe? |
+|---|---|---|
+| single-table `.from()`, in the select list | `"id"` | **no** — rebinds inside a subquery |
+| joined query (two or more tables), select list | `"payments"."id"` | yes |
+| single-table `.from()`, in `.orderBy()` | `"orgs"."id"` | yes |
+
+**Safety is a property of the QUERY, not of the fragment.** Two subqueries in
+`listAvailableAdvancesForInvoice` are correct only because that query happens to join
+`proforma_invoices`; removing the join — an entirely plausible refactor — would silently break both,
+with no type error and no SQL error. Nobody will remember that a join three lines away is load-bearing
+for a fragment's correctness.
+
+**So: write the qualified name (`advance_applications.id`) in raw SQL rather than interpolating a
+column, even where the current query renders it safely.** And if a raw fragment computes a figure
+the app depends on, assert that figure against an independently written query. The suite here
+computes availability twice, once through the shipped helper and once through hand-written SQL in
+the fixture; the mismatch is what exposed it. A single source of truth in a test is only a test of
+itself.
+
+The audit's reassuring half is structural rather than lucky: reports, aging, statements and project
+costing interpolate columns only into FLAT aggregates (`sum(${journalLinesTable.debit})`), which
+have no nested scope for a bare name to rebind into.
 
 ### The mirror image: a failing suite that is also not telling you what it looks like
 

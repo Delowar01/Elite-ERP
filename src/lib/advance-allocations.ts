@@ -439,11 +439,29 @@ type EffectiveAllocation = {
  * The share of an allocation a release takes — proportional, or the EXACT remainder when the
  * release closes the allocation out.
  *
- * The same construction `carriedBaseFor` uses on the pot, one level down, and for the same reason:
- * three partial releases of one allocation must give back exactly what the allocation took, to the
- * fils, or an apply → release round-trip strands rounding in 2300 forever. Both base figures derive
- * from the same ratio, so an allocation with no FX difference (carried === AR) cannot acquire one
- * by being released in pieces.
+ * Both base figures derive from the same ratio, so an allocation with no FX difference
+ * (carried === AR) cannot acquire one by being released in pieces.
+ *
+ * ## What actually makes a run of releases exact — and what this branch is really for
+ *
+ * Exactness comes from RECOMPUTING the effective figures by subtraction before every release, not
+ * from the `full` branch below. Because each release is measured against `stored − already
+ * released`, the last one is handed a `releaseAmount` equal to what is left, its ratio is 1, and a
+ * plain proportional computation returns the same figures the remainder branch does. Removing the
+ * branch's arithmetic changes no number the system can produce: `releaseAmount` is always rounded
+ * at the document currency's minor unit and the effective amount is a difference of two stored
+ * amounts, so the two are either equal or a whole storable step apart — the epsilon window in
+ * between is unreachable by any input.
+ *
+ * So the branch is **defence in depth**, deliberately: it pins the exact remainder against float
+ * noise in that subtraction and against a future caller that computes `releaseAmount` some other
+ * way. It is not load-bearing, and the verification suites cannot falsify its arithmetic — stated
+ * here so it is not read as carrying weight it does not carry. `carriedBaseFor`'s equivalent branch
+ * on the pot IS load-bearing, because a draw there is chosen against an invoice's needs rather than
+ * derived from what is left.
+ *
+ * The `full` FLAG it returns is load-bearing and is tested: it decides whether the allocation is
+ * marked released, and a mutation that never sets it fails the suite.
  */
 export function releaseShareOf(args: {
   effective: EffectiveAllocation;
