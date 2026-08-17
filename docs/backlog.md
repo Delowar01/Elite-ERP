@@ -415,6 +415,27 @@ upstream of anything allocations can see.
 conversion, and decide whether existing converted invoices are backfilled (from what? the proforma
 has no project either) or left as history. Treat the backfill question as part of the task.
 
+### Underneath it: the revenue line has no stated definition
+
+Worth settling in the same task, because the column alone will not answer it. The report's revenue
+block reads quoted → confirmed → invoiced → **received** → outstandingReceivable, and the two
+possible meanings of "received" diverge exactly where advances live:
+
+- **cash collected against this project's INVOICES** — what the arithmetic commits to, since
+  `outstandingReceivable = invoiced − received` is only coherent under this reading; or
+- **cash received FOR this project** — what the label "Received Payments" suggests, and what a
+  business owner reading a cost-control screen is likely to assume.
+
+They differ by the **unapplied advance balance**: money in the bank for this project's work, which
+the report cannot attribute to a project at all, because it lives on a proforma and proformas carry
+no project. Allocations 8/9 made the figure match the first definition for the first time (see the
+numbers in that commit's report); it did not, and could not, give the report the second.
+
+**Recommendation when this is picked up:** the arithmetic is the binding definition — rename the
+line to say "collected against invoices", or add a separate advances-held figure once proformas
+carry a project. What should not survive is a label that implies one definition over arithmetic that
+implements the other.
+
 ## Two Saudi-shaped defaults in `seedOrgDefaults` (pre-existing, not fallout)
 
 **Status:** deferred, not started. Both predate the multi-currency work and are unchanged by it.
