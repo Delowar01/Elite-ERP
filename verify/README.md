@@ -163,12 +163,69 @@ The fix is to assert on the MECHANISM rather than the symptom: the suite now rea
 `SELECT … FOR UPDATE` against `payments` — and under the mutation it fails naming the real waiter,
 `Lock: insert into "advance_applications" …`.
 
+**A smaller instance, same family, from the compliance-claims suite.** After rendering a page in
+Arabic to check its wording, the suite called `page.context().clearCookies()` to get back to
+English. That cleared the SESSION cookie too, so the next navigation landed on the login page — and
+the dashboard assertion read an empty body and reported the product as missing a string it renders
+perfectly well. **The check failed for a real reason that had nothing to do with what it tested.**
+Set the state you mean to change (`locale=en`) rather than clearing everything and assuming only
+your thing went with it.
+
 **When an assertion depends on a cause rather than an outcome — a lock, a cache hit, a specific
 query path, an index being used — assert the cause.** "It was slow", "it blocked", "it errored" are
 all satisfiable by mechanisms other than the one under test. And state plainly what the proof does
 NOT establish: this one shows the read takes the lock, not that the lock is necessary, because a
 conversion serialises on its proforma row anyway. That proof needs two invoices drawing on one
 advance concurrently, and belongs where that is possible.
+
+### An assertion that punishes HONEST wording — the one that pushes the product the wrong way
+
+Every other entry here is an assertion that fails to catch a defect. This one is worse in kind: it
+catches nothing and **actively shapes the product in the wrong direction**.
+
+Guarding a screen against re-acquiring a false compliance claim, the obvious assertion is that the
+word is absent:
+
+```js
+ok('page does NOT claim "certified"', !body.includes("certified"));   // WRONG
+```
+
+It failed — because the corrected page says, honestly, *"self-assessed, not certified"*. The Arabic
+twin failed the same way: `"شهادة اعتماد"` appears inside `"ليست شهادة اعتماد"` — "is **not** a
+certification".
+
+Read what that assertion rewards. It passes most easily on a page that **says nothing at all about
+certification**. Left as written it would, over a few refactors, quietly delete the disclaimer it
+was meant to protect — the suite pressuring the product from truthful toward vague, one honest
+sentence at a time.
+
+**The fix has two halves, and the second is the one people forget:**
+
+1. Assert the **claim forms**, not the token: `"is certified"`, `"ISO 27001 certified"`,
+   `"حاصل على شهادة"`, `"معتمد من"`.
+2. **Pair every absence with a positive assertion that the page explicitly denies the claim** —
+   `not a certification` / `ليست شهادة اعتماد`. Now vagueness fails too, from the other side.
+
+**Generally: when an assertion forbids a word, ask what a page that trivially satisfies it looks
+like.** If the answer is "a page that says less", the assertion is aimed at the wrong thing. Forbid
+the claim; require the disclaimer.
+
+### Testing the ARTEFACT instead of the STATE
+
+`tests/security/crypto-policy.test.mjs` reads `drizzle/immutable_audit.sql` and asserts its
+contents — the triggers it declares, the tables it protects. It never asks whether those triggers
+exist in any database. They do not: `pg_trigger` in the development database returns no non-internal
+triggers at all. The protection was written, committed, reviewed, tested, and never installed.
+
+A file saying the right thing is not a system being in the right state. The same shape as a suite
+that never runs, one layer up — there, the check existed and was not executed; here, the check ran
+and inspected the wrong object.
+
+**Where this bites hardest is exactly where it happened: anything applied out-of-band.** SQL run by
+hand after a schema push, a cron entry, an nginx rule, a bucket policy, an environment variable.
+Assert the EFFECT where the effect lives — query `pg_trigger`, attempt the `UPDATE` and require it
+to fail, read the running config — and if a suite genuinely cannot reach the deployment, say so in
+the test name rather than asserting the file and calling it covered.
 
 ### A query that silently answers a different question than it asks
 

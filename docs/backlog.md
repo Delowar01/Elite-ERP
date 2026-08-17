@@ -635,6 +635,45 @@ asserting compliance it does not have.
 
 ---
 
+## Customer PII is stored in plaintext (high priority)
+
+**Status:** open. Surfaced by the compliance-claims cleanup, which removed a screen that said
+otherwise. Removing the false label did not close the gap.
+
+**What is encrypted today:** exactly two columns, `users.mfaSecret` and `users.mfaRecoveryCodes`,
+via `encryptField` (AES-256-GCM, versioned key ring, rotation-capable). That is the whole of
+application-layer encryption.
+
+**What is not:** every customer record — `customers.name`, `email`, `phone`, `address`, plus vendor
+and employee equivalents. They sit in plaintext in the database, so anyone with a database dump or
+app-DB credentials reads them directly. Transport is encrypted and disk-level encryption may exist
+at the infrastructure layer, but neither is what "encryption at rest" is usually taken to mean by
+someone reading a security page.
+
+**Why this is not a one-liner — start here rather than rediscovering it.** An encrypted column
+cannot be searched. Client search, the global search bar, sorting by name, `LIKE`-based lookups in
+imports, and duplicate detection all query these columns directly. Encrypting them naively breaks
+every one of those. The two known routes:
+
+1. **Deterministic blind index.** Store a keyed HMAC of a normalised form alongside the ciphertext
+   and query the index for equality (and prefix, with careful tokenisation). Exact and prefix lookup
+   keep working; substring search does not, without a token index. Deterministic values leak
+   equality — two customers with the same email are visibly the same — which is usually acceptable
+   for this data and must be a conscious decision, not an accident.
+2. **A separate unencrypted display/search column.** Keep a reduced form (display name only, no
+   contact detail) in plaintext for listing and search, encrypt the rest. Simpler, and it concedes
+   that the name itself is not protected — which may be the honest trade, since a customer list is
+   visible throughout the product anyway.
+
+**Also to decide:** what happens to existing rows (a backfill that re-writes every customer row),
+what happens when `FIELD_ENCRYPTION_KEYS` is absent in a dev environment (today `encryptField`
+throws — `encryptionConfigured()` exists precisely so callers can degrade), and whether exports and
+the GDPR portability JSON emit plaintext (they must, which means the export path decrypts).
+
+**Do not start this as a labelling fix.** It is a data-model change with a search redesign attached.
+
+---
+
 ## The append-only audit trigger was written and never installed (security gap)
 
 **Status:** open. Found while adding a live check to the readiness screen. This is a real security
@@ -668,7 +707,10 @@ against `audit_logs` or `security_events` — so nothing in the application woul
 one thing to confirm before running it in production is that no retention or pruning job deletes
 audit rows on a schedule; none exists in this repository.
 
-**Direction:** make the install part of the deploy path rather than a checklist item, and have the
+**Direction: the install belongs in the DEPLOY PATH, not on a checklist.** A control that depends on
+someone remembering to tick a box is not a control, it is a hope — and the evidence here is that the
+box went unticked. Make it run with the schema push (or immediately after it) so a fresh database
+cannot come up without it, and have the
 readiness screen keep asking (it now does — the control reads `pg_trigger` live and shows "Not
 detected in this deployment" when the trigger is absent, which is how this was found).
 
@@ -694,10 +736,9 @@ how the claim could return through a data change rather than a wording change.
 **The finding that mattered most:** "Encryption of personal data at rest (AES-256-GCM)" covered
 exactly two columns — `users.mfaSecret` and `users.mfaRecoveryCodes`. Customer names, emails,
 addresses and phone numbers are stored in **plaintext**. That was a false statement about a security
-property, not an overstated capability. It now names what is actually encrypted and no longer sits
-under GDPR. **Encrypting customer PII at rest is not on any list yet** — if it is wanted, it is its
-own task with a searchability problem to solve first (an encrypted column cannot be queried with
-`LIKE`).
+property, not an overstated capability. The label is fixed; **the gap it described is not**, and it
+has its own entry: see "Customer PII is stored in plaintext" above. It is filed separately on
+purpose — a resolved entry reads as done and nobody opens it.
 
 `settings/compliance/compliance-client.tsx` shows a green **"Compliant"** pill and three framework
 cards — **GDPR**, **ISO 27001**, **SOC 2** — with twelve controls between them.
