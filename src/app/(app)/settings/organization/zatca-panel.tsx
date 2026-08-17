@@ -12,15 +12,26 @@ import type { Org } from "@/db";
 import { enableZatcaPhase1Action } from "./actions";
 import { useConfirm } from "../../_shared/confirm-provider";
 
-// ZATCA E-Invoicing — Phase 1 only. Eligible Saudi orgs can enable Phase 1 after an explicit
-// confirmation. Once enabled it is locked on for organization users (no disable control here); the
-// panel shows a locked state explaining that only a backend administrator may turn it off.
+/**
+ * ZATCA Phase 1 — the org's own RECORD that it operates under Phase 1.
+ *
+ * What the product actually does is print a Phase 1 QR code on tax invoice PDFs. It generates no
+ * XML, no UUID, no cryptographic stamp; it acquires no CSID and talks to no ZATCA system. This
+ * panel therefore claims none of those. It previously described "the connection this organization
+ * uses to comply", showed Integration Status / CSID / Environment fields nothing ever writes, and
+ * said the QR "comes from this integration" — which was wrong twice over, since the QR is produced
+ * regardless of this flag and only on the print route.
+ *
+ * The flag itself is kept: it is an honest per-org record, audit-logged, and locked on for
+ * organization users once set (only a backend administrator may turn it off). Making it GATE the QR
+ * would remove QR codes from Saudi orgs that never enabled it — a behaviour change, filed with the
+ * country-leak entry rather than smuggled in here.
+ */
 export function ZatcaPanel({ locale, org }: { locale: Locale; org: Org }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const confirm = useConfirm();
   const enabled = org.zatcaPhase1Enabled;
-  const connected = Boolean(org.zatcaCsid);
 
   // Enabling is permanent for organization users, so it goes through the app-wide confirmation with
   // that consequence spelled out — rather than a dialog written only for this panel.
@@ -31,7 +42,7 @@ export function ZatcaPanel({ locale, org }: { locale: Locale; org: Org }) {
       entityNumber: "",
       confirmLabel: "Enable ZATCA Phase 1",
       description:
-        "This activates ZATCA Phase 1 e-invoicing for your organization. After enabling, you will not be able to disable it yourself — only a backend administrator or the Elite Marcom Platform Owner can.",
+        "This records ZATCA Phase 1 for your organization. After enabling, you will not be able to disable it yourself — only a backend administrator or the Elite Marcom Platform Owner can.",
       onConfirm: () =>
         new Promise<{ error?: string } | void>((resolve) => {
           startTransition(async () => {
@@ -50,9 +61,9 @@ export function ZatcaPanel({ locale, org }: { locale: Locale; org: Org }) {
 
   return (
     <div className="max-w-xl">
-      <h3 className="text-[17px] font-bold mb-1">{t(locale, "ZATCA E-Invoicing")}</h3>
+      <h3 className="text-[17px] font-bold mb-1">{t(locale, "ZATCA Phase 1")}</h3>
       <p className="text-[12.5px] text-ink-muted mb-4">
-        {t(locale, "ZATCA Phase 1 (Generation) e-invoicing for eligible Saudi organizations. The QR code and hash shown on every Tax Invoice come from this integration.")}
+        {t(locale, "Records that this organization operates under ZATCA Phase 1. A Phase 1 QR code is printed on tax invoice PDFs. There is no connection to ZATCA systems: no XML, no cryptographic stamping, no clearance or reporting.")}
       </p>
 
       {enabled ? (
@@ -67,22 +78,8 @@ export function ZatcaPanel({ locale, org }: { locale: Locale; org: Org }) {
               </Badge>
             </div>
             <p className="text-[12.5px] text-ink-muted">
-              {t(locale, "ZATCA Phase 1 is enabled for this organization and cannot be turned off from here. To comply with Saudi e-invoicing regulations, only a backend administrator or the Elite Marcom Platform Owner can disable it.")}
+              {t(locale, "ZATCA Phase 1 is recorded for this organization and cannot be turned off from here. Only a backend administrator or the Elite Marcom Platform Owner can turn it off.")}
             </p>
-            <div className="flex flex-col gap-2 text-[12.5px] border-t border-line pt-3">
-              <div className="flex justify-between border-b border-line pb-2">
-                <span className="text-ink-faint">{t(locale, "Integration Status")}</span>
-                <Badge variant={connected ? "success" : "neutral"}>{connected ? t(locale, "Connected") : t(locale, "Not Connected")}</Badge>
-              </div>
-              <div className="flex justify-between border-b border-line pb-2">
-                <span className="text-ink-faint">CSID</span>
-                <span className="font-mono text-xs">{org.zatcaCsid ?? "—"}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-ink-faint">{t(locale, "Environment")}</span>
-                <span>{org.zatcaEnvironment === "production" ? t(locale, "Production") : t(locale, "Sandbox")}</span>
-              </div>
-            </div>
           </CardContent>
         </Card>
       ) : (
@@ -93,7 +90,7 @@ export function ZatcaPanel({ locale, org }: { locale: Locale; org: Org }) {
               <Badge variant="neutral">{t(locale, "Not Enabled")}</Badge>
             </div>
             <p className="text-[12.5px] text-ink-muted">
-              {t(locale, "Enable ZATCA Phase 1 to activate compliant e-invoicing for this organization. Enabling is permanent for organization users — once on, it can only be turned off by a backend administrator.")}
+              {t(locale, "Record that this organization operates under ZATCA Phase 1. Enabling is permanent for organization users — once on, it can only be turned off by a backend administrator.")}
             </p>
             <div>
               <Button type="button" onClick={confirmEnable} disabled={pending}>

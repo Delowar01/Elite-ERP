@@ -64,7 +64,7 @@ export default async function OrganizationSettingsPage({ searchParams }: { searc
           {showZatca && (
             <>
               <SettingsNavGroupLabel>{t(locale, "Integrations")}</SettingsNavGroupLabel>
-              <SettingsNavItem value="zatca">{t(locale, "ZATCA E-Invoicing")}</SettingsNavItem>
+              <SettingsNavItem value="zatca">{t(locale, "ZATCA Phase 1")}</SettingsNavItem>
             </>
           )}
         </SettingsNavList>

@@ -462,7 +462,7 @@ export function QrPanel({ dataUrl }: { dataUrl: string }) {
     <div className="qr-panel">
       <div className="qr-box">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={dataUrl} alt="ZATCA e-invoice QR" />
+        <img src={dataUrl} alt="ZATCA Phase 1 QR code" />
       </div>
     </div>
   );

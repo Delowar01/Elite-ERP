@@ -6,6 +6,7 @@ import { SafeRichText } from "../../_shared/safe-rich-text";
 import { LineItemCell, LineDescRow } from "../../_shared/line-item-cell";
 import { db, salesInvoicesTable, salesInvoiceItemsTable, customersTable, salesOrdersTable, quotationsTable, orgsTable, bankAccountsTable, advanceApplicationsTable } from "@/db";
 import { requireSession } from "@/lib/session";
+import { getProfileByCountryName, profileHasFeature } from "@/lib/geo/country-profiles";
 import { getLocale } from "@/lib/i18n/server";
 import { t } from "@/lib/i18n/dict";
 import { can } from "@/lib/document-lifecycle";
@@ -236,7 +237,9 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
           )}
         </div>
 
-        <EInvoicePreviewPanel locale={locale} vatNumber={org.vatNumber} taxTotal={invoice.taxTotal} />
+        {profileHasFeature(getProfileByCountryName(org.country), "zatca_phase1") && (
+          <EInvoicePreviewPanel locale={locale} vatNumber={org.vatNumber} taxTotal={invoice.taxTotal} />
+        )}
       </div>
     </div>
     </CurrencyProvider>

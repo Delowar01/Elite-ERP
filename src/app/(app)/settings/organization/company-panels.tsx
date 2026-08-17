@@ -173,7 +173,7 @@ export function BusinessDetailsForm({ locale, org, postedCount }: { locale: Loca
             <div className="flex justify-between"><span className="text-ink-faint">{t(locale, "Tax Number Label")}</span><span>{t(locale, labels.taxNumberLabel)}</span></div>
             <div className="flex justify-between"><span className="text-ink-faint">{t(locale, "Registration Field")}</span><span>{t(locale, labels.registrationLabel)}</span></div>
             <div className="flex justify-between"><span className="text-ink-faint">{t(locale, "Default VAT Rate")}</span><span>{profile.defaultTaxRate}%</span></div>
-            <div className="flex justify-between"><span className="text-ink-faint">{t(locale, "E-Invoicing")}</span><span>{profile.enabledFeatures.includes("zatca_phase1") ? t(locale, "ZATCA Phase 1") : "—"}</span></div>
+            <div className="flex justify-between"><span className="text-ink-faint">{t(locale, "E-Invoicing")}</span><span>{profile.enabledFeatures.includes("zatca_phase1") ? t(locale, "ZATCA Phase 1 (QR only)") : "—"}</span></div>
           </div>
           {profile.configurable && (
             <div className="border-t border-line pt-3 mt-1 flex flex-col gap-3">

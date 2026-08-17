@@ -2,6 +2,7 @@ import { Fragment } from "react";
 import { ShoppingCart, FileText, Wallet, CreditCard, BookOpen, ChevronRight, FileSignature, Building2, UserPlus, Shield, Lock, TrendingUp, RefreshCw, Link2 } from "lucide-react";
 import Link from "next/link";
 import { requireSession } from "@/lib/session";
+import { getProfileByCountryName, profileHasFeature } from "@/lib/geo/country-profiles";
 import { getLocale } from "@/lib/i18n/server";
 import { t } from "@/lib/i18n/dict";
 import { getDashboardPrefs } from "@/lib/user-prefs";
@@ -38,6 +39,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   after(() => fireEnsureFreshRates(session.orgId));
   const locale = await getLocale();
   const prefs = await getDashboardPrefs(session.orgId, session.userId);
+  const showZatca = profileHasFeature(getProfileByCountryName(session.orgCountry), "zatca_phase1");
 
   const sp = await searchParams;
   const rangeKey: DashboardRange = isDashboardRange(sp.range) ? sp.range : prefs.range;
@@ -304,10 +306,15 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
 
       {featureStripVisible && (
         <div className="feature-strip">
-          <div className="feature-card">
-            <div className="f-icon"><Shield className="size-4.5" /></div>
-            <div><div className="f-title">{t(locale, "ZATCA Compliant")}</div><div className="f-sub">{t(locale, "E-invoicing ready")}</div></div>
-          </div>
+          {/* Phase 1 is a printed QR, not a compliance certification and not a ZATCA connection — and
+              the card is shown only where the country profile enables it, so a UAE org is not told
+              about a Saudi scheme. */}
+          {showZatca && (
+            <div className="feature-card">
+              <div className="f-icon"><Shield className="size-4.5" /></div>
+              <div><div className="f-title">{t(locale, "ZATCA Phase 1 QR")}</div><div className="f-sub">{t(locale, "On printed tax invoices")}</div></div>
+            </div>
+          )}
           <div className="feature-card">
             <div className="f-icon"><Lock className="size-4.5" /></div>
             <div><div className="f-title">{t(locale, "Secure & Reliable")}</div><div className="f-sub">{t(locale, "Your data is encrypted")}</div></div>

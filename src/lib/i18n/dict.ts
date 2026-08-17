@@ -368,16 +368,6 @@ const DICT: Record<string, string> = {
   "Permanently deleting a record from any Recycle Bin additionally requires Owner or Admin, regardless of module.":
     "الحذف النهائي لأي سجل من سلة المحذوفات يتطلب أيضًا صلاحية المالك أو المشرف، بغض النظر عن الوحدة.",
 
-  "The connection this organization uses to comply with ZATCA Phase 1/2 e-invoicing. The QR code and hash shown on every Tax Invoice come from this integration.":
-    "الاتصال الذي تستخدمه هذه المؤسسة للامتثال للفوترة الإلكترونية زاتكا المرحلة 1/2. رمز QR والبصمة الظاهران في كل فاتورة ضريبية مصدرهما هذا التكامل.",
-  "Integration Status": "حالة التكامل",
-  Connected: "متصل",
-  "Not Connected": "غير متصل",
-  Environment: "البيئة",
-  Production: "بيئة الإنتاج",
-  Sandbox: "بيئة تجريبية",
-  "Certificate expires": "تاريخ انتهاء الشهادة",
-  "Not connected yet — ZATCA onboarding is built alongside the Invoice module.": "لم يتم الاتصال بعد — سيُبنى إعداد زاتكا مع وحدة الفواتير.",
 
   // ---- Team ----
   "Members of your organization and their access level.": "أعضاء مؤسستك ومستوى صلاحياتهم.",
@@ -651,11 +641,12 @@ const DICT: Record<string, string> = {
   "Write invoice title here…": "اكتب عنوان الفاتورة هنا…",
   "Search invoice number, client…": "ابحث برقم الفاتورة أو اسم العميل…",
   "Total Invoices": "إجمالي الفواتير",
-  "E-Invoice": "الفاتورة الإلكترونية",
-  "E-Invoice preview": "معاينة الفاتورة الإلكترونية",
-  "Generated automatically on send — QR encodes seller VAT, timestamp, and totals per ZATCA Phase 1.":
-    "تُنشأ تلقائيًا عند الإرسال — يشفّر رمز QR الرقم الضريبي للبائع والطابع الزمني والإجماليات وفق المرحلة الأولى من زاتكا.",
-  "Invoice type": "نوع الفاتورة",
+  "Tax Invoice QR": "رمز QR للفاتورة الضريبية",
+  "Tax Invoice QR preview": "معاينة رمز QR للفاتورة الضريبية",
+  "A ZATCA Phase 1 QR is added to the printed PDF of this invoice. It encodes seller name, VAT number, invoice date, total and VAT amount.":
+    "يُضاف رمز QR للمرحلة الأولى من زاتكا إلى ملف PDF المطبوع لهذه الفاتورة، ويتضمن اسم البائع والرقم الضريبي وتاريخ الفاتورة والإجمالي وقيمة الضريبة.",
+  "The ZATCA Phase 1 QR on this invoice's printed PDF encodes seller name, VAT number, invoice date, total and VAT amount.":
+    "رمز QR للمرحلة الأولى من زاتكا في ملف PDF المطبوع لهذه الفاتورة يتضمن اسم البائع والرقم الضريبي وتاريخ الفاتورة والإجمالي وقيمة الضريبة.",
   "Seller VAT": "الرقم الضريبي للبائع",
   "VAT total": "إجمالي ضريبة القيمة المضافة",
 
@@ -780,18 +771,18 @@ const DICT: Record<string, string> = {
   "Default per document type": "الافتراضي لكل نوع مستند",
   "Save defaults": "حفظ الإعدادات الافتراضية",
   // ZATCA Phase 1
-  "ZATCA Phase 1 (Generation) e-invoicing for eligible Saudi organizations. The QR code and hash shown on every Tax Invoice come from this integration.":
-    "فوترة المرحلة الأولى (الإصدار) من هيئة الزكاة والضريبة للمؤسسات السعودية المؤهلة. يأتي رمز الاستجابة السريعة والتجزئة الظاهران على كل فاتورة ضريبية من هذا التكامل.",
+  "Records that this organization operates under ZATCA Phase 1. A Phase 1 QR code is printed on tax invoice PDFs. There is no connection to ZATCA systems: no XML, no cryptographic stamping, no clearance or reporting.":
+    "يسجّل أن هذه المؤسسة تعمل ضمن المرحلة الأولى من زاتكا. يُطبع رمز QR للمرحلة الأولى على ملفات PDF للفواتير الضريبية. لا يوجد اتصال بأنظمة زاتكا: لا ملفات XML ولا ختم تشفيري ولا مقاصة أو إبلاغ.",
   "Enabled — Locked": "مُفعّل — مقفل",
-  "ZATCA Phase 1 is enabled for this organization and cannot be turned off from here. To comply with Saudi e-invoicing regulations, only a backend administrator or the Elite Marcom Platform Owner can disable it.":
-    "المرحلة الأولى من هيئة الزكاة والضريبة مُفعّلة لهذه المؤسسة ولا يمكن إيقافها من هنا. للامتثال للوائح الفوترة الإلكترونية السعودية، يستطيع فقط مسؤول النظام أو مالك منصة إيليت ماركوم إيقافها.",
+  "ZATCA Phase 1 is recorded for this organization and cannot be turned off from here. Only a backend administrator or the Elite Marcom Platform Owner can turn it off.":
+    "المرحلة الأولى من زاتكا مسجَّلة لهذه المؤسسة ولا يمكن إيقافها من هنا. يمكن لمسؤول النظام أو مالك منصة إيليت ماركوم فقط إيقافها.",
   "Not Enabled": "غير مُفعّل",
-  "Enable ZATCA Phase 1 to activate compliant e-invoicing for this organization. Enabling is permanent for organization users — once on, it can only be turned off by a backend administrator.":
-    "فعّل المرحلة الأولى من هيئة الزكاة والضريبة لتشغيل الفوترة الإلكترونية المتوافقة لهذه المؤسسة. التفعيل دائم لمستخدمي المؤسسة — بمجرد تفعيله لا يمكن إيقافه إلا بواسطة مسؤول النظام.",
+  "Record that this organization operates under ZATCA Phase 1. Enabling is permanent for organization users — once on, it can only be turned off by a backend administrator.":
+    "سجّل أن هذه المؤسسة تعمل ضمن المرحلة الأولى من زاتكا. التفعيل دائم لمستخدمي المؤسسة — بعد التفعيل لا يمكن إيقافه إلا بواسطة مسؤول النظام.",
   "Enable ZATCA Phase 1": "تفعيل المرحلة الأولى من هيئة الزكاة والضريبة",
   "Enable ZATCA Phase 1?": "تفعيل المرحلة الأولى من هيئة الزكاة والضريبة؟",
-  "This activates ZATCA Phase 1 e-invoicing for your organization. After enabling, you will not be able to disable it yourself — only a backend administrator or the Elite Marcom Platform Owner can. Do you want to continue?":
-    "يؤدي هذا إلى تفعيل فوترة المرحلة الأولى من هيئة الزكاة والضريبة لمؤسستك. بعد التفعيل، لن تتمكن من إيقافه بنفسك — يستطيع ذلك فقط مسؤول النظام أو مالك منصة إيليت ماركوم. هل تريد المتابعة؟",
+  "This records ZATCA Phase 1 for your organization. After enabling, you will not be able to disable it yourself — only a backend administrator or the Elite Marcom Platform Owner can. Do you want to continue?":
+    "يسجّل هذا المرحلة الأولى من زاتكا لمؤسستك. بعد التفعيل لن تتمكن من إيقافه بنفسك — يمكن لمسؤول النظام أو مالك منصة إيليت ماركوم فقط ذلك. هل تريد المتابعة؟",
   "Enabling…": "جارٍ التفعيل…",
   "ZATCA Phase 1 enabled.": "تم تفعيل المرحلة الأولى من هيئة الزكاة والضريبة.",
 
@@ -868,8 +859,8 @@ const DICT: Record<string, string> = {
   "Total Employees": "إجمالي الموظفين",
   "HR module not yet available.": "وحدة الموارد البشرية غير متاحة بعد.",
   "Go to HRM": "الذهاب إلى الموارد البشرية",
-  "ZATCA Compliant": "متوافق مع زاتكا",
-  "E-invoicing ready": "جاهز للفوترة الإلكترونية",
+  "ZATCA Phase 1 QR": "رمز QR — المرحلة الأولى",
+  "On printed tax invoices": "على الفواتير الضريبية المطبوعة",
   "Secure & Reliable": "آمن وموثوق",
   "Your data is encrypted": "بياناتك مشفّرة",
   "Real-time Insights": "رؤى فورية",
@@ -1526,6 +1517,7 @@ const DICT: Record<string, string> = {
   "Default VAT Rate": "نسبة ضريبة القيمة المضافة الافتراضية",
   "E-Invoicing": "الفوترة الإلكترونية",
   "ZATCA Phase 1": "هيئة الزكاة والضريبة — المرحلة الأولى",
+  "ZATCA Phase 1 (QR only)": "هيئة الزكاة والضريبة — المرحلة الأولى (رمز QR فقط)",
   "from your country profile": "من ملف دولتك",
   "This country has no dedicated profile — customize the tax terminology below.": "لا يوجد ملف مخصص لهذه الدولة — يمكنك تخصيص المصطلحات الضريبية أدناه.",
 

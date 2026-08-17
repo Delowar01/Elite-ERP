@@ -28,7 +28,7 @@ import { ConfigureColumnsDialog } from "../_shared/configure-columns-dialog";
 import { resolveColumns, type ColumnDef } from "@/lib/column-config";
 import { t, type Locale } from "@/lib/i18n/dict";
 import { useDirtyForm } from "../../_shared/dirty-form";
-import { getProfileByCountryName } from "@/lib/geo/country-profiles";
+import { getProfileByCountryName, profileHasFeature } from "@/lib/geo/country-profiles";
 import type { ContentPreset } from "@/lib/document-presets";
 import type { Customer, Product, Org } from "@/db";
 import { createInvoiceAction, updateInvoiceAction } from "./actions";
@@ -293,7 +293,11 @@ export function InvoiceForm({
         <TermsBlock locale={locale} notes={notes} onNotesChange={setNotes} terms={terms} onTermsChange={setTerms} noteTemplates={noteTemplates} termsGroups={termsGroups} attachments={attachments} onAttachmentsChange={setAttachments} />
         <div className="flex flex-col gap-4">
           <TotalsCard locale={locale} subtotal={totals.subtotal} discount={discount} onDiscountChange={setDiscount} taxTotal={totals.taxTotal} total={totals.total} />
-          <EInvoicePreviewPanel locale={locale} vatNumber={org.vatNumber} taxTotal={totals.taxTotal} variant="create" />
+          {/* Shown only where the country profile enables ZATCA Phase 1 — a Saudi scheme is not
+              described to organizations it does not apply to. */}
+          {profileHasFeature(countryProfile, "zatca_phase1") && (
+            <EInvoicePreviewPanel locale={locale} vatNumber={org.vatNumber} taxTotal={totals.taxTotal} variant="create" />
+          )}
         </div>
       </div>
 

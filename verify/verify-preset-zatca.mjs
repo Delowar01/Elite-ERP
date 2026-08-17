@@ -103,6 +103,41 @@ const q2=await makeQuote(true);
 const {rows:q2r}=await pool.query("select seal_url from quotations where id=$1",[q2]);
 ok("Per-document override 'No seal' applies (#7)", q2r[0].seal_url===null);
 
+// ============ Part 5: the product must not claim more than it does ============
+// Every string here was live before the claims cleanup. They are asserted ABSENT rather than the
+// replacements asserted present, because the failure being guarded against is a claim coming BACK
+// — a reworded label can be improved again freely, but "ZATCA Compliant" must never reappear.
+console.log("\n== Part 5: ZATCA claims are truthful ==");
+await p.goto(`${BASE}/settings/organization?tab=zatca`,{waitUntil:"networkidle"}); await p.waitForTimeout(400);
+const zc = await p.locator("body").innerText();
+for (const claim of [
+  "come from this integration",   // the QR does not; it is printed regardless of this flag
+  "Integration Status",           // no integration exists
+  "CSID",                         // never acquired, never written
+  "Not Connected",                // a status for a connection that does not exist
+  "compliant e-invoicing",        // Phase 1 is a printed QR, not a compliance posture
+  "Phase 1/2",                    // the only explicit Phase 2 claim in the codebase
+]) ok(`ZATCA settings does NOT claim "${claim}"`, !zc.includes(claim));
+
+await p.goto(`${BASE}/dashboard`,{waitUntil:"networkidle"}); await p.waitForTimeout(400);
+const dash = await p.locator("body").innerText();
+ok("Dashboard does NOT say 'ZATCA Compliant'", !dash.includes("ZATCA Compliant"));
+ok("Dashboard does NOT say 'E-invoicing ready'", !dash.includes("E-invoicing ready"));
+
+// A NON-Saudi org must see no ZATCA wording at all: the country profile gates the surface.
+await pool.query("update orgs set country='United Arab Emirates' where id=$1",[orgId]);
+await p.goto(`${BASE}/dashboard`,{waitUntil:"networkidle"}); await p.waitForTimeout(400);
+ok("Non-Saudi org: dashboard mentions no ZATCA at all", !(await p.locator("body").innerText()).includes("ZATCA"));
+await p.goto(`${BASE}/sales/invoices/new`,{waitUntil:"networkidle"}); await p.waitForTimeout(600);
+ok("Non-Saudi org: the invoice builder shows no e-invoice panel", !(await p.locator("body").innerText()).includes("ZATCA"));
+await pool.query("update orgs set country='Saudi Arabia' where id=$1",[orgId]);
+await p.goto(`${BASE}/sales/invoices/new`,{waitUntil:"networkidle"}); await p.waitForTimeout(600);
+const saudiNew = await p.locator("body").innerText();
+ok("Saudi org: the QR preview IS shown, described as printed-PDF only",
+  saudiNew.includes("Tax Invoice QR") && saudiNew.includes("printed PDF"));
+ok("Saudi org: no 'ZATCA-aligned' badge, no 'Invoice type' literal",
+  !saudiNew.includes("ZATCA-aligned") && !saudiNew.includes("Invoice type"));
+
 await b.close(); await pool.end();
 console.log(`\n${fail===0?"ALL PASSED":fail+" CHECK(S) FAILED"}`);
 process.exit(fail===0?0:1);

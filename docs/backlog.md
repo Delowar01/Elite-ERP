@@ -594,10 +594,105 @@ payment's own currency plus a rate, or only a base amount.
 
 ---
 
+## ZATCA output sits in the GENERIC invoice path with no country condition (high priority)
+
+**Status:** open. The UI half was corrected in the claims-cleanup commit; the OUTPUT half was not,
+deliberately, because closing it changes behaviour.
+
+**The leak.** `print/[type]/[id]/page.tsx` computes the TLV, persists `qrCodeData` + `invoiceHash`
+and renders the QR for **any non-draft sales invoice**, with no country condition and no check of
+`orgs.zatcaPhase1Enabled`. `sales_invoices` carries four ZATCA columns (`invoiceType`,
+`qrCodeData`, `invoiceHash`, `previousInvoiceHash`) for every org in every country.
+
+**The gate exists but guards the wrong thing.** `enableZatcaPhase1Action` is properly country-gated
+(`profileHasFeature(profile, "zatca_phase1")`, Saudi only) — it just controls a flag that no invoice
+code reads. So the country condition protects a record, while the actual Saudi-specific output is
+ungated.
+
+**AFTER THE CLEANUP COMMIT THE LEAK IS ASYMMETRIC — read this before starting.** The dashboard card
+and the invoice e-invoice panel are now gated on the country profile, so a non-Saudi org sees
+nothing about ZATCA in the interface. Its printed invoice PDFs still carry a ZATCA QR. That is the
+better direction to be wrong in (nothing is claimed to the user), but it means the UI has already
+moved and only the output is left. Do not assume the two are still in the same state.
+
+**What closing it means.** Put the QR behind the same gate: country profile, and probably
+`zatcaPhase1Enabled` too. Note the consequence that made it a separate task — **a Saudi org that
+never enabled the flag would lose the QR it prints today**, which is a behaviour change needing a
+decision (backfill-enable existing Saudi orgs? gate on country only?). 4 of 818 orgs here have the
+flag set; 4 invoices carry a QR.
+
+**Then the same treatment per country.** UAE, Bahrain and Oman are each moving on e-invoicing at
+their own pace, and each will want its own module behind its own profile feature. Whether Phase 2
+is "one country's module" or "a fork of the invoice engine" is decided by whether this leak is
+closed first — with it open, every country's rules accumulate in one print route.
+
+**Phase 2, described correctly.** ZATCA Phase 2 (Integration) is **wave-based**: ZATCA notifies
+taxpayers individually, in waves defined by taxpayer-specific revenue thresholds, each with its own
+integration date. There is **no single blanket deadline** by which all VAT-registered businesses
+above one revenue figure became mandatory — do not write one into this file, a screen, or a commit
+message. A product asserting a blanket legal deadline is the same class of error as a product
+asserting compliance it does not have.
+
+---
+
+## Compliance Center asserts certifications the product does not hold (NEXT cleanup)
+
+**Status:** open, found during the ZATCA audit, out of that commit's approved scope. This is the
+next cleanup, not a someday item — it is a **stronger** claim than any of the ZATCA wording.
+
+`settings/compliance/compliance-client.tsx` shows a green **"Compliant"** pill and three framework
+cards — **GDPR**, **ISO 27001**, **SOC 2** — with twelve controls between them.
+
+**Two distinct problems, and the second is the serious one:**
+
+1. **All twelve controls are hardcoded `done: true`.** The list is a literal in the component; no
+   control is evaluated against the deployment. The screen therefore **cannot ever show anything
+   but compliant**, whatever the actual state of the installation — the same "a screen asserting a
+   posture the code does not check" shape as the ZATCA panel.
+
+2. **Two of the three are CERTIFICATIONS, not self-assessments.** GDPR is a regulation an
+   organization can reasonably assess itself against, and the four controls listed under it do map
+   to shipped features. **ISO 27001 and SOC 2 are issued by accredited auditors after a formal
+   audit.** Displaying them as satisfied is not overstating a capability — it is asserting a
+   credential that does not exist. That is a materially different claim from "our QR is ZATCA
+   Phase 1 shaped".
+
+**Direction when picked up:** keep the control inventory (it is a genuinely useful map of shipped
+security features), drop the framework branding and the blanket pill, or re-title it as an internal
+readiness checklist that names what is implemented without claiming an external standard is met.
+
+---
+
+## ZATCA Phase 1 QR carries a FABRICATED timestamp
+
+**Status:** open, found in the ZATCA audit. Sibling of the currency defect below — same three lines
+of code, same persisted-artefact problem, deliberately filed as two bugs because the fixes differ.
+
+`src/app/print/[type]/[id]/page.tsx` builds tag 3 (timestamp) as:
+
+```ts
+timestamp: `${inv.issueDate}T00:00:00Z`
+```
+
+That is a DATE at midnight UTC, not the invoice's issue date-time. Two consequences:
+
+- It states a time the invoice was not issued at — every invoice claims 00:00:00Z.
+- For a KSA seller (UTC+3) it lands on the **wrong day** at the boundary: an invoice issued on the
+  5th at 01:00 local is 4 August 22:00 UTC, and this encodes `2026-08-05T00:00:00Z` regardless.
+
+`sales_invoices` stores `issueDate` as a DATE, so the fix needs a source for the time — either a
+posting timestamp (`createdAt` is the closest existing field) or a new column — plus the same
+decision the currency defect needs about invoices whose TLV is already persisted.
+
+---
+
 ## ZATCA QR encodes document-currency figures on foreign invoices
 
-**Status:** open, found during FX-6 (posting-time capture). Reported rather than fixed, because the
-TLV is persisted on first print and a change here alters an existing compliance artefact.
+**Status:** open, found during FX-6 (posting-time capture), re-confirmed live in the ZATCA audit.
+Reported rather than fixed, because the TLV is persisted on first print and a change here alters an
+existing compliance artefact. **Sibling of the fabricated-timestamp defect above** — both are in the
+same TLV construction, and whichever is fixed first should settle the regenerate-or-leave question
+for the other.
 
 The QR's tag 4 (total) and tag 5 (VAT amount) are built in `src/app/print/[type]/[id]/page.tsx`
 from `inv.total` / `inv.taxTotal` rounded at the DOCUMENT's currency. For a USD invoice in a KSA

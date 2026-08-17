@@ -2,41 +2,44 @@ import { QrCode } from "lucide-react";
 import { t, type Locale } from "@/lib/i18n/dict";
 import { Money } from "./money";
 
-// Matches the mockup's invoice_main e-invoice/ZATCA panel exactly:
-// <div class="card einvoice-panel"><div class="eh">... .qr-box .zatca-fields .zf ...
+/**
+ * A preview of the ZATCA PHASE 1 QR — nothing more.
+ *
+ * What the system actually produces is a QR code on the PRINTED PDF of a tax invoice, encoding
+ * seller name, VAT number, invoice date, total and VAT amount. There is no XML, no UUID, no
+ * cryptographic stamp, no CSID, no clearance or reporting, and no connection to ZATCA systems, so
+ * this panel says only what the printed document carries. The earlier "ZATCA-aligned" badge and
+ * "generated on send" wording claimed a compliance posture and a moment that do not exist.
+ *
+ * Rendered only where the country profile enables `zatca_phase1` — the caller gates it, so a UAE
+ * organization is not shown a Saudi scheme.
+ */
 export function EInvoicePreviewPanel({
   locale,
   vatNumber,
   taxTotal,
-  invoiceType = "Simplified",
   variant = "detail",
 }: {
   locale: Locale;
   vatNumber?: string | null;
   taxTotal: string;
-  invoiceType?: string;
   /** "detail" = sticky sidebar on the invoice detail page; "create" = static panel next to the create form's totals card. */
   variant?: "detail" | "create";
 }) {
   return (
     <div className="card einvoice-panel" style={variant === "create" ? { position: "static", maxWidth: "100%", padding: 18 } : undefined}>
       <div className="eh">
-        <h4>{variant === "create" ? t(locale, "E-Invoice preview") : t(locale, "E-Invoice")}</h4>
-        <span className="badge-zatca">ZATCA-aligned</span>
+        <h4>{variant === "create" ? t(locale, "Tax Invoice QR preview") : t(locale, "Tax Invoice QR")}</h4>
       </div>
       <div className="desc">
         {variant === "create"
-          ? t(locale, "Generated automatically on send — QR encodes seller VAT, timestamp, and totals per ZATCA Phase 1.")
-          : t(locale, "Simplified tax invoice fields per ZATCA Phase 1. QR encodes seller, VAT number, timestamp, and totals.")}
+          ? t(locale, "A ZATCA Phase 1 QR is added to the printed PDF of this invoice. It encodes seller name, VAT number, invoice date, total and VAT amount.")
+          : t(locale, "The ZATCA Phase 1 QR on this invoice's printed PDF encodes seller name, VAT number, invoice date, total and VAT amount.")}
       </div>
       <div className="qr-box flex items-center justify-center text-ink-faint">
         <QrCode className="size-9" />
       </div>
       <div className="zatca-fields">
-        <div className="zf">
-          <span className="k">{t(locale, "Invoice type")}</span>
-          <span className="v">{invoiceType}</span>
-        </div>
         <div className="zf">
           <span className="k">{t(locale, "Seller VAT")}</span>
           <span className="v">{vatNumber ?? "—"}</span>
