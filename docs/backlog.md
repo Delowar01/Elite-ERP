@@ -307,8 +307,21 @@ Clearing it destroys the fact with no record anywhere. So the script counts that
 5. **Deploy the application code.**
 6. `npx tsx … 2026-08-17-clear-advance-sales-invoice-id.ts` — dry run (expect a zero refusal count
    after step 4), then `--apply`. `--org N` rolls it out one tenant at a time.
+7. **`npm run db:harden`** — install the append-only triggers on `audit_logs` and `security_events`.
+   In a browser SQL console instead, paste `drizzle/immutable_audit.sql` whole.
 
-Steps 4 and 6 are both idempotent; re-running either finds nothing to do.
+Steps 4, 6 and 7 are all idempotent; re-running any of them finds nothing to do.
+
+**Step 7 in the same terms as the two migrations:**
+
+| | |
+|---|---|
+| **What it does** | Creates `reject_mutation()` and two BEFORE UPDATE/DELETE triggers that raise an exception, so `audit_logs` and `security_events` become append-only **at the database level** — a compromised application account, or anyone holding app-DB credentials, can no longer rewrite history. |
+| **Reversible?** | Yes — `DROP TRIGGER audit_logs_immutable ON audit_logs;` (and the same for `security_events_immutable`). Nothing about the data changes, so there is no one-way door here. |
+| **Correct output** | `DB hardening: installed audit_logs_immutable, security_events_immutable.` On a second run: `already present, re-applied cleanly`. |
+| **Verification** | `select tgname from pg_trigger where tgname in ('audit_logs_immutable','security_events_immutable');` must return **two rows**. The stronger check is the effect: `update audit_logs set action='x' where id = (select id from audit_logs limit 1);` must fail with `Table audit_logs is append-only; UPDATE is not permitted`. |
+| **Where in the order** | **Last — after the code deploy AND after the clear.** Not because it depends on them, but so the three cannot be confused: if the deploy or the clear goes wrong, the failure is theirs and the trigger is not yet in the picture. It is also the only step that can be run at any later time with no sequencing consequence. |
+| **Why it is a step at all** | It was a checklist line in `docs/security/infrastructure.md` and had been ticked nowhere: **production was checked and neither trigger existed**. `npm run db:push` now chains `db:harden`, so a fresh database cannot come up without it, and `verify:db-hardening` fails the standard gate when they are absent. |
 
 **Deploy the phase WHOLE — steps 5 is not divisible.** The switch to allocation-keyed application
 journals happens in Allocations 3/9; the statements reader that resolves them is fixed in 8/9.
@@ -693,8 +706,11 @@ non-internal triggers at all. The protection is written and unapplied.
 | Fresh deploy | **A human checklist item only**: `docs/security/infrastructure.md:84` lists "`drizzle/immutable_audit.sql` applied; `UPDATE audit_logs` is rejected" as a manual box to tick. |
 | `tests/security/crypto-policy.test.mjs:55` | Reads the FILE and asserts its contents — it does not check whether the trigger is installed anywhere. A test pinning the artefact, not the state. |
 
-**Whether production has it is unknown from here.** Nothing in this repository records it, and this
-environment cannot reach production. It must be checked directly:
+**PRODUCTION WAS CHECKED: the triggers are ABSENT.** The query below returned **no rows** against
+production — neither `audit_logs` nor `security_events` carries an immutability trigger. The control
+was written, committed, reviewed, covered by a test that reads the file, and installed in no
+environment that matters. A confirmed absence is a stronger fact than an unknown, and it is the
+whole argument for putting the install in the deploy path rather than in a document:
 
 ```sql
 select tgname from pg_trigger where tgname in ('audit_logs_immutable','security_events_immutable');
@@ -707,7 +723,17 @@ against `audit_logs` or `security_events` — so nothing in the application woul
 one thing to confirm before running it in production is that no retention or pruning job deletes
 audit rows on a schedule; none exists in this repository.
 
-**Direction: the install belongs in the DEPLOY PATH, not on a checklist.** A control that depends on
+**RESOLVED IN THE TOOLING, still to be run against production.** `npm run db:push` now chains
+`npm run db:harden` (`scripts/apply-db-hardening.ts`), so a fresh database cannot come up without
+the triggers, and `verify:db-hardening` — part of the standard `verify:server` gate — fails when
+they are missing. The script is Node + `pg` rather than a `psql` invocation on purpose: `psql` is not
+installed on every machine or CI image that can run this app, and a hardening step that silently
+no-ops where the client binary is missing would reproduce the original failure in a new costume.
+The allocation phase's runbook carries it as step 7. **What remains is running it against
+production**, which the runbook now sequences.
+
+**The original direction, kept because the reasoning is the point: the install belongs in the DEPLOY
+PATH, not on a checklist.** A control that depends on
 someone remembering to tick a box is not a control, it is a hope — and the evidence here is that the
 box went unticked. Make it run with the schema push (or immediately after it) so a fresh database
 cannot come up without it, and have the
