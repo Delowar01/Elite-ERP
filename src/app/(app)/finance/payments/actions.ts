@@ -22,6 +22,7 @@ import { subtractMoney } from "@/lib/posting-currency";
 import { lockAdvanceAndReadPot, availabilityOf, carriedBaseFor } from "@/lib/advance-allocations";
 import { logActivity } from "@/lib/activity";
 import { recordAudit } from "@/lib/security/audit";
+import { reversalRefusal, mirrorLines, paidAfterReversal, invoiceStatusAfter } from "@/lib/payment-reversal";
 
 export type ActionResult = {
   error?: string;
@@ -838,6 +839,194 @@ export async function deletePaymentAction(paymentId: number): Promise<ActionResu
   revalidatePath("/sales/invoices");
   revalidatePath("/sales/proforma");
   revalidatePath("/purchasing/orders");
+  revalidatePath("/dashboard");
+  return {};
+}
+
+/**
+ * Reverse a recorded payment — sales invoice or purchase order.
+ *
+ * The payment row is KEPT and marked reversed; a mirroring journal entry undoes its ledger effect.
+ * `deletePaymentAction` destroys the row and hard-deletes its entry; this is the replacement for
+ * the two populations it covers, and delete refuses them.
+ *
+ * The posting rule lives in lib/payment-reversal.ts and is one line long: read the original entry's
+ * lines and swap debit with credit. Nothing is recomputed, so the reversal never learns what the
+ * realized-FX line was — which is exactly why a sibling payment's gain or loss is untouched by
+ * construction rather than by a test, and why no FX code is touched by this feature.
+ *
+ * Owner/admin, matching `deletePaymentAction`. Reversal is the safer of the two, and the safer
+ * action must not be the more restricted one.
+ */
+export async function reversePaymentAction(paymentId: number): Promise<ActionResult> {
+  const session = await requireRole("owner", "admin");
+
+  const [existing] = await db
+    .select()
+    .from(paymentsTable)
+    .where(and(eq(paymentsTable.id, paymentId), eq(paymentsTable.orgId, session.orgId)));
+  if (!existing) return { error: "Payment not found." };
+  const preRefusal = reversalRefusal(existing);
+  if (preRefusal) return { error: preRefusal };
+
+  const outcome = await db.transaction(async (tx) => {
+    // Lock the PAYMENT first, then its document — the same order everywhere, so two reversals and a
+    // concurrent payment cannot form a cycle. Re-read under the lock: the checks above ran before
+    // the transaction, so two clicks on Reverse can both pass them.
+    const lock = await tx.execute(sql`
+      select kind, sales_invoice_id, purchase_order_id, proforma_invoice_id, reversed_at,
+             amount::text as amount, base_applied_amount::text as base_applied_amount
+        from payments where id = ${paymentId} and org_id = ${session.orgId} for update`);
+    const payment = (lock.rows as unknown as {
+      kind: string | null; sales_invoice_id: number | null; purchase_order_id: number | null;
+      proforma_invoice_id: number | null; reversed_at: Date | null;
+      amount: string; base_applied_amount: string | null;
+    }[])[0];
+    if (!payment) return { error: "Payment not found." } as const;
+    const refusal = reversalRefusal({
+      id: paymentId, kind: payment.kind, salesInvoiceId: payment.sales_invoice_id,
+      purchaseOrderId: payment.purchase_order_id, proformaInvoiceId: payment.proforma_invoice_id,
+      reversedAt: payment.reversed_at,
+    });
+    if (refusal) return { error: refusal } as const;
+
+    // THE IDEMPOTENCY KEY, type-qualified. The original entry is `(payment, <this same id>)`, so an
+    // id-only check would find IT and conclude the reversal is already posted. Both halves, always.
+    const [already] = await tx
+      .select({ id: journalEntriesTable.id })
+      .from(journalEntriesTable)
+      .where(and(
+        eq(journalEntriesTable.orgId, session.orgId),
+        eq(journalEntriesTable.sourceType, "payment_reversal"),
+        eq(journalEntriesTable.sourceId, paymentId),
+      ))
+      .limit(1);
+    if (already) return { error: "This payment has already been reversed." } as const;
+
+    const [original] = await tx
+      .select({ id: journalEntriesTable.id })
+      .from(journalEntriesTable)
+      .where(and(
+        eq(journalEntriesTable.orgId, session.orgId),
+        eq(journalEntriesTable.sourceType, "payment"),
+        eq(journalEntriesTable.sourceId, paymentId),
+      ))
+      .orderBy(journalEntriesTable.id)
+      .limit(1);
+    if (!original) return { error: "This payment has no ledger posting to reverse." } as const;
+
+    const originalLines = await tx
+      .select({ accountId: journalLinesTable.accountId, debit: journalLinesTable.debit, credit: journalLinesTable.credit })
+      .from(journalLinesTable)
+      .where(eq(journalLinesTable.journalEntryId, original.id));
+    if (originalLines.length === 0) return { error: "This payment's ledger posting has no lines to reverse." } as const;
+
+    let docLabel: string;
+    if (payment.sales_invoice_id !== null) {
+      const invLock = await tx.execute(sql`
+        select invoice_number, currency, total::text as total, paid_amount::text as paid_amount,
+               base_paid_amount::text as base_paid_amount, status
+          from sales_invoices where id = ${payment.sales_invoice_id} and org_id = ${session.orgId} for update`);
+      const inv = (invLock.rows as unknown as {
+        invoice_number: string; currency: string | null; total: string; paid_amount: string;
+        base_paid_amount: string | null; status: string;
+      }[])[0];
+      if (!inv) return { error: "Invoice not found." } as const;
+      if (inv.status === "void") return { error: "This invoice has been voided; its payments cannot be reversed." } as const;
+      docLabel = `invoice ${inv.invoice_number}`;
+
+      const paid = paidAfterReversal({
+        doc: { currency: inv.currency, paidAmount: inv.paid_amount, basePaidAmount: inv.base_paid_amount },
+        payment: { amount: payment.amount, baseAppliedAmount: payment.base_applied_amount },
+        baseCurrency: session.orgCurrency,
+      });
+      await tx
+        .update(salesInvoicesTable)
+        .set({
+          paidAmount: paid.paidAmount,
+          basePaidAmount: paid.basePaidAmount,
+          status: invoiceStatusAfter(paid.paidAmount, inv.total, inv.currency ?? session.orgCurrency),
+          updatedAt: new Date(),
+        })
+        .where(eq(salesInvoicesTable.id, payment.sales_invoice_id));
+    } else {
+      const poLock = await tx.execute(sql`
+        select po_number, currency, total::text as total, paid_amount::text as paid_amount,
+               base_paid_amount::text as base_paid_amount, status
+          from purchase_orders where id = ${payment.purchase_order_id} and org_id = ${session.orgId} for update`);
+      const po = (poLock.rows as unknown as {
+        po_number: string; currency: string | null; total: string; paid_amount: string;
+        base_paid_amount: string | null; status: string;
+      }[])[0];
+      if (!po) return { error: "Purchase order not found." } as const;
+      if (po.status === "cancelled") return { error: "This purchase order has been cancelled; its payments cannot be reversed." } as const;
+      docLabel = `purchase order ${po.po_number}`;
+
+      const paid = paidAfterReversal({
+        doc: { currency: po.currency, paidAmount: po.paid_amount, basePaidAmount: po.base_paid_amount },
+        payment: { amount: payment.amount, baseAppliedAmount: payment.base_applied_amount },
+        baseCurrency: session.orgCurrency,
+      });
+      // NO STATUS RECOMPUTE, and this is where one would go.
+      //
+      // Purchase orders have no paid status: the set is draft | ordered | received | cancelled, and
+      // `recordPaymentAction`'s PO branch likewise writes paidAmount/basePaidAmount and nothing
+      // else, so paying a PO in full leaves it `received`. Reversal mirrors the write path rather
+      // than inventing a lifecycle here. If POs ever gain `partially_paid`/`paid`, add the
+      // `invoiceStatusAfter`-shaped recompute HERE and in the PO branch of recordPaymentAction
+      // together — see docs/backlog.md, "give purchase orders paid statuses", which lists the rest
+      // of the blast radius.
+      await tx
+        .update(purchaseOrdersTable)
+        .set({ paidAmount: paid.paidAmount, basePaidAmount: paid.basePaidAmount, updatedAt: new Date() })
+        .where(eq(purchaseOrdersTable.id, payment.purchase_order_id!));
+    }
+
+    // Dated TODAY, not the original payment's date: a correction must not backdate into a period
+    // that may already have been reported. The memo carries the original's date so the pair is
+    // legible from the ledger alone.
+    const [entry] = await tx
+      .insert(journalEntriesTable)
+      .values({
+        orgId: session.orgId,
+        entryDate: new Date().toISOString().slice(0, 10),
+        memo: `Payment reversed — ${docLabel}`,
+        sourceType: "payment_reversal",
+        sourceId: paymentId,
+        createdById: session.userId,
+      })
+      .returning({ id: journalEntriesTable.id });
+    await tx.insert(journalLinesTable).values(
+      mirrorLines(originalLines).map((l) => ({ journalEntryId: entry.id, ...l })),
+    );
+
+    await tx
+      .update(paymentsTable)
+      .set({ reversedAt: new Date(), reversedById: session.userId })
+      .where(eq(paymentsTable.id, paymentId));
+
+    return { docLabel } as const;
+  });
+
+  if ("error" in outcome) return { error: outcome.error };
+
+  await logActivity(session, {
+    type: "payment.reversed",
+    description: `Reversed a payment of ${existing.amount} for ${outcome.docLabel}`,
+    entityType: "payment",
+    entityId: paymentId,
+  });
+  await recordAudit({ orgId: session.orgId, userId: session.userId, userName: session.name }, {
+    action: "payment.reversed", entityType: "payment", entityId: paymentId,
+    newValue: { reversed: true, amount: existing.amount },
+  });
+
+  revalidatePath(PATH);
+  if (existing.salesInvoiceId) revalidatePath(`/sales/invoices/${existing.salesInvoiceId}`);
+  if (existing.purchaseOrderId) revalidatePath(`/purchasing/orders/${existing.purchaseOrderId}`);
+  revalidatePath("/finance/chart-of-accounts");
+  revalidatePath("/finance/ledger");
+  revalidatePath("/finance/reports");
   revalidatePath("/dashboard");
   return {};
 }

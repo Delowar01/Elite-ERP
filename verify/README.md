@@ -82,6 +82,34 @@ FAIL  SWEEP A … the derived 4900 line is EXACTLY the difference
 almost every time.** Read the printed pair before hunting in the product code: two identical numbers
 next to a red line means the suite is comparing how they are written, not what they are.
 
+### "There is no UI for X" is a claim about RENDERING, and rendering is conditional
+
+The only entry here about how a **human** verifies absence rather than how a test does — and this
+project has now spent two rounds on it.
+
+A destructive server action was believed to have no rendered caller: reachable by anyone who could
+craft the request, invisible to users and reviewers, and therefore urgent to gate. Grepping for the
+action name found only its own definition and one import, which read as confirmation.
+
+It had a button the whole time. `DeletePaymentButton` was rendered on two detail pages, gated on
+`role === "owner" || role === "admin"`, as a bare icon in an **unlabelled** column
+(`<th className="w-8" />`) with no header text. A passing browser suite had been clicking it for
+months.
+
+Three things made the absence look real, and all three recur:
+
+1. **The grep was for the action, not the component.** One hop away — action → button → history
+   component → page — and each hop is a different identifier.
+2. **The control was role-gated**, so whoever looked was plausibly looking at a session that could
+   not see it.
+3. **The column had no header**, so even on the right screen there was nothing to read.
+
+**Before concluding a control does not exist: grep for the component that calls the action, then for
+the component that renders THAT, and check what conditions gate it.** And when the answer matters —
+as it did here, because it changed a feature from "add the missing undo" to "the existing undo
+destroys history" — look for a test that drives it. A suite that clicks the control is proof of
+rendering that no amount of reading can match.
+
 ### A generated input must be a state the system can actually produce
 
 The same trap has a generator-shaped form, and it is subtler because the suite genuinely runs and

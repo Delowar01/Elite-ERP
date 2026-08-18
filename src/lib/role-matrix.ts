@@ -94,6 +94,12 @@ export const RESTRICTED_ACTIONS: RestrictedAction[] = [
     reason: "Reverses a posted ledger entry and restores the document's outstanding balance.",
   },
   {
+    action: "Reverse a payment",
+    allowed: ["owner", "admin"],
+    reason:
+      "Undoes a posted settlement: the payment is kept and marked reversed, a mirroring entry is posted, and the document's outstanding balance returns to what it was. Same tier as deleting a payment — the safer of the two must not be the more restricted one.",
+  },
+  {
     action: "Refund a customer advance",
     allowed: ["owner", "admin"],
     reason: "Pays money out of a bank account and releases the customer-advance liability.",

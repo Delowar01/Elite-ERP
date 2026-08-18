@@ -83,6 +83,14 @@ for (const [label, fn] of [["client", "permanentlyDeleteClientAction"], ["vendor
 const delPay = guards.find((g) => g.fn === "deletePaymentAction");
 check("declared: delete a payment is owner+admin — guard agrees", !!delPay && owns(delPay, ["owner", "admin"]), delPay ? delPay.roles.join("+") : "no guard");
 
+const revPay = guards.find((g) => g.fn === "reversePaymentAction");
+check("declared: reverse a payment is owner+admin — guard agrees", !!revPay && owns(revPay, ["owner", "admin"]), revPay ? revPay.roles.join("+") : "no guard");
+// The pair must not drift apart: reversal preserves history and delete destroys it, so if they ever
+// differ it must not be the destructive one that is easier to reach.
+check("reverse and delete a payment sit at the SAME tier — the safer action is not the more restricted",
+  !!revPay && !!delPay && revPay.roles.slice().sort().join("+") === delPay.roles.slice().sort().join("+"),
+  `${revPay?.roles.join("+")} vs ${delPay?.roles.join("+")}`);
+
 const refundAdv = guards.find((g) => g.fn === "refundAdvanceAction");
 check("declared: refund a customer advance is owner+admin — guard agrees", !!refundAdv && owns(refundAdv, ["owner", "admin"]), refundAdv ? refundAdv.roles.join("+") : "no guard");
 
@@ -109,7 +117,7 @@ for (const fn of ["updateOrgContactAction", "saveDocumentSequenceAction", "updat
 // Anything the matrix does not account for is drift and must be declared before this passes.
 const DECLARED_FNS = new Set([
   "permanentlyDeleteClientAction", "permanentlyDeleteVendorAction", "permanentlyDeleteProductAction",
-  "deletePaymentAction", "refundAdvanceAction", "approveLeaveAction", "rejectLeaveAction",
+  "deletePaymentAction", "reversePaymentAction", "refundAdvanceAction", "approveLeaveAction", "rejectLeaveAction",
   "updateOrgContactAction", "saveDocumentSequenceAction", "updateValidityDaysAction",
   // Dismissing the one-time base-currency notice writes an org-level column, and only owners and
   // admins can change the currency it concerns — so the notice is shown to nobody else, and this
