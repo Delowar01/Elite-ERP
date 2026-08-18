@@ -4,6 +4,8 @@ import { t, type Locale } from "@/lib/i18n/dict";
 import { DocNum } from "../../sales/_shared/money";
 import { DeletePaymentButton } from "./delete-payment-button";
 import { RefundAdvanceButton } from "./refund-advance-button";
+import { ReversePaymentButton } from "./reverse-payment-button";
+import { Badge } from "@/components/ui/badge";
 import { advancePaymentIdsForInvoice } from "@/lib/advance-payment-links";
 
 const METHOD_LABEL: Record<string, string> = {
@@ -24,13 +26,19 @@ export async function PaymentHistory({
   source,
   canDelete = false,
   canRefund = false,
+  canReverse = false,
 }: {
   locale: Locale;
   orgId: number;
   /** The org's base currency — the refund dialog denominates its payout figure in it. */
   baseCurrency: string;
-  source: { type: "invoice" | "proforma"; id: number };
+  source: { type: "invoice" | "proforma" | "purchase_order"; id: number };
   canDelete?: boolean;
+  /**
+   * Offer "Reverse" on ordinary payments against this document. Invoices and purchase orders only —
+   * a proforma's receipts are advances, which have their own release and refund paths.
+   */
+  canReverse?: boolean;
   /**
    * Offer "Refund" on refundable rows: an advance receipt that was never applied and never
    * refunded. Passed separately from canDelete because refunds stay legitimate AFTER conversion —
@@ -45,7 +53,11 @@ export async function PaymentHistory({
   const allocationPaymentIds = source.type === "invoice"
     ? await advancePaymentIdsForInvoice(orgId, source.id)
     : [];
-  const col = source.type === "invoice" ? paymentsTable.salesInvoiceId : paymentsTable.proformaInvoiceId;
+  const col = source.type === "invoice"
+    ? paymentsTable.salesInvoiceId
+    : source.type === "purchase_order"
+      ? paymentsTable.purchaseOrderId
+      : paymentsTable.proformaInvoiceId;
   const belongsHere = allocationPaymentIds.length > 0
     ? or(eq(col, source.id), inArray(paymentsTable.id, allocationPaymentIds))
     : eq(col, source.id);
@@ -58,7 +70,10 @@ export async function PaymentHistory({
       reference: paymentsTable.reference,
       notes: paymentsTable.notes,
       kind: paymentsTable.kind,
+      reversedAt: paymentsTable.reversedAt,
+      baseAmount: paymentsTable.baseAmount,
       salesInvoiceId: paymentsTable.salesInvoiceId,
+      purchaseOrderId: paymentsTable.purchaseOrderId,
       refundsPaymentId: paymentsTable.refundsPaymentId,
       bankName: bankAccountsTable.name,
       proformaInvoiceId: paymentsTable.proformaInvoiceId,
@@ -89,6 +104,29 @@ export async function PaymentHistory({
   const refundable = (p: (typeof rows)[number]) =>
     p.kind === "advance_receipt" && Number(p.available) > 0;
 
+  /**
+   * Reversible rows. Every clause matters:
+   *  - `kind === null` — an ORDINARY payment. Advances reach an invoice's history through their
+   *    allocation (see `advancePaymentIdsForInvoice` above) and must never offer Reverse: their
+   *    undo is a release or a refund, and a fourth route to the same money is how the paths drift.
+   *    Written as an explicit null check, never `kind !== "advance_receipt"`, which is NULL for
+   *    every ordinary row and has already excluded all of them once in this project.
+   *  - it belongs to THIS document rather than merely appearing in its history.
+   *  - not already reversed — a reversed row shows no control at all, only its badge.
+   */
+  const reversible = (p: (typeof rows)[number]) =>
+    canReverse && p.kind === null && p.reversedAt === null &&
+    (source.type === "invoice" ? p.salesInvoiceId === source.id : p.purchaseOrderId === source.id);
+
+  // The base-currency column appears only when the document is FOREIGN, so base-currency
+  // organizations see no change. It shows `baseAmount` — the CASH that moved through the bank — and
+  // not `baseAppliedAmount`, which is what cleared AR or AP. The two differ by exactly the realized
+  // FX gain or loss (1,140.00 vs 1,125.00 on the reference fixture), so one unlabelled number would
+  // be read as whichever the reader assumed. The header names the direction because a single label
+  // cannot be right for both: money in is Received, money out is Paid.
+  const showBase = rows.some((p) => p.currency !== null && p.currency.toUpperCase() !== baseCurrency.toUpperCase());
+  const baseHeader = source.type === "purchase_order" ? "Paid" : "Received";
+
   return (
     <div className="mt-6">
       <div className="text-[11px] uppercase tracking-wide text-ink-faint mb-2">{t(locale, "Payment History")}</div>
@@ -104,13 +142,17 @@ export async function PaymentHistory({
                 <th className="text-start font-medium px-3 py-2">{t(locale, "Bank Account")}</th>
                 <th className="text-start font-medium px-3 py-2">{t(locale, "Reference")}</th>
                 <th className="text-end font-medium px-3 py-2">{t(locale, "Amount")}</th>
+                {showBase && <th className="text-end font-medium px-3 py-2">{t(locale, baseHeader)} ({baseCurrency})</th>}
                 {canRefund && <th className="w-8" />}
+                {/* Labelled, unlike the delete column that shipped as a bare `w-8` and read as
+                    absent to everyone who looked for it. */}
+                {canReverse && <th className="text-center font-medium px-3 py-2">{t(locale, "Reverse")}</th>}
                 {canDelete && <th className="w-8" />}
               </tr>
             </thead>
             <tbody>
               {rows.map((p) => (
-                <tr key={p.id} className="border-t border-line">
+                <tr key={p.id} className={`border-t border-line${p.reversedAt ? " text-ink-faint" : ""}`} data-reversed={p.reversedAt ? "1" : undefined}>
                   <td className="px-3 py-2 font-mono text-xs">{p.paymentDate}</td>
                   <td className="px-3 py-2">{p.method ? t(locale, METHOD_LABEL[p.method] ?? p.method) : "—"}</td>
                   <td className="px-3 py-2">{p.bankName ?? "—"}</td>
@@ -122,11 +164,29 @@ export async function PaymentHistory({
                     {p.kind === "advance_refund" && (
                       <span className="ms-1.5 text-[10.5px] text-ink-faint">({t(locale, "Refund")})</span>
                     )}
+                    {/* A reversed row STAYS — that is the point of reversing rather than deleting —
+                        but it must be obvious at a glance that it no longer counts. Badge and
+                        strike-through together, because either alone reads as decoration. */}
+                    {p.reversedAt && (
+                      <Badge variant="neutral" className="ms-1.5" data-testid={`reversed-badge-${p.id}`}>{t(locale, "Reversed")}</Badge>
+                    )}
                   </td>
-                  <td className="px-3 py-2 text-end font-mono"><DocNum value={p.amount} kind="amount" /></td>
+                  <td className={`px-3 py-2 text-end font-mono${p.reversedAt ? " line-through" : ""}`}>
+                    <DocNum value={p.amount} kind="amount" />
+                  </td>
+                  {showBase && (
+                    <td className={`px-3 py-2 text-end font-mono${p.reversedAt ? " line-through" : ""}`}>
+                      {p.baseAmount === null ? "—" : <DocNum value={p.baseAmount} kind="amount" />}
+                    </td>
+                  )}
                   {canRefund && (
                     <td className="px-2 py-2 text-center">
                       {refundable(p) && <RefundAdvanceButton locale={locale} paymentId={p.id} reference={p.reference ?? undefined} available={p.available} currency={p.currency} baseCurrency={baseCurrency} />}
+                    </td>
+                  )}
+                  {canReverse && (
+                    <td className="px-2 py-2 text-center">
+                      {reversible(p) && <ReversePaymentButton locale={locale} paymentId={p.id} reference={p.reference ?? undefined} amount={p.amount} />}
                     </td>
                   )}
                   {canDelete && (

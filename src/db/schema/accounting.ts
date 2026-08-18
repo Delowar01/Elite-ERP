@@ -65,6 +65,16 @@ export const journalEntriesTable = pgTable("journal_entries", {
    * attribution and were dropped from the statement, and 70 of them landed on a stranger's party
    * because an allocation id happened to equal a payment id. Nothing errored.
    *
+   * ## The canonical example, for anyone testing this hazard
+   *
+   * `payment_reversal` is the sharpest instance in the codebase and needs no contrived fixture: a
+   * reversal is keyed `(payment_reversal, <payments.id>)` and the posting it reverses is keyed
+   * `(payment, <the same payments.id>)`. The collision is GUARANTEED for every payment that has
+   * ever posted, so an id-only existence check finds the payment's own original entry and concludes
+   * the reversal is already there — writing nothing, erroring nothing. `verify-payment-reversal`
+   * mutates exactly that check and shows it silently refusing. Every other test of this hazard in
+   * the repo has to seed a decoy row; that one does not.
+   *
    * So: a reader must branch on `sourceType` FIRST and look the id up in that type's own table, and
    * a re-key of any source type is a change to every reader of it. `verify-statements` asserts the
    * attribution of each type against the shape the app actually posts — seed fixtures from the

@@ -224,6 +224,64 @@ only as good as the author's imagination about where it could appear. A check th
 allowed cannot be evaded by picking somewhere else. Where the allowed set is knowable — the accounts
 in an entry, the columns in a payload, the statuses a transition may reach — assert the set.
 
+### An assertion WEAKENED by a change elsewhere — one that decayed rather than one written weak
+
+Every other entry here is about an assertion that was wrong when it was written. This one is about
+an assertion that was strong, stayed textually identical, and quietly stopped proving what it said.
+
+The instance: a browser suite drove the Delete button on an invoice's payment history to prove that
+deleting an APPLIED advance is refused — it clicked, read the refusal in the dialog, and confirmed
+the payment, its receipt entry and its application entry all survived. Real coverage of a server
+rule, exercised through the real UI.
+
+Then payment reversal replaced Delete on that surface. The button was gone, so the click could not
+happen, and the block had to become an absence check: *"the row offers no Delete control"*. Same
+section, same intent, a fraction of the proof — and the server rule it used to cover now had no test
+at all. **Nothing failed.** The suite went green, one assertion shorter and much weaker.
+
+**The tell is a UI-driven test whose control is removed by an unrelated change.** The test does not
+break; it thins. Deleting a control, moving it behind a role, gating it on a status, or renaming its
+label all do this, and none of them touch the suite.
+
+The repair is not to keep the old control. It is to ask what the assertion actually proved and
+re-establish that half somewhere it still can be proved — here, a Next-Action replay of the same
+action with a real owner cookie, which covers the server rule directly and does not care what the UI
+renders. **Both now exist: the absence in the UI, the refusal at the server.**
+
+When you remove or gate a control, grep the suites for its label and its `aria-label` before
+assuming nothing depended on it.
+
+### A fixture whose numbers are too CLEAN to falsify the mutation it was written for
+
+A supplied test case is usually chosen for legibility — round figures, rates that divide evenly, a
+total that splits exactly — because that is what makes a spec readable. The same property can make
+the case unable to distinguish a correct implementation from a wrong one.
+
+The instance: reversing a payment must restore AR from the payment's **stored** journal line, not by
+recomputing `amount x the document's rate`. The reference fixture was `575 / 300 / 275 at 3.75`,
+which divides cleanly — so the closing payment's derived remainder (`baseTotal - basePaidAmount`)
+came out *identical* to its proportional conversion. The mutation that recomputes from the document
+rate produced the right answer and the suite went green on both fixtures.
+
+The fix is a twin, not a replacement: keep the supplied case, because it is the one the reader
+recognises, and add an awkward-rate sibling where the two constructions genuinely diverge
+(`552.28 = 179.64 + 372.64 at 3.7513` -> remainder 1,397.89 vs proportional 1,397.88). Then run
+every mutation against all of them.
+
+**And report the survivals.** The suite prints, per fixture, whether the mutation was caught:
+
+```
+A INV-0008 p2: SURVIVED — both 1125.000
+C INV-AWK  p2: caught — mirrored 673.880 vs recomputed 673.890
+```
+
+A report claiming 4/4 caught would have been more comfortable and less true. That two of the four
+cannot catch it is a fact about the fixtures worth having on the screen, because the next person to
+add a case will otherwise add another clean one.
+
+**The tell:** if you cannot state which arithmetic property of a fixture makes the mutation fail,
+the fixture probably does not have one.
+
 ### An assertion that RECOMPUTES the thing it is checking
 
 Closely related to the wrong-cause entry above, and harder to see, because the assertion looks like

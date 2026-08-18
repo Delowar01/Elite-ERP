@@ -478,22 +478,21 @@ check("CASE E: no application entry exists for the excess payment", (await appli
 check("CASE E: 2,000 remains in 2300 as the customer's available advance", (await advNet()) === 2000000);
 await balanced("after the excess-advance conversion");
 
-// ================= applied advances refuse deletion =================
-// The excess (unapplied) payment is filtered out of the invoice's history by salesInvoiceId, so
-// the applied 8,000 is the only row here.
+// ================= an APPLIED ADVANCE offers no undo control at all =================
+// This block drove the Delete button until payment reversal shipped. Delete is no longer rendered
+// on an invoice — Reverse replaced it — and Reverse deliberately does NOT appear on an advance row:
+// an advance reaches an invoice's history through its allocation, and its undo is a release or a
+// refund, not a fourth route to the same money.
+//
+// So the UI half is now an ABSENCE assertion, and the server-side refusal it used to prove is
+// re-established by replay further down, where the Next-Action harness is set up. An absence
+// assertion alone would be a weaker test than the one it replaces, which is why both exist.
 await page.goto(`${BASE}/sales/invoices/${invE}`, { waitUntil: "networkidle" });
-await page.getByLabel("Delete").first().click();
-await page.waitForTimeout(400);
-await dialogs().last().getByRole("button", { name: /^Delete Payment$/ }).click();
-await page.waitForTimeout(1200);
-check("deleting an APPLIED advance is refused — the dialog explains why",
-  (await dialogs().last().getByText(/applied to a sales invoice/).count()) >= 1);
-check("…and nothing was deleted: payment, receipt entry and application entry all stand",
-  (await db.query("select count(*)::int n from payments where id=$1", [ePays[0].id])).rows[0].n === 1
-    && (await db.query("select count(*)::int n from journal_entries where org_id=$1 and source_type='payment' and source_id=$2", [org, ePays[0].id])).rows[0].n === 1
-    && (await applicationLines(ePays[0].id)).length === 2);
-await dialogs().last().getByRole("button", { name: /^Cancel$/ }).click();
-await page.waitForTimeout(300);
+check("the applied advance is listed on the invoice", (await page.locator("tr", { hasText: "8,000" }).count()) >= 1);
+check("…and offers NO Delete control — Reverse replaced it on this surface",
+  (await page.getByLabel("Delete").count()) === 0);
+check("…and NO Reverse control either — an advance's undo is a release or a refund",
+  (await page.getByLabel("Reverse Payment").count()) === 0);
 
 // ================= F. refund of an unused advance: Dr 2300 / Cr Bank, never AR, never revenue =================
 // Happy paths run through the REAL UI (the payment-history Refund button + "Refund Advance"
@@ -535,6 +534,26 @@ const refund = async (args) => {
   });
   return { status: res.status, body: (await res.text()).replaceAll("<!-- -->", "") };
 };
+// The server-side half of the applied-advance refusal, replayed with a real owner cookie and no
+// page in between — the coverage the UI block above used to provide before Delete left that screen.
+const deleteActionId = idFor("deletePaymentAction");
+check("found the Next-Action id for deletePaymentAction", !!deleteActionId, String(deleteActionId));
+{
+  const res = await fetch(`${BASE}/finance/payments`, {
+    method: "POST",
+    headers: { "Next-Action": deleteActionId, "Content-Type": "text/plain;charset=UTF-8", Cookie: cookieHeader },
+    body: JSON.stringify([ePays[0].id]),
+    redirect: "manual",
+  });
+  const body = (await res.text()).replaceAll("<!-- -->", "");
+  check("REPLAY: deleting an APPLIED advance is refused at the SERVER, not merely unrendered",
+    /applied to a sales invoice/.test(body), body.slice(0, 140));
+  check("…and nothing was deleted: payment, receipt entry and application entry all stand",
+    (await db.query("select count(*)::int n from payments where id=$1", [ePays[0].id])).rows[0].n === 1
+      && (await db.query("select count(*)::int n from journal_entries where org_id=$1 and source_type='payment' and source_id=$2", [org, ePays[0].id])).rows[0].n === 1
+      && (await applicationLines(ePays[0].id)).length === 2);
+}
+
 const refundRowFor = async (receiptId) => (await db.query(
   `select id, kind, direction, amount::text, currency, base_amount::text, refunds_payment_id
      from payments where org_id=$1 and refunds_payment_id=$2`, [org, receiptId])).rows;

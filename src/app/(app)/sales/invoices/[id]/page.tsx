@@ -118,7 +118,14 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
   const availableAdvances = showPayments && (invoice.status === "sent" || invoice.status === "partially_paid")
     ? await listAvailableAdvancesForInvoice(invoice.id)
     : [];
-  const canDeletePayments = (session.role === "owner" || session.role === "admin") && invoice.status !== "void";
+  // REVERSE replaces DELETE on this surface. Delete destroys the payment row and hard-deletes its
+  // journal entry; reverse keeps both and posts a mirroring entry, which is the correction an
+  // accounting system should offer. The two are never rendered together — one preserving and one
+  // destroying control side by side on the same row is a mis-click with no undo.
+  //
+  // The server refuses delete for this population as well (see deletePaymentAction); not rendering
+  // it is a display choice and display choices are suggestions, not rules.
+  const canReversePayments = (session.role === "owner" || session.role === "admin") && invoice.status !== "void";
 
   const relNodes: { label: string; sub?: string }[] = [];
   if (sourceQuotation) relNodes.push({ label: "Quotation", sub: sourceQuotation.quotationNumber });
@@ -224,7 +231,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
             ] : [{ label: "Paid", value: invoice.paidAmount, colorClass: "text-success" }]) : undefined}
           />
 
-          {showPayments && <PaymentHistory locale={locale} orgId={session.orgId} baseCurrency={session.orgCurrency} source={{ type: "invoice", id: invoice.id }} canDelete={canDeletePayments} />}
+          {showPayments && <PaymentHistory locale={locale} orgId={session.orgId} baseCurrency={session.orgCurrency} source={{ type: "invoice", id: invoice.id }} canReverse={canReversePayments} />}
 
           <BankAccountBlocks locale={locale} accounts={invoice.bankAccounts} className="mt-5" />
 

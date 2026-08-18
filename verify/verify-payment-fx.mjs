@@ -241,29 +241,67 @@ check("CONVERSION-INIT FIX: born-partially-paid foreign invoice starts basePaidA
   gInv.status === "partially_paid" && num(gInv.paid_amount) === 200000 && num(gInv.base_paid_amount) === 810000, JSON.stringify(gInv));
 await balanced("after conversion (transfer moves no money)");
 
-// ================= G. deletion un-pays from STORED figures =================
-await balanced("before deleting the USD partial");
+// ================= G. REVERSAL un-pays from STORED figures =================
+// This section drove Delete until payment reversal shipped. The un-paying arithmetic it asserts is
+// unchanged — reversal subtracts the same stored baseAppliedAmount — but the payment row and its
+// journal entry now SURVIVE, and a mirroring entry undoes the ledger effect instead of the original
+// being erased. The last two assertions are the difference, and they are the whole point of the
+// feature.
+const reversalLinesOf = async (paymentId) => (await db.query(
+  `select l.account_id, l.debit::text, l.credit::text
+     from journal_lines l join journal_entries e on e.id = l.journal_entry_id
+    where e.org_id=$1 and e.source_type='payment_reversal' and e.source_id=$2 order by l.id`, [org, paymentId])).rows;
+
+await balanced("before reversing the USD partial");
 await page.goto(`${BASE}/sales/invoices/${invUsd}`, { waitUntil: "networkidle" });
+check("the Reverse column is LABELLED, unlike the bare icon column Delete shipped as",
+  (await page.locator("th", { hasText: /^Reverse$/ }).count()) === 1);
+check("Delete is no longer offered on an invoice — one control per row, and it is the preserving one",
+  (await page.getByLabel("Delete").count()) === 0);
 // Target the 400-USD partial's own row — history order is not part of this suite's contract.
-await page.locator("tr", { hasText: "400.00" }).getByLabel("Delete").first().click();
+await page.locator("tr", { hasText: "400.00" }).getByLabel("Reverse Payment").first().click();
 await page.waitForTimeout(400);
-await dialogs().last().getByRole("button", { name: /^Delete Payment$/ }).click();
+// The confirmation must say what the policy classifies this as: danger, but NOT a destroyed record.
+const revDlg = dialogs().last();
+const revText = await revDlg.innerText();
+check("the confirm dialog states the consequence and that it cannot be undone",
+  /marked reversed/i.test(revText) && /cannot be undone/i.test(revText), revText.replace(/\n/g, " ").slice(0, 160));
+check("…and does NOT claim the payment is removed or deleted", !/removed|deleted/i.test(revText));
+await revDlg.getByRole("button", { name: /^Reverse Payment$/ }).click();
 await page.waitForTimeout(1500);
 const gUsd = (await db.query("select paid_amount, base_paid_amount, status from sales_invoices where id=$1", [invUsd])).rows[0];
-check("deleting the 400-USD partial removes its STORED baseApplied 1500: 4312.50 → 2812.50",
+check("reversing the 400-USD partial removes its STORED baseApplied 1500: 4312.50 → 2812.50",
   num(gUsd.paid_amount) === 750000 && num(gUsd.base_paid_amount) === 2812500 && gUsd.status === "partially_paid", JSON.stringify(gUsd));
-check("…and its journal entry is gone", (await linesOf(bPay.id)).length === 0);
-await balanced("after deleting the USD partial");
+check("…its ORIGINAL journal entry survives — reversal preserves history where delete erased it",
+  (await linesOf(bPay.id)).length === 3, `${(await linesOf(bPay.id)).length} lines`);
+check("…and a mirroring entry was posted against it",
+  (await reversalLinesOf(bPay.id)).length === 3, `${(await reversalLinesOf(bPay.id)).length} lines`);
+check("…the payment row is KEPT and marked reversed",
+  (await db.query("select reversed_at from payments where id=$1", [bPay.id])).rows[0]?.reversed_at !== null);
+await balanced("after reversing the USD partial");
+
+// The reversed row stays visible and must be obviously spent: badge AND strike-through.
+await page.reload({ waitUntil: "networkidle" });
+const revRow = page.locator(`tr[data-reversed="1"]`).first();
+check("the reversed row is still listed", (await revRow.count()) === 1);
+check("…carrying a Reversed badge", (await revRow.getByText(/^Reversed$/).count()) >= 1);
+check("…and a struck-through amount", (await revRow.locator("td.line-through").count()) >= 1);
+check("…and it offers no Reverse control — absent, not disabled",
+  (await revRow.getByLabel("Reverse Payment").count()) === 0);
+check("the foreign invoice shows the base-currency column, headed by DIRECTION",
+  (await page.locator("th", { hasText: /^Received \(SAR\)$/ }).count()) === 1);
 
 await page.goto(`${BASE}/sales/invoices/${invSar}`, { waitUntil: "networkidle" });
-await page.getByLabel("Delete").first().click();
+check("a BASE-currency invoice shows no base column — nothing changed for base-currency orgs",
+  (await page.locator("th", { hasText: /\(SAR\)$/ }).count()) === 0);
+await page.getByLabel("Reverse Payment").first().click();
 await page.waitForTimeout(400);
-await dialogs().last().getByRole("button", { name: /^Delete Payment$/ }).click();
+await dialogs().last().getByRole("button", { name: /^Reverse Payment$/ }).click();
 await page.waitForTimeout(1500);
 const gSar = (await db.query("select paid_amount, base_paid_amount, status from sales_invoices where id=$1", [invSar])).rows[0];
-check("deleting the SAR payment keeps the identity: basePaidAmount back to 0 with paidAmount",
+check("reversing the SAR payment keeps the identity: basePaidAmount back to 0 with paidAmount",
   num(gSar.paid_amount) === 0 && num(gSar.base_paid_amount) === 0 && gSar.status === "sent", JSON.stringify(gSar));
-await balanced("after deleting the SAR payment");
+await balanced("after reversing the SAR payment");
 
 await db.end();
 await browser.close();
