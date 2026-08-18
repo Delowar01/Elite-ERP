@@ -336,6 +336,44 @@ allocations instead — so the window between deploy and clear is not a degraded
 `verify-advance-clear` asserts statement, project-costing and payment-history figures across the
 clear rather than trusting the ordering.
 
+### A THIRD migration, whose ordering is the mirror image again — and read this before running it
+
+`scripts/migrations/2026-08-18-bank-opening-balance-journals.ts` posts the opening-balance journal
+entry for bank accounts created before opening balances were journalized.
+
+| | `2026-08-16-advance-applications-backfill.ts` | `2026-08-18-bank-opening-balance-journals.ts` |
+|---|---|---|
+| **Order** | schema → **backfill** → deploy code | **deploy code** → backfill |
+| **Why that order** | The backfill CREATES the rows the new code reads. Code first ⇒ every applied advance reads as fully available until it catches up ⇒ **double-spend**. | The code REMOVES a render-time addition. Backfill first ⇒ for the window between them the entry exists AND the page still adds the column ⇒ the bank page shows **double** the true figure. |
+| **What the window looks like** | correct figures, wrong availability | 60,000 on a 30,000 account |
+| **What the other order's window looks like** | double-spend | **0** on a 30,000 account |
+
+**Why the zero is the better window, which is the whole reason the orders differ.** 60,000 is a
+plausible number. Someone can read it, believe it, and act on it — pay a supplier, sign off a
+reconciliation — and nothing about the screen says it is mid-migration. 0 on an account that
+obviously holds money is self-evidently broken: nobody acts on it, and the person who sees it asks.
+**Understated and obviously broken beats overstated and believable.** For a single account on a
+single tenant this is a couple of minutes of a zero.
+
+Three migrations in this project now have deploy orders chosen for three different reasons. There is
+no house rule to memorise, and that is the point: the order follows from what the intermediate state
+looks like to a user, and you have to work it out each time. If you are reading this tired, the
+question to ask is *"what does the screen say in between, and would somebody believe it?"*
+
+| | |
+|---|---|
+| **Detection** | non-zero `bank_accounts.opening_balance` AND no `(source_type='bank_opening', source_id=<bank account id>)` entry. The second condition IS the idempotency key — a re-run after a successful apply matches nothing. |
+| **Why the PAIR** | `source_id` comes from a different table per source type, each with its own sequence, so the same integer is a live id in several at once. An id-only check finds an unrelated `payment` entry and skips a real posting. `verify-bank-opening-backfill` seeds that exact collision. |
+| **Date** | `opening_date` when set, otherwise the account's `created_at` date — printed as "inferred" in the output when it had to fall back. |
+| **Contra** | `3000 Owner's Equity` by default; `--equity-account <code>` to override. |
+| **Reversible?** | Yes. Delete the `bank_opening` entries and their lines; the column they were derived from is untouched. |
+| **Refusals (all exit non-zero, nothing written)** | a GL account missing, inactive or not an asset; a contra account that does not exist or is not equity/liability; a foreign-currency bank account (the ledger is base-only and the script will not guess a rate); and — the important one — a `bank_opening` entry that already exists carrying a **different** amount than the column says. That last one means the column was changed after the entry was posted: a **changed** fact rather than a missing one, and picking a winner between two figures is a human's job. |
+| **Correct output** | dry run prints each entry it would post, both sides named, and writes nothing. `--apply` prints a ledger bracket per posting — the account's balance and the org's Dr/Cr totals before and after — then `Remaining candidates: 0`. A second `--apply` prints `Nothing to do.` |
+
+**Sequence:** `npm run db:push` (adds `opening_date`, `opening_contra_account_id`) → **deploy the
+application code** → dry run → `--apply` → confirm the bank page, Trial Balance and Balance Sheet
+agree for the account.
+
 ---
 
 ## Credit notes on a CASH-paid invoice still drive AR negative (high priority)
