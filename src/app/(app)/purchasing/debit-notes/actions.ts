@@ -14,7 +14,7 @@ import { snapshotSealForDoc } from "@/lib/doc-seal";
 import { snapshotDocumentBankAccounts } from "@/lib/document-bank-data";
 import { computeTotals, type LineItemInput } from "../../sales/_shared/totals";
 import { roundMoney } from "@/lib/currency/currencies";
-import { captureBaseAmounts } from "@/lib/posting-currency";
+import { debitNoteLines, noteBaseAmounts } from "@/lib/reversal-currency";
 
 export type ActionResult = {
   error?: string;
@@ -182,15 +182,21 @@ export async function issueDebitNoteAction(debitNoteId: number): Promise<ActionR
     return { error: "Chart of accounts is missing a required system account (1200/2000)." };
   }
 
-  // FX-6: the rate date for a debit note is the NOTE's own issue date. The note inherits its PO's
-  // currency at creation; a missing rate blocks the issue rather than posting unconverted.
-  const captured = await captureBaseAmounts({
+  // The source purchase order, read for its stored conversion. No lock: `exchange_rate` is written
+  // exactly once, by receivePurchaseOrderAction, which requires status `ordered` and sets
+  // `received` — and the lifecycle allows only duplicate/reverse from `received`, so a receive
+  // cannot run twice and edit is draft-only. There is nothing here to race.
+  const [sourcePo] = await db
+    .select({ currency: purchaseOrdersTable.currency, exchangeRate: purchaseOrdersTable.exchangeRate })
+    .from(purchaseOrdersTable)
+    .where(and(eq(purchaseOrdersTable.id, dn.sourcePurchaseOrderId), eq(purchaseOrdersTable.orgId, session.orgId)));
+  if (!sourcePo) return { error: "Purchase order not found." };
+
+  const captured = await noteBaseAmounts({
     orgId: session.orgId,
     baseCurrency: session.orgCurrency,
-    docCurrency: dn.currency,
-    total: dn.total,
-    taxTotal: dn.taxTotal,
-    date: dn.issueDate,
+    source: sourcePo,
+    note: { currency: dn.currency, total: dn.total, taxTotal: dn.taxTotal, issueDate: dn.issueDate },
   });
   if (!captured.ok) return { error: captured.error, missingRate: captured.missingRate };
 
@@ -217,10 +223,10 @@ export async function issueDebitNoteAction(debitNoteId: number): Promise<ActionR
       .returning({ id: journalEntriesTable.id });
 
     // BASE currency only. Two lines of the same figure — balanced by construction.
-    await tx.insert(journalLinesTable).values([
-      { journalEntryId: entry.id, accountId: accountsPayable.id, debit: captured.baseTotal, credit: "0" },
-      { journalEntryId: entry.id, accountId: inventory.id, debit: "0", credit: captured.baseTotal },
-    ]);
+    await tx.insert(journalLinesTable).values(
+      debitNoteLines({ baseTotal: captured.baseTotal, apAccountId: accountsPayable.id, inventoryAccountId: inventory.id })
+        .map((l) => ({ journalEntryId: entry.id, ...l })),
+    );
 
     await tx
       .update(debitNotesTable)

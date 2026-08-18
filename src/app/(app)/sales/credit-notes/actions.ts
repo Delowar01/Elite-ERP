@@ -14,7 +14,8 @@ import { snapshotSealForDoc } from "@/lib/doc-seal";
 import { snapshotDocumentBankAccounts } from "@/lib/document-bank-data";
 import { computeTotals, type LineItemInput } from "../_shared/totals";
 import { moneyEpsilon, roundMoney } from "@/lib/currency/currencies";
-import { captureBaseAmounts, subtractMoney } from "@/lib/posting-currency";
+import { subtractMoney } from "@/lib/posting-currency";
+import { creditNoteLines, noteBaseAmounts } from "@/lib/reversal-currency";
 import {
   activeAllocationTotal, creditNoteReleaseAmount, releaseAllocations, reverseReleasesOfCause,
 } from "@/lib/advance-allocations";
@@ -198,16 +199,19 @@ export async function issueCreditNoteAction(creditNoteId: number): Promise<Actio
     return { error: "Chart of accounts is missing a required system account (1100/4000/2100)." };
   }
 
-  // FX-6: the rate date for a credit note is the NOTE's own issue date. The note inherits its
-  // invoice's currency at creation, so this converts the same currency the invoice was in — but at
-  // the note date's rate, which is the model's rule: each posting event converts at its own date.
-  const captured = await captureBaseAmounts({
+  // The source invoice, read for its stored conversion. Re-read under lock inside the transaction
+  // below, which is the read the posting actually uses.
+  const [sourceInvoice] = await db
+    .select({ currency: salesInvoicesTable.currency, exchangeRate: salesInvoicesTable.exchangeRate })
+    .from(salesInvoicesTable)
+    .where(and(eq(salesInvoicesTable.id, cn.sourceInvoiceId), eq(salesInvoicesTable.orgId, session.orgId)));
+  if (!sourceInvoice) return { error: "Invoice not found." };
+
+  const captured = await noteBaseAmounts({
     orgId: session.orgId,
     baseCurrency: session.orgCurrency,
-    docCurrency: cn.currency,
-    total: cn.total,
-    taxTotal: cn.taxTotal,
-    date: cn.issueDate,
+    source: sourceInvoice,
+    note: { currency: cn.currency, total: cn.total, taxTotal: cn.taxTotal, issueDate: cn.issueDate },
   });
   if (!captured.ok) return { error: captured.error, missingRate: captured.missingRate };
   // Derived, so the entry balances by construction — the pre-FX-6 lines debited the full subtotal
@@ -272,13 +276,14 @@ export async function issueCreditNoteAction(creditNoteId: number): Promise<Actio
       .returning({ id: journalEntriesTable.id });
 
     // BASE currency only, mirroring the invoice-send shape in reverse.
-    const lines: { accountId: number; debit: string; credit: string }[] = [
-      { accountId: revenue.id, debit: baseRevenue, credit: "0" },
-      { accountId: ar.id, debit: "0", credit: captured.baseTotal },
-    ];
-    if (Number(captured.baseTaxAmount) > 0) {
-      lines.push({ accountId: vatPayable.id, debit: captured.baseTaxAmount, credit: "0" });
-    }
+    const lines = creditNoteLines({
+      baseTotal: captured.baseTotal,
+      baseRevenue,
+      baseTaxAmount: captured.baseTaxAmount,
+      arAccountId: ar.id,
+      revenueAccountId: revenue.id,
+      vatAccountId: vatPayable.id,
+    });
     await tx.insert(journalLinesTable).values(lines.map((l) => ({ journalEntryId: entry.id, ...l })));
 
     await tx
