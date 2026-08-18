@@ -178,6 +178,24 @@ NOT establish: this one shows the read takes the lock, not that the lock is nece
 conversion serialises on its proforma row anyway. That proof needs two invoices drawing on one
 advance concurrently, and belongs where that is possible.
 
+### Assert the EXHAUSTIVE set, not the absence of the one wrong thing
+
+A mutation walked past a check that was written the obvious way, and the fix generalises.
+
+The check: a credit note must post no realized-FX line, so it asserted that none of the note's lines
+targeted the fixture's 4900 account. The mutation — the plausible wrong fix, a compensating FX line
+added so the books balance around a gain that never occurred — pushed its line to a different
+account id and sailed through. The assertion was true and useless.
+
+**"No 4900 line" catches only the obvious wrong fix. "Only AR, revenue and VAT, and nothing else"
+catches a line pushed anywhere.** Rewritten as an exhaustive set plus a line count, the mutation
+fails immediately, and so would any other extra line nobody has thought of yet.
+
+The shape generalises past journal lines: a check that names the one thing that must be absent is
+only as good as the author's imagination about where it could appear. A check that names everything
+allowed cannot be evaded by picking somewhere else. Where the allowed set is knowable — the accounts
+in an entry, the columns in a payload, the statuses a transition may reach — assert the set.
+
 ### An assertion that RECOMPUTES the thing it is checking
 
 Closely related to the wrong-cause entry above, and harder to see, because the assertion looks like

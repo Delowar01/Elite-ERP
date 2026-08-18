@@ -75,6 +75,8 @@ await pool.query(
   [org, SRC_RATE, NOTE_RATE]);
 
 const BASE = "SAR";
+/** No sibling notes yet — the ordinary case for every single-note assertion below. */
+const NO_PRIOR = { total: "0", baseTotal: "0", baseTaxAmount: "0" };
 const post = async (date: string, memo: string, sourceType: string, sourceId: number,
                     lines: { accountId: number; debit: string; credit: string }[]) => {
   const je = (await pool.query(
@@ -121,10 +123,11 @@ check("BRACKET before the credit note — the invoice's own posting at 3.80",
   `AR ${beforeCn.ar} / 4000 ${beforeCn.rev} / 2100 ${beforeCn.vat}`);
 
 // A FULL credit note — same document figures as the invoice, dated where the rate is 3.90.
-const srcInvoice = { currency: "USD", exchangeRate: SRC_RATE };
+const srcInvoice = { currency: "USD", exchangeRate: SRC_RATE, total: INV_TOTAL, baseTotal: invBaseTotal, baseTaxAmount: invBaseTax };
 const full = noteBaseAmounts({
   baseCurrency: BASE, source: srcInvoice,
   note: { currency: "USD", total: INV_TOTAL, taxTotal: INV_TAX },
+  priorNotes: NO_PRIOR,
 });
 check("the full credit note converts", full.ok, full.ok ? "" : full.error);
 if (full.ok) {
@@ -165,6 +168,7 @@ if (full.ok) {
 const half = noteBaseAmounts({
   baseCurrency: BASE, source: srcInvoice,
   note: { currency: "USD", total: "575.00", taxTotal: "75.00" },
+  priorNotes: NO_PRIOR,
 });
 check("[3] a PARTIAL credit note converts at the source rate too",
   half.ok && mils(half.baseTotal) === mils(roundMoney(575 * Number(SRC_RATE), BASE)),
@@ -172,8 +176,9 @@ check("[3] a PARTIAL credit note converts at the source rate too",
 
 // [5] LEGACY — a foreign invoice with no stored conversion must REFUSE.
 const legacy = noteBaseAmounts({
-  baseCurrency: BASE, source: { currency: "USD", exchangeRate: null },
+  baseCurrency: BASE, source: { currency: "USD", exchangeRate: null, total: "999999.00", baseTotal: null, baseTaxAmount: null },
   note: { currency: "USD", total: INV_TOTAL, taxTotal: INV_TAX },
+  priorNotes: NO_PRIOR,
 });
 check("[5] a source with NO stored conversion is REFUSED, not re-converted",
   !legacy.ok, legacy.ok ? `converted anyway at ${legacy.exchangeRate}` : legacy.error.slice(0, 90));
@@ -191,8 +196,9 @@ await pool.query(
   "insert into exchange_rates (org_id,from_currency,to_currency,rate,effective_date,source) values ($1,'EUR','SAR','4.10000000','2026-07-01','manual')",
   [org]);
 const mismatch = noteBaseAmounts({
-  baseCurrency: BASE, source: { currency: "USD", exchangeRate: SRC_RATE },
+  baseCurrency: BASE, source: { currency: "USD", exchangeRate: SRC_RATE, total: "999999.00", baseTotal: null, baseTaxAmount: null },
   note: { currency: "EUR", total: "100.00", taxTotal: "0" },
+  priorNotes: NO_PRIOR,
 });
 check("a note in a DIFFERENT currency from its source is refused — and NOT because the rate is missing",
   !mismatch.ok && !/exchange rate exists/i.test(mismatch.error),
@@ -200,8 +206,9 @@ check("a note in a DIFFERENT currency from its source is refused — and NOT bec
 
 // [6] BASE CURRENCY — the no-regression case. Identity, no rate lookup, unchanged in every respect.
 const baseCase = noteBaseAmounts({
-  baseCurrency: BASE, source: { currency: null, exchangeRate: null },
+  baseCurrency: BASE, source: { currency: null, exchangeRate: null, total: "1150.00", baseTotal: null, baseTaxAmount: null },
   note: { currency: null, total: "1150.00", taxTotal: "150.00" },
+  priorNotes: NO_PRIOR,
 });
 check("[6] a BASE-currency note converts by identity — rate 1, amounts unchanged",
   baseCase.ok && baseCase.exchangeRate === "1" && baseCase.baseTotal === "1150.00" && baseCase.baseTaxAmount === "150.00",
@@ -209,18 +216,123 @@ check("[6] a BASE-currency note converts by identity — rate 1, amounts unchang
 check("[6] …and a base note whose source has no stored rate is NOT refused — there is nothing to inherit",
   baseCase.ok);
 
-// THE BOUND on the invariant, pinned. Same doc total, one fil of tax difference from retyped lines.
+// THE BOUND on the invariant — and the closing rule REMOVED it, which is worth pinning too.
+//
+// Before the closing rule, a "100%" note built from retyped lines whose document-level tax differed
+// by a fil returned AR to exactly zero and left revenue off by that difference times the source
+// rate. That bound no longer exists: a note that closes its source takes the source's stored base
+// figures as the exact remainder, so the note's own document tax never reaches the ledger.
+//
+// Kept as an assertion rather than deleted, because it is the case someone will hit and wonder
+// about — and because if the closing rule is ever stood down, this is where it shows up first.
 const retyped = noteBaseAmounts({
   baseCurrency: BASE, source: srcInvoice,
   note: { currency: "USD", total: INV_TOTAL, taxTotal: "150.01" },
+  priorNotes: NO_PRIOR,
 });
-check("BOUND: a 100% note with a DIFFERENT document-level tax still returns AR to exactly zero",
+check("BOUND (removed): a 100% note with a DIFFERENT document-level tax returns AR to exactly zero",
   retyped.ok && mils(retyped.baseTotal) === mils(invBaseTotal),
   retyped.ok ? `${retyped.baseTotal} vs invoice ${invBaseTotal}` : "blocked");
-check("BOUND: …while revenue is off by exactly the document tax difference × the source rate — note-entry, not FX",
-  retyped.ok && mils(subtractMoney(retyped.baseTotal, retyped.baseTaxAmount, BASE)) - mils(invBaseRevenue)
-    === -mils(roundMoney(0.01 * Number(SRC_RATE), BASE)),
+check("BOUND (removed): …and REVENUE to exactly zero too — the closing note takes the stored remainder, not its own tax",
+  retyped.ok && mils(subtractMoney(retyped.baseTotal, retyped.baseTaxAmount, BASE)) === mils(invBaseRevenue),
   retyped.ok ? `revenue side ${subtractMoney(retyped.baseTotal, retyped.baseTaxAmount, BASE)} vs invoice ${invBaseRevenue}` : "");
+
+// ── The CLOSING rule itself, stated rather than only swept ────────────────────────────────────
+// Three sequential partial notes against the 1,150.00 invoice booked at 3.80 (base 4,370.00).
+// Proportionally the three would sum to 4,370.01 and strand a fil on 1100 forever.
+{
+  const parts = ["383.33", "383.33", "383.34"];
+  const taxes = ["50.00", "50.00", "50.00"];
+  let priorDoc = 0, priorBase = 0, priorTax = 0;
+  const posted: string[] = [];
+  let proportionalSum = 0;
+  for (let i = 0; i < 3; i++) {
+    const part = noteBaseAmounts({
+      baseCurrency: BASE, source: srcInvoice,
+      note: { currency: "USD", total: parts[i], taxTotal: taxes[i] },
+      priorNotes: { total: priorDoc.toFixed(2), baseTotal: (priorBase / 1000).toFixed(3), baseTaxAmount: (priorTax / 1000).toFixed(3) },
+    });
+    if (!part.ok) { posted.push("BLOCKED"); break; }
+    posted.push(part.baseTotal);
+    proportionalSum += mils(roundMoney(Number(parts[i]) * Number(SRC_RATE), BASE));
+    priorDoc += Number(parts[i]);
+    priorBase += mils(part.baseTotal);
+    priorTax += mils(part.baseTaxAmount);
+  }
+  check("CLOSING: three sequential partial notes sum to the invoice's base total EXACTLY",
+    priorBase === mils(invBaseTotal), `${money(priorBase)} vs ${invBaseTotal} — proportional would give ${money(proportionalSum)}`);
+  check("CLOSING: …and the third note is the one that differs — it takes the remainder",
+    posted[2] !== roundMoney(Number(parts[2]) * Number(SRC_RATE), BASE),
+    `third ${posted[2]}, proportional would be ${roundMoney(Number(parts[2]) * Number(SRC_RATE), BASE)}`);
+  check("CLOSING: …while the first two are ordinary proportional conversions",
+    posted[0] === roundMoney(Number(parts[0]) * Number(SRC_RATE), BASE), `${posted[0]}`);
+  check("CLOSING: the VAT side lands exactly too", priorTax === mils(invBaseTax), `${money(priorTax)} vs ${invBaseTax}`);
+}
+
+// A note that does NOT close the source stays proportional — the rule is for the closing note only.
+const notClosing = noteBaseAmounts({
+  baseCurrency: BASE, source: srcInvoice,
+  note: { currency: "USD", total: "100.00", taxTotal: "13.04" },
+  priorNotes: NO_PRIOR,
+});
+check("CLOSING: a note that does NOT close the invoice is proportional, untouched",
+  notClosing.ok && notClosing.baseTotal === roundMoney(100 * Number(SRC_RATE), BASE),
+  notClosing.ok ? notClosing.baseTotal : "blocked");
+
+// STANDS DOWN when a prior note predates conversion: the sum already consumed is unknown, and
+// subtracting an incomplete total would produce a confident WRONG remainder — worse than a fil.
+const unknownPrior = noteBaseAmounts({
+  baseCurrency: BASE, source: srcInvoice,
+  note: { currency: "USD", total: "575.00", taxTotal: "75.00" },
+  priorNotes: { total: "575.00", baseTotal: null, baseTaxAmount: null },
+});
+check("CLOSING: stands down to proportional when a PRIOR note has no stored conversion",
+  unknownPrior.ok && unknownPrior.baseTotal === roundMoney(575 * Number(SRC_RATE), BASE),
+  unknownPrior.ok ? unknownPrior.baseTotal : "blocked");
+// …and when the SOURCE itself carries no stored base figures, for the same reason.
+const unknownSource = noteBaseAmounts({
+  baseCurrency: BASE,
+  source: { currency: "USD", exchangeRate: SRC_RATE, total: INV_TOTAL, baseTotal: null, baseTaxAmount: null },
+  note: { currency: "USD", total: INV_TOTAL, taxTotal: INV_TAX },
+  priorNotes: NO_PRIOR,
+});
+check("CLOSING: stands down when the SOURCE has no stored base figures — nothing to take a remainder of",
+  unknownSource.ok && unknownSource.baseTotal === roundMoney(Number(INV_TOTAL) * Number(SRC_RATE), BASE),
+  unknownSource.ok ? unknownSource.baseTotal : "blocked");
+
+// ── The ACTION's aggregate, against real rows ────────────────────────────────────────────────
+// The lib's stand-down is only as good as the flag the action feeds it, and that flag comes from a
+// `count(*) filter (...)` written in a raw SQL template. `sum()` skips nulls SILENTLY, so a legacy
+// note with no stored conversion would shrink the prior total and hand the closing rule a remainder
+// that is too large — a confident wrong number, not a fil. This asserts the SQL itself, because a
+// drizzle template that renders a bare column name has produced a confident 0 in this repo before.
+{
+  const legacyInv = (await pool.query(
+    `insert into sales_invoices (org_id,invoice_number,customer_id,issue_date,status,total,tax_total,paid_amount,currency,
+                                 exchange_rate,base_total,base_tax_amount,created_by_id)
+     values ($1,'INV-FX-LEG',$2,'2026-07-01','sent','1000.00','0','0','USD',$3,$4,'0',$5) returning id`,
+    [org, cust, SRC_RATE, roundMoney(1000 * Number(SRC_RATE), BASE), user])).rows[0].id;
+  const mkNote = async (num: string, total: string, base: string | null) => pool.query(
+    `insert into credit_notes (org_id,credit_note_number,customer_id,source_invoice_id,issue_date,status,
+                               subtotal,tax_total,total,currency,exchange_rate,base_total,base_tax_amount,created_by_id)
+     values ($1,$2,$3,$4,'2026-08-15','issued',$5,'0',$5,'USD',$6,$7,$8,$9)`,
+    [org, num, cust, legacyInv, total, base === null ? null : SRC_RATE, base, base === null ? null : "0", user]);
+  await mkNote("CN-LEG-A", "300.00", roundMoney(300 * Number(SRC_RATE), BASE));
+  await mkNote("CN-LEG-B", "200.00", null); // pre-FX-6: issued, but never converted
+
+  const agg = (await pool.query(
+    `select coalesce(sum(total),0)::text total, coalesce(sum(base_total),0)::text base_total,
+            count(*) filter (where base_total is null or base_tax_amount is null)::int unconverted
+       from credit_notes where org_id=$1 and source_invoice_id=$2 and status='issued' and deleted_at is null`,
+    [org, legacyInv])).rows[0];
+  check("ACTION AGG: the document total counts BOTH prior notes", mils(agg.total) === 500_000, agg.total);
+  check("ACTION AGG: sum(base_total) silently skips the unconverted one — 1140.00, not the true consumption",
+    mils(agg.base_total) === mils(roundMoney(300 * Number(SRC_RATE), BASE)), agg.base_total);
+  check("ACTION AGG: …and the unconverted COUNT is what makes that visible", Number(agg.unconverted) === 1, String(agg.unconverted));
+  // The two together: a short base sum plus a flag that says "do not trust it".
+  const wouldStandDown = Number(agg.unconverted) !== 0;
+  check("ACTION AGG: so the closing rule stands down for this invoice", wouldStandDown);
+}
 
 // ─────────────────────────────────────────────────────────────────────────────────────────────
 // DEBIT NOTE against a foreign purchase order — the twin
@@ -240,8 +352,9 @@ await post("2026-07-01", "Purchase order PO-FX-1 received", "purchase_order", po
 
 const beforeDn = await bracket();
 const dnFull = noteBaseAmounts({
-  baseCurrency: BASE, source: { currency: "USD", exchangeRate: SRC_RATE },
+  baseCurrency: BASE, source: { currency: "USD", exchangeRate: SRC_RATE, total: "999999.00", baseTotal: null, baseTaxAmount: null },
   note: { currency: "USD", total: PO_TOTAL, taxTotal: PO_TAX },
+  priorNotes: NO_PRIOR,
 });
 check("the full debit note converts", dnFull.ok, dnFull.ok ? "" : dnFull.error);
 if (dnFull.ok) {
@@ -261,15 +374,17 @@ if (dnFull.ok) {
     mils(afterDn.ap) === 0, `2000 is ${afterDn.ap} — residual ${money(mils(afterDn.ap))}`);
 }
 const dnHalf = noteBaseAmounts({
-  baseCurrency: BASE, source: { currency: "USD", exchangeRate: SRC_RATE },
+  baseCurrency: BASE, source: { currency: "USD", exchangeRate: SRC_RATE, total: "999999.00", baseTotal: null, baseTaxAmount: null },
   note: { currency: "USD", total: "400.00", taxTotal: "0" },
+  priorNotes: NO_PRIOR,
 });
 check("[3/DN] a PARTIAL debit note converts at the PO's rate",
   dnHalf.ok && mils(dnHalf.baseTotal) === mils(roundMoney(400 * Number(SRC_RATE), BASE)),
   dnHalf.ok ? `${dnHalf.baseTotal} (source-rate ${roundMoney(400 * Number(SRC_RATE), BASE)})` : "blocked");
 const dnLegacy = noteBaseAmounts({
-  baseCurrency: BASE, source: { currency: "USD", exchangeRate: null },
+  baseCurrency: BASE, source: { currency: "USD", exchangeRate: null, total: "999999.00", baseTotal: null, baseTaxAmount: null },
   note: { currency: "USD", total: PO_TOTAL, taxTotal: PO_TAX },
+  priorNotes: NO_PRIOR,
 });
 check("[5/DN] a purchase order with NO stored conversion is REFUSED", !dnLegacy.ok,
   dnLegacy.ok ? `converted at ${dnLegacy.exchangeRate}` : dnLegacy.error.slice(0, 80));
@@ -286,8 +401,8 @@ const AMOUNTS = [["1000.00", "130.43"], ["333.33", "43.48"], ["0.03", "0.01"], [
 // future refactor of the rounding would break, and it costs nothing.
 for (const rate of RATES) {
   for (const [total, tax] of AMOUNTS) {
-    const whole = noteBaseAmounts({ baseCurrency: BASE, source: { currency: "USD", exchangeRate: rate },
-      note: { currency: "USD", total, taxTotal: tax } });
+    const whole = noteBaseAmounts({ baseCurrency: BASE, source: { currency: "USD", exchangeRate: rate, total: "999999.00", baseTotal: null, baseTaxAmount: null },
+      note: { currency: "USD", total, taxTotal: tax } , priorNotes: NO_PRIOR });
     if (!whole.ok) { strands.push(`rate ${rate} total ${total}: blocked — ${whole.error.slice(0, 40)}`); continue; }
     const srcBaseTotal = roundMoney(Number(total) * Number(rate), BASE);
     const srcBaseTax = roundMoney(Number(tax) * Number(rate), BASE);
@@ -311,26 +426,34 @@ for (const rate of RATES) {
     if (cents < 3) continue; // cannot be split three ways in the document currency
     const splits = [Math.floor(cents / 3), Math.floor(cents / 3), cents - 2 * Math.floor(cents / 3)];
     const taxSplits = [Math.floor(taxCents / 3), Math.floor(taxCents / 3), taxCents - 2 * Math.floor(taxCents / 3)];
-    let sumBase = 0, sumTax = 0;
+    const wholeBase = roundMoney(Number(total) * Number(rate), BASE);
+    const wholeTax = roundMoney(Number(tax) * Number(rate), BASE);
+    // The notes are issued IN SEQUENCE, each seeing what the ones before it consumed — which is
+    // what the action does. Passing NO_PRIOR to all three would hide the closing rule entirely and
+    // measure a situation the product cannot produce.
+    let priorDoc = 0, sumBase = 0, sumTax = 0;
     let blocked = false;
     for (let i = 0; i < 3; i++) {
-      const part = noteBaseAmounts({ baseCurrency: BASE, source: { currency: "USD", exchangeRate: rate },
-        note: { currency: "USD", total: (splits[i] / 100).toFixed(2), taxTotal: (taxSplits[i] / 100).toFixed(2) } });
+      const part = noteBaseAmounts({
+        baseCurrency: BASE,
+        source: { currency: "USD", exchangeRate: rate, total, baseTotal: wholeBase, baseTaxAmount: wholeTax },
+        note: { currency: "USD", total: (splits[i] / 100).toFixed(2), taxTotal: (taxSplits[i] / 100).toFixed(2) },
+        priorNotes: { total: (priorDoc / 100).toFixed(2), baseTotal: (sumBase / 1000).toFixed(3), baseTaxAmount: (sumTax / 1000).toFixed(3) },
+      });
       if (!part.ok) { blocked = true; break; }
+      priorDoc += splits[i];
       sumBase += mils(part.baseTotal);
       sumTax += mils(part.baseTaxAmount);
     }
     if (blocked) { partialStrands.push(`rate ${rate} total ${total}: a split was blocked`); continue; }
-    const wholeBase = mils(roundMoney(Number(total) * Number(rate), BASE));
-    const wholeTax = mils(roundMoney(Number(tax) * Number(rate), BASE));
-    if (sumBase !== wholeBase) partialStrands.push(`rate ${rate} total ${total}: 3 partials sum to ${money(sumBase)}, whole is ${money(wholeBase)} (${money(sumBase - wholeBase)})`);
-    if (sumTax !== wholeTax) partialStrands.push(`rate ${rate} tax ${tax}: 3 partial taxes sum to ${money(sumTax)}, whole is ${money(wholeTax)} (${money(sumTax - wholeTax)})`);
+    if (sumBase !== mils(wholeBase)) partialStrands.push(`rate ${rate} total ${total}: 3 partials sum to ${money(sumBase)}, whole is ${wholeBase} (${money(sumBase - mils(wholeBase))})`);
+    if (sumTax !== mils(wholeTax)) partialStrands.push(`rate ${rate} tax ${tax}: 3 partial taxes sum to ${money(sumTax)}, whole is ${wholeTax} (${money(sumTax - mils(wholeTax))})`);
   }
 }
 
 check("SWEEP (a): 25 awkward rate/amount pairs — a FULL note reproduces the invoice's base figures",
   strands.length === 0, strands.slice(0, 6).join(" | "));
-check("SWEEP (b): 25 pairs split into THREE partial notes — their base amounts sum to the whole",
+check("SWEEP (b): 25 pairs split into THREE SEQUENTIAL partial notes — their base amounts sum to the whole",
   partialStrands.length === 0, `${partialStrands.length} strand(s):\n      ${partialStrands.join("\n      ")}`);
 
 await sweepDb();

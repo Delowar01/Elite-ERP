@@ -434,9 +434,10 @@ committed first so the numbers exist in the history:
 
 After the fix all three go to exactly `0.000`.
 
-### One deliberate behaviour change worth knowing about
+### One deliberate behaviour change worth knowing about — it changes a user-visible refusal
 
-A note dated **before the org's first exchange-rate row used to block**. It no longer does: the rate
+Anyone who documented "a credit note dated before your first exchange rate cannot be issued" should
+update it. A note dated **before the org's first exchange-rate row used to block**. It no longer does: the rate
 comes from the source document and the rate table is never consulted, so such a note now issues
 correctly. That was an artefact of converting at the note's own date, and removing it is an
 improvement rather than a regression. `verify-fx-posting` asserts the new behaviour explicitly.
@@ -471,46 +472,69 @@ select count(*) from credit_notes cn join sales_invoices i on i.id = cn.source_i
 
 ---
 
-## Partial notes crediting an invoice in full strand a minor unit (found by the note-FX sweep)
+## Partial notes crediting a source in full stranded a minor unit — RESOLVED
 
-**Status:** open, out of scope for the note-FX fix by decision. **Real, and in shipped posting
-math** — not a test artefact and not something to tune away.
+**Status:** FIXED, both note types, in the same change. Found by `verify-note-fx`'s sweep (b) the
+moment the FX inheritance fix made that sweep able to measure rounding rather than the FX defect.
 
-Once notes inherit the source rate, a FULL note nets its invoice to exactly zero. Several PARTIAL
-notes that together credit the same invoice do not: each is rounded on its own, so their base
-amounts can sum to something other than the invoice's base total.
+### What it was
 
-Measured by `verify-note-fx`'s sweep (b) — 25 rate/amount pairs, each split three ways:
-**17 strand, every one by exactly ±0.01.** Both directions. Examples:
+Once notes inherit the source rate, a FULL note nets its source to exactly zero. Several PARTIAL
+notes that together reverse the same source did not: each rounded on its own, so their base amounts
+summed to something other than the source's base total. Measured across 25 rate/amount pairs split
+three ways — **17 stranded, every one by exactly ±0.01, in both directions:**
 
 ```
-rate 3.75130000  total 333.33     3 partials sum to 1,250.430, whole is 1,250.420   (+0.010)
-rate 0.26700000  total 333.33     3 partials sum to    89.010, whole is    89.000   (+0.010)
-rate 17.94910000 total 99,999.99  3 partials sum to 1,794,909.810, whole is 1,794,909.820 (-0.010)
+rate 3.75130000  total 333.33     3 partials sum to     1,250.430, whole is     1,250.420  (+0.010)
+rate 0.26700000  total 333.33     3 partials sum to        89.010, whole is        89.000  (+0.010)
+rate 17.94910000 total 99,999.99  3 partials sum to 1,794,909.810, whole is 1,794,909.820  (-0.010)
 ```
 
-The consequence is the same *kind* of uncleanable AR residual the FX defect produced, one fil
-instead of a hundred: an invoice credited in full across three notes ends at ±0.01 in GL 1100.
+Uncleanable in the same way the FX residual was: no payment settles it, no allocation consumes it,
+it sits on the control account permanently. One fil instead of a hundred, identical in kind.
 
-**The codebase already has the discipline for the analogous case and it is simply missing here.**
-A closing PAYMENT uses `baseTotal − basePaidAmount` — the exact remainder — rather than a fresh
-proportional conversion, and `releaseShareOf`'s `full` branch does the same for advances. The note
-path has no equivalent: every note converts proportionally, including the one that closes the
-invoice out.
+### The rule, which already existed everywhere else
 
-**The fix, when it is picked up:** on the note that CLOSES the source document — cumulative
-document-currency credits reaching the total — the base amount is the exact remainder
-(`source.baseTotal − Σ base of prior active notes`) rather than a fresh conversion.
+**The note that CLOSES its source takes the exact remainder** — `source.baseTotal − Σ base of prior
+active notes` — rather than another proportional conversion. Not a new rule: a closing PAYMENT
+already posts `baseTotal − basePaidAmount`, and `releaseShareOf`'s `full` branch does the same for
+advances. Notes were the one path that stayed proportional all the way through.
 
-**Why it was not done in the same change.** The credit note already computes `alreadyCredited`
-inside its lock for the cap, so the sibling aggregate is nearly free there. The debit note has no
-cap, no sibling aggregate and no paid-amount tracking against the PO, so it would need that
-machinery built — and the rule must land on both types together, exactly as the FX fix did, or the
-next person finds one half fixed and the other not. That is a design decision with its own edges
-(reversed notes, interaction with the cap), not a rounding tweak.
+It stands down in three cases, each for a stated reason rather than for convenience: the note does
+not close the source; the source carries no stored base figures; or a prior note predates conversion
+so the sum already consumed is unknown — subtracting an incomplete total would produce a confident
+wrong remainder, which is worse than a fil.
 
-**Do not relax `verify-note-fx`'s sweep (b) to make the gate green.** It is measuring the defect
-correctly. It fails on purpose until the closing-note rule lands.
+That last guard is load-bearing and easy to get wrong: `sum()` skips nulls **silently**, so a legacy
+note shrinks the prior total and makes the remainder too large. The action counts unconverted
+siblings with `count(*) filter (...)` alongside the sums, and `verify-note-fx` asserts that SQL
+against real rows — a short sum plus a flag that says "do not trust it".
+
+### The debit-note half — scoped before it was built, as asked
+
+The gap named when this was filed ("no cap, no sibling aggregate, no paid-amount tracking") conflated
+three things. The closing rule needs only **one** of them:
+
+- a **sibling aggregate** — one SELECT over `debit_notes`, the exact mirror of the credit note's;
+- a **`for update` lock on the purchase order** — not for the rate, which is immutable once received,
+  but so two concurrent notes cannot both read the same prior total and both take the whole remainder.
+
+It needs **neither the cap nor paid-amount tracking**. Those are separate features the debit note
+still lacks. Net cost: the debit note's pre-transaction read moved inside a locked transaction, plus
+the aggregate — a small mirror, which is why both types landed together as instructed.
+
+### Still open, and NOT fixed here
+
+**A debit note can exceed its purchase order.** Credit notes are capped against the invoice; debit
+notes have no equivalent, so cumulative returns can pass the PO's value. The closing rule declines
+to act when the cumulative total *overshoots* rather than lands, so it neither helps nor worsens
+this — but it is a real gap and it is now the only asymmetry left between the two note paths.
+
+### Sweep (b) after the fix
+
+`0 strand(s)` across all 25 pairs, issued in sequence so each note sees what the ones before it
+consumed. Passing NO_PRIOR to all three would have hidden the closing rule entirely and measured a
+situation the product cannot produce.
 
 ---
 

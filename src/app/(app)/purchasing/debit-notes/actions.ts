@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { sanitizeIfHtml } from "@/lib/sanitize-html";
 import { normalizeDocumentTerms, type DocumentTerm } from "../../sales/_shared/document-terms";
 import { redirect } from "next/navigation";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, sql, isNull } from "drizzle-orm";
 import { db, debitNotesTable, debitNoteItemsTable, purchaseOrdersTable, productsTable, accountsTable, journalEntriesTable, journalLinesTable } from "@/db";
 import { requireSession } from "@/lib/session";
 import { logActivity } from "@/lib/activity";
@@ -182,27 +182,74 @@ export async function issueDebitNoteAction(debitNoteId: number): Promise<ActionR
     return { error: "Chart of accounts is missing a required system account (1200/2000)." };
   }
 
-  // The source purchase order, read for its stored conversion. No lock: `exchange_rate` is written
-  // exactly once, by receivePurchaseOrderAction, which requires status `ordered` and sets
-  // `received` — and the lifecycle allows only duplicate/reverse from `received`, so a receive
-  // cannot run twice and edit is draft-only. There is nothing here to race.
-  const [sourcePo] = await db
-    .select({ currency: purchaseOrdersTable.currency, exchangeRate: purchaseOrdersTable.exchangeRate })
-    .from(purchaseOrdersTable)
-    .where(and(eq(purchaseOrdersTable.id, dn.sourcePurchaseOrderId), eq(purchaseOrdersTable.orgId, session.orgId)));
-  if (!sourcePo) return { error: "Purchase order not found." };
+  const outcome = await db.transaction(async (tx) => {
+    // Lock the NOTE first, and re-check its status. The outer `status !== "draft"` check above ran
+    // before the transaction, so two clicks on Issue can both pass it; the second finds the note
+    // already issued here and stops before writing anything. The credit note has always done this;
+    // the debit note did not, and it matters more now that the sibling aggregate below has to see a
+    // serialized view — without it the second click would post a second entry AND be counted as a
+    // prior note by nothing, since it is the same note.
+    const noteLock = await tx.execute(sql`select status from debit_notes where id = ${dn.id} and org_id = ${session.orgId} for update`);
+    if ((noteLock.rows as unknown as { status: string }[])[0]?.status !== "draft") {
+      return { error: "Only draft debit notes can be issued." } as const;
+    }
 
-  // INHERITS the purchase order's stored rate. The note reverses part of a receipt whose inventory
-  // and AP were both booked at that rate, and no cash moves here — re-converting at the note's own
-  // date would invent a difference that never happened.
-  const captured = noteBaseAmounts({
-    baseCurrency: session.orgCurrency,
-    source: sourcePo,
-    note: { currency: dn.currency, total: dn.total, taxTotal: dn.taxTotal },
-  });
-  if (!captured.ok) return { error: captured.error };
+    // The purchase order, LOCKED. The rate itself needs no lock — `exchange_rate` is written
+    // exactly once, by receivePurchaseOrderAction, which requires status `ordered` and sets
+    // `received`, and the lifecycle allows only duplicate/reverse from there, so a receive cannot
+    // run twice and edit is draft-only. The lock is for the SIBLING AGGREGATE below: two debit
+    // notes issued concurrently against the same PO would otherwise both read the same "already
+    // returned" total and both decide they are the closing note, and both would take the whole
+    // remainder.
+    const poLock = await tx.execute(sql`
+      select po_number, currency, total::text as total, exchange_rate::text as exchange_rate,
+             base_total::text as base_total, base_tax_amount::text as base_tax_amount
+        from purchase_orders where id = ${dn.sourcePurchaseOrderId} and org_id = ${session.orgId}
+         for update`);
+    const sourcePo = (poLock.rows as unknown as {
+      po_number: string; currency: string | null; total: string; exchange_rate: string | null;
+      base_total: string | null; base_tax_amount: string | null;
+    }[])[0];
+    if (!sourcePo) return { error: "Purchase order not found." } as const;
 
-  await db.transaction(async (tx) => {
+    // The ACTIVE debit notes already issued against this PO — the mirror of the credit note's own
+    // aggregate, and read the same NULL-intolerant way: `sum()` skips nulls silently, so a legacy
+    // note with no stored conversion would shrink the sum and hand the closing rule a confident
+    // wrong remainder.
+    const [returned] = await tx
+      .select({
+        total: sql<string>`coalesce(sum(${debitNotesTable.total}), 0)::text`,
+        baseTotal: sql<string>`coalesce(sum(${debitNotesTable.baseTotal}), 0)::text`,
+        baseTaxAmount: sql<string>`coalesce(sum(${debitNotesTable.baseTaxAmount}), 0)::text`,
+        unconverted: sql<number>`count(*) filter (where ${debitNotesTable.baseTotal} is null or ${debitNotesTable.baseTaxAmount} is null)::int`,
+      })
+      .from(debitNotesTable)
+      .where(and(
+        eq(debitNotesTable.orgId, session.orgId),
+        eq(debitNotesTable.sourcePurchaseOrderId, dn.sourcePurchaseOrderId),
+        eq(debitNotesTable.status, "issued"),
+        isNull(debitNotesTable.deletedAt),
+      ));
+    const priorConverted = Number(returned?.unconverted ?? 0) === 0;
+
+    // INHERITS the purchase order's stored rate — the note reverses part of a receipt whose
+    // inventory and AP were both booked at that rate, and no cash moves here. The note that closes
+    // the PO out takes the exact remainder rather than a fresh proportional conversion.
+    const captured = noteBaseAmounts({
+      baseCurrency: session.orgCurrency,
+      source: {
+        currency: sourcePo.currency, exchangeRate: sourcePo.exchange_rate,
+        total: sourcePo.total, baseTotal: sourcePo.base_total, baseTaxAmount: sourcePo.base_tax_amount,
+      },
+      note: { currency: dn.currency, total: dn.total, taxTotal: dn.taxTotal },
+      priorNotes: {
+        total: returned?.total ?? "0",
+        baseTotal: priorConverted ? (returned?.baseTotal ?? "0") : null,
+        baseTaxAmount: priorConverted ? (returned?.baseTaxAmount ?? "0") : null,
+      },
+    });
+    if (!captured.ok) return { error: captured.error } as const;
+
     for (const item of items) {
       if (item.productId) {
         await tx
@@ -239,7 +286,9 @@ export async function issueDebitNoteAction(debitNoteId: number): Promise<ActionR
         baseTaxAmount: captured.baseTaxAmount,
       })
       .where(eq(debitNotesTable.id, debitNoteId));
+    return {} as const;
   });
+  if ("error" in outcome && outcome.error) return { error: outcome.error };
 
   await logActivity(session, { type: "debit_note.issued", description: `Issued debit note ${dn.debitNoteNumber} — posted reversing entry to ledger`, entityType: "debit_note", entityId: debitNoteId });
   revalidatePath(PATH);

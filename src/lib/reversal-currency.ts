@@ -1,5 +1,6 @@
 import "server-only";
 import { toBaseAmount } from "@/lib/exchange-rates";
+import { moneyEpsilon, roundMoney } from "@/lib/currency/currencies";
 
 /**
  * The conversion and the journal lines for a CREDIT NOTE and its debit-note twin.
@@ -64,8 +65,17 @@ export type NoteBaseAmounts =
 export function noteBaseAmounts(args: {
   baseCurrency: string;
   /** The document being reversed — the invoice behind a credit note, the PO behind a debit note. */
-  source: { currency: string | null; exchangeRate: string | null };
+  source: { currency: string | null; exchangeRate: string | null; total: string; baseTotal: string | null; baseTaxAmount: string | null };
   note: { currency: string | null; total: string; taxTotal: string };
+  /**
+   * The ACTIVE notes already issued against this source — document totals and the base figures they
+   * were posted with. Reversed and draft notes are excluded by the caller: a reversed note has given
+   * its credit back and a draft has posted nothing.
+   *
+   * `baseTotal`/`baseTaxAmount` are null when any prior note predates conversion, which is the one
+   * case the closing rule stands down for (see below).
+   */
+  priorNotes: { total: string; baseTotal: string | null; baseTaxAmount: string | null };
 }): NoteBaseAmounts {
   const base = args.baseCurrency.toUpperCase();
   // Null means "the base currency" on both documents, so normalise before comparing — an invoice
@@ -102,12 +112,47 @@ export function noteBaseAmounts(args: {
   }
 
   const rate = args.source.exchangeRate;
-  return {
-    ok: true,
+  const proportional = {
+    ok: true as const,
     exchangeRate: rate,
     baseTotal: toBaseAmount(args.note.total, rate, args.baseCurrency),
     baseTaxAmount: toBaseAmount(args.note.taxTotal, rate, args.baseCurrency),
   };
+
+  // ── The CLOSING note takes the exact remainder, not another proportional conversion ──────────
+  //
+  // Each note rounds on its own, so several partial notes that together reverse the whole document
+  // can sum to something other than the document's base total. Measured before this rule existed:
+  // 17 of 25 awkward rate/amount pairs split three ways stranded exactly ±0.01, in both directions.
+  // That fil sits on the control account permanently — no payment settles it and no allocation
+  // consumes it. It is the same uncleanable residual the note-date conversion produced, one minor
+  // unit instead of a hundred.
+  //
+  // This is not a new rule; it is an existing one this path never received. A closing PAYMENT
+  // already posts `baseTotal − basePaidAmount` rather than converting afresh, and
+  // `releaseShareOf`'s `full` branch does the same for advances. Notes were the only path that
+  // stayed proportional all the way through.
+  const docEps = moneyEpsilon(args.note.currency ?? args.baseCurrency);
+  const cumulative = Number(args.priorNotes.total) + Number(args.note.total);
+  const closes = Math.abs(cumulative - Number(args.source.total)) <= docEps;
+
+  // Three conditions stand the rule down, each for a stated reason rather than for convenience:
+  //  - the note does not close the source (a partial: proportional is correct and exact by nature);
+  //  - the source carries no stored base figures (nothing to take a remainder OF);
+  //  - a prior note predates conversion, so the sum already consumed is unknown. Subtracting an
+  //    incomplete sum would produce a confident wrong remainder, which is worse than a fil.
+  if (!closes) return proportional;
+  if (args.source.baseTotal === null || args.source.baseTaxAmount === null) return proportional;
+  if (args.priorNotes.baseTotal === null || args.priorNotes.baseTaxAmount === null) return proportional;
+
+  const remainderTotal = roundMoney(Number(args.source.baseTotal) - Number(args.priorNotes.baseTotal), args.baseCurrency);
+  const remainderTax = roundMoney(Number(args.source.baseTaxAmount) - Number(args.priorNotes.baseTaxAmount), args.baseCurrency);
+  // A negative remainder means the prior notes already reversed more base than the source carries —
+  // possible only from data this rule cannot repair. Proportional is the honest fallback; inventing
+  // a negative line would be a new defect on top of an old one.
+  if (Number(remainderTotal) < 0 || Number(remainderTax) < 0) return proportional;
+
+  return { ok: true, exchangeRate: rate, baseTotal: remainderTotal, baseTaxAmount: remainderTax };
 }
 
 /**

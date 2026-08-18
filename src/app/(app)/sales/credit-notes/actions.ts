@@ -213,12 +213,13 @@ export async function issueCreditNoteAction(creditNoteId: number): Promise<Actio
     }
     const invoiceLock = await tx.execute(sql`
       select invoice_number, total::text as total, paid_amount::text as paid_amount,
-             base_paid_amount::text as base_paid_amount, currency, exchange_rate::text as exchange_rate
+             base_paid_amount::text as base_paid_amount, currency, exchange_rate::text as exchange_rate,
+             base_total::text as base_total, base_tax_amount::text as base_tax_amount
         from sales_invoices where id = ${cn.sourceInvoiceId} and org_id = ${session.orgId}
          for update`);
     const invoice = (invoiceLock.rows as unknown as {
       invoice_number: string; total: string; paid_amount: string; base_paid_amount: string | null;
-      currency: string | null; exchange_rate: string | null;
+      currency: string | null; exchange_rate: string | null; base_total: string | null; base_tax_amount: string | null;
     }[])[0];
     if (!invoice) return { error: "Invoice not found." } as const;
 
@@ -226,22 +227,21 @@ export async function issueCreditNoteAction(creditNoteId: number): Promise<Actio
     // rate, the cap and the release are one decision rather than a read-then-write race. A credit
     // note moves no cash: it reverses part of an invoice whose AR and revenue were both booked at
     // this rate, so anything else invents a difference that never happened.
-    const captured = noteBaseAmounts({
-      baseCurrency: session.orgCurrency,
-      source: { currency: invoice.currency, exchangeRate: invoice.exchange_rate },
-      note: { currency: cn.currency, total: cn.total, taxTotal: cn.taxTotal },
-    });
-    if (!captured.ok) return { error: captured.error } as const;
-    // Derived, so the entry balances by construction — the pre-FX-6 lines debited the full subtotal
-    // against a discounted total, the same latent hole the invoice send had.
-    const baseRevenue = subtractMoney(captured.baseTotal, captured.baseTaxAmount, session.orgCurrency);
-
-    // §Cap — the sum of ACTIVE credit notes against an invoice may not exceed the invoice's value.
-    // Reversed and draft notes do not count: a reversed note has given its credit back, and a draft
-    // has not posted. Without this, `paidAmount` grows past `total` and the invoice's own arithmetic
-    // stops meaning anything — independent of advances.
+    // The ACTIVE notes already issued against this invoice. Reversed and draft notes do not count:
+    // a reversed note has given its credit back, and a draft has posted nothing. This one aggregate
+    // now serves two decisions — the cap below, and the closing-note remainder in the conversion.
+    //
+    // The unconverted COUNT is load-bearing: `sum()` skips nulls silently, so a legacy note with no
+    // stored conversion would shrink the base sum and hand the closing rule a remainder that is too
+    // large — a confident wrong number rather than a fil. The count makes that case visible so the
+    // rule stands down instead. `verify-note-fx` asserts this SQL against real rows.
     const [issued] = await tx
-      .select({ total: sql<string>`coalesce(sum(${creditNotesTable.total}), 0)::text` })
+      .select({
+        total: sql<string>`coalesce(sum(${creditNotesTable.total}), 0)::text`,
+        baseTotal: sql<string>`coalesce(sum(${creditNotesTable.baseTotal}), 0)::text`,
+        baseTaxAmount: sql<string>`coalesce(sum(${creditNotesTable.baseTaxAmount}), 0)::text`,
+        unconverted: sql<number>`count(*) filter (where ${creditNotesTable.baseTotal} is null or ${creditNotesTable.baseTaxAmount} is null)::int`,
+      })
       .from(creditNotesTable)
       .where(and(
         eq(creditNotesTable.orgId, session.orgId),
@@ -250,6 +250,29 @@ export async function issueCreditNoteAction(creditNoteId: number): Promise<Actio
         isNull(creditNotesTable.deletedAt),
       ));
     const alreadyCredited = Number(issued?.total ?? 0);
+    const priorConverted = Number(issued?.unconverted ?? 0) === 0;
+
+    const captured = noteBaseAmounts({
+      baseCurrency: session.orgCurrency,
+      source: {
+        currency: invoice.currency, exchangeRate: invoice.exchange_rate,
+        total: invoice.total, baseTotal: invoice.base_total, baseTaxAmount: invoice.base_tax_amount,
+      },
+      note: { currency: cn.currency, total: cn.total, taxTotal: cn.taxTotal },
+      priorNotes: {
+        total: issued?.total ?? "0",
+        baseTotal: priorConverted ? (issued?.baseTotal ?? "0") : null,
+        baseTaxAmount: priorConverted ? (issued?.baseTaxAmount ?? "0") : null,
+      },
+    });
+    if (!captured.ok) return { error: captured.error } as const;
+    // Derived, so the entry balances by construction — the pre-FX-6 lines debited the full subtotal
+    // against a discounted total, the same latent hole the invoice send had.
+    const baseRevenue = subtractMoney(captured.baseTotal, captured.baseTaxAmount, session.orgCurrency);
+
+    // §Cap — the sum of ACTIVE credit notes against an invoice may not exceed the invoice's value.
+    // Without this, `paidAmount` grows past `total` and the invoice's own arithmetic stops meaning
+    // anything — independent of advances.
     if (alreadyCredited + Number(cn.total) > Number(invoice.total) + eps) {
       const headroom = roundMoney(Math.max(0, Number(invoice.total) - alreadyCredited), docCurrency);
       return {
