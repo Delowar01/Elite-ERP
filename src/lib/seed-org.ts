@@ -76,7 +76,7 @@ export async function seedOrgDefaults(tx: Tx, orgId: number, country?: string | 
       orgId,
       name: "Cash on Hand",
       glAccountId: cashAccount.id,
-      openingBalance: "0",
+      openingBalanceLegacy: "0",
     });
   }
 

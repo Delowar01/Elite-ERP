@@ -50,7 +50,7 @@ export async function createBankAccountAction(formData: FormData): Promise<Actio
       orgId: session.orgId,
       name,
       glAccountId,
-      openingBalance,
+      openingBalanceLegacy: openingBalance,
       ...readDetailFields(formData),
     })
     .returning({ id: bankAccountsTable.id });
@@ -99,7 +99,7 @@ export async function updateBankAccountAction(id: number, formData: FormData): P
     set.glAccountId = glAccountId;
   }
   const openingRaw = formData.get("openingBalance");
-  if (openingRaw != null && String(openingRaw).trim() !== "") set.openingBalance = String(openingRaw).trim();
+  if (openingRaw != null && String(openingRaw).trim() !== "") set.openingBalanceLegacy = String(openingRaw).trim();
 
   await db.update(bankAccountsTable).set(set).where(and(eq(bankAccountsTable.id, id), eq(bankAccountsTable.orgId, session.orgId)));
 

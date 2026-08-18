@@ -74,7 +74,7 @@ export default async function BankAccountsPage() {
           {bankAccounts.map((ba) => {
             const glAccount = accountByGl.get(ba.glAccountId);
             const glBalance = balances.get(ba.glAccountId) ?? 0;
-            const total = Number(ba.openingBalance) + glBalance;
+            const total = Number(ba.openingBalanceLegacy) + glBalance;
             return (
               <div key={ba.id} className="card" style={{ padding: "18px 20px" }}>
                 <div className="flex justify-between items-start">

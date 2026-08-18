@@ -27,7 +27,35 @@ export const bankAccountsTable = pgTable("bank_accounts", {
   glAccountId: integer("gl_account_id")
     .notNull()
     .references(() => accountsTable.id),
-  openingBalance: numeric("opening_balance", { precision: 15, scale: 3 }).notNull().default("0"),
+  /**
+   * LEGACY. Nothing computes from this column any more — read `journal_entries` instead.
+   *
+   * It was a plain number written at account creation, with no journal entry posted anywhere, and
+   * the bank-accounts page rendered `Number(openingBalance) + <ledger balance>`. The money existed
+   * in exactly one place in the product and appeared on exactly one screen: it was in no Trial
+   * Balance, no Balance Sheet and no Cash Flow, which is why both statements balanced without it.
+   *
+   * Opening balances are now POSTED — `Dr <the bank's GL account> / Cr <contra>` dated
+   * `openingDate`, with `sourceType = 'bank_opening'` and `sourceId = <this row's id>`.
+   *
+   * The column is kept, not dropped: it is the only surviving record of what was typed before the
+   * repair, useful if a backfilled entry is ever disputed. Creation still writes it as an audit
+   * copy. The Drizzle field is named `openingBalanceLegacy` deliberately — `ba.openingBalance` no
+   * longer exists, so the natural way to write the old bug does not compile, and `verify:static`
+   * asserts this identifier appears nowhere outside this file. See the product-invariants section
+   * of verify/README.md. Dropping it is filed in docs/backlog.md as its own change.
+   */
+  openingBalanceLegacy: numeric("opening_balance", { precision: 15, scale: 3 }).notNull().default("0"),
+  /**
+   * As-of date of the opening balance — the date its journal entry is posted on.
+   *
+   * Nullable because rows created before the repair have no such date; the backfill falls back to
+   * the account's `createdAt` date for those. Every new account with a non-zero opening balance
+   * sets it.
+   */
+  openingDate: date("opening_date"),
+  /** Contra account of the opening entry (equity or liability). Null when the opening balance is zero. */
+  openingContraAccountId: integer("opening_contra_account_id").references(() => accountsTable.id),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });

@@ -41,7 +41,11 @@ export const journalEntriesTable = pgTable("journal_entries", {
    *
    * Known values: sales_invoice | credit_note | purchase_order | debit_note | payment |
    * advance_application | advance_application_release | advance_application_release_reversal |
-   * payroll_run | expense | manual.
+   * bank_opening | payroll_run | expense | manual.
+   *
+   * `bank_opening` keys off `bank_accounts.id`, and that pairing is the whole idempotency key of
+   * the opening-balance backfill: an entry is posted only when no `(bank_opening, <id>)` entry
+   * exists. Checking the id alone would collide with every other source type's sequence.
    *
    * ## The hazard for whoever adds the next source type
    *
