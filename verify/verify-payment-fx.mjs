@@ -67,7 +67,7 @@ const cust = (await db.query("insert into customers (org_id,name) values ($1,'FX
 const vend = (await db.query("insert into vendors (org_id,name) values ($1,'FX Payee') returning id", [org])).rows[0].id;
 const bank = (await db.query("select id, gl_account_id, name from bank_accounts where org_id=$1 limit 1", [org])).rows[0];
 const acct = async (code) => (await db.query("select id from accounts where org_id=$1 and code=$2", [org, code])).rows[0]?.id;
-const AR = await acct("1100"), AP = await acct("2000"), FX = await acct("4900"), ADV = await acct("2300");
+const AR = await acct("1100"), AP = await acct("2000"), FX = await acct("4900"), ADV = await acct("2300"), INV = await acct("1200");
 check("the org has the 4900 Exchange Gain/Loss system account seeded", !!FX, String(FX));
 
 const today = new Date().toISOString().slice(0, 10);
@@ -204,6 +204,39 @@ check("PO mirror: Dr AP 10833 (booked, derived closing) / Cr bank 10764 (paid) /
 const ePo = (await db.query("select paid_amount, base_paid_amount, base_total from purchase_orders where id=$1", [po])).rows[0];
 check("PO basePaidAmount lands at baseTotal exactly", num(ePo.base_paid_amount) === num(ePo.base_total), JSON.stringify(ePo));
 await balanced("after PO payment");
+
+// ---- the PO now HAS a payment history, which it never had before ----
+await page.goto(`${BASE}/purchasing/orders/${po}`, { waitUntil: "networkidle" });
+const poHist = page.locator("table").last();
+check("the PO detail page renders a Payment History section", (await page.getByText(/Payment History/).count()) >= 1);
+for (const col of ["Date", "Method", "Bank Account", "Reference", "Amount"]) {
+  check(`PO history column: ${col}`, (await poHist.locator("th", { hasText: new RegExp(`^${col}$`) }).count()) >= 1);
+}
+check("PO history shows the base-currency column headed PAID, not Received — the direction is out",
+  (await page.locator("th", { hasText: /^Paid \(SAR\)$/ }).count()) === 1);
+check("…and its figure is the CASH that moved (10,764.00), not what cleared AP (10,833.00)",
+  (await poHist.locator("td", { hasText: "10,764" }).count()) >= 1);
+
+const invBeforeRev = (await db.query(
+  `select coalesce(sum(l.debit) - sum(l.credit),0)::text v from journal_lines l
+     join journal_entries e on e.id=l.journal_entry_id where e.org_id=$1 and l.account_id=$2`, [org, INV])).rows[0].v;
+await page.getByLabel("Reverse Payment").first().click();
+await page.waitForTimeout(400);
+await dialogs().last().getByRole("button", { name: /^Reverse Payment$/ }).click();
+await page.waitForTimeout(1500);
+const ePoAfter = (await db.query("select paid_amount, base_paid_amount, status from purchase_orders where id=$1", [po])).rows[0];
+check("reversing the PO payment returns paidAmount to 0 and basePaidAmount with it",
+  num(ePoAfter.paid_amount) === 0 && num(ePoAfter.base_paid_amount) === 0, JSON.stringify(ePoAfter));
+check("…the PO's STATUS is unchanged at `received` — purchase orders have no paid status",
+  ePoAfter.status === "received", ePoAfter.status);
+const invAfterRev = (await db.query(
+  `select coalesce(sum(l.debit) - sum(l.credit),0)::text v from journal_lines l
+     join journal_entries e on e.id=l.journal_entry_id where e.org_id=$1 and l.account_id=$2`, [org, INV])).rows[0].v;
+check("…and INVENTORY 1200 is untouched — the receipt is a different entry from the payment",
+  num(invAfterRev) === num(invBeforeRev), `${invBeforeRev} -> ${invAfterRev}`);
+check("…the original payment row survives, marked reversed",
+  (await db.query("select reversed_at from payments where id=$1", [ePay.id])).rows[0]?.reversed_at !== null);
+await balanced("after reversing the PO payment");
 
 // ================= F. proforma advance: no booked rate, both lines at payment-date, NO FX line =================
 await setRate("EUR", "4.05");

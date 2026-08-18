@@ -103,7 +103,7 @@ const linesOf = async (st: string, sid: number) => (await pool.query(
  * calls. A session cannot be reached from here, so the wiring — role gate, locks, revalidation — is
  * browser-tier; the arithmetic, the posting shape and the refusals are what this proves.
  */
-async function reverse(paymentId: number, opts: { typeQualified?: boolean; recomputeFromDocRate?: boolean; dropFxLine?: boolean } = {}) {
+async function reverse(paymentId: number, opts: { typeQualified?: boolean; recomputeFromDocRate?: boolean; dropFxLine?: boolean; mirrorDocumentLines?: boolean } = {}) {
   const p = (await pool.query(
     `select kind, sales_invoice_id, purchase_order_id, proforma_invoice_id, reversed_at,
             amount::text amount, base_applied_amount::text base_applied_amount
@@ -121,7 +121,13 @@ async function reverse(paymentId: number, opts: { typeQualified?: boolean; recom
     [org, paymentId])).rowCount;
   if (already) return { error: "This payment has already been reversed." };
 
-  const orig = await linesOf("payment", paymentId);
+  // MUTATION 5's shape: mirror every line on the DOCUMENT rather than on this payment's own entry.
+  const orig = opts.mirrorDocumentLines
+    ? (await pool.query(
+        `select l.account_id, l.debit::text d, l.credit::text c from journal_lines l
+           join journal_entries e on e.id = l.journal_entry_id
+          where e.org_id=$1 and e.source_type in ('payment','purchase_order','sales_invoice') order by l.id`, [org])).rows
+    : await linesOf("payment", paymentId);
   if (orig.length === 0) return { error: "This payment has no ledger posting to reverse." };
   let lines = mirrorLines(orig.map((l) => ({ accountId: l.account_id, debit: l.d, credit: l.c })));
   if (opts.dropFxLine) lines = lines.filter((l) => l.accountId !== acc.get("4900"));
@@ -337,6 +343,19 @@ check("B payment 1 is NOT marked reversed",
   (await pool.query("select reversed_at from payments where id=$1", [b1])).rows[0].reversed_at === null);
 check("B org ledger still balances", await orgBalanced());
 
+// ── The PO RECEIPT posting is not the payment's, and reversal must not touch it ───────────────
+// A purchase order's inventory (1200) and AP (2000) come from receivePurchaseOrderAction, keyed
+// `(purchase_order, po.id)`. The payment posts its own entry keyed `(payment, payment.id)`. 1200 is
+// the account a wrong sourceType filter would catch first — a reversal that mirrored "every line on
+// this document" instead of "every line on this payment's entry" would un-receive the goods.
+check("B/RECEIPT inventory 1200 is UNCHANGED across the payment reversal — the receipt is a different entry",
+  mils(await balanceOf("1200")) === mils(poB.baseTotal), `1200 is ${await balanceOf("1200")}, PO booked at ${poB.baseTotal}`);
+check("B/RECEIPT …and the receipt entry itself still stands, both lines",
+  (await linesOf("purchase_order", poB.id)).length === 2);
+check("B/RECEIPT the reversal touched only AP, bank and 4900 — never 1200",
+  (await linesOf("payment_reversal", b2)).every((l) => l.account_id !== acc.get("1200")),
+  JSON.stringify((await linesOf("payment_reversal", b2)).map((l) => l.account_id)));
+
 // ══════════════════════════════════════════════════════════════════════════════════════════════
 // FIXTURES C and D — the AWKWARD-RATE TWINS.
 //
@@ -486,6 +505,25 @@ check("MUTATION 1: the AWKWARD twins catch a recompute-from-document-rate",
   await pool.query("delete from journal_entries where org_id=$1 and source_type='payment_reversal' and source_id=$2", [org, fp]);
   check("…removing the mutated entry restores the balance, confirming it was the only thing wrong",
     await orgBalanced());
+}
+
+// M5 — mirror the DOCUMENT's lines instead of the payment's own entry.
+//
+// The plausible wrong reading of "reverse what this document posted". It un-receives the goods: a
+// purchase order's inventory comes from receivePurchaseOrderAction, not from any payment.
+{
+  const poM = await mkPo("PO-M5", "100.00", "3.75000000");
+  const pm = await payPo(poM.id, "100.00", "380.00", "375.00");
+  const invBefore = mils(await balanceOf("1200"));
+  await reverse(pm, { mirrorDocumentLines: true });
+  const invAfter = mils(await balanceOf("1200"));
+  check("MUTATION 5: mirroring the DOCUMENT's lines moves inventory 1200 — the receipt gets un-posted",
+    invBefore !== invAfter, `1200 ${m3(invBefore)} -> ${m3(invAfter)}`);
+  // Clean up: the mutated entry is not a valid reversal, so remove it rather than leaving it in.
+  await pool.query(`delete from journal_lines where journal_entry_id in
+    (select id from journal_entries where org_id=$1 and source_type='payment_reversal' and source_id=$2)`, [org, pm]);
+  await pool.query("delete from journal_entries where org_id=$1 and source_type='payment_reversal' and source_id=$2", [org, pm]);
+  check("…and with it removed, 1200 is back where the receipt left it", mils(await balanceOf("1200")) === invBefore);
 }
 
 // M4 — the lock. Two reversals of the SAME payment, genuinely concurrent, on two connections.

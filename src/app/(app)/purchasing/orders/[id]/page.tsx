@@ -1,13 +1,14 @@
 import { Fragment } from "react";
 import { notFound } from "next/navigation";
-import { eq, and } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 import { DocumentTermsView } from "../../../sales/_shared/terms-view";
 import { BankAccountBlocks } from "../../../sales/_shared/bank-account-blocks";
 import { CurrencyProvider } from "@/components/ui/currency-mark";
 import { docMoneyMark } from "../../../sales/_shared/doc-currency";
 import { SafeRichText } from "../../../sales/_shared/safe-rich-text";
 import { LineItemCell, LineDescRow } from "../../../sales/_shared/line-item-cell";
-import { db, purchaseOrdersTable, purchaseOrderItemsTable, vendorsTable, bankAccountsTable, orgsTable } from "@/db";
+import { db, purchaseOrdersTable, purchaseOrderItemsTable, vendorsTable, bankAccountsTable, orgsTable, paymentsTable } from "@/db";
+import { PaymentHistory } from "../../../finance/_shared/payment-history";
 import { requireSession } from "@/lib/session";
 import { getLocale } from "@/lib/i18n/server";
 import { t } from "@/lib/i18n/dict";
@@ -68,6 +69,27 @@ export default async function PurchaseOrderDetailPage({ params }: { params: Prom
   ]);
   const balanceDue = Number(po.total) - Number(po.paidAmount);
   const showPayments = po.status === "received";
+
+  /**
+   * The payment HISTORY is gated on payments existing, not on status.
+   *
+   * `showPayments` (status === "received") is safe for the totals strip, and it happens to be safe
+   * for history too — a PO must be `received` to be paid, and the lifecycle does not allow `cancel`
+   * from `received`, so no cancelled PO can hold payments. But that is a coincidence of two rules
+   * in other files, not a property of this gate: permit cancel-from-received, or give POs paid
+   * statuses (docs/backlog.md), and this screen silently hides a document's entire payment history
+   * along with every Reverse control on it — the same class of problem as the history being missing
+   * in the first place.
+   *
+   * So it asks the question it actually means: are there payments to show?
+   */
+  const [paymentCount] = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(paymentsTable)
+    .where(and(eq(paymentsTable.orgId, session.orgId), eq(paymentsTable.purchaseOrderId, po.id)));
+  const showHistory = showPayments || Number(paymentCount?.n ?? 0) > 0;
+  const canReversePayments =
+    (session.role === "owner" || session.role === "admin") && po.status !== "cancelled";
 
   return (
     <CurrencyProvider mark={docMoneyMark(org, po.currency)}>
@@ -142,6 +164,16 @@ export default async function PurchaseOrderDetailPage({ params }: { params: Prom
         <div className="note" style={{ marginTop: 20 }}>
           {t(locale, "Receiving posts Dr Inventory, Cr Accounts Payable in a transaction alongside the stock increment.")}
         </div>
+      )}
+
+      {showHistory && (
+        <PaymentHistory
+          locale={locale}
+          orgId={session.orgId}
+          baseCurrency={session.orgCurrency}
+          source={{ type: "purchase_order", id: po.id }}
+          canReverse={canReversePayments}
+        />
       )}
 
       <BankAccountBlocks locale={locale} accounts={po.bankAccounts} className="mt-5" />
