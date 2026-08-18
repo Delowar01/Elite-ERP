@@ -892,3 +892,79 @@ Meanwhile nothing is blocked: the received-amount-first design already absorbs t
 honestly — the user types what the bank statement shows (net of FX spread), and any true FEE can
 be recorded as what it is once an Expenses flow exists. Whoever picks this up should decide the
 gross-vs-net question first, then the account, then the field.
+
+---
+
+## Bank opening balances were never journalized — the repair, and the two pieces deferred out of it
+
+**Status:** the repair is in progress (see the commits touching `bank_accounts` opening balances).
+This entry records the two decisions deliberately postponed and the sweep that bounded the work.
+
+### What the defect was
+
+`bank_accounts.opening_balance` was written at account creation and **no journal entry was posted**.
+`finance/bank-accounts/page.tsx` rendered `Number(ba.openingBalance) + <ledger balance>`. Nothing
+else in the product read the column. The Balance Sheet balanced and the Trial Balance balanced
+*because the figure never entered either one* — nothing compensated for it. The general form of the
+rule this violated is recorded in `verify/README.md`, under the product-invariants section: **no
+display path may add a stored scalar to a ledger-derived figure.**
+
+### The sweep — is this a class or an instance?
+
+Run before any code was written, because a second instance would have changed a repair into a class.
+**Result: one instance.** `finance/bank-accounts/page.tsx:77` is the only place in the product where
+a stored master-record scalar is added to a ledger- or aggregate-derived figure.
+
+What was searched: every `numeric` / `integer` column on a master-data table (customers, vendors,
+products, projects, employees, bank accounts, orgs), every consumer of `getAccountBalances` (three:
+chart of accounts, ledger, bank accounts — the first two read the ledger alone), every `+` between a
+`Number(<stored field>)` and an aggregate in `src/app`, and every reader of `bankAccountsTable`
+outside its own folder.
+
+Two candidates ruled out, with the reasoning, so nobody re-opens them:
+
+- **`products.quantity_on_hand`** — a *materialised running total*, incremented and decremented in
+  the same transaction as each posting (invoice, GRN, debit note) and displayed on its own. It is
+  never added to a movement-derived quantity. It has its own risk (drift between the counter and the
+  movements that fed it) but it is not this one.
+- **`projects.budget`** — a target displayed beside costing figures and compared against them, never
+  summed into them.
+- **Customers and vendors carry no numeric columns at all** — no credit limit, no stored outstanding
+  balance. There was nothing to find there.
+
+The distinguishing question, for whoever runs this sweep again after new features land, is not "is a
+number stored on a master record" but **"does a render path add it to something derived"**.
+
+### Deferred 1 — dropping `bank_accounts.opening_balance`
+
+The column is **kept**, renamed in the Drizzle layer to `openingBalanceLegacy` (the SQL column name
+is unchanged), removed from every read path, and still written at creation as an audit copy of what
+the user typed. Two reasons not to drop it in the same change: it is the only surviving evidence of
+what was entered before the repair, useful if a backfilled entry is ever disputed; and dropping a
+`NOT NULL` column in the same change that introduces new posting logic makes rollback harder than it
+needs to be.
+
+The rename is the durable half — `ba.openingBalance` no longer exists as an identifier, so the
+natural way to write the old bug does not compile — and a static assertion keeps `openingBalanceLegacy`
+from appearing anywhere outside the schema file.
+
+**The actual drop is deferred**, and it is a small reversible change once the repair has run in
+production for a while: remove the field, `alter table bank_accounts drop column opening_balance`.
+Do it on its own, not bundled.
+
+### Deferred 2 — `3100 Opening Balance Equity`
+
+**Not added.** For the production case the money is real owner capital and `3000 Owner's Equity` is
+the correct and complete answer; routing it through a suspense account would misstate the books to
+serve a migration concern that does not apply.
+
+The general case is different and will want it. When an org migrates from another system, opening
+balances for *many* accounts are entered together and the credits are not capital — they are the
+arithmetic residue of whatever the old system's balance sheet said. `3100` exists to hold that
+residue **visibly**, so that a non-zero balance in it is a signal that migration is incomplete and a
+zero balance is proof the opening trial balance balanced. That netting check is the whole point of
+the account.
+
+So: **add `3100` as part of the opening-balance-import feature, together with the check that gives
+it meaning** — not before. Added now it would be an account with no writer, no reader and no
+invariant, plus a defaulting choice between two equity accounts that nobody could answer correctly.

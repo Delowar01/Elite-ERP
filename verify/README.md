@@ -327,6 +327,61 @@ The fix is always to move the work out of the module, into the thing that launch
 `--import` preload, or the npm script. If you find yourself writing setup code above an import and
 hoping it lands first, it will not.
 
+## Product invariants — how the PRODUCT fails, not how the tests fail
+
+Everything above catalogues ways a *suite* can lie. This section is the other kind: a property of
+the product that, once violated, produces a wrong number no suite would think to look for. The
+catalogue entries are debugging aids. These are the things the suites exist to protect.
+
+### A displayed balance is a function of the ledger and nothing else
+
+**No display path may add a stored scalar to a ledger-derived figure.**
+
+The instance that produced this rule: `bank_accounts.opening_balance` was a plain column written at
+account creation, and the bank-accounts page rendered
+`Number(ba.openingBalance) + <sum of journal lines>`. Creating the account posted no journal entry
+at all, so the opening money existed in exactly one place in the entire system — that column, read
+by exactly one page.
+
+What makes it worth a section rather than a bug fix is how it hid:
+
+- **The Balance Sheet balanced.** Assets equalled liabilities plus equity, and the Trial Balance's
+  debits equalled its credits, *because the figure never entered either statement*. Nothing
+  compensated for it; nothing needed to. A balanced balance sheet is not evidence that a figure is
+  accounted for — only that the figures which *are* in it are consistent with each other.
+- **The bank page was the only witness, and it was the one lying.** Every other financial surface —
+  Trial Balance, Balance Sheet, Cash Flow, GL, the account ledger — computes from `journal_lines`.
+  Cash Flow even joins `bank_accounts`, but only to learn which GL account ids are cash. So the
+  disagreement was invisible from any single screen: each one was internally consistent.
+- **A value assertion could not have caught it.** "The bank page shows 30,000" passes both with and
+  without the addition whenever the ledger and the column happen to agree — which they do in every
+  fixture where the data was created honestly. The number is right for the wrong reason.
+
+The generalisation, which is what the rule is for: **a numeric field on a master record that a UI
+adds to a ledger-derived or aggregate-derived figure at render time is a defect by construction**,
+whatever the field is called. The stored half has no date, no currency conversion, no counterpart,
+no audit trail and no place in double entry. It cannot appear in a statement, so it silently exists
+only on the screen that adds it.
+
+Two things follow for anyone writing a check in this area:
+
+1. **Assert the absence of the addition, not the correctness of the total.** The behavioural form
+   is to seed a stored scalar that is deliberately *wrong* against a correct ledger, and require the
+   page to show the ledger figure. A lie in the fixture is what makes the assertion falsifiable.
+2. **Reconcile across surfaces, not within one.** Every reconciliation in this project until now was
+   ledger-to-subledger — the ledger against another thing derived from the ledger. Those agree by
+   construction and would agree here too. The check that finds this class is screen-against-ledger.
+
+The near-miss variant is worth naming as well: a stored scalar *displayed beside* a ledger figure
+under a heading that reads as one total. It double-counts in the reader's head instead of in the
+code, and no assertion on the rendered numbers will fail.
+
+**Not** instances of this, though they look adjacent: `products.quantity_on_hand` is a materialised
+running total mutated inside the same transaction as each posting and displayed on its own, never
+added to a movement-derived quantity; `projects.budget` is a target compared against costing, never
+summed into it. The distinguishing question is not "is a number stored on a master record" but
+"does a render path **add** it to something derived".
+
 ## Browser suites
 
 The `.mjs` suites drive a real browser and need a production build running on `localhost:3000`
