@@ -145,6 +145,61 @@ ok("the Balance Sheet now CONTAINS the opening balance — the old figure appear
   /30,000|30000/.test(bs), bs.split("\n").filter((l) => /1010|Al Inma/i.test(l)).join(" | ").slice(0, 120));
 ok("…and equity carries the other side", /Owner|3000/.test(bs));
 
+console.log("\n== Editing a posted opening balance is REFUSED ==");
+// Restore the honest column first: the lying value above was for the render assertion, and leaving
+// it would make the refusal assertion read against a state it is not about.
+await db.query("update bank_accounts set opening_balance = '30000.000' where id = $1", [created.id]);
+await p.goto(`${BASE}/finance/bank-accounts`, { waitUntil: "networkidle" });
+await p.waitForTimeout(600);
+const card = p.locator(".card").filter({ hasText: "Al Inma" }).first();
+await card.getByRole("button", { name: /^edit$/i }).first().click();
+await p.waitForTimeout(700);
+const edlg = p.locator('[role="dialog"]').last();
+ok("the edit dialog offers NO opening-balance input", await edlg.locator("#ba-opening-balance").count() === 0);
+ok("…and shows the posted entry read-only, from the LEDGER",
+  /30,?000/.test(await edlg.locator('[data-testid="opening-readonly"]').innerText().catch(() => "")),
+  await edlg.locator('[data-testid="opening-readonly"]').innerText().catch(() => "(absent)"));
+ok("…naming the journal entry as the way to correct it",
+  /journal entry/i.test(await edlg.innerText()));
+
+// The server is what holds the line; the dialog not rendering the field is only a UI choice. So
+// inject the field into the real form and submit it — a genuine invocation of the real action, with
+// the real session and a payload the UI cannot produce. Then require the LEDGER to be unmoved:
+// an action that returns an error having already written is the failure worth catching.
+const before = (await db.query(
+  `select coalesce(sum(l.debit),0)::text v from journal_lines l join journal_entries e on e.id=l.journal_entry_id
+    where e.org_id=$1 and e.source_type='bank_opening'`, [org])).rows[0].v;
+await p.evaluate(() => {
+  const form = document.querySelector('[role="dialog"] form');
+  const input = document.createElement("input");
+  input.type = "hidden"; input.name = "openingBalance"; input.value = "999999";
+  form.appendChild(input);
+});
+await edlg.getByRole("button", { name: /^save$/i }).click();
+await p.waitForTimeout(1800);
+const toastText = await p.locator("[data-sonner-toast], [role='status']").allInnerTexts().catch(() => []);
+ok("the server REFUSES the edit and says why",
+  toastText.join(" ").toLowerCase().includes("cannot be edited"), toastText.join(" | ").slice(0, 120));
+
+const after = (await db.query(
+  `select coalesce(sum(l.debit),0)::text v from journal_lines l join journal_entries e on e.id=l.journal_entry_id
+    where e.org_id=$1 and e.source_type='bank_opening'`, [org])).rows[0].v;
+ok("the posted entry is UNMOVED", mils(before) === mils(after), `${before} → ${after}`);
+const col = (await db.query("select opening_balance::text v from bank_accounts where id=$1", [created.id])).rows[0].v;
+ok("…and the stored audit copy was not rewritten either", mils(col) === 30_000_000, col);
+// The refusal must be about the OPENING BALANCE, not a blanket lock on the record — everything else
+// on a bank account stays editable, which is the difference between an immutability rule and a bug.
+await p.keyboard.press("Escape");
+await p.waitForTimeout(400);
+await card.getByRole("button", { name: /^edit$/i }).first().click();
+await p.waitForTimeout(700);
+const edlg2 = p.locator('[role="dialog"]').last();
+await edlg2.locator("#ba-branch").fill("Olaya");
+await edlg2.getByRole("button", { name: /^save$/i }).click();
+await p.waitForTimeout(1800);
+ok("…while the rest of the record stays editable",
+  (await db.query("select branch from bank_accounts where id=$1", [created.id])).rows[0].branch === "Olaya");
+
 await db.query("delete from journal_lines where journal_entry_id in (select id from journal_entries where org_id=$1)", [org]);
 await db.query("delete from journal_entries where org_id=$1", [org]);
 await b.close(); await db.end();

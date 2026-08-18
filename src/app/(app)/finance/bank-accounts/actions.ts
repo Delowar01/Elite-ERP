@@ -6,7 +6,7 @@ import { db, bankAccountsTable, accountsTable } from "@/db";
 import { requireSession } from "@/lib/session";
 import { logActivity } from "@/lib/activity";
 import { bankGlRefusal } from "@/lib/bank-gl-accounts";
-import { buildBankOpeningPosting, openingContraChoices, openingContraRefusal, writeBankOpeningEntry } from "@/lib/bank-opening";
+import { bankOpeningEntryId, buildBankOpeningPosting, openingContraChoices, openingContraRefusal, writeBankOpeningEntry } from "@/lib/bank-opening";
 
 export type ActionResult = { error?: string; id?: number };
 
@@ -160,8 +160,32 @@ export async function updateBankAccountAction(id: number, formData: FormData): P
     }
     set.glAccountId = glAccountId;
   }
+  // ── The opening balance is IMMUTABLE once posted ─────────────────────────────────────────────
+  // Same rule as a posted document. It stopped being a number on a record the moment it became a
+  // journal entry, and a form field that quietly emits backdated ledger movements is the defect
+  // this repair removed, wearing a different costume. The remedy for a wrong figure is the one the
+  // ledger already has: a correcting journal entry — dated, attributable, and visible in every
+  // report, none of which a silent field rewrite ever was.
+  //
+  // The edit dialog does not render these fields at all, so reaching this refusal means a replayed
+  // or hand-built action. That is exactly the case worth refusing on the server.
   const openingRaw = formData.get("openingBalance");
-  if (openingRaw != null && String(openingRaw).trim() !== "") set.openingBalanceLegacy = String(openingRaw).trim();
+  const openingDateRaw = formData.get("openingDate");
+  const openingContraRaw = formData.get("openingContraAccountId");
+  const touchesOpening = [openingRaw, openingDateRaw, openingContraRaw].some((v) => v != null && String(v).trim() !== "");
+  if (touchesOpening) {
+    const entryId = await bankOpeningEntryId(db, session.orgId, id);
+    if (entryId !== null) {
+      return {
+        error:
+          "This account's opening balance has been posted to the ledger and cannot be edited. " +
+          "Correct it with a journal entry so the change is dated and visible in the reports.",
+      };
+    }
+    // No entry yet — a zero-balance account, or a legacy row the backfill has not reached. Nothing
+    // is protected, so the figure stays editable and is still only an audit copy.
+    if (openingRaw != null && String(openingRaw).trim() !== "") set.openingBalanceLegacy = String(openingRaw).trim();
+  }
 
   await db.update(bankAccountsTable).set(set).where(and(eq(bankAccountsTable.id, id), eq(bankAccountsTable.orgId, session.orgId)));
 

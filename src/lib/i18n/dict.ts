@@ -389,6 +389,7 @@ const DICT: Record<string, string> = {
   "GL Account": "الحساب المحاسبي",
   "Opening Balance": "الرصيد الافتتاحي",
   "As of date": "بتاريخ",
+  "Posted to the ledger. It cannot be edited here — correct it with a journal entry so the change is dated and appears in the reports.": "مُرحَّل إلى دفتر الأستاذ. لا يمكن تعديله هنا — صححه بقيد يومية ليكون التغيير مؤرخاً وظاهراً في التقارير.",
   "Where it came from": "مصدر الرصيد",
   "This posts a journal entry": "يُنشئ هذا قيد يومية",
   "dated": "بتاريخ",

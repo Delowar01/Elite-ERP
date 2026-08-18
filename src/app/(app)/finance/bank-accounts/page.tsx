@@ -1,5 +1,5 @@
-import { eq, asc, desc } from "drizzle-orm";
-import { db, bankAccountsTable, accountsTable, paymentsTable } from "@/db";
+import { and, eq, asc, desc } from "drizzle-orm";
+import { db, bankAccountsTable, accountsTable, paymentsTable, journalEntriesTable, journalLinesTable } from "@/db";
 import { requireSession } from "@/lib/session";
 import { getLocale } from "@/lib/i18n/server";
 import { t } from "@/lib/i18n/dict";
@@ -37,6 +37,24 @@ export default async function BankAccountsPage() {
       .orderBy(desc(paymentsTable.paymentDate))
       .limit(10),
   ]);
+
+  // The posted opening entries, read from the LEDGER — the edit dialog shows what was actually
+  // posted, never the row's legacy column. `sourceId` is the bank account id, and the source type is
+  // half the key: without it this would match an unrelated row from another type's sequence.
+  const openingRows = await db
+    .select({
+      bankAccountId: journalEntriesTable.sourceId,
+      date: journalEntriesTable.entryDate,
+      debit: journalLinesTable.debit,
+    })
+    .from(journalEntriesTable)
+    .innerJoin(journalLinesTable, eq(journalLinesTable.journalEntryId, journalEntriesTable.id))
+    .where(and(eq(journalEntriesTable.orgId, orgId), eq(journalEntriesTable.sourceType, "bank_opening")));
+  const openingByBank = new Map<number, { date: string; amount: string }>();
+  for (const r of openingRows) {
+    if (Number(r.debit) === 0 || r.bankAccountId === null) continue;
+    openingByBank.set(r.bankAccountId, { date: r.date, amount: r.debit });
+  }
 
   const accountByGl = new Map(accounts.map((a) => [a.id, a]));
   // The selector offers only accounts a bank account MAY back — never a control account the system
@@ -112,6 +130,7 @@ export default async function BankAccountsPage() {
                         currency: ba.currency,
                         branch: ba.branch,
                         glAccountId: ba.glAccountId,
+                        opening: openingByBank.get(ba.id) ?? null,
                       }}
                       trigger={
                         <button type="button" className="text-ink-faint hover:text-brand-orange" title={t(locale, "Edit")} aria-label={t(locale, "Edit")}>

@@ -23,6 +23,12 @@ export type EditableBankAccount = {
   currency: string | null;
   branch: string | null;
   glAccountId: number;
+  /**
+   * The POSTED opening entry, read from the ledger rather than from the row's legacy column — the
+   * column is an audit copy of what was typed and the ledger is what is true. Null when nothing was
+   * posted (a zero opening balance, or a legacy row the backfill has not reached).
+   */
+  opening?: { date: string; amount: string } | null;
 };
 
 // The single shared create/edit dialog for a bank account — used by the Finance → Bank Accounts page
@@ -146,6 +152,17 @@ export function BankAccountFormDialog({
               </SelectContent>
             </Select>
           </FormField>
+          {isEdit && account?.opening && (
+            <div className="rounded-lg border border-line bg-surface-sunken px-3 py-2.5">
+              <div className="text-[11.5px] uppercase tracking-wide text-ink-faint">{t(locale, "Opening Balance")}</div>
+              <div className="font-mono text-[13.5px] mt-0.5" data-testid="opening-readonly">
+                {account.opening.amount} · {account.opening.date}
+              </div>
+              <p className="text-[11.5px] text-ink-muted mt-1 leading-relaxed">
+                {t(locale, "Posted to the ledger. It cannot be edited here — correct it with a journal entry so the change is dated and appears in the reports.")}
+              </p>
+            </div>
+          )}
           {!isEdit && (
             <>
               <FormField label={t(locale, "Opening Balance")} htmlFor="ba-opening-balance">
