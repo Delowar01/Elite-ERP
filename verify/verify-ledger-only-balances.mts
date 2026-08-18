@@ -96,5 +96,20 @@ check("the bank page's account total is the ledger balance, with nothing added t
 check("…and the page does not add anything to a balances lookup anywhere else",
   !/balances\.get\([^)]*\)[^;\n]*\+/.test(page) && !/\+[^;\n]*balances\.get\(/.test(page));
 
+// ── The general shape, as far as a static check can honestly go ───────────────────────────────
+// Every consumer of getAccountBalances — today three: chart of accounts, the ledger, bank accounts.
+// The map is the ledger; anything added to a value pulled out of it is another instance of the same
+// defect, on whatever table the next one happens to live. This is narrow enough to be falsifiable
+// (it names one function and one access shape) and general enough to cover a page nobody has
+// written yet, which is more than the bank-page assertion above can claim.
+const consumers = files.filter((f) => readFileSync(path.join(ROOT, f), "utf8").includes("getAccountBalances"))
+  .filter((f) => f !== "src/lib/accounting.ts");
+check("the getAccountBalances consumers were found (this scan is not empty either)",
+  consumers.length >= 3, consumers.join(", "));
+const additions = consumers.flatMap(lines).filter((h) =>
+  !isProse(h.text) && /balances\.get\(/.test(h.text) && /[+-]/.test(h.text.replace(/balances\.get\([^)]*\)/g, "")) && !/\?\?/.test(h.text.replace(/\?\? 0/, "")));
+check("no consumer of getAccountBalances adds anything to a balance it reads",
+  additions.length === 0, additions.map((h) => `      ${h.file}:${h.line}  ${h.text}`).join("\n"));
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail === 0 ? 0 : 1);

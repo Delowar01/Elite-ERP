@@ -227,6 +227,27 @@ Assert the EFFECT where the effect lives — query `pg_trigger`, attempt the `UP
 to fail, read the running config — and if a suite genuinely cannot reach the deployment, say so in
 the test name rather than asserting the file and calling it covered.
 
+### A REFUSAL assertion satisfied by a clean exit for an unrelated reason
+
+A refusal is asserted by its exit code, and an exit code says only that the process stopped, not
+why. So an assertion of the form *"the script refuses X"* passes for free whenever the script had
+nothing to do at all.
+
+The instance: `verify-bank-opening-backfill` checks that the backfill refuses when the contra
+account named on the command line does not exist. The check ran at the end of the suite, by which
+point every candidate had already been posted or deleted — so the script printed `Nothing to do.`
+and exited before it ever looked up a contra account. The assertion was green, and it would have
+stayed green with the entire refusal deleted.
+
+The tell is a refusal test that needs no fixture. **A refusal can only be observed against something
+to refuse.** The fix was one line — seed a candidate immediately before the check — and it is worth
+writing the assertion in that order deliberately: create the thing, then demand the refusal, then
+assert the thing was not written.
+
+The last clause matters as much as the exit code. Three of this suite's refusal checks pair
+"exits non-zero" with "and posted nothing", because a script that refuses *after* writing is the
+failure actually worth catching, and the exit code alone cannot see it.
+
 ### A query that silently answers a different question than it asks
 
 Not an assertion flaw — the flaw the assertions caught, and it is worth writing down because the
