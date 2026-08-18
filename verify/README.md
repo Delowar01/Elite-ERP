@@ -178,6 +178,30 @@ NOT establish: this one shows the read takes the lock, not that the lock is nece
 conversion serialises on its proforma row anyway. That proof needs two invoices drawing on one
 advance concurrently, and belongs where that is possible.
 
+### An assertion that RECOMPUTES the thing it is checking
+
+Closely related to the wrong-cause entry above, and harder to see, because the assertion looks like
+arithmetic rather than like a tautology.
+
+The instance: the credit-note FX sweep checked that a full note reproduces its invoice's base
+figures, by converting the note's amount at the source rate and comparing it to the invoice's amount
+converted at the source rate. While the rule under test was *wrong* — the note converting at its own
+date — the two sides genuinely differed and the sweep failed loudly, 25 pairs at a time. The moment
+the rule was fixed, both sides became the same expression evaluated twice. It could never fail
+again, and it would have gone on printing a confident PASS through any future change to the
+rounding it claimed to be checking.
+
+**The tell: the rule under test appears on both sides of the comparison.** A check is only a check
+if the two sides are derived independently — from a stored figure, from a different code path, from
+arithmetic the implementation does not itself perform.
+
+The repair was to change what the sweep measures rather than to delete it: split each case into
+THREE partial notes, each rounded on its own, and ask whether their base amounts sum to the whole.
+Now one side is the implementation applied three times and the other is a single stored figure, so
+the two can disagree — and on the first run after the fix, seventeen of twenty-five pairs did, by
+exactly one minor unit each. That is the shape that has now surfaced real drift twice: once in the
+advance-refund residual sweep, once here.
+
 ### An assertion that punishes HONEST wording — the one that pushes the product the wrong way
 
 Every other entry here is an assertion that fails to catch a defect. This one is worse in kind: it

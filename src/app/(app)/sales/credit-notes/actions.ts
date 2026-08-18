@@ -199,25 +199,6 @@ export async function issueCreditNoteAction(creditNoteId: number): Promise<Actio
     return { error: "Chart of accounts is missing a required system account (1100/4000/2100)." };
   }
 
-  // The source invoice, read for its stored conversion. Re-read under lock inside the transaction
-  // below, which is the read the posting actually uses.
-  const [sourceInvoice] = await db
-    .select({ currency: salesInvoicesTable.currency, exchangeRate: salesInvoicesTable.exchangeRate })
-    .from(salesInvoicesTable)
-    .where(and(eq(salesInvoicesTable.id, cn.sourceInvoiceId), eq(salesInvoicesTable.orgId, session.orgId)));
-  if (!sourceInvoice) return { error: "Invoice not found." };
-
-  const captured = await noteBaseAmounts({
-    orgId: session.orgId,
-    baseCurrency: session.orgCurrency,
-    source: sourceInvoice,
-    note: { currency: cn.currency, total: cn.total, taxTotal: cn.taxTotal, issueDate: cn.issueDate },
-  });
-  if (!captured.ok) return { error: captured.error, missingRate: captured.missingRate };
-  // Derived, so the entry balances by construction — the pre-FX-6 lines debited the full subtotal
-  // against a discounted total, the same latent hole the invoice send had.
-  const baseRevenue = subtractMoney(captured.baseTotal, captured.baseTaxAmount, session.orgCurrency);
-
   const docCurrency = cn.currency ?? session.orgCurrency;
   const eps = moneyEpsilon(docCurrency);
 
@@ -232,13 +213,28 @@ export async function issueCreditNoteAction(creditNoteId: number): Promise<Actio
     }
     const invoiceLock = await tx.execute(sql`
       select invoice_number, total::text as total, paid_amount::text as paid_amount,
-             base_paid_amount::text as base_paid_amount, currency
+             base_paid_amount::text as base_paid_amount, currency, exchange_rate::text as exchange_rate
         from sales_invoices where id = ${cn.sourceInvoiceId} and org_id = ${session.orgId}
          for update`);
     const invoice = (invoiceLock.rows as unknown as {
-      invoice_number: string; total: string; paid_amount: string; base_paid_amount: string | null; currency: string | null;
+      invoice_number: string; total: string; paid_amount: string; base_paid_amount: string | null;
+      currency: string | null; exchange_rate: string | null;
     }[])[0];
     if (!invoice) return { error: "Invoice not found." } as const;
+
+    // The conversion INHERITS the invoice's stored rate — taken from the row just locked, so the
+    // rate, the cap and the release are one decision rather than a read-then-write race. A credit
+    // note moves no cash: it reverses part of an invoice whose AR and revenue were both booked at
+    // this rate, so anything else invents a difference that never happened.
+    const captured = noteBaseAmounts({
+      baseCurrency: session.orgCurrency,
+      source: { currency: invoice.currency, exchangeRate: invoice.exchange_rate },
+      note: { currency: cn.currency, total: cn.total, taxTotal: cn.taxTotal },
+    });
+    if (!captured.ok) return { error: captured.error } as const;
+    // Derived, so the entry balances by construction — the pre-FX-6 lines debited the full subtotal
+    // against a discounted total, the same latent hole the invoice send had.
+    const baseRevenue = subtractMoney(captured.baseTotal, captured.baseTaxAmount, session.orgCurrency);
 
     // §Cap — the sum of ACTIVE credit notes against an invoice may not exceed the invoice's value.
     // Reversed and draft notes do not count: a reversed note has given its credit back, and a draft

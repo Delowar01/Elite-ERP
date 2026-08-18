@@ -192,13 +192,15 @@ export async function issueDebitNoteAction(debitNoteId: number): Promise<ActionR
     .where(and(eq(purchaseOrdersTable.id, dn.sourcePurchaseOrderId), eq(purchaseOrdersTable.orgId, session.orgId)));
   if (!sourcePo) return { error: "Purchase order not found." };
 
-  const captured = await noteBaseAmounts({
-    orgId: session.orgId,
+  // INHERITS the purchase order's stored rate. The note reverses part of a receipt whose inventory
+  // and AP were both booked at that rate, and no cash moves here — re-converting at the note's own
+  // date would invent a difference that never happened.
+  const captured = noteBaseAmounts({
     baseCurrency: session.orgCurrency,
     source: sourcePo,
-    note: { currency: dn.currency, total: dn.total, taxTotal: dn.taxTotal, issueDate: dn.issueDate },
+    note: { currency: dn.currency, total: dn.total, taxTotal: dn.taxTotal },
   });
-  if (!captured.ok) return { error: captured.error, missingRate: captured.missingRate };
+  if (!captured.ok) return { error: captured.error };
 
   await db.transaction(async (tx) => {
     for (const item of items) {

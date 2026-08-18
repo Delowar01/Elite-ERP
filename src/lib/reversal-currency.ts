@@ -1,5 +1,5 @@
 import "server-only";
-import { captureBaseAmounts } from "@/lib/posting-currency";
+import { toBaseAmount } from "@/lib/exchange-rates";
 
 /**
  * The conversion and the journal lines for a CREDIT NOTE and its debit-note twin.
@@ -24,38 +24,90 @@ import { captureBaseAmounts } from "@/lib/posting-currency";
  * phantom FX gain or loss buried inside revenue, where no FX account can explain it and the P&L is
  * simply wrong.
  *
- * Every other reversal in this system mirrors stored lines rather than reconverting — invoice void,
- * credit-note reversal, allocation release. These two are the only ones that re-convert.
+ * Every other reversal in this system mirrored stored lines rather than reconverting — invoice
+ * void, credit-note reversal, allocation release. These two were the only ones that re-converted.
+ *
+ * ## The rule
+ *
+ * **Inherit the source document's stored `exchangeRate`.** A credit note takes the invoice's; a
+ * debit note takes the purchase order's. Never a fresh lookup at the note's own date.
+ *
+ * Two independent lines of reasoning reach the same answer. The codebase's own principle: a
+ * reversal reproduces what was booked, it does not re-price it. And the tax rule: a credit note is
+ * an adjustment to the **original supply**, so its base amounts must mirror the original document's
+ * conversion — which Phase 2 e-invoicing will also require, since the e-invoice references the
+ * original.
+ *
+ * ## Why rate inheritance rather than mirroring the stored base figures proportionally
+ *
+ * One rule covers the partial and the full case, and the 100% case then falls out **exactly**
+ * rather than through a special branch: converting the same document amount at the same rate
+ * through the same rounding produces an identical string. The `full` branch of `releaseShareOf`
+ * is the precedent — exactness earned by identical inputs, not by a tolerance.
  */
 
 export type NoteBaseAmounts =
-  | { ok: true; exchangeRate: string; baseTotal: string; baseTaxAmount: string; missingRate?: { currency: string; date: string } }
-  | { ok: false; error: string; missingRate?: { currency: string; date: string } };
+  | { ok: true; exchangeRate: string; baseTotal: string; baseTaxAmount: string }
+  | { ok: false; error: string };
 
-export async function noteBaseAmounts(args: {
-  orgId: number;
+/**
+ * There is deliberately no `missingRate` on either arm, and no async work left in here.
+ *
+ * `missingRate` is the structured seam behind the one-click rate-fetch affordance, and four other
+ * posting paths still return it — invoice send, purchase-order receipt, payment capture, advance
+ * receipt — because for them the remedy really is "enter a rate for this date". These two are the
+ * asymmetry, and it is intentional rather than an oversight: after this change there is no rate for
+ * a note to fetch. The answer is on the source document or the operation is refused, so offering
+ * the affordance would present the user a remedy that cannot work. The function is synchronous for
+ * the same underlying reason — nothing here consults the rate table at all.
+ */
+export function noteBaseAmounts(args: {
   baseCurrency: string;
-  /**
-   * The document being reversed — the invoice behind a credit note, the purchase order behind a
-   * debit note. Carried through the signature already but NOT YET READ: the whole fix is to convert
-   * at `source.exchangeRate` instead of at the note's own date, and it lands in the next commit so
-   * the suite can be watched failing against the shipped rule first.
-   */
+  /** The document being reversed — the invoice behind a credit note, the PO behind a debit note. */
   source: { currency: string | null; exchangeRate: string | null };
-  note: { currency: string | null; total: string; taxTotal: string; issueDate: string };
-}): Promise<NoteBaseAmounts> {
-  void args.source;
-  // SHIPPED BEHAVIOUR, moved not changed: the rate date is the NOTE's own issue date.
-  const captured = await captureBaseAmounts({
-    orgId: args.orgId,
-    baseCurrency: args.baseCurrency,
-    docCurrency: args.note.currency,
-    total: args.note.total,
-    taxTotal: args.note.taxTotal,
-    date: args.note.issueDate,
-  });
-  if (!captured.ok) return { ok: false, error: captured.error, missingRate: captured.missingRate };
-  return { ok: true, exchangeRate: captured.exchangeRate, baseTotal: captured.baseTotal, baseTaxAmount: captured.baseTaxAmount };
+  note: { currency: string | null; total: string; taxTotal: string };
+}): NoteBaseAmounts {
+  const base = args.baseCurrency.toUpperCase();
+  // Null means "the base currency" on both documents, so normalise before comparing — an invoice
+  // storing "SAR" explicitly and a note storing null are the same currency, not a mismatch.
+  const sourceCurrency = (args.source.currency ?? base).toUpperCase();
+  const noteCurrency = (args.note.currency ?? base).toUpperCase();
+
+  if (sourceCurrency !== noteCurrency) {
+    // Today both creators copy the source's currency, so this cannot happen — which is exactly why
+    // it refuses rather than silently picking one of the two rates. If the premise ever breaks,
+    // neither conversion is defensible and inventing one would be the whole defect again.
+    return {
+      ok: false,
+      error: `This note is in ${noteCurrency} but the document it reverses is in ${sourceCurrency}. A note must be in the same currency as its source.`,
+    };
+  }
+
+  if (noteCurrency === base) {
+    // Base-currency identity: the document figures ARE base figures. No rate, no lookup, no
+    // dependency on the rate table — the overwhelmingly common case, and byte-for-byte what it has
+    // always done. Checked BEFORE the stored-rate refusal, because a base document has nothing to
+    // inherit and never did.
+    return { ok: true, exchangeRate: "1", baseTotal: args.note.total, baseTaxAmount: args.note.taxTotal };
+  }
+
+  if (args.source.exchangeRate === null) {
+    // A foreign source with no stored conversion (pre-FX-6 history): its AR — or its AP and
+    // inventory — was never booked in base, so there is no figure to reverse against. An honest
+    // refusal, in the shape `arClearedFor` already uses, never a guessed rate.
+    return {
+      ok: false,
+      error: "The document this note reverses has no stored base-currency conversion, so there is no rate to inherit. It was posted before exchange rates were captured, and re-converting it now at today's rate would invent a gain that never happened.",
+    };
+  }
+
+  const rate = args.source.exchangeRate;
+  return {
+    ok: true,
+    exchangeRate: rate,
+    baseTotal: toBaseAmount(args.note.total, rate, args.baseCurrency),
+    baseTaxAmount: toBaseAmount(args.note.taxTotal, rate, args.baseCurrency),
+  };
 }
 
 /**

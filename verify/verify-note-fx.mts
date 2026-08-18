@@ -122,9 +122,9 @@ check("BRACKET before the credit note — the invoice's own posting at 3.80",
 
 // A FULL credit note — same document figures as the invoice, dated where the rate is 3.90.
 const srcInvoice = { currency: "USD", exchangeRate: SRC_RATE };
-const full = await noteBaseAmounts({
-  orgId: org, baseCurrency: BASE, source: srcInvoice,
-  note: { currency: "USD", total: INV_TOTAL, taxTotal: INV_TAX, issueDate: "2026-08-15" },
+const full = noteBaseAmounts({
+  baseCurrency: BASE, source: srcInvoice,
+  note: { currency: "USD", total: INV_TOTAL, taxTotal: INV_TAX },
 });
 check("the full credit note converts", full.ok, full.ok ? "" : full.error);
 if (full.ok) {
@@ -136,8 +136,13 @@ if (full.ok) {
     baseTaxAmount: full.baseTaxAmount,
     arAccountId: acc.get("1100")!, revenueAccountId: acc.get("4000")!, vatAccountId: acc.get("2100")!,
   });
-  check("[2] the credit note's lines touch NO 4900 account",
-    !cnLines.some((l) => l.accountId === acc.get("4900")), JSON.stringify(cnLines));
+  // Asserted as "these three accounts and NOTHING else", not as "not 4900". Keying on the FX
+  // account's own id only catches an FX line posted to that id — a compensating line pushed
+  // anywhere else walks straight past it, which is how the first version of this check let a
+  // mutation through. An exhaustive account set cannot be evaded by choosing a different account.
+  const allowed = new Set([acc.get("1100"), acc.get("4000"), acc.get("2100")]);
+  check("[2] the credit note posts ONLY AR, revenue and VAT — no fourth line of any kind",
+    cnLines.length === 3 && cnLines.every((l) => allowed.has(l.accountId)), JSON.stringify(cnLines));
   check("the entry balances", cnLines.reduce((s, l) => s + mils(l.debit), 0) === cnLines.reduce((s, l) => s + mils(l.credit), 0));
 
   await post("2026-08-15", "Credit note CN-FX-1 issued", "credit_note", 1, cnLines);
@@ -157,24 +162,26 @@ if (full.ok) {
 }
 
 // [3] PARTIAL — half the invoice. Both sides move at the SOURCE rate.
-const half = await noteBaseAmounts({
-  orgId: org, baseCurrency: BASE, source: srcInvoice,
-  note: { currency: "USD", total: "575.00", taxTotal: "75.00", issueDate: "2026-08-15" },
+const half = noteBaseAmounts({
+  baseCurrency: BASE, source: srcInvoice,
+  note: { currency: "USD", total: "575.00", taxTotal: "75.00" },
 });
 check("[3] a PARTIAL credit note converts at the source rate too",
   half.ok && mils(half.baseTotal) === mils(roundMoney(575 * Number(SRC_RATE), BASE)),
   half.ok ? `${half.baseTotal} (source-rate ${roundMoney(575 * Number(SRC_RATE), BASE)}, note-rate ${roundMoney(575 * Number(NOTE_RATE), BASE)})` : "blocked");
 
 // [5] LEGACY — a foreign invoice with no stored conversion must REFUSE.
-const legacy = await noteBaseAmounts({
-  orgId: org, baseCurrency: BASE, source: { currency: "USD", exchangeRate: null },
-  note: { currency: "USD", total: INV_TOTAL, taxTotal: INV_TAX, issueDate: "2026-08-15" },
+const legacy = noteBaseAmounts({
+  baseCurrency: BASE, source: { currency: "USD", exchangeRate: null },
+  note: { currency: "USD", total: INV_TOTAL, taxTotal: INV_TAX },
 });
 check("[5] a source with NO stored conversion is REFUSED, not re-converted",
   !legacy.ok, legacy.ok ? `converted anyway at ${legacy.exchangeRate}` : legacy.error.slice(0, 90));
 check("[5] …and the refusal names the reason", !legacy.ok && /stored base-currency conversion|no stored/i.test(legacy.error));
+// Structural rather than typed, because the field no longer exists on the type at all — which is
+// the stronger guarantee, but a compile error is not an assertion someone reads in the output.
 check("[5] …and offers no missingRate seam — there is no rate to fetch, the answer is on the source",
-  !legacy.ok && legacy.missingRate === undefined);
+  !legacy.ok && !("missingRate" in legacy), JSON.stringify(legacy).slice(0, 60));
 
 // Currency mismatch — the inheritance premise is broken and neither rate is defensible.
 // The EUR rate is seeded FIRST, deliberately: without it this assertion passes because no EUR rate
@@ -183,18 +190,18 @@ check("[5] …and offers no missingRate seam — there is no rate to fetch, the 
 await pool.query(
   "insert into exchange_rates (org_id,from_currency,to_currency,rate,effective_date,source) values ($1,'EUR','SAR','4.10000000','2026-07-01','manual')",
   [org]);
-const mismatch = await noteBaseAmounts({
-  orgId: org, baseCurrency: BASE, source: { currency: "USD", exchangeRate: SRC_RATE },
-  note: { currency: "EUR", total: "100.00", taxTotal: "0", issueDate: "2026-08-15" },
+const mismatch = noteBaseAmounts({
+  baseCurrency: BASE, source: { currency: "USD", exchangeRate: SRC_RATE },
+  note: { currency: "EUR", total: "100.00", taxTotal: "0" },
 });
 check("a note in a DIFFERENT currency from its source is refused — and NOT because the rate is missing",
   !mismatch.ok && !/exchange rate exists/i.test(mismatch.error),
   mismatch.ok ? `converted at ${mismatch.exchangeRate}` : mismatch.error.slice(0, 90));
 
 // [6] BASE CURRENCY — the no-regression case. Identity, no rate lookup, unchanged in every respect.
-const baseCase = await noteBaseAmounts({
-  orgId: org, baseCurrency: BASE, source: { currency: null, exchangeRate: null },
-  note: { currency: null, total: "1150.00", taxTotal: "150.00", issueDate: "2026-08-15" },
+const baseCase = noteBaseAmounts({
+  baseCurrency: BASE, source: { currency: null, exchangeRate: null },
+  note: { currency: null, total: "1150.00", taxTotal: "150.00" },
 });
 check("[6] a BASE-currency note converts by identity — rate 1, amounts unchanged",
   baseCase.ok && baseCase.exchangeRate === "1" && baseCase.baseTotal === "1150.00" && baseCase.baseTaxAmount === "150.00",
@@ -203,9 +210,9 @@ check("[6] …and a base note whose source has no stored rate is NOT refused —
   baseCase.ok);
 
 // THE BOUND on the invariant, pinned. Same doc total, one fil of tax difference from retyped lines.
-const retyped = await noteBaseAmounts({
-  orgId: org, baseCurrency: BASE, source: srcInvoice,
-  note: { currency: "USD", total: INV_TOTAL, taxTotal: "150.01", issueDate: "2026-08-15" },
+const retyped = noteBaseAmounts({
+  baseCurrency: BASE, source: srcInvoice,
+  note: { currency: "USD", total: INV_TOTAL, taxTotal: "150.01" },
 });
 check("BOUND: a 100% note with a DIFFERENT document-level tax still returns AR to exactly zero",
   retyped.ok && mils(retyped.baseTotal) === mils(invBaseTotal),
@@ -232,16 +239,18 @@ await post("2026-07-01", "Purchase order PO-FX-1 received", "purchase_order", po
 ]);
 
 const beforeDn = await bracket();
-const dnFull = await noteBaseAmounts({
-  orgId: org, baseCurrency: BASE, source: { currency: "USD", exchangeRate: SRC_RATE },
-  note: { currency: "USD", total: PO_TOTAL, taxTotal: PO_TAX, issueDate: "2026-08-15" },
+const dnFull = noteBaseAmounts({
+  baseCurrency: BASE, source: { currency: "USD", exchangeRate: SRC_RATE },
+  note: { currency: "USD", total: PO_TOTAL, taxTotal: PO_TAX },
 });
 check("the full debit note converts", dnFull.ok, dnFull.ok ? "" : dnFull.error);
 if (dnFull.ok) {
   check("[4/DN] the note's rate IS the purchase order's stored rate", dnFull.exchangeRate === SRC_RATE,
     `${dnFull.exchangeRate} (PO ${SRC_RATE}, note date ${NOTE_RATE})`);
   const dnLines = debitNoteLines({ baseTotal: dnFull.baseTotal, apAccountId: acc.get("2000")!, inventoryAccountId: acc.get("1200")! });
-  check("[2/DN] the debit note's lines touch NO 4900 account", !dnLines.some((l) => l.accountId === acc.get("4900")));
+  const allowedDn = new Set([acc.get("2000"), acc.get("1200")]);
+  check("[2/DN] the debit note posts ONLY AP and inventory — no third line of any kind",
+    dnLines.length === 2 && dnLines.every((l) => allowedDn.has(l.accountId)), JSON.stringify(dnLines));
   await post("2026-08-15", "Debit note DN-FX-1 issued", "debit_note", 1, dnLines);
   const afterDn = await bracket();
   check("BRACKET across the debit note", true,
@@ -251,16 +260,16 @@ if (dnFull.ok) {
   check("[1/DN] …and base ACCOUNTS PAYABLE to exactly zero",
     mils(afterDn.ap) === 0, `2000 is ${afterDn.ap} — residual ${money(mils(afterDn.ap))}`);
 }
-const dnHalf = await noteBaseAmounts({
-  orgId: org, baseCurrency: BASE, source: { currency: "USD", exchangeRate: SRC_RATE },
-  note: { currency: "USD", total: "400.00", taxTotal: "0", issueDate: "2026-08-15" },
+const dnHalf = noteBaseAmounts({
+  baseCurrency: BASE, source: { currency: "USD", exchangeRate: SRC_RATE },
+  note: { currency: "USD", total: "400.00", taxTotal: "0" },
 });
 check("[3/DN] a PARTIAL debit note converts at the PO's rate",
   dnHalf.ok && mils(dnHalf.baseTotal) === mils(roundMoney(400 * Number(SRC_RATE), BASE)),
   dnHalf.ok ? `${dnHalf.baseTotal} (source-rate ${roundMoney(400 * Number(SRC_RATE), BASE)})` : "blocked");
-const dnLegacy = await noteBaseAmounts({
-  orgId: org, baseCurrency: BASE, source: { currency: "USD", exchangeRate: null },
-  note: { currency: "USD", total: PO_TOTAL, taxTotal: PO_TAX, issueDate: "2026-08-15" },
+const dnLegacy = noteBaseAmounts({
+  baseCurrency: BASE, source: { currency: "USD", exchangeRate: null },
+  note: { currency: "USD", total: PO_TOTAL, taxTotal: PO_TAX },
 });
 check("[5/DN] a purchase order with NO stored conversion is REFUSED", !dnLegacy.ok,
   dnLegacy.ok ? `converted at ${dnLegacy.exchangeRate}` : dnLegacy.error.slice(0, 80));
@@ -277,8 +286,8 @@ const AMOUNTS = [["1000.00", "130.43"], ["333.33", "43.48"], ["0.03", "0.01"], [
 // future refactor of the rounding would break, and it costs nothing.
 for (const rate of RATES) {
   for (const [total, tax] of AMOUNTS) {
-    const whole = await noteBaseAmounts({ orgId: org, baseCurrency: BASE, source: { currency: "USD", exchangeRate: rate },
-      note: { currency: "USD", total, taxTotal: tax, issueDate: "2026-08-15" } });
+    const whole = noteBaseAmounts({ baseCurrency: BASE, source: { currency: "USD", exchangeRate: rate },
+      note: { currency: "USD", total, taxTotal: tax } });
     if (!whole.ok) { strands.push(`rate ${rate} total ${total}: blocked — ${whole.error.slice(0, 40)}`); continue; }
     const srcBaseTotal = roundMoney(Number(total) * Number(rate), BASE);
     const srcBaseTax = roundMoney(Number(tax) * Number(rate), BASE);
@@ -305,8 +314,8 @@ for (const rate of RATES) {
     let sumBase = 0, sumTax = 0;
     let blocked = false;
     for (let i = 0; i < 3; i++) {
-      const part = await noteBaseAmounts({ orgId: org, baseCurrency: BASE, source: { currency: "USD", exchangeRate: rate },
-        note: { currency: "USD", total: (splits[i] / 100).toFixed(2), taxTotal: (taxSplits[i] / 100).toFixed(2), issueDate: "2026-08-15" } });
+      const part = noteBaseAmounts({ baseCurrency: BASE, source: { currency: "USD", exchangeRate: rate },
+        note: { currency: "USD", total: (splits[i] / 100).toFixed(2), taxTotal: (taxSplits[i] / 100).toFixed(2) } });
       if (!part.ok) { blocked = true; break; }
       sumBase += mils(part.baseTotal);
       sumTax += mils(part.baseTaxAmount);
@@ -322,7 +331,7 @@ for (const rate of RATES) {
 check("SWEEP (a): 25 awkward rate/amount pairs — a FULL note reproduces the invoice's base figures",
   strands.length === 0, strands.slice(0, 6).join(" | "));
 check("SWEEP (b): 25 pairs split into THREE partial notes — their base amounts sum to the whole",
-  partialStrands.length === 0, `${partialStrands.length} strand(s): ${partialStrands.slice(0, 5).join(" | ")}`);
+  partialStrands.length === 0, `${partialStrands.length} strand(s):\n      ${partialStrands.join("\n      ")}`);
 
 await sweepDb();
 await pool.end();

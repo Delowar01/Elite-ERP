@@ -339,34 +339,45 @@ await A.page.waitForTimeout(2000);
 check("fixture: the second USD invoice posted at ITS date's rate (3.70)",
   (await db.query("select exchange_rate from sales_invoices where id=$1", [invUsd2])).rows[0].exchange_rate === "3.70000000");
 
-// ---- foreign CN converts at the NOTE date, not the invoice's ----
+// ---- foreign CN INHERITS the invoice's stored rate, ignoring its own date's ----
+// This block asserted the opposite until the note-FX fix: the note converted at 3.75 against an
+// invoice booked at 3.70, so crediting the invoice in full left a residue in AR and — worse — in
+// REVENUE, where no FX account could explain it. A credit note moves no cash and reverses lines
+// booked at one rate, so it reproduces that rate. See src/lib/reversal-currency.ts.
 const cnUsd = await mkCn({ number: `FXCNU-${uniq()}`, invoiceId: invUsd2, currency: "USD", issueDate: "2026-07-01",
   subtotal: "100.000", tax: "15.000", total: "115.000" });
 await issueCn(cnUsd);
 const n2 = (await db.query("select status, exchange_rate, base_total, base_tax_amount from credit_notes where id=$1", [cnUsd])).rows[0];
-check("USD CN issued at the NOTE date's rate 3.75 — the invoice it credits carries 3.70",
-  n2.exchange_rate === "3.75000000", String(n2.exchange_rate));
-check("CN baseTotal = 115 × 3.75 = 431.25", n2.base_total === "431.250", String(n2.base_total));
-check("CN baseTaxAmount = 56.25", n2.base_tax_amount === "56.250", String(n2.base_tax_amount));
+check("USD CN inherits the INVOICE's stored rate 3.70 — the note date's 3.75 is never consulted",
+  n2.exchange_rate === "3.70000000", String(n2.exchange_rate));
+check("CN baseTotal = 115 × 3.70 = 425.50", n2.base_total === "425.500", String(n2.base_total));
+check("CN baseTaxAmount = 55.50", n2.base_tax_amount === "55.500", String(n2.base_tax_amount));
 const cnuE = (await entriesFor(A.org, "credit_note", cnUsd))[0];
-check("USD CN posts in BASE: Dr Rev 375.000 / Dr VAT 56.250 / Cr AR 431.250",
-  line(cnuE, "4000")?.debit === "375.000" && line(cnuE, "2100")?.debit === "56.250" && line(cnuE, "1100")?.credit === "431.250",
+check("USD CN posts in BASE: Dr Rev 370.000 / Dr VAT 55.500 / Cr AR 425.500",
+  line(cnuE, "4000")?.debit === "370.000" && line(cnuE, "2100")?.debit === "55.500" && line(cnuE, "1100")?.credit === "425.500",
   JSON.stringify(cnuE?.lines));
+check("…and NO 4900 line — no cash moved, so there is no realized FX to recognise",
+  !line(cnuE, "4900"), JSON.stringify(cnuE?.lines));
 const i2AfterCn = (await db.query("select paid_amount, base_paid_amount from sales_invoices where id=$1", [invUsd2])).rows[0];
 check("USD invoice paidAmount moved by 115 (document currency)", i2AfterCn.paid_amount === "115.000", String(i2AfterCn.paid_amount));
-check("…and basePaidAmount by 431.250 (base currency)", i2AfterCn.base_paid_amount === "431.250", String(i2AfterCn.base_paid_amount));
+check("…and basePaidAmount by 425.500 (base currency, at the invoice's own rate)", i2AfterCn.base_paid_amount === "425.500", String(i2AfterCn.base_paid_amount));
 await checkLedgerBalanced(A.org, "after foreign CN issue");
 
-// ---- a CN dated before any rate exists BLOCKS ----
+// ---- a CN dated before any rate exists now ISSUES, because it consults no rate at all ----
+// A deliberate BEHAVIOUR CHANGE, and an improvement: this used to block, which was an artefact of
+// converting at the note's own date. The rate comes from the invoice, so a note dated before the
+// org's first rate row is perfectly postable.
 const cnEarly = await mkCn({ number: `FXCNE-${uniq()}`, invoiceId: invUsd2, currency: "USD", issueDate: "2025-12-01",
   subtotal: "50.000", tax: "7.500", total: "57.500" });
 await issueCn(cnEarly);
-const n3 = (await db.query("select status, base_total from credit_notes where id=$1", [cnEarly])).rows[0];
-check("USD CN dated before any rate BLOCKS: still draft", n3.status === "draft", n3.status);
-check("…no entry, base stays null", n3.base_total === null && (await entriesFor(A.org, "credit_note", cnEarly)).length === 0);
-await checkLedgerBalanced(A.org, "after blocked CN issue (unchanged)");
+const n3 = (await db.query("select status, exchange_rate, base_total from credit_notes where id=$1", [cnEarly])).rows[0];
+check("USD CN dated BEFORE any rate exists still issues — the rate is inherited, not looked up",
+  n3.status === "issued", n3.status);
+check("…at the invoice's 3.70: 57.5 × 3.70 = 212.750",
+  n3.exchange_rate === "3.70000000" && n3.base_total === "212.750", `${n3.exchange_rate} / ${n3.base_total}`);
+await checkLedgerBalanced(A.org, "after early-dated CN issue");
 
-// ---- reversing the foreign CN mirrors its STORED 3.75 figures ----
+// ---- reversing the foreign CN mirrors its STORED figures ----
 await A.page.goto(`${BASE}/sales/credit-notes/${cnUsd}`, { waitUntil: "networkidle" });
 await A.page.getByRole("button", { name: "Reverse Credit Note", exact: true }).click();
 await A.page.waitForTimeout(400);
@@ -375,19 +386,21 @@ await A.page.waitForTimeout(2000);
 const cnRevEntries = await entriesFor(A.org, "credit_note", cnUsd);
 check("CN reversal added exactly one entry", cnRevEntries.length === 2, `n=${cnRevEntries.length}`);
 const cnR = cnRevEntries[1];
-check("CN reversal mirrors stored figures: Cr Rev 375.000 / Cr VAT 56.250 / Dr AR 431.250 (3.80 never consulted)",
-  line(cnR, "4000")?.credit === "375.000" && line(cnR, "2100")?.credit === "56.250" && line(cnR, "1100")?.debit === "431.250",
+check("CN reversal mirrors stored figures: Cr Rev 370.000 / Cr VAT 55.500 / Dr AR 425.500 (no rate consulted)",
+  line(cnR, "4000")?.credit === "370.000" && line(cnR, "2100")?.credit === "55.500" && line(cnR, "1100")?.debit === "425.500",
   JSON.stringify(cnR?.lines));
+// The early-dated note above is still issued, so the invoice keeps ITS credit — the reversal undoes
+// exactly one note, which is the property worth asserting.
 const i2AfterRev = (await db.query("select paid_amount, base_paid_amount from sales_invoices where id=$1", [invUsd2])).rows[0];
-check("invoice paidAmount restored", i2AfterRev.paid_amount === "0.000", String(i2AfterRev.paid_amount));
-check("…and basePaidAmount restored by the STORED baseTotal", i2AfterRev.base_paid_amount === "0.000", String(i2AfterRev.base_paid_amount));
+check("invoice paidAmount restored to the early note's 57.5 alone", i2AfterRev.paid_amount === "57.500", String(i2AfterRev.paid_amount));
+check("…and basePaidAmount to its 212.750, by the STORED baseTotal", i2AfterRev.base_paid_amount === "212.750", String(i2AfterRev.base_paid_amount));
 await checkLedgerBalanced(A.org, "after CN reversal");
 
-// ================= Path 4: debit note issue (rate date = NOTE date) =================
-// Mirrors the credit-note rules on the purchasing side: the note inherits its PO's currency,
-// converts at its own issue date, posts a two-line entry in base, and its reversal mirrors the
-// stored posting. The USD PO above was received today at 3.80; its July-dated debit note must
-// carry 3.75 — a THIRD distinct stored rate for the same currency in this org, all three correct.
+// ================= Path 4: debit note issue (rate INHERITED from the PO) =================
+// Mirrors the credit-note rules on the purchasing side: the note inherits its PO's currency AND its
+// stored rate, posts a two-line entry in base, and its reversal mirrors the stored posting. The USD
+// PO above was received today at 3.80, so its July-dated debit note carries 3.80 too — the note's
+// own date buys nothing, because no cash moves and the lines being reversed were booked at 3.80.
 const mkDn = async ({ number, poId, currency, issueDate, subtotal, tax, total }) => {
   const dn = (await db.query(
     `insert into debit_notes (org_id, debit_note_number, vendor_id, source_purchase_order_id, currency, issue_date, subtotal, tax_total, total, status, created_by_id)
@@ -420,30 +433,35 @@ check("DN entry: Dr AP 460.000 / Cr Inventory 460.000",
   line(dnE, "2000")?.debit === "460.000" && line(dnE, "1200")?.credit === "460.000", JSON.stringify(dnE?.lines));
 await checkLedgerBalanced(A.org, "after base DN issue");
 
-// ---- foreign DN converts at the NOTE date (3.75), not the PO's receipt rate (3.80) ----
+// ---- foreign DN INHERITS the PO's receipt rate (3.80), ignoring the note date's (3.75) ----
+// The twin of the credit-note rule, and it shipped with the identical defect. A debit note reverses
+// part of a receipt whose inventory and AP were both booked at the PO's rate.
 const dnUsd = await mkDn({ number: `FXDNU-${uniq()}`, poId: poUsd, currency: "USD", issueDate: "2026-07-01",
   subtotal: "200.000", tax: "30.000", total: "230.000" });
 await issueDn(dnUsd);
 const d2 = (await db.query("select status, exchange_rate, base_total, base_tax_amount from debit_notes where id=$1", [dnUsd])).rows[0];
-check("USD DN issued at the NOTE date's rate 3.75 — its PO was received at 3.80",
-  d2.exchange_rate === "3.75000000", String(d2.exchange_rate));
-check("DN baseTotal = 230 × 3.75 = 862.50", d2.base_total === "862.500", String(d2.base_total));
-check("DN baseTaxAmount = 112.50", d2.base_tax_amount === "112.500", String(d2.base_tax_amount));
+check("USD DN inherits the PURCHASE ORDER's stored rate 3.80 — the note date's 3.75 is never consulted",
+  d2.exchange_rate === "3.80000000", String(d2.exchange_rate));
+check("DN baseTotal = 230 × 3.80 = 874.00", d2.base_total === "874.000", String(d2.base_total));
+check("DN baseTaxAmount = 114.00", d2.base_tax_amount === "114.000", String(d2.base_tax_amount));
 const dnuE = (await entriesFor(A.org, "debit_note", dnUsd))[0];
-check("USD DN posts in BASE: Dr AP 862.500 / Cr Inventory 862.500",
-  line(dnuE, "2000")?.debit === "862.500" && line(dnuE, "1200")?.credit === "862.500", JSON.stringify(dnuE?.lines));
+check("USD DN posts in BASE: Dr AP 874.000 / Cr Inventory 874.000",
+  line(dnuE, "2000")?.debit === "874.000" && line(dnuE, "1200")?.credit === "874.000", JSON.stringify(dnuE?.lines));
+check("…and NO 4900 line", !line(dnuE, "4900"), JSON.stringify(dnuE?.lines));
 await checkLedgerBalanced(A.org, "after foreign DN issue");
 
-// ---- a DN dated before any rate BLOCKS ----
+// ---- a DN dated before any rate now ISSUES too, for the same reason ----
 const dnEarly = await mkDn({ number: `FXDNE-${uniq()}`, poId: poUsd, currency: "USD", issueDate: "2025-12-01",
   subtotal: "50.000", tax: "7.500", total: "57.500" });
 await issueDn(dnEarly);
-const d3 = (await db.query("select status, base_total from debit_notes where id=$1", [dnEarly])).rows[0];
-check("USD DN dated before any rate BLOCKS: still draft", d3.status === "draft", d3.status);
-check("…no entry, base stays null", d3.base_total === null && (await entriesFor(A.org, "debit_note", dnEarly)).length === 0);
-await checkLedgerBalanced(A.org, "after blocked DN issue (unchanged)");
+const d3 = (await db.query("select status, exchange_rate, base_total from debit_notes where id=$1", [dnEarly])).rows[0];
+check("USD DN dated BEFORE any rate exists still issues — the rate is inherited, not looked up",
+  d3.status === "issued", d3.status);
+check("…at the PO's 3.80: 57.5 × 3.80 = 218.500",
+  d3.exchange_rate === "3.80000000" && d3.base_total === "218.500", `${d3.exchange_rate} / ${d3.base_total}`);
+await checkLedgerBalanced(A.org, "after early-dated DN issue");
 
-// ---- reversing the foreign DN mirrors its STORED 3.75 figures ----
+// ---- reversing the foreign DN mirrors its STORED figures ----
 await A.page.goto(`${BASE}/purchasing/debit-notes/${dnUsd}`, { waitUntil: "networkidle" });
 await A.page.getByRole("button", { name: "Reverse Debit Note", exact: true }).click();
 await A.page.waitForTimeout(400);
@@ -452,8 +470,8 @@ await A.page.waitForTimeout(2000);
 const dnRevEntries = await entriesFor(A.org, "debit_note", dnUsd);
 check("DN reversal added exactly one entry", dnRevEntries.length === 2, `n=${dnRevEntries.length}`);
 const dnR = dnRevEntries[1];
-check("DN reversal mirrors stored figures: Cr AP 862.500 / Dr Inventory 862.500 (3.80 never consulted)",
-  line(dnR, "2000")?.credit === "862.500" && line(dnR, "1200")?.debit === "862.500", JSON.stringify(dnR?.lines));
+check("DN reversal mirrors stored figures: Cr AP 874.000 / Dr Inventory 874.000 (no rate consulted)",
+  line(dnR, "2000")?.credit === "874.000" && line(dnR, "1200")?.debit === "874.000", JSON.stringify(dnR?.lines));
 await checkLedgerBalanced(A.org, "after DN reversal");
 
 // ================= Org B: BHD base (3 decimals) =================

@@ -404,44 +404,113 @@ the cap.
 
 ---
 
-## A credit note converts at ITS OWN date's rate — a foreign-currency defect (high priority)
+## A credit note converted at ITS OWN date's rate — RESOLVED, and it uncovered the next item
 
-**Status:** unfixed, latent (zero issued credit notes on foreign invoices in the database audited).
-Found while verifying the credit-note release rule.
+**Status:** FIXED. Both the credit note and its debit-note twin now inherit the source document's
+stored `exchangeRate` and post no 4900 line. `src/lib/reversal-currency.ts` holds the rule for both;
+`verify-note-fx` asserts it.
 
-`issueCreditNoteAction` converts through `captureBaseAmounts({ date: cn.issueDate })`. But a credit
-note **moves no cash**. It reverses part of an invoice whose AR *and revenue* were both booked at
-that invoice's stored rate, so clearing them at a different rate invents a difference that never
-happened.
+### What it was
 
-**Two independent lines of reasoning reach the same answer:**
+`issueCreditNoteAction` converted through `captureBaseAmounts({ date: cn.issueDate })`. But a credit
+note **moves no cash**: it reverses part of an invoice whose AR *and revenue* were both booked at
+that invoice's stored rate, so clearing them at a different rate invented a difference that never
+happened. `purchasing/debit-notes/actions.ts` had the identical construction against its PO.
 
-1. **The codebase's own principle.** Every other reversal here MIRRORS stored lines rather than
-   reconverting — invoice void, credit-note reversal, allocation release. The credit note is the
-   only reversal that re-converts.
-2. **The tax rule.** A credit note is an adjustment to the **original supply**, so its SAR amounts
-   should mirror the original invoice's conversion. (This also matters for Phase 2: the e-invoice
-   references the original document.)
+The AR tail was a control-account residual — the document-currency balance reached zero while GL
+1100 kept a base-currency remainder, and ledger and subledger agreed because both were wrong
+together, which is why no invariant caught it. **The revenue tail was the serious half:** crediting
+100% of a foreign invoice did not return base revenue to zero, leaving a phantom FX gain inside
+4000 where no FX account could explain it.
 
-**What it produces today**, for a USD invoice booked at 3.80 and credited at 3.90:
+Measured, against a USD invoice booked at 3.80 and credited in full at 3.90 — the failing suite was
+committed first so the numbers exist in the history:
 
-- **AR that cannot be cleared, ever.** The document-currency balance reaches zero, so no payment or
-  allocation can be made against it, while GL 1100 keeps a base-currency tail (−33.33 in the
-  verification fixture). Ledger and subledger agree — both are wrong together — so invariant K
-  still passes, which is why nothing caught it.
-- **A misstated P&L, which is worse.** 4000 is debited at the note-date rate, so crediting 100% of a
-  foreign invoice does NOT return base revenue to zero. The residue is a phantom FX gain or loss
-  buried **inside revenue**, where no FX account can explain it.
+```
+4000  -3,800.000 → +100.000     (residual 100.000, inside revenue)
+1100  +4,370.000 → -115.000     (residual -115.000, uncleanable)
+1200  +3,040.000 →  -80.000     (the debit-note twin)
+```
 
-**THE FIX, stated so it cannot be misread:** inherit the **source document's stored
-`exchangeRate`** and post **NO 4900 line**. There is no realized FX to recognise, because no cash
-moved. Converting at the note date and adding a compensating FX line would balance and still be
-wrong — it would book a gain that did not occur. A pre-FX-6 legacy invoice with no stored rate must
-**refuse** (the construction `arClearedFor` already uses), never fall back to a fresh conversion.
+After the fix all three go to exactly `0.000`.
 
-**The debit-note twin is part of the same task.** `purchasing/debit-notes/actions.ts` has the
-identical construction against its source purchase order. Fixing one and finding the other later is
-the worse outcome.
+### One deliberate behaviour change worth knowing about
+
+A note dated **before the org's first exchange-rate row used to block**. It no longer does: the rate
+comes from the source document and the rate table is never consulted, so such a note now issues
+correctly. That was an artefact of converting at the note's own date, and removing it is an
+improvement rather than a regression. `verify-fx-posting` asserts the new behaviour explicitly.
+
+`missingRate` — the structured seam behind the one-click rate-fetch affordance — is deliberately
+**not** returned by these two paths any more, while four other posting paths still return it. There
+is no rate for a note to fetch: the answer is on the source document or the operation is refused.
+
+### Population
+
+Dev database at the time of the fix: **0** issued credit notes on foreign invoices, **0** issued
+debit notes on foreign purchase orders (126 of each exist, all base currency, where the old and new
+paths produce identical figures). So the fix was forward-only with no migration.
+
+**Production is a separate question.** Run these before deploy; a non-zero result means posted
+history carries a phantom revenue residual and needs a repair decision, not a migration written on
+spec:
+
+```sql
+select count(*) from credit_notes cn join sales_invoices i on i.id = cn.source_invoice_id
+ where cn.status='issued' and i.currency is not null
+   and upper(i.currency) <> upper((select currency from orgs o where o.id = cn.org_id));
+
+select count(*) from debit_notes dn join purchase_orders po on po.id = dn.source_purchase_order_id
+ where dn.status='issued' and po.currency is not null
+   and upper(po.currency) <> upper((select currency from orgs o where o.id = dn.org_id));
+
+select count(*) from credit_notes cn join sales_invoices i on i.id = cn.source_invoice_id
+ where cn.status='issued' and cn.exchange_rate is not null and i.exchange_rate is not null
+   and cn.exchange_rate <> i.exchange_rate;
+```
+
+---
+
+## Partial notes crediting an invoice in full strand a minor unit (found by the note-FX sweep)
+
+**Status:** open, out of scope for the note-FX fix by decision. **Real, and in shipped posting
+math** — not a test artefact and not something to tune away.
+
+Once notes inherit the source rate, a FULL note nets its invoice to exactly zero. Several PARTIAL
+notes that together credit the same invoice do not: each is rounded on its own, so their base
+amounts can sum to something other than the invoice's base total.
+
+Measured by `verify-note-fx`'s sweep (b) — 25 rate/amount pairs, each split three ways:
+**17 strand, every one by exactly ±0.01.** Both directions. Examples:
+
+```
+rate 3.75130000  total 333.33     3 partials sum to 1,250.430, whole is 1,250.420   (+0.010)
+rate 0.26700000  total 333.33     3 partials sum to    89.010, whole is    89.000   (+0.010)
+rate 17.94910000 total 99,999.99  3 partials sum to 1,794,909.810, whole is 1,794,909.820 (-0.010)
+```
+
+The consequence is the same *kind* of uncleanable AR residual the FX defect produced, one fil
+instead of a hundred: an invoice credited in full across three notes ends at ±0.01 in GL 1100.
+
+**The codebase already has the discipline for the analogous case and it is simply missing here.**
+A closing PAYMENT uses `baseTotal − basePaidAmount` — the exact remainder — rather than a fresh
+proportional conversion, and `releaseShareOf`'s `full` branch does the same for advances. The note
+path has no equivalent: every note converts proportionally, including the one that closes the
+invoice out.
+
+**The fix, when it is picked up:** on the note that CLOSES the source document — cumulative
+document-currency credits reaching the total — the base amount is the exact remainder
+(`source.baseTotal − Σ base of prior active notes`) rather than a fresh conversion.
+
+**Why it was not done in the same change.** The credit note already computes `alreadyCredited`
+inside its lock for the cap, so the sibling aggregate is nearly free there. The debit note has no
+cap, no sibling aggregate and no paid-amount tracking against the PO, so it would need that
+machinery built — and the rule must land on both types together, exactly as the FX fix did, or the
+next person finds one half fixed and the other not. That is a design decision with its own edges
+(reversed notes, interaction with the cap), not a rounding tweak.
+
+**Do not relax `verify-note-fx`'s sweep (b) to make the gate green.** It is measuring the defect
+correctly. It fails on purpose until the closing-note rule lands.
 
 ---
 
