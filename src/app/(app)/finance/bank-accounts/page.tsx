@@ -73,8 +73,14 @@ export default async function BankAccountsPage() {
         <div className="two-col" style={{ marginBottom: 20 }}>
           {bankAccounts.map((ba) => {
             const glAccount = accountByGl.get(ba.glAccountId);
-            const glBalance = balances.get(ba.glAccountId) ?? 0;
-            const total = Number(ba.openingBalanceLegacy) + glBalance;
+            // THE LEDGER, ALONE. This line used to read
+            // `Number(ba.openingBalance) + glBalance`, which was the only place in the product that
+            // added a stored master-record scalar to a ledger-derived figure — and the opening
+            // balance it added had never been posted anywhere, so the sum appeared here and in no
+            // Trial Balance, Balance Sheet or Cash Flow. Opening balances are journal entries now
+            // (lib/bank-opening.ts), so they are already inside `glBalance`; adding the column back
+            // would double-count them. See the product-invariants section of verify/README.md.
+            const total = balances.get(ba.glAccountId) ?? 0;
             return (
               <div key={ba.id} className="card" style={{ padding: "18px 20px" }}>
                 <div className="flex justify-between items-start">

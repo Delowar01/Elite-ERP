@@ -170,7 +170,18 @@ export function BankAccountFormDialog({
                     />
                   </FormField>
                   <FormField label={t(locale, "Where it came from")} htmlFor="ba-opening-contra">
-                    <Select value={contraId} onValueChange={setContraId}>
+                    {/*
+                      The guard is not defensive noise. Radix's Select renders a hidden native
+                      <select> for form participation, and its options are registered by the item
+                      texts — which mount in the same commit that sets this value, one render before
+                      the registration lands. So a value set PROGRAMMATICALLY while the menu has
+                      never been opened has no matching <option> yet: the browser refuses it, fires
+                      a change event, and Radix reports it back as "". Without this, the default
+                      contra account selected itself and was wiped a moment later, and the entry
+                      preview showed "Cr —". No item here has an empty value, so an empty change is
+                      never a real choice.
+                    */}
+                    <Select value={contraId} onValueChange={(v) => { if (v) setContraId(v); }}>
                       <SelectTrigger id="ba-opening-contra">
                         <SelectValue placeholder={t(locale, "Select an account")} />
                       </SelectTrigger>

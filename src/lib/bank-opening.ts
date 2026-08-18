@@ -72,12 +72,12 @@ export async function buildBankOpeningPosting(args: {
   baseCurrency: string;
   /** The bank account's own currency column, verbatim — null means base. */
   accountCurrency: string | null;
-  openingBalance: string;
+  openingAmount: string;
   openingDate: string;
   glAccountId: number;
   contraAccountId: number;
 }): Promise<OpeningPosting> {
-  const amount = Number(args.openingBalance);
+  const amount = Number(args.openingAmount);
   if (!Number.isFinite(amount)) return { ok: false, error: "Opening balance is not a number." };
   if (amount === 0) return { ok: true, skip: true };
 

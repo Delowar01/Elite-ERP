@@ -26,7 +26,7 @@
     "verify:skeletons": "tsx --env-file-if-exists=.env --conditions=react-server verify/verify-skeletons.mts",
     "verify:contrast": "tsx --env-file-if-exists=.env --conditions=react-server verify/verify-contrast.mts",
     "verify:edit-action": "tsx --env-file-if-exists=.env --conditions=react-server verify/verify-edit-action.mts",
-    "verify:static": "npm run verify:role-matrix && npm run verify:confirm-policy && npm run verify:dirty-form && npm run verify:skeletons && npm run verify:contrast && npm run verify:edit-action && npm run verify:money-precision",
+    "verify:static": "npm run verify:role-matrix && npm run verify:confirm-policy && npm run verify:dirty-form && npm run verify:skeletons && npm run verify:contrast && npm run verify:edit-action && npm run verify:money-precision && npm run verify:ledger-only-balances",
     "verify:all": "npm run verify:static && npm run verify:server",
     "verify:browser": "node --env-file-if-exists=.env verify/run-browser-suites.mjs",
     "verify:money-precision": "tsx --env-file-if-exists=.env --conditions=react-server verify/verify-money-precision.mts",
@@ -45,7 +45,8 @@
     "verify:compliance-claims": "node --env-file-if-exists=.env verify/verify-compliance-claims.mjs",
     "verify:advance-clear": "tsx --env-file-if-exists=.env --conditions=react-server verify/verify-advance-clear.mts",
     "smoke:rates": "tsx --conditions=react-server scripts/smoke-rates.ts",
-    "verify:bank-opening": "tsx --env-file-if-exists=.env --conditions=react-server verify/verify-bank-opening.mts"
+    "verify:bank-opening": "tsx --env-file-if-exists=.env --conditions=react-server verify/verify-bank-opening.mts",
+    "verify:ledger-only-balances": "tsx --env-file-if-exists=.env --conditions=react-server verify/verify-ledger-only-balances.mts"
   },
   "dependencies": {
     "@radix-ui/react-avatar": "^1.2.2",

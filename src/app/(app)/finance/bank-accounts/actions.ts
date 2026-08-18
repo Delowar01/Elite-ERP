@@ -77,7 +77,7 @@ export async function createBankAccountAction(formData: FormData): Promise<Actio
       orgId: session.orgId,
       baseCurrency: session.orgCurrency,
       accountCurrency: String(formData.get("currency") ?? "").trim() || null,
-      openingBalance,
+      openingAmount: openingBalance,
       openingDate,
       glAccountId,
       contraAccountId,

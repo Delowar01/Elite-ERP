@@ -57,7 +57,7 @@ await pool.query(
 const base = { orgId: org, baseCurrency: "SAR", glAccountId: acc.get("1010")!, contraAccountId: acc.get("3000")! };
 
 // ── 1. The posting construction ───────────────────────────────────────────────────────────────
-const positive = await buildBankOpeningPosting({ ...base, accountCurrency: null, openingBalance: "30000.000", openingDate: "2026-07-30" });
+const positive = await buildBankOpeningPosting({ ...base, accountCurrency: null, openingAmount: "30000.000", openingDate: "2026-07-30" });
 check("a positive opening balance DEBITS the bank and CREDITS the contra",
   positive.ok && !positive.skip && positive.debitAccountId === acc.get("1010") && positive.creditAccountId === acc.get("3000"),
   positive.ok && !positive.skip ? `Dr ${positive.debitAccountId} / Cr ${positive.creditAccountId}` : JSON.stringify(positive));
@@ -67,24 +67,24 @@ check("…for the full amount, base currency, rate 1", positive.ok && !positive.
 // An overdraft at cutover. The sides FLIP; a negative debit is never written, because every report
 // signs its own figures from the debit/credit columns and would read the negative as a positive on
 // the other side.
-const negative = await buildBankOpeningPosting({ ...base, accountCurrency: null, openingBalance: "-1200.000", openingDate: "2026-07-30" });
+const negative = await buildBankOpeningPosting({ ...base, accountCurrency: null, openingAmount: "-1200.000", openingDate: "2026-07-30" });
 check("a NEGATIVE opening balance flips the sides rather than posting a negative debit",
   negative.ok && !negative.skip && negative.debitAccountId === acc.get("3000") && negative.creditAccountId === acc.get("1010")
     && mils(negative.baseAmount) === 1_200_000 && Number(negative.baseAmount) > 0,
   negative.ok && !negative.skip ? `Dr ${negative.debitAccountId} ${negative.baseAmount} / Cr ${negative.creditAccountId}` : "");
 
-const zero = await buildBankOpeningPosting({ ...base, accountCurrency: null, openingBalance: "0", openingDate: "2026-07-30" });
+const zero = await buildBankOpeningPosting({ ...base, accountCurrency: null, openingAmount: "0", openingDate: "2026-07-30" });
 check("a ZERO opening balance posts NOTHING — no event, not a rounded-away one", zero.ok && zero.skip === true);
 
 // The ledger holds base currency only; a foreign account converts once, at the OPENING date.
-const foreign = await buildBankOpeningPosting({ ...base, accountCurrency: "USD", openingBalance: "1000.000", openingDate: "2026-07-01" });
+const foreign = await buildBankOpeningPosting({ ...base, accountCurrency: "USD", openingAmount: "1000.000", openingDate: "2026-07-01" });
 check("a FOREIGN opening balance converts at the opening date's rate and stores the base figure",
   foreign.ok && !foreign.skip && mils(foreign.baseAmount) === 3_750_000 && foreign.exchangeRate === "3.75000000",
   foreign.ok && !foreign.skip ? `${foreign.baseAmount} @ ${foreign.exchangeRate}` : JSON.stringify(foreign));
 
 // No rate on or before the date: BLOCKED. Never converted at 1.0 — a blocked posting is
 // recoverable and a wrong ledger is not.
-const noRate = await buildBankOpeningPosting({ ...base, accountCurrency: "EUR", openingBalance: "1000.000", openingDate: "2026-07-01" });
+const noRate = await buildBankOpeningPosting({ ...base, accountCurrency: "EUR", openingAmount: "1000.000", openingDate: "2026-07-01" });
 check("a foreign opening balance with NO rate is BLOCKED, not posted at 1.0",
   !noRate.ok && /exchange rate/i.test(noRate.error), noRate.ok ? "posted anyway" : noRate.error.slice(0, 70));
 // …and specifically NOT by silently landing the document figure in the ledger:
