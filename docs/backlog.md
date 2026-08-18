@@ -446,29 +446,187 @@ improvement rather than a regression. `verify-fx-posting` asserts the new behavi
 **not** returned by these two paths any more, while four other posting paths still return it. There
 is no rate for a note to fetch: the answer is on the source document or the operation is refused.
 
-### Population
+### PRE-DEPLOY PRODUCTION CHECK — six queries, each with a positive control
 
-Dev database at the time of the fix: **0** issued credit notes on foreign invoices, **0** issued
-debit notes on foreign purchase orders (126 of each exist, all base currency, where the old and new
-paths produce identical figures). So the fix was forward-only with no migration.
+Run these in the Neon console before deploying. They are the exact statements that were run against
+the development database, not a reconstruction — paste the whole block and read the ten rows it
+returns.
 
-**Production is a separate question.** Run these before deploy; a non-zero result means posted
-history carries a phantom revenue residual and needs a repair decision, not a migration written on
-spec:
+**Why each zero-expecting query has a control beside it.** Four of the six expect zero. A zero from a
+query whose join does not match anything is indistinguishable from a real zero, and that is not a
+hypothetical here: this project has already shipped a check that compared 0 to 0 and reported
+"unchanged" while every row it claimed to be watching was being rewritten. Each control uses the
+**same joins and the same filters** with the condition inverted, so a non-zero control proves the
+query reaches real rows and its zero is a result rather than an absence. **If a control returns 0,
+stop — the query is not measuring anything and its neighbour's zero means nothing.**
 
 ```sql
-select count(*) from credit_notes cn join sales_invoices i on i.id = cn.source_invoice_id
- where cn.status='issued' and i.currency is not null
-   and upper(i.currency) <> upper((select currency from orgs o where o.id = cn.org_id));
-
-select count(*) from debit_notes dn join purchase_orders po on po.id = dn.source_purchase_order_id
- where dn.status='issued' and po.currency is not null
-   and upper(po.currency) <> upper((select currency from orgs o where o.id = dn.org_id));
-
-select count(*) from credit_notes cn join sales_invoices i on i.id = cn.source_invoice_id
- where cn.status='issued' and cn.exchange_rate is not null and i.exchange_rate is not null
-   and cn.exchange_rate <> i.exchange_rate;
+-- Q1
+select 'Q1  issued CNs on FOREIGN invoices                 (expect 0)' as check, count(*) as n
+  from credit_notes cn
+  join sales_invoices i on i.id = cn.source_invoice_id
+  join orgs o on o.id = cn.org_id
+ where cn.status = 'issued'
+   and i.currency is not null and upper(i.currency) <> upper(o.currency)
+union all
+select 'Q1c CONTROL — same join, BASE-currency invoices    (expect > 0)', count(*)
+  from credit_notes cn
+  join sales_invoices i on i.id = cn.source_invoice_id
+  join orgs o on o.id = cn.org_id
+ where cn.status = 'issued'
+   and (i.currency is null or upper(i.currency) = upper(o.currency))
+union all
+-- Q2
+select 'Q2  issued DNs on FOREIGN purchase orders          (expect 0)', count(*)
+  from debit_notes dn
+  join purchase_orders po on po.id = dn.source_purchase_order_id
+  join orgs o on o.id = dn.org_id
+ where dn.status = 'issued'
+   and po.currency is not null and upper(po.currency) <> upper(o.currency)
+union all
+select 'Q2c CONTROL — same join, BASE-currency POs         (expect > 0)', count(*)
+  from debit_notes dn
+  join purchase_orders po on po.id = dn.source_purchase_order_id
+  join orgs o on o.id = dn.org_id
+ where dn.status = 'issued'
+   and (po.currency is null or upper(po.currency) = upper(o.currency))
+union all
+-- Q3
+select 'Q3  issued CNs whose stored rate <> the invoice''s  (expect 0)', count(*)
+  from credit_notes cn
+  join sales_invoices i on i.id = cn.source_invoice_id
+ where cn.status = 'issued'
+   and cn.exchange_rate is not null and i.exchange_rate is not null
+   and cn.exchange_rate <> i.exchange_rate
+union all
+select 'Q3c CONTROL — same join, rates EQUAL               (expect > 0)', count(*)
+  from credit_notes cn
+  join sales_invoices i on i.id = cn.source_invoice_id
+ where cn.status = 'issued'
+   and cn.exchange_rate is not null and i.exchange_rate is not null
+   and cn.exchange_rate = i.exchange_rate
+union all
+-- Q4
+select 'Q4  issued DNs whose stored rate <> the PO''s       (expect 0)', count(*)
+  from debit_notes dn
+  join purchase_orders po on po.id = dn.source_purchase_order_id
+ where dn.status = 'issued'
+   and dn.exchange_rate is not null and po.exchange_rate is not null
+   and dn.exchange_rate <> po.exchange_rate
+union all
+select 'Q4c CONTROL — same join, rates EQUAL               (expect > 0)', count(*)
+  from debit_notes dn
+  join purchase_orders po on po.id = dn.source_purchase_order_id
+ where dn.status = 'issued'
+   and dn.exchange_rate is not null and po.exchange_rate is not null
+   and dn.exchange_rate = po.exchange_rate
+union all
+-- Q5 / Q6
+select 'Q5  issued CNs, ALL currencies                  (informational)', count(*) from credit_notes where status = 'issued'
+union all
+select 'Q6  issued DNs, ALL currencies                  (informational)', count(*) from debit_notes where status = 'issued'
+order by 1;
 ```
+
+### How to read each result
+
+| Query | Expected | If it is not that | Blocks deploy? |
+|---|---|---|---|
+| **Q1** issued credit notes on foreign invoices | **0** | Each row is a posted credit note converted at its own date against an invoice booked at a different one. It carries a phantom FX gain or loss **inside revenue** (GL 4000) and an uncleanable tail on AR (GL 1100). Run the drill-down below, then decide per row. | **No — but do not deploy without deciding.** The fix is correct going forward either way; these are historical postings it does not touch. |
+| **Q2** issued debit notes on foreign POs | **0** | Same, on 2000/1200 instead of 1100/4000. | Same as Q1. |
+| **Q1c / Q2c** the controls | **> 0** | **STOP.** A zero control means the join matched nothing at all, so Q1/Q2's zero is meaningless. Check that the org has any issued notes before believing anything in this table. | **Yes.** |
+| **Q3** credit notes whose stored rate ≠ the invoice's | **0** | Direct evidence of the defect in stored data — a note that recorded a different rate than the document it reverses. Strictly narrower than Q1: see the coverage note. | No, but it is the strongest signal in the set. Investigate before deploying. |
+| **Q4** debit notes whose stored rate ≠ the PO's | **0** | Same, purchasing side. | Same as Q3. |
+| **Q3c / Q4c** the controls | **> 0** | **STOP**, as above. | **Yes.** |
+| **Q5 / Q6** issued notes, all currencies | any | Informational — the denominator. If both are 0, the org has never issued a note and Q1–Q4 are trivially zero for a reason that has nothing to do with this fix. | No. |
+
+**A non-zero Q1 or Q2 is a repair decision, not a migration.** Do not write a backfill on spec. The
+right response depends on how many rows there are and whether the periods they fall in are still
+open: a handful in an open period is cleanest corrected with adjusting journal entries; a large
+population needs a plan of its own. Bring the drill-down output back before writing anything.
+
+### Coverage caveat on Q3 and Q4 — read this before trusting their zeros
+
+Q3 only sees rows where **both** the note and its source carry a stored rate. A note whose
+`exchange_rate` is null — anything issued before FX-6 — is invisible to it, and so is its source.
+
+**`Q3 + Q3c` is exactly the number of rows Q3 can see at all.** In the development database that is
+21 out of 148 issued credit notes: the other 127 have no stored rate on either side. So a zero from
+Q3 means "nothing disagrees *among the rows that have both figures*", not "nothing disagrees".
+**Q1 is the broader check and Q3 is the sharper one; neither substitutes for the other.**
+
+### Drill-down, if Q1 or Q2 returns a non-zero
+
+A count cannot tell a real row from a test fixture, and cannot tell you how bad a row is. This lists
+them with both rates, so the size of each discrepancy is visible:
+
+```sql
+select cn.id, cn.credit_note_number, o.name as org, i.invoice_number,
+       i.currency as doc_currency, o.currency as base_currency,
+       i.exchange_rate::text  as invoice_rate,
+       cn.exchange_rate::text as note_rate,
+       cn.total::text as note_total,
+       cn.base_total::text as note_base_total,
+       round(cn.total * i.exchange_rate, 3)::text as base_total_it_should_have_had
+  from credit_notes cn
+  join sales_invoices i on i.id = cn.source_invoice_id
+  join orgs o on o.id = cn.org_id
+ where cn.status = 'issued'
+   and i.currency is not null and upper(i.currency) <> upper(o.currency)
+ order by cn.org_id, cn.id;
+```
+
+The purchasing equivalent, written out rather than described — a swap done by hand at 2am is how a
+query ends up joining the wrong column:
+
+```sql
+select dn.id, dn.debit_note_number, o.name as org, po.po_number,
+       po.currency as doc_currency, o.currency as base_currency,
+       po.exchange_rate::text as po_rate,
+       dn.exchange_rate::text as note_rate,
+       dn.total::text as note_total,
+       dn.base_total::text as note_base_total,
+       round(dn.total * po.exchange_rate, 3)::text as base_total_it_should_have_had
+  from debit_notes dn
+  join purchase_orders po on po.id = dn.source_purchase_order_id
+  join orgs o on o.id = dn.org_id
+ where dn.status = 'issued'
+   and po.currency is not null and upper(po.currency) <> upper(o.currency)
+ order by dn.org_id, dn.id;
+```
+
+In both drill-downs the last column is the figure the note **should** carry — the note's document
+total at the *source's* rate. Where it equals `note_base_total`, that row is already correct and
+needs nothing. Where it differs, the gap is the misstatement, in base currency, per note.
+
+### What the development database returned — and why it is NOT a clean read
+
+```
+ Q1  issued CNs on FOREIGN invoices                 (expect 0)   |   4
+ Q1c CONTROL — same join, BASE-currency invoices    (expect > 0) | 144
+ Q2  issued DNs on FOREIGN purchase orders          (expect 0)   |   4
+ Q2c CONTROL — same join, BASE-currency POs         (expect > 0) | 144
+ Q3  issued CNs whose stored rate <> the invoice's  (expect 0)   |   0
+ Q3c CONTROL — same join, rates EQUAL               (expect > 0) |  21
+ Q4  issued DNs whose stored rate <> the PO's       (expect 0)   |   0
+ Q4c CONTROL — same join, rates EQUAL               (expect > 0) |  21
+ Q5  issued CNs, ALL currencies                  (informational) | 148
+ Q6  issued DNs, ALL currencies                  (informational) | 148
+```
+
+**The four are verification fixtures, not data.** They are the `FXCNE-*` / `FXDNE-*` notes that
+`verify-fx-posting` creates, in orgs named `FX Posting SAR`, and the drill-down shows their note
+rate equal to their invoice rate (3.70 = 3.70) — which is the fix working, not the defect. Every
+browser-tier run adds more of them, so **this number climbs on its own and a dev-database count is
+not evidence of anything.** An earlier reading of the same queries returned 0/0 simply because the
+suites had not been run yet.
+
+Production has no such orgs, so its counts are real. This is recorded because a future reader
+running these locally will get a non-zero and should not conclude the product is broken.
+
+The useful signal from the dev run is the pair **Q3 = 0 with Q3c = 21**: among every note that
+carries both figures, the stored rate matches its source's. Post-fix, that is what correct looks
+like.
 
 ---
 
