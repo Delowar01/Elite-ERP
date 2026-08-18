@@ -724,6 +724,30 @@ export async function deletePaymentAction(paymentId: number): Promise<ActionResu
     .where(and(eq(paymentsTable.id, paymentId), eq(paymentsTable.orgId, session.orgId)));
   if (!payment) return { error: "Payment not found." };
 
+  // ── ORDINARY payments on an invoice or a purchase order are REVERSED, never deleted ──────────
+  //
+  // Delete destroys the payment row and hard-deletes its journal entry and lines; reverse keeps
+  // both and posts a mirroring entry. For the two populations reversal covers, the destroying
+  // option is simply withdrawn — the UI stopped rendering it on those surfaces, and a display
+  // choice is a suggestion rather than a rule, so the refusal lives here.
+  //
+  // `kind === null` is the ordinary case and is written as an explicit null check. `kind <> 'x'`
+  // is NULL for every ordinary payment and would match none of them — a mistake already shipped
+  // once in this project.
+  //
+  // Proforma advance receipts are deliberately NOT covered: reversal does not handle them, and
+  // `refundAdvanceAction` is no substitute for deleting a mistyped receipt, because a refund books
+  // a real cash payout rather than correcting a movement that never happened. Narrowing this
+  // refusal to the two populations is the whole point; an over-broad one would strand that.
+  if (payment.kind === null && (payment.salesInvoiceId !== null || payment.purchaseOrderId !== null)) {
+    const where = payment.salesInvoiceId !== null ? "invoice" : "purchase order";
+    return {
+      error:
+        `This ${where} payment cannot be deleted. Use Reverse Payment instead — it keeps the payment on record, ` +
+        `posts a mirroring entry to the ledger, and returns the document's balance to what it was.`,
+    };
+  }
+
   // An APPLIED advance is settled history: its receipt entry (Dr Bank / Cr 2300) and its
   // application entry (Dr 2300 / Cr 1100, keyed advance_application) both stand behind a posted
   // invoice's basePaidAmount. Deleting the receipt would orphan the application and corrupt both
