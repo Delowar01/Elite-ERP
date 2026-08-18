@@ -1257,3 +1257,112 @@ the account.
 So: **add `3100` as part of the opening-balance-import feature, together with the check that gives
 it meaning** — not before. Added now it would be an account with no writer, no reader and no
 invariant, plus a defaulting choice between two equity accounts that nobody could answer correctly.
+
+---
+
+## Payment reversal — what the investigation found before it was built
+
+Recorded because three of these findings contradict what everyone (including the brief) believed,
+and two of them constrain what the feature can assert.
+
+### `deletePaymentAction` was never hidden — it has a button, on the screen in question
+
+The premise going in was that delete is a server action with no rendered caller: reachable by anyone
+who can craft the request, invisible to users and reviewers. **That is not the case.**
+
+`DeletePaymentButton` is rendered by `finance/_shared/payment-history.tsx` whenever `canDelete` is
+true, and both callers pass it:
+
+```
+sales/invoices/[id]/page.tsx:121   (role owner|admin) && invoice.status !== "void"
+sales/proforma/[id]/page.tsx:129   (role owner|admin) && pf.convertedInvoiceId == null
+```
+
+It reads as absent because it is a bare `Trash2` icon in an **unlabelled 8-px column**
+(`<th className="w-8" />`) with no header text — `aria-label="Delete"` and nothing else.
+
+It is not merely present but **exercised end-to-end by a passing suite**: `verify-payment-fx.mjs`
+navigates to `/sales/invoices/{id}`, clicks `getByLabel("Delete")` in a payment row, confirms
+"Delete Payment", and asserts the invoice un-pays from stored figures (4312.50 → 2812.50, status
+`partially_paid`, journal entry gone).
+
+**So the problem was never a missing undo. It was that the undo destroys history** — `delete`
+already un-pays correctly from stored figures and restores status, then hard-deletes the payment row
+and its journal entry and lines. Reversal replaces those semantics rather than filling a gap.
+
+The lesson worth keeping: *"there is no UI for X"* is a claim about rendering, and rendering is
+conditional. Grep for the component, not just the action.
+
+### Three payment populations, and what each one's undo is
+
+| Payment | Posts | Reversal covers | Delete after this change |
+|---|---|---|---|
+| Ordinary sales-invoice payment (`kind IS NULL`, `salesInvoiceId`) | Dr Bank / Cr AR / ±4900 | **yes** | **refused server-side** |
+| Ordinary purchase-order payment (`kind IS NULL`, `purchaseOrderId`) | Dr AP / Cr Bank / ±4900 | **yes** | **refused server-side** |
+| Proforma advance receipt (`kind = 'advance_receipt'`) | Dr Bank / Cr 2300 | no | **kept, unchanged** |
+
+Delete stays for proforma advance receipts deliberately. `refundAdvanceAction` is **not** a
+substitute for deleting a mistyped receipt: a refund means money left the bank, so "record a receipt
+that never happened, then refund it" books two false cash movements instead of correcting one. That
+stranding is real and stays open — see the entry below.
+
+### Purchase orders have no paid status, and this is where that bites
+
+`purchase_orders.paidAmount` and `.basePaidAmount` exist and are byte-identical in type to the
+invoice's, and the closing-payment derivation (`baseTotal − basePaidAmount`) is the same
+construction. **The status set is not symmetric:**
+
+```
+sales_invoices.status   draft | sent | partially_paid | paid | void
+purchase_orders.status  draft | ordered | received | cancelled
+```
+
+`recordPaymentAction`'s PO branch confirms it behaviourally — it sets `paidAmount`,
+`basePaidAmount`, `updatedAt` and nothing else. **Paying a PO in full leaves it `received`.**
+
+So a spec line reading "reversing the payment leaves the PO partially paid" cannot be met: that is
+not a state the product can express. Reversal mirrors the write path — it changes no PO status —
+and the suite asserts `received` *before and after*, so the absence is pinned rather than merely
+unobserved. There is a comment at the exact site in the action where the status recompute would go.
+
+### DEFERRED — give purchase orders paid statuses
+
+**Status:** open, wanted, not done. The spec line above is legitimate and currently unmeetable.
+
+Adding `partially_paid` / `paid` to purchase orders is not a column change; it is a lifecycle
+change, and the blast radius is:
+
+- `document-lifecycle.ts` `RULES.purchase_order` — new states, and a decision about which actions
+  each permits. `received` currently allows `duplicate` and `reverse`; a paid PO probably should not
+  allow `reverse`, mirroring the invoice rule that a settled document is corrected by a note.
+- `recordPaymentAction`'s PO branch and `reversePaymentAction`'s PO branch — both start recomputing
+  status, with the document's own epsilon.
+- Status badges, list filters, saved views, and any status-keyed column config.
+- `verify-role-matrix` and `verify-confirm-policy` drift checks, plus every suite asserting a PO
+  status string.
+- A backfill decision for existing rows: a fully-paid `received` PO would need moving to `paid`, or
+  the new states apply only going forward and the two populations disagree.
+
+Whoever picks it up should decide the `reverse`/`void` permission question **first** — it is the
+part that changes behaviour rather than presentation.
+
+### The base-currency column, and the ambiguity it would have shipped
+
+The PO history was asked to show a base-currency amount. The invoice history showed none, so the
+column was added to the **shared** component instead — rendered only when the document's currency
+differs from base, so base-currency organizations see no change.
+
+A payment carries **two** base figures that differ by exactly the realized FX gain or loss:
+
+- `baseAmount` — the cash that actually moved through the bank;
+- `baseAppliedAmount` — what cleared AR or AP, at the document's booked rate.
+
+For payment 1 on the INV-0008 fixture those are **1,140.00** and **1,125.00**. A single column
+labelled "SAR" would be read as whichever the reader assumed, and both readings are defensible.
+
+Resolved as: show the **cash** figure, because a payment history answers "what moved through the
+bank", and label it by DIRECTION — `Received (SAR)` on a sales-invoice history, `Paid (SAR)` on a
+purchase-order one. One shared label cannot be correct for both directions, and the component
+already knows which it is rendering. `baseAppliedAmount` is deliberately not shown beside it: a
+second number reintroduces the same ambiguity in reverse, and the clearing figure's proper home is
+the ledger, where the 4900 line explains the difference.
