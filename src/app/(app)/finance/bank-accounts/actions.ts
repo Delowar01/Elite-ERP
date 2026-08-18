@@ -6,6 +6,7 @@ import { db, bankAccountsTable, accountsTable } from "@/db";
 import { requireSession } from "@/lib/session";
 import { logActivity } from "@/lib/activity";
 import { bankGlRefusal } from "@/lib/bank-gl-accounts";
+import { buildBankOpeningPosting, openingContraChoices, openingContraRefusal, writeBankOpeningEntry } from "@/lib/bank-opening";
 
 export type ActionResult = { error?: string; id?: number };
 
@@ -30,9 +31,12 @@ export async function createBankAccountAction(formData: FormData): Promise<Actio
   const name = String(formData.get("name") ?? "").trim();
   const glAccountId = Number(formData.get("glAccountId"));
   const openingBalance = String(formData.get("openingBalance") ?? "0").trim() || "0";
+  const openingDate = String(formData.get("openingDate") ?? "").trim();
+  const contraRaw = formData.get("openingContraAccountId");
 
   if (!name) return { error: "Account name is required." };
   if (Number.isNaN(glAccountId)) return { error: "Choose a linked GL account." };
+  if (!Number.isFinite(Number(openingBalance))) return { error: "Opening balance must be a number." };
 
   const [glAccount] = await db
     .select({ id: accountsTable.id, code: accountsTable.code, name: accountsTable.name, type: accountsTable.type })
@@ -44,20 +48,78 @@ export async function createBankAccountAction(formData: FormData): Promise<Actio
   const refusal = bankGlRefusal(glAccount);
   if (refusal) return { error: refusal };
 
-  const [row] = await db
-    .insert(bankAccountsTable)
-    .values({
+  // ── The opening balance is a POSTING, decided before anything is written ──────────────────────
+  // Everything below refuses BEFORE the insert, so a bank account can never exist carrying an
+  // opening balance whose entry failed to post — that combination is the defect this repair
+  // removes, and it must not be reachable by a half-finished create.
+  const wantsOpening = Number(openingBalance) !== 0;
+  let contraAccountId: number | null = null;
+  let posting: Awaited<ReturnType<typeof buildBankOpeningPosting>> | null = null;
+
+  if (wantsOpening) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(openingDate)) {
+      return { error: "An opening balance needs an as-of date — it is posted to the ledger on that date." };
+    }
+    if (openingDate > new Date().toISOString().slice(0, 10)) {
+      return { error: "The opening date cannot be in the future." };
+    }
+    contraAccountId = Number(contraRaw);
+    if (!Number.isInteger(contraAccountId)) return { error: "Choose where the opening balance came from." };
+    const [contra] = await db
+      .select({ id: accountsTable.id, code: accountsTable.code, name: accountsTable.name, type: accountsTable.type })
+      .from(accountsTable)
+      .where(and(eq(accountsTable.id, contraAccountId), eq(accountsTable.orgId, session.orgId)));
+    if (!contra) return { error: "Contra account not found." };
+    const contraRefusal = openingContraRefusal(contra);
+    if (contraRefusal) return { error: contraRefusal };
+
+    posting = await buildBankOpeningPosting({
       orgId: session.orgId,
-      name,
+      baseCurrency: session.orgCurrency,
+      accountCurrency: String(formData.get("currency") ?? "").trim() || null,
+      openingBalance,
+      openingDate,
       glAccountId,
-      openingBalanceLegacy: openingBalance,
-      ...readDetailFields(formData),
-    })
-    .returning({ id: bankAccountsTable.id });
+      contraAccountId,
+    });
+    if (!posting.ok) return { error: posting.error };
+  }
+
+  const row = await db.transaction(async (tx) => {
+    const [created] = await tx
+      .insert(bankAccountsTable)
+      .values({
+        orgId: session.orgId,
+        name,
+        glAccountId,
+        // An audit copy of what was typed. Nothing computes from it — see the schema comment.
+        openingBalanceLegacy: openingBalance,
+        openingDate: wantsOpening ? openingDate : null,
+        openingContraAccountId: contraAccountId,
+        ...readDetailFields(formData),
+      })
+      .returning({ id: bankAccountsTable.id });
+
+    if (posting && posting.ok && !posting.skip) {
+      await writeBankOpeningEntry(tx, {
+        orgId: session.orgId,
+        bankAccountId: created.id,
+        entryDate: openingDate,
+        memo: `Opening balance — ${name}`,
+        createdById: session.userId,
+        baseAmount: posting.baseAmount,
+        debitAccountId: posting.debitAccountId,
+        creditAccountId: posting.creditAccountId,
+      });
+    }
+    return created;
+  });
 
   await logActivity(session, {
     type: "bank_account.created",
-    description: `Added bank account "${name}"`,
+    description: wantsOpening
+      ? `Added bank account "${name}" with an opening balance of ${openingBalance} as of ${openingDate}`
+      : `Added bank account "${name}"`,
     entityType: "bank_account",
     entityId: row.id,
   });
@@ -111,4 +173,17 @@ export async function updateBankAccountAction(id: number, formData: FormData): P
   });
   revalidatePath(PATH);
   return { id };
+}
+
+/**
+ * Equity and liability accounts an opening balance may be credited to, for the create dialog.
+ *
+ * A server action rather than a page prop because the same dialog is mounted inside document
+ * create/edit pages, and threading the chart of accounts through every one of those to populate a
+ * field that only appears when someone types a non-zero opening balance would be a lot of plumbing
+ * for a rare path. The server validates the choice regardless — this only decides what is offered.
+ */
+export async function openingContraOptionsAction(): Promise<{ id: number; code: string; name: string; type: string }[]> {
+  const session = await requireSession();
+  return openingContraChoices(db, session.orgId);
 }

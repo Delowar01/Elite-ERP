@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,7 +8,7 @@ import { FormField } from "@/components/ui/form-field";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { t, type Locale } from "@/lib/i18n/dict";
-import { createBankAccountAction, updateBankAccountAction } from "./actions";
+import { createBankAccountAction, openingContraOptionsAction, updateBankAccountAction } from "./actions";
 import { accountName } from "@/lib/account-names";
 
 export type GlAccountOption = { id: number; code: string; name: string };
@@ -48,8 +48,44 @@ export function BankAccountFormDialog({
   const [glAccountId, setGlAccountId] = useState(account ? String(account.glAccountId) : glAccounts[0] ? String(glAccounts[0].id) : "");
   const [pending, startTransition] = useTransition();
 
+  // Opening balance — an ACCOUNTING EVENT, not a note on the record. It posts
+  // `Dr <this account's GL> / Cr <contra>` dated `openingDate`, so it needs both, and the preview
+  // line below exists to teach that: the field used to be a bare number that appeared on this
+  // screen and in no statement anywhere.
+  const [opening, setOpening] = useState("0");
+  const [openingDate, setOpeningDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [contraId, setContraId] = useState("");
+  const [contraOptions, setContraOptions] = useState<{ id: number; code: string; name: string; type: string }[]>([]);
+  const hasOpening = !isEdit && Number(opening) !== 0 && Number.isFinite(Number(opening));
+
+  useEffect(() => {
+    if (!hasOpening || contraOptions.length > 0) return;
+    let live = true;
+    openingContraOptionsAction().then((rows) => {
+      if (!live) return;
+      setContraOptions(rows);
+      // Owner capital is the overwhelmingly common answer, so 3000 is the default — but it is a
+      // visible, changeable field, because "where did this money come from" has more than one
+      // legitimate answer (capital, a director's loan, a migration residue).
+      const preferred = rows.find((r) => r.code === "3000") ?? rows.find((r) => r.type === "equity") ?? rows[0];
+      if (preferred) setContraId(String(preferred.id));
+    });
+    return () => { live = false; };
+  }, [hasOpening, contraOptions.length]);
+
+  const glAccount = glAccounts.find((a) => String(a.id) === glAccountId);
+  const contra = contraOptions.find((a) => String(a.id) === contraId);
+  const amount = Math.abs(Number(opening) || 0);
+  // An overdraft at cutover flips the two lines rather than posting a negative debit.
+  const debitSide = Number(opening) > 0 ? glAccount : contra;
+  const creditSide = Number(opening) > 0 ? contra : glAccount;
+
   function submit(formData: FormData) {
     formData.set("glAccountId", glAccountId);
+    if (hasOpening) {
+      formData.set("openingDate", openingDate);
+      formData.set("openingContraAccountId", contraId);
+    }
     startTransition(async () => {
       const result = isEdit ? await updateBankAccountAction(account!.id, formData) : await createBankAccountAction(formData);
       if (result.error) {
@@ -111,9 +147,55 @@ export function BankAccountFormDialog({
             </Select>
           </FormField>
           {!isEdit && (
-            <FormField label={t(locale, "Opening Balance")} htmlFor="ba-opening-balance">
-              <Input id="ba-opening-balance" name="openingBalance" type="number" step="0.01" defaultValue="0" />
-            </FormField>
+            <>
+              <FormField label={t(locale, "Opening Balance")} htmlFor="ba-opening-balance">
+                <Input
+                  id="ba-opening-balance"
+                  name="openingBalance"
+                  type="number"
+                  step="0.001"
+                  value={opening}
+                  onChange={(e) => setOpening(e.target.value)}
+                />
+              </FormField>
+              {hasOpening && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <FormField label={t(locale, "As of date")} htmlFor="ba-opening-date">
+                    <Input
+                      id="ba-opening-date"
+                      type="date"
+                      max={new Date().toISOString().slice(0, 10)}
+                      value={openingDate}
+                      onChange={(e) => setOpeningDate(e.target.value)}
+                    />
+                  </FormField>
+                  <FormField label={t(locale, "Where it came from")} htmlFor="ba-opening-contra">
+                    <Select value={contraId} onValueChange={setContraId}>
+                      <SelectTrigger id="ba-opening-contra">
+                        <SelectValue placeholder={t(locale, "Select an account")} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {contraOptions.map((a) => (
+                          <SelectItem key={a.id} value={String(a.id)}>
+                            {a.code} · {accountName(locale, a)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </FormField>
+                </div>
+              )}
+              {hasOpening && (
+                <p className="text-[12px] text-ink-faint leading-relaxed" data-testid="opening-entry-preview">
+                  {t(locale, "This posts a journal entry")}:{" "}
+                  <span className="font-mono">
+                    Dr {debitSide ? `${debitSide.code} ${debitSide.name}` : "—"} {amount} / Cr{" "}
+                    {creditSide ? `${creditSide.code} ${creditSide.name}` : "—"} {amount}
+                  </span>{" "}
+                  — {t(locale, "dated")} {openingDate}. {t(locale, "It cannot be edited afterwards; correct it with a journal entry.")}
+                </p>
+              )}
+            </>
           )}
           <DialogFooter>
             <Button type="submit" disabled={pending}>
