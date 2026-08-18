@@ -41,7 +41,13 @@ export const journalEntriesTable = pgTable("journal_entries", {
    *
    * Known values: sales_invoice | credit_note | purchase_order | debit_note | payment |
    * advance_application | advance_application_release | advance_application_release_reversal |
-   * bank_opening | payroll_run | expense | manual.
+   * bank_opening | payment_reversal | payroll_run | expense | manual.
+   *
+   * `payment_reversal` keys off `payments.id` — the SAME id its original `payment` entry uses, under
+   * a different type. That is deliberate and it is the whole idempotency key: a reversal exists iff
+   * a `(payment_reversal, <payment id>)` entry exists, checked inside the transaction. It is also
+   * the sharpest live example of why the pair matters — resolving that id without the type finds
+   * the original payment entry and concludes the reversal is already posted, or vice versa.
    *
    * `bank_opening` keys off `bank_accounts.id`, and that pairing is the whole idempotency key of
    * the opening-balance backfill: an entry is posted only when no `(bank_opening, <id>)` entry

@@ -113,6 +113,17 @@ export const paymentsTable = pgTable("payments", {
    * AVAILABLE iff unapplied (salesInvoiceId null) and unrefunded (no refund row referencing it).
    */
   refundsPaymentId: integer("refunds_payment_id").references((): AnyPgColumn => paymentsTable.id),
+  /**
+   * When this payment was REVERSED, and by whom. Null = live.
+   *
+   * A reversed payment is kept, never deleted: the row and its original journal entry stand, and a
+   * mirroring entry keyed `(payment_reversal, this id)` undoes its ledger effect. That entry is the
+   * structural guarantee against a double reversal — these two columns are for DISPLAY and for the
+   * refusal message, and a status flag alone would not be enough, because a flag can be written by
+   * a path that forgot to check it while an existence check inside the transaction cannot.
+   */
+  reversedAt: timestamp("reversed_at"),
+  reversedById: integer("reversed_by_id").references(() => usersTable.id),
   paymentDate: date("payment_date").notNull(),
   method: text("method"), // cash | bank_transfer | card | cheque
   reference: text("reference"),

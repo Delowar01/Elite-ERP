@@ -37,6 +37,7 @@ export const SENSITIVE_ACTIONS = [
   // --- money ----------------------------------------------------------------------------------
   "payment.record",
   "payment.delete",
+  "payment.reverse",
   "payment.refund",
   "journal.post",
   // --- master data ----------------------------------------------------------------------------
@@ -151,6 +152,14 @@ const POLICY: Record<SensitiveActionKind, PolicyEntry> = {
     verb: "Delete Payment",
     consequence: "The payment will be removed and its ledger posting reversed.",
     irreversible: true,
+  },
+  "payment.reverse": {
+    severity: "danger",
+    verb: "Reverse Payment",
+    // NOT `irreversible`. A reversal keeps the payment and posts a mirroring entry, so the ledger
+    // still holds both halves — but there is no un-reverse, which is what this sentence has to say
+    // without claiming the record is destroyed.
+    consequence: "The payment will be marked reversed and a mirroring entry posted to the ledger. The document's balance returns to what it was before the payment. This cannot be undone.",
   },
   "payment.refund": {
     severity: "financial",
