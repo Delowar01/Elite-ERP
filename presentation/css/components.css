@@ -1,0 +1,450 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   Elite ERP Executive Presentation — components.css
+   Reusable slide components: icon tiles, outcome pills, highlight rows,
+   value list items, diagram chips, transition bars, floating stat chips.
+
+   Design-revision pass: flat 4-side borders replaced with soft layered
+   shadows, single accent edges, or tinted surfaces (never a plain outline
+   as the only definition, except the single primary hero container).
+   Typography floor raised — nothing functional renders under ~18px; true
+   section eyebrows (.eyebrow / .panel-label) stay smaller but carry
+   uppercase + letter-spacing + weight to remain legible at that size.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Icon tile (icon holder) — asymmetric corner-cut, tied to the logomark's
+   angular "E" cut, so icon containers read as a signature shape rather than
+   a generic rounded/circular badge. Round 4: solid gradient color fill with
+   a white icon (real color doing visual work), not a pale 6-8% tint with a
+   thin colored stroke. ────────────────────────────────────────────────────── */
+.icon-tile {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 66px;
+  height: 66px;
+  border-radius: 19px 19px 19px 6px;
+  background: linear-gradient(135deg, var(--orange) 0%, #C9530F 100%);
+  color: #fff;
+  flex: 0 0 auto;
+  box-shadow: 0 6px 16px rgba(229, 108, 37, 0.32);
+}
+.icon-tile svg { width: 31px; height: 31px; }
+.icon-tile.tile-navy {
+  background: linear-gradient(135deg, #2C2972 0%, var(--navy) 100%);
+  color: #fff;
+  box-shadow: 0 6px 16px rgba(21, 19, 72, 0.34);
+}
+
+/* ── Highlight row (icon + title + caption) ───────────────────────────────── */
+.highlight-row { display: flex; align-items: flex-start; gap: 22px; }
+.highlight-row .hl-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--navy);
+  margin-bottom: 6px;
+  letter-spacing: -0.012em;
+}
+.highlight-row .hl-caption { font-size: 19px; line-height: 1.5; color: var(--graphite); }
+
+/* ── Benefit strip — dark navy proof-point bar closing out a content slide.
+   Reworked from the reference deck's bottom icon+label stat bar: a single
+   brand-dark surface with angular icon medallions and hairline dividers,
+   not a row of separate pastel pills. Reusable across any editorial slide
+   that needs a closing proof-point row. ──────────────────────────────────── */
+.benefit-strip {
+  display: flex;
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, #201D66 0%, var(--navy) 62%);
+  box-shadow: 0 18px 44px rgba(21, 19, 72, 0.28);
+  overflow: hidden;
+  position: relative;
+}
+.benefit-strip::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(420px 160px at 92% 0%, rgba(229, 108, 37, 0.3), transparent 70%);
+  pointer-events: none;
+}
+.benefit-item {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 22px 22px;
+  position: relative;
+  min-width: 0;
+}
+.benefit-item + .benefit-item::before {
+  content: '';
+  position: absolute;
+  inset-inline-start: 0;
+  top: 18px; bottom: 18px;
+  width: 1px;
+  background: rgba(255, 255, 255, 0.14);
+}
+.benefit-item .bi-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 13px 13px 13px 4px;
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--orange);
+  flex: 0 0 auto;
+}
+.benefit-item .bi-icon svg { width: 21px; height: 21px; }
+.benefit-item span { font-size: 18.5px; font-weight: 650; color: #fff; line-height: 1.25; }
+
+/* ── Value list item (checkmark / icon + text) ────────────────────────────── */
+.value-item { display: flex; align-items: flex-start; gap: 17px; }
+.value-item .vi-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 13px 13px 13px 4px;
+  background: linear-gradient(135deg, var(--orange) 0%, #C9530F 100%);
+  color: #fff;
+  flex: 0 0 auto;
+  margin-top: 1px;
+  box-shadow: 0 5px 13px rgba(229, 108, 37, 0.3);
+}
+.value-item .vi-icon svg { width: 22px; height: 22px; }
+.value-item .vi-title { font-size: 20px; font-weight: 700; color: var(--navy); margin-bottom: 4px; }
+.value-item .vi-caption { font-size: 18px; line-height: 1.48; color: var(--graphite); }
+
+/* ── Side panel headers — true section eyebrows (smaller-by-design) ──────── */
+.panel-label {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  font-size: 18px;
+  font-weight: 750;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  color: var(--navy);
+  margin-bottom: 30px;
+}
+.panel-label::before {
+  content: '';
+  width: 20px; height: 3px;
+  border-radius: 2px;
+  background: var(--orange);
+  flex: 0 0 auto;
+}
+
+/* ── Diagram module chip — accent-edge instead of a boxed border ─────────── */
+.module-chip {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  height: 70px;
+  padding: 0 22px 0 24px;
+  border-radius: 16px;
+  background: #fff;
+  border-inline-start: 3px solid var(--orange);
+  box-shadow: 0 3px 8px rgba(21, 19, 72, 0.05), 0 16px 34px rgba(21, 19, 72, 0.08);
+}
+.module-chip svg { width: 25px; height: 25px; color: var(--orange); flex: 0 0 auto; }
+.module-chip span { font-size: 18.5px; font-weight: 650; color: var(--navy); white-space: nowrap; }
+
+/* ── Platform core bar / node ─────────────────────────────────────────────── */
+.core-node {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  border-radius: 22px;
+  background: linear-gradient(135deg, #201D66 0%, var(--navy) 58%);
+  box-shadow: 0 16px 34px rgba(21, 19, 72, 0.32), 0 40px 90px rgba(21, 19, 72, 0.26);
+  color: #fff;
+}
+.core-node::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.38), rgba(255, 255, 255, 0) 40%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+.core-node .core-mark { width: 42px; }
+.core-node .core-title { font-size: 24px; font-weight: 750; letter-spacing: 0.006em; }
+.core-node .core-sub {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  opacity: 0.72;
+  margin-top: 6px;
+}
+
+/* ── Challenge card (slide 03) — left accent edge, no boxed border ───────── */
+.challenge-card {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  height: 84px;
+  padding: 0 24px 0 22px;
+  border-radius: var(--radius-md);
+  background: #FDFCFA;
+  border-inline-start: 4px solid var(--orange);
+  box-shadow: 0 4px 10px rgba(26, 26, 26, 0.05), 0 18px 36px rgba(26, 26, 26, 0.07);
+  rotate: var(--tilt, 0deg);
+}
+.challenge-card .cc-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 14px 14px 14px 4px;
+  background: var(--stone);
+  color: var(--graphite);
+  flex: 0 0 auto;
+}
+.challenge-card .cc-icon svg { width: 24px; height: 24px; }
+.challenge-card span { font-size: 19px; font-weight: 650; color: #383842; white-space: nowrap; }
+
+/* ── Transition statement bar ─────────────────────────────────────────────── */
+.transition-bar {
+  display: flex;
+  align-items: center;
+  gap: 19px;
+  padding: 25px 30px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, #201D66 0%, var(--navy) 60%);
+  color: #fff;
+  box-shadow: 0 18px 44px rgba(21, 19, 72, 0.28);
+  position: relative;
+  overflow: hidden;
+}
+.transition-bar::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(340px 150px at 88% -20%, rgba(229, 108, 37, 0.38), transparent 70%);
+  pointer-events: none;
+}
+.transition-bar .tb-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: var(--orange);
+  flex: 0 0 auto;
+  position: relative;
+}
+.transition-bar .tb-arrow svg { width: 21px; height: 21px; color: #fff; }
+.transition-bar p { font-size: 19.5px; font-weight: 600; line-height: 1.42; position: relative; }
+
+/* ── Floating stat chip (cover hero) — shadow-only surface, no border ────── */
+.stat-chip {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 17px 23px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(180deg, #fff 0%, #FDFCFA 100%);
+  box-shadow: var(--shadow-float);
+}
+.stat-chip .sc-label {
+  font-size: 15px;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--graphite);
+  margin-bottom: 6px;
+}
+.stat-chip .sc-value { font-size: 24px; font-weight: 800; color: var(--navy); letter-spacing: -0.012em; }
+.stat-chip.chip-navy { background: linear-gradient(135deg, #201D66 0%, var(--navy) 62%); }
+.stat-chip.chip-navy .sc-label { color: rgba(255, 255, 255, 0.68); }
+.stat-chip.chip-navy .sc-value { color: #fff; }
+.stat-chip .sc-ring { flex: 0 0 auto; }
+
+/* ── Screenshot card — the deck's one primary container; subtle border OK ── */
+.shot-card {
+  position: relative;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  border: 1px solid rgba(21, 19, 72, 0.08);
+  box-shadow: var(--shadow-hero);
+  background: #fff;
+}
+.shot-card img { width: 100%; height: 100%; object-fit: cover; object-position: top; }
+/* glassy top highlight, like light catching a device bezel */
+.shot-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55), inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+  pointer-events: none;
+}
+/* ambient brand glow seated behind the frame */
+.shot-glow {
+  position: absolute;
+  border-radius: 40%;
+  filter: blur(46px);
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* ── Network node (cover hero) — shadow-only, no border ───────────────────── */
+.net-node {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 66px;
+  height: 66px;
+  border-radius: 20px 20px 20px 6px;
+  background: #fff;
+  box-shadow: 0 4px 10px rgba(21, 19, 72, 0.08), 0 14px 28px rgba(21, 19, 72, 0.10);
+  color: var(--navy);
+}
+.net-node svg { width: 29px; height: 29px; }
+.net-node.node-accent { color: var(--orange); }
+
+/* ── Micro capability tag (fills sparse quadrants — slide 01) ─────────────── */
+.tag-row { display: flex; flex-wrap: wrap; gap: 12px; }
+.mini-tag {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 46px;
+  padding: 0 20px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--navy-10) 0%, var(--navy-16) 100%);
+  box-shadow: inset 0 0 0 1px rgba(21, 19, 72, 0.08);
+}
+.mini-tag svg { width: 19px; height: 19px; color: var(--orange); flex: 0 0 auto; }
+.mini-tag span {
+  font-size: 15px;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--navy);
+  white-space: nowrap;
+}
+
+/* ── Editorial spine accent — vertical rule anchoring a text column ───────── */
+.spine {
+  position: absolute;
+  width: 3px;
+  border-radius: 2px;
+  background: linear-gradient(180deg, var(--orange) 0%, var(--navy-16) 70%, transparent 100%);
+}
+
+/* ── Signature corner orbit — the deck's one recurring edge device ───────────
+   Two concentric thin rings, sized large and bled off-canvas at a corner so
+   only an arc reads within the slide. Deliberately asymmetric by
+   construction (always one corner, never mirrored/repeated at the same
+   weight on all sides): each slide places it at a different corner, size,
+   and brand color via the per-slide selectors in presentation.css. This
+   replaces the old uniform symmetric vignette/corner-mark. ───────────────── */
+.corner-orbit {
+  position: absolute;
+  pointer-events: none;
+}
+.corner-orbit .ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 1.5px solid currentColor;
+}
+.corner-orbit .ring-2 { inset: 13%; border-width: 1px; }
+.corner-orbit .ring-3 { inset: 27%; border-width: 1px; border-style: dashed; }
+
+/* ── Device frame — laptop bezel wrapping a live product screenshot. Real
+   Elite ERP UI shown inside real device chrome (the reference set's single
+   best move), built in CSS so no stock device-mockup imagery is needed. ── */
+.device-laptop {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+.device-laptop .dl-screen {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  padding: 15px 15px 0;
+  border-radius: 20px 20px 4px 4px;
+  background: linear-gradient(165deg, #302C6E 0%, var(--navy-deep) 100%);
+  box-shadow: var(--shadow-hero), 0 0 0 1px rgba(255, 255, 255, 0.09);
+  position: relative;
+}
+.device-laptop .dl-cam {
+  position: absolute;
+  top: 6px; left: 50%;
+  translate: -50% 0;
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.16);
+}
+.device-laptop .dl-inner {
+  flex: 1 1 auto;
+  border-radius: 6px;
+  overflow: hidden;
+  background: #fff;
+  position: relative;
+}
+.device-laptop .dl-inner img { width: 100%; height: 100%; object-fit: cover; object-position: top; display: block; }
+.device-laptop .dl-inner::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  pointer-events: none;
+}
+.device-laptop .dl-base {
+  flex: 0 0 auto;
+  height: 15px;
+  background: linear-gradient(180deg, #2B2948 0%, #17153A 100%);
+  border-radius: 0 0 9px 9px;
+  position: relative;
+}
+.device-laptop .dl-base::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 50%;
+  translate: -50% 0;
+  width: 130px; height: 5px;
+  background: rgba(0, 0, 0, 0.22);
+  border-radius: 0 0 7px 7px;
+}
+
+/* ── Core ring — segmented brand-color ring behind a radial ecosystem's hub.
+   Reworked replacement for the reference deck's plain circular icon ring:
+   an alternating navy/orange segmented arc, CSS-only (conic-gradient +
+   radial mask), signalling "one platform, many modules" without a pastel
+   circle badge. Used once, on the deck's one true hub-and-spoke slide. ──── */
+.core-ring {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  background: conic-gradient(from 0deg,
+    var(--navy) 0deg 38deg, var(--orange) 38deg 45deg,
+    var(--navy) 45deg 83deg, var(--orange) 83deg 90deg,
+    var(--navy) 90deg 128deg, var(--orange) 128deg 135deg,
+    var(--navy) 135deg 173deg, var(--orange) 173deg 180deg,
+    var(--navy) 180deg 218deg, var(--orange) 218deg 225deg,
+    var(--navy) 225deg 263deg, var(--orange) 263deg 270deg,
+    var(--navy) 270deg 308deg, var(--orange) 308deg 315deg,
+    var(--navy) 315deg 360deg);
+  -webkit-mask: radial-gradient(closest-side, transparent calc(100% - 15px), #000 calc(100% - 14px), #000 100%);
+          mask: radial-gradient(closest-side, transparent calc(100% - 15px), #000 calc(100% - 14px), #000 100%);
+  opacity: 0.92;
+}

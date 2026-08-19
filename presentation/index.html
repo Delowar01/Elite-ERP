@@ -1,0 +1,463 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Elite ERP — Executive Presentation</title>
+<link rel="icon" href="assets/logo/eis-icon.svg" type="image/svg+xml" />
+<link rel="stylesheet" href="css/animations.css" />
+<link rel="stylesheet" href="css/global.css" />
+<link rel="stylesheet" href="css/components.css" />
+<link rel="stylesheet" href="css/presentation.css" />
+</head>
+<body>
+
+<!-- ══ Loading screen ══════════════════════════════════════════════════════ -->
+<div id="loader" aria-hidden="true">
+  <img class="loader-mark" src="assets/logo/eis-icon-white.svg" alt="" />
+  <div class="loader-bar"></div>
+</div>
+
+<!-- ══ Inline icon sprite (master copy: assets/icons/icons.svg) ════════════ -->
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
+  <symbol id="i-crm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19.5c0-3 2.5-5 5.5-5s5.5 2 5.5 5"/><path d="M16 4.6a3.2 3.2 0 0 1 0 6.8"/><path d="M17.8 14.8c1.7.7 2.9 2 3.2 4.7"/></symbol>
+  <symbol id="i-sales" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h2l2.4 11.2a1.5 1.5 0 0 0 1.5 1.3h7.6a1.5 1.5 0 0 0 1.5-1.2L20.5 8H7"/><circle cx="10.5" cy="20" r="1.4"/><circle cx="17" cy="20" r="1.4"/></symbol>
+  <symbol id="i-finance" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="14" rx="2.5"/><path d="M3.5 10h17"/><path d="M7.5 15h3"/></symbol>
+  <symbol id="i-hr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="7.5" r="3.4"/><path d="M5 20c.6-3.6 3.4-5.6 7-5.6s6.4 2 7 5.6"/></symbol>
+  <symbol id="i-procurement" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8h14l-1.2 11a2 2 0 0 1-2 1.8H8.2a2 2 0 0 1-2-1.8L5 8Z"/><path d="M8.5 10.5V6.8a3.5 3.5 0 0 1 7 0v3.7"/></symbol>
+  <symbol id="i-inventory" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.8 8.2 12 4l8.2 4.2v7.6L12 20l-8.2-4.2Z"/><path d="M3.8 8.2 12 12.4l8.2-4.2"/><path d="M12 12.4V20"/></symbol>
+  <symbol id="i-projects" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4.5" width="5" height="15" rx="1.5"/><rect x="10.5" y="4.5" width="5" height="10" rx="1.5"/><rect x="17.5" y="4.5" width="3" height="6.5" rx="1.5"/></symbol>
+  <symbol id="i-analytics" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5h16"/><path d="M6.5 15.5V11"/><path d="M11 15.5V7"/><path d="M15.5 15.5v-3"/><path d="M20 15.5V5"/></symbol>
+  <symbol id="i-ai" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 13.6 8l4.5 1.6-4.5 1.6L12 15.6l-1.6-4.4L5.9 9.6 10.4 8Z"/><path d="M18.5 14.5l.9 2.4 2.4.9-2.4.9-.9 2.4-.9-2.4-2.4-.9 2.4-.9Z"/></symbol>
+  <symbol id="i-security" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 19 6v5.5c0 4.4-2.9 7.6-7 9-4.1-1.4-7-4.6-7-9V6Z"/><path d="m9.2 12 2 2 3.6-3.8"/></symbol>
+  <symbol id="i-decisions" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.2"/><circle cx="12" cy="12" r="4.6"/><circle cx="12" cy="12" r="1.1" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-speed" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 3.5 5 13.5h5.5L10 20.5l8.5-10H13Z"/></symbol>
+  <symbol id="i-unified" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="6" rx="7.5" ry="2.8"/><path d="M4.5 6v12c0 1.5 3.4 2.8 7.5 2.8s7.5-1.3 7.5-2.8V6"/><path d="M4.5 12c0 1.5 3.4 2.8 7.5 2.8s7.5-1.3 7.5-2.8"/></symbol>
+  <symbol id="i-productivity" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17.5 10 11l3.6 3.6 6.4-7"/><path d="M15 7.6h5v5"/></symbol>
+  <symbol id="i-growth" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20.5V11"/><path d="M12 11c0-3.8 2.7-6.5 6.5-6.5 0 3.8-2.7 6.5-6.5 6.5Z"/><path d="M12 14c0-2.9-2-4.9-4.9-4.9 0 2.9 2 4.9 4.9 4.9Z"/></symbol>
+  <symbol id="i-collab" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="9" r="2.6"/><circle cx="16.5" cy="9" r="2.6"/><path d="M3.5 18.5c.4-2.7 2-4.3 4-4.3 1.2 0 2.2.5 3 1.5.8-1 1.8-1.5 3-1.5 2 0 3.6 1.6 4 4.3"/></symbol>
+  <symbol id="i-automation" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 4.5V3M12 21v-1.5M19.5 12H21M3 12h1.5M17.3 6.7l1-1M5.7 18.3l1-1M17.3 17.3l1 1M5.7 5.7l1 1"/></symbol>
+  <symbol id="i-silo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4" width="7" height="7" rx="1.5"/><rect x="13.5" y="13" width="7" height="7" rx="1.5"/><path d="M10.5 16.5H8a2 2 0 0 1-2-2V13"/><path d="M13.5 7.5H16a2 2 0 0 1 2 2V11" stroke-dasharray="2.4 2.6"/></symbol>
+  <symbol id="i-manual" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 5.5 18 10l-8.5 8.5H5V14Z"/><path d="M11.5 7.5 16 12"/><path d="M14 19.5h6"/></symbol>
+  <symbol id="i-duplicate" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="8.5" y="8.5" width="12" height="12" rx="2"/><path d="M15.5 5.5v-.7a2 2 0 0 0-2-2H5.3a2 2 0 0 0-2 2v8.4a2 2 0 0 0 2 2H6"/></symbol>
+  <symbol id="i-delay" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="7.5"/><path d="M12 9v4.2l2.8 1.8"/><path d="M9.5 3h5"/></symbol>
+  <symbol id="i-blind" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4l16 16"/><path d="M9.9 6.2A9.4 9.4 0 0 1 12 6c4.4 0 7.9 2.7 9.5 6-.6 1.2-1.4 2.3-2.4 3.2M6.4 6.9C4.6 8.1 3.3 9.9 2.5 12c1.6 3.3 5.1 6 9.5 6 1.3 0 2.5-.2 3.6-.7"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></symbol>
+  <symbol id="i-decision-delay" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 3.5h11"/><path d="M6.5 20.5h11"/><path d="M8 3.5v3.2c0 2.6 4 3.9 4 5.3 0 1.4-4 2.7-4 5.3v3.2"/><path d="M16 3.5v3.2c0 2.6-4 3.9-4 5.3 0 1.4 4 2.7 4 5.3v3.2"/></symbol>
+  <symbol id="i-arrow-left" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="m11 6-6 6 6 6"/></symbol>
+  <symbol id="i-arrow-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></symbol>
+  <symbol id="i-fullscreen" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 3.5H5.5a2 2 0 0 0-2 2v3M15.5 3.5h3a2 2 0 0 1 2 2v3M8.5 20.5H5.5a2 2 0 0 1-2-2v-3M15.5 20.5h3a2 2 0 0 0 2-2v-3"/></symbol>
+  <symbol id="i-globe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17"/><path d="M12 3.5c2.4 2.3 3.6 5.2 3.6 8.5s-1.2 6.2-3.6 8.5c-2.4-2.3-3.6-5.2-3.6-8.5S9.6 5.8 12 3.5Z"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m4.5 12.5 5 5 10-11"/></symbol>
+</svg>
+
+<div id="viewport">
+  <div id="stage">
+
+    <!-- ══ Slide 01 — Cover ════════════════════════════════════════════════ -->
+    <section class="slide" id="slide-01" aria-label="Cover">
+      <div class="s01-glow-a" data-anim="fade" data-anim-order="1"></div>
+      <div class="s01-glow-b" data-anim="fade" data-anim-order="1"></div>
+      <div class="ghost-num" aria-hidden="true">01</div>
+      <div class="corner-orbit s01-orbit" aria-hidden="true">
+        <span class="ring"></span><span class="ring ring-2"></span><span class="ring ring-3"></span>
+      </div>
+
+      <div class="s01-copy">
+        <p class="eyebrow" data-anim="fade-up" data-anim-order="3">Executive Presentation</p>
+        <h1 class="headline">
+          <div data-anim="fade-up" data-anim-order="3">One Intelligent</div>
+          <div data-anim="fade-up" data-anim-order="4">Platform.</div>
+        </h1>
+        <p class="subheadline" data-anim="fade-up" data-anim-order="5">Every Business Process.</p>
+        <p class="support" data-anim="fade-up" data-anim-order="5">
+          Elite ERP unifies finance, sales, HR, procurement, operations, and business intelligence in one modern enterprise platform — one database, one experience, real&#8209;time insight.</p>
+        <div class="tag-row" data-anim="fade-up" data-anim-order="5">
+          <div class="mini-tag"><svg><use href="#i-ai"/></svg><span>AI-Powered</span></div>
+          <div class="mini-tag"><svg><use href="#i-security"/></svg><span>Enterprise Security</span></div>
+          <div class="mini-tag"><svg><use href="#i-analytics"/></svg><span>Real-Time Insight</span></div>
+          <div class="mini-tag"><svg><use href="#i-growth"/></svg><span>Built to Scale</span></div>
+        </div>
+      </div>
+
+      <div class="s01-hero">
+        <div class="s01-hero-panel" data-anim="fade" data-anim-order="1"></div>
+        <div class="s01-hero-grid" aria-hidden="true"></div>
+        <div class="s01-shot-glow shot-glow" data-anim="fade" data-anim-order="6"></div>
+        <div class="s01-shot device-laptop" data-anim="rise" data-anim-order="6">
+          <div class="dl-screen">
+            <span class="dl-cam" aria-hidden="true"></span>
+            <div class="dl-inner">
+              <img alt="Elite ERP executive dashboard"
+                   src="assets/screenshots/en/dashboard.png" />
+            </div>
+          </div>
+          <div class="dl-base"></div>
+        </div>
+
+        <div class="s01-net">
+          <svg class="net-lines" viewBox="0 0 500 430" aria-hidden="true">
+            <path pathLength="1" data-anim="draw" data-anim-order="7" d="M250 215 250 40"/>
+            <path pathLength="1" data-anim="draw" data-anim-order="7" d="M250 215 401 127"/>
+            <path pathLength="1" data-anim="draw" data-anim-order="7" d="M250 215 401 302"/>
+            <path pathLength="1" data-anim="draw" data-anim-order="7" d="M250 215 250 390"/>
+            <path pathLength="1" data-anim="draw" data-anim-order="7" d="M250 215 98 302"/>
+            <path pathLength="1" data-anim="draw" data-anim-order="7" d="M250 215 98 127"/>
+          </svg>
+          <div class="net-node" style="left:250px; top:40px"  data-anim="pop" data-anim-order="8"><svg><use href="#i-crm"/></svg></div>
+          <div class="net-node node-accent" style="left:401px; top:127px" data-anim="pop" data-anim-order="8"><svg><use href="#i-finance"/></svg></div>
+          <div class="net-node" style="left:401px; top:302px" data-anim="pop" data-anim-order="8"><svg><use href="#i-hr"/></svg></div>
+          <div class="net-node node-accent" style="left:250px; top:390px" data-anim="pop" data-anim-order="8"><svg><use href="#i-procurement"/></svg></div>
+          <div class="net-node" style="left:98px; top:302px" data-anim="pop" data-anim-order="8"><svg><use href="#i-projects"/></svg></div>
+          <div class="net-node node-accent" style="left:98px; top:127px" data-anim="pop" data-anim-order="8"><svg><use href="#i-analytics"/></svg></div>
+          <div class="net-core" data-anim="scale-in" data-anim-order="6">
+            <img src="assets/logo/eis-icon-white.svg" alt="" />
+          </div>
+          <span class="pulse" style="left:250px; top:127px" data-anim="fade" data-anim-order="8"></span>
+          <span class="pulse" style="left:325px; top:258px; animation-delay:.9s" data-anim="fade" data-anim-order="8"></span>
+          <span class="pulse" style="left:174px; top:171px; animation-delay:1.7s" data-anim="fade" data-anim-order="8"></span>
+        </div>
+
+        <div class="stat-chip s01-chip-margin" data-anim="pop" data-anim-order="9">
+          <svg class="sc-ring" width="44" height="44" viewBox="0 0 44 44" aria-hidden="true">
+            <circle cx="22" cy="22" r="18" fill="none" stroke="rgba(21,19,72,.12)" stroke-width="5"/>
+            <circle cx="22" cy="22" r="18" fill="none" stroke="#E56C25" stroke-width="5" stroke-linecap="round"
+                    stroke-dasharray="113" stroke-dashoffset="74" transform="rotate(-90 22 22)"/>
+          </svg>
+          <div>
+            <div class="sc-label">Profit margin</div>
+            <div class="sc-value num">34.6%</div>
+          </div>
+        </div>
+        <div class="stat-chip s01-chip-revenue" data-anim="pop" data-anim-order="9">
+          <div class="icon-tile" style="width:48px;height:48px;border-radius:14px 14px 14px 4px"><svg style="width:22px;height:22px"><use href="#i-productivity"/></svg></div>
+          <div>
+            <div class="sc-label">Revenue this month</div>
+            <div class="sc-value num">SAR 245,680</div>
+          </div>
+        </div>
+      </div>
+
+      <p class="s01-tagline" data-anim="fade" data-anim-order="9">
+        <b>Elite Innovation Solutions</b> &nbsp;·&nbsp; Enterprise software, beautifully engineered</p>
+    </section>
+
+    <!-- ══ Slide 02 — Executive Summary ════════════════════════════════════ -->
+    <section class="slide" id="slide-02" aria-label="Executive Summary">
+      <div class="ghost-num" aria-hidden="true">02</div>
+      <div class="s02-bg-glow-a" data-anim="fade" data-anim-order="1"></div>
+      <div class="s02-bg-glow-b" data-anim="fade" data-anim-order="1"></div>
+      <div class="s02-grid-wide" aria-hidden="true"></div>
+      <div class="corner-orbit s02-orbit" aria-hidden="true">
+        <span class="ring"></span><span class="ring ring-2"></span>
+      </div>
+      <div class="s02-panel" data-anim="fade" data-anim-order="1"></div>
+
+      <div class="s02-head">
+        <p class="eyebrow" data-anim="fade-up" data-anim-order="2">Executive Summary</p>
+        <h2 class="headline" data-anim="fade-up" data-anim-order="3">The intelligent enterprise platform.</h2>
+      </div>
+
+      <div class="s02-left">
+        <div class="spine" data-anim="fade" data-anim-order="4"></div>
+        <p class="support" data-anim="fade-up" data-anim-order="4">
+          Elite ERP is an integrated enterprise platform designed to improve visibility, productivity, collaboration, and operational efficiency — from the first quotation to financial close.</p>
+
+        <div class="s02-highlights">
+          <div class="highlight-row" data-anim="fade-up" data-anim-order="5">
+            <div class="icon-tile"><svg><use href="#i-unified"/></svg></div>
+            <div>
+              <div class="hl-title">Unified operations</div>
+              <div class="hl-caption">One database across every department — no silos, no re&#8209;keying.</div>
+            </div>
+          </div>
+          <div class="highlight-row" data-anim="fade-up" data-anim-order="5">
+            <div class="icon-tile tile-navy"><svg><use href="#i-automation"/></svg></div>
+            <div>
+              <div class="hl-title">Intelligent automation</div>
+              <div class="hl-caption">Approvals, documents, and workflows execute themselves.</div>
+            </div>
+          </div>
+          <div class="highlight-row" data-anim="fade-up" data-anim-order="6">
+            <div class="icon-tile"><svg><use href="#i-analytics"/></svg></div>
+            <div>
+              <div class="hl-title">Real-time reporting</div>
+              <div class="hl-caption">Live dashboards and KPIs the moment work happens.</div>
+            </div>
+          </div>
+          <div class="highlight-row" data-anim="fade-up" data-anim-order="6">
+            <div class="icon-tile tile-navy"><svg><use href="#i-growth"/></svg></div>
+            <div>
+              <div class="hl-title">Enterprise scalability</div>
+              <div class="hl-caption">From one branch to a multi&#8209;company group on the same platform.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="s02-diagram">
+        <svg class="s02-links" viewBox="0 0 878 590" aria-hidden="true">
+          <path pathLength="1" data-anim="draw" data-anim-order="7" d="M101.5 96 101.5 118"/>
+          <path pathLength="1" data-anim="draw" data-anim-order="7" d="M326.5 96 326.5 118"/>
+          <path pathLength="1" data-anim="draw" data-anim-order="7" d="M551.5 96 551.5 118"/>
+          <path pathLength="1" data-anim="draw" data-anim-order="7" d="M776.5 96 776.5 118"/>
+          <path pathLength="1" data-anim="draw" data-anim-order="7" d="M101.5 180 C101.5 290 264 282 264 392"/>
+          <path pathLength="1" data-anim="draw" data-anim-order="7" d="M326.5 180 C326.5 290 364 290 364 392"/>
+          <path pathLength="1" data-anim="draw" data-anim-order="7" d="M551.5 180 C551.5 290 514 290 514 392"/>
+          <path pathLength="1" data-anim="draw" data-anim-order="7" d="M776.5 180 C776.5 290 614 282 614 392"/>
+        </svg>
+        <div class="s02-modules">
+          <div class="module-chip" data-anim="pop" data-anim-order="5"><svg><use href="#i-crm"/></svg><span>CRM</span></div>
+          <div class="module-chip" data-anim="pop" data-anim-order="5"><svg><use href="#i-sales"/></svg><span>Sales</span></div>
+          <div class="module-chip" data-anim="pop" data-anim-order="5"><svg><use href="#i-finance"/></svg><span>Finance</span></div>
+          <div class="module-chip" data-anim="pop" data-anim-order="5"><svg><use href="#i-hr"/></svg><span>HR</span></div>
+          <div class="module-chip" data-anim="pop" data-anim-order="6"><svg><use href="#i-procurement"/></svg><span>Procurement</span></div>
+          <div class="module-chip" data-anim="pop" data-anim-order="6"><svg><use href="#i-inventory"/></svg><span>Inventory</span></div>
+          <div class="module-chip" data-anim="pop" data-anim-order="6"><svg><use href="#i-projects"/></svg><span>Projects</span></div>
+          <div class="module-chip" data-anim="pop" data-anim-order="6"><svg><use href="#i-analytics"/></svg><span>Analytics</span></div>
+        </div>
+        <div class="core-node s02-core" data-anim="rise" data-anim-order="8">
+          <img class="core-mark" src="assets/logo/eis-icon-white.svg" alt="" />
+          <div class="core-text">
+            <div class="core-title">Elite ERP</div>
+            <div class="core-sub">One platform · One database · One experience</div>
+          </div>
+        </div>
+        <div class="s02-core-glow" data-anim="fade" data-anim-order="8"></div>
+      </div>
+
+      <div class="benefit-strip">
+        <div class="benefit-item" data-anim="fade-up" data-anim-order="9"><div class="bi-icon"><svg><use href="#i-decisions"/></svg></div><span>Better decisions</span></div>
+        <div class="benefit-item" data-anim="fade-up" data-anim-order="9"><div class="bi-icon"><svg><use href="#i-speed"/></svg></div><span>Faster operations</span></div>
+        <div class="benefit-item" data-anim="fade-up" data-anim-order="10"><div class="bi-icon"><svg><use href="#i-unified"/></svg></div><span>Unified data</span></div>
+        <div class="benefit-item" data-anim="fade-up" data-anim-order="10"><div class="bi-icon"><svg><use href="#i-productivity"/></svg></div><span>Higher productivity</span></div>
+        <div class="benefit-item" data-anim="fade-up" data-anim-order="11"><div class="bi-icon"><svg><use href="#i-growth"/></svg></div><span>Sustainable growth</span></div>
+      </div>
+    </section>
+
+    <!-- ══ Slide 03 — Business Challenges ══════════════════════════════════ -->
+    <section class="slide" id="slide-03" aria-label="Business Challenges">
+      <div class="ghost-num" aria-hidden="true">03</div>
+      <div class="s03-bg-glow" data-anim="fade" data-anim-order="1"></div>
+      <div class="s03-bg-glow-b" data-anim="fade" data-anim-order="1"></div>
+      <div class="s03-accent-glow" data-anim="fade" data-anim-order="1"></div>
+      <div class="corner-orbit s03-orbit" aria-hidden="true">
+        <span class="ring"></span><span class="ring ring-2"></span><span class="ring ring-3"></span>
+      </div>
+      <div class="s03-left">
+        <div class="spine" data-anim="fade" data-anim-order="2"></div>
+        <p class="eyebrow" data-anim="fade-up" data-anim-order="2">The Challenge</p>
+        <h2 class="headline" data-anim="fade-up" data-anim-order="3">Disconnected systems hold business&nbsp;back.</h2>
+        <p class="support" data-anim="fade-up" data-anim-order="4">
+          When every department runs its own tools, data lives in silos, work is repeated, and leadership sees yesterday's numbers instead of today's.</p>
+      </div>
+
+      <div class="s03-field">
+        <svg class="s03-broken" viewBox="0 0 1010 830" aria-hidden="true">
+          <path data-anim="fade" data-anim-order="5" d="M240 105 C300 90 330 70 395 62"/>
+          <path data-anim="fade" data-anim-order="5" d="M610 78 C650 88 670 105 705 118"/>
+          <path data-anim="fade" data-anim-order="6" d="M215 255 C300 250 340 240 425 232"/>
+          <path data-anim="fade" data-anim-order="6" d="M655 240 C680 250 700 265 725 285"/>
+          <path data-anim="fade" data-anim-order="6" d="M330 140 C340 175 345 190 355 220"/>
+          <path class="snap" data-anim="fade" data-anim-order="6" d="M645 88 661 108 M661 88 645 108"/>
+          <path class="snap" data-anim="fade" data-anim-order="6" d="M377 228 393 248 M393 228 377 248"/>
+        </svg>
+
+        <div class="challenge-card" style="left:34px; top:64px; --tilt:-1.6deg" data-anim="pop" data-anim-order="4">
+          <div class="cc-icon"><svg><use href="#i-silo"/></svg></div>
+          <span>Data silos</span>
+        </div>
+        <div class="challenge-card" style="left:398px; top:22px; --tilt:1.4deg" data-anim="pop" data-anim-order="4">
+          <div class="cc-icon"><svg><use href="#i-manual"/></svg></div>
+          <span>Manual processes</span>
+        </div>
+        <div class="challenge-card" style="left:712px; top:86px; --tilt:-1.1deg" data-anim="pop" data-anim-order="5">
+          <div class="cc-icon"><svg><use href="#i-duplicate"/></svg></div>
+          <span>Duplicate work</span>
+        </div>
+        <div class="challenge-card" style="left:96px; top:218px; --tilt:1.3deg" data-anim="pop" data-anim-order="5">
+          <div class="cc-icon"><svg><use href="#i-delay"/></svg></div>
+          <span>Delayed reporting</span>
+        </div>
+        <div class="challenge-card" style="left:452px; top:192px; --tilt:-1.7deg" data-anim="pop" data-anim-order="6">
+          <div class="cc-icon"><svg><use href="#i-blind"/></svg></div>
+          <span>Limited visibility</span>
+        </div>
+        <div class="challenge-card" style="left:714px; top:268px; --tilt:1.8deg" data-anim="pop" data-anim-order="6">
+          <div class="cc-icon"><svg><use href="#i-decision-delay"/></svg></div>
+          <span>Slow decisions</span>
+        </div>
+
+        <svg class="s03-converge" viewBox="0 0 1010 830" aria-hidden="true">
+          <path pathLength="1" data-anim="draw" data-anim-order="7" d="M230 350 C250 460 428 468 470 542"/>
+          <path pathLength="1" data-anim="draw" data-anim-order="7" d="M505 330 C505 420 505 478 505 540"/>
+          <path pathLength="1" data-anim="draw" data-anim-order="7" d="M780 360 C760 468 582 470 540 542"/>
+        </svg>
+        <div class="core-node s03-core" data-anim="rise" data-anim-order="8">
+          <img class="core-mark" src="assets/logo/eis-icon-white.svg" alt="" />
+          <div class="core-text">
+            <div class="core-title">One connected enterprise</div>
+          </div>
+          <div class="core-check"><svg><use href="#i-check"/></svg></div>
+        </div>
+      </div>
+
+      <div class="transition-bar s03-transition" data-anim="fade-up" data-anim-order="8">
+        <div class="tb-arrow"><svg class="mirror-rtl"><use href="#i-arrow-right"/></svg></div>
+        <p>Elite ERP replaces fragmentation with one intelligent, connected platform.</p>
+      </div>
+    </section>
+
+    <!-- ══ Slide 04 — Why Elite ERP ════════════════════════════════════════ -->
+    <section class="slide" id="slide-04" aria-label="Why Elite ERP">
+      <div class="ghost-num" aria-hidden="true">04</div>
+      <div class="s04-bg-glow-a" data-anim="fade" data-anim-order="1"></div>
+      <div class="s04-bg-glow-b" data-anim="fade" data-anim-order="1"></div>
+      <div class="corner-orbit s04-orbit" aria-hidden="true">
+        <span class="ring"></span><span class="ring ring-2"></span>
+      </div>
+      <div class="s04-head">
+        <p class="eyebrow" data-anim="fade-up" data-anim-order="2">Why Elite ERP</p>
+        <h2 class="headline" data-anim="fade-up" data-anim-order="3">One intelligent enterprise ecosystem.</h2>
+      </div>
+
+      <div class="s04-eco">
+        <svg class="s04-links" viewBox="0 0 1000 620" aria-hidden="true">
+          <path pathLength="1" data-anim="draw" data-anim-order="4" d="M500 242 500 80"/>
+          <path pathLength="1" data-anim="draw" data-anim-order="4" d="M596 265 769 150"/>
+          <path pathLength="1" data-anim="draw" data-anim-order="4" d="M629 310 880 320"/>
+          <path pathLength="1" data-anim="draw" data-anim-order="4" d="M596 355 769 490"/>
+          <path pathLength="1" data-anim="draw" data-anim-order="4" d="M500 378 500 560"/>
+          <path pathLength="1" data-anim="draw" data-anim-order="4" d="M404 355 231 490"/>
+          <path pathLength="1" data-anim="draw" data-anim-order="4" d="M371 310 120 320"/>
+          <path pathLength="1" data-anim="draw" data-anim-order="4" d="M404 265 231 150"/>
+        </svg>
+
+        <div class="module-chip" style="left:500px; top:80px"  data-anim="pop" data-anim-order="5"><svg><use href="#i-crm"/></svg><span>CRM</span></div>
+        <div class="module-chip" style="left:769px; top:150px" data-anim="pop" data-anim-order="5"><svg><use href="#i-sales"/></svg><span>Sales</span></div>
+        <div class="module-chip" style="left:880px; top:320px" data-anim="pop" data-anim-order="5"><svg><use href="#i-finance"/></svg><span>Finance</span></div>
+        <div class="module-chip" style="left:769px; top:490px" data-anim="pop" data-anim-order="6"><svg><use href="#i-hr"/></svg><span>HR</span></div>
+        <div class="module-chip" style="left:500px; top:560px" data-anim="pop" data-anim-order="6"><svg><use href="#i-procurement"/></svg><span>Procurement</span></div>
+        <div class="module-chip" style="left:231px; top:490px" data-anim="pop" data-anim-order="6"><svg><use href="#i-inventory"/></svg><span>Inventory</span></div>
+        <div class="module-chip" style="left:120px; top:320px" data-anim="pop" data-anim-order="7"><svg><use href="#i-projects"/></svg><span>Projects</span></div>
+        <div class="module-chip" style="left:231px; top:150px" data-anim="pop" data-anim-order="7"><svg><use href="#i-analytics"/></svg><span>Analytics</span></div>
+
+        <span class="pulse" style="left:500px; top:161px" data-anim="fade" data-anim-order="7"></span>
+        <span class="pulse" style="left:754px; top:315px; animation-delay:1s" data-anim="fade" data-anim-order="7"></span>
+        <span class="pulse" style="left:500px; top:469px; animation-delay:1.8s" data-anim="fade" data-anim-order="7"></span>
+        <span class="pulse" style="left:246px; top:315px; animation-delay:.5s" data-anim="fade" data-anim-order="7"></span>
+
+        <div class="core-ring s04-core-ring" aria-hidden="true" data-anim="fade" data-anim-order="2"></div>
+        <div class="core-node s04-core" data-anim="scale-in" data-anim-order="3">
+          <img class="core-mark" src="assets/logo/eis-icon-white.svg" alt="" />
+          <div class="core-text">
+            <div class="core-title">Elite ERP</div>
+            <div class="core-sub">One platform</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="s04-side s04-value">
+        <p class="panel-label" data-anim="fade-up" data-anim-order="5">Business value</p>
+        <div class="value-item" data-anim="fade-up" data-anim-order="5">
+          <div class="vi-icon"><svg><use href="#i-unified"/></svg></div>
+          <div>
+            <div class="vi-title">Single source of truth</div>
+            <div class="vi-caption">Every department works on the same live data.</div>
+          </div>
+        </div>
+        <div class="value-item" data-anim="fade-up" data-anim-order="6">
+          <div class="vi-icon"><svg><use href="#i-decisions"/></svg></div>
+          <div>
+            <div class="vi-title">Executive visibility</div>
+            <div class="vi-caption">Live KPIs and dashboards for leadership.</div>
+          </div>
+        </div>
+        <div class="value-item" data-anim="fade-up" data-anim-order="7">
+          <div class="vi-icon"><svg><use href="#i-security"/></svg></div>
+          <div>
+            <div class="vi-title">Enterprise-grade security</div>
+            <div class="vi-caption">Roles, permissions, and full audit trails.</div>
+          </div>
+        </div>
+        <div class="value-item" data-anim="fade-up" data-anim-order="8">
+          <div class="vi-icon"><svg><use href="#i-growth"/></svg></div>
+          <div>
+            <div class="vi-title">Scales as you grow</div>
+            <div class="vi-caption">Add branches, companies, and users — no re&#8209;platforming.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="s04-side s04-caps">
+        <p class="panel-label" data-anim="fade-up" data-anim-order="5">Platform capabilities</p>
+        <div class="value-item" data-anim="fade-up" data-anim-order="5">
+          <div class="vi-icon"><svg><use href="#i-analytics"/></svg></div>
+          <div>
+            <div class="vi-title">Real-time analytics</div>
+            <div class="vi-caption">Numbers update the moment work happens.</div>
+          </div>
+        </div>
+        <div class="value-item" data-anim="fade-up" data-anim-order="6">
+          <div class="vi-icon"><svg><use href="#i-automation"/></svg></div>
+          <div>
+            <div class="vi-title">Workflow automation</div>
+            <div class="vi-caption">Approvals and documents flow without manual chasing.</div>
+          </div>
+        </div>
+        <div class="value-item" data-anim="fade-up" data-anim-order="7">
+          <div class="vi-icon"><svg><use href="#i-collab"/></svg></div>
+          <div>
+            <div class="vi-title">Connected departments</div>
+            <div class="vi-caption">Sales, finance, and operations share one workspace.</div>
+          </div>
+        </div>
+        <div class="value-item" data-anim="fade-up" data-anim-order="8">
+          <div class="vi-icon"><svg><use href="#i-ai"/></svg></div>
+          <div>
+            <div class="vi-title">Intelligent reporting</div>
+            <div class="vi-caption">AI&#8209;assisted insight built into the platform.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="s04-transition-wrap" data-anim="fade-up" data-anim-order="9">
+        <div class="transition-bar">
+          <div class="tb-arrow"><svg class="mirror-rtl"><use href="#i-arrow-right"/></svg></div>
+          <p>Let's explore how each business function is transformed with Elite ERP.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══ Presentation chrome ═════════════════════════════════════════════ -->
+    <div id="chrome-brand" aria-hidden="true">
+      <img src="assets/logo/eis-lockup.svg" alt="" />
+    </div>
+
+    <header id="chrome-top">
+      <button class="chrome-btn" id="btn-fullscreen" aria-label="Toggle full screen">
+        <svg><use href="#i-fullscreen"/></svg>
+      </button>
+    </header>
+
+    <footer id="chrome-bottom">
+      <div id="slide-counter" class="num"><b>01</b> / 04</div>
+      <div id="progress-dots"></div>
+      <div id="nav-arrows">
+        <button class="chrome-btn" id="btn-prev" aria-label="Previous slide">
+          <svg class="mirror-rtl"><use href="#i-arrow-left"/></svg>
+        </button>
+        <button class="chrome-btn" id="btn-next" aria-label="Next slide">
+          <svg class="mirror-rtl"><use href="#i-arrow-right"/></svg>
+        </button>
+      </div>
+    </footer>
+
+  </div>
+</div>
+
+<script src="js/presentation.js"></script>
+<script src="js/animation.js"></script>
+<script src="js/navigation.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
