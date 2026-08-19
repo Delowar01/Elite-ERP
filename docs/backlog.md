@@ -376,6 +376,160 @@ agree for the account.
 
 ---
 
+## DEPLOY RUNBOOK — the three undeployed changes, as ONE schema step
+
+Covers the credit-/debit-note FX inheritance fix, payment reversal, and the two credit-note defects
+(currency display and the paidAmount inflation). They deploy together. Production is Vercel + Neon.
+
+### 1. Every schema change, in commit order
+
+| # | Commit | Table | Column | Type | Null | Default |
+|---|---|---|---|---|---|---|
+| — | `e5f294e` `4e7ae24` `3cc676d` (note-FX) | — | **none** | — | — | — |
+| 1 | `7c7dc47` | `payments` | `reversed_at` | `timestamp without time zone` | YES | — |
+| 2 | `7c7dc47` | `payments` | `reversed_by_id` | `integer` → FK `users(id)` | YES | — |
+| 3 | `6422235` | `sales_invoices` | `credited_amount` | `numeric(15,3)` | **NO** | `'0'::numeric` |
+| 4 | `6422235` | `sales_invoices` | `base_credited_amount` | `numeric(15,3)` | YES | — |
+
+**The note-FX change added no schema at all** — verified, not assumed:
+`git diff --stat e5f294e~1..3cc676d -- src/db/ drizzle/` is empty. It is code-only, so it has no
+schema precondition and could deploy alone.
+
+`00bb976` touches `src/db/schema/accounting.ts` but adds **comments only** (the `payment_reversal`
+note on `sourceType`). No DDL.
+
+The FK on `reversed_by_id` is the only constraint added: `payments_reversed_by_id_users_id_fk`.
+
+### ⚠ A FOURTH change may be in the same bucket — confirm before deploying
+
+`5b65a04` (bank opening balances) added `bank_accounts.opening_date` (`date`, nullable) and
+`bank_accounts.opening_contra_account_id` (`integer`, nullable, FK `accounts(id)`). It is **not** in
+the three-change list above. If that work is already live, ignore this. If it is NOT, it goes out in
+the same push and **its data step has a different ordering** — see the entry above: schema first as
+usual, but its BACKFILL runs *after* the code deploy, not before. Check with the query in §2.
+
+### 2. Has production got them? The repo carries no evidence either way
+
+Nothing in this repository records what Neon has. `drizzle/` holds generated migrations only up to
+`0004_wooden_christian_walker.sql` (11 Aug) and **none of these columns appear in any of them** —
+this project has been on `drizzle-kit push` as its sole schema path since well before this work.
+
+Run this against Neon. Every expected column is listed, so a MISSING one shows as a missing row
+rather than having to be inferred from a short result:
+
+```sql
+select t.table_name, t.column_name,
+       c.data_type, c.is_nullable, c.column_default
+  from (values
+        ('payments','reversed_at'),
+        ('payments','reversed_by_id'),
+        ('sales_invoices','credited_amount'),
+        ('sales_invoices','base_credited_amount'),
+        -- the possible fourth change; drop these two lines if bank opening balances are already live
+        ('bank_accounts','opening_date'),
+        ('bank_accounts','opening_contra_account_id')
+       ) as t(table_name, column_name)
+  left join information_schema.columns c
+         on c.table_schema = 'public'
+        and c.table_name = t.table_name
+        and c.column_name = t.column_name
+ order by t.table_name, t.column_name;
+```
+
+**Reading it:** six rows come back either way. A row whose `data_type` is NULL is a column that
+**does not exist in Neon**. All six non-null ⇒ the schema is already applied and `db:push` will be a
+no-op.
+
+### 3. Deployment order — SCHEMA FIRST, and it is not a judgement call
+
+| | Does the NEW code need the column to exist? | Does the OLD code break if it exists? |
+|---|---|---|
+| `payments.reversed_at` / `reversed_by_id` | **Yes.** The payment-history query selects `reversedAt`, and `reversePaymentAction` writes both. Missing ⇒ `column does not exist` on every invoice/PO/proforma detail page that renders payment history. | **No.** Nullable, and no old query names them. |
+| `sales_invoices.credited_amount` / `base_credited_amount` | **Yes.** The invoice detail page, AR aging, the dashboard receivables sum, `recordPaymentAction`, `issueCreditNoteAction` and the advance path all select or write them. Missing ⇒ errors on the invoice page, the AR report and the dashboard. | **No.** `credited_amount` is `NOT NULL DEFAULT 0`, so old INSERTs that omit it still succeed; Drizzle emits explicit column lists, so old SELECTs never name either. |
+
+**So: `npm run db:push` MUST complete before the Vercel deploy.** Both directions are settled by the
+table — the new code cannot run without the columns, and the old code is indifferent to them. The
+window between push and deploy is therefore safe in a way the advance and bank-opening windows were
+not: nothing reads or writes these columns until the new code is live.
+
+This is a *different reason* from the three orderings already in this document, and worth stating so
+a fourth is not assumed by analogy:
+
+- advance backfill — `schema → backfill → deploy` because the backfill CREATES rows the code reads;
+- advance clear — `deploy → clear` because readers must move off the field before it goes null;
+- bank opening — `schema → deploy → backfill` because backfill-first shows a believable wrong number;
+- **this one — `schema → deploy`, because the columns are purely additive and nothing populates them
+  retroactively.** There is no data step at all.
+
+**Do not reach for `npm run db:migrate`.** The generated migrations are stale by months and contain
+none of these columns; `db:migrate` would report success having applied nothing, and the deploy
+would then fail against missing columns. `db:push` is the only path that works here.
+
+### 4. Backfill — NOT required, and the reason is worth understanding
+
+The obvious worry is that `credited_amount` defaults to 0 while legacy rows still carry the old
+inflated `paidAmount`, leaving outstanding wrong until repaired. **It does not.** Measured against
+190 existing invoices carrying issued credit notes:
+
+```
+invoices with an issued credit note                 190
+outstanding identical under old and new formula     184   (every row where credited_amount = 0)
+credited_amount still zero                          184
+```
+
+The arithmetic: the old identity was `outstanding = total − paidAmount`, where `paidAmount` already
+absorbed the credit. The new one is `total − paidAmount − creditedAmount`. For a legacy row
+`creditedAmount` is 0, so the two are **the same expression** and the figure does not move. Status,
+the payment balance check and the release's over-settlement all follow the same reasoning and are
+likewise unchanged for legacy rows.
+
+**What legacy rows DO keep is the display defect**: "Paid" still shows payments-plus-credits and the
+new "Credited" row shows nothing, until a credit note is issued against that invoice under the new
+code. Nothing regresses; the old rows simply keep looking as they did.
+
+Given production is pre-live test data with a reset planned, no repair is proposed. To size it there
+first (read-only):
+
+```sql
+with pay as (select sales_invoice_id id, coalesce(sum(amount),0) paid
+               from payments where sales_invoice_id is not null and reversed_at is null group by 1),
+     cns as (select source_invoice_id id, coalesce(sum(total),0) credited
+               from credit_notes where status='issued' group by 1)
+select count(*) as invoices_with_issued_cn,
+       count(*) filter (where abs(i.paid_amount - (coalesce(p.paid,0) + c.credited)) < 0.005)
+         as paid_still_carries_credit_value,
+       count(*) filter (where i.credited_amount > 0) as already_on_the_new_channel
+  from sales_invoices i
+  join cns c on c.id = i.id
+  left join pay p on p.id = i.id;
+```
+
+A non-zero middle column is the population whose **Paid display** is inflated. It is not a
+correctness problem for any balance, report or status — only for that one figure on screen.
+
+### 5. What else runs
+
+`npm run db:push` is `drizzle-kit push && npm run db:harden`, so the append-only audit triggers are
+re-applied automatically. Correct output on an already-hardened database:
+
+```
+DB hardening: already present, re-applied cleanly (audit_logs_immutable, security_events_immutable).
+```
+
+Nothing else chains off it, and there is no migration script to run for this deploy.
+
+### Sequence
+
+1. Run the §2 query against Neon. Note which columns are missing.
+2. `npm run db:push` against production (applies the columns, re-applies the audit triggers).
+3. Re-run the §2 query — all six rows non-null.
+4. Deploy to Vercel.
+5. Spot-check: an invoice detail page, the AR aging report, the dashboard, and one payment history.
+6. Only if the bank-opening change is also going out: run its backfill **after** the deploy, per its
+   own entry above.
+
+---
+
 ## Credit notes on a CASH-paid invoice still drive AR negative (high priority)
 
 **Status:** unfixed, deliberately out of scope for the allocation phase. This is the same defect
