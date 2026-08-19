@@ -4,7 +4,9 @@ import { eq, and } from "drizzle-orm";
 import { DocumentTermsView } from "../../../sales/_shared/terms-view";
 import { BankAccountBlocks } from "../../../sales/_shared/bank-account-blocks";
 import { LineItemCell, LineDescRow } from "../../../sales/_shared/line-item-cell";
-import { db, debitNotesTable, debitNoteItemsTable, vendorsTable, purchaseOrdersTable } from "@/db";
+import { db, debitNotesTable, debitNoteItemsTable, vendorsTable, purchaseOrdersTable, orgsTable } from "@/db";
+import { CurrencyProvider } from "@/components/ui/currency-mark";
+import { docMoneyMark } from "../../../sales/_shared/doc-currency";
 import { requireSession } from "@/lib/session";
 import { getLocale } from "@/lib/i18n/server";
 import { t } from "@/lib/i18n/dict";
@@ -50,6 +52,8 @@ export default async function DebitNoteDetailPage({ params }: { params: Promise<
       vendorName: vendorsTable.name,
       sourcePurchaseOrderId: debitNotesTable.sourcePurchaseOrderId,
       sourcePoNumber: purchaseOrdersTable.poNumber,
+      /** The note is denominated in the purchase order it reverses — read the SOURCE's currency. */
+      currency: purchaseOrdersTable.currency,
     })
     .from(debitNotesTable)
     .innerJoin(vendorsTable, eq(vendorsTable.id, debitNotesTable.vendorId))
@@ -60,7 +64,13 @@ export default async function DebitNoteDetailPage({ params }: { params: Promise<
 
   const items = await db.select().from(debitNoteItemsTable).where(eq(debitNoteItemsTable.debitNoteId, dnId));
 
+  const [org] = await db.select().from(orgsTable).where(eq(orgsTable.id, session.orgId));
+
   return (
+    // The debit note carried the identical defect to the credit note's: foreign figures rendered
+    // under the org's base mark. Fixed together — one type fixed and the twin left is the mistake
+    // this project has explicitly avoided twice.
+    <CurrencyProvider mark={docMoneyMark(org, dn.currency)}>
     <div className="max-w-4xl mx-auto">
       <div className="inv-head">
         <div>
@@ -135,5 +145,6 @@ export default async function DebitNoteDetailPage({ params }: { params: Promise<
 
       <DocumentTermsView locale={locale} terms={dn.terms} className="mt-5" />
     </div>
+    </CurrencyProvider>
   );
 }

@@ -94,6 +94,13 @@ export type AllocationInvoice = {
   basePaidAmount: string | null;
   total: string;
   paidAmount: string;
+  /**
+   * Value already returned by issued credit notes. A third settlement channel that reduces AR just
+   * as a payment does, so both "does this close the invoice" and "what AR remains" have to see it.
+   * Optional so callers that predate the split keep compiling; absent reads as zero.
+   */
+  creditedAmount?: string;
+  baseCreditedAmount?: string | null;
 };
 
 /**
@@ -110,7 +117,9 @@ export function arClearedFor(args: {
   const { invoice, applyAmount, baseCurrency } = args;
   const docCurrency = invoice.currency ?? baseCurrency;
   const eps = moneyEpsilon(docCurrency);
-  const closesInvoice = Number(invoice.paidAmount) + Number(applyAmount) >= Number(invoice.total) - eps;
+  // Settled across BOTH channels: an advance that finishes off a part-credited invoice closes it.
+  const credited = Number(invoice.creditedAmount ?? 0);
+  const closesInvoice = Number(invoice.paidAmount) + credited + Number(applyAmount) >= Number(invoice.total) - eps;
 
   const isBase = !invoice.currency || invoice.currency.toUpperCase() === baseCurrency.toUpperCase();
   if (isBase) {
@@ -119,11 +128,14 @@ export function arClearedFor(args: {
     // invoice carries one.
     const baseTotal = invoice.baseTotal ?? invoice.total;
     const basePaid = invoice.basePaidAmount ?? invoice.paidAmount;
+    const baseCredited = Number(invoice.baseCreditedAmount ?? invoice.creditedAmount ?? 0);
     return {
       ok: true,
       closesInvoice,
+      // The exact AR remainder nets out everything that has already relieved the account —
+      // payments AND credits. Omitting credits would clear more AR than 1100 still carries.
       arCleared: closesInvoice
-        ? roundMoney(Number(baseTotal) - Number(basePaid), baseCurrency)
+        ? roundMoney(Number(baseTotal) - Number(basePaid) - baseCredited, baseCurrency)
         : roundMoney(Number(applyAmount), baseCurrency),
     };
   }
@@ -136,7 +148,7 @@ export function arClearedFor(args: {
     ok: true,
     closesInvoice,
     arCleared: closesInvoice
-      ? roundMoney(Number(invoice.baseTotal) - Number(invoice.basePaidAmount ?? "0"), baseCurrency)
+      ? roundMoney(Number(invoice.baseTotal) - Number(invoice.basePaidAmount ?? "0") - Number(invoice.baseCreditedAmount ?? 0), baseCurrency)
       : roundMoney(Number(applyAmount) * Number(invoice.exchangeRate), baseCurrency),
   };
 }

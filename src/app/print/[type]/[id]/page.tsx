@@ -371,9 +371,18 @@ export default async function PrintPage({ params }: { params: Promise<{ type: st
       const [[customer], items, [sourceInvoice]] = await Promise.all([
         db.select().from(customersTable).where(eq(customersTable.id, cn.customerId)),
         db.select().from(creditNoteItemsTable).where(eq(creditNoteItemsTable.creditNoteId, id)),
-        db.select({ invoiceNumber: salesInvoicesTable.invoiceNumber }).from(salesInvoicesTable).where(eq(salesInvoicesTable.id, cn.sourceInvoiceId)),
+        db.select({ invoiceNumber: salesInvoicesTable.invoiceNumber, currency: salesInvoicesTable.currency })
+          .from(salesInvoicesTable).where(eq(salesInvoicesTable.id, cn.sourceInvoiceId)),
       ]);
       if (!customer) notFound();
+      // The invoice branch sets this at line ~152 and the purchase order at ~301; the note branches
+      // never did, so a $575 credit note printed as "SAR 575" — the document's own figures under
+      // the ORG's mark. Read from the SOURCE invoice, which is what the note is denominated in.
+      mark = docMoneyMark(org, sourceInvoice?.currency ?? cn.currency);
+      // `numFmt` must be reassigned too — `money()` reads `mark` at call time, but the item table's
+      // formatter is captured once, so setting only `mark` leaves the LINE RATES in base format
+      // while the totals switch. Half-fixed is worse than unfixed: the two would disagree.
+      numFmt = markFormat(mark);
       body = (
         <A4Page org={org} documentType="credit_note">
           <PdfHeader docLabel="CREDIT NOTE" numberLabel="Credit Note No" numberVal={cn.creditNoteNumber} dateVal={fmtDate(cn.issueDate)} org={org} />
@@ -406,9 +415,13 @@ export default async function PrintPage({ params }: { params: Promise<{ type: st
       const [[vendor], items, [sourcePo]] = await Promise.all([
         db.select().from(vendorsTable).where(eq(vendorsTable.id, dn.vendorId)),
         db.select().from(debitNoteItemsTable).where(eq(debitNoteItemsTable.debitNoteId, id)),
-        db.select({ poNumber: purchaseOrdersTable.poNumber }).from(purchaseOrdersTable).where(eq(purchaseOrdersTable.id, dn.sourcePurchaseOrderId)),
+        db.select({ poNumber: purchaseOrdersTable.poNumber, currency: purchaseOrdersTable.currency })
+          .from(purchaseOrdersTable).where(eq(purchaseOrdersTable.id, dn.sourcePurchaseOrderId)),
       ]);
       if (!vendor) notFound();
+      // Same fix as the credit note's, for the same defect on the twin.
+      mark = docMoneyMark(org, sourcePo?.currency ?? dn.currency);
+      numFmt = markFormat(mark);
       body = (
         <A4Page org={org} documentType="debit_note">
           <PdfHeader docLabel="DEBIT NOTE" numberLabel="Debit Note No" numberVal={dn.debitNoteNumber} dateVal={fmtDate(dn.issueDate)} org={org} />

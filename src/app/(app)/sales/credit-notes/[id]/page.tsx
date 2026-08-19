@@ -4,7 +4,9 @@ import { eq, and } from "drizzle-orm";
 import { DocumentTermsView } from "../../_shared/terms-view";
 import { BankAccountBlocks } from "../../_shared/bank-account-blocks";
 import { LineItemCell, LineDescRow } from "../../_shared/line-item-cell";
-import { db, creditNotesTable, creditNoteItemsTable, customersTable, salesInvoicesTable } from "@/db";
+import { db, creditNotesTable, creditNoteItemsTable, customersTable, salesInvoicesTable, orgsTable } from "@/db";
+import { CurrencyProvider } from "@/components/ui/currency-mark";
+import { docMoneyMark } from "../../_shared/doc-currency";
 import { requireSession } from "@/lib/session";
 import { getLocale } from "@/lib/i18n/server";
 import { t } from "@/lib/i18n/dict";
@@ -50,6 +52,9 @@ export default async function CreditNoteDetailPage({ params }: { params: Promise
       customerName: customersTable.name,
       sourceInvoiceId: creditNotesTable.sourceInvoiceId,
       sourceInvoiceNumber: salesInvoicesTable.invoiceNumber,
+      // The note is denominated in the invoice it reverses — read the SOURCE's currency, not the
+      // note's own copy, so a note can never render in a currency its invoice does not use.
+      currency: salesInvoicesTable.currency,
     })
     .from(creditNotesTable)
     .innerJoin(customersTable, eq(customersTable.id, creditNotesTable.customerId))
@@ -59,8 +64,13 @@ export default async function CreditNoteDetailPage({ params }: { params: Promise
   if (!cn) notFound();
 
   const items = await db.select().from(creditNoteItemsTable).where(eq(creditNoteItemsTable.creditNoteId, cnId));
+  const [org] = await db.select().from(orgsTable).where(eq(orgsTable.id, session.orgId));
 
   return (
+    // Without this the page rendered the note's USD figures under the ORG's base mark — "SAR 575"
+    // on a $575 note. The invoice detail page has always wrapped its own figures this way; the
+    // credit note (and the debit note) never did, so the numbers were right and the symbol was not.
+    <CurrencyProvider mark={docMoneyMark(org, cn.currency)}>
     <div className="max-w-4xl mx-auto">
       <div className="inv-head">
         <div>
@@ -135,5 +145,6 @@ export default async function CreditNoteDetailPage({ params }: { params: Promise
 
       <DocumentTermsView locale={locale} terms={cn.terms} className="mt-5" />
     </div>
+    </CurrencyProvider>
   );
 }

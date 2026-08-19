@@ -46,12 +46,44 @@ export function baseTaxExpr(t: CurrencyDoc & { taxTotal: PgColumn; baseTaxAmount
  * `baseTotal − basePaidAmount` for foreign ones — BOTH sides from the same world, never a base
  * total minus a foreign paid amount (the mix that justified `basePaidAmount`'s existence). NULL —
  * and therefore excluded and counted — when either foreign column is missing.
+ *
+ * Documents that can be CREDITED (sales invoices) subtract a third channel as well. Pass their
+ * credited columns and the identity becomes `total − paid − credited`; omit them — as purchase
+ * orders do, having no credit notes against them — and it stays the two-term form.
+ *
+ * This is why splitting credits out of `paidAmount` cost so little at the reporting layer: AR
+ * aging, the dashboard receivables total and every other consumer read outstanding through here,
+ * so the identity changed in ONE place rather than in each of them.
  */
 export function baseOutstandingExpr(
-  t: CurrencyDoc & { total: PgColumn; paidAmount: PgColumn; baseTotal: PgColumn; basePaidAmount: PgColumn },
+  t: CurrencyDoc & { total: PgColumn; paidAmount: PgColumn; baseTotal: PgColumn; basePaidAmount: PgColumn;
+                     creditedAmount?: PgColumn; baseCreditedAmount?: PgColumn },
   base: string,
 ): SQL<string | null> {
-  return sql`case when ${isBaseCurrencyPred(t, base)} then ${t.total} - ${t.paidAmount} else ${t.baseTotal} - ${t.basePaidAmount} end`;
+  // GREATEST(0, …) on both forms, matching `settlementOf`'s floor.
+  //
+  // Without it an invoice that is both fully paid and fully credited contributes a NEGATIVE
+  // receivable: 2156.25 − 2156.25 − 2156.25 = −2156.25. AR aging drops non-positive rows so it
+  // never showed there, but the dashboard SUMS this expression, so one over-settled invoice would
+  // have silently reduced total receivables below the true figure. An over-settlement is a refund
+  // owed, not a negative debt — the same reasoning that floors the document-side balance.
+  if (!t.creditedAmount || !t.baseCreditedAmount) {
+    return sql`GREATEST(0, case when ${isBaseCurrencyPred(t, base)} then ${t.total} - ${t.paidAmount} else ${t.baseTotal} - ${t.basePaidAmount} end)`;
+  }
+  // `coalesce` on the base credited column only: a foreign invoice with credits but no captured
+  // base figure would otherwise null the whole expression and drop the row from every total, which
+  // is the right treatment for an unknown TOTAL but not for an absent credit.
+  return sql`GREATEST(0, case when ${isBaseCurrencyPred(t, base)}
+                  then ${t.total} - ${t.paidAmount} - ${t.creditedAmount}
+                  else ${t.baseTotal} - ${t.basePaidAmount} - coalesce(${t.baseCreditedAmount}, 0) end)`;
+}
+
+/** The value credited back in base currency — the third settlement channel, for readers that show it. */
+export function baseCreditedExpr(
+  t: CurrencyDoc & { creditedAmount: PgColumn; baseCreditedAmount: PgColumn },
+  base: string,
+): SQL<string | null> {
+  return sql`case when ${isBaseCurrencyPred(t, base)} then ${t.creditedAmount} else coalesce(${t.baseCreditedAmount}, 0) end`;
 }
 
 /** Foreign document whose base total was never captured — the excluded-and-counted set. */

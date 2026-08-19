@@ -321,9 +321,15 @@ const cnE = (await entriesFor(A.org, "credit_note", cnBase))[0];
 check("CN entry: Dr Revenue 200.000 (derived) / Dr VAT 30.000 / Cr AR 230.000",
   line(cnE, "4000")?.debit === "200.000" && line(cnE, "2100")?.debit === "30.000" && line(cnE, "1100")?.credit === "230.000",
   JSON.stringify(cnE?.lines));
-const iAfterCn = (await db.query("select paid_amount, base_paid_amount from sales_invoices where id=$1", [invBase])).rows[0];
-check("invoice paidAmount moved by the CN total", iAfterCn.paid_amount === "230.000", String(iAfterCn.paid_amount));
-check("…and basePaidAmount by the CN's baseTotal", iAfterCn.base_paid_amount === "230.000", String(iAfterCn.base_paid_amount));
+// A CREDIT NOTE IS NOT A PAYMENT. These two asserted that the note moved `paidAmount`, which is the
+// defect that made a fully-paid invoice report Paid at twice its total. The note's value now lands
+// on its own channel and `paidAmount` is left alone; the LEDGER assertions above are unchanged,
+// because the posting never was the problem.
+const iAfterCn = (await db.query("select paid_amount, base_paid_amount, credited_amount, base_credited_amount from sales_invoices where id=$1", [invBase])).rows[0];
+check("invoice paidAmount is UNTOUCHED by the credit note", iAfterCn.paid_amount === "0.000", String(iAfterCn.paid_amount));
+check("…the note's value lands on creditedAmount / baseCreditedAmount instead",
+  iAfterCn.credited_amount === "230.000" && iAfterCn.base_credited_amount === "230.000",
+  `${iAfterCn.credited_amount} / ${iAfterCn.base_credited_amount}`);
 await checkLedgerBalanced(A.org, "after base CN issue");
 
 // ---- a second USD invoice to credit (the first was voided in Case D) ----
@@ -358,9 +364,11 @@ check("USD CN posts in BASE: Dr Rev 370.000 / Dr VAT 55.500 / Cr AR 425.500",
   JSON.stringify(cnuE?.lines));
 check("…and NO 4900 line — no cash moved, so there is no realized FX to recognise",
   !line(cnuE, "4900"), JSON.stringify(cnuE?.lines));
-const i2AfterCn = (await db.query("select paid_amount, base_paid_amount from sales_invoices where id=$1", [invUsd2])).rows[0];
-check("USD invoice paidAmount moved by 115 (document currency)", i2AfterCn.paid_amount === "115.000", String(i2AfterCn.paid_amount));
-check("…and basePaidAmount by 425.500 (base currency, at the invoice's own rate)", i2AfterCn.base_paid_amount === "425.500", String(i2AfterCn.base_paid_amount));
+const i2AfterCn = (await db.query("select paid_amount, base_paid_amount, credited_amount, base_credited_amount from sales_invoices where id=$1", [invUsd2])).rows[0];
+check("USD invoice paidAmount is UNTOUCHED — the note is not a payment", i2AfterCn.paid_amount === "0.000", String(i2AfterCn.paid_amount));
+check("…and creditedAmount carries 115 with baseCreditedAmount 425.500, at the invoice's own rate",
+  i2AfterCn.credited_amount === "115.000" && i2AfterCn.base_credited_amount === "425.500",
+  `${i2AfterCn.credited_amount} / ${i2AfterCn.base_credited_amount}`);
 await checkLedgerBalanced(A.org, "after foreign CN issue");
 
 // ---- a CN dated before any rate exists now ISSUES, because it consults no rate at all ----
@@ -391,9 +399,13 @@ check("CN reversal mirrors stored figures: Cr Rev 370.000 / Cr VAT 55.500 / Dr A
   JSON.stringify(cnR?.lines));
 // The early-dated note above is still issued, so the invoice keeps ITS credit — the reversal undoes
 // exactly one note, which is the property worth asserting.
-const i2AfterRev = (await db.query("select paid_amount, base_paid_amount from sales_invoices where id=$1", [invUsd2])).rows[0];
-check("invoice paidAmount restored to the early note's 57.5 alone", i2AfterRev.paid_amount === "57.500", String(i2AfterRev.paid_amount));
-check("…and basePaidAmount to its 212.750, by the STORED baseTotal", i2AfterRev.base_paid_amount === "212.750", String(i2AfterRev.base_paid_amount));
+const i2AfterRev = (await db.query("select paid_amount, base_paid_amount, credited_amount, base_credited_amount from sales_invoices where id=$1", [invUsd2])).rows[0];
+check("reversal takes the note's value back OFF the credited channel, leaving the early note's 57.5",
+  i2AfterRev.credited_amount === "57.500", String(i2AfterRev.credited_amount));
+check("…its base twin likewise 212.750, from the STORED baseTotal — never a fresh conversion",
+  i2AfterRev.base_credited_amount === "212.750", String(i2AfterRev.base_credited_amount));
+check("…and paidAmount was never involved on either side of the round trip",
+  i2AfterRev.paid_amount === "0.000", String(i2AfterRev.paid_amount));
 await checkLedgerBalanced(A.org, "after CN reversal");
 
 // ================= Path 4: debit note issue (rate INHERITED from the PO) =================

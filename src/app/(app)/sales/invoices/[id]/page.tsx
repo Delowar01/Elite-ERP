@@ -6,6 +6,7 @@ import { SafeRichText } from "../../_shared/safe-rich-text";
 import { LineItemCell, LineDescRow } from "../../_shared/line-item-cell";
 import { db, salesInvoicesTable, salesInvoiceItemsTable, customersTable, salesOrdersTable, quotationsTable, orgsTable, bankAccountsTable, advanceApplicationsTable } from "@/db";
 import { requireSession } from "@/lib/session";
+import { settlementOf } from "@/lib/settlement";
 import { getProfileByCountryName, profileHasFeature } from "@/lib/geo/country-profiles";
 import { getLocale } from "@/lib/i18n/server";
 import { t } from "@/lib/i18n/dict";
@@ -56,6 +57,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
       taxTotal: salesInvoicesTable.taxTotal,
       total: salesInvoicesTable.total,
       paidAmount: salesInvoicesTable.paidAmount,
+      creditedAmount: salesInvoicesTable.creditedAmount,
       notes: salesInvoicesTable.notes,
       terms: salesInvoicesTable.terms,
       bankAccounts: salesInvoicesTable.bankAccounts,
@@ -85,7 +87,14 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
       .from(bankAccountsTable)
       .where(and(eq(bankAccountsTable.orgId, session.orgId), eq(bankAccountsTable.isActive, true))),
   ]);
-  const balanceDue = Number(invoice.total) - Number(invoice.paidAmount);
+  // THREE channels. `paidAmount` is cash (and advances applied as payment); `creditedAmount` is
+  // value returned by credit notes. Subtracting only the first showed a fully-paid, fully-credited
+  // invoice as Paid 1,150 against a 575 total with a balance of −575.
+  const settlement = settlementOf({
+    total: invoice.total, paid: invoice.paidAmount, credited: invoice.creditedAmount,
+    docCurrency: invoice.currency ?? session.orgCurrency,
+  });
+  const balanceDue = Number(settlement.outstanding);
   const showPayments = invoice.status !== "draft" && invoice.status !== "void";
   // §18: an invoice born from a proforma with advances breaks its receipts out — Total = Advance
   // Applied + Paid + Due, with "Paid" reduced to the DIRECT payments so the same transferred
@@ -225,10 +234,18 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
             taxTotal={invoice.taxTotal}
             finalLabel={showPayments ? "Balance due" : "Total"}
             finalValue={showPayments ? String(balanceDue) : invoice.total}
-            extraRows={showPayments ? (advanceApplied > 0 ? [
-              { label: "Customer Advance Applied", value: String(advanceApplied), colorClass: "text-success" },
-              { label: "Paid", value: String(directPaid), colorClass: "text-success" },
-            ] : [{ label: "Paid", value: invoice.paidAmount, colorClass: "text-success" }]) : undefined}
+            /* Each settlement channel gets its OWN row. Folding credits into "Paid" is the defect
+               being repaired; showing them as a separate line is the whole point of tracking them
+               separately. */
+            extraRows={showPayments ? [
+              ...(advanceApplied > 0
+                ? [{ label: "Customer Advance Applied", value: String(advanceApplied), colorClass: "text-success" },
+                   { label: "Paid", value: String(directPaid), colorClass: "text-success" }]
+                : [{ label: "Paid", value: invoice.paidAmount, colorClass: "text-success" }]),
+              ...(Number(invoice.creditedAmount) > 0
+                ? [{ label: "Credited", value: invoice.creditedAmount, colorClass: "text-success" }]
+                : []),
+            ] : undefined}
           />
 
           {showPayments && <PaymentHistory locale={locale} orgId={session.orgId} baseCurrency={session.orgCurrency} source={{ type: "invoice", id: invoice.id }} canReverse={canReversePayments} />}

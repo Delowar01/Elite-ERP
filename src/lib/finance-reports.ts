@@ -16,7 +16,7 @@ import {
 } from "@/db";
 import { roundMoney } from "@/lib/currency/currencies";
 import { orgBaseCurrency } from "@/lib/org-currency";
-import { baseTotalExpr, baseTaxExpr, basePaidExpr, unconvertedOutstandingPred, unconvertedTotalPred } from "@/lib/base-amounts-sql";
+import { baseTotalExpr, baseTaxExpr, basePaidExpr, baseCreditedExpr, unconvertedOutstandingPred, unconvertedTotalPred } from "@/lib/base-amounts-sql";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Financial Reporting data layer. Every ledger-based report is generated from the
@@ -309,7 +309,10 @@ export async function getCashFlow(orgId: number, range: DateRange): Promise<Cash
 // ── Aging (AR from invoices, AP from purchase orders) ────────────────────────
 export type AgingRow = {
   id: number; number: string; party: string; date: string; dueDate: string;
-  total: number; paid: number; outstanding: number; overdueDays: number; bucket: AgingBucketKey;
+  total: number; paid: number;
+  /** Value returned by issued credit notes. Zero for payables, which cannot be credited. */
+  credited: number;
+  outstanding: number; overdueDays: number; bucket: AgingBucketKey;
 };
 export type AgingBucketKey = "current" | "d1_30" | "d31_60" | "d61_90" | "d90p";
 export const AGING_BUCKETS: AgingBucketKey[] = ["current", "d1_30", "d31_60", "d61_90", "d90p"];
@@ -331,7 +334,7 @@ function bucketFor(overdueDays: number): AgingBucketKey {
 function daysBetween(a: string, b: string): number {
   return Math.round((new Date(b + "T00:00:00Z").getTime() - new Date(a + "T00:00:00Z").getTime()) / 86400000);
 }
-function agingFrom(asOf: string, docs: { id: number; number: string; party: string; date: string; due: string | null; total: number; paid: number; unconverted?: boolean }[]): Aging {
+function agingFrom(asOf: string, docs: { id: number; number: string; party: string; date: string; due: string | null; total: number; paid: number; credited?: number; unconverted?: boolean }[]): Aging {
   const buckets: Record<AgingBucketKey, number> = { current: 0, d1_30: 0, d31_60: 0, d61_90: 0, d90p: 0 };
   const rows: AgingRow[] = [];
   // FX-8: a foreign document with no stored base conversion has no honest base figure — excluded
@@ -342,13 +345,17 @@ function agingFrom(asOf: string, docs: { id: number; number: string; party: stri
       excluded += 1;
       continue;
     }
-    const outstanding = Math.round((d.total - d.paid) * 100) / 100;
+    // THREE channels: cash received, and value credited back. Aging that subtracted only `paid`
+    // was correct while credits were folded into it and would have OVERSTATED every receivable the
+    // moment they were split out — which is why the split touches this line as well.
+    const credited = d.credited ?? 0;
+    const outstanding = Math.round((d.total - d.paid - credited) * 100) / 100;
     if (outstanding <= 0) continue;
     const dueDate = d.due || d.date;
     const overdueDays = Math.max(0, daysBetween(dueDate, asOf));
     const bucket = bucketFor(overdueDays);
     buckets[bucket] += outstanding;
-    rows.push({ id: d.id, number: d.number, party: d.party, date: d.date, dueDate, total: d.total, paid: d.paid, outstanding, overdueDays, bucket });
+    rows.push({ id: d.id, number: d.number, party: d.party, date: d.date, dueDate, total: d.total, paid: d.paid, credited, outstanding, overdueDays, bucket });
   }
   rows.sort((a, b) => b.overdueDays - a.overdueDays);
   const totalOutstanding = AGING_BUCKETS.reduce((s, k) => s + buckets[k], 0);
@@ -363,6 +370,7 @@ export async function getReceivableAging(orgId: number, asOf: string): Promise<A
     id: salesInvoicesTable.id, number: salesInvoicesTable.invoiceNumber, party: customersTable.name,
     date: salesInvoicesTable.issueDate, due: salesInvoicesTable.dueDate,
     total: baseTotalExpr(salesInvoicesTable, base), paid: basePaidExpr(salesInvoicesTable, base),
+    credited: baseCreditedExpr(salesInvoicesTable, base),
     unconverted: unconvertedOutstandingPred(salesInvoicesTable, base),
   }).from(salesInvoicesTable)
     .leftJoin(customersTable, eq(customersTable.id, salesInvoicesTable.customerId))
@@ -373,7 +381,7 @@ export async function getReceivableAging(orgId: number, asOf: string): Promise<A
       isNull(salesInvoicesTable.deletedAt),
       lte(salesInvoicesTable.issueDate, asOf),
     ));
-  return agingFrom(asOf, rows.map((r) => ({ id: r.id, number: r.number, party: r.party ?? "—", date: r.date, due: r.due, total: n(r.total), paid: n(r.paid), unconverted: !!r.unconverted })));
+  return agingFrom(asOf, rows.map((r) => ({ id: r.id, number: r.number, party: r.party ?? "—", date: r.date, due: r.due, total: n(r.total), paid: n(r.paid), credited: n(r.credited), unconverted: !!r.unconverted })));
 }
 
 export async function getPayableAging(orgId: number, asOf: string): Promise<Aging> {

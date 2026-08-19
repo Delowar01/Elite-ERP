@@ -991,9 +991,23 @@ check("THE DEFECT IS CLOSED: AR is unmoved — the note's credit and the release
   `${num(arAfterCN.dr) - num(arAfterCN.cr)} vs ${num(arBeforeCN.dr) - num(arBeforeCN.cr)}`);
 check("2300 rose by exactly the note's value — the client holds that credit as an available advance",
   (await advNet()) - advBeforeCN === num(cn1.total), `${await advNet()} vs ${advBeforeCN}`);
-const cnInvAfter = (await db.query("select paid_amount::text, base_paid_amount::text from sales_invoices where id=$1", [invCN])).rows[0];
-check("the invoice's paid figures did NOT grow past its total — the release nets against the note",
-  num(cnInvAfter.paid_amount) === 4000000 && num(cnInvAfter.base_paid_amount) === 4000000, JSON.stringify(cnInvAfter));
+const cnInvAfter = (await db.query(
+  "select paid_amount::text, base_paid_amount::text, credited_amount::text, base_credited_amount::text from sales_invoices where id=$1", [invCN])).rows[0];
+// THREE CHANNELS. This block asserted `paid === 4000` while credits were folded into paidAmount:
+// the note ADDED its 1,150 and the release SUBTRACTED the same, so the figure happened to land back
+// on the invoice total. It was right about the total and silent about which channel held what.
+//
+// Now the note's value sits on `creditedAmount` and `paidAmount` moves only by the release. The
+// invariant that actually mattered — the invoice is exactly settled, never over — is asserted
+// directly instead of inferred from a coincidence.
+check("PAID falls by the release alone: 4,000 − 1,150 = 2,850 — the note never touches it",
+  num(cnInvAfter.paid_amount) === 2850000 && num(cnInvAfter.base_paid_amount) === 2850000, JSON.stringify(cnInvAfter));
+check("…the note's 1,150 sits on the CREDITED channel",
+  num(cnInvAfter.credited_amount) === num(cn1.total) && num(cnInvAfter.base_credited_amount) === num(cn1.base_total),
+  JSON.stringify(cnInvAfter));
+check("…and SETTLED across both channels is exactly the invoice total, never past it",
+  num(cnInvAfter.paid_amount) + num(cnInvAfter.credited_amount) === 4000000,
+  `${(num(cnInvAfter.paid_amount) + num(cnInvAfter.credited_amount)) / 1000}`);
 check("the advance is available again, by the note's value", (await availableOf(payCN)).doc === num(cn1.total));
 await balanced("after the credit note released part of the allocation");
 

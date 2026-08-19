@@ -34,7 +34,25 @@ export const salesInvoicesTable = pgTable("sales_invoices", {
   discount: numeric("discount", { precision: 15, scale: 3 }).notNull().default("0"),
   taxTotal: numeric("tax_total", { precision: 15, scale: 3 }).notNull().default("0"),
   total: numeric("total", { precision: 15, scale: 3 }).notNull().default("0"),
+  /** Cash actually received against this invoice, plus advances applied as payment. NEVER credits. */
   paidAmount: numeric("paid_amount", { precision: 15, scale: 3 }).notNull().default("0"),
+  /**
+   * Value credited back by ISSUED credit notes — a third settlement channel, kept separate from
+   * `paidAmount` on purpose.
+   *
+   * It used to be folded into `paidAmount`, which made `outstanding = total − paidAmount` correct
+   * and `paidAmount` itself a lie: a fully-paid 575 invoice credited in full reported Paid 1,150
+   * and a balance of −575. That figure is not a display value — it feeds invoice status, AR aging,
+   * client statements, the dashboard receivables total, the advance-application cap and the
+   * credit-note release rule.
+   *
+   * Payments, applied advances and credit notes are three different things. The identity that
+   * replaces the old one is `outstanding = total − paidAmount − creditedAmount`, expressed once in
+   * `settlementOf` and once in `baseOutstandingExpr`, so no reader has to remember it.
+   */
+  creditedAmount: numeric("credited_amount", { precision: 15, scale: 3 }).notNull().default("0"),
+  /** `creditedAmount` in base currency. Null carries the same "not converted" meaning as its siblings. */
+  baseCreditedAmount: numeric("base_credited_amount", { precision: 15, scale: 3 }),
   notes: text("notes"),
   terms: jsonb("terms").$type<{ text: string; groupId: number | null; groupName: string | null }[]>(),
   bankAccounts: jsonb("bank_accounts").$type<DocBankAccount[]>(),

@@ -22,6 +22,7 @@ import { subtractMoney } from "@/lib/posting-currency";
 import { lockAdvanceAndReadPot, availabilityOf, carriedBaseFor } from "@/lib/advance-allocations";
 import { logActivity } from "@/lib/activity";
 import { recordAudit } from "@/lib/security/audit";
+import { settlementOf } from "@/lib/settlement";
 import { reversalRefusal, mirrorLines, paidAfterReversal, invoiceStatusAfter } from "@/lib/payment-reversal";
 
 export type ActionResult = {
@@ -229,7 +230,9 @@ export async function recordPaymentAction(formData: FormData): Promise<ActionRes
     }
     const docCurrency = invoice.currency ?? session.orgCurrency;
     const eps = moneyEpsilon(docCurrency);
-    const balance = Number(invoice.total) - Number(invoice.paidAmount);
+    // Outstanding across BOTH settlement channels. A part-credited invoice has less left to pay
+    // than `total − paidAmount` suggests, and a payment for the old figure would over-settle it.
+    const balance = Number(invoice.total) - Number(invoice.paidAmount) - Number(invoice.creditedAmount);
     if (amount > balance + eps) return { error: "Amount cannot exceed the remaining balance." };
 
     const ar = byCode.get("1100");
@@ -242,7 +245,12 @@ export async function recordPaymentAction(formData: FormData): Promise<ActionRes
     if (!captured.ok) return { error: captured.error, missingRate: captured.missingRate };
 
     const newPaid = roundMoney(Number(invoice.paidAmount) + amount, docCurrency);
-    const newStatus = Number(newPaid) >= Number(invoice.total) - eps ? "paid" : "partially_paid";
+    // "Closing" means the invoice is fully SETTLED, across both channels — a payment that finishes
+    // off a part-credited invoice closes it, and the derived AR remainder below depends on getting
+    // that right.
+    const newStatus = settlementOf({
+      total: invoice.total, paid: newPaid, credited: invoice.creditedAmount, docCurrency,
+    }).status;
 
     // What the invoice is credited with, at its BOOKED rate — the AR line. The closing payment's
     // figure is DERIVED (baseTotal − basePaidAmount), never converted again, so a fully paid
@@ -258,7 +266,12 @@ export async function recordPaymentAction(formData: FormData): Promise<ActionRes
       }
       baseApplied =
         newStatus === "paid"
-          ? subtractMoney(invoice.baseTotal, invoice.basePaidAmount ?? "0", session.orgCurrency)
+          // The exact AR remainder: what the ledger still carries after everything already
+          // credited or paid. Credits reduce AR too, so they belong in this subtraction — omitting
+          // them would post more AR relief than the account holds.
+          ? subtractMoney(
+              subtractMoney(invoice.baseTotal, invoice.basePaidAmount ?? "0", session.orgCurrency),
+              invoice.baseCreditedAmount ?? "0", session.orgCurrency)
           : roundMoney(amount * Number(invoice.exchangeRate), session.orgCurrency);
     }
     const newBasePaid =

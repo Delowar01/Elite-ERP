@@ -10,6 +10,7 @@ import { requireSession } from "@/lib/session";
 import { logActivity } from "@/lib/activity";
 import { recordAudit } from "@/lib/security/audit";
 import { moneyEpsilon, roundMoney } from "@/lib/currency/currencies";
+import { settlementOf } from "@/lib/settlement";
 import {
   lockAdvanceAndReadPot, planAllocations, availabilityOf,
   sameCustomerRefusal, sameCurrencyRefusal,
@@ -118,12 +119,14 @@ export async function applyAdvanceToInvoiceAction(
       .select({
         total: salesInvoicesTable.total, paidAmount: salesInvoicesTable.paidAmount,
         basePaidAmount: salesInvoicesTable.basePaidAmount, baseTotal: salesInvoicesTable.baseTotal,
+        creditedAmount: salesInvoicesTable.creditedAmount, baseCreditedAmount: salesInvoicesTable.baseCreditedAmount,
         exchangeRate: salesInvoicesTable.exchangeRate, currency: salesInvoicesTable.currency,
         invoiceNumber: salesInvoicesTable.invoiceNumber,
       })
       .from(salesInvoicesTable)
       .where(and(eq(salesInvoicesTable.id, invoiceId), eq(salesInvoicesTable.orgId, session.orgId)));
-    const due = Number(live.total) - Number(live.paidAmount);
+    // Outstanding across both channels — an advance cannot be applied to value already credited.
+    const due = Number(live.total) - Number(live.paidAmount) - Number(live.creditedAmount);
     if (due <= eps) return { error: "This invoice has nothing left outstanding." } as const;
     if (amount > due + eps) return { error: `Only ${roundMoney(due, docCurrency)} is still outstanding on this invoice.` } as const;
 
@@ -135,6 +138,7 @@ export async function applyAdvanceToInvoiceAction(
       invoice: {
         currency: live.currency, exchangeRate: live.exchangeRate, baseTotal: live.baseTotal,
         basePaidAmount: live.basePaidAmount, total: live.total, paidAmount: live.paidAmount,
+        creditedAmount: live.creditedAmount, baseCreditedAmount: live.baseCreditedAmount,
       },
       baseCurrency: session.orgCurrency,
       advancesAccountId: byCode.get("2300")!.id,
@@ -175,7 +179,9 @@ export async function applyAdvanceToInvoiceAction(
     const newBasePaid = live.basePaidAmount === null
       ? null
       : roundMoney(Number(live.basePaidAmount) + Number(step.arCleared), session.orgCurrency);
-    const newStatus = Number(newPaid) >= Number(live.total) - eps ? "paid" : "partially_paid";
+    const newStatus = settlementOf({
+      total: live.total, paid: newPaid, credited: live.creditedAmount, docCurrency,
+    }).status;
     await tx
       .update(salesInvoicesTable)
       .set({ paidAmount: newPaid, basePaidAmount: newBasePaid, status: newStatus, updatedAt: new Date() })

@@ -16,6 +16,7 @@ import { computeTotals, type LineItemInput } from "../_shared/totals";
 import { moneyEpsilon, roundMoney } from "@/lib/currency/currencies";
 import { subtractMoney } from "@/lib/posting-currency";
 import { creditNoteLines, noteBaseAmounts } from "@/lib/reversal-currency";
+import { settlementOf } from "@/lib/settlement";
 import {
   activeAllocationTotal, creditNoteReleaseAmount, releaseAllocations, reverseReleasesOfCause,
 } from "@/lib/advance-allocations";
@@ -214,12 +215,14 @@ export async function issueCreditNoteAction(creditNoteId: number): Promise<Actio
     const invoiceLock = await tx.execute(sql`
       select invoice_number, total::text as total, paid_amount::text as paid_amount,
              base_paid_amount::text as base_paid_amount, currency, exchange_rate::text as exchange_rate,
-             base_total::text as base_total, base_tax_amount::text as base_tax_amount
+             base_total::text as base_total, base_tax_amount::text as base_tax_amount,
+             credited_amount::text as credited_amount, base_credited_amount::text as base_credited_amount
         from sales_invoices where id = ${cn.sourceInvoiceId} and org_id = ${session.orgId}
          for update`);
     const invoice = (invoiceLock.rows as unknown as {
       invoice_number: string; total: string; paid_amount: string; base_paid_amount: string | null;
       currency: string | null; exchange_rate: string | null; base_total: string | null; base_tax_amount: string | null;
+      credited_amount: string; base_credited_amount: string | null;
     }[])[0];
     if (!invoice) return { error: "Invoice not found." } as const;
 
@@ -318,9 +321,13 @@ export async function issueCreditNoteAction(creditNoteId: number): Promise<Actio
     // Release what this note over-settles the invoice by, capped at the advance money actually
     // behind it. LIFO, apportioned, and keyed to THIS note so a replay releases nothing twice.
     const allocated = await activeAllocationTotal(tx, session.orgId, cn.sourceInvoiceId, docCurrency);
+    // Over-settlement is measured across BOTH channels. Under the old model credits lived inside
+    // `paid_amount`, so a second credit note computed against a figure the first had already
+    // inflated and released more advance than stood behind it.
     const releaseAmount = creditNoteReleaseAmount({
       invoiceTotal: invoice.total,
-      invoicePaidAmount: invoice.paid_amount,
+      invoicePaidAmount: roundMoney(
+        Number(invoice.paid_amount) + Number(invoice.credited_amount), docCurrency),
       creditNoteTotal: cn.total,
       activeAllocationTotal: allocated,
       docCurrency,
@@ -336,17 +343,34 @@ export async function issueCreditNoteAction(creditNoteId: number): Promise<Actio
     const releasedDoc = releases.reduce((sum, r) => sum + Number(r.appliedAmount), 0);
     const releasedAr = releases.reduce((sum, r) => sum + Number(r.arCleared), 0);
 
-    // The document-currency paidAmount moves by the note's total NET of what the release gave back;
-    // the BASE twin by the note's baseTotal net of the AR the release restored — which is exactly
-    // the AR the two entries moved between them, so GL 1100 still equals `baseTotal − basePaidAmount`
-    // to the fils. An unconverted legacy invoice keeps null rather than being handed a mixed figure.
+    // A CREDIT NOTE IS NOT A PAYMENT. The note's value goes to `creditedAmount`; `paidAmount` moves
+    // only by what the release GAVE BACK — a release genuinely un-applies an advance that really
+    // was counted as paid, so that decrement belongs on the paid channel and nowhere else.
+    //
+    // The ledger identity the old increment was holding up is preserved, restated over both
+    // channels: GL 1100 = baseTotal − basePaidAmount − baseCreditedAmount. Nothing about the
+    // posting changes; only which column carries which fact.
+    //
+    // An unconverted legacy invoice keeps null rather than being handed a mixed figure, on both
+    // base columns, exactly as before.
+    const newStatus = settlementOf({
+      total: invoice.total,
+      paid: roundMoney(Number(invoice.paid_amount) - releasedDoc, docCurrency),
+      credited: roundMoney(Number(invoice.credited_amount) + Number(cn.total), docCurrency),
+      docCurrency,
+    }).status;
     await tx
       .update(salesInvoicesTable)
       .set({
-        paidAmount: roundMoney(Number(invoice.paid_amount) + Number(cn.total) - releasedDoc, docCurrency),
+        paidAmount: roundMoney(Number(invoice.paid_amount) - releasedDoc, docCurrency),
         basePaidAmount: invoice.base_paid_amount === null
           ? null
-          : roundMoney(Number(invoice.base_paid_amount) + Number(captured.baseTotal) - releasedAr, session.orgCurrency),
+          : roundMoney(Number(invoice.base_paid_amount) - releasedAr, session.orgCurrency),
+        creditedAmount: roundMoney(Number(invoice.credited_amount) + Number(cn.total), docCurrency),
+        baseCreditedAmount: invoice.base_credited_amount === null && Number(invoice.credited_amount) > 0
+          ? null
+          : roundMoney(Number(invoice.base_credited_amount ?? 0) + Number(captured.baseTotal), session.orgCurrency),
+        status: newStatus,
         updatedAt: new Date(),
       })
       .where(eq(salesInvoicesTable.id, cn.sourceInvoiceId));
@@ -437,19 +461,38 @@ export async function reverseCreditNoteAction(creditNoteId: number): Promise<Act
     const reappliedDoc = reapplied.reduce((sum, r) => sum + Number(r.appliedAmount), 0);
     const reappliedAr = reapplied.reduce((sum, r) => sum + Number(r.arCleared), 0);
 
-    // Un-does the issue's adjustment exactly as it was made: the note's total LESS what it released
-    // then, which is what it has just re-applied. The base twin uses the note's STORED baseTotal —
-    // never a fresh conversion — guarded the same way it was applied, so a null stays null.
+    // Un-does the issue's adjustment exactly as it was made, now on the channel the issue used: the
+    // note's value comes OFF `creditedAmount`, and what the re-application restored goes back ON to
+    // `paidAmount`. The base twin uses the note's STORED baseTotal — never a fresh conversion —
+    // guarded the same way it was applied, so a null stays null.
     await tx
       .update(salesInvoicesTable)
       .set({
-        paidAmount: sql`GREATEST(0, ${salesInvoicesTable.paidAmount} - ${cn.total} + ${String(reappliedDoc)})`,
-        basePaidAmount: cn.baseTotal === null
-          ? sql`${salesInvoicesTable.basePaidAmount}`
-          : sql`case when ${salesInvoicesTable.basePaidAmount} is null then null else GREATEST(0, ${salesInvoicesTable.basePaidAmount} - ${cn.baseTotal} + ${String(reappliedAr)}) end`,
+        paidAmount: sql`GREATEST(0, ${salesInvoicesTable.paidAmount} + ${String(reappliedDoc)})`,
+        basePaidAmount: sql`case when ${salesInvoicesTable.basePaidAmount} is null then null else GREATEST(0, ${salesInvoicesTable.basePaidAmount} + ${String(reappliedAr)}) end`,
+        creditedAmount: sql`GREATEST(0, ${salesInvoicesTable.creditedAmount} - ${cn.total})`,
+        baseCreditedAmount: cn.baseTotal === null
+          ? sql`${salesInvoicesTable.baseCreditedAmount}`
+          : sql`case when ${salesInvoicesTable.baseCreditedAmount} is null then null else GREATEST(0, ${salesInvoicesTable.baseCreditedAmount} - ${cn.baseTotal}) end`,
         updatedAt: new Date(),
       })
       .where(eq(salesInvoicesTable.id, cn.sourceInvoiceId));
+
+    // Status follows the restored figures — recomputed from the row rather than guessed, because
+    // the reversal may or may not have re-opened the invoice depending on what else settles it.
+    const [restored] = await tx
+      .select({ total: salesInvoicesTable.total, paid: salesInvoicesTable.paidAmount,
+                credited: salesInvoicesTable.creditedAmount, currency: salesInvoicesTable.currency })
+      .from(salesInvoicesTable)
+      .where(eq(salesInvoicesTable.id, cn.sourceInvoiceId));
+    if (restored) {
+      await tx.update(salesInvoicesTable)
+        .set({ status: settlementOf({
+          total: restored.total, paid: restored.paid, credited: restored.credited,
+          docCurrency: restored.currency ?? session.orgCurrency,
+        }).status })
+        .where(eq(salesInvoicesTable.id, cn.sourceInvoiceId));
+    }
   });
 
   await logActivity(session, { type: "credit_note.reversed", description: `Reversed credit note ${cn.creditNoteNumber} — posted reversing entry and restored invoice balance`, entityType: "credit_note", entityId: creditNoteId });
