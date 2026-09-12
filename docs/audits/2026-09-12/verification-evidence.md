@@ -438,10 +438,16 @@ Error: ENOENT: no such file or directory, open
 ```
 
 The route is at `src/app/uploads/[...path]/route.ts`. `readFileSync` throws, Node
-exits 1, the job stops. **Eleven assertions never execute** — the upload route's
+exits 1, the job stops. **Ten assertions never execute** — the upload route's
 session/signed-URL/org/audit checks, the signed-URL HMAC/`timingSafeEqual`/expiry
 checks, the login rate-limit and MFA checks, `.env is gitignored`, and **`no
-insecure AUTH_SECRET fallback`**. CI's security coverage is 6 assertions, not 17.
+insecure AUTH_SECRET fallback`**. CI's security coverage is 6 assertions, not 16.
+
+> **Corrected during Batch 1 (C-14).** This section previously said 17 assertions
+> and 11 unreached. The file at `e8969a1` has **16** `ok()` calls — 6 reached,
+> **10** not — and the two security files hold **34** between them, not 35. The
+> Batch 1 repair adds a resolution guard, so the suite now reports 17/17; that 17
+> is the count *after* the fix.
 
 **Corrected claim.** The first report said "CI has never verified that this
 application builds." The evidence supports only: **in the 10 most recent runs on

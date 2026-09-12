@@ -14,7 +14,7 @@ logs in [`evidence/`](evidence/).
 
 ## 0. Correction log
 
-This pass re-examined the first report's conclusions. **Thirteen changed** — C-1 to C-11 in the correction pass; **C-12** (the migration column arithmetic) and **C-13** (evidence files silently untracked) in a final reconciliation pass. Each is
+This pass re-examined the first report's conclusions. **Fourteen changed** — C-1 to C-11 in the correction pass; **C-12** (migration column arithmetic) and **C-13** (evidence files silently untracked) in a final reconciliation pass; **C-14** (security-suite assertion count) established by the Batch 1 repair itself. Each is
 listed with what it said, what is true, and how that was established.
 
 | # | Earlier conclusion | Corrected conclusion | Why it changed |
@@ -33,6 +33,7 @@ listed with what it said, what is true, and how that was established.
 
 | **C-12** | "a migrations-only database is **7 tables and 204 columns short**", and the `generate` prompt attributed to `openingBalance` → `openingBalanceLegacy`. | **The 204 is right but was stated ambiguously, and the prompt attribution was wrong.** 608 columns are shared, **204 must be added, 1 must be dropped** — so the *net* difference is **+203**, which is why `812 − 609` does not equal 204. The dropped column is `terms_conditions_groups.content` (`text`), replaced by `terms` (`jsonb`) in `15ef378`; that single add-and-drop pair is the **only** column conflict, and is what stops `drizzle-kit generate`. `openingBalance` → `openingBalanceLegacy` renamed only the **Drizzle field** — the SQL column is still `opening_balance` and is present in **both** databases, so it produces no diff and cannot prompt anything. | Set-difference on column identity **and** on full fingerprints, on two rebuilt disposable databases. §12 |
 | **C-13** | The evidence outputs were cited in all four reports as committed artefacts. | **They were not committed.** `.gitignore:32` (`*.log`) silently excluded all five output files from commit `cefcb49`, so every citation pointed at a file absent from the repository — the scripts were tracked, their results were not. Renamed `.log` → `.txt` (rather than forcing past `.gitignore` or editing it, which would be a config change outside an audit's scope) and every reference updated. | `git ls-files` vs the directory listing; `git check-ignore -v` confirmed the cause. |
+| **C-14** | "the suite has 17 assertions, of which 11 never execute" (F-4). | **Off by one, established by fixing it.** `tests/security/access-control.test.mjs` at `e8969a1` contains **16** `ok()` calls: 6 ran before the crash and **10** did not. The two security files hold **34** assertions, not 35. The Batch 1 repair adds a resolution guard, so the file now reports 17/17 — which is why the corrected figure matters: 17 is the count *after* the fix, not before it. | `git show e8969a1:tests/security/access-control.test.mjs \| grep -c '^ok('` → 16. |
 
 Two earlier findings were re-tested and **stand unchanged**: F-1 (payment reversal
 writes a wrong invoice status) and F-9 (credit notes on cash-paid invoices leave
@@ -305,7 +306,7 @@ one from *deployed*. The table supports a shape, not a score.
 | **Sent-proforma revisions** | A sent proforma can be revised and tracked | **Entirely absent** — zero occurrences of `revision` in `src/` or any schema file. No revision number, supersede link or history for **any** document type. Separate from the project-attribution gap | **missing** | `source` — exhaustive | A new feature, not an unfinished one | none exists |
 | **Proforma project attribution** *(F-8)* | Proforma work attributed to its project | `proforma_invoices` has **no `projectId`**; conversion never sets one | **missing** | `source` | Column + conversion + **backfill decision** | `db/schema/proforma-invoices.ts` |
 | **Blob object access control** *(F-3)* | Files reachable only by authorized users | Written `access:"public"` with `addRandomSuffix:false`; the proxy's auth, tenancy and audit are bypassed by URL possession. No caller currently emits an absolute blob URL | **defective** | `source` — traced, callers enumerated | Private blobs + token-scoped reads, as a **storage and read-path migration** | `blob-storage.ts:98` |
-| **CI security suite** *(F-4)* | Every committed assertion runs | Crashes at 7 of 17 on a stale path; 11 assertions never execute; `db:push` and `build` skipped | **defective** | `automated` — CI logs | Fix the path, then confirm the remaining 11 pass | `access-control.test.mjs:51` |
+| **CI security suite** *(F-4)* | Every committed assertion runs | Crashes at 7 of **16** on a stale path; **10** assertions never execute; `db:push` and `build` skipped | **defective** | `automated` — CI logs | Fix the path, then confirm the remaining 11 pass | `access-control.test.mjs:51` |
 | **CI coverage of the verify tiers** *(N-4)* | The real evidence runs automatically | CI runs **none** of the 68 runnable suites | **missing** | `automated` | Add `verify:static` + `verify:server` with a Postgres service | `devsecops.yml` |
 | **Dependency currency** *(C-11)* | No known-vulnerable dependencies | 18 advisories, incl. `next` 16.2.10 with 11. **Three of the four worst do not apply here** (§6.3). Six high packages remain after the `next` bump | **defective** | `automated` + primary sources | Minor-version bump with regression testing; `npm audit fix`; a `puppeteer-core` decision | `package.json` |
 | **Generated migrations** *(F-6)* | Schema reproducible from the repo | Stale since 22 July, 146 commits. **Measured:** a migrations-only database is short **7 tables and 204 columns**, and carries **1 column that must be dropped** (net +203) | **partial** | `automated` — two disposable DBs diffed | Add a delta/baseline migration; **do not delete history** | `drizzle/meta/_journal.json`; `evidence/repro-migration-baseline.txt` |
@@ -629,7 +630,7 @@ performance under load.
 | # | Claim | Source | Evidence | Verdict |
 |---|---|---|---|---|
 | D-1 | "blob URLs are never exposed and cross-tenant access is denied" | `blob-storage.ts:11-12` | First half true of the app as written; second true of the **proxy**, false of the **storage** | **Misleading** |
-| D-2 | CI "runs … the security test suite. Any failure fails the pipeline" | `devsecops.yml:3-5` | Accurate about failing. But the suite **crashes at 7 of 17**, and CI runs **none** of the 68 runnable verify suites | **Overstated** |
+| D-2 | CI "runs … the security test suite. Any failure fails the pipeline" | `devsecops.yml:3-5` | Accurate about failing. But the suite **crashes at 7 of 16**, and CI runs **none** of the 68 runnable verify suites | **Overstated** |
 | D-3 | Deploy runbook: four columns, exact types, no backfill needed, `db:migrate` is a trap | `backlog.md` | Confirmed exactly against a fresh push | **Accurate** |
 | D-4 | "Credit notes on a CASH-paid invoice still drive AR negative" — unfixed | `backlog.md:533` | Re-derived at HEAD: still live | **Accurate** |
 | D-5 | "proforma_invoices has no projectId column at all" | `backlog.md:853` | Confirmed | **Accurate** |
@@ -680,7 +681,7 @@ performance under load.
 | Static (`verify:static`) | 8 | **388** (6 suites report `N/N`; 2 report `N passed`) | yes | **PASS, 0 fail** | **no** |
 | Server (`verify:server`) | **24** | **957** across 21, **+150** `PASS` lines in 2 more, 1 state gate | yes | **PASS, 0 fail** | **no** |
 | Browser (`verify:browser`) | 36 | **972** across 26 of 36 | yes | **PASS, 36/36, 0 fail** | **no** |
-| `tests/security/` | 2 files | 35 written, **24 reached** | via CI logs | **crashes at 7 of 17 in one file** | yes (partly) |
+| `tests/security/` | 2 files | **34** written, **24 reached** | via CI logs | **crashes at 7 of 16 in one file** | yes (partly) |
 | **Orphaned** | **1** (`verify-duedate.mjs`) | 9 | **manually, this pass** | PASS 9/9 | **no runner at all** |
 | `scripts/tests/` | 26 | unknown | no | not executed | no |
 
@@ -736,7 +737,7 @@ Carried forward unchanged:
 Revised against the confirmed findings. **Statement reversal handling is now in
 it**, and the dependency item is reshaped.
 
-1. **Fix the CI security-test path** (`access-control.test.mjs:51`), then confirm the 11 assertions after it actually pass. One line; it unblocks everything else.
+1. **Fix the CI security-test path** (`access-control.test.mjs:51`), then confirm the 10 assertions after it actually pass. One line; it unblocks everything else.
 2. **F-10 — attribute `payment_reversal` in statements.** The highest-impact money defect confirmed in this pass, customer-facing, with a template already in the same file.
 3. **F-1 — payment-reversal status**, asserted at the **action** layer.
 4. **F-2 — `reversed_at is null` in project cash.**
