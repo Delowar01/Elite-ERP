@@ -31,22 +31,23 @@ export type PartyKind = "client" | "vendor";
 
 /** Document families a statement line can come from. Used by the Document Type filter. */
 export type StatementDocType =
-  | "sales_invoice" | "credit_note" | "payment_in"
+  | "sales_invoice" | "credit_note" | "payment_in" | "payment_in_reversal"
   | "advance_receipt" | "advance_application" | "advance_release" | "advance_refund"
-  | "purchase_order" | "debit_note" | "payment_out"
+  | "purchase_order" | "debit_note" | "payment_out" | "payment_out_reversal"
   | "journal";
 
 export const CLIENT_DOC_TYPES: StatementDocType[] = [
-  "sales_invoice", "credit_note", "payment_in",
+  "sales_invoice", "credit_note", "payment_in", "payment_in_reversal",
   "advance_receipt", "advance_application", "advance_release", "advance_refund",
   "journal",
 ];
-export const VENDOR_DOC_TYPES: StatementDocType[] = ["purchase_order", "debit_note", "payment_out", "journal"];
+export const VENDOR_DOC_TYPES: StatementDocType[] = ["purchase_order", "debit_note", "payment_out", "payment_out_reversal", "journal"];
 
 export const DOC_TYPE_LABEL: Record<StatementDocType, string> = {
   sales_invoice: "Invoice",
   credit_note: "Credit Note",
   payment_in: "Payment Received",
+  payment_in_reversal: "Receipt Reversal",
   advance_receipt: "Advance Received",
   advance_application: "Advance Applied",
   advance_release: "Advance Released",
@@ -54,6 +55,7 @@ export const DOC_TYPE_LABEL: Record<StatementDocType, string> = {
   purchase_order: "Purchase Order",
   debit_note: "Debit Note",
   payment_out: "Payment Made",
+  payment_out_reversal: "Payment Reversal",
   journal: "Journal Entry",
 };
 
@@ -64,11 +66,13 @@ const DOC_PATH: Record<StatementDocType, (id: number) => string | null> = {
   purchase_order: (id) => `/purchasing/orders/${id}`,
   debit_note: (id) => `/purchasing/debit-notes/${id}`,
   payment_in: () => "/finance/payments",
+  payment_in_reversal: () => "/finance/payments",
   advance_receipt: (id) => `/sales/proforma/${id}`,   // docId = the proforma the advance was received against
   advance_application: (id) => `/sales/invoices/${id}`, // docId = the invoice the advance settled
   advance_release: (id) => `/sales/invoices/${id}`,   // docId = the invoice whose allocation was released
   advance_refund: (id) => `/sales/proforma/${id}`,    // docId = the proforma whose advance was returned
   payment_out: () => "/finance/payments",
+  payment_out_reversal: () => "/finance/payments",
   journal: () => "/finance/ledger",
 };
 
@@ -224,7 +228,10 @@ async function attribute(orgId: number, kind: PartyKind, raw: RawLine[]): Promis
     // equal an unrelated payment id, the line landed on that payment's party.
     const appIds = idsOf("advance_application");
     const releaseIds = [...new Set([...idsOf("advance_application_release"), ...idsOf("advance_application_release_reversal")])];
-    const payIds = idsOf("payment");
+    // A reversal keys off the SAME payments.id as the payment it mirrors — that is the project's
+    // `(sourceType, sourceId)` identity, and it is why both source types resolve through one query.
+    // Folding the ids together here is the same shape used for releases on the line above.
+    const payIds = [...new Set([...idsOf("payment"), ...idsOf("payment_reversal")])];
     const [invs, cns, pays] = await Promise.all([
       invIds.length ? db.select({
         id: salesInvoicesTable.id, customerId: salesInvoicesTable.customerId, number: salesInvoicesTable.invoiceNumber,
@@ -285,6 +292,16 @@ async function attribute(orgId: number, kind: PartyKind, raw: RawLine[]): Promis
         // No internal id is ever surfaced — the number column shows the payment reference when one
         // was recorded, and the row still carries its date, method and the document it settled.
         partyId, docType: "payment_in", number: p.reference?.trim() || "",
+        reference: against ? `Against ${against}` : (p.method ?? ""),
+        currency: inv?.currency ?? pf?.currency ?? "", paymentStatus: "", docId: p.id,
+      });
+      // F-10: the mirroring entry a reversal posts is attributed HERE, through the same payment and
+      // therefore the same party. Without this the line resolves to nothing and is dropped by the
+      // attribution filter, so the payment stayed on the statement while the reversal undoing it
+      // vanished — leaving the closing balance short by the payment, the opening balance short too
+      // when the payment predated the period, and the export carrying both errors.
+      out.set(keyOf("payment_reversal", p.id, AR_CODE), {
+        partyId, docType: "payment_in_reversal", number: p.reference?.trim() || "",
         reference: against ? `Against ${against}` : (p.method ?? ""),
         currency: inv?.currency ?? pf?.currency ?? "", paymentStatus: "", docId: p.id,
       });
@@ -356,7 +373,8 @@ async function attribute(orgId: number, kind: PartyKind, raw: RawLine[]): Promis
       }
     }
   } else {
-    const poIds = idsOf("purchase_order"), dnIds = idsOf("debit_note"), payIds = idsOf("payment");
+    const poIds = idsOf("purchase_order"), dnIds = idsOf("debit_note");
+    const payIds = [...new Set([...idsOf("payment"), ...idsOf("payment_reversal")])];
     const [pos, dns, pays] = await Promise.all([
       poIds.length ? db.select({
         id: purchaseOrdersTable.id, vendorId: purchaseOrdersTable.vendorId, number: purchaseOrdersTable.poNumber,
@@ -392,6 +410,11 @@ async function attribute(orgId: number, kind: PartyKind, raw: RawLine[]): Promis
       if (!po) continue;
       out.set(keyOf("payment", p.id, AP_CODE), {
         partyId: po.vendorId, docType: "payment_out", number: p.reference?.trim() || "",
+        reference: `Against ${po.number}`, currency: po.currency ?? "", paymentStatus: "", docId: p.id,
+      });
+      // F-10, the purchase side of the same defect — see the sales branch above.
+      out.set(keyOf("payment_reversal", p.id, AP_CODE), {
+        partyId: po.vendorId, docType: "payment_out_reversal", number: p.reference?.trim() || "",
         reference: `Against ${po.number}`, currency: po.currency ?? "", paymentStatus: "", docId: p.id,
       });
     }
