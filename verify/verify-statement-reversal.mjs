@@ -35,6 +35,7 @@
 import { chromium } from "playwright";
 import { Client } from "pg";
 import { readFile } from "node:fs/promises";
+import { assertFreshBuild } from "./assert-fresh-build.mjs";
 
 const BASE = "http://localhost:3000";
 const pass = "Qx7#vLm2$Rt9wZp4";
@@ -59,6 +60,9 @@ const reverseId = idFor("reversePaymentAction");
 check("found the Next-Action id for recordPaymentAction", !!recordId);
 check("found the Next-Action id for reversePaymentAction", !!reverseId);
 
+// Refuse to run against a stale build — this suite drove one during development and
+// reported a plausible, wrong number. The guard is a precondition, not a post-mortem.
+await assertFreshBuild(BASE);
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || "/opt/pw-browsers/chromium" });
 const ctx = await browser.newContext();
 const page = await ctx.newPage();

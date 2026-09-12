@@ -95,20 +95,12 @@ export function paidAfterReversal(args: {
   };
 }
 
-/**
- * A sales invoice's status after its paid amount moves — the REAL status set, with the document's
- * own epsilon rather than a fixed half-cent.
+/*
+ * There WAS an `invoiceStatusAfter(newPaid, total, docCurrency)` here. It has been removed rather
+ * than left beside its replacement, because a second status formula is precisely how this defect
+ * happened: it predated the three-channel settlement split by one day, never learned about
+ * `creditedAmount`, and stayed in use at the one call site the split missed. Status now comes from
+ * `settlementOf` in src/lib/settlement.ts, which every other consumer already used.
  *
- * An invoice returned to `sent` becomes voidable again, which is correct: it is in exactly the
- * state it was in before the payment, and that state has always allowed void. The reversal's own
- * entry is keyed `payment_reversal` while a void posts under `sales_invoice`, so a later void adds
- * a third entry rather than colliding with either.
- *
- * There is no purchase-order counterpart on purpose — see the action.
+ * There is still no purchase-order counterpart, on purpose — see the action.
  */
-export function invoiceStatusAfter(newPaid: string, total: string, docCurrency: string): string {
-  const eps = moneyEpsilon(docCurrency);
-  if (Number(newPaid) <= eps) return "sent";
-  if (Number(newPaid) >= Number(total) - eps) return "paid";
-  return "partially_paid";
-}

@@ -23,7 +23,7 @@ import { lockAdvanceAndReadPot, availabilityOf, carriedBaseFor } from "@/lib/adv
 import { logActivity } from "@/lib/activity";
 import { recordAudit } from "@/lib/security/audit";
 import { settlementOf } from "@/lib/settlement";
-import { reversalRefusal, mirrorLines, paidAfterReversal, invoiceStatusAfter } from "@/lib/payment-reversal";
+import { reversalRefusal, mirrorLines, paidAfterReversal } from "@/lib/payment-reversal";
 
 export type ActionResult = {
   error?: string;
@@ -962,11 +962,11 @@ export async function reversePaymentAction(paymentId: number): Promise<ActionRes
     if (payment.sales_invoice_id !== null) {
       const invLock = await tx.execute(sql`
         select invoice_number, currency, total::text as total, paid_amount::text as paid_amount,
-               base_paid_amount::text as base_paid_amount, status
+               base_paid_amount::text as base_paid_amount, credited_amount::text as credited_amount, status
           from sales_invoices where id = ${payment.sales_invoice_id} and org_id = ${session.orgId} for update`);
       const inv = (invLock.rows as unknown as {
         invoice_number: string; currency: string | null; total: string; paid_amount: string;
-        base_paid_amount: string | null; status: string;
+        base_paid_amount: string | null; credited_amount: string; status: string;
       }[])[0];
       if (!inv) return { error: "Invoice not found." } as const;
       if (inv.status === "void") return { error: "This invoice has been voided; its payments cannot be reversed." } as const;
@@ -982,7 +982,17 @@ export async function reversePaymentAction(paymentId: number): Promise<ActionRes
         .set({
           paidAmount: paid.paidAmount,
           basePaidAmount: paid.basePaidAmount,
-          status: invoiceStatusAfter(paid.paidAmount, inv.total, inv.currency ?? session.orgCurrency),
+          // Settlement has THREE channels — paid, credited, and the remainder — so the status
+          // after a reversal must read all of them. Reading only paid/total reported an invoice
+          // whose credit note still settles it as `sent`, putting a settled document back on the
+          // collections worklist. `settlementOf` is the one holder of that identity; every other
+          // consumer already goes through it.
+          status: settlementOf({
+            total: inv.total,
+            paid: paid.paidAmount,
+            credited: inv.credited_amount,
+            docCurrency: inv.currency ?? session.orgCurrency,
+          }).status,
           updatedAt: new Date(),
         })
         .where(eq(salesInvoicesTable.id, payment.sales_invoice_id));
@@ -1010,7 +1020,7 @@ export async function reversePaymentAction(paymentId: number): Promise<ActionRes
       // `recordPaymentAction`'s PO branch likewise writes paidAmount/basePaidAmount and nothing
       // else, so paying a PO in full leaves it `received`. Reversal mirrors the write path rather
       // than inventing a lifecycle here. If POs ever gain `partially_paid`/`paid`, add the
-      // `invoiceStatusAfter`-shaped recompute HERE and in the PO branch of recordPaymentAction
+      // `settlementOf`-shaped recompute HERE and in the PO branch of recordPaymentAction
       // together — see docs/backlog.md, "give purchase orders paid statuses", which lists the rest
       // of the blast radius.
       await tx
