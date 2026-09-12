@@ -1,0 +1,171 @@
+{
+  "org": 5,
+  "uid": 5,
+  "scenarios": {
+    "A": {
+      "kind": "client",
+      "partyId": 7,
+      "invoiceId": 7,
+      "paymentId": 8,
+      "from": "2026-08-01",
+      "to": "2026-09-30"
+    },
+    "B": {
+      "kind": "vendor",
+      "partyId": 3,
+      "poId": 3,
+      "paymentId": 9,
+      "from": "2026-08-01",
+      "to": "2026-09-30"
+    },
+    "C": {
+      "kind": "client",
+      "partyId": 8,
+      "invoiceId": 8,
+      "paymentId": 10,
+      "from": "2026-08-01",
+      "to": "2026-09-30"
+    },
+    "D": {
+      "kind": "vendor",
+      "partyId": 3,
+      "poId": 3,
+      "paymentId": 9,
+      "from": "2026-08-01",
+      "to": "2026-09-30",
+      "note": "PO dated 2026-07-01, outside the range"
+    }
+  },
+  "ledger": [
+    {
+      "source_type": "sales_invoice",
+      "source_id": 8,
+      "d": "2026-06-01",
+      "code": "1100",
+      "dr": "1000.000",
+      "cr": "0.000"
+    },
+    {
+      "source_type": "payment",
+      "source_id": 10,
+      "d": "2026-06-15",
+      "code": "1000",
+      "dr": "400.000",
+      "cr": "0.000"
+    },
+    {
+      "source_type": "payment",
+      "source_id": 10,
+      "d": "2026-06-15",
+      "code": "1100",
+      "dr": "0.000",
+      "cr": "400.000"
+    },
+    {
+      "source_type": "purchase_order",
+      "source_id": 3,
+      "d": "2026-07-01",
+      "code": "2000",
+      "dr": "0.000",
+      "cr": "1000.000"
+    },
+    {
+      "source_type": "sales_invoice",
+      "source_id": 7,
+      "d": "2026-07-01",
+      "code": "1100",
+      "dr": "1000.000",
+      "cr": "0.000"
+    },
+    {
+      "source_type": "payment",
+      "source_id": 8,
+      "d": "2026-08-05",
+      "code": "1000",
+      "dr": "400.000",
+      "cr": "0.000"
+    },
+    {
+      "source_type": "payment",
+      "source_id": 8,
+      "d": "2026-08-05",
+      "code": "1100",
+      "dr": "0.000",
+      "cr": "400.000"
+    },
+    {
+      "source_type": "payment",
+      "source_id": 9,
+      "d": "2026-08-05",
+      "code": "1000",
+      "dr": "0.000",
+      "cr": "400.000"
+    },
+    {
+      "source_type": "payment",
+      "source_id": 9,
+      "d": "2026-08-05",
+      "code": "2000",
+      "dr": "400.000",
+      "cr": "0.000"
+    },
+    {
+      "source_type": "payment_reversal",
+      "source_id": 8,
+      "d": "2026-09-12",
+      "code": "1000",
+      "dr": "0.000",
+      "cr": "400.000"
+    },
+    {
+      "source_type": "payment_reversal",
+      "source_id": 8,
+      "d": "2026-09-12",
+      "code": "1100",
+      "dr": "400.000",
+      "cr": "0.000"
+    },
+    {
+      "source_type": "payment_reversal",
+      "source_id": 9,
+      "d": "2026-09-12",
+      "code": "1000",
+      "dr": "400.000",
+      "cr": "0.000"
+    },
+    {
+      "source_type": "payment_reversal",
+      "source_id": 9,
+      "d": "2026-09-12",
+      "code": "2000",
+      "dr": "0.000",
+      "cr": "400.000"
+    },
+    {
+      "source_type": "payment_reversal",
+      "source_id": 10,
+      "d": "2026-09-12",
+      "code": "1000",
+      "dr": "0.000",
+      "cr": "400.000"
+    },
+    {
+      "source_type": "payment_reversal",
+      "source_id": 10,
+      "d": "2026-09-12",
+      "code": "1100",
+      "dr": "400.000",
+      "cr": "0.000"
+    }
+  ],
+  "control": [
+    {
+      "code": "1100",
+      "bal": "2000.000"
+    },
+    {
+      "code": "2000",
+      "bal": "-1000.000"
+    }
+  ]
+}

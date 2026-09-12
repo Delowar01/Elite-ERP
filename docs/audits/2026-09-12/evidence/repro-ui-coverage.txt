@@ -1,0 +1,103 @@
+registered fixture org, logged in as owner
+
+── 1. RESPONSIVE — horizontal overflow (documentElement.scrollWidth > clientWidth + 2px) ──
+   desktop 1440x900: 0 of 29 routes overflow horizontally
+   tablet 768x1024: 29 of 29 routes overflow horizontally
+      · /dashboard  (+217px; widest ? @0px vs viewport 768)
+      · /sales/quotations  (+217px; widest ? @0px vs viewport 768)
+      · /sales/invoices  (+217px; widest ? @0px vs viewport 768)
+      · /sales/invoices/new  (+217px; widest table.doc-items-table @800px vs viewport 768)
+      · /sales/proforma  (+217px; widest ? @0px vs viewport 768)
+      · /sales/credit-notes  (+217px; widest ? @0px vs viewport 768)
+      · /purchasing/orders  (+217px; widest ? @0px vs viewport 768)
+      · /purchasing/debit-notes  (+217px; widest ? @0px vs viewport 768)
+      · /purchasing/vendors  (+217px; widest ? @0px vs viewport 768)
+      · /inventory/products  (+217px; widest ? @0px vs viewport 768)
+      · /clients  (+217px; widest ? @0px vs viewport 768)
+      · /projects  (+217px; widest ? @0px vs viewport 768)
+      · /finance/payments  (+217px; widest ? @0px vs viewport 768)
+      · /finance/reports  (+217px; widest ? @0px vs viewport 768)
+      · /finance/statements  (+217px; widest ? @0px vs viewport 768)
+      · /finance/chart-of-accounts  (+217px; widest ? @0px vs viewport 768)
+      · /finance/bank-accounts  (+217px; widest ? @0px vs viewport 768)
+      · /finance/journal  (+217px; widest ? @0px vs viewport 768)
+      · /finance/ledger  (+217px; widest ? @0px vs viewport 768)
+      · /hr/employees  (+217px; widest ? @0px vs viewport 768)
+      · /hr/departments  (+217px; widest ? @0px vs viewport 768)
+      · /hr/attendance  (+217px; widest ? @0px vs viewport 768)
+      · /hr/leave  (+217px; widest ? @0px vs viewport 768)
+      · /hr/payroll  (+217px; widest ? @0px vs viewport 768)
+      · /settings/organization  (+217px; widest ? @0px vs viewport 768)
+      · /settings/team  (+217px; widest ? @0px vs viewport 768)
+      · /settings/presets  (+217px; widest ? @0px vs viewport 768)
+      · /settings/security  (+217px; widest ? @0px vs viewport 768)
+      · /settings/compliance  (+217px; widest ? @0px vs viewport 768)
+   mobile 390x844: 29 of 29 routes overflow horizontally
+      · /dashboard  (+555px; widest div.topbar-actions @653px vs viewport 390)
+      · /sales/quotations  (+555px; widest div.topbar-actions @653px vs viewport 390)
+      · /sales/invoices  (+555px; widest div.topbar-actions @653px vs viewport 390)
+      · /sales/invoices/new  (+555px; widest table.doc-items-table @800px vs viewport 390)
+      · /sales/proforma  (+555px; widest div.topbar-actions @653px vs viewport 390)
+      · /sales/credit-notes  (+555px; widest div.topbar-actions @653px vs viewport 390)
+      · /purchasing/orders  (+555px; widest div.topbar-actions @653px vs viewport 390)
+      · /purchasing/debit-notes  (+555px; widest div.topbar-actions @653px vs viewport 390)
+      · /purchasing/vendors  (+555px; widest div.topbar-actions @653px vs viewport 390)
+      · /inventory/products  (+555px; widest div.topbar-actions @653px vs viewport 390)
+      · /clients  (+555px; widest div.topbar-actions @653px vs viewport 390)
+      · /projects  (+555px; widest div.topbar-actions @653px vs viewport 390)
+      · /finance/payments  (+555px; widest div.topbar-actions @653px vs viewport 390)
+      · /finance/reports  (+555px; widest div.topbar-actions @653px vs viewport 390)
+      · /finance/statements  (+555px; widest div.topbar-actions @653px vs viewport 390)
+      · /finance/chart-of-accounts  (+555px; widest div.topbar-actions @653px vs viewport 390)
+      · /finance/bank-accounts  (+555px; widest div.topbar-actions @653px vs viewport 390)
+      · /finance/journal  (+555px; widest div.topbar-actions @653px vs viewport 390)
+      · /finance/ledger  (+555px; widest div.topbar-actions @653px vs viewport 390)
+      · /hr/employees  (+555px; widest div.topbar-actions @653px vs viewport 390)
+      · /hr/departments  (+555px; widest div.topbar-actions @653px vs viewport 390)
+      · /hr/attendance  (+555px; widest div.topbar-actions @653px vs viewport 390)
+      · /hr/leave  (+555px; widest div.topbar-actions @653px vs viewport 390)
+      · /hr/payroll  (+555px; widest div.topbar-actions @653px vs viewport 390)
+      · /settings/organization  (+555px; widest div.topbar-actions @653px vs viewport 390)
+      · /settings/team  (+555px; widest div.topbar-actions @653px vs viewport 390)
+      · /settings/presets  (+555px; widest div.topbar-actions @653px vs viewport 390)
+      · /settings/security  (+555px; widest div.topbar-actions @653px vs viewport 390)
+      · /settings/compliance  (+555px; widest div.topbar-actions @653px vs viewport 390)
+
+── 2. ARABIC — user-visible Latin-script text remaining after switching locale ──
+   dir attribute in Arabic: rtl
+   routes carrying residual Latin words: 29 of 29
+      · /dashboard  [3] INNOVATION, SOLUTIONS, bdsifk
+      · /sales/quotations  [3] INNOVATION, SOLUTIONS, bdsifk
+      · /sales/invoices  [3] INNOVATION, SOLUTIONS, bdsifk
+      · /sales/invoices/new  [11] INNOVATION, SOLUTIONS, bdsifk, INV-, Receipt, Item, Description, Unit, Price, Amount, Total
+      · /sales/proforma  [3] INNOVATION, SOLUTIONS, bdsifk
+      · /sales/credit-notes  [10] INNOVATION, SOLUTIONS, bdsifk, credit, notes, Open, sent, invoice, issue, against
+      · /purchasing/orders  [3] INNOVATION, SOLUTIONS, bdsifk
+      · /purchasing/debit-notes  [11] INNOVATION, SOLUTIONS, bdsifk, debit, notes, Open, received, purchase, order, issue, against
+      · /purchasing/vendors  [18] INNOVATION, SOLUTIONS, bdsifk, Vendors, Suppliers, used, purchase, orders, debit, notes, Recycle, Vendor
+      · /inventory/products  [18] INNOVATION, SOLUTIONS, bdsifk, Products, Inventory, catalog, used, across, quotations, orders, invoices, Recycle
+      · /clients  [19] INNOVATION, SOLUTIONS, bdsifk, Clients, Customer, directory, used, across, quotations, orders, invoices, Recycle
+      · /projects  [3] INNOVATION, SOLUTIONS, bdsifk
+      · /finance/payments  [3] INNOVATION, SOLUTIONS, bdsifk
+      · /finance/reports  [4] INNOVATION, SOLUTIONS, bdsifk, Excel
+      · /finance/statements  [7] INNOVATION, SOLUTIONS, bdsifk, Search, Document, type, Excel
+      · /finance/chart-of-accounts  [3] INNOVATION, SOLUTIONS, bdsifk
+      · /finance/bank-accounts  [5] INNOVATION, SOLUTIONS, bdsifk, Cash, Hand
+      · /finance/journal  [3] INNOVATION, SOLUTIONS, bdsifk
+      · /finance/ledger  [3] INNOVATION, SOLUTIONS, bdsifk
+      · /hr/employees  [6] INNOVATION, SOLUTIONS, bdsifk, Finance, Operations, Sales
+      · /hr/departments  [16] INNOVATION, SOLUTIONS, bdsifk, Departments, filter, tabs, Employees, departments, Operations, Finance, Logistics, Sales
+      · /hr/attendance  [3] INNOVATION, SOLUTIONS, bdsifk
+      · /hr/leave  [3] INNOVATION, SOLUTIONS, bdsifk
+      · /hr/payroll  [3] INNOVATION, SOLUTIONS, bdsifk
+      · /settings/organization  [12] INNOVATION, SOLUTIONS, bdsifk, Fiscal, Year, Configuration, Users, Integrations, editable, two-color, brand, gradient
+      · /settings/team  [9] INNOVATION, SOLUTIONS, bdsifk, Fiscal, Year, Configuration, Users, Integrations, Email
+      · /settings/presets  [5] INNOVATION, SOLUTIONS, bdsifk, Standard, Zero-rated
+      · /settings/security  [8] INNOVATION, SOLUTIONS, bdsifk, Chrome, Linux, account, created, info
+      · /settings/compliance  [4] INNOVATION, SOLUTIONS, bdsifk, AES-
+
+── 3. KEYBOARD — tab reachability and focus visibility ──
+   /dashboard             focusable  57  · reached by Tab (first 30) 30  · with a visible focus indicator 30
+   /sales/invoices        focusable  54  · reached by Tab (first 30) 30  · with a visible focus indicator 30
+   /sales/invoices/new    focusable  80  · reached by Tab (first 30) 30  · with a visible focus indicator 30
+   /clients               focusable  51  · reached by Tab (first 30) 30  · with a visible focus indicator 30

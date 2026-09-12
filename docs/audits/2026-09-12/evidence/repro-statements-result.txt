@@ -1,0 +1,42 @@
+AUDIT REPRODUCTION — getStatement vs ledger, org 5
+Ledger control balances for the whole org: 1100=2000.000  2000=-1000.000
+
+── Scenario A — client party 7, period 2026-08-01..2026-09-30
+   rows returned        : 1
+     · 2026-08-05  payment_in       REF-v2ebvm       Dr 0  Cr 400  bal undefined
+   opening balance      : 1000
+   closing balance      : 600
+   LEDGER balance @ 2026-09-30: 1000
+   DISAGREE  <-- statement does not reconcile to the ledger   (difference -400.000)
+   a reversal line present in the statement? NO
+   exported CSV rows    : 1
+
+── Scenario B — vendor party 3, period 2026-08-01..2026-09-30
+   rows returned        : 1
+     · 2026-08-05  payment_out      REF-fi2d9l       Dr 400  Cr 0  bal undefined
+   opening balance      : 1000
+   closing balance      : 600
+   LEDGER balance @ 2026-09-30: 1000
+   DISAGREE  <-- statement does not reconcile to the ledger   (difference -400.000)
+   a reversal line present in the statement? NO
+   exported CSV rows    : 1
+
+── Scenario C — client party 8, period 2026-08-01..2026-09-30
+   rows returned        : 0
+   opening balance      : 600
+   closing balance      : 600
+   LEDGER balance @ 2026-09-30: 1000
+   DISAGREE  <-- statement does not reconcile to the ledger   (difference -400.000)
+   a reversal line present in the statement? NO
+   exported CSV rows    : 0
+
+── Scenario D — vendor party 3, period 2026-08-01..2026-09-30 (PO dated 2026-07-01, outside the range)
+   rows returned        : 1
+     · 2026-08-05  payment_out      REF-fi2d9l       Dr 400  Cr 0  bal undefined
+   opening balance      : 1000
+   closing balance      : 600
+   LEDGER balance @ 2026-09-30: 1000
+   DISAGREE  <-- statement does not reconcile to the ledger   (difference -400.000)
+   a reversal line present in the statement? NO
+   exported CSV rows    : 1
+

@@ -1,0 +1,38 @@
+── 1. Column types (schema as pushed) ──
+   products.quantity_on_hand: integer(32,0)
+   sales_invoice_items.quantity: numeric(12,2)
+   purchase_order_items.quantity: numeric(12,2)
+
+── 2. The truncation the posting paths apply (Math.trunc, 5 call sites) ──
+   document quantity 1.5  ->  stock moves by 1
+   document quantity 0.5  ->  stock moves by 0
+   document quantity 2.75  ->  stock moves by 2
+   document quantity 0.25  ->  stock moves by 0
+   document quantity 3  ->  stock moves by 3
+
+── 3. What the INTEGER column does with a fraction (adjustStockAction's path) ──
+   delta 1.5: bound as a PARAMETER -> ERROR 22P02 invalid input syntax for type integer: "1.5"
+             as an inline LITERAL cast  -> 2  (rounds half away from zero)
+   delta 0.5: bound as a PARAMETER -> ERROR 22P02 invalid input syntax for type integer: "0.5"
+             as an inline LITERAL cast  -> 1  (rounds half away from zero)
+   delta 2.5: bound as a PARAMETER -> ERROR 22P02 invalid input syntax for type integer: "2.5"
+             as an inline LITERAL cast  -> 3  (rounds half away from zero)
+   Drizzle binds parameters, so the parameter row is the one that applies: the write FAILS.
+
+── 4. The disagreement, stated plainly ──
+   the SAME fractional quantity of 1.5:
+     · through a document posting (invoice / PO receipt / debit note): stock moves by 1
+     · through adjustStockAction: the update is REJECTED by Postgres (22P02) and the action throws
+   and 0.5:
+     · through a document posting: stock moves by 0  (no movement at all)
+     · through adjustStockAction: likewise rejected — no adjustment is possible at all
+
+── 5. Accumulated drift on repeated 1.5 movements through documents ──
+   receipt 1: real 1.5  ·  quantity_on_hand 1  ·  drift 0.5
+   receipt 2: real 3.0  ·  quantity_on_hand 2  ·  drift 1.0
+   receipt 3: real 4.5  ·  quantity_on_hand 3  ·  drift 1.5
+   receipt 4: real 6.0  ·  quantity_on_hand 4  ·  drift 2.0
+
+── 6. Money is NOT affected ──
+   an invoice line of 1.5 @ 200.000 posts 300.000 — quantity is numeric(12,2) on the document,
+   so pricing, tax and the ledger are all correct. Only the stock counter truncates.

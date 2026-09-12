@@ -1,0 +1,51 @@
+== 1. db_mig: apply committed migrations 0000..0004 in journal order ==
+   applied 0000_brainy_iron_lad.sql
+   applied 0001_marvelous_maximus.sql
+   applied 0002_strange_mad_thinker.sql
+   applied 0003_careful_nomad.sql
+   applied 0004_wooden_christian_walker.sql
+== 2. db_push: drizzle-kit push from the current schema ==
+   pushed
+
+== 3. Shape of each database ==
+   db_mig  tables: 59   columns: 609
+   db_push tables: 66   columns: 812
+
+== 4. THE GAP a new 0005 would have to carry ==
+   columns in BOTH                       : 608
+   columns ONLY in db_push (must be ADDED): 204
+   columns ONLY in db_mig  (must be DROPPED): 1
+      - terms_conditions_groups.content
+
+   ARITHMETIC, stated so the two figures are not mistaken for an error:
+     db_mig  = BOTH + only-mig  = 608 + 1 = 609
+     db_push = BOTH + only-push = 608 + 204 = 812
+     net total difference       = 812 - 609 = 203
+     The ADD count (204) and the NET count (203) differ by exactly the 1 dropped column.
+
+   -- tables entirely absent from the migrated database --
+      advance_application_releases
+      advance_applications
+      document_attachments
+      document_column_configs
+      exchange_rates
+      rate_fetch_attempts
+      seal_signature_assets
+
+== 4b. Are any SHARED columns modified (type/nullability/default)? ==
+   fingerprint rows only in db_mig : 1   (identity-only figure was 1)
+   fingerprint rows only in db_push: 204   (identity-only figure was 204)
+   The fingerprint and identity figures are EQUAL, so no shared column differs in type,
+   nullability or default. The gap is purely additive plus one drop.
+
+== 4c. The one dropped column, and why drizzle-kit stops ==
+   db_mig terms_conditions_groups: id integer, org_id integer, name text, document_type text, content text, is_default boolean
+   db_push terms_conditions_groups: id integer, org_id integer, name text, document_type text, terms jsonb, is_default boolean
+   Exactly ONE table has a deleted column, and that same table gains one, so drizzle-kit
+   cannot tell a RENAME from a DROP+CREATE and must ask. That is the single column-conflict
+   prompt behind the TTY failure — there is exactly one.
+
+== 5. Do the audit triggers exist in either? ==
+   db_mig: 0 of 2 append-only triggers
+   db_push: 0 of 2 append-only triggers
+   (db:harden installs them; a migrations-only path does NOT)

@@ -1,0 +1,36 @@
+Next-Action ids: recordPaymentAction=407773819e1b9d73f9e4fe294978b82dd02678defd reversePaymentAction=400cacd99e2ed5d646e15d6501d7d993fcee18bdea
+registered org, genuine OWNER cookie captured: true
+
+── A. CLIENT — invoice 1,000 (2026-07-01), payment 400 (2026-08-05), reverse
+   recordPaymentAction -> {"status":200,"wrote":true}
+   payment row: {"id":8,"amount":"400.000","payment_date":"2026-08-05","reversed_at":null}
+   reversePaymentAction -> {"status":200,"body":"0:{\"a\":\"$@1\",\"f\":\"\",\"q\":\"\",\"i\":false,\"b\":\"FrBW8EC6Re8FEzbau3oNw\"}\n1:{}\n"}
+   reversed_at now: Sat Sep 12 2026 16:30:38 GMT+0000 (Coordinated Universal Time)
+
+── B. VENDOR — PO 1,000 (2026-07-01), payment 400 (2026-08-05), reverse
+   recordPaymentAction -> {"status":200,"wrote":true}
+   payment row: {"id":9,"amount":"400.000","payment_date":"2026-08-05","reversed_at":null}
+   reversePaymentAction -> {"status":200,"body":"0:{\"a\":\"$@1\",\"f\":\"\",\"q\":\"\",\"i\":false,\"b\":\"FrBW8EC6Re8FEzbau3oNw\"}\n1:{}\n"}
+
+── C. CLIENT — payment 400 on 2026-06-15 (BEFORE period), reversal inside period
+   recordPaymentAction -> {"status":200,"wrote":true}
+   payment row: {"id":10,"amount":"400.000","payment_date":"2026-06-15","reversed_at":null}
+   reversePaymentAction -> {"status":200,"body":"0:{\"a\":\"$@1\",\"f\":\"\",\"q\":\"\",\"i\":false,\"b\":\"FrBW8EC6Re8FEzbau3oNw\"}\n1:{}\n"}
+
+── LEDGER (source of truth) ──
+   2026-06-01 sales_invoice#8 1100 Dr 1000.000 Cr 0.000
+   2026-06-15 payment#10 1000 Dr 400.000 Cr 0.000
+   2026-06-15 payment#10 1100 Dr 0.000 Cr 400.000
+   2026-07-01 purchase_order#3 2000 Dr 0.000 Cr 1000.000
+   2026-07-01 sales_invoice#7 1100 Dr 1000.000 Cr 0.000
+   2026-08-05 payment#8 1000 Dr 400.000 Cr 0.000
+   2026-08-05 payment#8 1100 Dr 0.000 Cr 400.000
+   2026-08-05 payment#9 1000 Dr 0.000 Cr 400.000
+   2026-08-05 payment#9 2000 Dr 400.000 Cr 0.000
+   2026-09-12 payment_reversal#8 1000 Dr 0.000 Cr 400.000
+   2026-09-12 payment_reversal#8 1100 Dr 400.000 Cr 0.000
+   2026-09-12 payment_reversal#9 1000 Dr 400.000 Cr 0.000
+   2026-09-12 payment_reversal#9 2000 Dr 0.000 Cr 400.000
+   2026-09-12 payment_reversal#10 1000 Dr 0.000 Cr 400.000
+   2026-09-12 payment_reversal#10 1100 Dr 400.000 Cr 0.000
+   control balances: 1100=2000.000  2000=-1000.000
