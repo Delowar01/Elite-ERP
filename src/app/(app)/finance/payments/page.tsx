@@ -1,4 +1,5 @@
 import { eq, and, desc, inArray, sql } from "drizzle-orm";
+import { settlementOf } from "@/lib/settlement";
 import { db, paymentsTable, bankAccountsTable, salesInvoicesTable, customersTable, purchaseOrdersTable, vendorsTable } from "@/db";
 import { advanceInvoiceLinks } from "@/lib/advance-payment-links";
 import { requireSession } from "@/lib/session";
@@ -52,6 +53,7 @@ export default async function PaymentsPage() {
         customerName: customersTable.name,
         total: salesInvoicesTable.total,
         paidAmount: salesInvoicesTable.paidAmount,
+        creditedAmount: salesInvoicesTable.creditedAmount,
         currency: salesInvoicesTable.currency,
       })
       .from(salesInvoicesTable)
@@ -91,13 +93,24 @@ export default async function PaymentsPage() {
     id: r.id,
     invoiceNumber: r.invoiceNumber,
     customerName: r.customerName,
-    balance: Number(r.total) - Number(r.paidAmount),
+    // Settlement has three channels, and this figure is the one a person acts on — it pre-fills the
+    // amount field, so an overstatement is what gets accepted by default. `total − paidAmount` left
+    // every credited invoice looking more collectible than it is. `settlementOf` is the same helper
+    // the invoice page, the reversal action and the credit-note action settle through.
+    balance: Number(settlementOf({
+      total: r.total,
+      paid: r.paidAmount,
+      credited: r.creditedAmount ?? "0",
+      docCurrency: r.currency ?? session.orgCurrency,
+    }).outstanding),
     currency: r.currency,
   }));
   const outstandingPos = outstandingPoRows.map((r) => ({
     id: r.id,
     poNumber: r.poNumber,
     vendorName: r.vendorName,
+    // Purchase orders have NO credited column — `total − paidAmount` is the whole identity here,
+    // and mirroring the invoice change onto this row would invent a channel that does not exist.
     balance: Number(r.total) - Number(r.paidAmount),
     currency: r.currency,
   }));
