@@ -76,7 +76,7 @@
     "jose": "^6.2.3",
     "lucide-react": "^1.24.0",
     "n2words": "^5.1.2",
-    "next": "16.2.10",
+    "next": "16.3.5",
     "pdf-lib": "^1.17.1",
     "pg": "^8.22.0",
     "puppeteer-core": "^24.43.1",
@@ -100,7 +100,7 @@
     "dotenv": "^17.4.2",
     "drizzle-kit": "^0.31.10",
     "eslint": "^9",
-    "eslint-config-next": "16.2.10",
+    "eslint-config-next": "16.3.5",
     "playwright": "^1.61.1",
     "tailwindcss": "^4",
     "typescript": "^5"
