@@ -123,6 +123,9 @@ $ node -e 'console.log(require("./package.json").scripts["verify:server"].split(
 24
 ```
 
+*Counted under **Rule B** — see §17, which names the rule and shows why this
+total is not directly comparable with a Rule A figure.*
+
 | Tier | Suites | Reporting a count | Assertions counted | Result |
 |---|---|---|---|---|
 | **Static** | **8** | 6 as `N/N checks`, 2 as `N passed` | **388** | PASS, 0 fail |
@@ -438,10 +441,16 @@ Error: ENOENT: no such file or directory, open
 ```
 
 The route is at `src/app/uploads/[...path]/route.ts`. `readFileSync` throws, Node
-exits 1, the job stops. **Eleven assertions never execute** — the upload route's
+exits 1, the job stops. **Ten assertions never execute** — the upload route's
 session/signed-URL/org/audit checks, the signed-URL HMAC/`timingSafeEqual`/expiry
 checks, the login rate-limit and MFA checks, `.env is gitignored`, and **`no
-insecure AUTH_SECRET fallback`**. CI's security coverage is 6 assertions, not 17.
+insecure AUTH_SECRET fallback`**. CI's security coverage is 6 assertions, not 16.
+
+> **Corrected during Batch 1 (C-14).** This section previously said 17 assertions
+> and 11 unreached. The file at `e8969a1` has **16** `ok()` calls — 6 reached,
+> **10** not — and the two security files hold **34** between them, not 35. The
+> Batch 1 repair adds a resolution guard, so the suite now reports 17/17; that 17
+> is the count *after* the fix.
 
 **Corrected claim.** The first report said "CI has never verified that this
 application builds." The evidence supports only: **in the 10 most recent runs on
@@ -600,3 +609,84 @@ bash docs/audits/2026-09-12/evidence/repro-migration-baseline.sh
 - **The browser sweep is a sweep, not an audit.** Overflow is one metric; keyboard reachability is the first 30 tab stops on 4 routes; the Arabic sweep detects Latin text, not translation *quality*.
 - **Screen-reader behaviour, payroll arithmetic against a worked example, a restore drill, load testing, penetration testing and `scripts/tests/` remain not yet examined** — §2.3 of the audit separates these from the one genuinely blocked area.
 - **No regulatory or compliance determination is made.** None can be made from source code, and no authoritative regulatory source was consulted for that purpose.
+
+
+---
+
+## 17. Counting convention, and the Batch 1 comparison
+
+*Added during the Batch 1 correction pass. The figures in §5 above are the audit's
+own run at `04457ff` and are not restated; this section names the rule they used
+so a later total can be compared with them honestly.*
+
+### 17.1 The problem this section fixes
+
+§5's total of **2,467** and the Batch 1 report's **2,389** were computed under
+different rules, so the second looked like a *decrease* after a batch that only
+added suites. Neither number was wrong; the comparison was.
+
+### 17.2 Two rules, each stated explicitly
+
+**Rule A — self-reported totals only.**
+Each executed suite contributes the numeric total it prints for itself
+(`N/N checks`, or `N passed, 0 failed`). A suite printing no numeric total
+contributes **0 assertions and 1 suite**, and is named.
+
+**Rule B — Rule A, plus `PASS` lines from suites that print no total.**
+For a suite that emits per-assertion `PASS` lines but no summary, count the
+lines.
+
+**Rule B is not universally applicable, and that is the whole difficulty.** The
+browser runner prints *one summary line per suite*, not per-assertion output, so
+for the ten browser suites that report no total there are **no PASS lines to
+count** — their assertion counts are simply not observable from the tier's
+output. Rule B therefore equals Rule A on the browser tier, and the §5 total
+applied the hybrid to the server tier alone. That is why 2,467 is internally
+mixed.
+
+**Rule A is the one to quote when comparing across runs**, because it means the
+same thing on every tier. Rule B is reported alongside it for continuity with §5.
+
+### 17.3 Baseline `e8969a1` vs Batch 1 `adeabc0`, both rules
+
+| | Baseline suites | Baseline A | Baseline B | Batch 1 suites | Batch 1 A | Batch 1 B |
+|---|---|---|---|---|---|---|
+| Static | 8 | 388 | 388 | **9** | **414** | **414** |
+| Server | 24 | 957 | 1,107 | 24 | **966** | **1,116** |
+| Browser | 36 | 972 | 972 † | **39** | **1,018** | **1,018** † |
+| **Total** | **68** | **2,317** | **2,467** | **72** | **2,398** | **2,548** |
+
+† Rule B is inapplicable on this tier (see §17.2) and falls back to Rule A.
+
+**Non-numeric suites, unchanged by Batch 1:** `verify:db-hardening` is a state
+gate — it asserts that two database triggers exist and prints no count.
+`verify:client-import` (60 `PASS` lines) and `verify:import` (90) print no total;
+both figures are **unchanged** from the baseline. Ten browser suites report no
+total: `bank-opening`, `color-theme`, `compliance-claims`, `dark-theme`,
+`draft-buttons`, `draft-func`, `edit`, `preset-zatca`, `print-apply`,
+`proforma-payments`.
+
+### 17.4 The delta reconciles exactly
+
+**+4 suites, +81 assertions**, identical under either rule:
+
+| Source | Suites | Assertions |
+|---|---|---|
+| `verify-backup-claims.mts` (new, static) | +1 | +26 |
+| `verify-project-costing.mts` (F-2 cases added to an existing suite) | 0 | +9 (41 → 50) |
+| `verify-statement-reversal.mjs` (new, browser) | +1 | +25 |
+| `verify-reversal-status.mjs` (new, browser) | +1 | +16 |
+| `verify-register-outstanding.mjs` (new, browser) | +1 | +5 |
+| **Total** | **+4** | **+81** |
+
+2,317 + 81 = **2,398** (Rule A) · 2,467 + 81 = **2,548** (Rule B). No existing
+suite's count moved, and no test was altered to change a count.
+
+### 17.5 Outside the tiers
+
+`tests/security/` is counted separately from the verify tiers in both runs:
+`crypto-policy` 18/18 and `access-control` **17/17** at Batch 1 (16 assertions at
+the baseline, of which only 6 executed — see C-14).
+
+`verify-duedate.mjs` remains reachable by **no** runner and is in neither total.
+Wiring it in is Batch 5.

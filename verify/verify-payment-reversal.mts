@@ -29,7 +29,8 @@
  * genuinely diverge, and every mutation runs against all four.
  */
 import { Pool } from "pg";
-import { reversalRefusal, mirrorLines, paidAfterReversal, invoiceStatusAfter } from "../src/lib/payment-reversal";
+import { reversalRefusal, mirrorLines, paidAfterReversal } from "../src/lib/payment-reversal";
+import { settlementOf } from "../src/lib/settlement";
 import { roundMoney } from "../src/lib/currency/currencies";
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
@@ -158,8 +159,16 @@ async function reverse(paymentId: number, opts: { typeQualified?: boolean; recom
 
   await post(new Date().toISOString().slice(0, 10), `Payment reversed`, "payment_reversal", paymentId, lines);
   if (isInv) {
+    // This helper SIMULATES reversePaymentAction, so it has to settle the way the action settles —
+    // through `settlementOf`, reading the credited channel as well as the paid one. It used to call
+    // a separate two-term helper, which is how the simulation and production drifted apart and how
+    // F-1 survived 55/55 here. verify-reversal-status drives the real action for the same reason.
+    const credited = (await pool.query("select coalesce(credited_amount,0)::text c from sales_invoices where id=$1",
+      [p.sales_invoice_id])).rows[0].c as string;
     await pool.query("update sales_invoices set paid_amount=$1, base_paid_amount=$2, status=$3 where id=$4",
-      [paid.paidAmount, paid.basePaidAmount, invoiceStatusAfter(paid.paidAmount, doc.total, doc.currency ?? "SAR"), p.sales_invoice_id]);
+      [paid.paidAmount, paid.basePaidAmount,
+       settlementOf({ total: doc.total, paid: paid.paidAmount, credited, docCurrency: doc.currency ?? "SAR" }).status,
+       p.sales_invoice_id]);
   } else {
     await pool.query("update purchase_orders set paid_amount=$1, base_paid_amount=$2 where id=$3",
       [paid.paidAmount, paid.basePaidAmount, p.purchase_order_id]);
