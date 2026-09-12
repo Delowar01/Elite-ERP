@@ -250,6 +250,42 @@ check("health reads No Revenue Yet with nothing invoiced", fresh.health === "no_
 check("an empty project reports zeroes rather than failing",
   fresh.revenue.invoiced === 0 && fresh.cost.total === 0 && fresh.rows.revenue.length === 0);
 
+// ── 8. F-2: a REVERSED payment is not project cash ────────────────────────────────────────────
+// Cash received and cash paid are the two figures on this report that read the payments table
+// directly rather than the ledger, so they are the two that a reversal can leave stale. The
+// reversal itself is seeded here — reversePaymentAction's own correctness is verify-reversal-status
+// and verify-payment-reversal's job; what is under test is whether THESE queries honour it.
+const beforeRev = (await getProjectCostControl(org, proj, "SAR"))!;
+await pool.query("update payments set reversed_at = now(), reversed_by_id = $1 where org_id = $2 and reference = 'PAY-B'", [user, org]);
+await pool.query("update payments set reversed_at = now(), reversed_by_id = $1 where org_id = $2 and reference = 'PAY-P1'", [user, org]);
+const afterRev = (await getProjectCostControl(org, proj, "SAR"))!;
+
+check("F-2: a reversed customer payment leaves Received Payments",
+  near(afterRev.revenue.received, beforeRev.revenue.received - 15000),
+  `before ${beforeRev.revenue.received} -> after ${afterRev.revenue.received} (PAY-B 15,000 reversed)`);
+check("F-2: the surviving customer payment still counts",
+  near(afterRev.revenue.received, 10000), String(afterRev.revenue.received));
+check("F-2: the reversed payment's row is gone from the revenue drill-down",
+  !JSON.stringify(afterRev.rows.revenue).includes("PAY-B") && JSON.stringify(afterRev.rows.revenue).includes("PAY-A"));
+check("F-2: a reversed supplier payment leaves Amount Paid to Suppliers",
+  near(afterRev.cost.paidToSuppliers, 0),
+  `before ${beforeRev.cost.paidToSuppliers} -> after ${afterRev.cost.paidToSuppliers} (PAY-P1 6,000 reversed)`);
+check("F-2: the reversed supplier payment's row is gone from the cost drill-down",
+  !JSON.stringify(afterRev.rows.costs).includes("PAY-P1"));
+check("F-2: Outstanding Receivables follows the corrected cash figure",
+  near(afterRev.revenue.outstandingReceivable, afterRev.revenue.invoiced - 10000),
+  String(afterRev.revenue.outstandingReceivable));
+
+// The audit corrected an earlier claim that this defect distorted margins. It does not:
+// profit = invoiced − totalCost and margin = profit ÷ invoiced never read cash. Pinning that here
+// so the two concepts cannot be re-conflated by a later change.
+check("F-2: profit is UNCHANGED by a payment reversal (it reads invoiced, never cash)",
+  near(afterRev.profit, beforeRev.profit), `${beforeRev.profit} -> ${afterRev.profit}`);
+check("F-2: margin % is UNCHANGED by a payment reversal",
+  near(afterRev.marginPercent!, beforeRev.marginPercent!), `${beforeRev.marginPercent} -> ${afterRev.marginPercent}`);
+check("F-2: committed supplier cost is UNCHANGED (a reversal returns cash, not the commitment)",
+  near(afterRev.cost.purchase, beforeRev.cost.purchase), `${beforeRev.cost.purchase} -> ${afterRev.cost.purchase}`);
+
 const costOnly = await q("insert into projects (org_id,name) values ($1,'Cost Only') returning id", [org]);
 await q(PO, [org, "PO-C", vend, costOnly, "2026-03-03", "received", 7000, 0, "SAR", user]);
 const co = (await getProjectCostControl(org, costOnly, "SAR"))!;

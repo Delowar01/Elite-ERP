@@ -248,6 +248,11 @@ export async function getProjectCostControl(
           // tagged), and `kind <> 'advance_receipt'` evaluates to NULL for those rows, which SQL
           // treats as not-true — plain inequality dropped every ordinary payment from the report.
           sql`${paymentsTable.kind} is distinct from 'advance_receipt'`,
+          // F-2: a REVERSED payment is not cash. reversePaymentAction keeps the original row on
+          // record and posts a mirroring entry, so the ledger self-corrects — but this figure reads
+          // the payments table directly, and without this predicate a reversed payment kept
+          // counting as money received. `reversed_at` is NULL for every payment that still stands.
+          isNull(paymentsTable.reversedAt),
           eq(salesInvoicesTable.projectId, projectId),
           activeOnly(salesInvoicesTable),
         ),
@@ -308,6 +313,8 @@ export async function getProjectCostControl(
         and(
           eq(paymentsTable.orgId, orgId),
           eq(paymentsTable.direction, "out"),
+          // The purchase side of the same defect — see the sales query above.
+          isNull(paymentsTable.reversedAt),
           eq(purchaseOrdersTable.projectId, projectId),
           activeOnly(purchaseOrdersTable),
         ),
