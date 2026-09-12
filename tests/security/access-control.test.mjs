@@ -1,7 +1,7 @@
 // Stage 11 Part 11 — committed, headless access-control / API-security regression (no server).
 // Scans the server-action + route surface and asserts the authorization and tenant-isolation
 // invariants that every mutating entry point must uphold. Runs in CI alongside crypto-policy.
-import { readFileSync, readdirSync, statSync } from "node:fs";
+import { readFileSync, readdirSync, statSync, globSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
@@ -48,7 +48,13 @@ const usesTenantScope = serverActionFiles.filter((f) => readFileSync(f, "utf8").
 ok("tenantScope is used broadly in server actions", usesTenantScope >= 5, String(usesTenantScope));
 
 // ---- 3. Private file route requires a session OR a verified signature ----
-const uploadRoute = readFileSync(join(root, "src/app/uploads/[folder]/[file]/route.ts"), "utf8");
+// The route was restructured from [folder]/[file] to a catch-all [...path] segment; this test kept
+// the old path and threw ENOENT here, taking the whole suite down at assertion 7 of 17 and skipping
+// CI's db:push and production build with it. Read the route through a resolved glob rather than a
+// hardcoded segment shape, so the next restructure fails an ASSERTION instead of crashing the file.
+const uploadRouteFile = globSync("src/app/uploads/**/route.ts", { cwd: root }).map((p) => join(root, p))[0];
+ok("upload route file was found", Boolean(uploadRouteFile), String(uploadRouteFile));
+const uploadRoute = uploadRouteFile ? readFileSync(uploadRouteFile, "utf8") : "";
 ok("upload route enforces session or signed URL", uploadRoute.includes("getSession") && uploadRoute.includes("verifySignedFile"));
 ok("upload route scopes files to the caller's org", uploadRoute.includes("session.orgId"));
 ok("upload route audits downloads", uploadRoute.includes("recordFileAccess"));
