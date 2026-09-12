@@ -1,9 +1,9 @@
 // Stage 11 Part 11 — committed, headless access-control / API-security regression (no server).
 // Scans the server-action + route surface and asserts the authorization and tenant-isolation
 // invariants that every mutating entry point must uphold. Runs in CI alongside crypto-policy.
-import { readFileSync, readdirSync, statSync, globSync } from "node:fs";
+import { readFileSync, readdirSync, statSync, existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { dirname, join } from "node:path";
+import { basename, dirname, join } from "node:path";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 let pass = 0, fail = 0;
@@ -50,11 +50,26 @@ ok("tenantScope is used broadly in server actions", usesTenantScope >= 5, String
 // ---- 3. Private file route requires a session OR a verified signature ----
 // The route was restructured from [folder]/[file] to a catch-all [...path] segment; this test kept
 // the old path and threw ENOENT here, taking the whole suite down at assertion 7 of 17 and skipping
-// CI's db:push and production build with it. Read the route through a resolved glob rather than a
-// hardcoded segment shape, so the next restructure fails an ASSERTION instead of crashing the file.
-const uploadRouteFile = globSync("src/app/uploads/**/route.ts", { cwd: root }).map((p) => join(root, p))[0];
-ok("upload route file was found", Boolean(uploadRouteFile), String(uploadRouteFile));
-const uploadRoute = uploadRouteFile ? readFileSync(uploadRouteFile, "utf8") : "";
+// CI's db:push and production build with it. Resolve the route by walking src/app/uploads instead of
+// naming any segment, so the next restructure fails an ASSERTION instead of crashing the file.
+//
+// walk() rather than fs.globSync: globSync landed in node:fs in Node 22, and CI pins Node 20, where
+// importing it is a SyntaxError that kills the suite before a single assertion runs — the same
+// db:push-and-build skip as before, just moved from assertion 7 to assertion 0. The lookup also has
+// to survive the directory being absent: walk() would throw ENOENT, so existsSync gates it and the
+// empty result is reported as a failed assertion instead.
+const uploadsDir = join(root, "src/app/uploads");
+const uploadRouteFiles = existsSync(uploadsDir) ? walk(uploadsDir).filter((f) => basename(f) === "route.ts") : [];
+ok(
+  "exactly one upload route resolved under src/app/uploads",
+  uploadRouteFiles.length === 1,
+  uploadRouteFiles.length === 0
+    ? `no route.ts found under ${uploadsDir.replace(root, "")} (directory ${existsSync(uploadsDir) ? "exists but holds none" : "does not exist"})`
+    : `expected exactly 1, found ${uploadRouteFiles.length}: ${uploadRouteFiles.map((f) => f.replace(root, "")).join(", ")}`,
+);
+// Only read when the resolution is unambiguous; otherwise the three assertions below fail on an
+// empty string rather than this line throwing on undefined.
+const uploadRoute = uploadRouteFiles.length === 1 ? readFileSync(uploadRouteFiles[0], "utf8") : "";
 ok("upload route enforces session or signed URL", uploadRoute.includes("getSession") && uploadRoute.includes("verifySignedFile"));
 ok("upload route scopes files to the caller's org", uploadRoute.includes("session.orgId"));
 ok("upload route audits downloads", uploadRoute.includes("recordFileAccess"));
