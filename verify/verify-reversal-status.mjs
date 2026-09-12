@@ -27,8 +27,8 @@
  */
 import { chromium } from "playwright";
 import { Client } from "pg";
-import { readFile } from "node:fs/promises";
 import { assertFreshBuild } from "./assert-fresh-build.mjs";
+import { loadActionIds } from "./action-id.mjs";
 
 const BASE = "http://localhost:3000";
 const pass = "Qx7#vLm2$Rt9wZp4";
@@ -40,13 +40,7 @@ const check = (name, cond, extra = "") => results.push([cond, name, extra]);
 const db = new Client({ connectionString: process.env.DATABASE_URL });
 await db.connect();
 
-const manifest = JSON.parse(await readFile(".next/server/server-reference-manifest.json", "utf8"));
-const idFor = (name) => {
-  for (const [id, entry] of Object.entries(manifest.node)) {
-    for (const w of Object.values(entry.workers ?? {})) if (w.exportedName === name) return id;
-  }
-  return null;
-};
+const idFor = await loadActionIds();
 const recordId = idFor("recordPaymentAction");
 const reverseId = idFor("reversePaymentAction");
 check("found both Next-Action ids", !!recordId && !!reverseId);
