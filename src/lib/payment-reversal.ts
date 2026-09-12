@@ -1,5 +1,5 @@
 import "server-only";
-import { moneyEpsilon, roundMoney } from "@/lib/currency/currencies";
+import { roundMoney } from "@/lib/currency/currencies";
 
 /**
  * Reversing a recorded payment — sales invoices and purchase orders alike.
