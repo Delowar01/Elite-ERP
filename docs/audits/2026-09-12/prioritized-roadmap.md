@@ -185,9 +185,9 @@ packages remain**, so the gate does not go green on it alone.
 | | |
 |---|---|
 | **Objective** | Know when the product is broken; know that it can be recovered |
-| **Included** | R-12, R-13, and the scheduling half of R-22 |
+| **Included** | R-12, R-13, and **both remaining halves of R-22** — scheduling, and the uploaded-file bytes themselves |
 | **Effort** | **M** |
-| **Acceptance criteria** | `/api/health` reporting database reachability and schema presence without leaking detail to an unauthenticated caller. An error tracker receiving server-action and route failures. **A restore drill performed and documented** — the artefact is the drill record, not the script. **Backup scheduling confirmed on the actual target**: `backup-dr.md` assumes cron/systemd, which Vercel does not have; either Neon's PITR tier is recorded as the answer or a scheduled job is added |
+| **Acceptance criteria** | `/api/health` reporting database reachability and schema presence without leaking detail to an unauthenticated caller. An error tracker receiving server-action and route failures. **A restore drill performed and documented** — the artefact is the drill record, not the script, and a drill that restores only the database is not a passing drill while uploaded files remain unrecoverable. **Backup scheduling confirmed on the actual target**: `backup-dr.md` assumes cron/systemd, which Vercel does not have; either Neon's PITR tier is recorded as the answer or a scheduled job is added. **UPLOADED-FILE RECOVERY RESOLVED ONE WAY OR THE OTHER**: either the five-item provider checklist in `backup-dr.md` is answered from the Vercel console and the answers recorded there, or an explicit blob-copy mechanism is built. Batch 1 made the gap honest and visible; it did not close it, and `backup.sh` still produces no copy of a single uploaded byte |
 | **Verification** | Health endpoint asserted healthy and database-down; restore evidenced by a recovered database |
 
 ### Batch 12 — Fractional stock, or an honest refusal

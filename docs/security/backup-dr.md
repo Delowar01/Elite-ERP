@@ -99,28 +99,54 @@ dump, so the two restore together. That is a change to the backup architecture
 rather than a correction to it, and is deliberately **not** implemented here: it
 needs a decision about where those copies live and who pays for them.
 
-### Restoring
-
-`scripts/restore.sh` restores the database, and will untar a **legacy local**
-uploads archive if one is passed to it. It has no ability to restore blob
-objects, and a database-only restore is silently incomplete with respect to
-files — which is why this section exists.
-
 ## Restoring
 
-See `scripts/restore.sh`. Procedure:
+**Two different deployments restore differently, and conflating them is how an
+operator ends up believing files came back when they did not.** Read the one
+that matches the deployment in front of you.
+
+### Restoring the CURRENT deployment (PostgreSQL + Vercel Blob)
+
+`scripts/restore.sh` covers steps 1–2. Steps 3–5 are yours.
 
 1. Provision a clean PostgreSQL and an empty `elite_erp` database + app role.
 2. Restore the dump: `pg_restore --no-owner -d "$DATABASE_URL" backup.dump`
    (the script wraps this, handling decryption first if needed).
-3. Restore `uploads/` by untarring into the app root.
-4. Ensure `AUTH_SECRET` and all `FIELD_ENCRYPTION_KEYS` versions match the
+3. Ensure `AUTH_SECRET` and all `FIELD_ENCRYPTION_KEYS` versions match the
    originals, or field-encrypted data won't decrypt and existing sessions won't
    validate.
-5. Re-apply the immutable-audit triggers on the fresh DB:
+4. Re-apply the immutable-audit triggers on the fresh DB:
    `psql "$DATABASE_URL" -f drizzle/immutable_audit.sql`.
-6. Start the app; verify login, a decrypted field (e.g. a user with MFA), and
+   (`npm run db:push` chains `db:harden`, which does the same thing; a bare
+   `drizzle-kit push` does **not**.)
+5. Start the app; verify login, a decrypted field (e.g. a user with MFA), and
    that the audit log is present.
+
+**There is no step here that restores uploaded files, and none is omitted by
+mistake.** `scripts/restore.sh` cannot restore blob objects, and there is no
+archive of them to restore — `scripts/backup.sh` does not produce one. **Do not
+untar anything into the app root expecting current uploaded files to reappear**;
+that is the legacy procedure below and it restores nothing on this deployment.
+
+After a restore of this kind the database is whole and every uploaded file is a
+broken link, because the database stores the proxy path and not the bytes. What
+recovers those files — if anything does — is the blob provider, and that is
+**unverified**: see *Uploaded files* above for the checklist that must be
+answered before relying on it. Until it is answered, **treat a restored system
+as having lost every logo, seal, signature, product image and document
+attachment**, and plan the drill accordingly.
+
+### Restoring a LEGACY self-hosted deployment (local `uploads/` on disk)
+
+Only applies where uploads were still written to a local directory and
+`scripts/backup.sh` was run with `UPLOADS_DIR` explicitly set, so an uploads
+archive actually exists. **This is not the current deployment.**
+
+Steps 1–2 and 3–5 above apply unchanged. Between them:
+
+- Restore the uploads archive by untarring it into the app root, or pass it as
+  the second argument to `scripts/restore.sh`, which does the same thing.
+- Confirm the restored directory is the one `UPLOADS_DIR` points at.
 
 ## Disaster-recovery drills
 
@@ -138,3 +164,4 @@ See `scripts/restore.sh`. Procedure:
 | Ransomware / bad deploy | Restore from the last known-good off-host backup; rotate `AUTH_SECRET` (forces re-login). |
 | Encryption key lost | Field-encrypted columns are unrecoverable — this is why keys live in a durable secret store with their own backup. |
 | Accidental data delete | Soft-deleted rows sit in the Recycle Bin; hard losses restore from backup. |
+| **Uploaded files lost or overwritten** | **No procedure exists here yet.** `scripts/backup.sh` produces no copy of them, and whether the blob provider can recover an object — and for how long — is unverified. See *Uploaded files*. Listing this row with no answer is deliberate: the table would otherwise read as exhaustive. |

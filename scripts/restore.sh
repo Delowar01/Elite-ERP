@@ -2,8 +2,14 @@
 #
 # Elite ERP — restore from a backup produced by scripts/backup.sh (Stage 11 Part 8).
 #
-# Restores a pg_dump into a TARGET database and (optionally) untars uploads.
-# Re-applies the immutable-audit triggers afterwards.
+# Restores a pg_dump into a TARGET database and re-applies the immutable-audit
+# triggers afterwards.
+#
+# The optional second argument untars a LEGACY LOCAL uploads archive. It has no
+# ability to recover Vercel Blob objects, and scripts/backup.sh does not produce
+# an archive of them — so on the current deployment there is nothing to pass and
+# a database-only restore leaves every uploaded file a broken link. See
+# docs/security/backup-dr.md, "Restoring", before assuming otherwise.
 #
 # Required env:
 #   DATABASE_URL      target postgres connection string (empty DB + app role ready)

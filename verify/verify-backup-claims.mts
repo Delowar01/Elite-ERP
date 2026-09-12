@@ -112,6 +112,48 @@ function runBackup(env: Record<string, string>): { code: number; out: string; fi
     /needs operational confirmation/i.test(dr) && /which offers neither/i.test(dr));
 }
 
+// ── 5. The restore procedure must not contradict the backup one ────────────────────────────────
+// The document briefly carried TWO "Restoring" sections: a new one saying blob objects cannot be
+// restored, and the original whose step 3 still said "Restore uploads/ by untarring into the app
+// root". An operator following the second would untar nothing and conclude their files were back.
+// A backup that is honest and a restore that is not is worse than neither, because the restore is
+// the document someone reads under pressure.
+{
+  const raw = readFileSync("docs/security/backup-dr.md", "utf8");
+  const flat = raw.replace(/\*/g, "").replace(/\s+/g, " ");
+  const h2 = (raw.match(/^## Restoring\s*$/gm) ?? []).length;
+  check("exactly ONE top-level Restoring section exists", h2 === 1, `${h2} found`);
+
+  // Split the section so each procedure is asserted against its own text, not the page as a whole.
+  const restore = raw.slice(raw.indexOf("\n## Restoring"));
+  const current = restore.slice(restore.indexOf("### Restoring the CURRENT"), restore.indexOf("### Restoring a LEGACY"));
+  const legacy = restore.slice(restore.indexOf("### Restoring a LEGACY"));
+  check("the current-deployment and legacy procedures are separate sections",
+    current.length > 200 && legacy.length > 100, `current ${current.length}b, legacy ${legacy.length}b`);
+
+  const curFlat = current.replace(/\*/g, "").replace(/\s+/g, " ");
+  check("the CURRENT procedure does not instruct an untar as a recovery step",
+    !/Restore uploads\/ by untarring/i.test(curFlat) && !/^\s*\d\..*untar/im.test(current));
+  check("the CURRENT procedure says so explicitly rather than merely omitting it",
+    /Do not untar anything into the app root/i.test(curFlat));
+  check("the CURRENT procedure states what a restored system has lost",
+    /treat a restored system as having lost every/i.test(curFlat));
+  check("the LEGACY procedure is the only place untar instructions appear",
+    /untarring it into the app root/i.test(legacy.replace(/\s+/g, " ")));
+  check("the LEGACY procedure marks itself as not the current deployment",
+    /This is not the current deployment/i.test(legacy.replace(/\*/g, "").replace(/\s+/g, " ")));
+
+  check("the failure-scenario table does not silently omit uploaded files",
+    /Uploaded files lost or overwritten/i.test(flat) && /No procedure exists here yet/i.test(flat));
+
+  // Strip the leading "#" of each comment line before collapsing, or a phrase that wraps across
+  // two comment lines reads as "no # ability" and no sensible regex matches it.
+  const rs = readFileSync("scripts/restore.sh", "utf8")
+    .split("\n").map((l) => l.replace(/^\s*#\s?/, "")).join(" ").replace(/\s+/g, " ");
+  check("restore.sh's header says it cannot recover blob objects",
+    /no\s*ability to recover Vercel Blob objects/i.test(rs));
+}
+
 const failed = results.filter(([ok]) => !ok);
 for (const [ok, name, extra] of results) console.log(`${ok ? "PASS" : "FAIL"}  ${name}${extra ? `  << ${extra}` : ""}`);
 console.log(`\n${results.length - failed.length}/${results.length} checks`);
