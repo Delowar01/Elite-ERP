@@ -68,10 +68,10 @@
  * missing revenue. Commit 4's mutations: suppressing the application journals must FAIL C/D/E/H;
  * re-converting the closing application instead of deriving it must FAIL G naming both figures.
  */
-import { readFile } from "fs/promises";
 import { chromium } from "playwright";
 import { Client } from "pg";
 import { assertFreshBuild } from "./assert-fresh-build.mjs";
+import { loadActionIds } from "./action-id.mjs";
 import { pickCountry } from "./register-org.mjs";
 
 const BASE = "http://localhost:3000";
@@ -513,15 +513,7 @@ const refundViaUi = async (pfId, opts = {}) => {
   await dialogs().last().getByRole("button", { name: /^Refund Advance$/ }).click();
   await page.waitForTimeout(1500);
 };
-const manifest = JSON.parse(await readFile(".next/server/server-reference-manifest.json", "utf8"));
-const idFor = (name) => {
-  for (const [id, entry] of Object.entries(manifest.node)) {
-    for (const w of Object.values(entry.workers ?? {})) {
-      if (w.exportedName === name) return id;
-    }
-  }
-  return null;
-};
+const idFor = await loadActionIds();
 const refundActionId = idFor("refundAdvanceAction");
 check("found the Next-Action id for refundAdvanceAction", !!refundActionId, String(refundActionId));
 const cookieHeader = (await ctx.cookies()).map((c) => `${c.name}=${c.value}`).join("; ");

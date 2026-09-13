@@ -22,8 +22,8 @@
  */
 import { chromium } from "playwright";
 import { Client } from "pg";
-import { readFile } from "node:fs/promises";
 import { assertFreshBuild } from "./assert-fresh-build.mjs";
+import { loadActionIds } from "./action-id.mjs";
 import { pickCountry } from "./register-org.mjs";
 
 const BASE = "http://localhost:3000";
@@ -36,15 +36,7 @@ const uniq = () => Math.random().toString(36).slice(2, 8);
 const db = new Client({ connectionString: process.env.DATABASE_URL });
 await db.connect();
 
-const manifest = JSON.parse(await readFile(".next/server/server-reference-manifest.json", "utf8"));
-const idFor = (name) => {
-  for (const [id, entry] of Object.entries(manifest.node)) {
-    for (const w of Object.values(entry.workers ?? {})) {
-      if (w.exportedName === name) return id;
-    }
-  }
-  return null;
-};
+const idFor = await loadActionIds();
 const deleteId = idFor("deletePaymentAction");
 check("found the Next-Action id for deletePaymentAction", !!deleteId, String(deleteId));
 

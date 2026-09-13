@@ -2,6 +2,9 @@
   "name": "elite-erp",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": "22.x"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -76,10 +79,10 @@
     "jose": "^6.2.3",
     "lucide-react": "^1.24.0",
     "n2words": "^5.1.2",
-    "next": "16.2.10",
+    "next": "16.3.5",
     "pdf-lib": "^1.17.1",
     "pg": "^8.22.0",
-    "puppeteer-core": "^24.43.1",
+    "puppeteer-core": "^25.10.0",
     "qrcode": "^1.5.4",
     "react": "19.2.4",
     "react-dom": "19.2.4",
@@ -92,7 +95,7 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/bcryptjs": "^2.4.6",
-    "@types/node": "^20",
+    "@types/node": "^22",
     "@types/pg": "^8.20.0",
     "@types/qrcode": "^1.5.6",
     "@types/react": "^19",
@@ -100,7 +103,7 @@
     "dotenv": "^17.4.2",
     "drizzle-kit": "^0.31.10",
     "eslint": "^9",
-    "eslint-config-next": "16.2.10",
+    "eslint-config-next": "16.3.5",
     "playwright": "^1.61.1",
     "tailwindcss": "^4",
     "typescript": "^5"
