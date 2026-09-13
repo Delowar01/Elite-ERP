@@ -1,15 +1,30 @@
 import "server-only";
-import { put, del } from "@vercel/blob";
 import { randomBytes } from "crypto";
+import { blobClient } from "./blob-client";
 
 // ---------------------------------------------------------------------------
 // Shared Vercel Blob storage service for every upload in Elite ERP (logos,
 // seals, signatures, item images, client/vendor logos, employee photos,
 // document attachments). Replaces the old local-filesystem writes, which fail
-// on Vercel (read-only /var/task). Files are stored on Vercel Blob under
-// tenant-scoped pathnames; the DB keeps an app-relative proxy path that the
-// authenticated /uploads/[...] route resolves back to the blob (tenant-checked
-// + audited), so blob URLs are never exposed and cross-tenant access is denied.
+// on Vercel (read-only /var/task).
+//
+// WHAT IS AND IS NOT GUARANTEED, stated precisely because the previous version
+// of this comment overstated it. It claimed "blob URLs are never exposed and
+// cross-tenant access is denied" while every object was written
+// `access: "public"` — so the URLs were not exposed by this application, but
+// anyone who came by one could fetch the bytes straight from the provider,
+// outside the org check, outside the signature check and outside the audit log.
+// Not exposing a URL is not the same as the storage being private, and the old
+// wording read as though it were.
+//
+// Now:
+//  - STORAGE is private. Objects are written access: "private" and read back
+//    with a token, so possession of a URL alone grants nothing.
+//  - AUTHORIZATION is the application's. /uploads/[...path] requires a session
+//    whose org matches the path's {orgId}, or a valid unexpired HMAC signature.
+//  - TENANT ISOLATION is encoded in the pathname and re-checked on every read.
+//  - The DB keeps an app-relative proxy path, never a provider URL, so the rest
+//    of the ERP stays uncoupled from the storage provider.
 // ---------------------------------------------------------------------------
 
 export type FileExt = "png" | "jpg" | "pdf";
@@ -21,6 +36,10 @@ export const BLOB_FOLDERS = [
 ] as const;
 export type BlobFolder = (typeof BLOB_FOLDERS)[number];
 export const BLOB_FOLDER_SET = new Set<string>(BLOB_FOLDERS);
+
+// Every object this application writes is private. Declared once so the write and the read cannot
+// drift apart: the SDK requires the access level on BOTH, and a mismatch reads as "not found".
+export const BLOB_ACCESS = "private" as const;
 
 export const IMAGE_MAX_BYTES = 5 * 1024 * 1024; // 5 MB for images
 export const ATTACHMENT_MAX_BYTES = 8 * 1024 * 1024; // 8 MB for attachments
@@ -95,11 +114,26 @@ export async function validateUpload(
 export async function storeBlob(orgId: number, folder: BlobFolder, bytes: Buffer, ext: FileExt, contentType: string): Promise<string> {
   const name = `${orgId}-${Date.now()}-${randomBytes(8).toString("hex")}.${ext}`;
   const pathname = `organizations/${orgId}/${folder}/${name}`;
-  await put(pathname, bytes, { access: "public", addRandomSuffix: false, contentType, token: process.env.BLOB_READ_WRITE_TOKEN });
+  await blobClient().put(pathname, bytes, { contentType, access: BLOB_ACCESS });
   return `/uploads/${pathname}`;
 }
 
-// Base public host of this project's blob store, derived from the token (vercel_blob_rw_<store>_<secret>).
+/** Read a stored object's bytes for the proxy route. Null when it is not in the store. */
+export async function readBlob(pathname: string): Promise<{ bytes: Buffer; contentType: string } | null> {
+  return blobClient().get(pathname, { access: BLOB_ACCESS });
+}
+
+/** Strip the `/uploads/` proxy prefix the DB stores, yielding the provider pathname. */
+export function pathnameFromStored(stored: string): string {
+  return stored.replace(/^\/uploads\//, "").replace(/^\//, "");
+}
+
+// Base PUBLIC host of this project's blob store, derived from the token
+// (vercel_blob_rw_<store>_<secret>). Nothing in the request path uses this any more — reads go
+// through blobClient().get(), which authenticates with the token and needs no URL at all. It is
+// kept for ONE purpose: the read-only inventory script probes this host anonymously to find out
+// which existing objects are still publicly readable, which is exactly the question the migration
+// has to answer. It must never be handed to a browser.
 export function blobBaseUrl(): string {
   const token = process.env.BLOB_READ_WRITE_TOKEN;
   if (!token) throw new Error("BLOB_READ_WRITE_TOKEN is not set");
@@ -108,18 +142,12 @@ export function blobBaseUrl(): string {
   return `https://${storeId.toLowerCase()}.public.blob.vercel-storage.com`;
 }
 
-// Resolve a stored proxy path (`/uploads/organizations/...`) or bare pathname to its blob URL.
-export function blobUrlFromStored(stored: string): string {
-  const pathname = stored.replace(/^\/uploads\//, "").replace(/^\//, "");
-  return `${blobBaseUrl()}/${pathname}`;
-}
+// `blobUrlFromStored()` was removed with this change. Its only caller was deleteStoredBlob, and the
+// delete now addresses the object by pathname, so the helper existed solely to manufacture a
+// provider URL — the shape this batch is trying to stop relying on.
 
 // Delete a previously-stored blob. Never throws for a missing/blank value (idempotent cleanup).
 export async function deleteStoredBlob(stored: string | null | undefined): Promise<void> {
   if (!stored || !stored.startsWith("/uploads/organizations/")) return;
-  try {
-    await del(blobUrlFromStored(stored), { token: process.env.BLOB_READ_WRITE_TOKEN });
-  } catch {
-    // best-effort; a missing blob is not an error for cleanup
-  }
+  await blobClient().del(pathnameFromStored(stored));
 }
