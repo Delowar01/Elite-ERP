@@ -74,6 +74,22 @@ ok("upload route enforces session or signed URL", uploadRoute.includes("getSessi
 ok("upload route scopes files to the caller's org", uploadRoute.includes("session.orgId"));
 ok("upload route audits downloads", uploadRoute.includes("recordFileAccess"));
 
+// ---- 3b. Storage itself is private, and the read path does not go round the front ----
+// These are structural rather than behavioural on purpose: this suite runs in CI with no database,
+// no server and no storage. The behaviour they stand for is executed in verify-private-storage.mjs
+// (9 folders x owner/cross-tenant/anonymous/signed) and verify-pdf-branding.mjs. What is worth
+// catching HERE is the specific regression that created F-3 — storage quietly going back to public,
+// or the route quietly going back to reading a provider URL — because either one silently reopens
+// the hole while every behavioural test that runs against a live app still passes.
+const storageSrc = readFileSync(join(root, "src/lib/storage/blob-storage.ts"), "utf8");
+ok("uploads are stored with private access", /BLOB_ACCESS\s*=\s*"private"/.test(storageSrc), storageSrc.match(/BLOB_ACCESS\s*=\s*"[a-z]+"/)?.[0] ?? "no BLOB_ACCESS");
+ok("the upload route never fetches a provider URL", !/fetch\(`?\$\{?blobBaseUrl/.test(uploadRoute) && !uploadRoute.includes("blob.vercel-storage.com"));
+// Matching `readBlob(` alone would pass on the IMPORT line, which is an assertion that cannot
+// fail — removing the call and keeping the import left this green. Require the actual invocation.
+ok("the upload route reads through the token-authenticated helper", /await\s+readBlob\(\s*pathname\s*\)/.test(uploadRoute));
+ok("no provider URL is constructed anywhere under src/", files.every((f) => !/public\.blob\.vercel-storage\.com/.test(readFileSync(f, "utf8"))));
+ok("the test storage driver is opt-in only and never the default", /process\.env\.STORAGE_DRIVER === "fake"/.test(readFileSync(join(root, "src/lib/storage/blob-client.ts"), "utf8")));
+
 // ---- 4. Signed URLs use HMAC + constant-time compare + expiry ----
 const signedSrc = readFileSync(join(root, "src/lib/security/signed-url.ts"), "utf8");
 ok("signed URLs use HMAC-SHA256", signedSrc.includes('createHmac("sha256"'));
