@@ -42,6 +42,28 @@ export interface BlobClient {
   head(pathname: string): Promise<BlobObject | null>;
   /** One page of objects under `prefix`, oldest-first pagination via an opaque cursor. */
   list(opts: { prefix?: string; cursor?: string; limit?: number }): Promise<{ objects: BlobObject[]; cursor?: string }>;
+  /**
+   * Is this object readable by an ANONYMOUS caller — the leaked-URL case?
+   *
+   * Neither `list` nor `head` reports an access level, so the only way to answer is to ask
+   * anonymously. The inventory and the migration both need it: one to report exposure, the other to
+   * decide what still has to be re-stored and to confirm afterwards that it worked.
+   */
+  probePublic(pathname: string): Promise<boolean>;
+}
+
+/**
+ * Base PUBLIC host of this project's blob store, derived from the token
+ * (vercel_blob_rw_<store>_<secret>). Internal to this module on purpose: nothing in the request
+ * path needs a provider URL any more, and the one remaining use — probing anonymously — lives
+ * right here rather than being handed out.
+ */
+function publicBase(): string {
+  const t = token();
+  if (!t) throw new Error("BLOB_READ_WRITE_TOKEN is not set");
+  const storeId = t.split("_")[3];
+  if (!storeId) throw new Error("BLOB_READ_WRITE_TOKEN is malformed");
+  return `https://${storeId.toLowerCase()}.public.blob.vercel-storage.com`;
 }
 
 function token(): string | undefined {
@@ -95,6 +117,17 @@ const vercelClient: BlobClient = {
       objects: res.blobs.map((b) => ({ pathname: b.pathname, size: b.size, contentType: "", uploadedAt: b.uploadedAt })),
       cursor: res.cursor,
     };
+  },
+
+  async probePublic(pathname) {
+    try {
+      const res = await fetch(`${publicBase()}/${pathname}`, { cache: "no-store" });
+      if (!res.ok) return false;
+      await res.arrayBuffer();
+      return true;
+    } catch {
+      return false;
+    }
   },
 };
 

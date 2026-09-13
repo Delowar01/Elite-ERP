@@ -128,19 +128,13 @@ export function pathnameFromStored(stored: string): string {
   return stored.replace(/^\/uploads\//, "").replace(/^\//, "");
 }
 
-// Base PUBLIC host of this project's blob store, derived from the token
-// (vercel_blob_rw_<store>_<secret>). Nothing in the request path uses this any more — reads go
-// through blobClient().get(), which authenticates with the token and needs no URL at all. It is
-// kept for ONE purpose: the read-only inventory script probes this host anonymously to find out
-// which existing objects are still publicly readable, which is exactly the question the migration
-// has to answer. It must never be handed to a browser.
-export function blobBaseUrl(): string {
-  const token = process.env.BLOB_READ_WRITE_TOKEN;
-  if (!token) throw new Error("BLOB_READ_WRITE_TOKEN is not set");
-  const storeId = token.split("_")[3];
-  if (!storeId) throw new Error("BLOB_READ_WRITE_TOKEN is malformed");
-  return `https://${storeId.toLowerCase()}.public.blob.vercel-storage.com`;
-}
+// `blobBaseUrl()` and `blobUrlFromStored()` were both REMOVED with this change.
+//
+// blobUrlFromStored existed only to build a provider URL for deleteStoredBlob, which now addresses
+// the object by pathname. blobBaseUrl had one surviving use — probing an object anonymously to see
+// whether it is still publicly readable — and that moved into blob-client.ts as a private helper
+// behind BlobClient.probePublic(), where the inventory and the migration reach it without a
+// provider URL ever being handed to anything else. Nothing in the request path constructs one now.
 
 // `blobUrlFromStored()` was removed with this change. Its only caller was deleteStoredBlob, and the
 // delete now addresses the object by pathname, so the helper existed solely to manufacture a

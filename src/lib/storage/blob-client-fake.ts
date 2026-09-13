@@ -106,6 +106,10 @@ export function fakeBlobClient(): BlobClient {
       const next = start + limit < all.length ? page[page.length - 1] : undefined;
       return { objects, cursor: next };
     },
+
+    async probePublic(pathname) {
+      return readMeta(pathname)?.access === "public";
+    },
   };
 }
 

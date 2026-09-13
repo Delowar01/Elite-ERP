@@ -12,6 +12,8 @@
     "lint": "eslint",
     "db:push": "drizzle-kit push && npm run db:harden",
     "db:harden": "tsx --env-file-if-exists=.env scripts/apply-db-hardening.ts",
+    "blob:inventory": "tsx --env-file-if-exists=.env --conditions=react-server scripts/blob-inventory.ts",
+    "blob:migrate": "tsx --env-file-if-exists=.env --conditions=react-server scripts/blob-migrate.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
