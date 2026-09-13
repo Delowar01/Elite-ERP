@@ -27,6 +27,13 @@ const check = (name, cond, extra = "") => results.push([cond, name, extra]);
 const BRANDING = new Set(["logos", "seals", "signatures", "client-logos", "vendor-logos", "employee-photos"]);
 const SESSION_ONLY = new Set(["item-images", "attachments", "layouts"]);
 
+// This suite drives the test storage driver. Run against the real Vercel Blob client it would
+// either fail obscurely (no token here) or, worse, write to a real store. Refuse plainly instead.
+if (process.env.STORAGE_DRIVER !== "fake") {
+  console.error("STORAGE_DRIVER=fake is required for this suite (set it in .env). Refusing to run against real Vercel Blob.");
+  process.exit(1);
+}
+
 const db = new Client({ connectionString: process.env.DATABASE_URL });
 await db.connect();
 await assertFreshBuild(BASE);
