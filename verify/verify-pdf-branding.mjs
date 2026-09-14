@@ -17,7 +17,7 @@ import { execFileSync } from "node:child_process";
 import { inflateSync } from "node:zlib";
 import { PDFDocument } from "pdf-lib";
 import { assertFreshBuild } from "./assert-fresh-build.mjs";
-import { fakeStoredAccess } from "./fake-probe.mjs";
+import { existsIn, anonymousRead } from "./fake-probe.mjs";
 import { pickCountry } from "./register-org.mjs";
 
 const BASE = "http://localhost:3000";
@@ -60,7 +60,9 @@ const uid = (await one("select id from users where email=$1", [email])).id;
 const stored = JSON.parse(execFileSync("npx", ["tsx", "--env-file-if-exists=.env", "--conditions=react-server", "verify/private-storage-writer.mts", String(org)], { encoding: "utf8" }).trim().split("\n").pop());
 const logo = stored.logos, seal = stored.seals, sig = stored.signatures;
 for (const [label, p] of [["logo", logo], ["seal", seal], ["signature", sig]]) {
-  check(`${label} asset is stored private`, fakeStoredAccess(p.replace(/^\/uploads\//, "")) === "private", p);
+  const pn = p.replace(/^\/uploads\//, "");
+  check(`${label} asset lives in the PRIVATE destination store and nowhere public`, existsIn("private", pn) && !existsIn("public", pn), p);
+  check(`${label} asset is not anonymously fetchable`, anonymousRead("private", pn) === null, p);
 }
 await db.query("update orgs set logo_url=$1, seal_url=$2, signature_url=$3 where id=$4", [logo, seal, sig, org]);
 

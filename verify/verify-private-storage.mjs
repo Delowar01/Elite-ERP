@@ -14,7 +14,7 @@ import { chromium } from "playwright";
 import { Client } from "pg";
 import { execFileSync } from "node:child_process";
 import { signFileUrl } from "./sign-file-url.mjs";
-import { fakeStoredAccess, fakeProviderRead } from "./fake-probe.mjs";
+import { existsIn, bytesIn, anonymousRead, listIn } from "./fake-probe.mjs";
 import { assertFreshBuild } from "./assert-fresh-build.mjs";
 import { pickCountry } from "./register-org.mjs";
 
@@ -82,7 +82,8 @@ for (const folder of folders) {
   const stored = storedA[folder];
   const pathname = pathOf(stored);
 
-  if (fakeStoredAccess(pathname) !== "private") { allPrivate = false; check(`${folder}: stored private`, false, String(fakeStoredAccess(pathname))); }
+  if (!existsIn("private", pathname)) { allPrivate = false; check(`${folder}: written to the PRIVATE destination store`, false, "absent from the private store"); }
+  if (existsIn("public", pathname)) { allPrivate = false; check(`${folder}: no public copy was written`, false, "also present in the public store"); }
 
   const ok = await getRaw(stored, { cookie: A.cookie });
   const body = ok.status === 200 ? Buffer.from(await ok.arrayBuffer()) : Buffer.alloc(0);
@@ -101,9 +102,9 @@ for (const folder of folders) {
   const anon = await getRaw(stored);
   if (anon.status === 200) { allAnonDenied = false; check(`${folder}: unauthenticated read denied`, false, `status=${anon.status}`); }
 
-  if (fakeProviderRead(pathname) !== null) { allProviderDenied = false; check(`${folder}: provider refuses an anonymous read`, false, "bytes returned"); }
+  if (anonymousRead("private", pathname) !== null) { allProviderDenied = false; check(`${folder}: the private store refuses an anonymous read`, false, "bytes returned"); }
 }
-check("all 9 folders: storeBlob wrote access=private", allPrivate);
+check("all 9 folders: the upload went ONLY to the private destination store", allPrivate);
 check("all 9 folders: the owning session reads the exact bytes, type and disposition", allAuthOk);
 check("all 9 folders: a different organization's session is denied", allCrossDenied);
 check("all 9 folders: no session is denied", allAnonDenied);
@@ -158,14 +159,29 @@ for (const [label, p] of subs) {
 }
 check("path substitution is refused in all five shapes", subsDenied);
 
+// ---- signed responses must not outlive their signature in the browser cache ----
+{
+  const pathname = pathOf(storedA.logos);
+  const short = signFileUrl(pathname, 60);
+  const r = await getRaw(storedA.logos, { query: short.slice(short.indexOf("?")) });
+  const cc = r.headers.get("cache-control") ?? "";
+  const maxAge = Number(/max-age=(\d+)/.exec(cc)?.[1] ?? -1);
+  check("a signed response caps max-age at the signature's remaining validity", r.status === 200 && maxAge >= 0 && maxAge <= 60, `${cc} (signature had 60s left)`);
+  const sess = await getRaw(storedA.logos, { cookie: A.cookie });
+  const sessMaxAge = Number(/max-age=(\d+)/.exec(sess.headers.get("cache-control") ?? "")?.[1] ?? -1);
+  check("a session response is NOT penalised by that cap", sessMaxAge === 3600, String(sess.headers.get("cache-control")));
+}
+
 // ---- cache policy ----
 const cacheRes = await getRaw(storedA.logos, { cookie: A.cookie });
 check("served bytes are marked private and never shared-cacheable", (cacheRes.headers.get("cache-control") ?? "").startsWith("private,"), String(cacheRes.headers.get("cache-control")));
 check("served bytes carry X-Content-Type-Options: nosniff", cacheRes.headers.get("x-content-type-options") === "nosniff", String(cacheRes.headers.get("x-content-type-options")));
 
-// ---- delete round-trip ----
-const delTarget = pathOf(storedB["item-images"]);
-check("an object exists before deletion", fakeStoredAccess(delTarget) === "private");
+// ---- the store holds nothing it should not ----
+check("the public source store is empty — nothing new was ever written there", listIn("public").length === 0, JSON.stringify(listIn("public").slice(0, 5)));
+check("every object the suite created is in the private store", listIn("private").length >= folders.length * 2, String(listIn("private").length));
+const sample = pathOf(storedB["item-images"]);
+check("bytes in the private store match what the route served", Boolean(bytesIn("private", sample)), sample);
 
 console.log("");
 let pass_ = 0, fail_ = 0;

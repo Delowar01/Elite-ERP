@@ -4,30 +4,47 @@
  * Deliberately an independent reader rather than an import of the application's own fake: if the
  * suite inspected storage through the same code the server writes with, a bug in that code would
  * cancel itself out and the assertions would pass on a shared mistake.
+ *
+ * The driver models TWO STORES with fixed modes, each in its own directory, because that is how
+ * Vercel Blob works — access belongs to the store, not the object.
  */
-import { readFileSync, existsSync } from "node:fs";
+import { readFileSync, existsSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 
-const root = () => process.env.STORAGE_FAKE_DIR || ".storage-fake";
-const meta = (pathname) => {
-  const f = join(root(), pathname) + ".__meta.json";
-  if (!existsSync(f)) return null;
-  try { return JSON.parse(readFileSync(f, "utf8")); } catch { return null; }
-};
+const root = (mode) => join(process.env.STORAGE_FAKE_DIR || ".storage-fake", mode);
 
-/** How the object was actually written, or undefined when it does not exist. */
-export function fakeStoredAccess(pathname) {
-  return meta(pathname)?.access;
+/** Does this store hold the object? */
+export function existsIn(mode, pathname) {
+  return existsSync(join(root(mode), pathname));
+}
+
+/** Bytes as they sit in that store, or null. */
+export function bytesIn(mode, pathname) {
+  const f = join(root(mode), pathname);
+  return existsSync(f) ? readFileSync(f) : null;
 }
 
 /**
- * An ANONYMOUS request straight at the storage provider, bypassing the application — the "leaked
- * absolute Blob URL" in the threat model. Public objects give up their bytes; private objects do
- * not. This models the provider rule; it is not evidence about Vercel's real enforcement.
+ * An ANONYMOUS request straight at the provider, bypassing the application — the leaked-URL case.
+ * A PUBLIC store serves anyone holding the URL; a PRIVATE store does not. The STORE decides, which
+ * is the whole correction: there is no such thing as a private object in a public store.
  */
-export function fakeProviderRead(pathname) {
-  const m = meta(pathname);
-  if (!m || m.access !== "public") return null;
-  const f = join(root(), pathname);
-  return existsSync(f) ? readFileSync(f) : null;
+export function anonymousRead(mode, pathname) {
+  return mode === "public" ? bytesIn(mode, pathname) : null;
+}
+
+/** Every pathname a store holds. */
+export function listIn(mode) {
+  const base = root(mode);
+  const out = [];
+  const walk = (d) => {
+    if (!existsSync(d)) return;
+    for (const n of readdirSync(d)) {
+      const p = join(d, n);
+      if (statSync(p).isDirectory()) walk(p);
+      else if (!p.endsWith(".__meta.json")) out.push(p.slice(base.length + 1).split(/[\\/]/).join("/"));
+    }
+  };
+  walk(base);
+  return out.sort();
 }
