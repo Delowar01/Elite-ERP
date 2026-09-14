@@ -1,42 +1,41 @@
 /**
- * Re-store existing PUBLIC Blob objects as PRIVATE, without changing any pathname or any DB row.
+ * Copy objects from the legacy PUBLIC SOURCE store into the PRIVATE DESTINATION store, at the same
+ * pathname. Nothing is deleted, no pathname changes, and no database row is touched.
  *
- *   npm run blob:migrate                                  # dry run (the default)
- *   npm run blob:migrate -- --execute [--folder f] [--limit n] [--state f.log]
+ *   npm run blob:migrate                                       # dry run (the default)
+ *   npm run blob:migrate -- --execute [--folder f] [--limit n] [--state f.jsonl]
  *
- * DRY RUN IS THE DEFAULT AND --execute IS THE ONLY WAY PAST IT. A dry run writes nothing at all,
- * not even the state file.
+ * DRY RUN IS THE DEFAULT AND --execute IS THE ONLY WAY PAST IT. A dry run writes nothing, not even
+ * the state file.
  *
- * MECHANISM, and why this one. Vercel Blob has no in-place permission change, so an object's access
- * can only be set when it is written. `copy(from, to, { access })` exists, but every safe use of it
- * needs a second pathname and therefore either a same-path copy whose behaviour is not documented,
- * or a delete-and-restore window in which the original does not exist. This uses only operations
- * whose semantics are certain:
+ * WHY A COPY AND NOT AN OVERWRITE. Access belongs to the STORE in Vercel Blob: a store is created
+ * public or private and cannot be changed, and the SDK builds
+ * `https://${storeId}.${access}.blob.vercel-storage.com/${pathname}` — the access level is part of
+ * the host. So an object cannot be "made private" where it lies; it has to be written into a
+ * different store. An earlier version of this script read an object public and put() it back
+ * private at the same pathname in one store, which is not a thing that can happen.
  *
- *     get(pathname, { access: "public" })   ->  bytes
- *     put(pathname, bytes, { access: "private", addRandomSuffix: false })
+ * THE SOURCE IS NEVER DELETED. A copied object is not a removed one, and keeping the public copy
+ * intact is what makes the rollback window survivable. Retiring the source store is a separate,
+ * later, deliberate act — see docs/security/private-blob-runbook.md.
  *
- * `put` at an existing pathname with addRandomSuffix disabled overwrites that object, so the
- * pathname never changes, no DB row moves, and nothing is deleted at any point — the object is only
- * ever rewritten in place. That is the property that keeps this reversible-by-re-running and keeps
- * the application's stored `/uploads/...` paths stable.
+ * COMPARE BEFORE WRITE, rather than allowOverwrite. The SDK refuses to replace an existing pathname
+ * unless allowOverwrite is set, and that default is a feature here: a destination object that
+ * already exists is either the same bytes (already done, skip) or different bytes (a CONFLICT that
+ * a human must look at). Blindly overwriting would destroy the evidence of the second case.
  *
- * IF PATHNAMES EVER HAVE TO CHANGE, STOP. That would mean rewriting DB rows in the same operation
- * as rewriting storage, which is a materially larger risk than this, and it is out of scope here.
- *
- * IDEMPOTENT: an object that already refuses an anonymous read is skipped, so a rerun is a no-op
- * over work already done. RESUMABLE: every completed pathname is appended to the state file and
- * skipped on the next run. FAILURES ARE RECORDED, never swallowed, and never silently skipped — the
- * run ends non-zero if any object failed.
- *
- * ATTACHMENT ORPHANS ARE MIGRATED LIKE ANYTHING ELSE AND NEVER DELETED. Objects under
- * organizations/{orgId}/attachments/ with no DB reference may be lost attachments from the
- * pre-d3694a6 persistence defect; making them private is exactly what should happen to them.
- * Nothing in this script removes an object under any circumstances.
+ * Per-object state is one of:
+ *   pending    listed, not yet attempted
+ *   copied     written to the destination, not yet verified
+ *   verified   destination exists, size and sha256 match the source, and an anonymous fetch of the
+ *              destination is refused
+ *   conflict   destination exists with different content — not touched, reported
+ *   failed     any error; recorded with its reason, never swallowed
+ * The run exits non-zero if anything ends conflict or failed.
  */
+import { createHash } from "node:crypto";
 import { existsSync, readFileSync, appendFileSync } from "node:fs";
-import { blobClient } from "../src/lib/storage/blob-client";
-
+import { destinationStore, sourceStore, type BlobStore } from "../src/lib/storage/blob-client";
 
 const has = (n: string) => process.argv.includes(`--${n}`);
 const arg = (n: string) => { const i = process.argv.indexOf(`--${n}`); return i >= 0 ? process.argv[i + 1] : undefined; };
@@ -44,79 +43,105 @@ const arg = (n: string) => { const i = process.argv.indexOf(`--${n}`); return i 
 const execute = has("execute");
 const onlyFolder = arg("folder");
 const limit = arg("limit") ? Number(arg("limit")) : Infinity;
-const statePath = arg("state") ?? "blob-migration-state.log";
+const statePath = arg("state") ?? "blob-migration-state.jsonl";
+
+type State = "pending" | "copied" | "verified" | "conflict" | "failed";
+type Entry = { pathname: string; state: State; reason?: string; bytes?: number; sha256?: string; at: string };
+
+const sha = (b: Buffer) => createHash("sha256").update(b).digest("hex");
+
+function loadDone(): Map<string, Entry> {
+  const m = new Map<string, Entry>();
+  if (!existsSync(statePath)) return m;
+  for (const line of readFileSync(statePath, "utf8").split("\n").filter(Boolean)) {
+    try { const e = JSON.parse(line) as Entry; m.set(e.pathname, e); } catch { /* skip a torn line */ }
+  }
+  return m;
+}
+
+function record(e: Entry) {
+  appendFileSync(statePath, JSON.stringify(e) + "\n");
+}
+
+async function migrateOne(src: BlobStore, dest: BlobStore, pathname: string, listedSize: number): Promise<Entry> {
+  const at = new Date().toISOString();
+  try {
+    const source = await src.get(pathname);
+    if (!source) return { pathname, state: "failed", reason: "source object could not be read", at };
+    if (source.bytes.length !== listedSize) return { pathname, state: "failed", reason: `source size changed while listing: listed ${listedSize}, read ${source.bytes.length}`, at };
+    const sourceHash = sha(source.bytes);
+
+    // Compare before write. An existing destination is only success if it is byte-identical.
+    const existing = await dest.get(pathname);
+    if (existing) {
+      if (sha(existing.bytes) === sourceHash) return { pathname, state: "verified", bytes: source.bytes.length, sha256: sourceHash, reason: "destination already held identical bytes", at };
+      return { pathname, state: "conflict", reason: `destination exists with different content (source sha ${sourceHash.slice(0, 12)}, destination sha ${sha(existing.bytes).slice(0, 12)})`, at };
+    }
+
+    await dest.put(pathname, source.bytes, { contentType: source.contentType });
+
+    const after = await dest.get(pathname);
+    if (!after) return { pathname, state: "failed", reason: "destination object missing immediately after write", at };
+    if (after.bytes.length !== source.bytes.length) return { pathname, state: "failed", reason: `destination size mismatch: ${source.bytes.length} -> ${after.bytes.length}`, at };
+    if (sha(after.bytes) !== sourceHash) return { pathname, state: "failed", reason: "destination sha256 does not match the source", at };
+    if (after.contentType !== source.contentType) return { pathname, state: "failed", reason: `content type changed: ${source.contentType} -> ${after.contentType}`, at };
+    if (await dest.probeAnonymous(pathname)) return { pathname, state: "failed", reason: "destination object is anonymously fetchable — the destination store is not private", at };
+
+    return { pathname, state: "verified", bytes: source.bytes.length, sha256: sourceHash, at };
+  } catch (e) {
+    return { pathname, state: "failed", reason: String(e), at };
+  }
+}
 
 async function main() {
-  // Without a token this script cannot tell which objects are still public, so it cannot even
-  // PLAN — a dry run would report an empty, falsely reassuring list. Fail loudly and specifically
-  // rather than letting a stack trace stand in for the explanation.
-  const client = blobClient();
-  if (!process.env.BLOB_READ_WRITE_TOKEN && process.env.STORAGE_DRIVER !== "fake") {
+  const dest = destinationStore();
+  const src = sourceStore();
+  if (!src) {
     console.error(
-      "BLOB_READ_WRITE_TOKEN is not set.\n" +
-      "This script needs it to list the store and to probe each object anonymously; without it the\n" +
-      "public/private question cannot be answered and a dry run would report nothing to do, which\n" +
-      "would be misleading rather than safe. Set it and re-run.",
+      "No PUBLIC SOURCE store is configured (BLOB_PUBLIC_SOURCE_READ_WRITE_TOKEN is unset).\n" +
+      "There is nothing to migrate from. If the legacy store has already been retired this is the\n" +
+      "expected state and no migration is needed; if it has not, set the token and re-run. Refusing\n" +
+      "to report 'nothing to do', which would be misleading rather than safe.",
     );
     process.exit(1);
   }
-  const done = new Set(existsSync(statePath) ? readFileSync(statePath, "utf8").split("\n").filter(Boolean) : []);
 
+  const done = loadDone();
   const all: { pathname: string; size: number }[] = [];
   let cursor: string | undefined;
   do {
-    const page = await client.list({ prefix: "organizations/", cursor, limit: 1000 });
+    const page = await src.list({ prefix: "organizations/", cursor, limit: 1000 });
     for (const o of page.objects) {
-      const folder = o.pathname.split("/")[2];
-      if (onlyFolder && folder !== onlyFolder) continue;
+      if (onlyFolder && o.pathname.split("/")[2] !== onlyFolder) continue;
       all.push({ pathname: o.pathname, size: o.size });
     }
     cursor = page.cursor;
   } while (cursor);
 
-  const pending: typeof all = [];
-  for (const o of all) {
-    if (done.has(o.pathname)) continue;
-    if (!(await client.probePublic(o.pathname))) continue; // already private
-    pending.push(o);
-    if (pending.length >= limit) break;
-  }
+  const settled = (p: string) => done.get(p)?.state === "verified";
+  const pending = all.filter((o) => !settled(o.pathname)).slice(0, limit === Infinity ? undefined : limit);
 
-  console.log(`${execute ? "EXECUTE" : "DRY RUN"} — ${all.length} objects listed, ${done.size} already recorded done, ${pending.length} publicly readable and pending`);
+  console.log(`${execute ? "EXECUTE" : "DRY RUN"} — source ${src.mode} store: ${all.length} objects listed, ${[...done.values()].filter((e) => e.state === "verified").length} already verified, ${pending.length} pending`);
   if (onlyFolder) console.log(`folder filter: ${onlyFolder}`);
   if (!execute) {
-    for (const o of pending) console.log(`  would re-store private: ${o.pathname} (${o.size} bytes)`);
-    console.log(`\nDry run. Nothing was written. Re-run with --execute to perform ${pending.length} rewrites.`);
+    for (const o of pending) console.log(`  would copy -> private destination: ${o.pathname} (${o.size} bytes)`);
+    console.log(`\nDry run. Nothing was written, to either store, and no state file was created.`);
+    console.log(`Re-run with --execute to copy ${pending.length} objects. The source store is never modified.`);
     return;
   }
 
-  let ok = 0;
-  const failures: { pathname: string; reason: string }[] = [];
+  const tally: Record<State, number> = { pending: 0, copied: 0, verified: 0, conflict: 0, failed: 0 };
   for (const o of pending) {
-    try {
-      const src = await client.get(o.pathname, { access: "public" });
-      if (!src) { failures.push({ pathname: o.pathname, reason: "source unreadable as public" }); continue; }
-      if (src.bytes.length !== o.size) { failures.push({ pathname: o.pathname, reason: `size mismatch before write: listed ${o.size}, read ${src.bytes.length}` }); continue; }
-
-      await client.put(o.pathname, src.bytes, { contentType: src.contentType, access: "private" });
-
-      const after = await client.head(o.pathname);
-      if (!after) { failures.push({ pathname: o.pathname, reason: "object missing after write" }); continue; }
-      if (after.size !== o.size) { failures.push({ pathname: o.pathname, reason: `size mismatch after write: was ${o.size}, now ${after.size}` }); continue; }
-      const stillPublic = await client.probePublic(o.pathname);
-      if (stillPublic) { failures.push({ pathname: o.pathname, reason: "still publicly readable after rewrite" }); continue; }
-
-      appendFileSync(statePath, `${o.pathname}\n`);
-      ok++;
-      console.log(`  private: ${o.pathname} (${o.size} bytes)`);
-    } catch (e) {
-      failures.push({ pathname: o.pathname, reason: String(e) });
-    }
+    const entry = await migrateOne(src, dest, o.pathname, o.size);
+    record(entry);
+    tally[entry.state]++;
+    const mark = entry.state === "verified" ? "verified" : entry.state.toUpperCase();
+    console.log(`  ${mark}: ${o.pathname}${entry.reason ? ` — ${entry.reason}` : ""}`);
   }
 
-  console.log(`\n${ok} re-stored private, ${failures.length} failed.`);
-  for (const f of failures) console.log(`  FAILED ${f.pathname}: ${f.reason}`);
-  if (failures.length) process.exit(1);
+  console.log(`\nverified ${tally.verified}, conflict ${tally.conflict}, failed ${tally.failed}`);
+  console.log("The public source store was not modified: no object was deleted or rewritten there.");
+  if (tally.conflict || tally.failed) process.exit(1);
 }
 
 main().catch((e) => { console.error(e); process.exit(1); });
