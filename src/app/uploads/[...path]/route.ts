@@ -41,7 +41,17 @@ export async function GET(req: Request, ctx: { params: Promise<{ path: string[] 
 
   // Path 2: signed URL (branding folders only).
   const url = new URL(req.url);
-  const signed = BRANDING_FOLDERS.has(folder) && verifySignedFile(pathname, url.searchParams.get("exp"), url.searchParams.get("sig"));
+  const expRaw = url.searchParams.get("exp");
+  const signed = BRANDING_FOLDERS.has(folder) && verifySignedFile(pathname, expRaw, url.searchParams.get("sig"));
+
+  // A signed response must not outlive its signature in the browser's own cache. With a flat
+  // max-age=3600 a client that fetched the file once could keep re-serving it from cache for an hour
+  // after `exp` had passed, without ever asking the server again — which makes the expiry a promise
+  // the system does not keep. Cap the lifetime at whatever validity is left, so the cache entry dies
+  // no later than the capability does. Session-authorized responses are unaffected and keep the full
+  // hour: that is what makes a print page full of <img> tags affordable.
+  const signedTtl = signed ? Math.max(0, Number(expRaw) - Math.floor(Date.now() / 1000)) : 0;
+  const maxAge = signed ? Math.min(3600, signedTtl) : 3600;
 
   // Path 1: live session that owns the file.
   const session = signed ? null : await getSession();
@@ -60,12 +70,11 @@ export async function GET(req: Request, ctx: { params: Promise<{ path: string[] 
         "Content-Type": CONTENT_TYPES[ext],
         "Content-Disposition": folder === "attachments" ? "attachment" : "inline",
         "X-Content-Type-Options": "nosniff",
-        // `private` keeps these bytes out of every SHARED cache — CDN, proxy, Vercel's edge — while
-        // still allowing the requesting browser to reuse them for an hour, which is what makes a
-        // print page full of <img> tags cheap. It must stay `private` whichever path authorized the
-        // request: a session response obviously must not be shared, and a signed response must not
-        // outlive its signature in someone else's cache.
-        "Cache-Control": "private, max-age=3600",
+        // `private` keeps these bytes out of every SHARED cache — CDN, proxy, Vercel's edge —
+        // whichever path authorized the request. max-age is the full hour for a session and the
+        // signature's remaining validity for a signed request (see above); a signature with no time
+        // left yields max-age=0, so the entry is never reusable.
+        "Cache-Control": `private, max-age=${maxAge}`,
       },
     });
   } catch {
