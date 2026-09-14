@@ -125,7 +125,12 @@ for (const folder of folders) {
     const other = pathOf(storedA[folders.find((f) => f !== folder)]);
     const tampered = await getRaw(stored, { query: signFileUrl(other, 600).slice(signFileUrl(other, 600).indexOf("?")) });
     if (tampered.status === 200) { signedTampered = false; check(`${folder}: a signature minted for another path denied`, false, ""); }
-    const bad = await getRaw(stored, { query: q.replace(/sig=./, "sig=X") });
+    // Flip the first signature character to a DIFFERENT one. Replacing it with a constant "X" is a
+    // no-op whenever the signature already starts with X — base64url contains it — so that version
+    // passed on luck and failed roughly one run in eleven across six branding folders.
+    const sigVal = new URLSearchParams(q).get("sig");
+    const corrupted = (sigVal[0] === "A" ? "B" : "A") + sigVal.slice(1);
+    const bad = await getRaw(stored, { query: q.replace(`sig=${sigVal}`, `sig=${corrupted}`) });
     if (bad.status === 200) { signedBad = false; check(`${folder}: corrupted signature denied`, false, ""); }
   } else if (SESSION_ONLY.has(folder) && res.status === 200) {
     signedNonBranding = false;
