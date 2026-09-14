@@ -17,7 +17,7 @@ process.env.STORAGE_DRIVER = "fake";
 process.env.STORAGE_FAKE_SOURCE = "1";
 process.env.STORAGE_FAKE_DIR = mkdtempSync(join(tmpdir(), "storemodel-"));
 
-const { destinationStore, sourceStore, BlobExistsError } = await import("../src/lib/storage/blob-client");
+const { destinationStore, sourceStore, BlobExistsError, BlobDeleteError } = await import("../src/lib/storage/blob-client");
 const { storeBlob, readBlob, deleteStoredBlob, pathnameFromStored } = await import("../src/lib/storage/blob-storage");
 
 const results: [boolean, string, string][] = [];
@@ -108,6 +108,69 @@ await src.put(both, PNG, { contentType: "image/png" });
 await dest.put(both, PNG, { contentType: "image/png" });
 await deleteStoredBlob(`/uploads/${both}`);
 ok("an intentional delete removes the object from BOTH stores", (await dest.head(both)) === null && (await src.head(both)) === null);
+
+// ---- DELETE SEMANTICS ----------------------------------------------------------------------
+// An intentional removal that half-worked must never report success. If the private copy went and
+// the PUBLIC one did not, the user has been told their file is gone while its bytes are still
+// anonymously downloadable — so every one of these is about the public store surviving.
+const seed = async (path: string, where: ("public" | "private")[]) => {
+  if (where.includes("public")) await src.put(path, PNG, { contentType: "image/png", allowOverwrite: true });
+  if (where.includes("private")) await dest.put(path, PNG, { contentType: "image/png", allowOverwrite: true });
+};
+const gone = async (path: string) => (await dest.head(path)) === null && (await src.head(path)) === null;
+
+// 1. present in both
+const dBoth = "organizations/5/logos/5-1700000000010-1111111111111111.png";
+await seed(dBoth, ["public", "private"]);
+await deleteStoredBlob(`/uploads/${dBoth}`);
+ok("delete: an object in BOTH stores is removed from both", await gone(dBoth));
+
+// 2. destination missing, source present
+const dSrcOnly = "organizations/5/logos/5-1700000000011-2222222222222222.png";
+await seed(dSrcOnly, ["public"]);
+await deleteStoredBlob(`/uploads/${dSrcOnly}`);
+ok("delete: an object only in the PUBLIC source is removed", await gone(dSrcOnly));
+
+// 3. source missing, destination present
+const dDestOnly = "organizations/5/logos/5-1700000000012-3333333333333333.png";
+await seed(dDestOnly, ["private"]);
+await deleteStoredBlob(`/uploads/${dDestOnly}`);
+ok("delete: an object only in the private destination is removed", await gone(dDestOnly));
+
+// 4. destination delete FAILS — the source must still be attempted, and the whole thing must report
+const dFailDest = "organizations/5/logos/5-1700000000013-faildest00000000.png";
+await seed(dFailDest, ["public", "private"]);
+process.env.STORAGE_FAKE_FAIL_DELETE = "faildest";
+process.env.STORAGE_FAKE_FAIL_DELETE_ROLE = "destination";
+let reported = false;
+try { await deleteStoredBlob(`/uploads/${dFailDest}`); } catch (e) { reported = e instanceof BlobDeleteError; }
+delete process.env.STORAGE_FAKE_FAIL_DELETE;
+ok("delete: a DESTINATION failure is reported, not swallowed", reported);
+ok("delete: the PUBLIC source is still removed even though the destination failed", (await src.head(dFailDest)) === null, "the anonymously-readable copy must not survive a destination error");
+ok("delete: the destination object that failed to delete is still there (the failure was real)", (await dest.head(dFailDest)) !== null);
+
+// 5. source delete FAILS — destination still removed, still reported
+const dFailSrc = "organizations/5/logos/5-1700000000014-failsrc000000000.png";
+await seed(dFailSrc, ["public", "private"]);
+process.env.STORAGE_FAKE_FAIL_DELETE = "failsrc";
+process.env.STORAGE_FAKE_FAIL_DELETE_ROLE = "source";
+let reportedSrc = false, failedStores: string[] = [];
+try { await deleteStoredBlob(`/uploads/${dFailSrc}`); } catch (e) { reportedSrc = e instanceof BlobDeleteError; if (e instanceof BlobDeleteError) failedStores = e.failures.map((f) => f.role); }
+delete process.env.STORAGE_FAKE_FAIL_DELETE;
+delete process.env.STORAGE_FAKE_FAIL_DELETE_ROLE;
+ok("delete: a SOURCE failure is reported — the public bytes may still be downloadable", reportedSrc && failedStores.includes("source"), JSON.stringify(failedStores));
+ok("delete: the destination was still removed despite the source failing", (await dest.head(dFailSrc)) === null);
+
+// 6. idempotent on a genuinely missing object
+let missingThrew = false;
+try { await deleteStoredBlob("/uploads/organizations/5/logos/5-1700000000015-4444444444444444.png"); } catch { missingThrew = true; }
+ok("delete: a genuinely missing object is idempotent and not an error", !missingThrew);
+
+// 7. the headline property: a REPORTED SUCCESS means nothing survived in the public store
+const dClean = "organizations/5/logos/5-1700000000016-5555555555555555.png";
+await seed(dClean, ["public", "private"]);
+await deleteStoredBlob(`/uploads/${dClean}`);
+ok("delete: after a reported success the object is not anonymously readable anywhere", (await src.probeAnonymous(dClean)) === false && (await dest.probeAnonymous(dClean)) === false);
 
 let pass = 0, fail = 0;
 for (const [c, name, extra] of results) { c ? pass++ : fail++; console.log(`${c ? "PASS" : "FAIL"}  ${name}${c ? "" : "  -> " + extra}`); }

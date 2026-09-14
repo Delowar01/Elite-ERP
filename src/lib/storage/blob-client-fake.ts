@@ -87,8 +87,16 @@ export function fakeStore(role: StoreRole, mode: StoreMode): BlobStore {
     },
 
     async del(pathname) {
+      // A configurable fault, scoped to one store ROLE, so a suite can prove that a delete which
+      // FAILS is reported as a failure rather than swallowed — and that a failure in one store
+      // still lets the other store be attempted.
+      const failRole = process.env.STORAGE_FAKE_FAIL_DELETE_ROLE ?? "destination";
+      if (process.env.STORAGE_FAKE_FAIL_DELETE && role === failRole && pathname.includes(process.env.STORAGE_FAKE_FAIL_DELETE)) {
+        throw new Error(`fake ${mode} store (${role}): injected delete failure for ${pathname}`);
+      }
+      // A missing object is idempotent, exactly as the real client treats BlobNotFoundError.
       for (const f of [fileOf(mode, pathname), metaOf(mode, pathname)]) {
-        try { if (existsSync(f)) rmSync(f); } catch { /* best-effort, as the real client */ }
+        if (existsSync(f)) rmSync(f);
       }
     },
 

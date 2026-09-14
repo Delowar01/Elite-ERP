@@ -59,6 +59,17 @@ export class BlobExistsError extends Error {
   }
 }
 
+/**
+ * Thrown when a delete did not happen. Carries every store that failed, because a partial delete is
+ * the dangerous case: if the private copy went and the PUBLIC one did not, the user has been told
+ * their file is gone while its bytes are still anonymously downloadable.
+ */
+export class BlobDeleteError extends Error {
+  constructor(public readonly pathname: string, public readonly failures: { role: StoreRole; mode: StoreMode; reason: string }[]) {
+    super(`delete failed for ${pathname} in: ${failures.map((f) => `${f.role}(${f.mode}) — ${f.reason}`).join("; ")}`);
+  }
+}
+
 export interface BlobStore {
   readonly role: StoreRole;
   readonly mode: StoreMode;
@@ -70,7 +81,14 @@ export interface BlobStore {
    * fallback cannot mistake "I could not read it" for "it is not here".
    */
   get(pathname: string): Promise<BlobBytes | null>;
+  /**
+   * Delete. A MISSING object is not an error — delete stays idempotent. Every other failure —
+   * auth, authorization, network, service, rate limit, malformed token, unknown — THROWS, because
+   * an object that could not be deleted is still there, and on the public store that means its
+   * bytes are still anonymously downloadable.
+   */
   del(pathname: string): Promise<void>;
+  /** Metadata, or null when the object genuinely does not exist. Other failures throw. */
   head(pathname: string): Promise<BlobObject | null>;
   list(opts: { prefix?: string; cursor?: string; limit?: number }): Promise<{ objects: BlobObject[]; cursor?: string }>;
   /** The real provider URL for this object, in this store's access shape. Never send to a client. */
@@ -90,7 +108,6 @@ function storeIdOf(token: string): string {
 
 function vercelStore(role: StoreRole, mode: StoreMode, token: string): BlobStore {
   const storeId = storeIdOf(token);
-  const isNotFound = (e: unknown) => e instanceof Error && /not.?found/i.test(e.name + e.message);
 
   return {
     role,
@@ -110,12 +127,15 @@ function vercelStore(role: StoreRole, mode: StoreMode, token: string): BlobStore
     },
 
     async get(pathname) {
-      const { get } = await import("@vercel/blob");
+      const { get, BlobNotFoundError } = await import("@vercel/blob");
       let res;
       try {
         res = await get(pathname, { access: mode, token });
       } catch (e) {
-        if (isNotFound(e)) return null;
+        // Only the provider's own "it does not exist" is absence. Everything else is a failure and
+        // must reach the caller, because readBlob() falls back to the public store on absence and a
+        // swallowed auth error would turn every read into a silent public serve.
+        if (e instanceof BlobNotFoundError) return null;
         throw new BlobReadError(pathname, e);
       }
       if (!res) return null;
@@ -127,21 +147,29 @@ function vercelStore(role: StoreRole, mode: StoreMode, token: string): BlobStore
     },
 
     async del(pathname) {
-      const { del } = await import("@vercel/blob");
+      const { del, BlobNotFoundError } = await import("@vercel/blob");
       try {
         await del(pathname, { token });
-      } catch {
-        // best-effort: a missing object is not an error for cleanup
+      } catch (e) {
+        // A MISSING object is not an error — delete stays idempotent. Anything else is: an auth
+        // failure, a suspended store, a rate limit or a network fault means the object is STILL
+        // THERE, and on the public source that means its bytes are still anonymously downloadable.
+        // The previous `catch {}` reported that as a successful deletion.
+        if (e instanceof BlobNotFoundError) return;
+        throw e;
       }
     },
 
     async head(pathname) {
-      const { head } = await import("@vercel/blob");
+      const { head, BlobNotFoundError } = await import("@vercel/blob");
       try {
         const h = await head(pathname, { token });
         return { pathname: h.pathname, size: h.size, contentType: h.contentType, uploadedAt: h.uploadedAt };
-      } catch {
-        return null;
+      } catch (e) {
+        // Same rule as get and del: null means absent, never "could not tell". The inventory counts
+        // objects with this, and a broad catch would quietly under-report a store it cannot reach.
+        if (e instanceof BlobNotFoundError) return null;
+        throw e;
       }
     },
 

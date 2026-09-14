@@ -1,6 +1,6 @@
 import "server-only";
 import { randomBytes } from "crypto";
-import { destinationStore, sourceStore } from "./blob-client";
+import { destinationStore, sourceStore, BlobDeleteError } from "./blob-client";
 
 // ---------------------------------------------------------------------------
 // Shared Vercel Blob storage service for every upload in Elite ERP (logos,
@@ -185,7 +185,22 @@ export function pathnameFromStored(stored: string): string {
 export async function deleteStoredBlob(stored: string | null | undefined): Promise<void> {
   if (!stored || !stored.startsWith("/uploads/organizations/")) return;
   const pathname = pathnameFromStored(stored);
-  await destinationStore().del(pathname);
-  const source = sourceStore();
-  if (source) await source.del(pathname);
+
+  // Both stores are attempted INDEPENDENTLY, and the source is attempted even when the destination
+  // failed. Sequencing them with `await a; await b;` would mean a destination failure aborted the
+  // SOURCE delete — leaving the public copy, the one that is anonymously downloadable, untouched
+  // precisely when something had already gone wrong. That is the worst possible ordering.
+  const stores = [destinationStore(), sourceStore()].filter((s) => s !== null);
+  const failures: { role: (typeof stores)[number]["role"]; mode: (typeof stores)[number]["mode"]; reason: string }[] = [];
+  for (const store of stores) {
+    try {
+      await store.del(pathname);
+    } catch (e) {
+      failures.push({ role: store.role, mode: store.mode, reason: String(e) });
+    }
+  }
+
+  // A partial delete must not read as success. The user has been told the file is gone; if the
+  // public copy survived, it is still fetchable by anyone holding its URL, and only an error says so.
+  if (failures.length) throw new BlobDeleteError(pathname, failures);
 }

@@ -24,13 +24,27 @@
  * already exists is either the same bytes (already done, skip) or different bytes (a CONFLICT that
  * a human must look at). Blindly overwriting would destroy the evidence of the second case.
  *
- * Per-object state is one of:
- *   pending    listed, not yet attempted
- *   copied     written to the destination, not yet verified
- *   verified   destination exists, size and sha256 match the source, and an anonymous fetch of the
- *              destination is refused
- *   conflict   destination exists with different content — not touched, reported
- *   failed     any error; recorded with its reason, never swallowed
+ * STATE FILE — exactly three states are written, because exactly three are reached:
+ *
+ *   verified   the destination holds the object, its size, sha256 and content type match the
+ *              source, and an anonymous fetch of the destination was refused
+ *   conflict   the destination already held DIFFERENT content — left untouched, reported
+ *   failed     any error, with its reason; never swallowed
+ *
+ * An earlier version of this comment also listed `pending` and `copied`. Neither is ever written:
+ * an object is attempted and lands on a terminal state in one step, so recording intermediates
+ * would mean adding a write and a crash-window purely to make the state machine look richer. That
+ * would be complexity for appearance.
+ *
+ * CRASH RECOVERY DOES NOT NEED THEM, which is why the simpler design is the right one. If the copy
+ * succeeds and the process dies before verification, nothing is recorded, so the rerun treats the
+ * object as unattempted — reads the source, finds the destination already present, hashes both, and
+ * records `verified` when they match. The unrecorded half-step is recovered by COMPARING rather
+ * than by remembering, and comparison is what would have to be trusted anyway.
+ *
+ * RESUME SEMANTICS: only `verified` is settled and skipped. `conflict` and `failed` entries are
+ * retried on the next run, because both are states a human may have fixed in between.
+ *
  * The run exits non-zero if anything ends conflict or failed.
  */
 import { createHash } from "node:crypto";
@@ -45,7 +59,8 @@ const onlyFolder = arg("folder");
 const limit = arg("limit") ? Number(arg("limit")) : Infinity;
 const statePath = arg("state") ?? "blob-migration-state.jsonl";
 
-type State = "pending" | "copied" | "verified" | "conflict" | "failed";
+// Only the states that are actually written. See the header: intermediates are not recorded.
+type State = "verified" | "conflict" | "failed";
 type Entry = { pathname: string; state: State; reason?: string; bytes?: number; sha256?: string; at: string };
 
 const sha = (b: Buffer) => createHash("sha256").update(b).digest("hex");
@@ -130,7 +145,7 @@ async function main() {
     return;
   }
 
-  const tally: Record<State, number> = { pending: 0, copied: 0, verified: 0, conflict: 0, failed: 0 };
+  const tally: Record<State, number> = { verified: 0, conflict: 0, failed: 0 };
   for (const o of pending) {
     const entry = await migrateOne(src, dest, o.pathname, o.size);
     record(entry);

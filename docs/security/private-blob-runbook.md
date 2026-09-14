@@ -43,8 +43,12 @@ Neither is ever sent to a client.
 4. **Dry run.** `npm run blob:migrate`. Dry run is the default and creates no state file.
 5. **Migrate in slices.** `npm run blob:migrate -- --execute --limit 50`, then by folder. Each object
    is copied to the same pathname in the destination and **verified** — size, sha256, content type,
-   and an anonymous fetch of the destination refused. Conflicts and failures are reported, never
-   skipped.
+   and an anonymous fetch of the destination refused. The state file records exactly three states:
+   `verified`, `conflict`, `failed`. Only `verified` is settled and skipped on a rerun; `conflict`
+   and `failed` are retried, because both are states a human may have fixed in between. If the
+   process dies between the copy and the verification, nothing is recorded and the rerun recovers by
+   comparison: it finds the destination present, hashes both sides, and records `verified` when they
+   match.
 6. **Re-inventory.** `publicOnly` should reach 0 and `inBoth` should equal the source count.
 7. **Retire the source later, deliberately.** Only once `publicOnly` is 0, the app has run on the
    fallback for a period you are comfortable with, and you accept that rollback past this point is
@@ -116,29 +120,63 @@ the test storage driver, because Vercel Blob is unreachable from the build envir
 **this application** stores private and never falls back to an anonymous URL read. They are **not**
 evidence that a real private Vercel object refuses an anonymous GET.
 
-That must be settled on a Preview deployment against a real private store, using **disposable
-objects only**, in two cleanly separated parts — because one prefix cannot do both jobs:
+That must be settled on a Preview deployment. **Everything it touches is disposable — no production
+Blob store, no production database, no production object.**
 
-**(a) Provider-only behaviour.** An isolated prefix such as `batch3-verification/<unique-id>/` is
-fine for raw provider checks. It CANNOT exercise `/uploads/[...path]`: that route accepts only
-`organizations/{orgId}/{folder}/{orgId}-{timestamp}-{16hex}.{ext}` and rejects anything else at the
-shape check, so an object under a verification prefix proves nothing about the application path.
+### Disposable setup required
 
-**(b) Application-route behaviour.** Register a disposable Preview test organization and use real
-application-generated paths under `organizations/{testOrgId}/{realFolder}/`. Keep an exact manifest
-of every disposable pathname created, so cleanup deletes only those. **No production or customer
-object may be read, written or deleted.**
+| Preview variable | Value |
+| --- | --- |
+| `BLOB_READ_WRITE_TOKEN` | a **disposable PRIVATE** Blob store, created for this test |
+| `BLOB_PUBLIC_SOURCE_READ_WRITE_TOKEN` | a **disposable PUBLIC** Blob store, for legacy-source and fallback testing |
+| `DATABASE_URL` | a **disposable** Preview database (a Neon branch or equivalent already-approved isolated DB) |
 
-Between them they must prove:
+Preview environment only. **Do not replace any Production variable. Do not point the Preview at the
+production public store or the production database. Neither credential may reach the browser.**
 
-1. a real private write succeeds
-2. the raw provider URL — the one the SDK actually returns from `put`/`head`, on the
-   `.private.blob.vercel-storage.com` host, never a manufactured `.public.` URL — fails anonymously
-3. the authorized `/uploads/...` route returns the exact bytes
-4. an unauthenticated route request is denied
-5. a cross-tenant request is denied
-6. a valid signed URL works, and an expired or tampered one fails
-7. logo, seal and signature render inside real generated PDFs
+Keep an **exact manifest** of every disposable pathname created. Cleanup compares against that
+manifest; never delete by prefix scan.
 
-Delete only those disposable objects afterwards. **Do not touch existing production objects**, and
-do not run this until the owner approves it.
+### What it must prove
+
+**Provider level** — disposable provider-only objects, an isolated prefix is fine here:
+
+1. a public-store object IS anonymously readable
+2. a private-store object is NOT anonymously readable, using the **URL the SDK actually returned**
+   from `put`/`head` — not a hand-built `.private.` string, which would prove only that a guessed
+   URL 404s
+
+**Application path** — a disposable Preview organization and real generated paths under
+`organizations/{testOrgId}/{realFolder}/`, because `/uploads/[...path]` rejects anything else at its
+shape check:
+
+3. a private destination write succeeds
+4. a new upload exists **only** in the private destination
+5. the authorized route serves the exact bytes
+6. an unauthenticated request is denied
+7. a cross-tenant request is denied
+8. the private object wins when both stores hold the pathname
+9. a genuinely absent destination falls back to the public source
+10. a destination auth/read failure does **not** fall back
+11. a signed branding URL succeeds; expired and tampered ones fail
+12. a signed response's cache lifetime never exceeds the signature's remaining lifetime
+13. logo, seal and signature render inside generated PDFs
+
+**Real cross-store migration** — using only disposable source objects:
+
+14. source public object present, destination absent
+15. copy source → destination at the same pathname
+16. the source is left untouched
+17. destination bytes, sha256 and content type match
+18. the destination's raw URL denies an anonymous read
+19. the application route now serves the destination copy
+20. a rerun is idempotent
+21. a differing destination produces `conflict` and is not overwritten
+
+**Do not run the migration tool against the production public store to test it.**
+
+### Cleanup
+
+Delete only the objects in the recorded manifest. Retire the disposable stores if they were created
+for this test, and drop the disposable Preview database/branch if it was. Never clean up by prefix
+scan without comparing against the manifest.
