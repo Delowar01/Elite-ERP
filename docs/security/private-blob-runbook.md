@@ -4,75 +4,84 @@ Covers F-3 / R-2 / D-1: uploads stop depending on possession of a public Vercel 
 
 ## What changed
 
+**Access belongs to the store, not the object.** A Vercel Blob store is created public or private
+and cannot be changed afterwards. The SDK builds
+`https://${storeId}.${access}.blob.vercel-storage.com/${pathname}` — the access level is part of the
+host, so a private object is a *different address in a different store*, not the same URL with
+different permissions. There is no "make this object private" operation.
+
 | | Before | After |
 | --- | --- | --- |
-| Write | `put(path, bytes, { access: "public" })` | `put(path, bytes, { access: "private" })` |
-| Read | `fetch(https://<store>.public.blob.vercel-storage.com/<path>)` | `get(path, { access: "private", token })` |
-| Delete | `del(<provider URL>)` | `del(<pathname>)` |
-| Stored in DB | `/uploads/organizations/{orgId}/{folder}/{file}` | **unchanged** |
+| Stores | one PUBLIC store | **PUBLIC SOURCE** (legacy, read-only in practice) + **PRIVATE DESTINATION** |
+| New uploads | public store | private destination **only** — no public copy is written |
+| Read | `fetch(<public URL>)` | private destination, falling back **server-side** to the public source while unmigrated |
+| Delete (user action) | public store | **both** stores |
+| Migration | — | **copy** source → destination, same pathname; source never deleted |
+| Stored in DB | `/uploads/organizations/{orgId}/{folder}/{file}` | **unchanged — the DB never learns which store holds an object** |
 
-No pathname moves and no database row changes, in either the code change or the migration. That is
-deliberate: it keeps the ERP uncoupled from the provider and keeps every step independently
-reversible.
+### Configuration
+
+Two stores are addressed with two tokens. `resolveBlobAuth()` prefers an explicit `options.token`
+and derives the store id from it (`token.split("_")[3]`), so a distinct token per call is the
+supported way to reach a second store from one project.
+
+| Variable | Store | Notes |
+| --- | --- | --- |
+| `BLOB_READ_WRITE_TOKEN` | **private destination** | required; the default name deliberately points at the safe store |
+| `BLOB_PUBLIC_SOURCE_READ_WRITE_TOKEN` | **public source** | optional; **removing it retires the fallback** |
+
+Neither is ever sent to a client.
 
 ## Deploy and migrate, in this order
 
-The order matters, and it is **not** symmetric with the rollback.
+1. **Create the private destination store** and set `BLOB_READ_WRITE_TOKEN` to it. Set
+   `BLOB_PUBLIC_SOURCE_READ_WRITE_TOKEN` to the existing public store.
+2. **Deploy the code.** New uploads go straight to the private store; everything older still loads
+   through the source fallback. Nothing breaks at this point and nothing has moved.
+3. **Inventory, read-only.** `npm run blob:inventory -- --json inventory.json [--hash]`. Read
+   `reconciliation.publicOnly` (still to migrate) and the `attachmentOrphans` block first.
+4. **Dry run.** `npm run blob:migrate`. Dry run is the default and creates no state file.
+5. **Migrate in slices.** `npm run blob:migrate -- --execute --limit 50`, then by folder. Each object
+   is copied to the same pathname in the destination and **verified** — size, sha256, content type,
+   and an anonymous fetch of the destination refused. Conflicts and failures are reported, never
+   skipped.
+6. **Re-inventory.** `publicOnly` should reach 0 and `inBoth` should equal the source count.
+7. **Retire the source later, deliberately.** Only once `publicOnly` is 0, the app has run on the
+   fallback for a period you are comfortable with, and you accept that rollback past this point is
+   no longer possible: unset `BLOB_PUBLIC_SOURCE_READ_WRITE_TOKEN`, then delete the public store.
+   **Deleting the public store is the point of no return, and nothing in this repo does it.**
 
-1. **Deploy the code first.** New code reads private objects with a token *and* still reads objects
-   that happen to be public — `get()` is told which access level to expect, and the migration is
-   what changes that. Deploying code before migrating therefore breaks nothing: new uploads land
-   private, old objects keep working as they are.
-2. **Inventory, read-only.** `npm run blob:inventory -- --json inventory.json`. Writes nothing.
-   Read the `publiclyReadable` count — that is the exposure the migration exists to close — and the
-   `attachmentOrphans` block before doing anything else.
-3. **Dry run.** `npm run blob:migrate`. Dry run is the default; it does not even create the state
-   file. Confirm the pending count matches the inventory's `publiclyReadable`.
-4. **Migrate, in slices.** `npm run blob:migrate -- --execute --limit 50` first, then by folder, then
-   the rest. Each object is re-stored at its own pathname; nothing is deleted at any point.
-5. **Re-inventory.** `publiclyReadable` should reach 0. Anything left is listed by pathname.
+## Rollback — six cases, and only one is a plain revert
 
-### Why there is no "delete the old public objects" step
+Keeping the public source intact is what makes most of these survivable. The hazard is **new files**:
+anything uploaded after the code deploy exists *only* in the private destination, and old code
+cannot read that store at all.
 
-There are no old objects to delete. The migration overwrites each object **in place** at the same
-pathname, so there is never a second copy. Nothing in either script deletes anything, ever.
+| # | Situation | Rollback |
+| --- | --- | --- |
+| 1 | Before the Batch 3 production deploy | Nothing to do. |
+| 2 | Code deployed, **no new uploads yet**, migration not started | **Plain revert is sufficient.** Every object is still in the public store where old code looks. |
+| 3 | Code deployed, **new uploads have happened** | Revert restores old behaviour for historical files but **every file uploaded since the deploy becomes unreadable** — old code only reads the public store. Copy those private-only objects back to the public store first (`reconciliation.privateOnlyPathnames` lists them exactly), or accept the loss knowingly. |
+| 4 | Partial migration | Same as 3. Migration itself changes nothing about rollback — it only *copies*, so every migrated object is still in the public store. The private-only new uploads remain the whole problem. |
+| 5 | Full migration, source still present | Same as 3. Full migration is not a cliff; retiring the source is. |
+| 6 | After the public source is retired/deleted | **No rollback.** Old code cannot read the private store, and the public copies no longer exist. Recovery means restoring the deleted store from Vercel, if that is even possible. Do not take this step until rollback is something you are willing to give up. |
 
-## Rollback is asymmetric — read this before rolling back
+**So "revert the commit" is sufficient only in case 2.** In cases 3–5 it silently breaks recently
+uploaded files; in case 6 it is not a rollback at all.
 
-```
-  new code + public objects   ->  fine (get() reads either)
-  new code + private objects  ->  fine
-  OLD code + public objects   ->  fine (this is today)
-  OLD code + private objects  ->  BROKEN — old code fetches the public URL, which now 404s
-```
-
-**Reverting the commit is not sufficient once any object has been migrated.** Old code reads bytes
-by fetching the public provider URL; a private object refuses that, so every migrated file — logos,
-seals, signatures on documents and PDFs, item images, attachments — stops loading. The application
-keeps serving pages; the images just break.
-
-| Situation | Rollback |
-| --- | --- |
-| Code deployed, migration **not** started | Revert the commit. Genuinely sufficient: every object is still public and old code reads it. |
-| Migration partially or fully run | Reverting the code alone is **not** safe. Either roll forward (fix under the new code), or re-run the migration in reverse to make the affected objects public again *before* the code revert reaches production. |
-
-There is no in-place permission change in the Vercel Blob API, so "make it public again" is the same
-mechanism in the other direction: read the bytes, `put` them back with `access: "public"`. That
-reverse path is **not** scripted here — writing a tool whose purpose is to re-expose files is not
-something to leave lying around. If it is ever needed, it is `blob-migrate.ts` with the two access
-values swapped, run deliberately.
+The reverse copy (private → public) is deliberately **not** scripted: a tool whose purpose is to
+re-expose files should not sit in the repo waiting to be run by accident. It is `blob-migrate.ts`
+with source and destination exchanged, run deliberately, by someone who has read this table.
 
 ### Compatibility window
 
-Between the code deploy and the end of the migration, both access levels coexist and both work. That
-window can be as long as you like. The risk starts only when a rollback is attempted **after**
-migration has begun.
+Between the deploy and the source retirement both stores are in play and everything reads. That
+window can be as long as you like, and lengthening it is the cheapest risk reduction available.
 
 ### Emergency read
 
-If a file must be recovered while the pipeline is broken, `blobClient().get(pathname, { access })`
-with the project token reads any object regardless of state; `npm run blob:inventory` locates it.
-Neither requires the application to be up.
+`destinationStore().get(pathname)` and `sourceStore()?.get(pathname)` read either store with its own
+token; `npm run blob:inventory` locates any object. Neither needs the application to be up.
 
 ## Attachment orphans — do not delete
 
@@ -107,11 +116,24 @@ the test storage driver, because Vercel Blob is unreachable from the build envir
 **this application** stores private and never falls back to an anonymous URL read. They are **not**
 evidence that a real private Vercel object refuses an anonymous GET.
 
-That must be settled on a Preview deployment against the project's real Blob store, using disposable
-objects only, under an isolated prefix such as `batch3-verification/<unique-id>/`, proving:
+That must be settled on a Preview deployment against a real private store, using **disposable
+objects only**, in two cleanly separated parts — because one prefix cannot do both jobs:
+
+**(a) Provider-only behaviour.** An isolated prefix such as `batch3-verification/<unique-id>/` is
+fine for raw provider checks. It CANNOT exercise `/uploads/[...path]`: that route accepts only
+`organizations/{orgId}/{folder}/{orgId}-{timestamp}-{16hex}.{ext}` and rejects anything else at the
+shape check, so an object under a verification prefix proves nothing about the application path.
+
+**(b) Application-route behaviour.** Register a disposable Preview test organization and use real
+application-generated paths under `organizations/{testOrgId}/{realFolder}/`. Keep an exact manifest
+of every disposable pathname created, so cleanup deletes only those. **No production or customer
+object may be read, written or deleted.**
+
+Between them they must prove:
 
 1. a real private write succeeds
-2. the raw provider URL fails anonymously
+2. the raw provider URL — the one the SDK actually returns from `put`/`head`, on the
+   `.private.blob.vercel-storage.com` host, never a manufactured `.public.` URL — fails anonymously
 3. the authorized `/uploads/...` route returns the exact bytes
 4. an unauthenticated route request is denied
 5. a cross-tenant request is denied
