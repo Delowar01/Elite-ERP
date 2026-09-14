@@ -9,7 +9,7 @@
  * NOT evidence about Vercel: REAL PROVIDER VERIFICATION PENDING.
  */
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync, existsSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -17,7 +17,7 @@ process.env.STORAGE_DRIVER = "fake";
 process.env.STORAGE_FAKE_SOURCE = "1";
 process.env.STORAGE_FAKE_DIR = mkdtempSync(join(tmpdir(), "storemodel-"));
 
-const { destinationStore, sourceStore, BlobExistsError, BlobDeleteError } = await import("../src/lib/storage/blob-client");
+const { destinationStore, sourceStore, BlobExistsError, BlobDeleteError, BlobProbeError, assertPrivatelyStored } = await import("../src/lib/storage/blob-client");
 const { storeBlob, readBlob, deleteStoredBlob, pathnameFromStored } = await import("../src/lib/storage/blob-storage");
 
 const results: [boolean, string, string][] = [];
@@ -35,7 +35,7 @@ ok("a public store's provider URL is a .public. host; a private store's is .priv
    `${src.providerUrl("x")} | ${dest.providerUrl("x")}`);
 ok("the PUBLIC store serves an anonymous caller and the PRIVATE store does not",
    await (async () => { await src.put("organizations/1/logos/p.png", PNG, { contentType: "image/png" }); await dest.put("organizations/1/logos/q.png", PNG, { contentType: "image/png" });
-     return (await src.probeAnonymous("organizations/1/logos/p.png")) === true && (await dest.probeAnonymous("organizations/1/logos/q.png")) === false; })());
+     return (await src.probeAnonymous("organizations/1/logos/p.png")).state === "readable" && (await dest.probeAnonymous("organizations/1/logos/q.png")).state === "denied"; })());
 
 // 3. A new upload goes only to the private destination.
 const stored = await storeBlob(7, "logos", PNG, "png", "image/png");
@@ -170,7 +170,79 @@ ok("delete: a genuinely missing object is idempotent and not an error", !missing
 const dClean = "organizations/5/logos/5-1700000000016-5555555555555555.png";
 await seed(dClean, ["public", "private"]);
 await deleteStoredBlob(`/uploads/${dClean}`);
-ok("delete: after a reported success the object is not anonymously readable anywhere", (await src.probeAnonymous(dClean)) === false && (await dest.probeAnonymous(dClean)) === false);
+ok("delete: after a reported success the object is not anonymously readable anywhere", (await src.probeAnonymous(dClean)).state !== "readable" && (await dest.probeAnonymous(dClean)).state !== "readable");
+
+// ---- ANONYMOUS PROBE: AN ANSWER, OR NOTHING -------------------------------------------------
+// The probe used to return a boolean, folding "the provider refused" together with "I could not
+// reach the provider". Those are opposites — one is evidence of privacy, the other is its absence —
+// and in THIS environment, where Vercel is egress-blocked outright, the old version would have
+// reported every object in the store as private.
+const pubObj = "organizations/6/logos/6-1700000000020-6666666666666666.png";
+const privObj = "organizations/6/logos/6-1700000000021-7777777777777777.png";
+await src.put(pubObj, PNG, { contentType: "image/png", allowOverwrite: true });
+await dest.put(privObj, PNG, { contentType: "image/png", allowOverwrite: true });
+
+ok("probe: a public-store object reports readable", (await src.probeAnonymous(pubObj)).state === "readable", JSON.stringify(await src.probeAnonymous(pubObj)));
+ok("probe: a private-store object reports an explicit denial", (await dest.probeAnonymous(privObj)).state === "denied", JSON.stringify(await dest.probeAnonymous(privObj)));
+ok("probe: a genuinely absent object reports not_found, distinct from denied", (await dest.probeAnonymous("organizations/6/logos/6-1700000000022-8888888888888888.png")).state === "not_found");
+
+const probeThrows = async (fault: string) => {
+  process.env.STORAGE_FAKE_PROBE_FAULT = fault;
+  let err: unknown = null;
+  try { await dest.probeAnonymous(privObj); } catch (e) { err = e; }
+  delete process.env.STORAGE_FAKE_PROBE_FAULT;
+  return err instanceof BlobProbeError;
+};
+ok("probe: a transport failure THROWS rather than reporting 'not readable'", await probeThrows("network"));
+ok("probe: a 429 THROWS — a rate limit is not a refusal", await probeThrows("429"));
+ok("probe: a 5xx THROWS — a provider fault is not a refusal", await probeThrows("500"));
+
+// Positive evidence, in the right order: authenticated existence FIRST, then the anonymous answer.
+const verified = await assertPrivatelyStored(dest, privObj);
+ok("privacy verification: a real denial verifies a private destination object", verified.state === "denied", JSON.stringify(verified));
+let noEvidence = false;
+try { await assertPrivatelyStored(dest, "organizations/6/logos/6-1700000000023-9999999999999999.png"); } catch (e) { noEvidence = e instanceof BlobProbeError; }
+ok("privacy verification: refuses an object with no authenticated evidence it exists", noEvidence);
+process.env.STORAGE_FAKE_PROBE_FAULT = "network";
+let inconclusive = false;
+try { await assertPrivatelyStored(dest, privObj); } catch (e) { inconclusive = e instanceof BlobProbeError; }
+delete process.env.STORAGE_FAKE_PROBE_FAULT;
+ok("privacy verification: an inconclusive probe NEVER resolves to verified", inconclusive);
+let readableRejected = false;
+try { await assertPrivatelyStored(src, pubObj); } catch (e) { readableRejected = e instanceof BlobProbeError; }
+ok("privacy verification: an anonymously READABLE object is rejected outright", readableRejected);
+
+// Migration must not call an object verified when the probe could not answer.
+const mProbe = "organizations/6/seals/6-1700000000024-probefail0000000.png";
+await src.put(mProbe, PNG, { contentType: "image/png", allowOverwrite: true });
+process.env.STORAGE_FAKE_PROBE_FAULT = "network";
+process.env.STORAGE_FAKE_PROBE_FAULT_MATCH = "probefail";
+const probeState = join(process.env.STORAGE_FAKE_DIR!, "state-probe.jsonl");
+const probeRun = mig("--execute", "--state", probeState);
+delete process.env.STORAGE_FAKE_PROBE_FAULT;
+delete process.env.STORAGE_FAKE_PROBE_FAULT_MATCH;
+const probeLines = existsSync(probeState) ? readFileSync(probeState, "utf8").split("\n").filter(Boolean).map((l) => JSON.parse(l) as { pathname: string; state: string; reason?: string }) : [];
+const probeEntry = probeLines.find((e) => e.pathname === mProbe);
+ok("migration: an object whose privacy probe failed is recorded FAILED, not verified", probeEntry?.state === "failed", JSON.stringify(probeEntry ?? probeRun.split("\n").slice(-3)));
+ok("migration: the failure records why", (probeEntry?.reason ?? "").includes("privacy unverified"), probeEntry?.reason ?? "");
+
+// Inventory must surface a failed probe as its own category, never inside the private count.
+if (process.env.DATABASE_URL) {
+  const invOut = join(process.env.STORAGE_FAKE_DIR!, "inv.json");
+  process.env.STORAGE_FAKE_PROBE_FAULT = "network";
+  process.env.STORAGE_FAKE_PROBE_FAULT_MATCH = "organizations/6/logos";
+  try {
+    execFileSync("npx", ["tsx", "--conditions=react-server", "scripts/blob-inventory.ts", "--json", invOut], { encoding: "utf8", env: process.env, stdio: "pipe" });
+  } catch { /* the report is still written */ }
+  delete process.env.STORAGE_FAKE_PROBE_FAULT;
+  delete process.env.STORAGE_FAKE_PROBE_FAULT_MATCH;
+  const inv = existsSync(invOut) ? JSON.parse(readFileSync(invOut, "utf8")) : null;
+  ok("inventory: a failed probe is reported as probeFailed, not counted as private", (inv?.exposure?.probeFailed ?? 0) > 0, JSON.stringify(inv?.exposure ?? "no report"));
+  ok("inventory: any probe failure marks the exposure figures NOT AUTHORITATIVE", inv?.exposure?.authoritative === false, String(inv?.exposure?.authoritative));
+  ok("inventory: the affected pathname and reason are identifiable", Boolean(inv?.exposure?.probeFailures?.[0]?.pathname && inv?.exposure?.probeFailures?.[0]?.reason), JSON.stringify(inv?.exposure?.probeFailures?.[0] ?? null));
+} else {
+  ok("inventory probe reporting SKIPPED — no DATABASE_URL in this environment", true, "run under verify:static with .env present");
+}
 
 let pass = 0, fail = 0;
 for (const [c, name, extra] of results) { c ? pass++ : fail++; console.log(`${c ? "PASS" : "FAIL"}  ${name}${c ? "" : "  -> " + extra}`); }

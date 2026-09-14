@@ -1,7 +1,7 @@
 import "server-only";
 import { mkdirSync, readFileSync, writeFileSync, existsSync, rmSync, readdirSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { BlobExistsError, type BlobStore, type StoreMode, type StoreRole } from "./blob-client";
+import { BlobExistsError, BlobProbeError, type AnonymousProbe, type BlobStore, type StoreMode, type StoreRole } from "./blob-client";
 
 // ---------------------------------------------------------------------------
 // Test-only stand-in for Vercel Blob. Reachable ONLY under STORAGE_DRIVER=fake.
@@ -127,8 +127,21 @@ export function fakeStore(role: StoreRole, mode: StoreMode): BlobStore {
 
     // The one provider rule this batch turns on: a PUBLIC store serves anyone holding the URL, a
     // PRIVATE store does not. It is the store's mode that decides, never the object's.
-    async probeAnonymous(pathname) {
-      return mode === "public" && existsSync(fileOf(mode, pathname));
+    //
+    // The injectable faults are what make the "inconclusive is not private" assertions possible:
+    // without a way to produce a transport failure, a 429 and a 5xx on demand, the distinction
+    // between "the provider refused" and "the provider never answered" cannot be tested at all.
+    async probeAnonymous(pathname): Promise<AnonymousProbe> {
+      const fault = process.env.STORAGE_FAKE_PROBE_FAULT;
+      if (fault && (!process.env.STORAGE_FAKE_PROBE_FAULT_MATCH || pathname.includes(process.env.STORAGE_FAKE_PROBE_FAULT_MATCH))) {
+        if (fault === "network") throw new BlobProbeError(pathname, "transport failure: injected network fault");
+        if (fault === "429") throw new BlobProbeError(pathname, "provider returned 429, which is neither an answer nor a refusal");
+        if (fault === "500") throw new BlobProbeError(pathname, "provider returned 500, which is neither an answer nor a refusal");
+        throw new BlobProbeError(pathname, `injected fault: ${fault}`);
+      }
+      const present = existsSync(fileOf(mode, pathname));
+      if (!present) return { state: "not_found", status: 404 };
+      return mode === "public" ? { state: "readable", status: 200 } : { state: "denied", status: 403 };
     },
   };
 }

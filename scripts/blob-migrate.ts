@@ -27,7 +27,9 @@
  * STATE FILE — exactly three states are written, because exactly three are reached:
  *
  *   verified   the destination holds the object, its size, sha256 and content type match the
- *              source, and an anonymous fetch of the destination was refused
+ *              source, AND an anonymous request to the provider was explicitly refused. A probe
+ *              that could not answer — transport failure, 429, 5xx, unknown status — is NOT a
+ *              refusal and yields `failed`, never `verified`.
  *   conflict   the destination already held DIFFERENT content — left untouched, reported
  *   failed     any error, with its reason; never swallowed
  *
@@ -49,7 +51,7 @@
  */
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync, appendFileSync } from "node:fs";
-import { destinationStore, sourceStore, type BlobStore } from "../src/lib/storage/blob-client";
+import { destinationStore, sourceStore, assertPrivatelyStored, type BlobStore } from "../src/lib/storage/blob-client";
 
 const has = (n: string) => process.argv.includes(`--${n}`);
 const arg = (n: string) => { const i = process.argv.indexOf(`--${n}`); return i >= 0 ? process.argv[i + 1] : undefined; };
@@ -100,9 +102,19 @@ async function migrateOne(src: BlobStore, dest: BlobStore, pathname: string, lis
     if (after.bytes.length !== source.bytes.length) return { pathname, state: "failed", reason: `destination size mismatch: ${source.bytes.length} -> ${after.bytes.length}`, at };
     if (sha(after.bytes) !== sourceHash) return { pathname, state: "failed", reason: "destination sha256 does not match the source", at };
     if (after.contentType !== source.contentType) return { pathname, state: "failed", reason: `content type changed: ${source.contentType} -> ${after.contentType}`, at };
-    if (await dest.probeAnonymous(pathname)) return { pathname, state: "failed", reason: "destination object is anonymously fetchable — the destination store is not private", at };
-
-    return { pathname, state: "verified", bytes: source.bytes.length, sha256: sourceHash, at };
+    // The last step is POSITIVE evidence that the copy is private, and it is allowed to fail.
+    // assertPrivatelyStored proves the object exists through an authenticated read first, then
+    // requires the provider to say something explicit about the anonymous request. If the probe is
+    // inconclusive — transport failure, 429, 5xx, an unrecognized status — it throws, and this
+    // object is recorded FAILED with that reason. "I could not reach the provider" must never be
+    // recorded as "verified private"; that is exactly how a migration would report success against
+    // a store it never actually contacted.
+    try {
+      const probe = await assertPrivatelyStored(dest, pathname);
+      return { pathname, state: "verified", bytes: source.bytes.length, sha256: sourceHash, reason: `anonymous ${probe.state} (${probe.status})`, at };
+    } catch (e) {
+      return { pathname, state: "failed", reason: `destination privacy unverified: ${String(e)}`, at };
+    }
   } catch (e) {
     return { pathname, state: "failed", reason: String(e), at };
   }

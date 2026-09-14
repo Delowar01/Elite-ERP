@@ -109,19 +109,41 @@ async function main() {
 
   // Which of the public source objects an anonymous caller can still fetch — the exposure the
   // migration exists to close. Always zero for the private store, which is the point of it.
-  let sourcePubliclyReadable: number | null = null;
-  if (src) {
-    let n = 0;
-    for (const o of srcObjects) if (await src.probeAnonymous(o.pathname)) n++;
-    sourcePubliclyReadable = n;
-  }
+  // Three outcomes, never two. A probe that could not answer is its own category: folding it into
+  // "not publicly readable" would report an unreachable store as a fully private one, which is the
+  // most dangerous possible direction for this number to be wrong in.
+  const exposure = { publiclyReadable: [] as string[], anonymousDenied: [] as string[], probeFailed: [] as { pathname: string; reason: string }[] };
+  const probeStore = async (store: BlobStore, objects: BlobObject[]) => {
+    for (const o of objects) {
+      try {
+        const r = await store.probeAnonymous(o.pathname);
+        if (r.state === "readable") exposure.publiclyReadable.push(o.pathname);
+        else exposure.anonymousDenied.push(o.pathname);
+      } catch (e) {
+        exposure.probeFailed.push({ pathname: o.pathname, reason: String(e) });
+      }
+    }
+  };
+  if (src) await probeStore(src, srcObjects);
+  await probeStore(dest, destObjects);
 
   const report = {
     generatedAt: new Date().toISOString(),
     readOnly: true,
     stores: {
-      publicSource: src ? { present: true, mode: src.mode, ...summarize(srcObjects, referenced), publiclyReadable: sourcePubliclyReadable } : { present: false, note: "no source token configured — the legacy public store is retired or was never set" },
+      publicSource: src ? { present: true, mode: src.mode, ...summarize(srcObjects, referenced) } : { present: false, note: "no source token configured — the legacy public store is retired or was never set" },
       privateDestination: { present: true, mode: dest.mode, ...summarize(destObjects, referenced) },
+    },
+    exposure: {
+      publiclyReadable: exposure.publiclyReadable.length,
+      anonymousDenied: exposure.anonymousDenied.length,
+      probeFailed: exposure.probeFailed.length,
+      authoritative: exposure.probeFailed.length === 0,
+      note: exposure.probeFailed.length
+        ? "NOT AUTHORITATIVE for exposure: at least one anonymous probe could not answer, so those objects' public readability is UNKNOWN — not private. Resolve them before relying on these counts."
+        : "every object produced an explicit provider answer",
+      publiclyReadablePathnames: exposure.publiclyReadable,
+      probeFailures: exposure.probeFailed,
     },
     reconciliation: {
       inBoth: inBoth.length,
