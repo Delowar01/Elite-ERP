@@ -28,7 +28,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { armOrRefuse, printSafetySummary, reportArmingFailure, type Identities } from "./provider-harness/guards.mjs";
 import { installRedactedCrashHandler, redact, say } from "./provider-harness/redact.mjs";
-import { Run, runDir, sha256, computeVerdict, type ManifestObject } from "./provider-harness/manifest.mjs";
+import { Run, runDir, sha256, computeVerdict, exitCodeForVerdict, EXIT_CODES, type ManifestObject } from "./provider-harness/manifest.mjs";
 import { seedObject } from "./provider-harness/seed.mjs";
 import { classifyPostDeletionPublicUrl, type ProbeAnswer } from "./provider-harness/deletion.mjs";
 import { pickCountry } from "./register-org.mjs";
@@ -452,7 +452,9 @@ say("\n§22 delete matrix");
   await deleteStoredBlob(`/uploads/${both}`);
   const destGone = (await dest.head(both)) === null;
   const srcGone = (await src!.head(both)) === null;
-  run.record("§22", "an object in both stores is removed from both (authenticated absence)", "REAL PREVIEW APPLICATION PROVEN", destGone && srcGone, `destGone=${destGone} srcGone=${srcGone}`);
+  // deleteStoredBlob() runs HERE, in this process, against the real stores — it does not travel
+  // through the deployed Preview. So this is provider evidence, not Preview-application evidence.
+  run.record("§22", "an object in both stores is removed from both (authenticated absence)", "REAL PROVIDER PROVEN", destGone && srcGone, `destGone=${destGone} srcGone=${srcGone}`);
   let answer: ProbeAnswer;
   try {
     const after = await src!.probeAnonymous(both);
@@ -479,7 +481,6 @@ say("\n§22 delete matrix");
 }
 
 // ─── verdict ──────────────────────────────────────────────────────────────────────────────────
-const failed = run.findings.filter((f) => f.passed === false).length;
 const { verdict, reason } = computeVerdict(run.findings);
 notes.push(`verdict basis: ${reason}`);
 notes.push(`Cleanup has NOT run. Execute: npm run verify:blob-provider:cleanup -- --run-id ${runId}`);
@@ -491,4 +492,9 @@ say(`CLEANUP IS A SEPARATE COMMAND and has not been run — evidence is preserve
 
 await browser.close();
 await db.end();
-process.exit(failed > 0 ? 1 : 0);
+
+// A=0, C=1, B=2. INCONCLUSIVE is not success: a caller reading only the exit status must not be
+// told "passed" about a run in which a mandatory check never happened.
+const code = exitCodeForVerdict(verdict);
+say(`exit ${code} (${code === EXIT_CODES.A ? "A passed" : code === EXIT_CODES.B ? "B inconclusive" : "C failed"})`);
+process.exit(code);

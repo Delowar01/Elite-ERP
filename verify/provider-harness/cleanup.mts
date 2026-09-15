@@ -3,20 +3,21 @@
  * tested directly against the fake stores. The CLI refuses to run under the fake driver, so without
  * this seam "cleanup never deletes what it does not own" would have to be taken on trust.
  *
- * THE OWNERSHIP RULE. Recording a pathname is not the same as owning the object at it. An entry is
- * only safe to delete when this run is known to have written those exact bytes:
+ * THE OWNERSHIP RULE: match the bytes that are there NOW.
  *
- *   created        the write returned successfully -> owned, delete
- *   planned        the write was never attempted or never returned -> NOT owned. Something may
- *                  already have been there. Prove the bytes match before touching it.
- *   create-failed  the write threw, but an ambiguous network failure can still commit on the
- *                  provider. Same treatment: match the bytes, or leave it.
+ * A successful write proves the run owned the pathname at that moment. It does not prove the run
+ * owns whatever is sitting at that pathname when cleanup runs, possibly hours later — a concurrent
+ * actor or a careless overwrite can have replaced it, and deleting the replacement would destroy
+ * somebody else's object under cover of a correct-looking record. So every candidate, whatever its
+ * recorded state, is read back and hashed against the bytes this run INTENDED to write:
  *
- * For the two unproven states cleanup authenticates to the exact store and pathname and compares
- * sha256 against what the run INTENDED to write. Matching bytes mean the write did land and the run
- * owns it. Different bytes mean something else is there and it is left alone and reported. An
- * unreachable store means the question is unanswered, which is recorded as inconclusive rather than
- * resolved in either direction.
+ *   bytes match      -> owned. Delete, then verify it is gone.
+ *   bytes differ     -> skipped-not-owned. Left untouched and reported.
+ *   nothing there    -> already gone.
+ *   cannot be read   -> inconclusive. The question is unanswered, so nothing is deleted.
+ *
+ * The recorded state (`created`, `planned`, `create-failed`) therefore no longer decides deletion;
+ * it only explains why a pathname is in the manifest at all.
  */
 import type { BlobStore } from "../../src/lib/storage/blob-client";
 import { sha256, type Manifest, type ManifestObject } from "./manifest.mjs";
@@ -26,6 +27,17 @@ export type CleanupResult = {
 };
 
 type Ownership = { kind: "owned" | "absent" | "not-ours" | "unknown"; pathname: string };
+
+/** Do the bytes at this pathname, right now, hash to what the run intended to write? */
+async function ownsCurrentBytes(store: BlobStore, pathname: string, expectedSha: string): Promise<Ownership> {
+  try {
+    const got = await store.get(pathname);
+    if (!got) return { kind: "absent", pathname };
+    return { kind: sha256(got.bytes) === expectedSha ? "owned" : "not-ours", pathname };
+  } catch {
+    return { kind: "unknown", pathname };
+  }
+}
 
 /**
  * Does this run own the object currently at the pathname — and which pathname is that?
@@ -50,18 +62,8 @@ async function ownership(store: BlobStore, entry: ManifestObject): Promise<Owner
       return { kind: "unknown", pathname: "" };
     }
   }
-  if (entry.state === "created") {
-    const head = await store.head(entry.pathname);
-    return { kind: head ? "owned" : "absent", pathname: entry.pathname };
-  }
-  // planned / create-failed: ownership must be earned by comparing bytes.
-  try {
-    const got = await store.get(entry.pathname);
-    if (!got) return { kind: "absent", pathname: entry.pathname };
-    return { kind: sha256(got.bytes) === entry.sha256 ? "owned" : "not-ours", pathname: entry.pathname };
-  } catch {
-    return { kind: "unknown", pathname: entry.pathname };
-  }
+  // Including `created`: a write that succeeded is history, not a claim on the current bytes.
+  return ownsCurrentBytes(store, entry.pathname, entry.sha256);
 }
 
 export async function cleanupManifestObjects(
@@ -79,7 +81,7 @@ export async function cleanupManifestObjects(
       if (own.kind === "absent") { entry.cleanupStatus = "verified-gone"; res.alreadyGone++; res.log.push(`already gone: ${entry.storeRole} ${entry.pathname || `${entry.prefix}* (reservation never used)`}`); onProgress?.(manifest); continue; }
       if (own.kind === "not-ours") {
         entry.cleanupStatus = "skipped-not-owned";
-        entry.cleanupNote = `an object exists at this pathname but its bytes are not the ones this run intended to write (state=${entry.state}) — left untouched`;
+        entry.cleanupNote = `an object exists at this pathname but its bytes are not the ones this run intended to write (recorded state=${entry.state}) — it was replaced or was never ours, so it is left untouched`;
         res.skippedNotOwned++;
         res.log.push(`SKIPPED (not ours): ${entry.storeRole} ${own.pathname}`);
         onProgress?.(manifest); continue;
@@ -124,21 +126,47 @@ export type DbCleanupResult = { removed: number; failed: number; log: string[] }
  * weakens that FK, and the result is VERIFIED afterwards across every table the harness writes to
  * rather than trusting the cascade to have happened.
  */
+/**
+ * Tables the harness and its PDF fixtures write into that carry their own org_id, so the org alone
+ * locates every row.
+ */
+const ORG_SCOPED_TABLES = [
+  "users", "customers", "vendors", "products", "bank_accounts", "quotations", "sales_orders",
+  "proforma_invoices", "sales_invoices", "delivery_challans", "credit_notes", "purchase_orders",
+  "debit_notes", "payments", "document_attachments", "file_access_logs",
+];
+
+/**
+ * Tables that carry NO org_id: a line item belongs to its document, and the document belongs to the
+ * organization. They were previously queried as if `where org_id = $1` worked, which threw every
+ * time — and the error was swallowed into "0 leftovers", so eight tables reported themselves clean
+ * without ever being looked at. (The FK column is `invoice_id` on sales_invoice_items, not the
+ * `sales_invoice_id` a pattern would predict; that is exactly the kind of mistake the swallow hid.)
+ *
+ * They are verified in two steps instead: capture the exact ids through the parent BEFORE the
+ * delete, then after the cascade query those ids DIRECTLY. A post-delete join would be worthless —
+ * with the parent gone, an orphaned child joins to nothing and looks like success.
+ */
+const CHILD_FIXTURE_TABLES: { table: string; fk: string; parent: string }[] = [
+  { table: "quotation_items", fk: "quotation_id", parent: "quotations" },
+  { table: "sales_order_items", fk: "sales_order_id", parent: "sales_orders" },
+  { table: "proforma_invoice_items", fk: "proforma_invoice_id", parent: "proforma_invoices" },
+  { table: "sales_invoice_items", fk: "invoice_id", parent: "sales_invoices" },
+  { table: "delivery_challan_items", fk: "delivery_challan_id", parent: "delivery_challans" },
+  { table: "credit_note_items", fk: "credit_note_id", parent: "credit_notes" },
+  { table: "purchase_order_items", fk: "purchase_order_id", parent: "purchase_orders" },
+  { table: "debit_note_items", fk: "debit_note_id", parent: "debit_notes" },
+];
+
+/** Total tables verified after the cascade, named in the log so the claim is checkable. */
+export const VERIFIED_TABLE_COUNT = ORG_SCOPED_TABLES.length + CHILD_FIXTURE_TABLES.length + 1;
+
 export async function cleanupTestOrgs(
   manifest: Manifest,
   db: { query: (sql: string, params?: unknown[]) => Promise<{ rows: Record<string, unknown>[] }> },
   onProgress?: (m: Manifest) => void,
 ): Promise<DbCleanupResult> {
   const res: DbCleanupResult = { removed: 0, failed: 0, log: [] };
-  // Every table the harness or its PDF fixtures write into, verified empty for the org afterwards.
-  const FIXTURE_TABLES = [
-    "users", "customers", "vendors", "bank_accounts", "quotations", "quotation_items",
-    "sales_orders", "sales_order_items", "proforma_invoices", "proforma_invoice_items",
-    "sales_invoices", "sales_invoice_items", "delivery_challans", "delivery_challan_items",
-    "credit_notes", "credit_note_items", "purchase_orders", "purchase_order_items",
-    "debit_notes", "debit_note_items", "payments", "document_attachments", "file_access_logs",
-  ];
-
   for (const org of manifest.testOrgs) {
     try {
       // The email is the locator recorded before registration, so a crash that lost the orgId still
@@ -151,16 +179,40 @@ export async function cleanupTestOrgs(
       }
       if (orgId === null) { org.cleanupStatus = "verified-gone"; res.log.push(`no such test user: ${org.email}`); onProgress?.(manifest); continue; }
 
+      // Capture the child fixture ids while their parents still exist. Recorded in the manifest and
+      // persisted, so a crash between here and the verification does not lose the only handle on
+      // rows that no longer have a parent to be found through.
+      const childIds: Record<string, number[]> = org.childFixtureIds ?? {};
+      for (const { table, fk, parent } of CHILD_FIXTURE_TABLES) {
+        const r = await db.query(
+          `select c.id from "${table}" c join "${parent}" p on c."${fk}" = p.id where p.org_id=$1`,
+          [orgId],
+        );
+        childIds[table] = r.rows.map((row) => Number(row.id));
+      }
+      org.childFixtureIds = childIds;
+      onProgress?.(manifest);
+
       await db.query("delete from users where email=$1", [org.email]);
       await db.query("delete from orgs where id=$1", [orgId]);
 
       // Verify. A cascade that silently did not fire would otherwise leave a disposable org's rows
-      // behind while cleanup reported success.
+      // behind while cleanup reported success. NOTHING here is wrapped in a catch that yields zero:
+      // a verification query that fails has not verified anything, and the whole org is reported
+      // failed so the command exits non-zero.
       const leftovers: string[] = [];
-      for (const table of FIXTURE_TABLES) {
-        const r = await db.query(`select count(*)::int as c from "${table}" where org_id=$1`, [orgId]).catch(() => ({ rows: [{ c: 0 }] }));
+      for (const table of ORG_SCOPED_TABLES) {
+        const r = await db.query(`select count(*)::int as c from "${table}" where org_id=$1`, [orgId]);
         const c = Number(r.rows[0]?.c ?? 0);
         if (c > 0) leftovers.push(`${table}=${c}`);
+      }
+      for (const { table } of CHILD_FIXTURE_TABLES) {
+        const ids = childIds[table] ?? [];
+        if (!ids.length) continue;
+        // By id, with no join: an orphaned child whose parent is gone must still be found.
+        const r = await db.query(`select count(*)::int as c from "${table}" where id = any($1::int[])`, [ids]);
+        const c = Number(r.rows[0]?.c ?? 0);
+        if (c > 0) leftovers.push(`${table}=${c} of ${ids.length} (orphaned by id)`);
       }
       const orgGone = Number((await db.query("select count(*)::int as c from orgs where id=$1", [orgId])).rows[0].c) === 0;
       const userGone = Number((await db.query("select count(*)::int as c from users where email=$1", [org.email])).rows[0].c) === 0;
@@ -173,13 +225,15 @@ export async function cleanupTestOrgs(
       } else {
         org.cleanupStatus = "verified-gone";
         res.removed++;
-        res.log.push(`removed org ${orgId} (${org.email}) and every fixture row across ${FIXTURE_TABLES.length} tables`);
+        const childCount = Object.values(childIds).reduce((n, ids) => n + ids.length, 0);
+        res.log.push(`removed org ${orgId} (${org.email}); verified ${VERIFIED_TABLE_COUNT} tables, including ${childCount} child fixture row(s) checked by id`);
       }
     } catch (e) {
       org.cleanupStatus = "cleanup-failed";
       org.cleanupNote = String(e);
       res.failed++;
-      res.log.push(`FAILED org cleanup for ${org.email}`);
+      // A verification query that threw proves nothing about the rows it was meant to count.
+      res.log.push(`FAILED org cleanup for ${org.email}: ${String(e).split("\n")[0]}`);
     }
     onProgress?.(manifest);
   }

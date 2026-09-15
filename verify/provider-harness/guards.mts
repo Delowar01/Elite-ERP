@@ -23,6 +23,8 @@ export type Identities = {
   dbUser: string;
   expectedCommitSha: string;
   previewShaVerifiedExternally: boolean;
+  previewHost: string;
+  declaredProductionHosts: string[];
   signingSecretAttested: boolean;
 };
 
@@ -50,6 +52,23 @@ export function dbIdentity(url: string): { host: string; name: string; user: str
     throw new ArmingError("DATABASE_URL is not a parseable URL");
   }
   return { host: u.hostname, name: u.pathname.replace(/^\//, ""), user: decodeURIComponent(u.username) };
+}
+
+/** Lowercased, trimmed, without a trailing dot, a scheme, a port or a path. */
+function normalizeHost(raw: string): string {
+  let h = raw.trim().toLowerCase();
+  if (!h) return "";
+  if (h.includes("://")) { try { h = new URL(h).hostname; } catch { return ""; } }
+  else { h = h.split("/")[0].split("@").pop() ?? ""; h = h.replace(/:\d+$/, ""); }
+  return h.replace(/\.$/, "");
+}
+
+function hostnameOf(url: string, label: string): string {
+  let parsed: URL;
+  try { parsed = new URL(url); } catch { throw new ArmingError(`${label} is not a valid URL`); }
+  const host = normalizeHost(parsed.hostname);
+  if (!host) throw new ArmingError(`${label} has no hostname`);
+  return host;
 }
 
 /**
@@ -98,11 +117,36 @@ export function armOrRefuse(): Identities {
   const expectUser = process.env.BATCH3_EXPECT_DB_USER;
   if (expectUser && db.user !== expectUser) throw new ArmingError(`DATABASE_URL user is "${db.user}", not the declared "${expectUser}"`);
 
-  // 5. Preview identity. A production hostname is rejected when one can be determined; when it
-  //    cannot, the limitation is stated rather than papered over.
-  const knownProdHost = process.env.BATCH3_KNOWN_PRODUCTION_HOST;
-  if (knownProdHost && previewBaseUrl.includes(knownProdHost)) {
-    throw new ArmingError(`BATCH3_PREVIEW_BASE_URL points at the known production host "${knownProdHost}"`);
+  // 5. Preview identity — MANDATORY, and compared as a hostname rather than as a substring.
+  //
+  //    The disposable tokens and the disposable DATABASE_URL protect what this PROCESS touches.
+  //    They do not protect what the remote application touches: /register and every browser action
+  //    run inside the deployment at BATCH3_PREVIEW_BASE_URL, using ITS environment. If that URL is
+  //    Production, the run writes to the production database with production credentials and no
+  //    guard in this file is anywhere near it. So the production host must be declared, every time.
+  //
+  //    Substring matching would be both too weak and too strong: "erp.example.com" is contained in
+  //    "not-erp.example.com.evil.test" and does not contain "www.erp.example.com". Hostnames are
+  //    compared exactly, after normalization.
+  const previewHost = hostnameOf(previewBaseUrl, "BATCH3_PREVIEW_BASE_URL");
+  if (!previewBaseUrl.startsWith("https://")) {
+    throw new ArmingError(`BATCH3_PREVIEW_BASE_URL must be https:// — got "${previewBaseUrl.split("://")[0]}://"`);
+  }
+  const prodHostsRaw = process.env.BATCH3_KNOWN_PRODUCTION_HOST;
+  if (!prodHostsRaw || !prodHostsRaw.trim()) {
+    throw new ArmingError(
+      "BATCH3_KNOWN_PRODUCTION_HOST is required for every armed run.\n" +
+      "Browser actions execute inside the deployment at BATCH3_PREVIEW_BASE_URL, using that\n" +
+      "deployment's own environment — so a Preview URL that is really Production would write to the\n" +
+      "production database no matter how disposable this process's own credentials are.\n" +
+      "Declare every production hostname (comma- or semicolon-separated if there are several,\n" +
+      "including custom domains).",
+    );
+  }
+  const prodHosts = prodHostsRaw.split(/[;,]/).map((h) => normalizeHost(h)).filter(Boolean);
+  if (!prodHosts.length) throw new ArmingError("BATCH3_KNOWN_PRODUCTION_HOST contained no usable hostname");
+  if (prodHosts.includes(previewHost)) {
+    throw new ArmingError(`BATCH3_PREVIEW_BASE_URL resolves to the declared production host "${previewHost}" — refusing`);
   }
 
   // 6. The Preview's commit. Nothing in the application exposes its git sha, and this harness will
@@ -130,13 +174,15 @@ export function armOrRefuse(): Identities {
     );
   }
 
-  return { previewBaseUrl, privateStoreId, publicStoreId, dbHost: db.host, dbName: db.name, dbUser: db.user, expectedCommitSha, previewShaVerifiedExternally: attested, signingSecretAttested: true };
+  return { previewBaseUrl, previewHost, declaredProductionHosts: prodHosts, privateStoreId, publicStoreId, dbHost: db.host, dbName: db.name, dbUser: db.user, expectedCommitSha, previewShaVerifiedExternally: attested, signingSecretAttested: true };
 }
 
 /** The sanitized summary printed before anything is written. */
 export function printSafetySummary(id: Identities): void {
   say("──────── BATCH 3 REAL-PROVIDER VERIFICATION — SAFETY SUMMARY ────────");
   say(`  Preview URL       : ${id.previewBaseUrl}`);
+  say(`  Preview host      : ${id.previewHost}`);
+  say(`  Production hosts  : ${id.declaredProductionHosts.join(", ")} (declared; none may equal the Preview host)`);
   say(`  Private store ID  : ${id.privateStoreId}`);
   say(`  Public store ID   : ${id.publicStoreId}`);
   say(`  DB host           : ${id.dbHost}`);

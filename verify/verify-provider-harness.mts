@@ -33,6 +33,7 @@ const GOOD = {
   BATCH3_EXPECT_PUBLIC_STORE_ID: "PUBSTORE002",
   BATCH3_EXPECT_DB_HOST: "disposable.example.invalid",
   BATCH3_EXPECT_DB_NAME: "batch3_test",
+  BATCH3_KNOWN_PRODUCTION_HOST: "erp.example.invalid",
   BATCH3_PREVIEW_SHA_VERIFIED_EXTERNALLY: "YES",
   BATCH3_SIGNING_SECRET_MATCHES_PREVIEW: "YES",
   BLOB_READ_WRITE_TOKEN: PRIVATE_TOKEN,
@@ -68,11 +69,28 @@ const sameStore = refuses({ BLOB_PUBLIC_SOURCE_READ_WRITE_TOKEN: PRIVATE_TOKEN, 
 ok("two tokens addressing the SAME store refuses", sameStore.refused, sameStore.why.slice(0, 80));
 ok("a wrong database host refuses", refuses({ BATCH3_EXPECT_DB_HOST: "prod.example.invalid" }).refused);
 ok("a wrong database name refuses", refuses({ BATCH3_EXPECT_DB_NAME: "elite_erp_production" }).refused);
-ok("a preview URL matching a known production host refuses", refuses({ BATCH3_KNOWN_PRODUCTION_HOST: "preview-batch3.example.invalid" }).refused);
 ok("a missing external SHA attestation refuses", refuses({ BATCH3_PREVIEW_SHA_VERIFIED_EXTERNALLY: undefined }).refused);
 // Without this the signed-access section would fail for a configuration reason and be read as an
 // application defect.
 ok("a missing signing-secret attestation refuses", refuses({ BATCH3_SIGNING_SECRET_MATCHES_PREVIEW: undefined }).refused);
+// The production-host declaration is MANDATORY: disposable tokens protect this process, but every
+// browser action runs inside the deployment at BATCH3_PREVIEW_BASE_URL using ITS environment.
+ok("a MISSING production-host declaration refuses", refuses({ BATCH3_KNOWN_PRODUCTION_HOST: undefined }).refused);
+ok("an empty production-host declaration refuses", refuses({ BATCH3_KNOWN_PRODUCTION_HOST: "   " }).refused);
+ok("a Preview URL whose host EQUALS the production host refuses",
+   refuses({ BATCH3_KNOWN_PRODUCTION_HOST: "preview-batch3.example.invalid" }).refused);
+ok("the production host matches after normalization (scheme, port, trailing dot, case)",
+   refuses({ BATCH3_KNOWN_PRODUCTION_HOST: "HTTPS://Preview-Batch3.example.invalid.:443/" }).refused);
+ok("one match in a LIST of production domains is enough to refuse",
+   refuses({ BATCH3_KNOWN_PRODUCTION_HOST: "erp.example.invalid, preview-batch3.example.invalid; www.erp.example.invalid" }).refused);
+// Substring matching would be both too weak and too strong; these two prove it is not used.
+ok("a production host that is only a SUBSTRING of the Preview host does not refuse",
+   !refuses({ BATCH3_KNOWN_PRODUCTION_HOST: "batch3.example.invalid" }).refused, "preview-batch3.example.invalid merely contains it");
+ok("a Preview host that CONTAINS the production host as a prefix does not refuse",
+   !refuses({ BATCH3_PREVIEW_BASE_URL: "https://preview-batch3.example.invalid.attacker.test", BATCH3_KNOWN_PRODUCTION_HOST: "preview-batch3.example.invalid" }).refused);
+ok("a plain distinct production host is accepted", !refuses({ BATCH3_KNOWN_PRODUCTION_HOST: "erp.example.invalid" }).refused);
+ok("a non-HTTPS Preview URL refuses", refuses({ BATCH3_PREVIEW_BASE_URL: "http://preview-batch3.example.invalid" }).refused);
+ok("an unparseable Preview URL refuses", refuses({ BATCH3_PREVIEW_BASE_URL: "not a url" }).refused);
 ok("store id is derived from the token's 4th segment", storeIdFromToken(PRIVATE_TOKEN, "x") === "PRIVSTORE001");
 ok("database identity is parsed without touching the password", dbIdentity(DB_URL).host === "disposable.example.invalid" && dbIdentity(DB_URL).name === "batch3_test" && dbIdentity(DB_URL).user === "tester");
 
@@ -136,6 +154,7 @@ const cwd = process.cwd();
 process.chdir(dir);
 
 const { Run, runDir, loadManifest } = await import("./provider-harness/manifest.mjs");
+type Manifest = ReturnType<typeof loadManifest>;
 const { cleanupManifestObjects, cleanupTestOrgs } = await import("./provider-harness/cleanup.mjs");
 const { destinationStore, sourceStore } = await import("../src/lib/storage/blob-client");
 const dest = destinationStore();
@@ -195,6 +214,28 @@ let collided = false;
 try { await dest.put(unlisted, BYTES, { contentType: "image/png" }); } catch { collided = true; }
 ok("writing an occupied pathname is refused (no blind overwrite)", collided);
 ok("the pre-existing object survived the refused overwrite", (await dest.get(unlisted))?.bytes.toString() === OTHER.toString());
+
+// ---- a successfully CREATED object whose bytes were replaced afterwards. The write proved the run
+// owned the pathname at that moment; it proves nothing about what is there now.
+{
+  const replaced = P("9");
+  const mine = Buffer.from("bytes-this-run-actually-wrote!!!");
+  const theirs = Buffer.from("SOMEONE-REPLACED-THESE-BYTES!!!!");
+  const e = run.planObject("private-destination", replaced, "created, then overwritten by someone else", mine);
+  await dest.put(replaced, mine, { contentType: "image/png" });
+  run.markObjectCreated(e);
+  ok("the object is recorded created", e.state === "created");
+
+  // Same size, different content: a length check would not notice.
+  await dest.del(replaced);
+  await dest.put(replaced, theirs, { contentType: "image/png" });
+  ok("the replacement is the same size as the recorded bytes", theirs.length === mine.length);
+
+  const r = await cleanupManifestObjects({ ...loadManifest("selftest"), objects: [e] }, { destination: dest, source: src });
+  ok("a CREATED object whose current bytes differ is NOT deleted", (await dest.get(replaced))?.bytes.toString() === theirs.toString(), JSON.stringify(r.log));
+  ok("the replaced object is reported skipped-not-owned, not silently ignored", r.skippedNotOwned === 1 && r.deleted === 0, JSON.stringify({ s: r.skippedNotOwned, d: r.deleted }));
+  ok("its manifest entry says the bytes are not this run's", (e.cleanupNote ?? "").includes("not the ones this run intended"), e.cleanupNote ?? "");
+}
 
 // ---- seeding: the harness must never overwrite an object it did not write
 {
@@ -282,49 +323,131 @@ ok("a test organization is recorded by EMAIL before registration, with no org id
 run.resolveTestOrg(orgEntry, 4242);
 ok("the org id is filled in once registration resolves it", loadManifest("selftest").testOrgs[0].orgId === 4242);
 
-// ---- database cleanup: ordering, verification, and failure surfacing
+// ---- database cleanup: ordering, dependency-correct verification, and failure surfacing
 {
   type Row = Record<string, unknown>;
   const EMAIL = "batch3-A-selftest@example.invalid";
-  const mkDb = (behaviour: { userDeleted?: boolean; orgDeleted?: boolean; leftover?: string }) => {
+  type Behaviour = {
+    userDeleted?: boolean;
+    orgDeleted?: boolean;
+    leftover?: string;          // an org-scoped table that still holds rows
+    orphanChild?: string;       // a CHILD table whose captured ids survive the cascade
+    failVerifyFor?: string;     // a table whose verification query throws
+  };
+  const mkDb = (behaviour: Behaviour) => {
     let userGone = false, orgGone = false;
     const seen: string[] = [];
+    // Child ids the fixtures "created", returned by the pre-delete capture join.
+    const CHILD_IDS: Record<string, number[]> = { quotation_items: [11, 12], sales_invoice_items: [21, 22, 23] };
     return {
       seen,
       async query(sql: string, params: unknown[] = []): Promise<{ rows: Row[] }> {
         seen.push(sql);
+        const table = /from "([a-z_]+)"/.exec(sql)?.[1];
+        // A verification query that FAILS must never be turned into "0 leftovers".
+        if (behaviour.failVerifyFor && table === behaviour.failVerifyFor && /count\(\*\)/.test(sql)) {
+          throw new Error(`relation "${table}" does not exist`);
+        }
         if (/^select org_id from users/.test(sql)) return { rows: [{ org_id: 4242 }] };
-        // The delete must name ONE address, passed as a parameter. A pattern sweep would delete
-        // whatever else happens to share the prefix, which is the thing this run is forbidden to do,
-        // so the fake refuses to honour anything but the exact locator.
+        // Pre-delete capture: child ids reached THROUGH the parent, while the parent still exists.
+        if (/^select c\.id from/.test(sql)) return { rows: (CHILD_IDS[table ?? ""] ?? []).map((id) => ({ id })) };
         if (/^delete from users/.test(sql)) { userGone = behaviour.userDeleted !== false && /email=\$1/.test(sql) && params[0] === EMAIL; return { rows: [] }; }
         if (/^delete from orgs/.test(sql)) { orgGone = behaviour.orgDeleted !== false && /id=\$1/.test(sql) && params[0] === 4242; return { rows: [] }; }
         if (/count\(\*\)::int as c from orgs/.test(sql)) return { rows: [{ c: orgGone ? 0 : 1 }] };
         if (/count\(\*\)::int as c from users/.test(sql)) return { rows: [{ c: userGone ? 0 : 1 }] };
-        const m = /from "([a-z_]+)" where org_id/.exec(sql);
-        if (m) return { rows: [{ c: behaviour.leftover === m[1] ? 3 : 0 }] };
+        // Post-delete child verification, BY ID and with no join — an orphan must still be visible.
+        if (/where id = any/.test(sql)) return { rows: [{ c: behaviour.orphanChild === table ? 1 : 0 }] };
+        if (/where org_id/.test(sql)) return { rows: [{ c: behaviour.leftover === table ? 3 : 0 }] };
         return { rows: [{ c: 0 }] };
       },
     };
   };
-  const fresh = () => ({ ...loadManifest("selftest"), testOrgs: [{ email: EMAIL, orgId: 4242, purpose: "x", cleanupStatus: "pending" as const }] });
+  const fresh = (): Manifest => ({ ...loadManifest("selftest"), testOrgs: [{ email: EMAIL, orgId: 4242, purpose: "x", cleanupStatus: "pending" }] });
 
   const goodDb = mkDb({});
-  const good = await cleanupTestOrgs(fresh(), goodDb);
+  const goodManifest = fresh();
+  const good = await cleanupTestOrgs(goodManifest, goodDb);
   ok("db cleanup: a clean run removes the org and reports no failure", good.removed === 1 && good.failed === 0, JSON.stringify(good.log));
   ok("db cleanup: the user is deleted by its exact recorded address, passed as a parameter",
      goodDb.seen.some((q) => /^delete from users where email=\$1$/.test(q.trim())), JSON.stringify(goodDb.seen.filter((q) => q.startsWith("delete"))));
   ok("db cleanup: no statement uses LIKE or any other pattern sweep",
      !goodDb.seen.some((q) => /\blike\b/i.test(q)), JSON.stringify(goodDb.seen.filter((q) => /\blike\b/i.test(q))));
+
+  // Child fixture rows have no org_id of their own. They are captured through the parent BEFORE the
+  // delete and verified by id AFTER it — a post-delete join would find nothing precisely when an
+  // orphan exists, because the parent it would join to is the row that was removed.
+  const captureIdx = goodDb.seen.findIndex((q) => /^select c\.id from/.test(q));
+  const deleteIdx = goodDb.seen.findIndex((q) => /^delete from orgs/.test(q));
+  ok("db cleanup: child fixture ids are captured BEFORE the org is deleted", captureIdx >= 0 && captureIdx < deleteIdx, `capture@${captureIdx} delete@${deleteIdx}`);
+  ok("db cleanup: the captured ids are persisted in the manifest",
+     (goodManifest.testOrgs[0].childFixtureIds?.quotation_items ?? []).join(",") === "11,12",
+     JSON.stringify(goodManifest.testOrgs[0].childFixtureIds));
+  // Captured ids are worthless if a crash can lose them: after the delete the parent is gone, so
+  // there is no second chance to find those rows. They must reach the manifest before the delete.
+  {
+    const persistDb = mkDb({});
+    const persistManifest = fresh();
+    let persistedAfterNQueries = -1;
+    await cleanupTestOrgs(persistManifest, persistDb, (m) => {
+      if (persistedAfterNQueries < 0 && m.testOrgs[0].childFixtureIds) persistedAfterNQueries = persistDb.seen.length;
+    });
+    const firstDelete = persistDb.seen.findIndex((q) => /^delete from/.test(q));
+    ok("db cleanup: the captured ids are PERSISTED before the first delete, not after it",
+       persistedAfterNQueries >= 0 && persistedAfterNQueries <= firstDelete,
+       `persisted after ${persistedAfterNQueries} queries, first delete at ${firstDelete}`);
+  }
+  ok("db cleanup: child verification queries by id, with no join to the vanished parent",
+     goodDb.seen.some((q) => /where id = any/.test(q) && !/join/.test(q)), "");
+  ok("db cleanup: the child fixture table with the non-obvious FK is reached (invoice_id, not sales_invoice_id)",
+     goodDb.seen.some((q) => /^select c\.id from "sales_invoice_items"/.test(q) && /c\."invoice_id" = p\.id/.test(q)),
+     JSON.stringify(goodDb.seen.filter((q) => q.includes("sales_invoice_items"))));
+
   const orgLeft = await cleanupTestOrgs(fresh(), mkDb({ orgDeleted: false }));
   ok("db cleanup: user removed but ORG remains → failure", orgLeft.failed === 1, JSON.stringify(orgLeft.log));
   const userLeft = await cleanupTestOrgs(fresh(), mkDb({ userDeleted: false }));
   ok("db cleanup: org removed but USER remains → failure", userLeft.failed === 1, JSON.stringify(userLeft.log));
-  const fixtureLeft = await cleanupTestOrgs(fresh(), mkDb({ leftover: "sales_invoice_items" }));
-  ok("db cleanup: a leftover PDF-fixture row → failure (the cascade is verified, not assumed)", fixtureLeft.failed === 1, JSON.stringify(fixtureLeft.log));
-  const noUser = { ...loadManifest("selftest"), testOrgs: [{ email: "gone@example.invalid", orgId: null, purpose: "x", cleanupStatus: "pending" as const }] };
+  const fixtureLeft = await cleanupTestOrgs(fresh(), mkDb({ leftover: "customers" }));
+  ok("db cleanup: a leftover org-scoped row → failure (the cascade is verified, not assumed)", fixtureLeft.failed === 1, JSON.stringify(fixtureLeft.log));
+
+  // The sentinel: a child row the cascade failed to remove. It has no org_id and its parent is gone,
+  // so only the by-id check can see it.
+  const orphanManifest = fresh();
+  const orphan = await cleanupTestOrgs(orphanManifest, mkDb({ orphanChild: "sales_invoice_items" }));
+  ok("db cleanup: an ORPHANED child row the cascade missed → failure", orphan.failed === 1 && orphan.removed === 0, JSON.stringify(orphan.log));
+  ok("db cleanup: the orphan is named in the note, by table and by id count",
+     (orphanManifest.testOrgs[0].cleanupNote ?? "").includes("sales_invoice_items=1 of 3"), orphanManifest.testOrgs[0].cleanupNote ?? "");
+
+  // A verification query that THREW has verified nothing. The old code caught it and read it as
+  // "0 leftovers", so eight tables reported themselves clean without ever being looked at.
+  const brokenManifest = fresh();
+  const broken = await cleanupTestOrgs(brokenManifest, mkDb({ failVerifyFor: "customers" }));
+  ok("db cleanup: a FAILED verification query is a failure, never zero leftovers",
+     broken.failed === 1 && broken.removed === 0, JSON.stringify(broken.log));
+  ok("db cleanup: the failed org is marked cleanup-failed with the reason", brokenManifest.testOrgs[0].cleanupStatus === "cleanup-failed" && (brokenManifest.testOrgs[0].cleanupNote ?? "").includes("does not exist"), brokenManifest.testOrgs[0].cleanupNote ?? "");
+  const brokenChild = await cleanupTestOrgs(fresh(), mkDb({ failVerifyFor: "quotation_items" }));
+  ok("db cleanup: a failed CHILD verification query is a failure too", brokenChild.failed === 1, JSON.stringify(brokenChild.log));
+
+  const noUser: Manifest = { ...loadManifest("selftest"), testOrgs: [{ email: "gone@example.invalid", orgId: null, purpose: "x", cleanupStatus: "pending" }] };
   const resolved = await cleanupTestOrgs(noUser, { async query(sql: string) { return /^select org_id/.test(sql) ? { rows: [] } : { rows: [{ c: 0 }] }; } });
   ok("db cleanup: an org id lost to a crash is re-resolved from the recorded email", resolved.failed === 0 && resolved.log[0].includes("no such test user"), JSON.stringify(resolved.log));
+}
+
+// ---- exit codes. A gate that exits 0 on INCONCLUSIVE tells every caller that reads only the
+// status that the run passed.
+{
+  const { exitCodeForVerdict, EXIT_CODES } = await import("./provider-harness/manifest.mjs");
+  ok("exit code: A → 0", exitCodeForVerdict("A — REAL PROVIDER VERIFICATION PASSED") === 0);
+  ok("exit code: B → non-zero", exitCodeForVerdict("B — INCONCLUSIVE") === EXIT_CODES.B && Number(EXIT_CODES.B) !== 0);
+  ok("exit code: C → non-zero", exitCodeForVerdict("C — FAILED") === 1);
+  ok("exit code: an unrecognised verdict is never treated as a pass", exitCodeForVerdict("everything seems fine") !== 0);
+  const f = (over: Partial<{ passed: boolean | null; requiredForVerdict: boolean }>) =>
+    ({ section: "x", name: "y", classification: "REAL PROVIDER PROVEN" as const, passed: true, requiredForVerdict: true, detail: "", ...over });
+  const { computeVerdict } = await import("./provider-harness/manifest.mjs");
+  const codeOf = (findings: ReturnType<typeof f>[]) => exitCodeForVerdict(computeVerdict(findings).verdict);
+  ok("exit code: all mandatory pass + approved optional omission → 0", codeOf([f({}), f({ passed: null, requiredForVerdict: false })]) === 0);
+  ok("exit code: a mandatory omission → non-zero", codeOf([f({}), f({ passed: null })]) !== 0);
+  ok("exit code: a mandatory failure → non-zero", codeOf([f({ passed: false })]) !== 0);
+  ok("exit code: an OPTIONAL failure → non-zero", codeOf([f({}), f({ passed: false, requiredForVerdict: false })]) !== 0);
 }
 
 run.record("selftest", "example finding", "APPLICATION-LEVEL TEST PROVEN", true, `detail mentioning ${PRIVATE_TOKEN}`);
@@ -343,6 +466,6 @@ process.chdir(cwd);
 rmSync(dir, { recursive: true, force: true });
 
 let pass = 0, fail = 0;
-for (const [c, name, extra] of results) { c ? pass++ : fail++; console.log(`${c ? "PASS" : "FAIL"}  ${name}${c ? "" : "  -> " + extra}`); }
+for (const [c, name, extra] of results) { if (c) pass++; else fail++; console.log(`${c ? "PASS" : "FAIL"}  ${name}${c ? "" : "  -> " + extra}`); }
 console.log(`\n${pass}/${pass + fail} checks`);
 process.exit(fail ? 1 : 0);

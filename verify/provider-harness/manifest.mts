@@ -70,6 +70,13 @@ export type ManifestTestOrg = {
   purpose: string;
   cleanupStatus: CleanupStatus;
   cleanupNote?: string;
+  /**
+   * Ids of fixture rows in tables that carry NO org_id of their own (line items hang off their
+   * document, not off the organization). Captured through their parent BEFORE the org is deleted,
+   * because afterwards the parent is gone and a join could no longer see an orphaned child at all.
+   * Verification after the cascade queries these ids DIRECTLY, with no join.
+   */
+  childFixtureIds?: Record<string, number[]>;
 };
 
 export type Manifest = {
@@ -106,9 +113,30 @@ export type Finding = {
 };
 
 /**
+ * The verdict, and the process exit code that carries it.
+ *
+ *   A — REAL PROVIDER VERIFICATION PASSED   exit 0
+ *   C — FAILED                              exit 1
+ *   B — INCONCLUSIVE                        exit 2
+ *
+ * B is deliberately NOT zero. A gate that exits 0 when a mandatory check never ran is indisting-
+ * uishable, to anything reading the exit status, from a gate that passed — which is how "we ran it
+ * and it was fine" gets said about a run that proved nothing. The report stays the authoritative
+ * explanation; the exit code just refuses to lie about it.
+ *
  * A is permitted only when every REQUIRED check ran and passed. An optional check that FAILED still
  * forces C: it was allowed to be skipped, never allowed to contradict the design.
  */
+export const EXIT_CODES = { A: 0, C: 1, B: 2 } as const;
+
+export function exitCodeForVerdict(verdict: string): number {
+  if (verdict.startsWith("A")) return EXIT_CODES.A;
+  if (verdict.startsWith("C")) return EXIT_CODES.C;
+  if (verdict.startsWith("B")) return EXIT_CODES.B;
+  // An unrecognised verdict is not a pass.
+  return EXIT_CODES.C;
+}
+
 export function computeVerdict(findings: Finding[]): { verdict: string; reason: string } {
   const failedAny = findings.filter((f) => f.passed === false);
   if (failedAny.length) return { verdict: "C — FAILED", reason: `${failedAny.length} check(s) failed, including ${failedAny.filter((f) => !f.requiredForVerdict).length} optional: a check that was allowed to be skipped is never allowed to contradict the design` };

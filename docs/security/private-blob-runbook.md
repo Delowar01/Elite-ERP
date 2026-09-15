@@ -140,11 +140,20 @@ manifest; never delete by prefix scan.
 **Ownership, not presence.** Recording a pathname is not the same as owning the object at it, so the
 manifest tracks a lifecycle and cleanup deletes only what it can prove the run wrote:
 
-| State | Meaning | Cleanup |
-| --- | --- | --- |
-| `planned` | recorded before the write; the write may never have been attempted | delete only if the bytes at that pathname match the intended sha256 |
-| `created` | the write returned successfully | delete, then verify it is gone |
-| `create-failed` | the write threw, but an ambiguous network failure can still commit | same as `planned`: match the bytes or leave it |
+Cleanup reads every candidate back and hashes it against the bytes the run intended to write —
+**including objects it successfully created**. A completed write proves the run owned that pathname
+at that moment, not that it owns whatever is there now; an object replaced since belongs to whoever
+replaced it.
+
+| Current bytes | Cleanup |
+| --- | --- |
+| hash to the recorded sha256 | delete, then verify it is gone |
+| differ | `skipped-not-owned` — left untouched and reported |
+| nothing there | `verified-gone` |
+| cannot be read | `inconclusive` — nothing is deleted |
+
+The recorded state (`planned` / `created` / `create-failed`) explains why a pathname is in the
+manifest; it never decides deletion.
 
 Writes go out with **no `allowOverwrite`**. The pathname is checked free first, but the guarantee
 that matters is the provider's own refusal, because a check-then-write has a window in which
@@ -162,6 +171,35 @@ org is the cleanup root: of the 53 foreign keys referencing `orgs`, 52 are `ON D
 exception, `audit_logs.org_id`, is `SET NULL` by design), so deleting the org removes its users,
 documents and line items in one dependency-correct step — which is then **verified** across every
 table the harness writes to rather than assumed. No `LIKE` pattern, ever.
+
+### Arming the harness
+
+`npm run verify:blob-provider` refuses to start unless every one of these is set. All of them are
+checked before the first write, and `armOrRefuse()` performs no I/O, so a refusal can never arrive
+too late.
+
+| Variable | Why it is required |
+| --- | --- |
+| `BATCH3_PROVIDER_TEST` | exact arming phrase — not a default, not inferable from a typo |
+| `BATCH3_PREVIEW_BASE_URL` | the disposable Preview; must be `https://` and parse to a hostname |
+| `BATCH3_KNOWN_PRODUCTION_HOST` | every production hostname, comma- or semicolon-separated. **Mandatory.** The disposable tokens and `DATABASE_URL` govern only what this process touches; `/register` and every browser action run inside the deployment at the Preview URL using *its* environment, so a Preview URL that is really Production writes to the production database regardless. Compared as a normalized hostname, never as a substring |
+| `BATCH3_EXPECT_PRIVATE_STORE_ID` / `BATCH3_EXPECT_PUBLIC_STORE_ID` | the store ids are derived from the tokens themselves and must match what was declared, so a token pasted into the wrong variable is caught rather than used. Two tokens addressing the same store also refuse |
+| `BATCH3_EXPECT_DB_HOST` / `BATCH3_EXPECT_DB_NAME` | checked from the URL's non-secret parts |
+| `BATCH3_EXPECT_COMMIT_SHA` + `BATCH3_PREVIEW_SHA_VERIFIED_EXTERNALLY=YES` | nothing in the application exposes its git sha and the harness will not add an endpoint that does; the operator attests and the report records it as an attestation |
+| `BATCH3_SIGNING_SECRET_MATCHES_PREVIEW=YES` | signatures are minted locally and verified remotely; a mismatch would fail the signed-access section for a configuration reason and read as an application defect |
+
+`VERCEL_ENV=production` and `STORAGE_DRIVER=fake` both refuse outright.
+
+### Exit codes
+
+| Verdict | Exit |
+| --- | --- |
+| A — REAL PROVIDER VERIFICATION PASSED | 0 |
+| C — FAILED | 1 |
+| B — INCONCLUSIVE | 2 |
+
+B is deliberately non-zero. A gate that exits 0 when a mandatory check never ran is, to anything
+reading the exit status, indistinguishable from one that passed.
 
 ### What it must prove
 

@@ -7,7 +7,7 @@ import { basename, dirname, join } from "node:path";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 let pass = 0, fail = 0;
-const ok = (label, cond, extra = "") => { cond ? pass++ : fail++; console.log(`${cond ? "PASS" : "FAIL"}  ${label}${cond ? "" : "  -> " + extra}`); };
+const ok = (label, cond, extra = "") => { if (cond) pass++; else fail++; console.log(`${cond ? "PASS" : "FAIL"}  ${label}${cond ? "" : "  -> " + extra}`); };
 
 function walk(dir, out = []) {
   for (const name of readdirSync(dir)) {

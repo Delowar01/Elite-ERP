@@ -19,7 +19,7 @@ import { Client } from "pg";
 import { armOrRefuse, reportArmingFailure } from "./provider-harness/guards.mjs";
 import { installRedactedCrashHandler, say } from "./provider-harness/redact.mjs";
 import { loadManifest, saveManifestFor } from "./provider-harness/manifest.mjs";
-import { cleanupManifestObjects, cleanupTestOrgs } from "./provider-harness/cleanup.mjs";
+import { cleanupManifestObjects, cleanupTestOrgs, VERIFIED_TABLE_COUNT } from "./provider-harness/cleanup.mjs";
 
 installRedactedCrashHandler();
 
@@ -33,7 +33,7 @@ try { armOrRefuse(); } catch (e) { reportArmingFailure(e); }
 
 const manifest = loadManifest(runId!);
 say(`cleaning up run ${runId}: ${manifest.objects.length} planned objects (${manifest.objects.filter((o) => o.state === "created").length} confirmed created), ${manifest.testOrgs.length} test organizations`);
-say("only objects this run is PROVEN to own are deleted — never a prefix scan, and never a merely-planned\npathname whose bytes have not been matched\n");
+say("only objects whose CURRENT bytes hash to what this run intended are deleted — never a prefix scan,\nand never on the strength of a recorded write alone: an object replaced since is somebody else's\n");
 
 const { destinationStore, sourceStore } = await import("../src/lib/storage/blob-client");
 const dest = destinationStore();
@@ -58,7 +58,7 @@ if (manifest.testOrgs.length) {
 }
 
 say(`\nblob: ${deleted} deleted, ${alreadyGone} already gone, ${result.skippedNotOwned} skipped (not ours), ${result.inconclusive} inconclusive, ${failed} failed`);
-say(`database: ${dbFailed} failed`);
+say(`database: ${dbFailed} failed (verification covers ${VERIFIED_TABLE_COUNT} tables per organization)`);
 say("Blob stores and the database itself were NOT deleted — that remains an operator action.");
 // EITHER kind of failure fails the command. A database cleanup failure that still exited 0 would
 // leave disposable rows behind while reporting success.

@@ -245,7 +245,7 @@ if (process.env.DATABASE_URL) {
 }
 
 let pass = 0, fail = 0;
-for (const [c, name, extra] of results) { c ? pass++ : fail++; console.log(`${c ? "PASS" : "FAIL"}  ${name}${c ? "" : "  -> " + extra}`); }
+for (const [c, name, extra] of results) { if (c) pass++; else fail++; console.log(`${c ? "PASS" : "FAIL"}  ${name}${c ? "" : "  -> " + extra}`); }
 console.log(`\n${pass}/${pass + fail} checks`);
 rmSync(process.env.STORAGE_FAKE_DIR!, { recursive: true, force: true });
 process.exit(fail ? 1 : 0);

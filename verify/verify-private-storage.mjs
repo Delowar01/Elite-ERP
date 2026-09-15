@@ -190,7 +190,7 @@ check("bytes in the private store match what the route served", Boolean(bytesIn(
 
 console.log("");
 let pass_ = 0, fail_ = 0;
-for (const [ok, name, extra] of results) { ok ? pass_++ : fail_++; console.log(`${ok ? "PASS" : "FAIL"}  ${name}${ok ? "" : "  -> " + extra}`); }
+for (const [ok, name, extra] of results) { if (ok) pass_++; else fail_++; console.log(`${ok ? "PASS" : "FAIL"}  ${name}${ok ? "" : "  -> " + extra}`); }
 console.log(`\n${pass_}/${pass_ + fail_} checks`);
 await browser.close();
 await db.end();
