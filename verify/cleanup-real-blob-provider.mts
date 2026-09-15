@@ -17,9 +17,9 @@
  */
 import { Client } from "pg";
 import { armOrRefuse, reportArmingFailure } from "./provider-harness/guards.mjs";
-import { installRedactedCrashHandler, redact, say } from "./provider-harness/redact.mjs";
+import { installRedactedCrashHandler, say } from "./provider-harness/redact.mjs";
 import { loadManifest, saveManifestFor } from "./provider-harness/manifest.mjs";
-import { cleanupManifestObjects } from "./provider-harness/cleanup.mjs";
+import { cleanupManifestObjects, cleanupTestOrgs } from "./provider-harness/cleanup.mjs";
 
 installRedactedCrashHandler();
 
@@ -32,8 +32,8 @@ if (!runId) { console.error("usage: npm run verify:blob-provider:cleanup -- --ru
 try { armOrRefuse(); } catch (e) { reportArmingFailure(e); }
 
 const manifest = loadManifest(runId!);
-say(`cleaning up run ${runId}: ${manifest.objects.length} objects, ${manifest.dbRows.length} database rows`);
-say("only pathnames recorded in this manifest are deleted — never a prefix scan\n");
+say(`cleaning up run ${runId}: ${manifest.objects.length} planned objects (${manifest.objects.filter((o) => o.state === "created").length} confirmed created), ${manifest.testOrgs.length} test organizations`);
+say("only objects this run is PROVEN to own are deleted — never a prefix scan, and never a merely-planned\npathname whose bytes have not been matched\n");
 
 const { destinationStore, sourceStore } = await import("../src/lib/storage/blob-client");
 const dest = destinationStore();
@@ -43,27 +43,23 @@ const result = await cleanupManifestObjects(manifest, { destination: dest, sourc
 for (const line of result.log) say(`  ${line}`);
 const { deleted, alreadyGone, failed } = result;
 
-// Database rows, in the disposable database only — the guards already proved which one that is.
-if (manifest.dbRows.length) {
+// Test organizations, in the disposable database the guards already identified. Rooted at the org
+// because the schema cascades (measured: 52 of 53 FKs to orgs are ON DELETE CASCADE, the exception
+// being audit_logs.org_id which is SET NULL by design), and VERIFIED across every fixture table
+// afterwards rather than trusted.
+let dbFailed = 0;
+if (manifest.testOrgs.length) {
   const db = new Client({ connectionString: process.env.DATABASE_URL });
   await db.connect();
-  for (const row of manifest.dbRows) {
-    try {
-      const [col, val] = row.identifier.split("=");
-      if (row.table === "users" && col === "email") await db.query("delete from users where email=$1", [val]);
-      else if (row.table === "orgs" && col === "id") await db.query("delete from orgs where id=$1", [Number(val)]);
-      else { row.cleanupStatus = "failed"; continue; }
-      row.cleanupStatus = "deleted";
-      say(`  deleted row: ${row.table} ${row.identifier}`);
-    } catch (e) {
-      row.cleanupStatus = "failed";
-      say(`  FAILED row: ${row.table} ${row.identifier} — ${redact(e)}`);
-    }
-  }
-  saveManifestFor(manifest);
+  const dbRes = await cleanupTestOrgs(manifest, db, saveManifestFor);
+  for (const line of dbRes.log) say(`  ${line}`);
+  dbFailed = dbRes.failed;
   await db.end();
 }
 
-say(`\n${deleted} deleted, ${alreadyGone} already gone, ${failed} failed`);
+say(`\nblob: ${deleted} deleted, ${alreadyGone} already gone, ${result.skippedNotOwned} skipped (not ours), ${result.inconclusive} inconclusive, ${failed} failed`);
+say(`database: ${dbFailed} failed`);
 say("Blob stores and the database itself were NOT deleted — that remains an operator action.");
-process.exit(failed ? 1 : 0);
+// EITHER kind of failure fails the command. A database cleanup failure that still exited 0 would
+// leave disposable rows behind while reporting success.
+process.exit(failed + dbFailed + result.inconclusive > 0 ? 1 : 0);

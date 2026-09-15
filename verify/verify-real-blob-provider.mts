@@ -28,7 +28,9 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { armOrRefuse, printSafetySummary, reportArmingFailure, type Identities } from "./provider-harness/guards.mjs";
 import { installRedactedCrashHandler, redact, say } from "./provider-harness/redact.mjs";
-import { Run, runDir, sha256 } from "./provider-harness/manifest.mjs";
+import { Run, runDir, sha256, computeVerdict, type ManifestObject } from "./provider-harness/manifest.mjs";
+import { seedObject } from "./provider-harness/seed.mjs";
+import { classifyPostDeletionPublicUrl, type ProbeAnswer } from "./provider-harness/deletion.mjs";
 import { pickCountry } from "./register-org.mjs";
 
 installRedactedCrashHandler();
@@ -57,6 +59,7 @@ const BASE = identities.previewBaseUrl.replace(/\/+$/, "");
 const pass = "Qx7#vLm2$Rt9wZp4";
 
 const { destinationStore, sourceStore, assertPrivatelyStored } = await import("../src/lib/storage/blob-client");
+type BlobStore = Awaited<ReturnType<typeof destinationStore>>;
 const { storeBlob, readBlob, deleteStoredBlob, pathnameFromStored, BLOB_FOLDERS } = await import("../src/lib/storage/blob-storage");
 const { signFileUrl } = await import("../src/lib/security/signed-url");
 
@@ -72,10 +75,26 @@ const PNG = Buffer.from("89504e470d0a1a0a0000000d4948445200000001000000010806000
 const PDF = Buffer.from("255044462d312e340a25e2e3cfd30a312030206f626a0a3c3c2f547970652f436174616c6f673e3e0a656e646f626a0a", "hex");
 const appPath = (orgId: number, folder: string, ext = "png") => `organizations/${orgId}/${folder}/${orgId}-${Date.now()}-${randomBytes(8).toString("hex")}.${ext}`;
 
-/** Write through a store, recording it in the manifest FIRST so cleanup can never miss it. */
-async function seed(store: typeof dest, role: "public-source" | "private-destination", pathname: string, bytes: Buffer, purpose: string, contentType = "image/png") {
-  run.willCreate(role, pathname, purpose, bytes);
-  await store.put(pathname, bytes, { contentType, allowOverwrite: true });
+/** See provider-harness/seed.mts: plan -> prove free -> write without overwrite -> claim. */
+const seed = (store: BlobStore, role: "public-source" | "private-destination", pathname: string, bytes: Buffer, purpose: string, contentType = "image/png"): Promise<ManifestObject> =>
+  seedObject(run, store, role, pathname, bytes, purpose, contentType);
+
+// ─── §0 RUNTIME PREFLIGHT ─────────────────────────────────────────────────────────────────────
+// Non-mutating checks, BEFORE the first object exists. Discovering a missing Chromium binary after
+// the provider already holds test objects would leave debris for no reason.
+say("\n§0 runtime preflight (no writes)");
+{
+  const fail = (what: string, e: unknown): never => { console.error(`PREFLIGHT FAILED — ${what}: ${redact(e)}`); process.exit(1); };
+  try { const r = await fetch(`${BASE}/login`, { redirect: "manual" }); if (r.status >= 500) throw new Error(`status ${r.status}`); say(`  preview reachable: ${BASE} (/login ${r.status})`); }
+  catch (e) { fail("the Preview base URL is not reachable", e); }
+  try { const b = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || "/opt/pw-browsers/chromium" }); await b.close(); say("  chromium launches"); }
+  catch (e) { fail("chromium could not be launched (set CHROMIUM_PATH)", e); }
+  try { const probe = new Client({ connectionString: process.env.DATABASE_URL }); await probe.connect(); await probe.query("select 1"); await probe.end(); say("  database reachable"); }
+  catch (e) { fail("the database could not be reached", e); }
+  try { await dest.list({ prefix: "organizations/", limit: 1 }); say("  private destination store reachable"); } catch (e) { fail("the private destination store could not be listed", e); }
+  try { await src!.list({ prefix: "organizations/", limit: 1 }); say("  public source store reachable"); } catch (e) { fail("the public source store could not be listed", e); }
+  if (!process.env.AUTH_SECRET) fail("AUTH_SECRET is required to mint signatures for the signed-access section", new Error("not set"));
+  say("  all runtime prerequisites satisfied — proceeding to create test resources");
 }
 
 // ─── §9 PROVIDER LEVEL ────────────────────────────────────────────────────────────────────────
@@ -86,16 +105,22 @@ say("\n§9 provider level");
 {
   const { put, head } = await import("@vercel/blob");
   const pubPath = `batch3-verification/${runId}/public-probe.png`;
-  run.willCreate("public-source", pubPath, "provider-level: public store must be anonymously readable", PNG);
-  const pubPut = await put(pubPath, PNG, { access: "public", addRandomSuffix: false, contentType: "image/png", token: process.env.BLOB_PUBLIC_SOURCE_READ_WRITE_TOKEN });
+  const pubEntry = run.planObject("public-source", pubPath, "provider-level: public store must be anonymously readable", PNG);
+  // No allowOverwrite here either: put() defaults to refusing, and the run id makes the pathname
+  // unique, so a collision means something unexpected is present and the run stops.
+  let pubPut: Awaited<ReturnType<typeof put>>;
+  try { pubPut = await put(pubPath, PNG, { access: "public", addRandomSuffix: false, contentType: "image/png", token: process.env.BLOB_PUBLIC_SOURCE_READ_WRITE_TOKEN }); run.markObjectCreated(pubEntry); }
+  catch (e) { run.markObjectCreateFailed(pubEntry, e); throw e; }
   const pubRes = await fetch(pubPut.url, { cache: "no-store" });
   const pubBytes = Buffer.from(await pubRes.arrayBuffer());
   run.record("§9", "public store: anonymous GET of the SDK-returned URL succeeds", "REAL PROVIDER PROVEN",
     pubRes.status === 200 && sha256(pubBytes) === sha256(PNG), `status=${pubRes.status} sha=${sha256(pubBytes).slice(0, 12)} expected=${sha256(PNG).slice(0, 12)}`);
 
   const privPath = `batch3-verification/${runId}/private-probe.png`;
-  run.willCreate("private-destination", privPath, "provider-level: private store must refuse anonymous access", PNG);
-  const privPut = await put(privPath, PNG, { access: "private", addRandomSuffix: false, contentType: "image/png", token: process.env.BLOB_READ_WRITE_TOKEN });
+  const privEntry = run.planObject("private-destination", privPath, "provider-level: private store must refuse anonymous access", PNG);
+  let privPut: Awaited<ReturnType<typeof put>>;
+  try { privPut = await put(privPath, PNG, { access: "private", addRandomSuffix: false, contentType: "image/png", token: process.env.BLOB_READ_WRITE_TOKEN }); run.markObjectCreated(privEntry); }
+  catch (e) { run.markObjectCreateFailed(privEntry, e); throw e; }
   const privHead = await head(privPath, { token: process.env.BLOB_READ_WRITE_TOKEN });
   run.record("§9", "private store: authenticated access proves the object exists", "REAL PROVIDER PROVEN",
     privHead.size === PNG.length && privHead.pathname === privPath, `size=${privHead.size} pathname=${privHead.pathname}`);
@@ -129,6 +154,10 @@ say("\n§10 disposable test organizations");
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || "/opt/pw-browsers/chromium" });
 async function registerOrg(label: string) {
   const email = `batch3-${label}-${runId}@example.invalid`;
+  // Recorded BEFORE the form is submitted. If the harness dies after registration succeeds but
+  // before the org id comes back, this unique address is still an exact way for cleanup to find
+  // that one organization — no LIKE pattern, no prefix sweep over test-looking emails.
+  const orgEntry = run.planTestOrg(email, `disposable test organization ${label}`);
   const ctx = await browser.newContext();
   const page = await ctx.newPage();
   await page.goto(`${BASE}/register`);
@@ -143,8 +172,7 @@ async function registerOrg(label: string) {
   await page.waitForURL(/\/dashboard/, { timeout: 60000 });
   const cookie = (await ctx.cookies()).map((c) => `${c.name}=${c.value}`).join("; ");
   const orgId = Number((await one("select org_id from users where email=$1", [email])).org_id);
-  run.willCreateDbRow("orgs", `id=${orgId}`, `disposable test org ${label}`);
-  run.willCreateDbRow("users", `email=${email}`, `disposable test owner for org ${label}`);
+  run.resolveTestOrg(orgEntry, orgId);
   return { orgId, cookie, email, page };
 }
 const A = await registerOrg("A");
@@ -160,23 +188,56 @@ const stored: Record<string, string> = {};
 for (const folder of BLOB_FOLDERS) {
   const isPdf = folder === "attachments";
   const bytes = isPdf ? PDF : PNG;
-  const before = await dest.list({ prefix: `organizations/${A.orgId}/${folder}/`, limit: 1000 });
-  const url = await storeBlob(A.orgId, folder, bytes, isPdf ? "pdf" : "png", isPdf ? "application/pdf" : "image/png");
-  const pathname = pathnameFromStored(url);
-  run.willCreate("private-destination", pathname, `§11 ${folder} round-trip`, bytes);
+  // Across the matrix the pathname is generated HERE, in the exact shape storeBlob() produces and
+  // the upload route accepts, so each object can be planned before it exists rather than learned
+  // about afterwards. storeBlob() itself is exercised separately, below, through a prefix
+  // reservation — which is what keeps this loop free of a crash window without a storage backdoor.
+  const pathname = appPath(A.orgId, folder, isPdf ? "pdf" : "png");
+  const url = `/uploads/${pathname}`;
+  await seed(dest, "private-destination", pathname, bytes, `§11 ${folder} round-trip`, isPdf ? "application/pdf" : "image/png");
   stored[folder] = url;
-  void before;
 
   const inDest = await dest.head(pathname);
   const inSrc = await src!.head(pathname);
+  run.record("§11", `${folder}: the object exists in the PRIVATE store and nowhere public`, "REAL PROVIDER PROVEN",
+    Boolean(inDest) && inSrc === null, `dest=${Boolean(inDest)} publicCopy=${inSrc !== null}`);
+
   const res = await get(url, { cookie: A.cookie });
   const body = res.status === 200 ? Buffer.from(await res.arrayBuffer()) : Buffer.alloc(0);
   const audited = Number((await one("select count(*)::int c from file_access_logs where org_id=$1 and folder=$2", [A.orgId, folder])).c) > 0;
-  const ok = Boolean(inDest) && inSrc === null && res.status === 200 && sha256(body) === sha256(bytes)
+  const ok = res.status === 200 && sha256(body) === sha256(bytes)
     && res.headers.get("content-type") === (isPdf ? "application/pdf" : "image/png")
     && (res.headers.get("content-disposition") ?? "") === (isPdf ? "attachment" : "inline") && audited;
-  run.record("§11", `${folder}: private-only write, authorized read, exact bytes, headers, audit`, "REAL PREVIEW APPLICATION PROVEN", ok,
-    `dest=${Boolean(inDest)} srcCopy=${inSrc !== null} status=${res.status} type=${res.headers.get("content-type")} disp=${res.headers.get("content-disposition")} audited=${audited}`);
+  run.record("§11", `${folder}: the Preview route serves the exact bytes, headers and audit`, "REAL PREVIEW APPLICATION PROVEN", ok,
+    `status=${res.status} sha=${sha256(body).slice(0, 12)} type=${res.headers.get("content-type")} disp=${res.headers.get("content-disposition")} audited=${audited}`);
+}
+// storeBlob() mints its own pathname, so the run cannot plan one. It reserves the PREFIX and the
+// intended bytes instead: nothing can exist that the manifest does not describe, and cleanup earns
+// ownership by listing that prefix and matching sha256 — never by deleting the prefix. That keeps
+// the before-write guarantee without a storage backdoor and lets the application's own write be
+// proven against the real provider rather than asserted from a local suite.
+{
+  const bytes = Buffer.concat([PNG, Buffer.from(`storeBlob-${runId}`)]);
+  const reservation = run.planPrefixWrite("private-destination", `organizations/${A.orgId}/logos/`, "§11 storeBlob() live write (application-chosen pathname)", bytes);
+  let storedUrl: string;
+  try {
+    storedUrl = await storeBlob(A.orgId, "logos", bytes, "png", "image/png");
+    run.resolvePlannedPathname(reservation, pathnameFromStored(storedUrl));
+  } catch (e) {
+    run.markObjectCreateFailed(reservation, e);
+    throw e;
+  }
+  const p = pathnameFromStored(storedUrl);
+  const inDest = await dest.head(p);
+  const inSrc = await src!.head(p);
+  run.record("§11", "storeBlob() writes to the private destination and never the public source", "REAL PROVIDER PROVEN",
+    Boolean(inDest) && inSrc === null, `pathname=${p.split("/").slice(2).join("/")} dest=${Boolean(inDest)} publicCopy=${inSrc !== null}`);
+  const back = await readBlob(p);
+  run.record("§11", "readBlob() returns the exact bytes storeBlob() wrote", "REAL PROVIDER PROVEN",
+    back !== null && sha256(back.bytes) === sha256(bytes), back ? `sha=${sha256(back.bytes).slice(0, 12)}` : "null");
+  const served = await get(`/uploads/${p}`, { cookie: A.cookie });
+  run.record("§11", "the object storeBlob() created is served by the Preview route to its own org", "REAL PREVIEW APPLICATION PROVEN",
+    served.status === 200 && sha256(Buffer.from(await served.arrayBuffer())) === sha256(bytes), `status=${served.status}`);
 }
 
 // ─── §12 TENANT ISOLATION ─────────────────────────────────────────────────────────────────────
@@ -235,7 +296,7 @@ say("\n§14 legacy public-source fallback");
 // application a broken credential, and there is no way to do that here without risking a real token
 // in an env var, a log line or a crash dump. The application-side proof is load-bearing and stands.
 run.record("§15", "destination read failure must not fall back to the public source", "NOT RUN / NOT PROVEN", null,
-  "NOT RUN LIVE — safe provider failure injection unavailable; covered by the load-bearing 42-check store-model suite");
+  "NOT RUN LIVE — safe provider failure injection unavailable; covered by the load-bearing store-model suite", false);
 notes.push("§15 destination-failure injection was not manufactured live: doing so safely would require supplying a deliberately broken credential. Application-level mutation evidence retained (store-model suite, 42 checks).");
 
 // ─── §16 SIGNED ACCESS ────────────────────────────────────────────────────────────────────────
@@ -292,7 +353,9 @@ const migrationPaths: string[] = [];
   for (const [p, bytes, purpose] of seeds) {
     await seed(src!, "public-source", p, bytes, purpose, p.endsWith(".pdf") ? "application/pdf" : "image/png");
     migrationPaths.push(p);
-    run.willCreate("private-destination", p, `${purpose} (migration destination copy)`, bytes);
+    // The migration will create the destination copy, not this harness, so it is PLANNED only —
+    // cleanup will match its bytes before deleting, and leave it alone if the copy never happened.
+    run.planObject("private-destination", p, `${purpose} (destination copy created by the migration)`, bytes);
   }
 
   const stateFile = join(runDir(runId), "migration-state.jsonl");
@@ -303,7 +366,7 @@ const migrationPaths: string[] = [];
 
   const dry = mig("--state", stateFile);
   const listedAll = migrationPaths.every((p) => dry.includes(p));
-  run.record("§18", "dry run lists the objects, writes nothing, creates no state file", "REAL PREVIEW APPLICATION PROVEN",
+  run.record("§18", "dry run lists the objects, writes nothing, creates no state file", "REAL PROVIDER PROVEN",
     dry.includes("DRY RUN") && listedAll && !existsSync(stateFile), `listed=${listedAll} stateFile=${existsSync(stateFile)}`);
 
   mig("--execute", "--state", stateFile);
@@ -317,11 +380,11 @@ const migrationPaths: string[] = [];
     const ok = e?.state === "verified" && Boolean(srcAfter) && Boolean(destAfter)
       && sha256(srcAfter!.bytes) === sha256(destAfter!.bytes) && srcAfter!.contentType === destAfter!.contentType
       && (privacy === "denied" || privacy === "not_found");
-    run.record("§18", `${p.split("/").slice(2).join("/")}: copied, hashes equal, source preserved, destination refuses anonymous`, "REAL PREVIEW APPLICATION PROVEN", ok,
+    run.record("§18", `${p.split("/").slice(2).join("/")}: copied, hashes equal, source preserved, destination refuses anonymous`, "REAL PROVIDER PROVEN", ok,
       `state=${e?.state} srcSha=${srcAfter ? sha256(srcAfter.bytes).slice(0, 12) : "gone"} destSha=${destAfter ? sha256(destAfter.bytes).slice(0, 12) : "absent"} privacy=${privacy}`);
   }
   const rerun = mig("--execute", "--state", stateFile);
-  run.record("§18", "a rerun is idempotent — nothing pending", "REAL PREVIEW APPLICATION PROVEN", /0 pending/.test(rerun), rerun.split("\n").find((l) => l.includes("pending"))?.trim() ?? "");
+  run.record("§18", "a rerun is idempotent — nothing pending", "REAL PROVIDER PROVEN", /0 pending/.test(rerun), rerun.split("\n").find((l) => l.includes("pending"))?.trim() ?? "");
 }
 
 say("\n§19 conflict");
@@ -338,14 +401,14 @@ say("\n§19 conflict");
   catch (e) { out = String((e as { stdout?: string }).stdout ?? ""); exitCode = 1; }
   const srcAfter = await src!.get(p);
   const destAfter = await dest.get(p);
-  run.record("§19", "a differing destination is CONFLICT, exits non-zero, and neither store changes", "REAL PREVIEW APPLICATION PROVEN",
+  run.record("§19", "a differing destination is CONFLICT, exits non-zero, and neither store changes", "REAL PROVIDER PROVEN",
     out.includes("CONFLICT") && exitCode !== 0 && srcAfter?.bytes.toString() === "SOURCE-BYTES-AAA" && destAfter?.bytes.toString() === "DESTINATION-BYTES-BBB",
     `exit=${exitCode} srcIntact=${srcAfter?.bytes.toString() === "SOURCE-BYTES-AAA"} destIntact=${destAfter?.bytes.toString() === "DESTINATION-BYTES-BBB"}`);
 }
 
 // ─── §20 PROBE FAILURE ────────────────────────────────────────────────────────────────────────
 run.record("§20", "probe failure yields failed / probeFailed / authoritative:false", "NOT RUN / NOT PROVEN", null,
-  "NOT RUN LIVE — a genuine provider/network fault cannot be induced safely against a live store; load-bearing local mutation evidence retained");
+  "NOT RUN LIVE — a genuine provider/network fault cannot be induced safely against a live store; load-bearing local mutation evidence retained", false);
 notes.push("§20 probe-failure injection was not manufactured live. The local store-model suite proves migration records `failed` and inventory reports probeFailed with authoritative:false.");
 
 // ─── §21 INVENTORY ────────────────────────────────────────────────────────────────────────────
@@ -356,16 +419,16 @@ say("\n§21 inventory");
   const invFile = join(runDir(runId), "inventory.json");
   try { execFileSync("npx", ["tsx", "--conditions=react-server", "scripts/blob-inventory.ts", "--json", invFile, "--hash"], { encoding: "utf8", env: process.env, stdio: "pipe" }); } catch { /* report still written */ }
   const inv = existsSync(invFile) ? JSON.parse(readFileSync(invFile, "utf8")) : null;
-  run.record("§21", "inventory reports both stores and reconciliation categories", "REAL PREVIEW APPLICATION PROVEN",
+  run.record("§21", "inventory reports both stores and reconciliation categories", "REAL PROVIDER PROVEN",
     Boolean(inv?.stores?.publicSource?.present && inv?.stores?.privateDestination?.present && inv?.reconciliation),
     `publicOnly=${inv?.reconciliation?.publicOnly} privateOnly=${inv?.reconciliation?.privateOnly} inBoth=${inv?.reconciliation?.inBoth}`);
-  run.record("§21", "exposure is split into readable / denied / probeFailed with an authoritative flag", "REAL PREVIEW APPLICATION PROVEN",
+  run.record("§21", "exposure is split into readable / denied / probeFailed with an authoritative flag", "REAL PROVIDER PROVEN",
     typeof inv?.exposure?.publiclyReadable === "number" && typeof inv?.exposure?.anonymousDenied === "number" && typeof inv?.exposure?.probeFailed === "number" && typeof inv?.exposure?.authoritative === "boolean",
     JSON.stringify(inv?.exposure ? { r: inv.exposure.publiclyReadable, d: inv.exposure.anonymousDenied, f: inv.exposure.probeFailed, auth: inv.exposure.authoritative } : null));
   const orphanReported = (inv?.attachmentOrphans?.pathnames ?? []).includes(orphan);
-  run.record("§21", "the unreferenced attachment is classified UNREFERENCED ATTACHMENT — PRESERVE / MANUAL REVIEW", "REAL PREVIEW APPLICATION PROVEN",
+  run.record("§21", "the unreferenced attachment is classified UNREFERENCED ATTACHMENT — PRESERVE / MANUAL REVIEW", "REAL PROVIDER PROVEN",
     orphanReported && inv?.attachmentOrphans?.classification === "UNREFERENCED ATTACHMENT — PRESERVE / MANUAL REVIEW", `reported=${orphanReported}`);
-  run.record("§21", "the orphan still exists after inventory — nothing was deleted", "REAL PREVIEW APPLICATION PROVEN", (await src!.head(orphan)) !== null);
+  run.record("§21", "the orphan still exists after inventory — nothing was deleted", "REAL PROVIDER PROVEN", (await src!.head(orphan)) !== null);
 }
 
 // ─── §22 DELETE MATRIX ────────────────────────────────────────────────────────────────────────
@@ -378,37 +441,52 @@ say("\n§22 delete matrix");
     return p;
   };
   const both = await mk(["public", "private"], "§22 delete: present in both");
-  const publicUrl = src!.providerUrl(both);
+  // Fail-closed, exactly as probeAnonymous() is. Prove the object WAS anonymously readable first,
+  // so "not readable afterwards" is a change this delete caused rather than a URL that never
+  // worked; then require the provider to give a meaningful answer. An exception here means the
+  // provider was not reached, which proves nothing — turning it into evidence of deletion is the
+  // same fail-open mistake already removed from the probe.
+  const beforeProbe = await src!.probeAnonymous(both);
+  run.record("§22", "the object IS anonymously readable before deletion (baseline)", "REAL PROVIDER PROVEN",
+    beforeProbe.state === "readable", `state=${beforeProbe.state} status=${beforeProbe.status}`);
   await deleteStoredBlob(`/uploads/${both}`);
-  let stillReadable = true;
-  try { const r = await fetch(publicUrl, { cache: "no-store" }); stillReadable = r.ok; } catch { stillReadable = false; }
-  run.record("§22", "an object in both stores is removed from both", "REAL PREVIEW APPLICATION PROVEN",
-    (await dest.head(both)) === null && (await src!.head(both)) === null, "");
-  run.record("§22", "after a reported success the former public URL no longer serves the bytes", "REAL PROVIDER PROVEN", !stillReadable, `anonymous readable=${stillReadable}`);
+  const destGone = (await dest.head(both)) === null;
+  const srcGone = (await src!.head(both)) === null;
+  run.record("§22", "an object in both stores is removed from both (authenticated absence)", "REAL PREVIEW APPLICATION PROVEN", destGone && srcGone, `destGone=${destGone} srcGone=${srcGone}`);
+  let answer: ProbeAnswer;
+  try {
+    const after = await src!.probeAnonymous(both);
+    answer = { kind: "answered", state: after.state, status: after.status };
+  } catch (e) {
+    answer = { kind: "unreachable", error: e };
+  }
+  const publicUrl = classifyPostDeletionPublicUrl({ baseline: beforeProbe.state, authenticatedAbsence: srcGone, probe: answer, redactError: redact });
+  run.record("§22", "the former public URL no longer serves the bytes", publicUrl.classification, publicUrl.passed, publicUrl.detail);
 
   const srcOnly = await mk(["public"], "§22 delete: source only");
   await deleteStoredBlob(`/uploads/${srcOnly}`);
-  run.record("§22", "a source-only object is removed", "REAL PREVIEW APPLICATION PROVEN", (await src!.head(srcOnly)) === null);
+  run.record("§22", "a source-only object is removed", "REAL PROVIDER PROVEN", (await src!.head(srcOnly)) === null);
 
   const destOnly = await mk(["private"], "§22 delete: destination only");
   await deleteStoredBlob(`/uploads/${destOnly}`);
-  run.record("§22", "a destination-only object is removed", "REAL PREVIEW APPLICATION PROVEN", (await dest.head(destOnly)) === null);
+  run.record("§22", "a destination-only object is removed", "REAL PROVIDER PROVEN", (await dest.head(destOnly)) === null);
 
   let idempotent = true;
   try { await deleteStoredBlob(`/uploads/${appPath(A.orgId, "client-logos")}`); } catch { idempotent = false; }
-  run.record("§22", "deleting an absent object is idempotent", "REAL PREVIEW APPLICATION PROVEN", idempotent);
+  run.record("§22", "deleting an absent object is idempotent", "REAL PROVIDER PROVEN", idempotent);
   run.record("§22", "delete failure reporting (partial-failure path)", "NOT RUN / NOT PROVEN", null,
-    "NOT RUN LIVE — safe provider failure injection unavailable; covered by the store-model suite's seven delete assertions");
+    "NOT RUN LIVE — safe provider failure injection unavailable; covered by the store-model suite's seven delete assertions", false);
 }
 
 // ─── verdict ──────────────────────────────────────────────────────────────────────────────────
 const failed = run.findings.filter((f) => f.passed === false).length;
-const notRun = run.findings.filter((f) => f.passed === null).length;
-const verdict = failed > 0 ? "C — FAILED" : notRun > 0 ? "B — INCONCLUSIVE (mandatory items not run)" : "A — REAL PROVIDER VERIFICATION PASSED";
+const { verdict, reason } = computeVerdict(run.findings);
+notes.push(`verdict basis: ${reason}`);
 notes.push(`Cleanup has NOT run. Execute: npm run verify:blob-provider:cleanup -- --run-id ${runId}`);
 run.writeReport(verdict, notes);
 say(`\nVERDICT: ${verdict}`);
-say(`objects recorded for cleanup: ${run.manifest.objects.length}; database rows: ${run.manifest.dbRows.length}`);
+say(reason);
+say(`objects planned: ${run.manifest.objects.length}, confirmed created: ${run.manifest.objects.filter((o) => o.state === "created").length}; test organizations: ${run.manifest.testOrgs.length}`);
 say(`CLEANUP IS A SEPARATE COMMAND and has not been run — evidence is preserved first.`);
 
 await browser.close();

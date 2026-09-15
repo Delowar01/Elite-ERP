@@ -101,6 +101,19 @@ export function fakeStore(role: StoreRole, mode: StoreMode): BlobStore {
     },
 
     async head(pathname) {
+      // A configurable RACE, so a suite can prove the no-overwrite guarantee lives at the provider
+      // and not merely in a caller's head() check. When armed, head() reports the pathname free and
+      // an object appears immediately afterwards — precisely the window every check-then-write has.
+      // A caller passing allowOverwrite:true destroys those bytes; a caller that does not is refused
+      // by put(). Without this, re-adding allowOverwrite:true breaks nothing observable.
+      const race = process.env.STORAGE_FAKE_RACE_CREATE;
+      if (race && pathname.includes(race) && !existsSync(fileOf(mode, pathname))) {
+        const f = fileOf(mode, pathname);
+        mkdirSync(dirname(f), { recursive: true });
+        writeFileSync(f, Buffer.from(process.env.STORAGE_FAKE_RACE_BYTES ?? "raced-in-by-somebody-else"));
+        writeFileSync(metaOf(mode, pathname), JSON.stringify({ contentType: "application/octet-stream", uploadedAt: new Date().toISOString() } satisfies Sidecar));
+        return null;
+      }
       const meta = readMeta(mode, pathname);
       const f = fileOf(mode, pathname);
       if (!meta || !existsSync(f)) return null;

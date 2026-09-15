@@ -137,6 +137,32 @@ production public store or the production database. Neither credential may reach
 Keep an **exact manifest** of every disposable pathname created. Cleanup compares against that
 manifest; never delete by prefix scan.
 
+**Ownership, not presence.** Recording a pathname is not the same as owning the object at it, so the
+manifest tracks a lifecycle and cleanup deletes only what it can prove the run wrote:
+
+| State | Meaning | Cleanup |
+| --- | --- | --- |
+| `planned` | recorded before the write; the write may never have been attempted | delete only if the bytes at that pathname match the intended sha256 |
+| `created` | the write returned successfully | delete, then verify it is gone |
+| `create-failed` | the write threw, but an ambiguous network failure can still commit | same as `planned`: match the bytes or leave it |
+
+Writes go out with **no `allowOverwrite`**. The pathname is checked free first, but the guarantee
+that matters is the provider's own refusal, because a check-then-write has a window in which
+somebody else's object can appear.
+
+Where the **application** chooses the pathname (`storeBlob()` mints `{orgId}-{timestamp}-{random}`)
+the run reserves the *prefix* and the intended sha256 beforehand. Nothing can exist that the
+manifest does not describe, and cleanup resolves the reservation by listing that prefix and matching
+bytes. **The prefix is never a delete scope** — an object under it whose bytes differ is left alone
+and reported.
+
+Disposable **organizations** are recorded by their unique email address *before* `/register` is
+submitted, so a crash between registration and the manifest write still leaves an exact locator. The
+org is the cleanup root: of the 53 foreign keys referencing `orgs`, 52 are `ON DELETE CASCADE` (the
+exception, `audit_logs.org_id`, is `SET NULL` by design), so deleting the org removes its users,
+documents and line items in one dependency-correct step — which is then **verified** across every
+table the harness writes to rather than assumed. No `LIKE` pattern, ever.
+
 ### What it must prove
 
 **Provider level** — disposable provider-only objects, an isolated prefix is fine here:
@@ -177,6 +203,9 @@ shape check:
 
 ### Cleanup
 
-Delete only the objects in the recorded manifest. Retire the disposable stores if they were created
-for this test, and drop the disposable Preview database/branch if it was. Never clean up by prefix
-scan without comparing against the manifest.
+Delete only the objects in the recorded manifest, and only after proving ownership as above. Cleanup
+is a **separate command** (`npm run verify:blob-provider:cleanup -- --run-id <id>`) so evidence is
+preserved before anything is removed; it is resumable, persists the manifest after each operation,
+and exits non-zero if any blob or database deletion failed or was left inconclusive. Retire the
+disposable stores if they were created for this test, and drop the disposable Preview
+database/branch if it was. Never clean up by prefix scan without comparing against the manifest.

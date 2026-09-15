@@ -34,6 +34,7 @@ const GOOD = {
   BATCH3_EXPECT_DB_HOST: "disposable.example.invalid",
   BATCH3_EXPECT_DB_NAME: "batch3_test",
   BATCH3_PREVIEW_SHA_VERIFIED_EXTERNALLY: "YES",
+  BATCH3_SIGNING_SECRET_MATCHES_PREVIEW: "YES",
   BLOB_READ_WRITE_TOKEN: PRIVATE_TOKEN,
   BLOB_PUBLIC_SOURCE_READ_WRITE_TOKEN: PUBLIC_TOKEN,
   DATABASE_URL: DB_URL,
@@ -69,6 +70,9 @@ ok("a wrong database host refuses", refuses({ BATCH3_EXPECT_DB_HOST: "prod.examp
 ok("a wrong database name refuses", refuses({ BATCH3_EXPECT_DB_NAME: "elite_erp_production" }).refused);
 ok("a preview URL matching a known production host refuses", refuses({ BATCH3_KNOWN_PRODUCTION_HOST: "preview-batch3.example.invalid" }).refused);
 ok("a missing external SHA attestation refuses", refuses({ BATCH3_PREVIEW_SHA_VERIFIED_EXTERNALLY: undefined }).refused);
+// Without this the signed-access section would fail for a configuration reason and be read as an
+// application defect.
+ok("a missing signing-secret attestation refuses", refuses({ BATCH3_SIGNING_SECRET_MATCHES_PREVIEW: undefined }).refused);
 ok("store id is derived from the token's 4th segment", storeIdFromToken(PRIVATE_TOKEN, "x") === "PRIVSTORE001");
 ok("database identity is parsed without touching the password", dbIdentity(DB_URL).host === "disposable.example.invalid" && dbIdentity(DB_URL).name === "batch3_test" && dbIdentity(DB_URL).user === "tester");
 
@@ -85,7 +89,45 @@ withEnv({}, () => {
   ok("deep redaction reaches nested structures", !JSON.stringify(deep).includes(PRIVATE_TOKEN) && !JSON.stringify(deep).includes("sup3rs3cr3tpw"));
 });
 
-// ---- manifest and cleanup, against the fake stores
+// ---- verdict logic. The previous version could never return A, because every approved
+// fault-injection omission was counted as a mandatory gap — which made the gate unwinnable.
+{
+  const f = (over: Partial<{ passed: boolean | null; requiredForVerdict: boolean }>) =>
+    ({ section: "x", name: "y", classification: "REAL PROVIDER PROVEN" as const, passed: true, requiredForVerdict: true, detail: "", ...over });
+  const { computeVerdict } = await import("./provider-harness/manifest.mjs");
+  ok("all mandatory pass, no omissions → A", computeVerdict([f({}), f({})]).verdict.startsWith("A"));
+  ok("all mandatory pass + APPROVED optional omission → A", computeVerdict([f({}), f({ passed: null, requiredForVerdict: false })]).verdict.startsWith("A"),
+     computeVerdict([f({}), f({ passed: null, requiredForVerdict: false })]).verdict);
+  ok("a MANDATORY omission → B", computeVerdict([f({}), f({ passed: null })]).verdict.startsWith("B"));
+  ok("a mandatory failure → C", computeVerdict([f({ passed: false })]).verdict.startsWith("C"));
+  // Policy, stated and tested: an optional check may be SKIPPED but may never CONTRADICT the design.
+  ok("an OPTIONAL check that FAILED → C, not A", computeVerdict([f({}), f({ passed: false, requiredForVerdict: false })]).verdict.startsWith("C"));
+  ok("a provider security defect (mandatory false) → C", computeVerdict([f({ passed: false, classification: "REAL PROVIDER PROVEN" } as never)]).verdict.startsWith("C"));
+  ok("the verdict explains itself", computeVerdict([f({}), f({ passed: null, requiredForVerdict: false })]).reason.includes("fault-injection"));
+}
+
+// ---- §22 post-deletion public URL, fail-closed. The shape being guarded against is
+// `catch { return "gone" }`: an unreachable provider becoming proof that the object is gone.
+{
+  const { classifyPostDeletionPublicUrl } = await import("./provider-harness/deletion.mjs");
+  const base = { baseline: "readable" as const, authenticatedAbsence: true };
+  const denied = classifyPostDeletionPublicUrl({ ...base, probe: { kind: "answered", state: "denied", status: 403 } });
+  ok("§22: readable before, denied after, authenticated absence → PROVEN", denied.passed === true && denied.classification === "REAL PROVIDER PROVEN", denied.detail);
+  ok("§22: readable before, not_found after → PROVEN", classifyPostDeletionPublicUrl({ ...base, probe: { kind: "answered", state: "not_found", status: 404 } }).passed === true);
+  ok("§22: still readable after deletion → FAILURE, never a pass", classifyPostDeletionPublicUrl({ ...base, probe: { kind: "answered", state: "readable", status: 200 } }).passed === false);
+  const unreachable = classifyPostDeletionPublicUrl({ ...base, probe: { kind: "unreachable", error: new Error("ECONNRESET") } });
+  ok("§22: an UNREACHABLE provider is INCONCLUSIVE — an exception is never evidence of deletion",
+     unreachable.passed === null && unreachable.classification === "NOT RUN / NOT PROVEN", `${unreachable.passed} ${unreachable.detail}`);
+  ok("§22: the inconclusive detail says the provider did not answer", unreachable.detail.includes("did not answer"), unreachable.detail);
+  ok("§22: an unreachable provider's error is redacted through the supplied redactor",
+     classifyPostDeletionPublicUrl({ ...base, probe: { kind: "unreachable", error: new Error(`boom ${PRIVATE_TOKEN}`) }, redactError: redact }).detail.includes(PRIVATE_TOKEN) === false);
+  const neverReadable = classifyPostDeletionPublicUrl({ baseline: "denied", authenticatedAbsence: true, probe: { kind: "answered", state: "denied", status: 403 } });
+  ok("§22: a URL that was NEVER anonymously readable proves nothing about the delete", neverReadable.passed === null, neverReadable.detail);
+  const stillThere = classifyPostDeletionPublicUrl({ baseline: "readable", authenticatedAbsence: false, probe: { kind: "answered", state: "denied", status: 403 } });
+  ok("§22: without authenticated absence the public-URL question is moot, not passed", stillThere.passed === null, stillThere.detail);
+}
+
+// ---- manifest lifecycle and cleanup ownership, against the fake stores
 const dir = mkdtempSync(join(tmpdir(), "harness-"));
 process.env.STORAGE_DRIVER = "fake";
 process.env.STORAGE_FAKE_SOURCE = "1";
@@ -94,33 +136,196 @@ const cwd = process.cwd();
 process.chdir(dir);
 
 const { Run, runDir, loadManifest } = await import("./provider-harness/manifest.mjs");
-const { cleanupManifestObjects } = await import("./provider-harness/cleanup.mjs");
+const { cleanupManifestObjects, cleanupTestOrgs } = await import("./provider-harness/cleanup.mjs");
 const { destinationStore, sourceStore } = await import("../src/lib/storage/blob-client");
 const dest = destinationStore();
 const src = sourceStore()!;
 
 const run = new Run("selftest", "0".repeat(40), { previewBaseUrl: "https://preview.example.invalid", note: `token was ${PRIVATE_TOKEN}` });
 const BYTES = Buffer.from("harness-object");
-const listed = "organizations/1/logos/1-1700000000000-1111111111111111.png";
-const unlisted = "organizations/1/logos/1-1700000000000-2222222222222222.png";
-run.willCreate("private-destination", listed, "selftest: recorded object", BYTES);
-await dest.put(listed, BYTES, { contentType: "image/png" });
-// Deliberately NOT recorded — it stands in for anything already in the store that this run did not
-// create, which cleanup must never touch.
-await dest.put(unlisted, BYTES, { contentType: "image/png" });
+const OTHER = Buffer.from("somebody-elses-object");
+const P = (n: string) => `organizations/1/logos/1-1700000000000-${n.repeat(16).slice(0, 16)}.png`;
+
+// (a) created -> owned -> deleted
+const created = P("1");
+const eCreated = run.planObject("private-destination", created, "created", BYTES);
+await dest.put(created, BYTES, { contentType: "image/png" });
+run.markObjectCreated(eCreated);
+
+// (b) planned but never created, and something ELSE is sitting at that pathname
+const plannedOther = P("2");
+const ePlannedOther = run.planObject("private-destination", plannedOther, "planned, never created", BYTES);
+await dest.put(plannedOther, OTHER, { contentType: "image/png" });
+
+// (c) ambiguous write that DID commit: the bytes match what the run intended
+const ambiguousMatch = P("3");
+const eAmbMatch = run.planObject("private-destination", ambiguousMatch, "ambiguous write, bytes match", BYTES);
+await dest.put(ambiguousMatch, BYTES, { contentType: "image/png" });
+run.markObjectCreateFailed(eAmbMatch, new Error("socket hang up"));
+
+// (d) ambiguous write where something different is present
+const ambiguousDiff = P("4");
+const eAmbDiff = run.planObject("private-destination", ambiguousDiff, "ambiguous write, bytes differ", BYTES);
+await dest.put(ambiguousDiff, OTHER, { contentType: "image/png" });
+run.markObjectCreateFailed(eAmbDiff, new Error("socket hang up"));
+
+// (e) never recorded at all — stands in for anything already in the store
+const unlisted = P("5");
+await dest.put(unlisted, OTHER, { contentType: "image/png" });
+
+ok("the manifest distinguishes planned from created", eCreated.state === "created" && ePlannedOther.state === "planned" && eAmbMatch.state === "create-failed",
+   `${eCreated.state}/${ePlannedOther.state}/${eAmbMatch.state}`);
+ok("a planned entry records the sha256 the run INTENDED to write", ePlannedOther.sha256 === run.manifest.objects[0].sha256);
 
 const saved = loadManifest("selftest");
-ok("the manifest records exactly what was created, with sha256 and size", saved.objects.length === 1 && saved.objects[0].pathname === listed && saved.objects[0].size === BYTES.length, JSON.stringify(saved.objects.map((o) => o.pathname)));
-ok("the manifest file itself carries no secret", !readFileSync(join(runDir("selftest"), "manifest.json"), "utf8").includes(PRIVATE_TOKEN));
-
 const cleanup = await cleanupManifestObjects(saved, { destination: dest, source: src });
-ok("cleanup deletes the manifest object", (await dest.head(listed)) === null, `deleted=${cleanup.deleted}`);
-ok("an object NOT in the manifest survives cleanup", (await dest.head(unlisted)) !== null, "the unrecorded object must be left alone");
+ok("cleanup deletes an object the run created", (await dest.head(created)) === null, `deleted=${cleanup.deleted}`);
+ok("a PLANNED-only pathname holding somebody else's bytes is NOT deleted", (await dest.head(plannedOther)) !== null, "this is the case that would destroy pre-existing data");
+ok("an ambiguous write whose bytes MATCH is recognised as ours and cleaned", (await dest.head(ambiguousMatch)) === null);
+ok("an ambiguous write whose bytes DIFFER is never deleted", (await dest.head(ambiguousDiff)) !== null);
+ok("an object never recorded at all survives cleanup", (await dest.head(unlisted)) !== null);
+ok("not-owned entries are reported rather than silently skipped", cleanup.skippedNotOwned === 2, `skipped=${cleanup.skippedNotOwned}`);
 ok("cleanup verifies each deletion rather than assuming it", saved.objects[0].cleanupStatus === "verified-gone", saved.objects[0].cleanupStatus);
 
-// A second pass models resuming after a partial run: already-gone entries are idempotent.
 const again = await cleanupManifestObjects(saved, { destination: dest, source: src });
-ok("cleanup is resumable — a second pass is idempotent and reports nothing failed", again.failed === 0 && again.deleted === 0 && again.alreadyGone === 1, JSON.stringify(again));
+ok("cleanup is resumable — a second pass deletes nothing new and reports no failure", again.failed === 0 && again.deleted === 0, JSON.stringify({ d: again.deleted, f: again.failed }));
+
+// (f) overwrite is refused by the store itself, which is what makes the collision rule enforceable
+let collided = false;
+try { await dest.put(unlisted, BYTES, { contentType: "image/png" }); } catch { collided = true; }
+ok("writing an occupied pathname is refused (no blind overwrite)", collided);
+ok("the pre-existing object survived the refused overwrite", (await dest.get(unlisted))?.bytes.toString() === OTHER.toString());
+
+// ---- seeding: the harness must never overwrite an object it did not write
+{
+  const { seedObject, SeedCollisionError } = await import("./provider-harness/seed.mjs");
+  const free = P("6");
+  const e = await seedObject(run, dest, "private-destination", free, BYTES, "seed: free pathname");
+  ok("seed writes to a free pathname and marks it created", e.state === "created" && (await dest.get(free))?.bytes.toString() === BYTES.toString(), e.state);
+
+  const taken = P("7");
+  await dest.put(taken, OTHER, { contentType: "image/png" });
+  let refusedWith: unknown = null;
+  try { await seedObject(run, dest, "private-destination", taken, BYTES, "seed: occupied pathname"); } catch (err) { refusedWith = err; }
+  ok("seed REFUSES an occupied pathname instead of overwriting", refusedWith instanceof SeedCollisionError, String(refusedWith));
+  ok("the occupying bytes are untouched after a refused seed", (await dest.get(taken))?.bytes.toString() === OTHER.toString());
+  const collisionEntry = run.manifest.objects.find((o) => o.pathname === taken)!;
+  ok("a refused seed is recorded as create-failed, so cleanup must prove ownership before deleting it",
+     collisionEntry.state === "create-failed", collisionEntry.state);
+  const afterRefusal = await cleanupManifestObjects({ ...loadManifest("selftest"), objects: [collisionEntry] }, { destination: dest, source: src });
+  ok("cleanup does NOT delete the pathname a refused seed touched", (await dest.head(taken)) !== null && afterRefusal.skippedNotOwned === 1, JSON.stringify(afterRefusal.log));
+
+  // The head() check above is check-then-write and therefore has a window. The guarantee that
+  // survives that window is the provider's own refusal, so it is tested separately: an object
+  // appears AFTER the pathname is seen free. allowOverwrite:true would destroy it silently.
+  const raced = P("8");
+  process.env.STORAGE_FAKE_RACE_CREATE = raced;
+  let racedError: unknown = null;
+  try { await seedObject(run, dest, "private-destination", raced, BYTES, "seed: object created during the write window"); } catch (err) { racedError = err; }
+  delete process.env.STORAGE_FAKE_RACE_CREATE;
+  ok("an object appearing AFTER the free-pathname check is still not overwritten", racedError !== null, String(racedError));
+  ok("the raced-in bytes survive — the no-overwrite guarantee is the provider's, not the head() check",
+     (await dest.get(raced))?.bytes.toString() === "raced-in-by-somebody-else", (await dest.get(raced))?.bytes.toString().slice(0, 40) ?? "absent");
+  const racedEntry = run.manifest.objects.find((o) => o.pathname === raced)!;
+  ok("a raced write is recorded create-failed and cleanup leaves the other party's object alone",
+     racedEntry.state === "create-failed" &&
+     (await cleanupManifestObjects({ ...loadManifest("selftest"), objects: [racedEntry] }, { destination: dest, source: src })).skippedNotOwned === 1 &&
+     (await dest.head(raced)) !== null);
+}
+
+// ---- prefix reservations: storeBlob() chooses its own pathname, so the run reserves the prefix
+// and the intended bytes. Ownership is still earned by bytes; the prefix is never a delete scope.
+{
+  const PREFIX = "organizations/77/logos/";
+  const MINE = Buffer.from("bytes-the-application-wrote!!!!!");
+  // Same LENGTH as MINE, different bytes: a size pre-filter alone must not be mistaken for proof.
+  const THEIRS = Buffer.from("SOMEBODY-ELSES-BYTES-ENTIRELY!!!");
+  await dest.put(`${PREFIX}77-1700000000000-aaaaaaaaaaaaaaaa.png`, THEIRS, { contentType: "image/png" });
+
+  // (i) the application returned a pathname — the reservation becomes a concrete created object
+  const resolvedEntry = run.planPrefixWrite("private-destination", PREFIX, "reservation, resolved", MINE);
+  ok("a prefix reservation starts with NO pathname and confers no ownership", resolvedEntry.pathname === "" && resolvedEntry.state === "planned");
+  const chosen = `${PREFIX}77-1700000000001-bbbbbbbbbbbbbbbb.png`;
+  await dest.put(chosen, MINE, { contentType: "image/png" });
+  run.resolvePlannedPathname(resolvedEntry, chosen);
+  ok("resolving a reservation records the application's pathname", loadManifest("selftest").objects.some((o) => o.pathname === chosen && o.state === "created"));
+
+  // (ii) the process died before the pathname came back, but the write DID land
+  const lostEntry = run.planPrefixWrite("private-destination", PREFIX, "reservation, pathname lost to a crash", MINE);
+  const landed = `${PREFIX}77-1700000000002-cccccccccccccccc.png`;
+  await dest.put(landed, MINE, { contentType: "image/png" });
+
+  // (iii) reserved, but the write never happened at all
+  const unusedEntry = run.planPrefixWrite("private-destination", PREFIX, "reservation, never written", Buffer.from("never-written-bytes"));
+
+  const r = await cleanupManifestObjects({ ...loadManifest("selftest"), objects: [resolvedEntry, lostEntry, unusedEntry] }, { destination: dest, source: src });
+  ok("a resolved reservation is deleted", (await dest.head(chosen)) === null, JSON.stringify(r.log));
+  ok("an unresolved reservation whose bytes DID land is found by matching sha256 and deleted", (await dest.head(landed)) === null, JSON.stringify(r.log));
+  ok("the recovered pathname is written back into the manifest rather than left blank", lostEntry.pathname === landed, lostEntry.pathname);
+  ok("a reservation that was never written reports absent, not failure", r.failed === 0 && r.alreadyGone === 1, JSON.stringify({ f: r.failed, a: r.alreadyGone }));
+  ok("a pre-existing object under the SAME prefix is never deleted — the prefix is not a delete scope",
+     (await dest.get(`${PREFIX}77-1700000000000-aaaaaaaaaaaaaaaa.png`))?.bytes.toString() === THEIRS.toString());
+  ok("a same-SIZE object under the prefix is still not claimed — the hash decides, not the length",
+     (await dest.get(`${PREFIX}77-1700000000000-aaaaaaaaaaaaaaaa.png`))?.bytes.length === MINE.length);
+
+  // A reservation whose prefix is missing has no way to resolve itself. That is an open question,
+  // not a resolved one, and must never be reported as cleaned.
+  const prefixless = { ...run.planPrefixWrite("private-destination", PREFIX, "reservation with no prefix recorded", MINE), prefix: undefined };
+  const pr = await cleanupManifestObjects({ ...loadManifest("selftest"), objects: [prefixless] }, { destination: dest, source: src });
+  ok("a reservation with no prefix recorded is INCONCLUSIVE, never 'already gone'",
+     pr.inconclusive === 1 && pr.alreadyGone === 0 && prefixless.cleanupStatus === "inconclusive", JSON.stringify({ i: pr.inconclusive, a: pr.alreadyGone, s: prefixless.cleanupStatus }));
+}
+
+// ---- registration locator, recorded before any registration happens
+const orgEntry = run.planTestOrg("batch3-A-selftest@example.invalid", "disposable org A");
+ok("a test organization is recorded by EMAIL before registration, with no org id yet", orgEntry.orgId === null && loadManifest("selftest").testOrgs[0].email === "batch3-A-selftest@example.invalid");
+run.resolveTestOrg(orgEntry, 4242);
+ok("the org id is filled in once registration resolves it", loadManifest("selftest").testOrgs[0].orgId === 4242);
+
+// ---- database cleanup: ordering, verification, and failure surfacing
+{
+  type Row = Record<string, unknown>;
+  const EMAIL = "batch3-A-selftest@example.invalid";
+  const mkDb = (behaviour: { userDeleted?: boolean; orgDeleted?: boolean; leftover?: string }) => {
+    let userGone = false, orgGone = false;
+    const seen: string[] = [];
+    return {
+      seen,
+      async query(sql: string, params: unknown[] = []): Promise<{ rows: Row[] }> {
+        seen.push(sql);
+        if (/^select org_id from users/.test(sql)) return { rows: [{ org_id: 4242 }] };
+        // The delete must name ONE address, passed as a parameter. A pattern sweep would delete
+        // whatever else happens to share the prefix, which is the thing this run is forbidden to do,
+        // so the fake refuses to honour anything but the exact locator.
+        if (/^delete from users/.test(sql)) { userGone = behaviour.userDeleted !== false && /email=\$1/.test(sql) && params[0] === EMAIL; return { rows: [] }; }
+        if (/^delete from orgs/.test(sql)) { orgGone = behaviour.orgDeleted !== false && /id=\$1/.test(sql) && params[0] === 4242; return { rows: [] }; }
+        if (/count\(\*\)::int as c from orgs/.test(sql)) return { rows: [{ c: orgGone ? 0 : 1 }] };
+        if (/count\(\*\)::int as c from users/.test(sql)) return { rows: [{ c: userGone ? 0 : 1 }] };
+        const m = /from "([a-z_]+)" where org_id/.exec(sql);
+        if (m) return { rows: [{ c: behaviour.leftover === m[1] ? 3 : 0 }] };
+        return { rows: [{ c: 0 }] };
+      },
+    };
+  };
+  const fresh = () => ({ ...loadManifest("selftest"), testOrgs: [{ email: EMAIL, orgId: 4242, purpose: "x", cleanupStatus: "pending" as const }] });
+
+  const goodDb = mkDb({});
+  const good = await cleanupTestOrgs(fresh(), goodDb);
+  ok("db cleanup: a clean run removes the org and reports no failure", good.removed === 1 && good.failed === 0, JSON.stringify(good.log));
+  ok("db cleanup: the user is deleted by its exact recorded address, passed as a parameter",
+     goodDb.seen.some((q) => /^delete from users where email=\$1$/.test(q.trim())), JSON.stringify(goodDb.seen.filter((q) => q.startsWith("delete"))));
+  ok("db cleanup: no statement uses LIKE or any other pattern sweep",
+     !goodDb.seen.some((q) => /\blike\b/i.test(q)), JSON.stringify(goodDb.seen.filter((q) => /\blike\b/i.test(q))));
+  const orgLeft = await cleanupTestOrgs(fresh(), mkDb({ orgDeleted: false }));
+  ok("db cleanup: user removed but ORG remains → failure", orgLeft.failed === 1, JSON.stringify(orgLeft.log));
+  const userLeft = await cleanupTestOrgs(fresh(), mkDb({ userDeleted: false }));
+  ok("db cleanup: org removed but USER remains → failure", userLeft.failed === 1, JSON.stringify(userLeft.log));
+  const fixtureLeft = await cleanupTestOrgs(fresh(), mkDb({ leftover: "sales_invoice_items" }));
+  ok("db cleanup: a leftover PDF-fixture row → failure (the cascade is verified, not assumed)", fixtureLeft.failed === 1, JSON.stringify(fixtureLeft.log));
+  const noUser = { ...loadManifest("selftest"), testOrgs: [{ email: "gone@example.invalid", orgId: null, purpose: "x", cleanupStatus: "pending" as const }] };
+  const resolved = await cleanupTestOrgs(noUser, { async query(sql: string) { return /^select org_id/.test(sql) ? { rows: [] } : { rows: [{ c: 0 }] }; } });
+  ok("db cleanup: an org id lost to a crash is re-resolved from the recorded email", resolved.failed === 0 && resolved.log[0].includes("no such test user"), JSON.stringify(resolved.log));
+}
 
 run.record("selftest", "example finding", "APPLICATION-LEVEL TEST PROVEN", true, `detail mentioning ${PRIVATE_TOKEN}`);
 run.writeReport("B — INCONCLUSIVE (self-test)", [`note mentioning ${DB_URL}`]);
@@ -129,7 +334,10 @@ const reportMd = readFileSync(join(runDir("selftest"), "report.md"), "utf8");
 ok("report.json contains no secret value", !reportJson.includes(PRIVATE_TOKEN) && !reportJson.includes("sup3rs3cr3tpw"), "");
 ok("report.md contains no secret value", !reportMd.includes(PRIVATE_TOKEN) && !reportMd.includes("sup3rs3cr3tpw"), "");
 ok("the report keeps classifications separate rather than summing them", reportMd.includes("REAL PROVIDER PROVEN: 0") && reportMd.includes("APPLICATION-LEVEL TEST PROVEN: 1"), "");
+ok("the report separates mandatory omissions from approved fault-injection ones", reportMd.includes("NOT RUN — MANDATORY") && reportMd.includes("approved fault injection"), "");
+ok("the report marks each finding as required or not", reportMd.includes("| Required |"), "");
 ok("both report files were written", existsSync(join(runDir("selftest"), "report.json")) && existsSync(join(runDir("selftest"), "report.md")));
+ok("the manifest file itself carries no secret", !readFileSync(join(runDir("selftest"), "manifest.json"), "utf8").includes(PRIVATE_TOKEN));
 
 process.chdir(cwd);
 rmSync(dir, { recursive: true, force: true });

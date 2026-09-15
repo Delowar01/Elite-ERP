@@ -23,6 +23,7 @@ export type Identities = {
   dbUser: string;
   expectedCommitSha: string;
   previewShaVerifiedExternally: boolean;
+  signingSecretAttested: boolean;
 };
 
 export class ArmingError extends Error {}
@@ -117,7 +118,19 @@ export function armOrRefuse(): Identities {
     );
   }
 
-  return { previewBaseUrl, privateStoreId, publicStoreId, dbHost: db.host, dbName: db.name, dbUser: db.user, expectedCommitSha, previewShaVerifiedExternally: attested };
+  // The harness mints signatures LOCALLY with AUTH_SECRET and sends them to the remote Preview. If
+  // the two secrets differ, every signed-access assertion fails for a configuration reason and would
+  // be read as an application defect. The secret itself is never compared or printed — the operator
+  // attests, and the report says so.
+  if (process.env.BATCH3_SIGNING_SECRET_MATCHES_PREVIEW !== "YES") {
+    throw new ArmingError(
+      "BATCH3_SIGNING_SECRET_MATCHES_PREVIEW=YES is required.\n" +
+      "The signed-access section signs locally with AUTH_SECRET and verifies remotely on the Preview;\n" +
+      "if those secrets differ the results are meaningless. Confirm they match, then set it.",
+    );
+  }
+
+  return { previewBaseUrl, privateStoreId, publicStoreId, dbHost: db.host, dbName: db.name, dbUser: db.user, expectedCommitSha, previewShaVerifiedExternally: attested, signingSecretAttested: true };
 }
 
 /** The sanitized summary printed before anything is written. */
@@ -131,6 +144,7 @@ export function printSafetySummary(id: Identities): void {
   say(`  DB user           : ${id.dbUser}`);
   say(`  Expected commit   : ${id.expectedCommitSha}`);
   say(`  Preview SHA proof : ${id.previewShaVerifiedExternally ? "PREVIEW_SHA_VERIFIED_EXTERNALLY (operator attestation)" : "NONE"}`);
+  say(`  Signing secret    : ${id.signingSecretAttested ? "BATCH3_SIGNING_SECRET_MATCHES_PREVIEW (operator attestation)" : "NOT ATTESTED"}`);
   say(`  Production mode   : FALSE`);
   say("  (no token, password or connection string is printed by this harness)");
   say("─────────────────────────────────────────────────────────────────────");
