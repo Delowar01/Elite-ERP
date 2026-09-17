@@ -24,7 +24,7 @@ import { chromium } from "playwright";
 import { Client } from "pg";
 import { randomBytes } from "node:crypto";
 import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { armOrRefuse, printSafetySummary, reportArmingFailure, type Identities } from "./provider-harness/guards.mjs";
 import { installRedactedCrashHandler, redact, say } from "./provider-harness/redact.mjs";
@@ -358,19 +358,45 @@ const migrationPaths: string[] = [];
     run.planObject("private-destination", p, `${purpose} (destination copy created by the migration)`, bytes);
   }
 
+  // EXACT SCOPE. By now the run has seeded valid public-source objects for §13, §14 and §11, so a
+  // sweep of organizations/ would copy objects this section never planned — and an unplanned
+  // destination copy is exactly what the manifest rule forbids. The three fixtures are named in a
+  // file and the migration is told to consider nothing else.
+  const pathsFile = join(runDir(runId), "migration-paths.txt");
+  writeFileSync(pathsFile, migrationPaths.join("\n") + "\n");
   const stateFile = join(runDir(runId), "migration-state.jsonl");
   const mig = (...args: string[]) => {
     try { return execFileSync("npx", ["tsx", "--conditions=react-server", "scripts/blob-migrate.ts", ...args], { encoding: "utf8", env: process.env }); }
     catch (e) { return String((e as { stdout?: string }).stdout ?? e); }
   };
+  const selectedIn = (out: string) => out.split("\n").filter((l) => l.trim().startsWith("selected: ")).map((l) => l.trim().slice("selected: ".length)).sort();
 
-  const dry = mig("--state", stateFile);
-  const listedAll = migrationPaths.every((p) => dry.includes(p));
-  run.record("§18", "dry run lists the objects, writes nothing, creates no state file", "REAL PROVIDER PROVEN",
-    dry.includes("DRY RUN") && listedAll && !existsSync(stateFile), `listed=${listedAll} stateFile=${existsSync(stateFile)}`);
+  // A public-source object this section did NOT name. If it ever appears in a selection or gains a
+  // destination copy, the exact-path filter is not doing its job.
+  const bystander = appPath(A.orgId, "item-images");
+  await seed(src!, "public-source", bystander, Buffer.concat([PNG, Buffer.from("bystander")]), "§18 unrelated source object — must never be migrated");
 
-  mig("--execute", "--state", stateFile);
+  const dry = mig("--paths-file", pathsFile, "--state", stateFile);
+  const dryPicked = selectedIn(dry);
+  const expected = [...migrationPaths].sort();
+  // Set EQUALITY, not containment: "the three are somewhere in the output" would also pass if a
+  // fourth object were being copied alongside them.
+  run.record("§18", "the dry run selects EXACTLY the three fixtures and nothing else", "REAL PROVIDER PROVEN",
+    dryPicked.length === 3 && JSON.stringify(dryPicked) === JSON.stringify(expected),
+    `selected=${dryPicked.length} exact=${JSON.stringify(dryPicked) === JSON.stringify(expected)}`);
+  run.record("§18", "dry run writes nothing and creates no state file", "REAL PROVIDER PROVEN",
+    dry.includes("DRY RUN") && !existsSync(stateFile), `stateFile=${existsSync(stateFile)}`);
+
+  const run18 = mig("--execute", "--paths-file", pathsFile, "--state", stateFile);
+  const execPicked = selectedIn(run18);
+  run.record("§18", "the execute run selects EXACTLY the same three", "REAL PROVIDER PROVEN",
+    JSON.stringify(execPicked) === JSON.stringify(expected), `selected=${JSON.stringify(execPicked.map((p) => p.split("/").pop()))}`);
+
   const entries = existsSync(stateFile) ? readFileSync(stateFile, "utf8").split("\n").filter(Boolean).map((l) => JSON.parse(l) as { pathname: string; state: string; sha256?: string }) : [];
+  run.record("§18", "the state file records exactly the three selected objects", "REAL PROVIDER PROVEN",
+    entries.length === 3 && JSON.stringify([...new Set(entries.map((e) => e.pathname))].sort()) === JSON.stringify(expected),
+    `entries=${entries.length}`);
+
   for (const p of migrationPaths) {
     const e = entries.find((x) => x.pathname === p);
     const srcAfter = await src!.get(p);
@@ -383,7 +409,12 @@ const migrationPaths: string[] = [];
     run.record("§18", `${p.split("/").slice(2).join("/")}: copied, hashes equal, source preserved, destination refuses anonymous`, "REAL PROVIDER PROVEN", ok,
       `state=${e?.state} srcSha=${srcAfter ? sha256(srcAfter.bytes).slice(0, 12) : "gone"} destSha=${destAfter ? sha256(destAfter.bytes).slice(0, 12) : "absent"} privacy=${privacy}`);
   }
-  const rerun = mig("--execute", "--state", stateFile);
+
+  run.record("§18", "the unrelated source object was NOT selected and has NO destination copy", "REAL PROVIDER PROVEN",
+    !dryPicked.includes(bystander) && !execPicked.includes(bystander) && !entries.some((e) => e.pathname === bystander) && (await dest.head(bystander)) === null,
+    `inSelection=${dryPicked.includes(bystander)} destCopy=${(await dest.head(bystander)) !== null}`);
+
+  const rerun = mig("--execute", "--paths-file", pathsFile, "--state", stateFile);
   run.record("§18", "a rerun is idempotent — nothing pending", "REAL PROVIDER PROVEN", /0 pending/.test(rerun), rerun.split("\n").find((l) => l.includes("pending"))?.trim() ?? "");
 }
 
@@ -395,12 +426,19 @@ say("\n§19 conflict");
   await seed(src!, "public-source", p, a, "§19 conflict source");
   await seed(dest, "private-destination", p, b, "§19 conflict destination (different bytes)");
   const stateFile = join(runDir(runId), "migration-conflict.jsonl");
+  // One pathname, named exactly. Re-sweeping the store here would re-process every §18, §13 and
+  // §14 object just to prove something about this one.
+  const conflictPaths = join(runDir(runId), "migration-conflict-paths.txt");
+  writeFileSync(conflictPaths, p + "\n");
   let exitCode = 0;
   let out = "";
-  try { out = execFileSync("npx", ["tsx", "--conditions=react-server", "scripts/blob-migrate.ts", "--execute", "--state", stateFile], { encoding: "utf8", env: process.env }); }
+  try { out = execFileSync("npx", ["tsx", "--conditions=react-server", "scripts/blob-migrate.ts", "--execute", "--paths-file", conflictPaths, "--state", stateFile], { encoding: "utf8", env: process.env }); }
   catch (e) { out = String((e as { stdout?: string }).stdout ?? ""); exitCode = 1; }
+  const picked = out.split("\n").filter((l) => l.trim().startsWith("selected: ")).map((l) => l.trim().slice("selected: ".length));
   const srcAfter = await src!.get(p);
   const destAfter = await dest.get(p);
+  run.record("§19", "the conflict run selects EXACTLY one pathname", "REAL PROVIDER PROVEN",
+    picked.length === 1 && picked[0] === p, `selected=${picked.length}`);
   run.record("§19", "a differing destination is CONFLICT, exits non-zero, and neither store changes", "REAL PROVIDER PROVEN",
     out.includes("CONFLICT") && exitCode !== 0 && srcAfter?.bytes.toString() === "SOURCE-BYTES-AAA" && destAfter?.bytes.toString() === "DESTINATION-BYTES-BBB",
     `exit=${exitCode} srcIntact=${srcAfter?.bytes.toString() === "SOURCE-BYTES-AAA"} destIntact=${destAfter?.bytes.toString() === "DESTINATION-BYTES-BBB"}`);

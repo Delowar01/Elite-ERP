@@ -34,6 +34,9 @@ const GOOD = {
   BATCH3_EXPECT_DB_HOST: "disposable.example.invalid",
   BATCH3_EXPECT_DB_NAME: "batch3_test",
   BATCH3_KNOWN_PRODUCTION_HOST: "erp.example.invalid",
+  BATCH3_PREVIEW_DATABASE_VERIFIED_DISPOSABLE: "YES",
+  BATCH3_PREVIEW_PRIVATE_STORE_VERIFIED_DISPOSABLE: "YES",
+  BATCH3_PREVIEW_PUBLIC_STORE_VERIFIED_DISPOSABLE: "YES",
   BATCH3_PREVIEW_SHA_VERIFIED_EXTERNALLY: "YES",
   BATCH3_SIGNING_SECRET_MATCHES_PREVIEW: "YES",
   BLOB_READ_WRITE_TOKEN: PRIVATE_TOKEN,
@@ -73,6 +76,19 @@ ok("a missing external SHA attestation refuses", refuses({ BATCH3_PREVIEW_SHA_VE
 // Without this the signed-access section would fail for a configuration reason and be read as an
 // application defect.
 ok("a missing signing-secret attestation refuses", refuses({ BATCH3_SIGNING_SECRET_MATCHES_PREVIEW: undefined }).refused);
+// The Preview deployment runs every browser action with ITS OWN environment. Nothing reachable from
+// here can read those values — and asking for them would mean copying production secrets into this
+// environment — so the operator inspects them and attests, and the report says so.
+const dbAtt = refuses({ BATCH3_PREVIEW_DATABASE_VERIFIED_DISPOSABLE: undefined });
+ok("a missing Preview DATABASE attestation refuses", dbAtt.refused, dbAtt.why.split("\n")[0].slice(0, 70));
+ok("a missing Preview PRIVATE-store attestation refuses", refuses({ BATCH3_PREVIEW_PRIVATE_STORE_VERIFIED_DISPOSABLE: undefined }).refused);
+ok("a missing Preview PUBLIC-store attestation refuses", refuses({ BATCH3_PREVIEW_PUBLIC_STORE_VERIFIED_DISPOSABLE: undefined }).refused);
+ok("a nearly-right Preview attestation value refuses", refuses({ BATCH3_PREVIEW_DATABASE_VERIFIED_DISPOSABLE: "yes please" }).refused);
+ok("all three Preview attestations present allows the good configuration through", withEnv({}, () => { try { armOrRefuse(); return true; } catch { return false; } }));
+ok("the refusal names the variable and what it means, without asking for any secret value",
+   dbAtt.why.includes("BATCH3_PREVIEW_DATABASE_VERIFIED_DISPOSABLE") && dbAtt.why.includes("Do not copy the Preview's secret values"), "");
+ok("the identities record the Preview-environment attestation for the report",
+   withEnv({}, () => armOrRefuse().previewEnvironmentAttested) === true);
 // The production-host declaration is MANDATORY: disposable tokens protect this process, but every
 // browser action runs inside the deployment at BATCH3_PREVIEW_BASE_URL using ITS environment.
 ok("a MISSING production-host declaration refuses", refuses({ BATCH3_KNOWN_PRODUCTION_HOST: undefined }).refused);

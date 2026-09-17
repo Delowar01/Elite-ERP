@@ -24,6 +24,7 @@ export type Identities = {
   expectedCommitSha: string;
   previewShaVerifiedExternally: boolean;
   previewHost: string;
+  previewEnvironmentAttested: boolean;
   declaredProductionHosts: string[];
   signingSecretAttested: boolean;
 };
@@ -149,7 +150,35 @@ export function armOrRefuse(): Identities {
     throw new ArmingError(`BATCH3_PREVIEW_BASE_URL resolves to the declared production host "${previewHost}" — refusing`);
   }
 
-  // 6. The Preview's commit. Nothing in the application exposes its git sha, and this harness will
+  // 6. THE REMOTE PREVIEW'S OWN ENVIRONMENT. Everything above governs what THIS PROCESS touches.
+  //    It says nothing about what the deployment reaches for when the harness drives it: /register,
+  //    /uploads, the server actions and PDF generation all execute inside the Preview using the
+  //    Preview's OWN variables. A deployment can sit on a perfectly safe Preview hostname and still
+  //    hold a production DATABASE_URL or a production Blob token, and nothing reachable from here
+  //    can detect that — the values are not ours to read, and asking for them would mean copying
+  //    production secrets into this environment, which is exactly what must not happen.
+  //
+  //    So the operator inspects the Preview's environment and attests. The report records these as
+  //    attestations, never as automatic proof, because that is what they are.
+  const previewAttestations: [string, string][] = [
+    ["BATCH3_PREVIEW_DATABASE_VERIFIED_DISPOSABLE", `the Preview's DATABASE_URL is the same disposable database as ${db.host}/${db.name}`],
+    ["BATCH3_PREVIEW_PRIVATE_STORE_VERIFIED_DISPOSABLE", `the Preview's BLOB_READ_WRITE_TOKEN addresses the disposable PRIVATE store ${privateStoreId}`],
+    ["BATCH3_PREVIEW_PUBLIC_STORE_VERIFIED_DISPOSABLE", `the Preview's BLOB_PUBLIC_SOURCE_READ_WRITE_TOKEN addresses the disposable PUBLIC store ${publicStoreId}`],
+  ];
+  const missingAttestations = previewAttestations.filter(([name]) => process.env[name] !== "YES");
+  if (missingAttestations.length) {
+    throw new ArmingError(
+      `${missingAttestations.length} Preview environment attestation(s) missing.\n\n` +
+      "The disposable tokens and DATABASE_URL here govern only what this process touches. The\n" +
+      "Preview deployment runs every browser action with ITS OWN environment, so a Preview that is\n" +
+      "pointed at production data would write to production no matter what is set locally. Inspect\n" +
+      "the Preview deployment's variables, confirm each of these, and set it to exactly YES:\n\n" +
+      missingAttestations.map(([name, meaning]) => `  ${name}=YES\n    ${meaning}`).join("\n") +
+      "\n\nDo not copy the Preview's secret values here to compare them; confirm them where they are.",
+    );
+  }
+
+  // 7. The Preview's commit. Nothing in the application exposes its git sha, and this harness will
   //    NOT add a public debug endpoint to obtain one — that would be a permanent hole opened for a
   //    one-off test. So the operator attests to it and the report records that it was verified
   //    externally rather than claiming an automatic proof.
@@ -174,7 +203,7 @@ export function armOrRefuse(): Identities {
     );
   }
 
-  return { previewBaseUrl, previewHost, declaredProductionHosts: prodHosts, privateStoreId, publicStoreId, dbHost: db.host, dbName: db.name, dbUser: db.user, expectedCommitSha, previewShaVerifiedExternally: attested, signingSecretAttested: true };
+  return { previewBaseUrl, previewHost, previewEnvironmentAttested: true, declaredProductionHosts: prodHosts, privateStoreId, publicStoreId, dbHost: db.host, dbName: db.name, dbUser: db.user, expectedCommitSha, previewShaVerifiedExternally: attested, signingSecretAttested: true };
 }
 
 /** The sanitized summary printed before anything is written. */
@@ -191,6 +220,7 @@ export function printSafetySummary(id: Identities): void {
   say(`  Expected commit   : ${id.expectedCommitSha}`);
   say(`  Preview SHA proof : ${id.previewShaVerifiedExternally ? "PREVIEW_SHA_VERIFIED_EXTERNALLY (operator attestation)" : "NONE"}`);
   say(`  Signing secret    : ${id.signingSecretAttested ? "BATCH3_SIGNING_SECRET_MATCHES_PREVIEW (operator attestation)" : "NOT ATTESTED"}`);
+  say(`  Preview env       : ${id.previewEnvironmentAttested ? "database + both stores confirmed disposable — OPERATOR ATTESTATION, not automatic proof" : "NOT ATTESTED"}`);
   say(`  Production mode   : FALSE`);
   say("  (no token, password or connection string is printed by this harness)");
   say("─────────────────────────────────────────────────────────────────────");

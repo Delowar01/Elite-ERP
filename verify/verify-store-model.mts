@@ -9,7 +9,7 @@
  * NOT evidence about Vercel: REAL PROVIDER VERIFICATION PENDING.
  */
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, rmSync, existsSync, readFileSync } from "node:fs";
+import { mkdtempSync, rmSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -69,10 +69,15 @@ ok("a destination read ERROR throws instead of falling back to the public source
 
 // 7-10. Migration: copy across stores, idempotent, conflict fails closed, source untouched.
 const mig = (...args: string[]) => {
+  // stdout AND stderr: a refusal (an unknown path, an illegal flag combination) is reported on
+  // stderr with a non-zero exit, and a test that only read stdout would see an empty string and
+  // pass for the wrong reason.
   try {
-    return execFileSync("npx", ["tsx", "--conditions=react-server", "scripts/blob-migrate.ts", ...args], { encoding: "utf8", env: process.env });
+    const out = execFileSync("npx", ["tsx", "--conditions=react-server", "scripts/blob-migrate.ts", ...args], { encoding: "utf8", env: process.env, stdio: ["ignore", "pipe", "pipe"] });
+    return out;
   } catch (e) {
-    return String((e as { stdout?: string }).stdout ?? e);
+    const err = e as { stdout?: string; stderr?: string };
+    return `${err.stdout ?? ""}${err.stderr ?? ""}` || String(e);
   }
 };
 const toMigrate = "organizations/9/seals/9-1700000000002-bbbbbbbbbbbbbbbb.png";
@@ -96,6 +101,92 @@ await dest.put(conflictPath, Buffer.from("DIFFERENT"), { contentType: "image/png
 const conflicted = mig("--execute", "--state", join(process.env.STORAGE_FAKE_DIR!, "state2.jsonl"));
 ok("a destination that differs is reported as CONFLICT and not overwritten", conflicted.includes("CONFLICT"), conflicted.split("\n").find((l) => l.includes(conflictPath))?.trim() ?? "");
 ok("the conflicting destination object was left exactly as it was", (await dest.get(conflictPath))?.bytes.toString() === "DIFFERENT");
+
+// ---- EXACT-PATH SELECTION -------------------------------------------------------------------
+// A sweep of organizations/ is the wrong scope for a caller that must create nothing it has not
+// recorded in advance. --paths-file names the objects; nothing else may be considered.
+{
+  const { readPathsFile } = await import("../scripts/blob-migrate");
+  const parse = (body: string) => readPathsFile("test.txt", () => body);
+  const P1 = "organizations/9/logos/9-1700000000010-aaaaaaaaaaaaaaaa.png";
+  const P2 = "organizations/9/seals/9-1700000000011-bbbbbbbbbbbbbbbb.png";
+  const refuses = (body: string) => { try { parse(body); return false; } catch { return true; } };
+
+  ok("paths file: exact pathnames are accepted, blanks and comments ignored", JSON.stringify(parse(`${P1}\n\n# note\n${P2}\n`)) === JSON.stringify([P1, P2]));
+  ok("paths file: a duplicate entry refuses", refuses(`${P1}\n${P1}\n`));
+  // Shaped exactly like a valid object pathname, so ONLY the organizations/ requirement can reject
+  // it — a shorter path would be caught by the segment-count rule and prove nothing about this one.
+  ok("paths file: a well-formed path outside organizations/ refuses", refuses("elsewhere/9/logos/9-1700000000010-aaaaaaaaaaaaaaaa.png\n"));
+  ok("paths file: a wildcard refuses — this is not a prefix matcher", refuses("organizations/9/logos/*\n"));
+  ok("paths file: a traversal segment refuses", refuses("organizations/9/logos/../../x.png\n"));
+  ok("paths file: a prefix without an object name refuses", refuses("organizations/9/logos\n"));
+  ok("paths file: an empty file refuses", refuses("\n\n"));
+  ok("paths file: a pathname with whitespace inside refuses", refuses("organizations/9/logos/a b.png\n"));
+
+  // Two source objects; only one is named.
+  const named = "organizations/9/logos/9-1700000000012-cccccccccccccccc.png";
+  const unnamed = "organizations/9/logos/9-1700000000013-dddddddddddddddd.png";
+  await src.put(named, PNG, { contentType: "image/png" });
+  await src.put(unnamed, Buffer.concat([PNG, Buffer.from("other")]), { contentType: "image/png" });
+  const listFile = join(process.env.STORAGE_FAKE_DIR!, "paths.txt");
+  writeFileSync(listFile, named + "\n");
+
+  const selDry = mig("--paths-file", listFile, "--state", join(process.env.STORAGE_FAKE_DIR!, "state-exact.jsonl"));
+  const selected = selDry.split("\n").filter((l) => l.trim().startsWith("selected: ")).map((l) => l.trim().slice(10));
+  ok("paths file: the selection is EXACTLY the named object", selected.length === 1 && selected[0] === named, JSON.stringify(selected));
+  mig("--execute", "--paths-file", listFile, "--state", join(process.env.STORAGE_FAKE_DIR!, "state-exact.jsonl"));
+  ok("paths file: the named object is copied", (await dest.head(named)) !== null);
+  ok("paths file: the UNNAMED source object gets no destination copy", (await dest.head(unnamed)) === null);
+
+  const missingFile = join(process.env.STORAGE_FAKE_DIR!, "paths-missing.txt");
+  writeFileSync(missingFile, "organizations/9/logos/9-1700000000099-eeeeeeeeeeeeeeee.png\n");
+  const missingOut = mig("--paths-file", missingFile, "--state", join(process.env.STORAGE_FAKE_DIR!, "state-missing.jsonl"));
+  ok("paths file: a requested path absent from the source is reported, not skipped", /not in the source store/.test(missingOut), missingOut.split("\n")[0] ?? "");
+
+  const comboOut = mig("--paths-file", listFile, "--folder", "logos", "--state", join(process.env.STORAGE_FAKE_DIR!, "state-combo.jsonl"));
+  ok("paths file: combining it with --folder is refused rather than silently intersected", /cannot be combined/.test(comboOut), comboOut.split("\n")[0] ?? "");
+}
+
+// ---- AN EXISTING DESTINATION IS HELD TO THE SAME STANDARD ------------------------------------
+// The crash-recovery case: the copy landed, the process died before the privacy probe, and nothing
+// was recorded. A rerun that trusts matching bytes alone records `verified` for an object whose
+// privacy was never proven once.
+{
+  const recovered = "organizations/9/logos/9-1700000000020-ffffffffffffffff.png";
+  await src.put(recovered, PNG, { contentType: "image/png" });
+  await dest.put(recovered, PNG, { contentType: "image/png" });   // identical, as a crashed copy would leave it
+  const listFile = join(process.env.STORAGE_FAKE_DIR!, "paths-recover.txt");
+  writeFileSync(listFile, recovered + "\n");
+  const stateR = join(process.env.STORAGE_FAKE_DIR!, "state-recover.jsonl");
+  const out = mig("--execute", "--paths-file", listFile, "--state", stateR);
+  const entry = JSON.parse(readFileSync(stateR, "utf8").split("\n").filter(Boolean)[0]) as { state: string; reason?: string };
+  ok("existing identical destination: recorded verified only after privacy is re-proved", entry.state === "verified" && /anonymous/.test(entry.reason ?? ""), `${entry.state} — ${entry.reason}`);
+  ok("existing identical destination: the reason says it already existed", /already existed/.test(entry.reason ?? ""), entry.reason ?? "");
+  void out;
+
+  // Same object, but now the probe cannot answer. An unreachable provider is not proof of privacy.
+  const stateF = join(process.env.STORAGE_FAKE_DIR!, "state-recover-fail.jsonl");
+  process.env.STORAGE_FAKE_PROBE_FAULT = "network";
+  process.env.STORAGE_FAKE_PROBE_FAULT_MATCH = "1700000000020";
+  mig("--execute", "--paths-file", listFile, "--state", stateF);
+  delete process.env.STORAGE_FAKE_PROBE_FAULT;
+  delete process.env.STORAGE_FAKE_PROBE_FAULT_MATCH;
+  const failEntry = JSON.parse(readFileSync(stateF, "utf8").split("\n").filter(Boolean)[0]) as { state: string; reason?: string };
+  ok("existing identical destination + unanswerable probe: FAILED, never verified", failEntry.state === "failed" && /privacy unverified/.test(failEntry.reason ?? ""), `${failEntry.state} — ${failEntry.reason}`);
+
+  // Identical bytes, different content type: the destination would serve these bytes as something
+  // else, so it is a conflict and the destination is left exactly as it was.
+  const ctPath = "organizations/9/logos/9-1700000000021-1111111111111111.png";
+  await src.put(ctPath, PNG, { contentType: "image/png" });
+  await dest.put(ctPath, PNG, { contentType: "application/octet-stream" });
+  const ctFile = join(process.env.STORAGE_FAKE_DIR!, "paths-ct.txt");
+  writeFileSync(ctFile, ctPath + "\n");
+  const stateCt = join(process.env.STORAGE_FAKE_DIR!, "state-ct.jsonl");
+  mig("--execute", "--paths-file", ctFile, "--state", stateCt);
+  const ctEntry = JSON.parse(readFileSync(stateCt, "utf8").split("\n").filter(Boolean)[0]) as { state: string; reason?: string };
+  ok("identical bytes with a DIFFERENT content type is a conflict", ctEntry.state === "conflict" && /content type/.test(ctEntry.reason ?? ""), `${ctEntry.state} — ${ctEntry.reason}`);
+  ok("the content-type conflict left the destination object untouched", (await dest.get(ctPath))?.contentType === "application/octet-stream");
+}
 
 // 11. allowOverwrite is off by default, in the fake as in the SDK.
 let existsThrew = false;

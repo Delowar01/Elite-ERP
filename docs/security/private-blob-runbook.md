@@ -187,8 +187,44 @@ too late.
 | `BATCH3_EXPECT_DB_HOST` / `BATCH3_EXPECT_DB_NAME` | checked from the URL's non-secret parts |
 | `BATCH3_EXPECT_COMMIT_SHA` + `BATCH3_PREVIEW_SHA_VERIFIED_EXTERNALLY=YES` | nothing in the application exposes its git sha and the harness will not add an endpoint that does; the operator attests and the report records it as an attestation |
 | `BATCH3_SIGNING_SECRET_MATCHES_PREVIEW=YES` | signatures are minted locally and verified remotely; a mismatch would fail the signed-access section for a configuration reason and read as an application defect |
+| `BATCH3_PREVIEW_DATABASE_VERIFIED_DISPOSABLE=YES` | **operator attestation**: the Preview deployment's own `DATABASE_URL` is the same disposable database declared above |
+| `BATCH3_PREVIEW_PRIVATE_STORE_VERIFIED_DISPOSABLE=YES` | **operator attestation**: the Preview's `BLOB_READ_WRITE_TOKEN` addresses the disposable private store declared above |
+| `BATCH3_PREVIEW_PUBLIC_STORE_VERIFIED_DISPOSABLE=YES` | **operator attestation**: the Preview's `BLOB_PUBLIC_SOURCE_READ_WRITE_TOKEN` addresses the disposable public store declared above |
+
+The last three exist because the local tokens and `DATABASE_URL` govern only what the harness
+process touches. `/register`, `/uploads`, the server actions and PDF generation all execute **inside
+the Preview deployment, using its own variables** — so a deployment on a perfectly safe Preview
+hostname can still hold a production database URL or Blob token, and nothing reachable from the
+harness can detect it. Inspect the Preview's environment and confirm each one *where it lives*;
+never copy its secret values out to compare them. The report records all three as
+`OPERATOR ATTESTATION`, not as automatic proof.
 
 `VERCEL_ENV=production` and `STORAGE_DRIVER=fake` both refuse outright.
+
+### Migrating an exact set
+
+`--paths-file <file>` takes one exact pathname per line and migrates **those objects and nothing
+else** — exact string equality, no prefix, no wildcard, no folder inference. Entries must be under
+`organizations/`, must be complete object pathnames, and must not repeat; a path that is not in the
+source store is reported and the run exits non-zero rather than being skipped. It cannot be combined
+with `--folder` or `--limit`: the file *is* the selection, and quietly removing an entry from it
+would defeat the point of naming the objects.
+
+Use it whenever the set matters — a reviewable production slice, or a verification run that must
+create nothing it has not recorded in advance. `--folder`/`--limit` remain for sweeps.
+
+### What `verified` requires
+
+Four conditions, and an object already sitting in the destination is held to every one of them:
+
+1. source and destination bytes hash identically
+2. content types match — identical bytes under a different content type is a **conflict**, left untouched
+3. the destination object is proven to exist through an authenticated read
+4. an anonymous request to the provider is **explicitly** refused
+
+Matching bytes alone are never enough. If a copy succeeds and the process dies before the privacy
+probe, nothing is recorded, and the rerun re-derives all four — the step most likely to be missing
+after a crash is precisely the privacy proof. A probe that cannot answer yields `failed`.
 
 ### Exit codes
 
