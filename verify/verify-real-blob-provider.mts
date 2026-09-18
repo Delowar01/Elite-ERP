@@ -50,7 +50,15 @@ const run = new Run(runId, identities.expectedCommitSha, {
   publicStoreId: identities.publicStoreId,
   dbHost: identities.dbHost,
   dbName: identities.dbName,
-  previewShaProof: "PREVIEW_SHA_VERIFIED_EXTERNALLY (operator attestation)",
+  previewHost: identities.previewHost,
+  declaredProductionHosts: identities.declaredProductionHosts.join(", "),
+  // The three safety claims that CANNOT be derived here travel with the evidence, worded so nobody
+  // reading the report later mistakes them for things the harness checked itself. The report is the
+  // artifact that outlives the run; a guard that refused at arming time proves nothing to a reader
+  // six months later unless what it required is written down beside the results.
+  previewShaProof: "PREVIEW_SHA_VERIFIED_EXTERNALLY — OPERATOR ATTESTATION, not automatically verified",
+  previewEnvironmentProof: "the Preview deployment's own database, private destination store and public source store were each confirmed disposable — OPERATOR ATTESTATION, not automatically verified",
+  signingSecretProof: "the local AUTH_SECRET matches the Preview's — OPERATOR ATTESTATION, not automatically verified",
 });
 say(`\nrun id: ${runId}\nmanifest: ${join(runDir(runId), "manifest.json")}\n`);
 
@@ -297,7 +305,7 @@ say("\n§14 legacy public-source fallback");
 // in an env var, a log line or a crash dump. The application-side proof is load-bearing and stands.
 run.record("§15", "destination read failure must not fall back to the public source", "NOT RUN / NOT PROVEN", null,
   "NOT RUN LIVE — safe provider failure injection unavailable; covered by the load-bearing store-model suite", false);
-notes.push("§15 destination-failure injection was not manufactured live: doing so safely would require supplying a deliberately broken credential. Application-level mutation evidence retained (store-model suite, 42 checks).");
+notes.push("§15 destination-failure injection was not manufactured live: doing so safely would require supplying a deliberately broken credential. Application-level mutation evidence retained (the load-bearing store-model suite).");
 
 // ─── §16 SIGNED ACCESS ────────────────────────────────────────────────────────────────────────
 say("\n§16 signed branding access");

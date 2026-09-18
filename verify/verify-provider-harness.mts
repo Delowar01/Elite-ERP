@@ -466,6 +466,54 @@ ok("the org id is filled in once registration resolves it", loadManifest("selfte
   ok("exit code: an OPTIONAL failure → non-zero", codeOf([f({}), f({ passed: false, requiredForVerdict: false })]) !== 0);
 }
 
+// The report is what outlives the run. A guard that refused at arming time proves nothing to a
+// reader months later unless what it required travels with the results — and the three claims the
+// harness CANNOT derive must be labelled as claims, not quietly folded in among measured facts.
+const attested = new Run("selftest-report", "0".repeat(40), {
+  previewBaseUrl: "https://preview-batch3.example.invalid",
+  previewHost: "preview-batch3.example.invalid",
+  declaredProductionHosts: "erp.example.invalid, www.erp.example.invalid",
+  dbHost: "disposable.example.invalid",
+  dbName: "batch3_test",
+  previewShaProof: "PREVIEW_SHA_VERIFIED_EXTERNALLY — OPERATOR ATTESTATION, not automatically verified",
+  previewEnvironmentProof: "the Preview deployment's own database, private destination store and public source store were each confirmed disposable — OPERATOR ATTESTATION, not automatically verified",
+  signingSecretProof: "the local AUTH_SECRET matches the Preview's — OPERATOR ATTESTATION, not automatically verified",
+});
+attested.record("selftest", "example", "REAL PROVIDER PROVEN", true, `token ${PRIVATE_TOKEN} db ${DB_URL}`);
+attested.writeReport("A — REAL PROVIDER VERIFICATION PASSED (self-test)", ["note"]);
+{
+  const j = readFileSync(join(runDir("selftest-report"), "report.json"), "utf8");
+  const m = readFileSync(join(runDir("selftest-report"), "report.md"), "utf8");
+  const both = (needle: string) => j.includes(needle) && m.includes(needle);
+  ok("report: the Preview disposable-environment attestation is recorded in BOTH files", both("confirmed disposable"), "");
+  ok("report: the signing-secret attestation is recorded", both("AUTH_SECRET matches the Preview"), "");
+  ok("report: the Preview SHA attestation is recorded", both("PREVIEW_SHA_VERIFIED_EXTERNALLY"), "");
+  ok("report: each of the three is labelled OPERATOR ATTESTATION, not a verified fact",
+     (j.match(/OPERATOR ATTESTATION, not automatically verified/g) ?? []).length === 3, String((j.match(/OPERATOR ATTESTATION/g) ?? []).length));
+  ok("report: the declared production hostnames are recorded", both("erp.example.invalid"), "");
+  ok("report: the production hostnames are plain hostnames, carrying no credential",
+     !/erp\.example\.invalid[^,\s"]*[:@]/.test(j), "");
+  // The attestations are prose ABOUT secrets; none of the secrets themselves may ride along.
+  for (const [what, secret] of [["blob token", PRIVATE_TOKEN], ["public token", PUBLIC_TOKEN], ["db password", "sup3rs3cr3tpw"], ["database URL", DB_URL]] as const) {
+    ok(`report: no ${what} appears in report.json or report.md`, !j.includes(secret) && !m.includes(secret), "");
+  }
+  ok("report: the manifest for an attested run carries no secret either",
+     !readFileSync(join(runDir("selftest-report"), "manifest.json"), "utf8").includes(PRIVATE_TOKEN), "");
+}
+
+// The report writer persists whatever identities it is given; these assert the HARNESS actually
+// hands it all three attestations. Without this, dropping one from the live run would change
+// nothing any test could see.
+{
+  const harnessSrc = readFileSync(join(cwd, "verify", "verify-real-blob-provider.mts"), "utf8");
+  const identityBlock = harnessSrc.slice(harnessSrc.indexOf("const run = new Run("), harnessSrc.indexOf("say(`\\nrun id:"));
+  for (const field of ["previewShaProof", "previewEnvironmentProof", "signingSecretProof", "declaredProductionHosts"]) {
+    ok(`the live run hands ${field} to the report`, identityBlock.includes(`${field}:`), "");
+  }
+  ok("the live run's attestations are worded as attestations", (identityBlock.match(/OPERATOR ATTESTATION/g) ?? []).length === 3,
+     String((identityBlock.match(/OPERATOR ATTESTATION/g) ?? []).length));
+}
+
 run.record("selftest", "example finding", "APPLICATION-LEVEL TEST PROVEN", true, `detail mentioning ${PRIVATE_TOKEN}`);
 run.writeReport("B — INCONCLUSIVE (self-test)", [`note mentioning ${DB_URL}`]);
 const reportJson = readFileSync(join(runDir("selftest"), "report.json"), "utf8");
