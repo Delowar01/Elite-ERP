@@ -339,67 +339,144 @@ ok("a test organization is recorded by EMAIL before registration, with no org id
 run.resolveTestOrg(orgEntry, 4242);
 ok("the org id is filled in once registration resolves it", loadManifest("selftest").testOrgs[0].orgId === 4242);
 
-// ---- database cleanup: ordering, dependency-correct verification, and failure surfacing
+// ---- database cleanup: ownership, hardened-database transaction, and failure surfacing
 {
   type Row = Record<string, unknown>;
-  const EMAIL = "batch3-A-selftest@example.invalid";
+  const EMAIL = "batch3-a-selftest@example.invalid";
   type Behaviour = {
     userDeleted?: boolean;
     orgDeleted?: boolean;
     leftover?: string;          // an org-scoped table that still holds rows
     orphanChild?: string;       // a CHILD table whose captured ids survive the cascade
     failVerifyFor?: string;     // a table whose verification query throws
+    missingTrigger?: string;    // a trigger absent from pg_trigger
+    disabledTrigger?: string;   // a trigger present but tgenabled = 'D'
+    reEnableFails?: string;     // ENABLE TRIGGER silently does not take
+    ownerOrgId?: number;        // the org the recorded email actually belongs to
+    noOwner?: boolean;          // the recorded email matches no user at all
   };
+
+  /**
+   * A database that models the parts this cleanup depends on: transaction boundaries, the two
+   * append-only triggers and their enabled state, and deletes that only take effect while those
+   * triggers are disabled — which is the real constraint, since audit_logs.org_id is SET NULL and
+   * security_events.org_id is CASCADE, so deleting an org mutates both immutable tables.
+   */
   const mkDb = (behaviour: Behaviour) => {
-    let userGone = false, orgGone = false;
+    let userGone = false, orgGone = false, inTx = false, rolledBack = false, committed = false;
     const seen: string[] = [];
-    // Child ids the fixtures "created", returned by the pre-delete capture join.
+    const enabled: Record<string, boolean> = { audit_logs_immutable: true, security_events_immutable: true };
+    if (behaviour.disabledTrigger) enabled[behaviour.disabledTrigger] = false;
     const CHILD_IDS: Record<string, number[]> = { quotation_items: [11, 12], sales_invoice_items: [21, 22, 23] };
+    // Committed state, so a ROLLBACK can restore it rather than the test asserting on nothing.
+    let snapshot: { userGone: boolean; orgGone: boolean; enabled: Record<string, boolean> } | null = null;
     return {
       seen,
+      get inTx() { return inTx; },
+      get rolledBack() { return rolledBack; },
+      get committed() { return committed; },
+      get triggersEnabled() { return { ...enabled }; },
+      get userGone() { return userGone; },
+      get orgGone() { return orgGone; },
       async query(sql: string, params: unknown[] = []): Promise<{ rows: Row[] }> {
         seen.push(sql);
-        const table = /from "([a-z_]+)"/.exec(sql)?.[1];
-        // A verification query that FAILS must never be turned into "0 leftovers".
-        if (behaviour.failVerifyFor && table === behaviour.failVerifyFor && /count\(\*\)/.test(sql)) {
-          throw new Error(`relation "${table}" does not exist`);
+        const table = /from "([a-z_]+)"|TABLE "([a-z_]+)"/.exec(sql);
+        const tableName = table?.[1] ?? table?.[2];
+
+        if (/^BEGIN$/.test(sql)) { inTx = true; snapshot = { userGone, orgGone, enabled: { ...enabled } }; return { rows: [] }; }
+        if (/^COMMIT$/.test(sql)) { inTx = false; committed = true; snapshot = null; return { rows: [] }; }
+        if (/^ROLLBACK$/.test(sql)) {
+          inTx = false; rolledBack = true;
+          if (snapshot) { userGone = snapshot.userGone; orgGone = snapshot.orgGone; Object.assign(enabled, snapshot.enabled); }
+          return { rows: [] };
         }
-        if (/^select org_id from users/.test(sql)) return { rows: [{ org_id: 4242 }] };
-        // Pre-delete capture: child ids reached THROUGH the parent, while the parent still exists.
-        if (/^select c\.id from/.test(sql)) return { rows: (CHILD_IDS[table ?? ""] ?? []).map((id) => ({ id })) };
-        if (/^delete from users/.test(sql)) { userGone = behaviour.userDeleted !== false && /email=\$1/.test(sql) && params[0] === EMAIL; return { rows: [] }; }
-        if (/^delete from orgs/.test(sql)) { orgGone = behaviour.orgDeleted !== false && /id=\$1/.test(sql) && params[0] === 4242; return { rows: [] }; }
+        if (/DISABLE TRIGGER/.test(sql)) {
+          const t = /TRIGGER "([a-z_]+)"/.exec(sql)![1];
+          if (!inTx) throw new Error(`${t} disabled OUTSIDE a transaction`);
+          enabled[t] = false; return { rows: [] };
+        }
+        if (/ENABLE TRIGGER/.test(sql)) {
+          const t = /TRIGGER "([a-z_]+)"/.exec(sql)![1];
+          if (behaviour.reEnableFails !== t) enabled[t] = true;
+          return { rows: [] };
+        }
+        if (/from pg_trigger/.test(sql)) {
+          const t = String(params[0]);
+          if (behaviour.missingTrigger === t) return { rows: [] };
+          return { rows: [{ tgenabled: enabled[t] ? "O" : "D" }] };
+        }
+
+        if (behaviour.failVerifyFor && tableName === behaviour.failVerifyFor && /count\(\*\)/.test(sql)) {
+          throw new Error(`relation "${tableName}" does not exist`);
+        }
+        if (/^select org_id from users/.test(sql)) {
+          if (behaviour.noOwner) return { rows: [] };
+          return { rows: [{ org_id: behaviour.ownerOrgId ?? 4242 }] };
+        }
+        if (/^select c\.id from/.test(sql)) return { rows: (CHILD_IDS[tableName ?? ""] ?? []).map((id) => ({ id })) };
+        // The append-only triggers are what make this realistic: with either still enabled, the
+        // delete raises, exactly as reject_mutation() does on the real database.
+        if (/^delete from users/.test(sql)) {
+          if (enabled.audit_logs_immutable) throw new Error("Table audit_logs is append-only; UPDATE is not permitted");
+          userGone = behaviour.userDeleted !== false && /email=\$1/.test(sql) && params[0] === EMAIL;
+          return { rows: [] };
+        }
+        if (/^delete from orgs/.test(sql)) {
+          if (enabled.audit_logs_immutable) throw new Error("Table audit_logs is append-only; UPDATE is not permitted");
+          if (enabled.security_events_immutable) throw new Error("Table security_events is append-only; DELETE is not permitted");
+          orgGone = behaviour.orgDeleted !== false && /id=\$1/.test(sql) && params[0] === 4242;
+          return { rows: [] };
+        }
         if (/count\(\*\)::int as c from orgs/.test(sql)) return { rows: [{ c: orgGone ? 0 : 1 }] };
         if (/count\(\*\)::int as c from users/.test(sql)) return { rows: [{ c: userGone ? 0 : 1 }] };
-        // Post-delete child verification, BY ID and with no join — an orphan must still be visible.
-        if (/where id = any/.test(sql)) return { rows: [{ c: behaviour.orphanChild === table ? 1 : 0 }] };
-        if (/where org_id/.test(sql)) return { rows: [{ c: behaviour.leftover === table ? 3 : 0 }] };
+        if (/where id = any/.test(sql)) return { rows: [{ c: behaviour.orphanChild === tableName ? 1 : 0 }] };
+        if (/where org_id/.test(sql)) return { rows: [{ c: behaviour.leftover === tableName ? 3 : 0 }] };
         return { rows: [{ c: 0 }] };
       },
     };
   };
   const fresh = (): Manifest => ({ ...loadManifest("selftest"), testOrgs: [{ email: EMAIL, orgId: 4242, purpose: "x", cleanupStatus: "pending" }] });
+  const idx = (db: ReturnType<typeof mkDb>, re: RegExp) => db.seen.findIndex((q) => re.test(q));
 
+  // ---- the happy path on a HARDENED database
   const goodDb = mkDb({});
   const goodManifest = fresh();
   const good = await cleanupTestOrgs(goodManifest, goodDb);
-  ok("db cleanup: a clean run removes the org and reports no failure", good.removed === 1 && good.failed === 0, JSON.stringify(good.log));
+  ok("db cleanup: a hardened database is cleaned and reports no failure", good.removed === 1 && good.failed === 0, JSON.stringify(good.log));
+  ok("db cleanup: the transaction committed", goodDb.committed && !goodDb.rolledBack && !goodDb.inTx);
+  ok("db cleanup: BOTH immutable triggers are enabled again at the end",
+     goodDb.triggersEnabled.audit_logs_immutable && goodDb.triggersEnabled.security_events_immutable, JSON.stringify(goodDb.triggersEnabled));
+  ok("db cleanup: trigger state is checked BEFORE anything is deleted",
+     idx(goodDb, /from pg_trigger/) < idx(goodDb, /^delete from/), `check@${idx(goodDb, /from pg_trigger/)} delete@${idx(goodDb, /^delete from/)}`);
+  ok("db cleanup: the triggers are disabled AFTER BEGIN, never outside a transaction",
+     idx(goodDb, /^BEGIN$/) >= 0 && idx(goodDb, /^BEGIN$/) < idx(goodDb, /DISABLE TRIGGER/), "the mock throws if a disable happens outside a transaction");
+  ok("db cleanup: both triggers are re-enabled BEFORE COMMIT",
+     goodDb.seen.filter((q) => /ENABLE TRIGGER/.test(q) && !/DISABLE/.test(q)).length === 2 &&
+     goodDb.seen.findLastIndex((q) => /ENABLE TRIGGER/.test(q) && !/DISABLE/.test(q)) < idx(goodDb, /^COMMIT$/), "");
+  ok("db cleanup: the restored state is re-read before COMMIT, not assumed",
+     goodDb.seen.lastIndexOf(goodDb.seen.filter((q) => /from pg_trigger/.test(q)).pop()!) < idx(goodDb, /^COMMIT$/), "");
+  ok("db cleanup: row verification happens before COMMIT",
+     idx(goodDb, /count\(\*\)::int as c from orgs/) < idx(goodDb, /^COMMIT$/), "");
+  ok("db cleanup: ONLY the two named triggers are touched",
+     goodDb.seen.filter((q) => /TRIGGER/.test(q) && !/pg_trigger/.test(q)).every((q) => /"(audit_logs_immutable|security_events_immutable)"/.test(q)),
+     JSON.stringify(goodDb.seen.filter((q) => /TRIGGER/.test(q) && !/pg_trigger/.test(q))));
+  ok("db cleanup: never DISABLE TRIGGER ALL or USER", !goodDb.seen.some((q) => /DISABLE TRIGGER (ALL|USER)/i.test(q)));
+  ok("db cleanup: reject_mutation() is never dropped and no trigger is dropped",
+     !goodDb.seen.some((q) => /DROP (TRIGGER|FUNCTION)/i.test(q)));
   ok("db cleanup: the user is deleted by its exact recorded address, passed as a parameter",
-     goodDb.seen.some((q) => /^delete from users where email=\$1$/.test(q.trim())), JSON.stringify(goodDb.seen.filter((q) => q.startsWith("delete"))));
-  ok("db cleanup: no statement uses LIKE or any other pattern sweep",
-     !goodDb.seen.some((q) => /\blike\b/i.test(q)), JSON.stringify(goodDb.seen.filter((q) => /\blike\b/i.test(q))));
+     goodDb.seen.some((q) => /^delete from users where email=\$1$/.test(q.trim())), "");
+  ok("db cleanup: no statement uses LIKE or any other pattern sweep", !goodDb.seen.some((q) => /\blike\b/i.test(q)));
+  ok("db cleanup: the log records that hardening was restored", good.log[0].includes("hardening restored"), good.log[0]);
 
-  // Child fixture rows have no org_id of their own. They are captured through the parent BEFORE the
-  // delete and verified by id AFTER it — a post-delete join would find nothing precisely when an
-  // orphan exists, because the parent it would join to is the row that was removed.
-  const captureIdx = goodDb.seen.findIndex((q) => /^select c\.id from/.test(q));
-  const deleteIdx = goodDb.seen.findIndex((q) => /^delete from orgs/.test(q));
-  ok("db cleanup: child fixture ids are captured BEFORE the org is deleted", captureIdx >= 0 && captureIdx < deleteIdx, `capture@${captureIdx} delete@${deleteIdx}`);
+  // ---- child fixture capture, unchanged guarantees
+  ok("db cleanup: child fixture ids are captured BEFORE the org is deleted",
+     idx(goodDb, /^select c\.id from/) >= 0 && idx(goodDb, /^select c\.id from/) < idx(goodDb, /^delete from/), "");
   ok("db cleanup: the captured ids are persisted in the manifest",
-     (goodManifest.testOrgs[0].childFixtureIds?.quotation_items ?? []).join(",") === "11,12",
-     JSON.stringify(goodManifest.testOrgs[0].childFixtureIds));
-  // Captured ids are worthless if a crash can lose them: after the delete the parent is gone, so
-  // there is no second chance to find those rows. They must reach the manifest before the delete.
+     (goodManifest.testOrgs[0].childFixtureIds?.quotation_items ?? []).join(",") === "11,12", JSON.stringify(goodManifest.testOrgs[0].childFixtureIds));
+  ok("db cleanup: child verification queries by id, with no join to the vanished parent",
+     goodDb.seen.some((q) => /where id = any/.test(q) && !/join/.test(q)), "");
+  ok("db cleanup: the child fixture table with the non-obvious FK is reached (invoice_id, not sales_invoice_id)",
+     goodDb.seen.some((q) => /^select c\.id from "sales_invoice_items"/.test(q) && /c\."invoice_id" = p\.id/.test(q)), "");
   {
     const persistDb = mkDb({});
     const persistManifest = fresh();
@@ -409,43 +486,94 @@ ok("the org id is filled in once registration resolves it", loadManifest("selfte
     });
     const firstDelete = persistDb.seen.findIndex((q) => /^delete from/.test(q));
     ok("db cleanup: the captured ids are PERSISTED before the first delete, not after it",
-       persistedAfterNQueries >= 0 && persistedAfterNQueries <= firstDelete,
-       `persisted after ${persistedAfterNQueries} queries, first delete at ${firstDelete}`);
+       persistedAfterNQueries >= 0 && persistedAfterNQueries <= firstDelete, `persisted after ${persistedAfterNQueries}, delete at ${firstDelete}`);
   }
-  ok("db cleanup: child verification queries by id, with no join to the vanished parent",
-     goodDb.seen.some((q) => /where id = any/.test(q) && !/join/.test(q)), "");
-  ok("db cleanup: the child fixture table with the non-obvious FK is reached (invoice_id, not sales_invoice_id)",
-     goodDb.seen.some((q) => /^select c\.id from "sales_invoice_items"/.test(q) && /c\."invoice_id" = p\.id/.test(q)),
-     JSON.stringify(goodDb.seen.filter((q) => q.includes("sales_invoice_items"))));
 
-  const orgLeft = await cleanupTestOrgs(fresh(), mkDb({ orgDeleted: false }));
-  ok("db cleanup: user removed but ORG remains → failure", orgLeft.failed === 1, JSON.stringify(orgLeft.log));
-  const userLeft = await cleanupTestOrgs(fresh(), mkDb({ userDeleted: false }));
-  ok("db cleanup: org removed but USER remains → failure", userLeft.failed === 1, JSON.stringify(userLeft.log));
-  const fixtureLeft = await cleanupTestOrgs(fresh(), mkDb({ leftover: "customers" }));
-  ok("db cleanup: a leftover org-scoped row → failure (the cascade is verified, not assumed)", fixtureLeft.failed === 1, JSON.stringify(fixtureLeft.log));
+  // ---- hardening preconditions: fail closed, delete nothing
+  for (const [name, behaviour] of [
+    ["MISSING", { missingTrigger: "security_events_immutable" }],
+    ["already DISABLED", { disabledTrigger: "audit_logs_immutable" }],
+  ] as [string, Behaviour][]) {
+    const db = mkDb(behaviour);
+    const m = fresh();
+    const r = await cleanupTestOrgs(m, db);
+    ok(`db cleanup: an immutable trigger that is ${name} fails closed`, r.failed === 1 && r.removed === 0, JSON.stringify(r.log));
+    ok(`db cleanup: nothing is deleted when a trigger is ${name}`, !db.seen.some((q) => /^delete from/.test(q)) && !db.orgGone && !db.userGone, "");
+    ok(`db cleanup: no transaction is even opened when a trigger is ${name}`, !db.seen.some((q) => /^BEGIN$/.test(q)), "");
+    ok(`db cleanup: the note names the hardening state (${name})`, (m.testOrgs[0].cleanupNote ?? "").includes("append-only hardening is not in the expected state"), m.testOrgs[0].cleanupNote ?? "");
+  }
 
-  // The sentinel: a child row the cascade failed to remove. It has no org_id and its parent is gone,
-  // so only the by-id check can see it.
-  const orphanManifest = fresh();
-  const orphan = await cleanupTestOrgs(orphanManifest, mkDb({ orphanChild: "sales_invoice_items" }));
-  ok("db cleanup: an ORPHANED child row the cascade missed → failure", orphan.failed === 1 && orphan.removed === 0, JSON.stringify(orphan.log));
-  ok("db cleanup: the orphan is named in the note, by table and by id count",
-     (orphanManifest.testOrgs[0].cleanupNote ?? "").includes("sales_invoice_items=1 of 3"), orphanManifest.testOrgs[0].cleanupNote ?? "");
+  // ---- ownership must still hold at cleanup time
+  {
+    const db = mkDb({ ownerOrgId: 9999 });
+    const m = fresh();
+    const r = await cleanupTestOrgs(m, db);
+    ok("db cleanup: an email/orgId ownership mismatch fails closed", r.failed === 1 && r.removed === 0, JSON.stringify(r.log));
+    ok("db cleanup: the mismatch deletes nothing and opens no transaction", !db.seen.some((q) => /^delete from|^BEGIN$/.test(q)), "");
+    ok("db cleanup: the mismatch note names both organizations", (m.testOrgs[0].cleanupNote ?? "").includes("belongs to org 9999"), m.testOrgs[0].cleanupNote ?? "");
+  }
 
-  // A verification query that THREW has verified nothing. The old code caught it and read it as
-  // "0 leftovers", so eight tables reported themselves clean without ever being looked at.
-  const brokenManifest = fresh();
-  const broken = await cleanupTestOrgs(brokenManifest, mkDb({ failVerifyFor: "customers" }));
-  ok("db cleanup: a FAILED verification query is a failure, never zero leftovers",
-     broken.failed === 1 && broken.removed === 0, JSON.stringify(broken.log));
-  ok("db cleanup: the failed org is marked cleanup-failed with the reason", brokenManifest.testOrgs[0].cleanupStatus === "cleanup-failed" && (brokenManifest.testOrgs[0].cleanupNote ?? "").includes("does not exist"), brokenManifest.testOrgs[0].cleanupNote ?? "");
-  const brokenChild = await cleanupTestOrgs(fresh(), mkDb({ failVerifyFor: "quotation_items" }));
-  ok("db cleanup: a failed CHILD verification query is a failure too", brokenChild.failed === 1, JSON.stringify(brokenChild.log));
+  // ---- failures inside the transaction roll back
+  const rollbackCases: [string, Behaviour, RegExp][] = [
+    ["the org row survives", { orgDeleted: false }, /orgGone=false/],
+    ["the user row survives", { userDeleted: false }, /userGone=false/],
+    ["an org-scoped table still holds rows", { leftover: "customers" }, /customers=3/],
+    ["an orphaned child row remains", { orphanChild: "sales_invoice_items" }, /sales_invoice_items=1 of 3/],
+    ["a verification query throws", { failVerifyFor: "customers" }, /does not exist/],
+    ["a trigger cannot be re-enabled", { reEnableFails: "audit_logs_immutable" }, /hardening was not restored/],
+  ];
+  for (const [name, behaviour, noteRe] of rollbackCases) {
+    const db = mkDb(behaviour);
+    const m = fresh();
+    const r = await cleanupTestOrgs(m, db);
+    ok(`db cleanup: ${name} → failure, never success`, r.failed === 1 && r.removed === 0, JSON.stringify(r.log));
+    ok(`db cleanup: ${name} → ROLLBACK, not COMMIT`, db.rolledBack && !db.committed, `rolledBack=${db.rolledBack} committed=${db.committed}`);
+    ok(`db cleanup: ${name} → the note explains why`, noteRe.test(m.testOrgs[0].cleanupNote ?? ""), m.testOrgs[0].cleanupNote ?? "");
+    ok(`db cleanup: ${name} → hardening is verified intact after the rollback`,
+       db.triggersEnabled.audit_logs_immutable && db.triggersEnabled.security_events_immutable &&
+       (m.testOrgs[0].cleanupNote ?? "").includes("hardening verified intact after rollback"), m.testOrgs[0].cleanupNote ?? "");
+  }
 
-  const noUser: Manifest = { ...loadManifest("selftest"), testOrgs: [{ email: "gone@example.invalid", orgId: null, purpose: "x", cleanupStatus: "pending" }] };
-  const resolved = await cleanupTestOrgs(noUser, { async query(sql: string) { return /^select org_id/.test(sql) ? { rows: [] } : { rows: [{ c: 0 }] }; } });
-  ok("db cleanup: an org id lost to a crash is re-resolved from the recorded email", resolved.failed === 0 && resolved.log[0].includes("no such test user"), JSON.stringify(resolved.log));
+  // ---- resumability
+  {
+    const db = mkDb({ noOwner: true });
+    const m = fresh();
+    const r = await cleanupTestOrgs(m, db);
+    ok("db cleanup: a second pass over an already-cleaned org reports no failure", r.failed === 0 && r.removed === 0, JSON.stringify(r.log));
+    ok("db cleanup: the already-clean org deletes nothing and opens no transaction", !db.seen.some((q) => /^delete from|^BEGIN$/.test(q)), "");
+  }
+  {
+    const noUser: Manifest = { ...loadManifest("selftest"), testOrgs: [{ email: "gone@example.invalid", orgId: null, purpose: "x", cleanupStatus: "pending" }] };
+    const resolved = await cleanupTestOrgs(noUser, { async query(sql: string) { return /^select org_id/.test(sql) ? { rows: [] } : { rows: [{ c: 0 }] }; } });
+    ok("db cleanup: an org id lost to a crash is re-resolved from the recorded email", resolved.failed === 0 && resolved.log[0].includes("no such test user"), JSON.stringify(resolved.log));
+  }
+}
+
+// ---- the disposable registration identity must be canonical BEFORE it is recorded
+{
+  const { testOrgEmail, canonicalizeEmail } = await import("./provider-harness/test-identity.mjs");
+  const rid = "2026-09-19T02-44-06-369Z-3e2644";
+  const email = testOrgEmail("A", rid);
+  // Registration stores .trim().toLowerCase(); an uppercase label and an ISO run id meant the
+  // harness looked up an address the database never held.
+  ok("test identity: an uppercase label yields a lowercase address", email === email.toLowerCase(), email);
+  ok("test identity: the run id's uppercase T and Z are canonicalized too", !/[A-Z]/.test(email), email);
+  ok("test identity: it is the address registration would store", email === canonicalizeEmail(`batch3-A-${rid}@example.invalid`), email);
+  ok("test identity: the address is still unique per run and label", testOrgEmail("A", rid) !== testOrgEmail("B", rid));
+  ok("test identity: it is stable — the same inputs give the same locator", testOrgEmail("A", rid) === testOrgEmail("A", rid));
+
+  // The one recorded address must be the one used for the lookup and for cleanup.
+  const r = new Run("selftest-identity", "0".repeat(40), {});
+  const entry = r.planTestOrg(email, "disposable org A");
+  ok("test identity: the manifest records the canonical address, unchanged",
+     loadManifest("selftest-identity").testOrgs[0].email === email && entry.email === email, entry.email);
+  ok("test identity: the recorded locator survives a round trip through the manifest file",
+     loadManifest("selftest-identity").testOrgs[0].email === canonicalizeEmail(loadManifest("selftest-identity").testOrgs[0].email), "");
+
+  const harnessSrc = readFileSync(join(cwd, "verify", "verify-real-blob-provider.mts"), "utf8");
+  ok("test identity: the live run builds its address through the canonical helper", /const email = testOrgEmail\(label, runId\)/.test(harnessSrc), "");
+  ok("test identity: the live run looks the org up by exact equality, not LOWER/ILIKE/LIKE",
+     /select org_id from users where email=\$1/.test(harnessSrc) && !/lower\(email\)|ilike|email like/i.test(harnessSrc), "");
 }
 
 // ---- exit codes. A gate that exits 0 on INCONCLUSIVE tells every caller that reads only the

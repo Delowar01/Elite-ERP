@@ -161,6 +161,47 @@ const CHILD_FIXTURE_TABLES: { table: string; fk: string; parent: string }[] = [
 /** Total tables verified after the cascade, named in the log so the claim is checkable. */
 export const VERIFIED_TABLE_COUNT = ORG_SCOPED_TABLES.length + CHILD_FIXTURE_TABLES.length + 1;
 
+/**
+ * The two append-only triggers installed by drizzle/immutable_audit.sql. They reject every UPDATE
+ * and DELETE on the audit tables — which is exactly right in production, and exactly what stops a
+ * disposable organization from being deleted: audit_logs.org_id and .user_id are ON DELETE SET
+ * NULL, so removing the org makes PostgreSQL attempt an UPDATE on an immutable table, and
+ * security_events.org_id is ON DELETE CASCADE, which attempts a DELETE on another.
+ *
+ * Cleanup therefore suspends THESE TWO TRIGGERS ONLY, inside the transaction that removes one
+ * manifest-owned organization, and re-enables them before committing. Not DISABLE TRIGGER ALL,
+ * not DISABLE TRIGGER USER, not dropping reject_mutation(), and nothing outside the transaction:
+ * ALTER TABLE ... DISABLE TRIGGER is transactional in PostgreSQL, so a ROLLBACK restores the
+ * previous state even if the process dies mid-way.
+ */
+const IMMUTABLE_TRIGGERS: { trigger: string; table: string }[] = [
+  { trigger: "audit_logs_immutable", table: "audit_logs" },
+  { trigger: "security_events_immutable", table: "security_events" },
+];
+
+type Db = { query: (sql: string, params?: unknown[]) => Promise<{ rows: Record<string, unknown>[] }> };
+
+/**
+ * What the database says about the two triggers right now: attached to the expected table, and
+ * enabled. 'O' is the normal enabled state; 'D' is disabled. Anything else ('R', 'A' — replica
+ * modes) is not the state this cleanup expects and is treated as not-enabled.
+ */
+async function immutableTriggerState(db: Db): Promise<{ trigger: string; table: string; present: boolean; enabled: boolean; tgenabled?: string }[]> {
+  const out = [];
+  for (const { trigger, table } of IMMUTABLE_TRIGGERS) {
+    const r = await db.query(
+      "select t.tgenabled::text as tgenabled from pg_trigger t join pg_class c on c.oid = t.tgrelid where t.tgname = $1 and c.relname = $2 and not t.tgisinternal",
+      [trigger, table],
+    );
+    const tgenabled = r.rows.length ? String(r.rows[0].tgenabled) : undefined;
+    out.push({ trigger, table, present: r.rows.length > 0, enabled: tgenabled === "O", tgenabled });
+  }
+  return out;
+}
+
+const describeTriggers = (state: Awaited<ReturnType<typeof immutableTriggerState>>) =>
+  state.map((t) => `${t.trigger}=${!t.present ? "MISSING" : t.enabled ? "enabled" : `tgenabled=${t.tgenabled}`}`).join(", ");
+
 export async function cleanupTestOrgs(
   manifest: Manifest,
   db: { query: (sql: string, params?: unknown[]) => Promise<{ rows: Record<string, unknown>[] }> },
@@ -193,40 +234,114 @@ export async function cleanupTestOrgs(
       org.childFixtureIds = childIds;
       onProgress?.(manifest);
 
-      await db.query("delete from users where email=$1", [org.email]);
-      await db.query("delete from orgs where id=$1", [orgId]);
-
-      // Verify. A cascade that silently did not fire would otherwise leave a disposable org's rows
-      // behind while cleanup reported success. NOTHING here is wrapped in a catch that yields zero:
-      // a verification query that fails has not verified anything, and the whole org is reported
-      // failed so the command exits non-zero.
-      const leftovers: string[] = [];
-      for (const table of ORG_SCOPED_TABLES) {
-        const r = await db.query(`select count(*)::int as c from "${table}" where org_id=$1`, [orgId]);
-        const c = Number(r.rows[0]?.c ?? 0);
-        if (c > 0) leftovers.push(`${table}=${c}`);
+      // OWNERSHIP, PROVED AGAINST THE DATABASE. The manifest carries an email and an org id; before
+      // anything is deleted they must still agree. If the recorded address does not belong to the
+      // recorded organization, something has changed since the run and this cleanup no longer knows
+      // what it would be deleting, so it refuses rather than guessing.
+      const owner = await db.query("select org_id from users where email=$1", [org.email]);
+      if (!owner.rows.length) {
+        org.cleanupStatus = "verified-gone";
+        res.log.push(`no such test user: ${org.email} (org ${orgId} not deleted — its recorded user is already gone)`);
+        onProgress?.(manifest); continue;
       }
-      for (const { table } of CHILD_FIXTURE_TABLES) {
-        const ids = childIds[table] ?? [];
-        if (!ids.length) continue;
-        // By id, with no join: an orphaned child whose parent is gone must still be found.
-        const r = await db.query(`select count(*)::int as c from "${table}" where id = any($1::int[])`, [ids]);
-        const c = Number(r.rows[0]?.c ?? 0);
-        if (c > 0) leftovers.push(`${table}=${c} of ${ids.length} (orphaned by id)`);
-      }
-      const orgGone = Number((await db.query("select count(*)::int as c from orgs where id=$1", [orgId])).rows[0].c) === 0;
-      const userGone = Number((await db.query("select count(*)::int as c from users where email=$1", [org.email])).rows[0].c) === 0;
-
-      if (!orgGone || !userGone || leftovers.length) {
+      if (Number(owner.rows[0].org_id) !== orgId) {
         org.cleanupStatus = "cleanup-failed";
-        org.cleanupNote = `orgGone=${orgGone} userGone=${userGone} leftovers=${leftovers.join(",") || "none"}`;
+        org.cleanupNote = `ownership mismatch: ${org.email} belongs to org ${Number(owner.rows[0].org_id)}, not the recorded ${orgId} — refusing to delete either`;
         res.failed++;
         res.log.push(`FAILED org ${orgId} (${org.email}): ${org.cleanupNote}`);
-      } else {
+        onProgress?.(manifest); continue;
+      }
+
+      // PRECONDITION, BEFORE ANY MUTATION. Both triggers must exist, be attached to the expected
+      // table, and be enabled. A database where one is already missing or already disabled is not
+      // the hardened disposable database this cleanup was told it was pointed at, and the honest
+      // response is to stop rather than to delete rows and leave the hardening however it was.
+      const before = await immutableTriggerState(db);
+      const badBefore = before.filter((t) => !t.present || !t.enabled);
+      if (badBefore.length) {
+        org.cleanupStatus = "cleanup-failed";
+        org.cleanupNote = `append-only hardening is not in the expected state before cleanup (${describeTriggers(before)}) — refusing to delete anything`;
+        res.failed++;
+        res.log.push(`FAILED org ${orgId} (${org.email}): ${org.cleanupNote}`);
+        onProgress?.(manifest); continue;
+      }
+
+      // ONE TRANSACTION, ALL OR NOTHING.
+      let committed = false;
+      let failure = "";
+      await db.query("BEGIN");
+      try {
+        for (const { trigger, table } of IMMUTABLE_TRIGGERS) {
+          await db.query(`ALTER TABLE "${table}" DISABLE TRIGGER "${trigger}"`);
+        }
+
+        await db.query("delete from users where email=$1", [org.email]);
+        await db.query("delete from orgs where id=$1", [orgId]);
+
+        // Verify INSIDE the transaction, so a cascade that did not fire rolls the deletion back
+        // rather than leaving a half-removed organization behind.
+        const leftovers: string[] = [];
+        for (const table of ORG_SCOPED_TABLES) {
+          const r = await db.query(`select count(*)::int as c from "${table}" where org_id=$1`, [orgId]);
+          const c = Number(r.rows[0]?.c ?? 0);
+          if (c > 0) leftovers.push(`${table}=${c}`);
+        }
+        for (const { table } of CHILD_FIXTURE_TABLES) {
+          const ids = childIds[table] ?? [];
+          if (!ids.length) continue;
+          // By id, with no join: an orphaned child whose parent is gone must still be found.
+          const r = await db.query(`select count(*)::int as c from "${table}" where id = any($1::int[])`, [ids]);
+          const c = Number(r.rows[0]?.c ?? 0);
+          if (c > 0) leftovers.push(`${table}=${c} of ${ids.length} (orphaned by id)`);
+        }
+        const orgGone = Number((await db.query("select count(*)::int as c from orgs where id=$1", [orgId])).rows[0].c) === 0;
+        const userGone = Number((await db.query("select count(*)::int as c from users where email=$1", [org.email])).rows[0].c) === 0;
+        if (!orgGone || !userGone || leftovers.length) {
+          failure = `orgGone=${orgGone} userGone=${userGone} leftovers=${leftovers.join(",") || "none"}`;
+          throw new Error(failure);
+        }
+
+        // Re-enable BEFORE commit, and prove it took. Committing with either trigger still disabled
+        // would leave the database permanently unhardened while cleanup reported success.
+        for (const { trigger, table } of IMMUTABLE_TRIGGERS) {
+          await db.query(`ALTER TABLE "${table}" ENABLE TRIGGER "${trigger}"`);
+        }
+        const after = await immutableTriggerState(db);
+        if (after.some((t) => !t.present || !t.enabled)) {
+          failure = `append-only hardening was not restored (${describeTriggers(after)})`;
+          throw new Error(failure);
+        }
+
+        await db.query("COMMIT");
+        committed = true;
+      } catch (e) {
+        failure = failure || String(e);
+        try { await db.query("ROLLBACK"); } catch { /* reported below via the trigger re-check */ }
+      }
+
+      if (!committed) {
+        // ALTER TABLE ... DISABLE TRIGGER is transactional, so the rollback should have restored
+        // both triggers. Re-read rather than assume, and say what was found either way: a cleanup
+        // that failed AND left the database unhardened is a different, worse problem.
+        let restored = "trigger state unknown after rollback";
+        try {
+          const state = await immutableTriggerState(db);
+          restored = state.every((t) => t.present && t.enabled)
+            ? "append-only hardening verified intact after rollback"
+            : `APPEND-ONLY HARDENING NOT INTACT AFTER ROLLBACK (${describeTriggers(state)}) — inspect this database before using it again`;
+        } catch (e) { restored = `could not re-check hardening after rollback: ${String(e).split("\n")[0]}`; }
+        org.cleanupStatus = "cleanup-failed";
+        org.cleanupNote = `${failure}; rolled back; ${restored}`;
+        res.failed++;
+        res.log.push(`FAILED org ${orgId} (${org.email}): ${org.cleanupNote}`);
+        onProgress?.(manifest); continue;
+      }
+
+      {
         org.cleanupStatus = "verified-gone";
         res.removed++;
         const childCount = Object.values(childIds).reduce((n, ids) => n + ids.length, 0);
-        res.log.push(`removed org ${orgId} (${org.email}); verified ${VERIFIED_TABLE_COUNT} tables, including ${childCount} child fixture row(s) checked by id`);
+        res.log.push(`removed org ${orgId} (${org.email}); verified ${VERIFIED_TABLE_COUNT} tables, including ${childCount} child fixture row(s) checked by id; append-only hardening restored before commit`);
       }
     } catch (e) {
       org.cleanupStatus = "cleanup-failed";

@@ -32,6 +32,7 @@ import { Run, runDir, sha256, computeVerdict, exitCodeForVerdict, EXIT_CODES, ty
 import { seedObject } from "./provider-harness/seed.mjs";
 import { classifyPostDeletionPublicUrl, type ProbeAnswer } from "./provider-harness/deletion.mjs";
 import { pickCountry } from "./register-org.mjs";
+import { testOrgEmail } from "./provider-harness/test-identity.mjs";
 
 installRedactedCrashHandler();
 
@@ -161,7 +162,10 @@ say("\n§9 provider level");
 say("\n§10 disposable test organizations");
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || "/opt/pw-browsers/chromium" });
 async function registerOrg(label: string) {
-  const email = `batch3-${label}-${runId}@example.invalid`;
+  // Canonical (lowercased) before it is used ANYWHERE: registration stores the address
+  // lowercased, and the manifest's exact-equality locator has to be the address that ends up in
+  // the row, not the one that was typed. See provider-harness/test-identity.mts.
+  const email = testOrgEmail(label, runId);
   // Recorded BEFORE the form is submitted. If the harness dies after registration succeeds but
   // before the org id comes back, this unique address is still an exact way for cleanup to find
   // that one organization — no LIKE pattern, no prefix sweep over test-looking emails.
