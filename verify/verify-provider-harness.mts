@@ -549,6 +549,164 @@ ok("the org id is filled in once registration resolves it", loadManifest("selfte
   }
 }
 
+// ---- cross-platform subprocess execution. The real run failed on Windows because there is no
+// executable called `npx` there — only npx.cmd — and execFile does not go through a shell. §18, §19
+// and §21 all failed together while every direct Blob call around them worked.
+{
+  const { runRepoScript, resolveTsxCli } = await import("./provider-harness/run-script.mjs");
+  const src = readFileSync(join(cwd, "verify", "provider-harness", "run-script.mts"), "utf8");
+  const harnessSrc = readFileSync(join(cwd, "verify", "verify-real-blob-provider.mts"), "utf8");
+
+  ok("subprocess: the harness no longer shells out through bare npx", !/execFileSync\(\s*"npx"/.test(harnessSrc) && !/"npx"/.test(harnessSrc), "");
+  ok("subprocess: the runner spawns the CURRENT node binary, not a PATH lookup", /spawnSync\(process\.execPath/.test(src), "");
+  ok("subprocess: no shell is used, so nothing is quoted or interpolated", /shell: false/.test(src) && !/exec\(|execSync\(/.test(src), "");
+  ok("subprocess: arguments stay in an array", /\[cli, "--conditions=react-server", scriptPath, \.\.\.args\]/.test(src), "");
+  ok("subprocess: --conditions=react-server is preserved", /--conditions=react-server/.test(src), "");
+  const codeOnly = src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  ok("subprocess: tsx is resolved from local node_modules, never installed",
+     /node_modules/.test(codeOnly) && !/"npx"|npm install|--yes|--package/.test(codeOnly), "");
+  ok("subprocess: a local tsx CLI is actually found in this repository", resolveTsxCli(cwd) !== null, String(resolveTsxCli(cwd)));
+
+  // Behaviour, not just shape.
+  const okRun = runRepoScript(join(cwd, "verify", "provider-harness", "fixtures", "echo-ok.mts"), ["hello"], { cwd });
+  ok("subprocess: a successful script launches and reports exit 0", okRun.launched && okRun.exitCode === 0, JSON.stringify({ l: okRun.launched, c: okRun.exitCode, e: okRun.stderr.slice(0, 120) }));
+  ok("subprocess: stdout is captured", okRun.stdout.includes("STDOUT:hello"), okRun.stdout.slice(0, 120));
+  ok("subprocess: stderr is captured separately", okRun.stderr.includes("STDERR:hello"), okRun.stderr.slice(0, 120));
+
+  const failRun = runRepoScript(join(cwd, "verify", "provider-harness", "fixtures", "echo-fail.mts"), [], { cwd });
+  ok("subprocess: a script that exits non-zero is LAUNCHED with a non-zero code", failRun.launched && failRun.exitCode === 3, JSON.stringify({ l: failRun.launched, c: failRun.exitCode }));
+  ok("subprocess: its stderr survives for evidence", failRun.stderr.includes("deliberate failure"), failRun.stderr.slice(0, 120));
+
+  const missing = runRepoScript(join(cwd, "verify", "provider-harness", "fixtures", "does-not-exist.mts"), [], { cwd });
+  ok("subprocess: a missing script still LAUNCHES node and fails there, distinguishably", missing.launched && missing.exitCode !== 0, JSON.stringify({ l: missing.launched, c: missing.exitCode }));
+
+  // A directory with no node_modules anywhere above it, so resolution genuinely fails.
+  const isolated = mkdtempSync(join(tmpdir(), "no-tsx-"));
+  const noTsx = runRepoScript("scripts/blob-inventory.ts", [], { cwd: isolated });
+  ok("subprocess: when tsx cannot be resolved the result says NOT LAUNCHED, never a zero-result run",
+     noTsx.launched === false && noTsx.launchError === "tsx-not-found" && noTsx.exitCode === null && noTsx.output === "",
+     JSON.stringify({ l: noTsx.launched, e: noTsx.launchError, c: noTsx.exitCode }));
+
+  // The masking the old code did: a launch failure arriving as "selected 0" / "inventory null".
+  ok("subprocess: a launch failure is not reported as an ordinary empty result", noTsx.launched === false && !noTsx.stdout.includes("selected"), "");
+  // spawnSync reports a failure to START through res.error. That branch cannot be provoked from a
+  // test without breaking the node binary itself, so its contract is asserted on the source: it
+  // must classify as NOT launched. Reporting it as a launched run is exactly the masking this
+  // whole change exists to remove.
+  const spawnErrBranch = codeOnly.slice(codeOnly.indexOf("if (res.error)"), codeOnly.indexOf("const stdout"));
+  ok("subprocess: a spawn error yields launched:false with a safe classification",
+     /launched: false/.test(spawnErrBranch) && /launchError: "spawn-failed"/.test(spawnErrBranch) && /exitCode: null/.test(spawnErrBranch),
+     spawnErrBranch.replace(/\s+/g, " ").slice(0, 160));
+  ok("subprocess: the spawn error object itself is never carried into the result",
+     !/res\.error\b(?!\))/.test(spawnErrBranch.replace("if (res.error)", "")), "");
+  rmSync(isolated, { recursive: true, force: true });
+  ok("§18: a migration launch failure raises its own mandatory FAILED finding",
+     /migration subprocess could not be launched/.test(harnessSrc) && /"REAL PROVIDER PROVEN", false/.test(harnessSrc.slice(harnessSrc.indexOf("migration subprocess could not be launched"))), "");
+  ok("§19: the conflict section asserts the subprocess launched, separately from its exit code",
+     /the conflict migration subprocess actually launched/.test(harnessSrc), "");
+  ok("§19: the expected non-zero conflict exit is still inspected", /out\.includes\("CONFLICT"\) && exitCode !== 0/.test(harnessSrc), "");
+  ok("§21: an inventory that never launched raises its own finding rather than inv=null",
+     /the inventory subprocess actually launched/.test(harnessSrc), "");
+  ok("§21: an inventory that launched but wrote no report is reported too",
+     /the inventory script produced a report/.test(harnessSrc), "");
+  ok("subprocess diagnostics go through redact() before they can reach the report",
+     harnessSrc.split("launch failed").every((seg, i) => i === 0 || /redact\(/.test(harnessSrc.slice(0, harnessSrc.indexOf("launch failed") + 1))) &&
+     (harnessSrc.match(/redact\(`launch failed/g) ?? []).length >= 2, "");
+  ok("subprocess: no environment dump is ever persisted", !/JSON\.stringify\(process\.env|process\.env\)/.test(harnessSrc) && !/process\.env\b(?!\.)/.test(src.replace(/opts\.env \?\? process\.env/g, "")), "");
+}
+
+// ---- the /uploads storage-failure diagnostic: sanitized, and only for a post-authorization failure
+{
+  const { buildStorageReadDiagnostic } = await import("../src/lib/storage/read-failure-log");
+  const { BlobReadError, classifyBlobFailure } = await import("../src/lib/storage/blob-client");
+  const routeSrc = readFileSync(join(cwd, "src", "app", "uploads", "[...path]", "route.ts"), "utf8");
+
+  const SECRETS = {
+    token: "vercel_blob_rw_PRIVSTORE001_aaaaaaaaaaaaaaaaaaaaaaaa",
+    publicToken: "vercel_blob_rw_PUBSTORE002_bbbbbbbbbbbbbbbbbbbbbbbb",
+    dbUrl: "postgresql://tester:sup3rs3cr3tpw@db.example.invalid:5432/x",
+    authSecret: "super-secret-signing-key",
+    cookie: "session=eyJhbGciOiJIUzI1NiJ9.payload.sig",
+  };
+  const saved = { d: process.env.BLOB_READ_WRITE_TOKEN, s: process.env.BLOB_PUBLIC_SOURCE_READ_WRITE_TOKEN };
+  process.env.BLOB_READ_WRITE_TOKEN = SECRETS.token;
+  process.env.BLOB_PUBLIC_SOURCE_READ_WRITE_TOKEN = SECRETS.publicToken;
+
+  // An SDK error shaped like a real one: a 403 carrying the request headers, Authorization and all.
+  const sdkError = Object.assign(new Error(`Access denied for ${SECRETS.token}`), {
+    status: 403,
+    requestHeaders: { authorization: `Bearer ${SECRETS.token}`, cookie: SECRETS.cookie },
+    config: { url: `https://x.blob.vercel-storage.com?token=${SECRETS.token}` },
+  });
+  const wrapped = new BlobReadError("organizations/3/logos/3-1-aaaaaaaaaaaaaaaa.png", sdkError, "destination");
+  const diag = buildStorageReadDiagnostic("organizations/3/logos/3-1-aaaaaaaaaaaaaaaa.png", "logos", 3, wrapped);
+  const asText = JSON.stringify(diag);
+
+  ok("uploads diagnostic: a 401/403 is classified unauthorized", diag.category === "unauthorized", diag.category);
+  ok("uploads diagnostic: the failing store ROLE is named", diag.failedRole === "destination", diag.failedRole);
+  ok("uploads diagnostic: it reports whether each token is configured", diag.destinationTokenConfigured === true && diag.sourceTokenConfigured === true, "");
+  ok("uploads diagnostic: it reports the derived STORE IDS, which is what distinguishes a wrong store",
+     diag.destinationStoreId === "PRIVSTORE001" && diag.sourceStoreId === "PUBSTORE002", `${diag.destinationStoreId}/${diag.sourceStoreId}`);
+  for (const [what, secret] of Object.entries(SECRETS)) {
+    ok(`uploads diagnostic: no ${what} appears in the diagnostic`, !asText.includes(secret), "");
+  }
+  ok("uploads diagnostic: the raw SDK message never travels", !asText.includes("Access denied") && !asText.includes("Bearer"), asText.slice(0, 160));
+  ok("uploads diagnostic: no request headers travel", !asText.includes("requestHeaders") && !asText.includes("authorization"), "");
+  ok("uploads diagnostic: BlobReadError's own message carries no credential",
+     !wrapped.message.includes(SECRETS.token) && !wrapped.message.includes("Bearer"), wrapped.message);
+  ok("uploads diagnostic: BlobReadError's message names the role and category instead",
+     wrapped.message.includes("destination") && wrapped.message.includes("unauthorized"), wrapped.message);
+
+  ok("failure classification: 429 is rate-limited", classifyBlobFailure({ status: 429 }) === "rate-limited");
+  ok("failure classification: 5xx is server-error", classifyBlobFailure({ status: 503 }) === "server-error");
+  ok("failure classification: a reset is transport", classifyBlobFailure({ code: "ECONNRESET" }) === "transport");
+  ok("failure classification: an unrecognised shape is 'unknown', never a guess", classifyBlobFailure({}) === "unknown");
+
+  // What the builder returns is only half of it; the logger is what reaches a log aggregator.
+  {
+    const { logStorageReadFailure } = await import("../src/lib/storage/read-failure-log");
+    process.env.BLOB_READ_WRITE_TOKEN = SECRETS.token;
+    process.env.BLOB_PUBLIC_SOURCE_READ_WRITE_TOKEN = SECRETS.publicToken;
+    const original = console.error;
+    const lines: string[] = [];
+    console.error = (...a: unknown[]) => { lines.push(a.map(String).join(" ")); };
+    try { logStorageReadFailure("organizations/3/logos/3-1-aaaaaaaaaaaaaaaa.png", "logos", 3, wrapped); }
+    finally { console.error = original; }
+    const printed = lines.join("\n");
+    ok("uploads diagnostic: exactly one structured line is printed", lines.length === 1, String(lines.length));
+    ok("uploads diagnostic: the printed line is the sanitized object and nothing else",
+       printed === JSON.stringify(buildStorageReadDiagnostic("organizations/3/logos/3-1-aaaaaaaaaaaaaaaa.png", "logos", 3, wrapped)), printed.slice(0, 200));
+    for (const [what, secret] of Object.entries(SECRETS)) {
+      ok(`uploads diagnostic: the PRINTED line carries no ${what}`, !printed.includes(secret), "");
+    }
+    ok("uploads diagnostic: the printed line carries no raw cause or error object",
+       !printed.includes("Access denied") && !printed.includes("Bearer") && !/"(cause|raw|stack|requestHeaders)"/.test(printed), printed.slice(0, 200));
+    if (saved.d === undefined) delete process.env.BLOB_READ_WRITE_TOKEN; else process.env.BLOB_READ_WRITE_TOKEN = saved.d;
+    if (saved.s === undefined) delete process.env.BLOB_PUBLIC_SOURCE_READ_WRITE_TOKEN; else process.env.BLOB_PUBLIC_SOURCE_READ_WRITE_TOKEN = saved.s;
+  }
+
+  // The route's own shape: the diagnostic fires ONLY from the post-authorization catch.
+  const beforeTry = routeSrc.slice(routeSrc.indexOf("export async function GET"), routeSrc.indexOf("try {"));
+  ok("uploads route: no diagnostic is emitted on any authorization or validation denial",
+     !beforeTry.includes("logStorageReadFailure"), "");
+  ok("uploads route: every pre-authorization refusal still returns 404",
+     (beforeTry.match(/status: 404/g) ?? []).length >= 6, String((beforeTry.match(/status: 404/g) ?? []).length));
+  ok("uploads route: a genuinely absent object returns 404 WITHOUT the failure diagnostic",
+     /if \(!object\) return new Response\("Not found", \{ status: 404 \}\);/.test(routeSrc), "");
+  ok("uploads route: the diagnostic is emitted exactly once, from the catch",
+     (routeSrc.match(/logStorageReadFailure\(/g) ?? []).length === 1 && /catch \(e\) \{[\s\S]*logStorageReadFailure/.test(routeSrc), "");
+  ok("uploads route: an unexpected storage failure STILL returns 404 to the caller",
+     /logStorageReadFailure\([\s\S]{0,120}return new Response\("Not found", \{ status: 404 \}\);/.test(routeSrc), "");
+  const bodies = [...routeSrc.matchAll(/new Response\(([^,)]+)/g)].map((m) => m[1].trim());
+  ok("uploads route: every response body is either the fixed string or the file bytes — never an error",
+     bodies.every((b) => b === '"Not found"' || b === "bytes"), JSON.stringify(bodies));
+  ok("uploads route: session and signature authorization are unchanged",
+     /const signed = BRANDING_FOLDERS\.has\(folder\) && verifySignedFile\(pathname, expRaw, url\.searchParams\.get\("sig"\)\)/.test(routeSrc) &&
+     /if \(!signed && \(!session \|\| session\.orgId !== fileOrgId\)\) return new Response\("Not found", \{ status: 404 \}\);/.test(routeSrc), "");
+  ok("uploads route: a destination read failure is still NOT turned into a public-source serve",
+     !/sourceStore\(\)|publicSource/.test(routeSrc), "");
+}
+
 // ---- the disposable registration identity must be canonical BEFORE it is recorded
 {
   const { testOrgEmail, canonicalizeEmail } = await import("./provider-harness/test-identity.mjs");

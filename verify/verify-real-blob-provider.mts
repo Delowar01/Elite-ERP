@@ -23,7 +23,6 @@
 import { chromium } from "playwright";
 import { Client } from "pg";
 import { randomBytes } from "node:crypto";
-import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { armOrRefuse, printSafetySummary, reportArmingFailure, type Identities } from "./provider-harness/guards.mjs";
@@ -31,6 +30,7 @@ import { installRedactedCrashHandler, redact, say } from "./provider-harness/red
 import { Run, runDir, sha256, computeVerdict, exitCodeForVerdict, EXIT_CODES, type ManifestObject } from "./provider-harness/manifest.mjs";
 import { seedObject } from "./provider-harness/seed.mjs";
 import { classifyPostDeletionPublicUrl, type ProbeAnswer } from "./provider-harness/deletion.mjs";
+import { runRepoScript, type ScriptRun } from "./provider-harness/run-script.mjs";
 import { pickCountry } from "./register-org.mjs";
 import { testOrgEmail } from "./provider-harness/test-identity.mjs";
 
@@ -377,9 +377,15 @@ const migrationPaths: string[] = [];
   const pathsFile = join(runDir(runId), "migration-paths.txt");
   writeFileSync(pathsFile, migrationPaths.join("\n") + "\n");
   const stateFile = join(runDir(runId), "migration-state.jsonl");
+  // A launch failure must never look like "the migration selected nothing". Each call is recorded
+  // and, if no process started, that becomes its own mandatory FAILED finding below.
+  const migRuns: ScriptRun[] = [];
   const mig = (...args: string[]) => {
-    try { return execFileSync("npx", ["tsx", "--conditions=react-server", "scripts/blob-migrate.ts", ...args], { encoding: "utf8", env: process.env }); }
-    catch (e) { return String((e as { stdout?: string }).stdout ?? e); }
+    const r = runRepoScript("scripts/blob-migrate.ts", args);
+    migRuns.push(r);
+    if (!r.launched) run.record("§18", `migration subprocess could not be launched (${r.launchError})`, "REAL PROVIDER PROVEN", false,
+      redact(`the helper process never started, so nothing below was measured: ${r.stderr.slice(0, 300)}`));
+    return r.output;
   };
   const selectedIn = (out: string) => out.split("\n").filter((l) => l.trim().startsWith("selected: ")).map((l) => l.trim().slice("selected: ".length)).sort();
 
@@ -442,10 +448,13 @@ say("\n§19 conflict");
   // §14 object just to prove something about this one.
   const conflictPaths = join(runDir(runId), "migration-conflict-paths.txt");
   writeFileSync(conflictPaths, p + "\n");
-  let exitCode = 0;
-  let out = "";
-  try { out = execFileSync("npx", ["tsx", "--conditions=react-server", "scripts/blob-migrate.ts", "--execute", "--paths-file", conflictPaths, "--state", stateFile], { encoding: "utf8", env: process.env }); }
-  catch (e) { out = String((e as { stdout?: string }).stdout ?? ""); exitCode = 1; }
+  // The conflict case is EXPECTED to exit non-zero, which is precisely why a launch failure must be
+  // distinguished from it: both would otherwise read as "non-zero, as intended".
+  const conflictRun = runRepoScript("scripts/blob-migrate.ts", ["--execute", "--paths-file", conflictPaths, "--state", stateFile]);
+  run.record("§19", "the conflict migration subprocess actually launched", "REAL PROVIDER PROVEN", conflictRun.launched,
+    conflictRun.launched ? `exit=${conflictRun.exitCode}` : redact(`launch failed (${conflictRun.launchError}): ${conflictRun.stderr.slice(0, 300)}`));
+  const out = conflictRun.output;
+  const exitCode = conflictRun.launched ? (conflictRun.exitCode ?? 0) : 0;
   const picked = out.split("\n").filter((l) => l.trim().startsWith("selected: ")).map((l) => l.trim().slice("selected: ".length));
   const srcAfter = await src!.get(p);
   const destAfter = await dest.get(p);
@@ -467,7 +476,14 @@ say("\n§21 inventory");
   const orphan = appPath(A.orgId, "attachments", "pdf");
   await seed(src!, "public-source", orphan, PDF, "§21 unreferenced attachment orphan", "application/pdf");
   const invFile = join(runDir(runId), "inventory.json");
-  try { execFileSync("npx", ["tsx", "--conditions=react-server", "scripts/blob-inventory.ts", "--json", invFile, "--hash"], { encoding: "utf8", env: process.env, stdio: "pipe" }); } catch { /* report still written */ }
+  const invRun = runRepoScript("scripts/blob-inventory.ts", ["--json", invFile, "--hash"]);
+  // An inventory that never ran must not arrive as `inv = null` and be reported as a shape problem.
+  run.record("§21", "the inventory subprocess actually launched", "REAL PROVIDER PROVEN", invRun.launched,
+    invRun.launched ? `exit=${invRun.exitCode}` : redact(`launch failed (${invRun.launchError}): ${invRun.stderr.slice(0, 300)}`));
+  if (invRun.launched && invRun.exitCode !== 0 && !existsSync(invFile)) {
+    run.record("§21", "the inventory script produced a report", "REAL PROVIDER PROVEN", false,
+      redact(`exit=${invRun.exitCode} and no JSON was written: ${invRun.stderr.slice(0, 300)}`));
+  }
   const inv = existsSync(invFile) ? JSON.parse(readFileSync(invFile, "utf8")) : null;
   run.record("§21", "inventory reports both stores and reconciliation categories", "REAL PROVIDER PROVEN",
     Boolean(inv?.stores?.publicSource?.present && inv?.stores?.privateDestination?.present && inv?.reconciliation),

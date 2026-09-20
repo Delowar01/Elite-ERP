@@ -3,6 +3,7 @@ import { verifySignedFile } from "@/lib/security/signed-url";
 import { recordFileAccess } from "@/lib/security/audit";
 import { getRequestContext } from "@/lib/security/request-context";
 import { readBlob, BLOB_FOLDER_SET, CONTENT_TYPES, type FileExt } from "@/lib/storage/blob-storage";
+import { logStorageReadFailure } from "@/lib/storage/read-failure-log";
 
 // The ONLY read path for uploaded files. The stored path is organizations/{orgId}/{folder}/{file};
 // ownership is encoded in the path, so a request is served only to (1) a live session whose org
@@ -77,7 +78,14 @@ export async function GET(req: Request, ctx: { params: Promise<{ path: string[] 
         "Cache-Control": `private, max-age=${maxAge}`,
       },
     });
-  } catch {
+  } catch (e) {
+    // The response stays 404 — a caller learns nothing here, whether the object is absent, the
+    // token is wrong or the provider is down. But reaching this line means the request was ALREADY
+    // authorized and the storage read then failed, which is not an ordinary refusal and is the one
+    // case an operator cannot otherwise see: every denial above and a genuine absence below all
+    // look identical from outside. So the reason goes to the server log, sanitized to a fixed
+    // category and non-secret store facts, and never into the response.
+    logStorageReadFailure(pathname, folder, fileOrgId, e);
     return new Response("Not found", { status: 404 });
   }
 }

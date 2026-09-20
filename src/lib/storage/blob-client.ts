@@ -64,9 +64,50 @@ export type AnonymousProbe =
 export type BlobBytes = { bytes: Buffer; contentType: string };
 
 /** Thrown when a genuine object exists but could not be read. Never confused with "absent". */
+/**
+ * A safe classification of WHY a read failed. The category is derived from the provider's status
+ * or the transport failure, never from free text, so it can be logged anywhere without carrying a
+ * token, a header or a URL along with it.
+ */
+export type BlobFailureCategory =
+  | "unauthorized"     // 401/403 — the token is missing, wrong, or not for this store
+  | "rate-limited"     // 429
+  | "server-error"     // 5xx
+  | "transport"        // DNS, TLS, reset, timeout — the provider was never reached
+  | "unexpected-status"
+  | "unknown";
+
+/** Classify without ever reading the message for anything but a coarse transport hint. */
+export function classifyBlobFailure(cause: unknown): BlobFailureCategory {
+  const status = typeof cause === "object" && cause !== null
+    ? Number((cause as { status?: unknown; statusCode?: unknown }).status ?? (cause as { statusCode?: unknown }).statusCode)
+    : NaN;
+  if (status === 401 || status === 403) return "unauthorized";
+  if (status === 429) return "rate-limited";
+  if (status >= 500 && status < 600) return "server-error";
+  if (Number.isInteger(status) && status > 0) return "unexpected-status";
+  const code = typeof cause === "object" && cause !== null ? String((cause as { code?: unknown }).code ?? "") : "";
+  if (/^(ECONNRESET|ECONNREFUSED|ENOTFOUND|EAI_AGAIN|ETIMEDOUT|EPIPE|UND_ERR|CERT_|DEPTH_ZERO)/i.test(code)) return "transport";
+  if (cause instanceof TypeError && /fetch failed/i.test(cause.message)) return "transport";
+  return "unknown";
+}
+
+/**
+ * A read that FAILED, as opposed to an object that is absent — the distinction readBlob() depends
+ * on, since it falls back to the public source only on genuine absence.
+ *
+ * The message deliberately does NOT embed the underlying error. An SDK failure can carry the
+ * request headers, and therefore the Authorization header, and therefore the store token; a message
+ * built with `String(cause)` is a credential one console.error away from a log aggregator. What
+ * travels instead is the pathname, the store role and a fixed category. The original is still
+ * attached as `cause` for a debugger, and nothing in this repository prints it.
+ */
 export class BlobReadError extends Error {
-  constructor(public readonly pathname: string, cause: unknown) {
-    super(`blob read failed for ${pathname}: ${String(cause)}`);
+  readonly category: BlobFailureCategory;
+  constructor(public readonly pathname: string, cause: unknown, public readonly role: StoreRole | "unknown" = "unknown") {
+    const category = typeof cause === "string" ? "unexpected-status" : classifyBlobFailure(cause);
+    super(`blob read failed for ${pathname} (${role} store, ${category})`, { cause });
+    this.category = category;
   }
 }
 
@@ -135,8 +176,19 @@ export interface BlobStore {
   probeAnonymous(pathname: string): Promise<AnonymousProbe>;
 }
 
-const DESTINATION_TOKEN_ENV = "BLOB_READ_WRITE_TOKEN";
-const SOURCE_TOKEN_ENV = "BLOB_PUBLIC_SOURCE_READ_WRITE_TOKEN";
+export const DESTINATION_TOKEN_ENV = "BLOB_READ_WRITE_TOKEN";
+export const SOURCE_TOKEN_ENV = "BLOB_PUBLIC_SOURCE_READ_WRITE_TOKEN";
+
+/**
+ * The store id a token addresses: the 4th underscore-delimited segment, the same derivation the
+ * SDK uses (parseStoreIdFromReadWriteToken). The id is the public half of a provider hostname and
+ * is treated as non-secret throughout Batch 3; the token it came from never leaves this function.
+ */
+export function storeIdFromToken(token: string): string {
+  const id = token.split("_")[3];
+  if (!id) throw new Error("token has no store id segment");
+  return id;
+}
 
 function storeIdOf(token: string): string {
   const id = token.split("_")[3];
@@ -174,10 +226,10 @@ function vercelStore(role: StoreRole, mode: StoreMode, token: string): BlobStore
         // must reach the caller, because readBlob() falls back to the public store on absence and a
         // swallowed auth error would turn every read into a silent public serve.
         if (e instanceof BlobNotFoundError) return null;
-        throw new BlobReadError(pathname, e);
+        throw new BlobReadError(pathname, e, role);
       }
       if (!res) return null;
-      if (res.statusCode !== 200 || !res.stream) throw new BlobReadError(pathname, `unexpected status ${res.statusCode}`);
+      if (res.statusCode !== 200 || !res.stream) throw new BlobReadError(pathname, `unexpected status ${res.statusCode}`, role);
       const chunks: Uint8Array[] = [];
       // @ts-expect-error — Node iterates a web ReadableStream at runtime.
       for await (const chunk of res.stream) chunks.push(chunk as Uint8Array);
