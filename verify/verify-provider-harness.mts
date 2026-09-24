@@ -610,6 +610,78 @@ ok("the org id is filled in once registration resolves it", loadManifest("selfte
   }
 }
 
+// ---- signed-URL expiry. The live §16 failure was a TEST defect: signFileUrl clamps its TTL, so a
+// negative value cannot mint an expired token. This proves the clamp deterministically, against the
+// real production functions, by stubbing the clock rather than sleeping.
+{
+  const { signFileUrl, verifySignedFile } = await import("../src/lib/security/signed-url");
+  const PATH = "organizations/3/logos/3-1700000000000-aaaaaaaaaaaaaaaa.png";
+  const FIXED_MS = 1_800_000_000_000;
+  const fixedSec = Math.floor(FIXED_MS / 1000);
+  const savedNow = Date.now;
+  const savedSecret = process.env.AUTH_SECRET;
+  try {
+    process.env.AUTH_SECRET = "selftest-signing-key-not-a-real-secret";
+    Date.now = () => FIXED_MS;
+    const url = signFileUrl(PATH, -60);
+    const params = new URLSearchParams(url.slice(url.indexOf("?")));
+    const exp = Number(params.get("exp"));
+    const sig = params.get("sig");
+
+    // Math.max(1, Math.floor(ttlSeconds)) — a negative TTL becomes +1 second, not the past.
+    ok("signed url: a NEGATIVE ttl is CLAMPED to +1s and does not mint an expired token",
+       exp === fixedSec + 1, `exp-now=${exp - fixedSec}`);
+    ok("signed url: the clamped token verifies as VALID at minting time — which is why the old §16 test asserted the opposite of the truth",
+       verifySignedFile(PATH, params.get("exp"), sig) === true);
+
+    // exp is still >= now here, and verifySignedFile rejects only once now passes exp.
+    Date.now = () => (exp + 0) * 1000;
+    ok("signed url: it is still valid at exactly exp", verifySignedFile(PATH, params.get("exp"), sig) === true);
+    Date.now = () => (exp + 2) * 1000;
+    ok("signed url: it becomes invalid only once real time passes exp",
+       verifySignedFile(PATH, params.get("exp"), sig) === false);
+
+    // A genuinely short-lived token behaves the same way, which is what §16 now relies on.
+    Date.now = () => FIXED_MS;
+    const short = new URLSearchParams(signFileUrl(PATH, 1).slice(signFileUrl(PATH, 1).indexOf("?")));
+    ok("signed url: a 1-second ttl is honoured as +1s", Number(short.get("exp")) === fixedSec + 1);
+    ok("signed url: and it is valid when minted", verifySignedFile(PATH, short.get("exp"), short.get("sig")) === true);
+    Date.now = () => (fixedSec + 3) * 1000;
+    ok("signed url: and denied a few seconds later", verifySignedFile(PATH, short.get("exp"), short.get("sig")) === false);
+  } finally {
+    Date.now = savedNow;
+    if (savedSecret === undefined) delete process.env.AUTH_SECRET; else process.env.AUTH_SECRET = savedSecret;
+  }
+  ok("signed url: Date.now was restored", Math.abs(Date.now() - new Date().getTime()) < 5_000);
+
+  // The live §16 test must OBSERVE expiry, not manufacture it. Comments are stripped first: the
+  // explanation of the old bug necessarily mentions the old call.
+  const harnessSrc = readFileSync(join(cwd, "verify", "verify-real-blob-provider.mts"), "utf8");
+  const harnessCode = harnessSrc.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  const s16 = harnessCode.slice(harnessCode.indexOf("§16 signed branding access"), harnessCode.indexOf("§17 PDF MATRIX"));
+
+  ok("§16: no negative TTL is used to fake an expired signature", !/signFileUrl\([^)]*,\s*-\d/.test(harnessCode),
+     (harnessCode.match(/signFileUrl\([^)]*,\s*-\d[^)]*\)/g) ?? []).join(" "));
+  ok("§16: a short-lived signature is minted through the real public API", /signFileUrl\(p, 1\)/.test(s16), "");
+  ok("§16: the same signed query is reused for every probe", /const shortQuery = q\(shortLived\)/.test(s16) && (s16.match(/\$\{shortQuery\}/g) ?? []).length >= 1, "");
+  ok("§16: a 200 baseline is required before expiry is claimed", /initialStatus === 200/.test(s16), "");
+  ok("§16: the expiry poll bypasses every cache", /cache: "no-store"/.test(s16), "");
+  ok("§16: the wait is BOUNDED, never open-ended", /POLL_DEADLINE_MS = \d+/.test(s16) && /Date\.now\(\) - startedAt < POLL_DEADLINE_MS/.test(s16), "");
+  ok("§16: the poll interval is in the 200-250ms range", /POLL_INTERVAL_MS = 2[0-5]\d\b/.test(s16), (s16.match(/POLL_INTERVAL_MS = \d+/) ?? [""])[0]);
+  // Scoped to the VERDICT, not the whole section: the poll's own `if (finalStatus !== 200) break`
+  // is legitimate — it stops as soon as the server stops honouring the capability — and only the
+  // recorded assertion has to insist on the exact status.
+  const expiryVerdict = s16.slice(s16.indexOf('"an expired signature is denied"'), s16.indexOf("elapsedMs=${elapsedMs}"));
+  ok("§16: the verdict requires EXACTLY 404, not merely any non-200",
+     /finalStatus === 404/.test(expiryVerdict) && !/finalStatus !== 200/.test(expiryVerdict), expiryVerdict.replace(/\s+/g, " ").slice(0, 140));
+  ok("§16: the verdict also requires the capability to have been valid first",
+     /initialStatus === 200 && finalStatus === 404/.test(s16), "");
+  ok("§16: the recorded evidence carries the timing facts needed to diagnose it",
+     /initial=\$\{initialStatus\}/.test(s16) && /final=\$\{finalStatus\}/.test(s16) && /exp=\$\{shortExp\}/.test(s16) && /polls=\$\{polls\}/.test(s16) && /elapsedMs=\$\{elapsedMs\}/.test(s16), "");
+  ok("§16: no signature or secret is interpolated into any recorded detail",
+     !/\$\{sig\b|\$\{shortLived\}|AUTH_SECRET/.test(s16), "");
+}
+
 // ---- cross-platform subprocess execution. The real run failed on Windows because there is no
 // executable called `npx` there — only npx.cmd — and execFile does not go through a shell. §18, §19
 // and §21 all failed together while every direct Blob call around them worked.

@@ -327,8 +327,50 @@ say("\n§16 signed branding access");
   run.record("§16", "a session response keeps the normal one-hour private cache", "REAL PREVIEW APPLICATION PROVEN",
     /max-age=3600/.test(rSession.headers.get("cache-control") ?? ""), String(rSession.headers.get("cache-control")));
 
-  const expired = signFileUrl(p, -60);
-  run.record("§16", "an expired signature is denied", "REAL PREVIEW APPLICATION PROVEN", (await get(`/uploads/${p}`, { query: q(expired) })).status !== 200);
+  // EXPIRY IS OBSERVED, NOT MANUFACTURED. The previous test minted signFileUrl(p, -60) and asserted
+  // the result was denied. signFileUrl clamps: `Math.max(1, Math.floor(ttlSeconds))`, so a negative
+  // TTL does not produce an expired token — it produces one valid for at least another second. The
+  // assertion was therefore the opposite of the truth, and the live run failed on it while every
+  // other §16 check passed. The runtime is correct; the test was not.
+  //
+  // So the same capability is watched across its own expiry: mint a one-second signature, prove the
+  // Preview honours it, then poll that identical signed URL until the Preview refuses it. Nothing is
+  // hand-rolled — no private internals, no duplicated HMAC — and the local clock is not assumed to
+  // match the Preview's, which is why this waits for the server's answer rather than for a deadline
+  // computed here.
+  const shortLived = signFileUrl(p, 1);
+  const shortQuery = q(shortLived);
+  const shortExp = Number(new URLSearchParams(shortQuery).get("exp"));
+  // cache: "no-store" on every probe. A cached 200 would let an expired capability keep appearing
+  // valid, which is exactly the failure this check exists to catch.
+  const probeSigned = async (): Promise<number> => {
+    const r = await fetch(`${BASE}/uploads/${p}${shortQuery}`, { cache: "no-store", redirect: "manual" });
+    await r.arrayBuffer();
+    return r.status;
+  };
+
+  const initialStatus = await probeSigned();
+  run.record("§16", "a short-lived signature is initially valid", "REAL PREVIEW APPLICATION PROVEN",
+    initialStatus === 200, `status=${initialStatus} exp=${shortExp}`);
+
+  const POLL_DEADLINE_MS = 8000;
+  const POLL_INTERVAL_MS = 220;
+  const startedAt = Date.now();
+  let polls = 0;
+  let finalStatus = initialStatus;
+  while (Date.now() - startedAt < POLL_DEADLINE_MS) {
+    await new Promise<void>((resolve) => { setTimeout(resolve, POLL_INTERVAL_MS); });
+    polls++;
+    finalStatus = await probeSigned();
+    if (finalStatus !== 200) break;
+  }
+  const elapsedMs = Date.now() - startedAt;
+  // 404 exactly: the uploads route denies every unauthorized request with a non-enumerable 404, so
+  // any other status — a 5xx in particular — is a different failure and must not read as a pass.
+  // And the baseline matters: "denied" proves nothing unless this same URL was honoured first.
+  run.record("§16", "an expired signature is denied", "REAL PREVIEW APPLICATION PROVEN",
+    initialStatus === 200 && finalStatus === 404,
+    `initial=${initialStatus} final=${finalStatus} exp=${shortExp} polls=${polls} elapsedMs=${elapsedMs}`);
   const sigVal = new URLSearchParams(q(valid)).get("sig")!;
   const corrupted = q(valid).replace(`sig=${sigVal}`, `sig=${(sigVal[0] === "A" ? "B" : "A") + sigVal.slice(1)}`);
   run.record("§16", "a corrupted signature is denied", "REAL PREVIEW APPLICATION PROVEN", (await get(`/uploads/${p}`, { query: corrupted })).status !== 200);
