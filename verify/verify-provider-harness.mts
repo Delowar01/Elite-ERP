@@ -354,6 +354,14 @@ ok("the org id is filled in once registration resolves it", loadManifest("selfte
     reEnableFails?: string;     // ENABLE TRIGGER silently does not take
     ownerOrgId?: number;        // the org the recorded email actually belongs to
     noOwner?: boolean;          // the recorded email matches no user at all
+    /**
+     * The live shape that broke the first run: the org's own quotation references its creator with
+     * ON DELETE NO ACTION, so deleting the USER directly raises. Default true — this is what the
+     * disposable database actually does, and a mock that omitted it let the old code pass.
+     */
+    userReferencedByDocument?: boolean;
+    /** The org cascade fails to take the user with it. */
+    userSurvivesOrgCascade?: boolean;
   };
 
   /**
@@ -363,13 +371,14 @@ ok("the org id is filled in once registration resolves it", loadManifest("selfte
    * security_events.org_id is CASCADE, so deleting an org mutates both immutable tables.
    */
   const mkDb = (behaviour: Behaviour) => {
-    let userGone = false, orgGone = false, inTx = false, rolledBack = false, committed = false;
+    let userGone = false, orgGone = false, quotationGone = false, inTx = false, rolledBack = false, committed = false;
+    const userIsReferenced = behaviour.userReferencedByDocument !== false;
     const seen: string[] = [];
     const enabled: Record<string, boolean> = { audit_logs_immutable: true, security_events_immutable: true };
     if (behaviour.disabledTrigger) enabled[behaviour.disabledTrigger] = false;
     const CHILD_IDS: Record<string, number[]> = { quotation_items: [11, 12], sales_invoice_items: [21, 22, 23] };
     // Committed state, so a ROLLBACK can restore it rather than the test asserting on nothing.
-    let snapshot: { userGone: boolean; orgGone: boolean; enabled: Record<string, boolean> } | null = null;
+    let snapshot: { userGone: boolean; orgGone: boolean; quotationGone: boolean; enabled: Record<string, boolean> } | null = null;
     return {
       seen,
       get inTx() { return inTx; },
@@ -383,11 +392,11 @@ ok("the org id is filled in once registration resolves it", loadManifest("selfte
         const table = /from "([a-z_]+)"|TABLE "([a-z_]+)"/.exec(sql);
         const tableName = table?.[1] ?? table?.[2];
 
-        if (/^BEGIN$/.test(sql)) { inTx = true; snapshot = { userGone, orgGone, enabled: { ...enabled } }; return { rows: [] }; }
+        if (/^BEGIN$/.test(sql)) { inTx = true; snapshot = { userGone, orgGone, quotationGone, enabled: { ...enabled } }; return { rows: [] }; }
         if (/^COMMIT$/.test(sql)) { inTx = false; committed = true; snapshot = null; return { rows: [] }; }
         if (/^ROLLBACK$/.test(sql)) {
           inTx = false; rolledBack = true;
-          if (snapshot) { userGone = snapshot.userGone; orgGone = snapshot.orgGone; Object.assign(enabled, snapshot.enabled); }
+          if (snapshot) { userGone = snapshot.userGone; orgGone = snapshot.orgGone; quotationGone = snapshot.quotationGone; Object.assign(enabled, snapshot.enabled); }
           return { rows: [] };
         }
         if (/DISABLE TRIGGER/.test(sql)) {
@@ -416,21 +425,36 @@ ok("the org id is filled in once registration resolves it", loadManifest("selfte
         if (/^select c\.id from/.test(sql)) return { rows: (CHILD_IDS[tableName ?? ""] ?? []).map((id) => ({ id })) };
         // The append-only triggers are what make this realistic: with either still enabled, the
         // delete raises, exactly as reject_mutation() does on the real database.
+        // A DIRECT user delete is what the live run attempted. The org's quotation references the
+        // user with ON DELETE NO ACTION, so PostgreSQL refuses — verbatim, as it did on org 3.
         if (/^delete from users/.test(sql)) {
           if (enabled.audit_logs_immutable) throw new Error("Table audit_logs is append-only; UPDATE is not permitted");
+          if (userIsReferenced && !quotationGone) {
+            throw new Error('update or delete on table "users" violates foreign key constraint "quotations_created_by_id_users_id_fk" on table "quotations"');
+          }
           userGone = behaviour.userDeleted !== false && /email=\$1/.test(sql) && params[0] === EMAIL;
           return { rows: [] };
         }
+        // The ORG delete discharges the graph in dependency order: the quotation goes with the org,
+        // which frees the user, which users.org_id CASCADE then removes.
         if (/^delete from orgs/.test(sql)) {
           if (enabled.audit_logs_immutable) throw new Error("Table audit_logs is append-only; UPDATE is not permitted");
           if (enabled.security_events_immutable) throw new Error("Table security_events is append-only; DELETE is not permitted");
-          orgGone = behaviour.orgDeleted !== false && /id=\$1/.test(sql) && params[0] === 4242;
+          const addressed = /id=\$1/.test(sql) && params[0] === 4242;
+          if (addressed) {
+            quotationGone = true;                                    // child documents cascade first
+            if (behaviour.orgDeleted !== false) orgGone = true;
+            if (!behaviour.userSurvivesOrgCascade) userGone = behaviour.userDeleted !== false;
+          }
           return { rows: [] };
         }
         if (/count\(\*\)::int as c from orgs/.test(sql)) return { rows: [{ c: orgGone ? 0 : 1 }] };
         if (/count\(\*\)::int as c from users/.test(sql)) return { rows: [{ c: userGone ? 0 : 1 }] };
         if (/where id = any/.test(sql)) return { rows: [{ c: behaviour.orphanChild === tableName ? 1 : 0 }] };
-        if (/where org_id/.test(sql)) return { rows: [{ c: behaviour.leftover === tableName ? 3 : 0 }] };
+        if (/where org_id/.test(sql)) {
+          if (tableName === "quotations" && !quotationGone) return { rows: [{ c: 1 }] };
+          return { rows: [{ c: behaviour.leftover === tableName ? 3 : 0 }] };
+        }
         return { rows: [{ c: 0 }] };
       },
     };
@@ -463,10 +487,45 @@ ok("the org id is filled in once registration resolves it", loadManifest("selfte
   ok("db cleanup: never DISABLE TRIGGER ALL or USER", !goodDb.seen.some((q) => /DISABLE TRIGGER (ALL|USER)/i.test(q)));
   ok("db cleanup: reject_mutation() is never dropped and no trigger is dropped",
      !goodDb.seen.some((q) => /DROP (TRIGGER|FUNCTION)/i.test(q)));
-  ok("db cleanup: the user is deleted by its exact recorded address, passed as a parameter",
-     goodDb.seen.some((q) => /^delete from users where email=\$1$/.test(q.trim())), "");
-  ok("db cleanup: no statement uses LIKE or any other pattern sweep", !goodDb.seen.some((q) => /\blike\b/i.test(q)));
+  // THE REGRESSION. The first live run deleted the user explicitly and org 3 failed on
+  // quotations_created_by_id_users_id_fk. Deleting the org is not merely sufficient, it is the only
+  // correct step: the database already knows the order.
+  ok("db cleanup: NO direct DELETE FROM users is ever issued",
+     !goodDb.seen.some((q) => /^delete\s+from\s+users/i.test(q.trim())), JSON.stringify(goodDb.seen.filter((q) => /^delete/i.test(q.trim()))));
+  ok("db cleanup: the ONLY delete is the org, addressed by exact id parameter",
+     goodDb.seen.filter((q) => /^delete/i.test(q.trim())).length === 1 &&
+     /^delete from orgs where id=\$1$/.test(goodDb.seen.find((q) => /^delete/i.test(q.trim()))!.trim()),
+     JSON.stringify(goodDb.seen.filter((q) => /^delete/i.test(q.trim()))));
+  ok("db cleanup: the user disappears as a CONSEQUENCE of the org cascade, not a separate step",
+     goodDb.userGone && goodDb.orgGone, `userGone=${goodDb.userGone} orgGone=${goodDb.orgGone}`);
+  // \blike\b alone misses ILIKE — the "i" is a word character, so the boundary never matches, and a
+  // case-insensitive locator would have slipped straight past this assertion.
+  ok("db cleanup: no statement uses LIKE, ILIKE, SIMILAR TO or a regex match",
+     !goodDb.seen.some((q) => /\b(i?like|similar\s+to)\b|[^:]~\*?\s/i.test(q)),
+     JSON.stringify(goodDb.seen.filter((q) => /\b(i?like|similar\s+to)\b/i.test(q))));
+  ok("db cleanup: the ownership locator is exact equality on a parameter",
+     goodDb.seen.some((q) => /^select org_id from users where email=\$1$/.test(q.trim())),
+     JSON.stringify(goodDb.seen.filter((q) => /select org_id/.test(q))));
   ok("db cleanup: the log records that hardening was restored", good.log[0].includes("hardening restored"), good.log[0]);
+
+  // The mock must be able to FAIL the old code, or this regression proves nothing. Issued directly,
+  // the user delete raises the live error verbatim; issued after the org delete it does not, because
+  // the quotation is already gone.
+  {
+    const probe = mkDb({});
+    let directErr = "";
+    await probe.query("BEGIN");
+    try { await probe.query("ALTER TABLE \"audit_logs\" DISABLE TRIGGER \"audit_logs_immutable\""); } catch { /* setup */ }
+    try { await probe.query("ALTER TABLE \"security_events\" DISABLE TRIGGER \"security_events_immutable\""); } catch { /* setup */ }
+    try { await probe.query("delete from users where email=$1", [EMAIL]); } catch (e) { directErr = String(e); }
+    ok("regression: a DIRECT user delete raises the live foreign-key error",
+       /quotations_created_by_id_users_id_fk/.test(directErr), directErr.slice(0, 140));
+    ok("regression: the error names the ON DELETE NO ACTION direction", /violates foreign key constraint/.test(directErr), "");
+    await probe.query("delete from orgs where id=$1", [4242]);
+    ok("regression: the org delete removes the referencing document and the user together",
+       probe.orgGone && probe.userGone, `org=${probe.orgGone} user=${probe.userGone}`);
+    await probe.query("ROLLBACK");
+  }
 
   // ---- child fixture capture, unchanged guarantees
   ok("db cleanup: child fixture ids are captured BEFORE the org is deleted",
@@ -517,6 +576,8 @@ ok("the org id is filled in once registration resolves it", loadManifest("selfte
   const rollbackCases: [string, Behaviour, RegExp][] = [
     ["the org row survives", { orgDeleted: false }, /orgGone=false/],
     ["the user row survives", { userDeleted: false }, /userGone=false/],
+    ["the user survives the org cascade", { userSurvivesOrgCascade: true }, /userGone=false/],
+    ["a quotation survives the org cascade", { leftover: "quotations" }, /quotations=/],
     ["an org-scoped table still holds rows", { leftover: "customers" }, /customers=3/],
     ["an orphaned child row remains", { orphanChild: "sales_invoice_items" }, /sales_invoice_items=1 of 3/],
     ["a verification query throws", { failVerifyFor: "customers" }, /does not exist/],

@@ -122,9 +122,21 @@ export type DbCleanupResult = { removed: number; failed: number; log: string[] }
  * org therefore removes its users, documents, line items and every other fixture the PDF matrix
  * created, in one dependency-correct step — no hand-maintained table list to fall out of date.
  *
- * The user is deleted first anyway, so the ordering is correct even if a future schema change
- * weakens that FK, and the result is VERIFIED afterwards across every table the harness writes to
- * rather than trusting the cascade to have happened.
+ * THE ORG IS THE ONLY ROW DELETED, and that is load-bearing rather than tidy. An earlier version
+ * deleted the user first, on the theory that doing so was harmless and would survive a future
+ * schema change weakening users.org_id. It is not harmless: a disposable org's own documents
+ * reference its user with ON DELETE NO ACTION —
+ *
+ *   quotations.created_by_id -> users.id    ON DELETE NO ACTION
+ *
+ * — so the explicit delete hit that constraint and rolled the whole transaction back, which is
+ * exactly what happened on the first live run (org 4 had created no quotation and was removed; org
+ * 3 had one and failed). Deleting the ORG lets PostgreSQL discharge the graph in dependency order:
+ * quotations go with the org, which frees the user, which users.org_id CASCADE then removes. Adding
+ * a manual first step only re-imposes an ordering the database already had right.
+ *
+ * The result is still VERIFIED afterwards — the org row, the exact recorded user, every org-scoped
+ * table and every captured child id — rather than trusting the cascade to have fired.
  */
 /**
  * Tables the harness and its PDF fixtures write into that carry their own org_id, so the org alone
@@ -275,7 +287,9 @@ export async function cleanupTestOrgs(
           await db.query(`ALTER TABLE "${table}" DISABLE TRIGGER "${trigger}"`);
         }
 
-        await db.query("delete from users where email=$1", [org.email]);
+        // ORG-ROOTED, and only the org. See the header: an explicit user delete violates
+        // quotations.created_by_id (ON DELETE NO ACTION); the cascade from orgs removes the
+        // documents first and the user with them, in an order the database already knows.
         await db.query("delete from orgs where id=$1", [orgId]);
 
         // Verify INSIDE the transaction, so a cascade that did not fire rolls the deletion back
