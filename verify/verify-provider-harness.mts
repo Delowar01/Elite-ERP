@@ -738,12 +738,38 @@ ok("the org id is filled in once registration resolves it", loadManifest("selfte
 
   ok("§16: no negative TTL is used to fake an expired signature", !/signFileUrl\([^)]*,\s*-\d/.test(harnessCode),
      (harnessCode.match(/signFileUrl\([^)]*,\s*-\d[^)]*\)/g) ?? []).join(" "));
-  ok("§16: a short-lived signature is minted through the real public API", /signFileUrl\(p, 1\)/.test(s16), "");
+  // A/B/C — the live TTL is a named constant with a survivable value. One second could not survive
+  // second-boundary rounding plus network latency plus small Preview clock skew, and a live run lost
+  // the whole budget before its first probe arrived.
+  ok("§16: the live expiry TTL is a NAMED constant, not a literal buried in the signFileUrl call",
+     /const LIVE_EXPIRY_TTL_SECONDS = (\d+);/.test(s16) && /signFileUrl\(p, LIVE_EXPIRY_TTL_SECONDS\)/.test(s16), "");
+  const liveTtl = Number((/const LIVE_EXPIRY_TTL_SECONDS = (\d+);/.exec(s16) ?? [])[1]);
+  ok("§16: the live expiry TTL is NOT 1 second", liveTtl !== 1 && liveTtl !== 2, `ttl=${liveTtl}`);
+  ok("§16: the live expiry TTL is at least 5 seconds", liveTtl >= 5, `ttl=${liveTtl}`);
+  ok("§16: no bare 1-second signature is minted for the expiry test", !/signFileUrl\(p, 1\)/.test(s16), "");
+
+  // D — the bounded wait must comfortably outlast the TTL, or the deadline itself becomes the flake.
+  const deadline = Number((/const POLL_DEADLINE_MS = ([\d_]+);/.exec(s16) ?? [])[1]?.replace(/_/g, ""));
+  ok("§16: the poll deadline strictly exceeds the TTL", deadline > liveTtl * 1000, `deadline=${deadline} ttl=${liveTtl * 1000}`);
+  ok("§16: and leaves real slack — at least twice the TTL", deadline >= liveTtl * 2000, `deadline=${deadline}`);
+
+  // H — a failed baseline must never be retried with a fresh signature; that would hide the very
+  // clock and timing problems this section exists to surface.
+  ok("§16: the capability is minted exactly ONCE — no remint, no retry loop",
+     (s16.match(/signFileUrl\(p, LIVE_EXPIRY_TTL_SECONDS\)/g) ?? []).length === 1 && !/retry|remint|attempt/i.test(s16), "");
+  // Scoped to the LOOP BODY. Later §16 checks (wrong-pathname, non-branding folders) legitimately
+  // mint their own signatures; what matters is that the expiry poll re-probes without re-signing.
+  const loopStart = s16.indexOf("while (Date.now() - startedAt");
+  const loopBody = s16.slice(loopStart, s16.indexOf("const elapsedMs", loopStart));
+  ok("§16: the poll loop only re-probes, it never re-signs", !/signFileUrl/.test(loopBody), loopBody.replace(/\s+/g, " ").slice(0, 120));
   ok("§16: the same signed query is reused for every probe", /const shortQuery = q\(shortLived\)/.test(s16) && (s16.match(/\$\{shortQuery\}/g) ?? []).length >= 1, "");
   ok("§16: a 200 baseline is required before expiry is claimed", /initialStatus === 200/.test(s16), "");
   ok("§16: the expiry poll bypasses every cache", /cache: "no-store"/.test(s16), "");
   ok("§16: the wait is BOUNDED, never open-ended", /POLL_DEADLINE_MS = \d+/.test(s16) && /Date\.now\(\) - startedAt < POLL_DEADLINE_MS/.test(s16), "");
   ok("§16: the poll interval is in the 200-250ms range", /POLL_INTERVAL_MS = 2[0-5]\d\b/.test(s16), (s16.match(/POLL_INTERVAL_MS = \d+/) ?? [""])[0]);
+  ok("§16: the optional server-Date diagnostic is not part of any verdict",
+     /serverSecondsLeft/.test(s16) && !/serverSecondsLeft [!=]==?/.test(s16) &&
+     !new RegExp("serverSecondsLeft[^`]*\\)\\s*;\\s*$", "m").test(s16.split("run.record").filter((b) => /passed|=== 200|=== 404/.test(b)).join("")), "");
   // Scoped to the VERDICT, not the whole section: the poll's own `if (finalStatus !== 200) break`
   // is legitimate — it stops as soon as the server stops honouring the capability — and only the
   // recorded assertion has to insist on the exact status.
@@ -752,10 +778,21 @@ ok("the org id is filled in once registration resolves it", loadManifest("selfte
      /finalStatus === 404/.test(expiryVerdict) && !/finalStatus !== 200/.test(expiryVerdict), expiryVerdict.replace(/\s+/g, " ").slice(0, 140));
   ok("§16: the verdict also requires the capability to have been valid first",
      /initialStatus === 200 && finalStatus === 404/.test(s16), "");
-  ok("§16: the recorded evidence carries the timing facts needed to diagnose it",
-     /initial=\$\{initialStatus\}/.test(s16) && /final=\$\{finalStatus\}/.test(s16) && /exp=\$\{shortExp\}/.test(s16) && /polls=\$\{polls\}/.test(s16) && /elapsedMs=\$\{elapsedMs\}/.test(s16), "");
-  ok("§16: no signature or secret is interpolated into any recorded detail",
-     !/\$\{sig\b|\$\{shortLived\}|AUTH_SECRET/.test(s16), "");
+  // Asserted PER RECORD. Checking the section as a whole let the baseline lose a field while the
+  // expiry verdict's own copy kept the assertion green — and the baseline is the record that failed
+  // live, so its detail is exactly where the timing facts have to be.
+  const baselineDetail = s16.slice(s16.indexOf('"a short-lived signature is initially valid"'), s16.indexOf("const startedAt"));
+  const expiryDetail = s16.slice(s16.indexOf('"an expired signature is denied"'));
+  for (const [what, detail, fields] of [
+    ["the initial-validity record", baselineDetail, ["status=${initialStatus}", "ttl=${LIVE_EXPIRY_TTL_SECONDS}", "exp=${shortExp}", "initialElapsedMs=${initialElapsedMs}"]],
+    ["the expiry verdict", expiryDetail, ["initial=${initialStatus}", "initialElapsedMs=${initialElapsedMs}", "final=${finalStatus}", "ttl=${LIVE_EXPIRY_TTL_SECONDS}", "exp=${shortExp}", "polls=${polls}", "elapsedMs=${elapsedMs}"]],
+  ] as [string, string, string[]][]) {
+    const missing = fields.filter((f) => !detail.includes(f));
+    ok(`§16: ${what} carries every timing fact needed to diagnose a skew problem`, missing.length === 0, `missing: ${missing.join(", ")}`);
+  }
+  ok("§16: no signature, signed query, cookie or secret is interpolated into any recorded detail",
+     !/\$\{sig\b|\$\{shortLived\}|\$\{shortQuery\}|AUTH_SECRET|cookie/i.test(
+       s16.split("\n").filter((l) => /run\.record/.test(l) || /^\s*`/.test(l)).join("\n")), "");
 }
 
 // ---- cross-platform subprocess execution. The real run failed on Windows because there is no

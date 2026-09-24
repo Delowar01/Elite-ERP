@@ -340,50 +340,71 @@ say("\n§16 signed branding access");
   run.record("§16", "a session response keeps the normal one-hour private cache", "REAL PREVIEW APPLICATION PROVEN",
     /max-age=3600/.test(rSession.headers.get("cache-control") ?? ""), String(rSession.headers.get("cache-control")));
 
-  // EXPIRY IS OBSERVED, NOT MANUFACTURED. The previous test minted signFileUrl(p, -60) and asserted
-  // the result was denied. signFileUrl clamps: `Math.max(1, Math.floor(ttlSeconds))`, so a negative
-  // TTL does not produce an expired token — it produces one valid for at least another second. The
-  // assertion was therefore the opposite of the truth, and the live run failed on it while every
-  // other §16 check passed. The runtime is correct; the test was not.
+  // EXPIRY IS OBSERVED, NOT MANUFACTURED, AND THE WINDOW IS SURVIVABLE.
   //
-  // So the same capability is watched across its own expiry: mint a one-second signature, prove the
-  // Preview honours it, then poll that identical signed URL until the Preview refuses it. Nothing is
-  // hand-rolled — no private internals, no duplicated HMAC — and the local clock is not assumed to
-  // match the Preview's, which is why this waits for the server's answer rather than for a deadline
-  // computed here.
-  const shortLived = signFileUrl(p, 1);
+  // Two corrections live here. First: an earlier version minted signFileUrl(p, -60) and asserted the
+  // result was denied. signFileUrl clamps with `Math.max(1, Math.floor(ttlSeconds))`, so a negative
+  // TTL yields a token valid for at least another second — the assertion was the opposite of the
+  // truth. Second: replacing it with a ONE-second token made the test depend on a cross-machine
+  // timing window it could not win. Production rounds to whole seconds and denies only once
+  // `exp < floor(now)`, so a nominal 1s token carries roughly 1–2s of real validity depending on
+  // where inside the current second it was minted, and the very first request can lose all of it to
+  // second-boundary rounding, network latency, small Preview clock skew, or ordinary scheduling. A
+  // live run did exactly that: the first probe already saw 404, so the baseline failed and the
+  // expiry verdict failed with it — while the 60-second signature in this same section returned 200.
+  //
+  // Ten seconds is long enough that transport and skew cannot consume the whole budget, and short
+  // enough to observe within a bounded wait. The proof shape is unchanged: ONE capability, proven
+  // honoured, then polled — the same query every time — until the Preview itself refuses it. Nothing
+  // is hand-rolled, no HMAC is duplicated, and no sleep is the assertion; the server's answer is.
+  const LIVE_EXPIRY_TTL_SECONDS = 10;
+  const POLL_INTERVAL_MS = 250;
+  const POLL_DEADLINE_MS = 20_000;
+
+  const mintedAtMs = Date.now();
+  const shortLived = signFileUrl(p, LIVE_EXPIRY_TTL_SECONDS);
   const shortQuery = q(shortLived);
   const shortExp = Number(new URLSearchParams(shortQuery).get("exp"));
   // cache: "no-store" on every probe. A cached 200 would let an expired capability keep appearing
   // valid, which is exactly the failure this check exists to catch.
-  const probeSigned = async (): Promise<number> => {
+  const probeSigned = async (): Promise<{ status: number; serverDate: string | null }> => {
     const r = await fetch(`${BASE}/uploads/${p}${shortQuery}`, { cache: "no-store", redirect: "manual" });
     await r.arrayBuffer();
-    return r.status;
+    return { status: r.status, serverDate: r.headers.get("date") };
   };
 
-  const initialStatus = await probeSigned();
+  const initial = await probeSigned();
+  const initialElapsedMs = Date.now() - mintedAtMs;
+  const initialStatus = initial.status;
+  // Non-secret timing context only, and deliberately NOT part of any verdict: the Preview's own Date
+  // header says how much validity the server thought was left when it answered, which is what makes
+  // a skew problem legible instead of looking like a broken capability.
+  const serverSecondsLeft = initial.serverDate
+    ? shortExp - Math.floor(new Date(initial.serverDate).getTime() / 1000)
+    : null;
   run.record("§16", "a short-lived signature is initially valid", "REAL PREVIEW APPLICATION PROVEN",
-    initialStatus === 200, `status=${initialStatus} exp=${shortExp}`);
+    initialStatus === 200,
+    `status=${initialStatus} ttl=${LIVE_EXPIRY_TTL_SECONDS}s exp=${shortExp} initialElapsedMs=${initialElapsedMs} serverSecondsLeft=${serverSecondsLeft ?? "unknown"}`);
 
-  const POLL_DEADLINE_MS = 8000;
-  const POLL_INTERVAL_MS = 220;
+  // The SAME capability is polled — never re-minted. Re-signing after a failed baseline would hide
+  // exactly the clock and timing problems this section exists to surface.
   const startedAt = Date.now();
   let polls = 0;
   let finalStatus = initialStatus;
   while (Date.now() - startedAt < POLL_DEADLINE_MS) {
     await new Promise<void>((resolve) => { setTimeout(resolve, POLL_INTERVAL_MS); });
     polls++;
-    finalStatus = await probeSigned();
+    finalStatus = (await probeSigned()).status;
     if (finalStatus !== 200) break;
   }
   const elapsedMs = Date.now() - startedAt;
   // 404 exactly: the uploads route denies every unauthorized request with a non-enumerable 404, so
-  // any other status — a 5xx in particular — is a different failure and must not read as a pass.
-  // And the baseline matters: "denied" proves nothing unless this same URL was honoured first.
+  // any other status — 5xx, 429, a redirect, 401, 403 — is a different failure and must not read as
+  // a pass. And the baseline matters: "denied" proves nothing unless this same URL was honoured
+  // first. Still 200 at the deadline is also a failure.
   run.record("§16", "an expired signature is denied", "REAL PREVIEW APPLICATION PROVEN",
     initialStatus === 200 && finalStatus === 404,
-    `initial=${initialStatus} final=${finalStatus} exp=${shortExp} polls=${polls} elapsedMs=${elapsedMs}`);
+    `initial=${initialStatus} initialElapsedMs=${initialElapsedMs} final=${finalStatus} ttl=${LIVE_EXPIRY_TTL_SECONDS}s exp=${shortExp} polls=${polls} elapsedMs=${elapsedMs}`);
   const sigVal = new URLSearchParams(q(valid)).get("sig")!;
   const corrupted = q(valid).replace(`sig=${sigVal}`, `sig=${(sigVal[0] === "A" ? "B" : "A") + sigVal.slice(1)}`);
   run.record("§16", "a corrupted signature is denied", "REAL PREVIEW APPLICATION PROVEN", (await get(`/uploads/${p}`, { query: corrupted })).status !== 200);
