@@ -124,6 +124,28 @@ function record(e: Entry) {
   appendFileSync(statePath, JSON.stringify(e) + "\n");
 }
 
+/**
+ * Every DESTINATION read in a migration bypasses the CDN.
+ *
+ * Both of them exist to answer "what is in the destination right now", and a cached answer is the
+ * wrong answer to that question in two different directions. Read-before-write: a stale copy of an
+ * older object would be compared as if it were current, so a genuine CONFLICT could be missed or an
+ * already-correct copy mis-reported. Immediate post-write verification: a stale absence makes a copy
+ * that did land look like it did not.
+ *
+ * A live provider run showed the second case — one fixture reported `state=verified` and then read
+ * back absent moments later, while read-only inspection afterwards found it present in both stores
+ * with the expected sha256. A consistent read removes that ambiguity; a sleep or a retry would only
+ * hide it, and would turn "eventually correct" into evidence of "immediately correct", which is a
+ * different and weaker claim.
+ *
+ * The SOURCE read is deliberately left on the default cached path: nothing writes to the public
+ * source during a migration, so there is no newer version for a cache to be stale about, and paying
+ * origin transfer for every object of a full migration to prove that would be waste. Application
+ * reads stay cached for the same reason — see BlobGetOptions.
+ */
+const CONSISTENT = { useCache: false } as const;
+
 async function migrateOne(src: BlobStore, dest: BlobStore, pathname: string, listedSize: number): Promise<Entry> {
   const at = new Date().toISOString();
   try {
@@ -137,7 +159,7 @@ async function migrateOne(src: BlobStore, dest: BlobStore, pathname: string, lis
     // anonymous refusal. Returning `verified` on matching bytes alone opened a real crash-recovery
     // hole: copy succeeds, the process dies before the privacy probe, the rerun sees identical
     // bytes and records `verified` for an object whose privacy was never proven once.
-    const existing = await dest.get(pathname);
+    const existing = await dest.get(pathname, CONSISTENT);
     if (existing) {
       if (sha(existing.bytes) !== sourceHash) {
         return { pathname, state: "conflict", reason: `destination exists with different content (source sha ${sourceHash.slice(0, 12)}, destination sha ${sha(existing.bytes).slice(0, 12)})`, at };
@@ -152,7 +174,7 @@ async function migrateOne(src: BlobStore, dest: BlobStore, pathname: string, lis
 
     await dest.put(pathname, source.bytes, { contentType: source.contentType });
 
-    const after = await dest.get(pathname);
+    const after = await dest.get(pathname, CONSISTENT);
     if (!after) return { pathname, state: "failed", reason: "destination object missing immediately after write", at };
     if (after.bytes.length !== source.bytes.length) return { pathname, state: "failed", reason: `destination size mismatch: ${source.bytes.length} -> ${after.bytes.length}`, at };
     if (sha(after.bytes) !== sourceHash) return { pathname, state: "failed", reason: "destination sha256 does not match the source", at };

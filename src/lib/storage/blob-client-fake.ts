@@ -67,7 +67,21 @@ export function fakeStore(role: StoreRole, mode: StoreMode): BlobStore {
       writeFileSync(metaOf(mode, pathname), JSON.stringify({ contentType, uploadedAt: new Date().toISOString() } satisfies Sidecar));
     },
 
-    async get(pathname) {
+    // The signature matches the real store exactly, including the consistent-read option. The fake
+    // has no CDN in front of it, so nothing here is ever stale and the flag has nothing to do —
+    // accepting it keeps the interface structurally identical rather than letting the two drivers
+    // drift, and lets suites exercise the option without a cache emulator.
+    async get(pathname, opts) {
+      // An injectable STALE NEGATIVE, so the consistent-read option is testable without emulating a
+      // CDN. It reduces the live symptom to the single property that matters: a DEFAULT read may
+      // report absence for an object that is present, and an explicit consistent read may not. With
+      // it armed on the destination, any code path that needs current state and forgot to ask for it
+      // fails — which is exactly the regression this exists to catch.
+      const stale = process.env.STORAGE_FAKE_STALE_ABSENT;
+      if (stale && role === (process.env.STORAGE_FAKE_STALE_ABSENT_ROLE ?? "destination")
+          && pathname.includes(stale) && opts?.useCache !== false) {
+        return null;
+      }
       // A configurable fault, so a suite can prove that a READ FAILURE does not masquerade as
       // "absent" and trigger the migration fallback. Without it that distinction is untestable.
       //

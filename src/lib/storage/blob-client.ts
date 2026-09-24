@@ -138,6 +138,22 @@ export class BlobDeleteError extends Error {
   }
 }
 
+/**
+ * Options for a single read.
+ *
+ * `useCache: false` is an OPT-IN consistent read: it bypasses the CDN and goes to origin storage,
+ * so it reflects the latest write. It is opt-in rather than the default because it costs latency
+ * and origin transfer on every call, and the overwhelming majority of reads in this application
+ * serve a file to a browser that does not care whether it is a few seconds stale.
+ *
+ * It exists for read-before-write and immediate post-write verification, where being a few seconds
+ * stale is the difference between a correct answer and a wrong one. A live provider run produced a
+ * transient stale/absent destination read immediately after a copy the same run had verified —
+ * later read-only inspection found the object present with the expected bytes in both stores — and
+ * a consistent read removes that ambiguity rather than papering over it with a sleep or a retry.
+ */
+export type BlobGetOptions = { useCache?: boolean };
+
 export interface BlobStore {
   readonly role: StoreRole;
   readonly mode: StoreMode;
@@ -148,7 +164,7 @@ export interface BlobStore {
    * Any other failure — auth, network, service — throws BlobReadError, so a caller with a
    * fallback cannot mistake "I could not read it" for "it is not here".
    */
-  get(pathname: string): Promise<BlobBytes | null>;
+  get(pathname: string, opts?: BlobGetOptions): Promise<BlobBytes | null>;
   /**
    * Delete. A MISSING object is not an error — delete stays idempotent. Every other failure —
    * auth, authorization, network, service, rate limit, malformed token, unknown — THROWS, because
@@ -216,11 +232,16 @@ function vercelStore(role: StoreRole, mode: StoreMode, token: string): BlobStore
       }
     },
 
-    async get(pathname) {
+    async get(pathname, opts) {
       const { get, BlobNotFoundError } = await import("@vercel/blob");
       let res;
       try {
-        res = await get(pathname, { access: mode, token });
+        // useCache is only forwarded when a caller explicitly asked for it, so the default path is
+        // byte-for-byte the cached read it has always been. `useCache` is a first-class field on the
+        // SDK's GetCommandOptions, so no cast is needed and the typing stays honest.
+        res = await get(pathname, opts?.useCache === undefined
+          ? { access: mode, token }
+          : { access: mode, token, useCache: opts.useCache });
       } catch (e) {
         // Only the provider's own "it does not exist" is absence. Everything else is a failure and
         // must reach the caller, because readBlob() falls back to the public store on absence and a

@@ -28,8 +28,21 @@ const src = sourceStore()!;
 
 // 1 + 2. A store's mode is fixed and structural — there is no access argument to get wrong.
 ok("the destination store is private and the source store is public", dest.mode === "private" && src.mode === "public", `${dest.mode}/${src.mode}`);
+// get() now takes an options bag for the opt-in consistent read, so arity alone no longer expresses
+// the property. What matters is unchanged and is asserted directly: the only thing a caller may pass
+// is `useCache`, and the store's access mode stays whatever it was constructed with.
+const clientSrc = readFileSync(new URL("../src/lib/storage/blob-client.ts", import.meta.url), "utf8");
+// Scoped to the PUBLIC interface declaration. The internal Vercel call necessarily passes `access`
+// to the SDK — that is the store's own fixed mode, not something a caller can supply.
+const ifaceStart = clientSrc.indexOf("export interface BlobStore");
+const ifaceDecl = clientSrc.slice(ifaceStart, clientSrc.indexOf("\n}", ifaceStart))
+  .replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");   // signatures only, not prose
 ok("no store method accepts an access argument, so the wrong access cannot be requested",
-   dest.put.length === 3 && dest.get.length === 1, `put arity ${dest.put.length}, get arity ${dest.get.length}`);
+   dest.put.length === 3 && /export type BlobGetOptions = \{ useCache\?: boolean \};/.test(clientSrc) &&
+   !/access/.test(ifaceDecl),
+   `put arity ${dest.put.length}, get arity ${dest.get.length}, accessInInterface=${/access/.test(ifaceDecl)}`);
+ok("the read option cannot change a store's access mode",
+   (await (async () => { await dest.get("organizations/1/logos/x.png", { useCache: false }).catch(() => null); return dest.mode; })()) === "private");
 ok("a public store's provider URL is a .public. host; a private store's is .private.",
    src.providerUrl("x").includes(".public.blob.") && dest.providerUrl("x").includes(".private.blob."),
    `${src.providerUrl("x")} | ${dest.providerUrl("x")}`);
@@ -101,6 +114,53 @@ await dest.put(conflictPath, Buffer.from("DIFFERENT"), { contentType: "image/png
 const conflicted = mig("--execute", "--state", join(process.env.STORAGE_FAKE_DIR!, "state2.jsonl"));
 ok("a destination that differs is reported as CONFLICT and not overwritten", conflicted.includes("CONFLICT"), conflicted.split("\n").find((l) => l.includes(conflictPath))?.trim() ?? "");
 ok("the conflicting destination object was left exactly as it was", (await dest.get(conflictPath))?.bytes.toString() === "DIFFERENT");
+
+// ---- CONSISTENT READS --------------------------------------------------------------------------
+// A live run recorded a migration fixture as `state=verified` and then read the destination back as
+// ABSENT moments later; read-only inspection afterwards found it present in both stores with the
+// expected sha256. The copy was fine, the read was ambiguous. These prove the fix is a read that
+// asks for current state — not a sleep, not a retry, and not a weaker assertion.
+{
+  const consistentPath = "organizations/9/logos/9-1700000000030-2222222222222222.png";
+  await src.put(consistentPath, PNG, { contentType: "image/png" });
+  await dest.put(consistentPath, PNG, { contentType: "image/png" });
+
+  process.env.STORAGE_FAKE_STALE_ABSENT = "1700000000030";
+  try {
+    ok("a DEFAULT read may report a stale absence for an object that is present",
+       (await dest.get(consistentPath)) === null);
+    const consistent = await dest.get(consistentPath, { useCache: false });
+    ok("an explicit consistent read sees the object that is really there",
+       consistent?.bytes.equals(PNG) === true, String(consistent?.bytes.length));
+    ok("head() is unaffected — only the cached GET path is modelled as stale",
+       (await dest.head(consistentPath)) !== null);
+
+    // The application path deliberately stays on the cached read, so a stale destination absence
+    // falls through to the public source exactly as it always has. This is the behaviour we are
+    // KEEPING: making every /uploads read uncached would bypass the CDN for every image.
+    const viaApp = await readBlob(consistentPath);
+    ok("readBlob() still uses the DEFAULT cached destination read", viaApp?.bytes.equals(PNG) === true);
+
+    // End-to-end: with the stale absence armed, a migration that reads the destination WITHOUT
+    // asking for current state cannot verify its own copy. This one passes because it does ask.
+    const migPath = "organizations/9/logos/9-1700000000031-3333333333333333.png";
+    await src.put(migPath, PNG, { contentType: "image/png" });
+    const listFile = join(process.env.STORAGE_FAKE_DIR!, "paths-consistent.txt");
+    writeFileSync(listFile, migPath + "\n");
+    const stateFile = join(process.env.STORAGE_FAKE_DIR!, "state-consistent.jsonl");
+    process.env.STORAGE_FAKE_STALE_ABSENT = "1700000000031";
+    mig("--execute", "--paths-file", listFile, "--state", stateFile);
+    const entry = JSON.parse(readFileSync(stateFile, "utf8").split("\n").filter(Boolean)[0]) as { state: string; reason?: string };
+    ok("migration verifies its own copy even when the DEFAULT destination read would be stale",
+       entry.state === "verified", `${entry.state} — ${entry.reason}`);
+    ok("and the object really is in the destination", (await dest.get(migPath, { useCache: false }))?.bytes.equals(PNG) === true);
+    ok("the public source is still untouched", (await src.get(migPath))?.bytes.equals(PNG) === true);
+  } finally {
+    delete process.env.STORAGE_FAKE_STALE_ABSENT;
+  }
+  ok("with the fault cleared, the default read sees the object again",
+     (await dest.get(consistentPath))?.bytes.equals(PNG) === true);
+}
 
 // ---- EXACT-PATH SELECTION -------------------------------------------------------------------
 // A sweep of organizations/ is the wrong scope for a caller that must create nothing it has not

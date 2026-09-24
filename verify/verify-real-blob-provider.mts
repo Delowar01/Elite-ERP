@@ -84,6 +84,19 @@ const PNG = Buffer.from("89504e470d0a1a0a0000000d4948445200000001000000010806000
 const PDF = Buffer.from("255044462d312e340a25e2e3cfd30a312030206f626a0a3c3c2f547970652f436174616c6f673e3e0a656e646f626a0a", "hex");
 const appPath = (orgId: number, folder: string, ext = "png") => `organizations/${orgId}/${folder}/${orgId}-${Date.now()}-${randomBytes(8).toString("hex")}.${ext}`;
 
+/**
+ * Destination reads that must reflect the LATEST provider state, not a cached one. Used where the
+ * question is "what is in the private store right now" — immediately after a migration wrote it, and
+ * when proving a conflict left it untouched.
+ *
+ * A live run needed this: one §18 fixture was recorded `state=verified` by the migration and then
+ * read back ABSENT from the parent process moments later, while read-only inspection afterwards found
+ * it present in both stores with the expected sha256. The copy was fine; the read was ambiguous. The
+ * fix is to make the read authoritative — not to sleep, not to retry, and not to treat eventual
+ * success as evidence of immediate success.
+ */
+const CONSISTENT = { useCache: false } as const;
+
 /** See provider-harness/seed.mts: plan -> prove free -> write without overwrite -> claim. */
 const seed = (store: BlobStore, role: "public-source" | "private-destination", pathname: string, bytes: Buffer, purpose: string, contentType = "image/png"): Promise<ManifestObject> =>
   seedObject(run, store, role, pathname, bytes, purpose, contentType);
@@ -460,7 +473,7 @@ const migrationPaths: string[] = [];
   for (const p of migrationPaths) {
     const e = entries.find((x) => x.pathname === p);
     const srcAfter = await src!.get(p);
-    const destAfter = await dest.get(p);
+    const destAfter = await dest.get(p, CONSISTENT);
     let privacy = "not checked";
     try { privacy = (await assertPrivatelyStored(dest, p)).state; } catch (err) { privacy = `INCONCLUSIVE: ${redact(err)}`; }
     const ok = e?.state === "verified" && Boolean(srcAfter) && Boolean(destAfter)
@@ -499,7 +512,7 @@ say("\n§19 conflict");
   const exitCode = conflictRun.launched ? (conflictRun.exitCode ?? 0) : 0;
   const picked = out.split("\n").filter((l) => l.trim().startsWith("selected: ")).map((l) => l.trim().slice("selected: ".length));
   const srcAfter = await src!.get(p);
-  const destAfter = await dest.get(p);
+  const destAfter = await dest.get(p, CONSISTENT);
   run.record("§19", "the conflict run selects EXACTLY one pathname", "REAL PROVIDER PROVEN",
     picked.length === 1 && picked[0] === p, `selected=${picked.length}`);
   run.record("§19", "a differing destination is CONFLICT, exits non-zero, and neither store changes", "REAL PROVIDER PROVEN",

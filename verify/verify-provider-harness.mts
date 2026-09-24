@@ -610,6 +610,82 @@ ok("the org id is filled in once registration resolves it", loadManifest("selfte
   }
 }
 
+// ---- consistent reads. A live run recorded a §18 fixture as `state=verified` and then read the
+// destination back ABSENT moments later; read-only inspection afterwards found it present in both
+// stores with the expected sha256. The copy was fine, the read was ambiguous. These assert the fix is
+// an authoritative read, opt-in, and that nothing turned ordinary application reads into origin reads.
+{
+  const clientSrc = readFileSync(join(cwd, "src", "lib", "storage", "blob-client.ts"), "utf8");
+  const storageSrc = readFileSync(join(cwd, "src", "lib", "storage", "blob-storage.ts"), "utf8");
+  const migrateSrc = readFileSync(join(cwd, "scripts", "blob-migrate.ts"), "utf8");
+  const harnessSrc = readFileSync(join(cwd, "verify", "verify-real-blob-provider.mts"), "utf8");
+  const code = (t: string) => t.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+
+  // A — the option exists and is the only thing a read may ask for.
+  ok("consistent reads: BlobStore.get takes an opt-in options bag",
+     /get\(pathname: string, opts\?: BlobGetOptions\): Promise<BlobBytes \| null>;/.test(clientSrc), "");
+  ok("consistent reads: the option is exactly { useCache?: boolean } — nothing else is requestable",
+     /export type BlobGetOptions = \{ useCache\?: boolean \};/.test(clientSrc), "");
+
+  // B — the real implementation forwards it to the SDK.
+  const vercelGet = code(clientSrc).slice(code(clientSrc).indexOf("async get(pathname, opts)"));
+  ok("consistent reads: an explicit useCache is passed through to @vercel/blob get()",
+     /useCache: opts\.useCache/.test(vercelGet.slice(0, 600)), "");
+
+  // C — and the default path is untouched: no useCache key at all unless one was asked for.
+  ok("consistent reads: the DEFAULT read sends no useCache, so it stays the cached call it always was",
+     /opts\?\.useCache === undefined\s*\?\s*\{ access: mode, token \}/.test(vercelGet.slice(0, 600)), "");
+  ok("consistent reads: useCache:false is never hardcoded anywhere in the client",
+     !/useCache: false/.test(code(clientSrc)), "");
+
+  // D — the application read path is deliberately left cached. Uncached reads bypass the CDN and pay
+  // origin transfer on every image; that cost is worth it for verification, not for serving files.
+  ok("consistent reads: readBlob() passes no read options, keeping /uploads on the cached path",
+     /const fromDestination = await destinationStore\(\)\.get\(pathname\);/.test(storageSrc) &&
+     !/useCache/.test(storageSrc), "");
+
+  // E — both migration destination reads ask for current state; the source read does not.
+  ok("migration: the read-before-write destination check is consistent",
+     /const existing = await dest\.get\(pathname, CONSISTENT\);/.test(migrateSrc), "");
+  ok("migration: the immediate post-write verification read is consistent",
+     /const after = await dest\.get\(pathname, CONSISTENT\);/.test(migrateSrc), "");
+  ok("migration: CONSISTENT means useCache:false", /const CONSISTENT = \{ useCache: false \} as const;/.test(migrateSrc), "");
+  ok("migration: the public SOURCE read is left on the default cached path — nothing writes there",
+     /const source = await src\.get\(pathname\);/.test(migrateSrc), "");
+
+  // F — §18 verifies the freshly migrated object with an authoritative read, and §19's conflict check
+  // asks the same "what is there now" question.
+  const s18 = harnessSrc.slice(harnessSrc.indexOf("§18 real cross-store migration"), harnessSrc.indexOf("§19 conflict"));
+  ok("§18: the freshly migrated destination object is read consistently",
+     /const destAfter = await dest\.get\(p, CONSISTENT\);/.test(s18), "");
+  const s19 = harnessSrc.slice(harnessSrc.indexOf("§19 conflict"), harnessSrc.indexOf("§20 PROBE FAILURE"));
+  ok("§19: the conflict destination check is read consistently",
+     /const destAfter = await dest\.get\(p, CONSISTENT\);/.test(s19), "");
+  ok("§18/§19: CONSISTENT means useCache:false in the harness too",
+     /const CONSISTENT = \{ useCache: false \} as const;/.test(harnessSrc), "");
+
+  // G — the fix must not be a sleep, a retry, or a softened assertion.
+  ok("§18: no sleep or retry was added around the destination verification",
+     !/setTimeout|sleep|retry|attempt/i.test(code(s18)), "");
+  ok("§18: the assertion still requires the destination object to be present",
+     /Boolean\(srcAfter\) && Boolean\(destAfter\)/.test(s18), "");
+  ok("§18: it still requires equal hashes and content types",
+     /sha256\(srcAfter!\.bytes\) === sha256\(destAfter!\.bytes\)/.test(s18) && /srcAfter!\.contentType === destAfter!\.contentType/.test(s18), "");
+  ok("§18: it still requires migration state `verified` and an explicit privacy refusal",
+     /e\?\.state === "verified"/.test(s18) && /privacy === "denied" \|\| privacy === "not_found"/.test(s18), "");
+  ok("§19: the conflict assertion still requires both stores unchanged",
+     /srcAfter\?\.bytes\.toString\(\) === "SOURCE-BYTES-AAA" && destAfter\?\.bytes\.toString\(\) === "DESTINATION-BYTES-BBB"/.test(s19), "");
+
+  // H — assertPrivatelyStored's ordering is untouched: authenticated existence, then the probe.
+  const apsStart = clientSrc.indexOf("export async function assertPrivatelyStored");
+  const aps = clientSrc.slice(apsStart, clientSrc.indexOf("\n}", apsStart));
+  const headAt = aps.indexOf("await store.head(pathname)");
+  const probeAt = aps.indexOf("store.probeAnonymous(pathname)");
+  ok("consistent reads: assertPrivatelyStored is untouched — authenticated existence, THEN the probe",
+     headAt >= 0 && probeAt > headAt && /if \(!authenticated\) throw new BlobProbeError/.test(aps) && !/useCache/.test(aps),
+     `head@${headAt} probe@${probeAt}`);
+}
+
 // ---- signed-URL expiry. The live §16 failure was a TEST defect: signFileUrl clamps its TTL, so a
 // negative value cannot mint an expired token. This proves the clamp deterministically, against the
 // real production functions, by stubbing the clock rather than sleeping.
