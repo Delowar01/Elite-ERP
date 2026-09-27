@@ -52,3 +52,9 @@ next-env.d.ts
 # Local backup artifacts (never commit database dumps)
 backups/
 scripts/tests/.last-b1-results.json
+
+# test storage driver scratch (STORAGE_DRIVER=fake)
+.storage-fake/
+
+# real-provider verification run artefacts (manifests, reports, state)
+.batch3-provider-verification/

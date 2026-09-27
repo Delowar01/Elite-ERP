@@ -1,15 +1,34 @@
 import "server-only";
-import { put, del } from "@vercel/blob";
 import { randomBytes } from "crypto";
+import { destinationStore, sourceStore, BlobDeleteError } from "./blob-client";
 
 // ---------------------------------------------------------------------------
 // Shared Vercel Blob storage service for every upload in Elite ERP (logos,
 // seals, signatures, item images, client/vendor logos, employee photos,
 // document attachments). Replaces the old local-filesystem writes, which fail
-// on Vercel (read-only /var/task). Files are stored on Vercel Blob under
-// tenant-scoped pathnames; the DB keeps an app-relative proxy path that the
-// authenticated /uploads/[...] route resolves back to the blob (tenant-checked
-// + audited), so blob URLs are never exposed and cross-tenant access is denied.
+// on Vercel (read-only /var/task).
+//
+// WHAT IS AND IS NOT GUARANTEED, stated precisely because the previous version
+// of this comment overstated it. It claimed "blob URLs are never exposed and
+// cross-tenant access is denied" while every object was written
+// `access: "public"` — so the URLs were not exposed by this application, but
+// anyone who came by one could fetch the bytes straight from the provider,
+// outside the org check, outside the signature check and outside the audit log.
+// Not exposing a URL is not the same as the storage being private, and the old
+// wording read as though it were.
+//
+// Now:
+//  - STORAGE is private, and that is a property of the STORE. New uploads are
+//    written to the PRIVATE DESTINATION store; possession of a URL grants
+//    nothing there. The legacy PUBLIC SOURCE store still holds everything
+//    uploaded before this change, and reads fall back to it until migration
+//    completes — server-side only, never as a URL handed to a browser.
+//  - AUTHORIZATION is the application's. /uploads/[...path] requires a session
+//    whose org matches the path's {orgId}, or a valid unexpired HMAC signature.
+//  - TENANT ISOLATION is encoded in the pathname and re-checked on every read.
+//  - The DB keeps an app-relative proxy path and NEVER learns which store an
+//    object currently lives in. That is what lets the migration move objects
+//    without touching a single row.
 // ---------------------------------------------------------------------------
 
 export type FileExt = "png" | "jpg" | "pdf";
@@ -21,6 +40,11 @@ export const BLOB_FOLDERS = [
 ] as const;
 export type BlobFolder = (typeof BLOB_FOLDERS)[number];
 export const BLOB_FOLDER_SET = new Set<string>(BLOB_FOLDERS);
+
+// Every object this application writes goes to the PRIVATE store. Kept as a named constant because
+// the committed security suite asserts on it: a silent return to public storage is the exact
+// regression that created F-3, and it has to be visible to a grep in CI, not only to a live test.
+export const BLOB_ACCESS = "private" as const;
 
 export const IMAGE_MAX_BYTES = 5 * 1024 * 1024; // 5 MB for images
 export const ATTACHMENT_MAX_BYTES = 8 * 1024 * 1024; // 8 MB for attachments
@@ -95,31 +119,88 @@ export async function validateUpload(
 export async function storeBlob(orgId: number, folder: BlobFolder, bytes: Buffer, ext: FileExt, contentType: string): Promise<string> {
   const name = `${orgId}-${Date.now()}-${randomBytes(8).toString("hex")}.${ext}`;
   const pathname = `organizations/${orgId}/${folder}/${name}`;
-  await put(pathname, bytes, { access: "public", addRandomSuffix: false, contentType, token: process.env.BLOB_READ_WRITE_TOKEN });
+  // Destination only. No public copy is written "to make rollback easier" — that would recreate the
+  // exposure this batch exists to close, for every new file, for as long as the copy survived.
+  await destinationStore().put(pathname, bytes, { contentType });
   return `/uploads/${pathname}`;
 }
 
-// Base public host of this project's blob store, derived from the token (vercel_blob_rw_<store>_<secret>).
-export function blobBaseUrl(): string {
-  const token = process.env.BLOB_READ_WRITE_TOKEN;
-  if (!token) throw new Error("BLOB_READ_WRITE_TOKEN is not set");
-  const storeId = token.split("_")[3];
-  if (!storeId) throw new Error("BLOB_READ_WRITE_TOKEN is malformed");
-  return `https://${storeId.toLowerCase()}.public.blob.vercel-storage.com`;
+/**
+ * Read a stored object for the proxy route: private destination first, legacy public source second.
+ *
+ * The fallback is TEMPORARY migration compatibility — it lets objects uploaded before this change
+ * keep loading while everything new is already protected — and it is deliberately narrow:
+ *
+ *  - it happens ONLY when the destination genuinely does not hold the object. A read that FAILS
+ *    (auth, network, service) throws BlobReadError from the store and is allowed to propagate, so a
+ *    broken token can never be mistaken for "not migrated yet" and quietly serve the public copy.
+ *  - the source is read SERVER-SIDE with its own token. Its provider URL is never constructed for,
+ *    or returned to, a browser.
+ *  - it disappears by configuration: sourceStore() is null once the legacy token is removed, which
+ *    is the operational signal that migration is complete.
+ */
+export async function readBlob(pathname: string): Promise<{ bytes: Buffer; contentType: string } | null> {
+  const fromDestination = await destinationStore().get(pathname);
+  if (fromDestination) return fromDestination;
+  const source = sourceStore();
+  if (!source) return null;
+  return source.get(pathname);
 }
 
-// Resolve a stored proxy path (`/uploads/organizations/...`) or bare pathname to its blob URL.
-export function blobUrlFromStored(stored: string): string {
-  const pathname = stored.replace(/^\/uploads\//, "").replace(/^\//, "");
-  return `${blobBaseUrl()}/${pathname}`;
+/** Strip the `/uploads/` proxy prefix the DB stores, yielding the provider pathname. */
+export function pathnameFromStored(stored: string): string {
+  return stored.replace(/^\/uploads\//, "").replace(/^\//, "");
 }
 
-// Delete a previously-stored blob. Never throws for a missing/blank value (idempotent cleanup).
+// `blobBaseUrl()` and `blobUrlFromStored()` were both REMOVED. blobUrlFromStored only ever built a
+// provider URL for the delete, which now addresses objects by pathname. blobBaseUrl hardcoded
+// `.public.` into the host, which is wrong for a private store — the SDK builds
+// `https://${storeId}.${access}.blob.vercel-storage.com/${pathname}`, so the access level IS part of
+// the host and a private object is a different address, not the same one with different permissions.
+// Probing now belongs to a store (BlobStore.providerUrl / probeAnonymous), which knows its own mode
+// and therefore its own host. Nothing in the request path constructs a provider URL.
+
+// `blobUrlFromStored()` was removed with this change. Its only caller was deleteStoredBlob, and the
+// delete now addresses the object by pathname, so the helper existed solely to manufacture a
+// provider URL — the shape this batch is trying to stop relying on.
+
+/**
+ * Delete a previously-stored blob, for a USER action — replacing a logo, removing a seal. Idempotent
+ * and never throws for a missing or blank value.
+ *
+ * DURING THE MIGRATION WINDOW AN OBJECT MAY LIVE IN EITHER STORE OR BOTH, and all three cases are
+ * handled deliberately, because getting this wrong is how an "I removed that file" action leaves the
+ * file publicly downloadable forever:
+ *
+ *   only in the private destination  -> delete it there
+ *   only in the legacy public source -> delete it THERE, or the user's removal is cosmetic and the
+ *                                       object stays anonymously fetchable at its public URL
+ *   in both                          -> delete BOTH, same reason
+ *
+ * So this deletes unconditionally from every store that exists. That is the opposite of what the
+ * MIGRATION does: the migration never deletes a source object, because a copied object is not a
+ * removed one. Intentional removal and migration housekeeping are different acts and only one of
+ * them is allowed to destroy the public copy.
+ */
 export async function deleteStoredBlob(stored: string | null | undefined): Promise<void> {
   if (!stored || !stored.startsWith("/uploads/organizations/")) return;
-  try {
-    await del(blobUrlFromStored(stored), { token: process.env.BLOB_READ_WRITE_TOKEN });
-  } catch {
-    // best-effort; a missing blob is not an error for cleanup
+  const pathname = pathnameFromStored(stored);
+
+  // Both stores are attempted INDEPENDENTLY, and the source is attempted even when the destination
+  // failed. Sequencing them with `await a; await b;` would mean a destination failure aborted the
+  // SOURCE delete — leaving the public copy, the one that is anonymously downloadable, untouched
+  // precisely when something had already gone wrong. That is the worst possible ordering.
+  const stores = [destinationStore(), sourceStore()].filter((s) => s !== null);
+  const failures: { role: (typeof stores)[number]["role"]; mode: (typeof stores)[number]["mode"]; reason: string }[] = [];
+  for (const store of stores) {
+    try {
+      await store.del(pathname);
+    } catch (e) {
+      failures.push({ role: store.role, mode: store.mode, reason: String(e) });
+    }
   }
+
+  // A partial delete must not read as success. The user has been told the file is gone; if the
+  // public copy survived, it is still fetchable by anyone holding its URL, and only an error says so.
+  if (failures.length) throw new BlobDeleteError(pathname, failures);
 }
