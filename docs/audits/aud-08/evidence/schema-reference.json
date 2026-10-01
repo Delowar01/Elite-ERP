@@ -1,0 +1,15 @@
+{
+  "note": "AUD-08.1 measured reference digests. Structural projection only — see scripts/migration-preflight.ts for why types are excluded from snapshot comparison.",
+  "measuredAt": "2026-10-01T11:55:56.343Z",
+  "repoHead": "f35343733c9d17e17dc03b3b9439bbba1d6075f5",
+  "drizzleOrm": "0.45.2",
+  "drizzleKit": "0.31.10",
+  "pgDriver": "8.22.0",
+  "pushStructuralDigest": "9bf3b78e2b75ed3a3f6ad3d7ba789fa3cc616fa0db8a97baff0400f698eabfce",
+  "migrationsOnlyStructuralDigest": "fbf9575bf9cb8920486946d3e30c525b1e56d2a85a6afb44027c789f9ebca648",
+  "prefixStructuralDigests": {
+    "4": "fbf9575bf9cb8920486946d3e30c525b1e56d2a85a6afb44027c789f9ebca648"
+  },
+  "pushSemanticDigest": "f9db6a780276dce25f311f712c95825f5006fd4f3418bee32a1de29840b09fcd",
+  "migrationsOnlySemanticDigest": "4c8fbc4b0ad8813455fd7f8d896b9a2d8e97586cd39eaa775b506f4f482c8130"
+}

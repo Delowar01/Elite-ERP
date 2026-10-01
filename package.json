@@ -18,6 +18,7 @@
     "verify:blob-provider:cleanup": "tsx --env-file-if-exists=.env --conditions=react-server verify/cleanup-real-blob-provider.mts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
+    "db:preflight": "tsx scripts/migration-preflight.ts",
     "db:studio": "drizzle-kit studio",
     "verify:statements": "tsx --env-file-if-exists=.env --conditions=react-server verify/verify-statements.mts",
     "verify:project-costing": "tsx --env-file-if-exists=.env --conditions=react-server verify/verify-project-costing.mts",
