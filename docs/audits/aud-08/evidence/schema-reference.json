@@ -1,0 +1,31 @@
+{
+  "note": "AUD-08.1 MEASURED reference. prefixSemanticDigests and pushSemanticDigest are FULL F1–F6 digests (projectLive + fingerprintDigest) from databases the real drizzle-kit CLI built. These alone authorize migrate. Structural digests are DIAGNOSTIC ONLY.",
+  "measuredAt": "2026-10-01T12:29:56.033Z",
+  "binding": {
+    "migrationJournalDigest": "sha256 over journal version/dialect + ordered (idx|when|tag|sha256(sql)) — content identity, not git HEAD",
+    "schemaSourceDigest": "sha256 over src/db/schema/**/*.{ts,mts} + drizzle.config.ts in stable path order"
+  },
+  "drizzleOrm": "0.45.2",
+  "drizzleKit": "0.31.10",
+  "pgDriver": "8.22.0",
+  "migrationJournalDigest": "cf58434f84abb362c5ecf6d349935e0e6d1f03b19ae8d8bd7750f887b76c5a4f",
+  "schemaSourceDigest": "8466be2a3289c6cc03022db73eec028105a10f47b74f9b020a03caa0f0797ff9",
+  "prefixSemanticDigests": {
+    "0": "97df34d3b0b73cf90aabaa344ac5e992bd3fa7c08e79a2240d813be5854bd8a4",
+    "1": "39d7ec4acd03e955fef36ea6012e2703f3fa247f31cf124e4df4607a1222670d",
+    "2": "20fa0afd4dad8594e690c734c65b8c5e49dfe7bfef1e5b9f5926c5a52cd76b69",
+    "3": "9f6c6860887cc81c516f54d823ebb0b0f3b025cbc85654653506edd351bb6d42",
+    "4": "4c8fbc4b0ad8813455fd7f8d896b9a2d8e97586cd39eaa775b506f4f482c8130",
+    "empty": "8cca3fcf4acf0d05a730ea1b78d37b1a9ab86b2689a5b358a14aedf188a85862"
+  },
+  "pushSemanticDigest": "f9db6a780276dce25f311f712c95825f5006fd4f3418bee32a1de29840b09fcd",
+  "pushStructuralDigest": "9bf3b78e2b75ed3a3f6ad3d7ba789fa3cc616fa0db8a97baff0400f698eabfce",
+  "prefixStructuralDigests": {
+    "0": "a09e562f8bea7304a9c80cd676f47b48f53b6fd7df61a47eea376ad0c1bd3007",
+    "1": "1c9c5019f747997ccf117db3368205c1696c76c415b53b2914ebbd4b6f33a223",
+    "2": "6432e408d90ea9a6f38439ba9fad070c57c151390ea389be1beb3bf3b9198e11",
+    "3": "3afd962989b701dedf8e481f4e1b9245e6c9e4ff705e41b5c8babd45e4e3c8a3",
+    "4": "fbf9575bf9cb8920486946d3e30c525b1e56d2a85a6afb44027c789f9ebca648",
+    "empty": "94f04e4c1fca36ad1077de98846e9da792529f82b78416f1b8efd6d1ae6c2bb0"
+  }
+}

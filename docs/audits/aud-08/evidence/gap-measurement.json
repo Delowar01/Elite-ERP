@@ -1,0 +1,635 @@
+{
+  "sharedColumnDifferences": {
+    "count": 61,
+    "kinds": {
+      "precision/scale numeric(14,2) -> numeric(15,3)": 53,
+      "precision/scale numeric(12,2) -> numeric(15,3)": 8
+    },
+    "tables": [
+      "bank_accounts",
+      "credit_note_items",
+      "credit_notes",
+      "debit_note_items",
+      "debit_notes",
+      "expenses",
+      "journal_lines",
+      "payments",
+      "payslips",
+      "products",
+      "proforma_invoice_items",
+      "proforma_invoices",
+      "projects",
+      "purchase_order_items",
+      "purchase_orders",
+      "quotation_items",
+      "quotations",
+      "salary_structures",
+      "sales_invoice_items",
+      "sales_invoices",
+      "sales_order_items",
+      "sales_orders"
+    ],
+    "onlyPrecisionScale": true,
+    "allWidening": true,
+    "columns": [
+      {
+        "column": "bank_accounts.opening_balance",
+        "from": "numeric(14,2)",
+        "to": "numeric(15,3)",
+        "kinds": [
+          "precision/scale"
+        ]
+      },
+      {
+        "column": "credit_note_items.line_total",
+        "from": "numeric(14,2)",
+        "to": "numeric(15,3)",
+        "kinds": [
+          "precision/scale"
+        ]
+      },
+      {
+        "column": "credit_note_items.unit_price",
+        "from": "numeric(14,2)",
+        "to": "numeric(15,3)",
+        "kinds": [
+          "precision/scale"
+        ]
+      },
+      {
+        "column": "credit_notes.discount",
+        "from": "numeric(14,2)",
+        "to": "numeric(15,3)",
+        "kinds": [
+          "precision/scale"
+        ]
+      },
+      {
+        "column": "credit_notes.subtotal",
+        "from": "numeric(14,2)",
+        "to": "numeric(15,3)",
+        "kinds": [
+          "precision/scale"
+        ]
+      },
+      {
+        "column": "credit_notes.tax_total",
+        "from": "numeric(14,2)",
+        "to": "numeric(15,3)",
+        "kinds": [
+          "precision/scale"
+        ]
+      },
+      {
+        "column": "credit_notes.total",
+        "from": "numeric(14,2)",
+        "to": "numeric(15,3)",
+        "kinds": [
+          "precision/scale"
+        ]
+      },
+      {
+        "column": "debit_note_items.line_total",
+        "from": "numeric(14,2)",
+        "to": "numeric(15,3)",
+        "kinds": [
+          "precision/scale"
+        ]
+      },
+      {
+        "column": "debit_note_items.unit_cost",
+        "from": "numeric(14,2)",
+        "to": "numeric(15,3)",
+        "kinds": [
+          "precision/scale"
+        ]
+      },
+      {
+        "column": "debit_notes.discount",
+        "from": "numeric(14,2)",
+        "to": "numeric(15,3)",
+        "kinds": [
+          "precision/scale"
+        ]
+      },
+      {
+        "column": "debit_notes.subtotal",
+        "from": "numeric(14,2)",
+        "to": "numeric(15,3)",
+        "kinds": [
+          "precision/scale"
+        ]
+      },
+      {
+        "column": "debit_notes.tax_total",
+        "from": "numeric(14,2)",
+        "to": "numeric(15,3)",
+        "kinds": [
+          "precision/scale"
+        ]
+      },
+      {
+        "column": "debit_notes.total",
+        "from": "numeric(14,2)",
+        "to": "numeric(15,3)",
+        "kinds": [
+          "precision/scale"
+        ]
+      },
+      {
+        "column": "expenses.amount",
+        "from": "numeric(14,2)",
+        "to": "numeric(15,3)",
+        "kinds": [
+          "precision/scale"
+        ]
+      },
+      {
+        "column": "expenses.tax_amount",
+        "from": "numeric(14,2)",
+        "to": "numeric(15,3)",
+        "kinds": [
+          "precision/scale"
+        ]
+      },
+      {
+        "column": "journal_lines.credit",
+        "from": "numeric(14,2)",
+        "to": "numeric(15,3)",
+        "kinds": [
+          "precision/scale"
+        ]
+      },
+      {
+        "column": "journal_lines.debit",
+        "from": "numeric(14,2)",
+        "to": "numeric(15,3)",
+        "kinds": [
+          "precision/scale"
+        ]
+      },
+      {
+        "column": "payments.amount",
+        "from": "numeric(14,2)",
+        "to": "numeric(15,3)",
+        "kinds": [
+          "precision/scale"
+        ]
+      },
+      {
+        "column": "payslips.allowances",
+        "from": "numeric(12,2)",
+        "to": "numeric(15,3)",
+        "kinds": [
+          "precision/scale"
+        ]
+      },
+      {
+        "column": "payslips.basic_salary",
+        "from": "numeric(12,2)",
+        "to": "numeric(15,3)",
+        "kinds": [
+          "precision/scale"
+        ]
+      },
+      {
+        "column": "payslips.deductions",
+        "from": "numeric(12,2)",
+        "to": "numeric(15,3)",
+        "kinds": [
+          "precision/scale"
+        ]
+      },
+      {
+        "column": "payslips.gross_pay",
+        "from": "numeric(12,2)",
+        "to": "numeric(15,3)",
+        "kinds": [
+          "precision/scale"
+        ]
+      },
+      {
+        "column": "payslips.net_pay",
+        "from": "numeric(12,2)",
+        "to": "numeric(15,3)",
+        "kinds": [
+          "precision/scale"
+        ]
+      },
+      {
+        "column": "products.cost_price",
+        "from": "numeric(14,2)",
+        "to": "numeric(15,3)",
+        "kinds": [
+          "precision/scale"
+        ]
+      },
+      {
+        "column": "products.unit_price",
+        "from": "numeric(14,2)",
+        "to": "numeric(15,3)",
+        "kinds": [
+          "precision/scale"
+        ]
+      },
+      {
+        "column": "proforma_invoice_items.line_total",
+        "from": "numeric(14,2)",
+        "to": "numeric(15,3)",
+        "kinds": [
+          "precision/scale"
+        ]
+      },
+      {
+        "column": "proforma_invoice_items.unit_price",
+        "from": "numeric(14,2)",
+        "to": "numeric(15,3)",
+        "kinds": [
+          "precision/scale"
+        ]
+      },
+      {
+        "column": "proforma_invoices.discount",
+        "from": "numeric(14,2)",
+        "to": "numeric(15,3)",
+        "kinds": [
+          "precision/scale"
+        ]
+      },
+      {
+        "column": "proforma_invoices.subtotal",
+        "from": "numeric(14,2)",
+        "to": "numeric(15,3)",
+        "kinds": [
+          "precision/scale"
+        ]
+      },
+      {
+        "column": "proforma_invoices.tax_total",
+        "from": "numeric(14,2)",
+        "to": "numeric(15,3)",
+        "kinds": [
+          "precision/scale"
+        ]
+      },
+      {
+        "column": "proforma_invoices.total",
+        "from": "numeric(14,2)",
+        "to": "numeric(15,3)",
+        "kinds": [
+          "precision/scale"
+        ]
+      },
+      {
+        "column": "projects.budget",
+        "from": "numeric(14,2)",
+        "to": "numeric(15,3)",
+        "kinds": [
+          "precision/scale"
+        ]
+      },
+      {
+        "column": "purchase_order_items.line_total",
+        "from": "numeric(14,2)",
+        "to": "numeric(15,3)",
+        "kinds": [
+          "precision/scale"
+        ]
+      },
+      {
+        "column": "purchase_order_items.unit_cost",
+        "from": "numeric(14,2)",
+        "to": "numeric(15,3)",
+        "kinds": [
+          "precision/scale"
+        ]
+      },
+      {
+        "column": "purchase_orders.discount",
+        "from": "numeric(14,2)",
+        "to": "numeric(15,3)",
+        "kinds": [
+          "precision/scale"
+        ]
+      },
+      {
+        "column": "purchase_orders.paid_amount",
+        "from": "numeric(14,2)",
+        "to": "numeric(15,3)",
+        "kinds": [
+          "precision/scale"
+        ]
+      },
+      {
+        "column": "purchase_orders.subtotal",
+        "from": "numeric(14,2)",
+        "to": "numeric(15,3)",
+        "kinds": [
+          "precision/scale"
+        ]
+      },
+      {
+        "column": "purchase_orders.tax_total",
+        "from": "numeric(14,2)",
+        "to": "numeric(15,3)",
+        "kinds": [
+          "precision/scale"
+        ]
+      },
+      {
+        "column": "purchase_orders.total",
+        "from": "numeric(14,2)",
+        "to": "numeric(15,3)",
+        "kinds": [
+          "precision/scale"
+        ]
+      },
+      {
+        "column": "quotation_items.line_total",
+        "from": "numeric(14,2)",
+        "to": "numeric(15,3)",
+        "kinds": [
+          "precision/scale"
+        ]
+      },
+      {
+        "column": "quotation_items.unit_price",
+        "from": "numeric(14,2)",
+        "to": "numeric(15,3)",
+        "kinds": [
+          "precision/scale"
+        ]
+      },
+      {
+        "column": "quotations.discount",
+        "from": "numeric(14,2)",
+        "to": "numeric(15,3)",
+        "kinds": [
+          "precision/scale"
+        ]
+      },
+      {
+        "column": "quotations.subtotal",
+        "from": "numeric(14,2)",
+        "to": "numeric(15,3)",
+        "kinds": [
+          "precision/scale"
+        ]
+      },
+      {
+        "column": "quotations.tax_total",
+        "from": "numeric(14,2)",
+        "to": "numeric(15,3)",
+        "kinds": [
+          "precision/scale"
+        ]
+      },
+      {
+        "column": "quotations.total",
+        "from": "numeric(14,2)",
+        "to": "numeric(15,3)",
+        "kinds": [
+          "precision/scale"
+        ]
+      },
+      {
+        "column": "salary_structures.allowances",
+        "from": "numeric(12,2)",
+        "to": "numeric(15,3)",
+        "kinds": [
+          "precision/scale"
+        ]
+      },
+      {
+        "column": "salary_structures.basic_salary",
+        "from": "numeric(12,2)",
+        "to": "numeric(15,3)",
+        "kinds": [
+          "precision/scale"
+        ]
+      },
+      {
+        "column": "salary_structures.deductions",
+        "from": "numeric(12,2)",
+        "to": "numeric(15,3)",
+        "kinds": [
+          "precision/scale"
+        ]
+      },
+      {
+        "column": "sales_invoice_items.line_total",
+        "from": "numeric(14,2)",
+        "to": "numeric(15,3)",
+        "kinds": [
+          "precision/scale"
+        ]
+      },
+      {
+        "column": "sales_invoice_items.unit_price",
+        "from": "numeric(14,2)",
+        "to": "numeric(15,3)",
+        "kinds": [
+          "precision/scale"
+        ]
+      },
+      {
+        "column": "sales_invoices.discount",
+        "from": "numeric(14,2)",
+        "to": "numeric(15,3)",
+        "kinds": [
+          "precision/scale"
+        ]
+      },
+      {
+        "column": "sales_invoices.paid_amount",
+        "from": "numeric(14,2)",
+        "to": "numeric(15,3)",
+        "kinds": [
+          "precision/scale"
+        ]
+      },
+      {
+        "column": "sales_invoices.subtotal",
+        "from": "numeric(14,2)",
+        "to": "numeric(15,3)",
+        "kinds": [
+          "precision/scale"
+        ]
+      },
+      {
+        "column": "sales_invoices.tax_total",
+        "from": "numeric(14,2)",
+        "to": "numeric(15,3)",
+        "kinds": [
+          "precision/scale"
+        ]
+      },
+      {
+        "column": "sales_invoices.total",
+        "from": "numeric(14,2)",
+        "to": "numeric(15,3)",
+        "kinds": [
+          "precision/scale"
+        ]
+      },
+      {
+        "column": "sales_order_items.line_total",
+        "from": "numeric(14,2)",
+        "to": "numeric(15,3)",
+        "kinds": [
+          "precision/scale"
+        ]
+      },
+      {
+        "column": "sales_order_items.unit_price",
+        "from": "numeric(14,2)",
+        "to": "numeric(15,3)",
+        "kinds": [
+          "precision/scale"
+        ]
+      },
+      {
+        "column": "sales_orders.discount",
+        "from": "numeric(14,2)",
+        "to": "numeric(15,3)",
+        "kinds": [
+          "precision/scale"
+        ]
+      },
+      {
+        "column": "sales_orders.subtotal",
+        "from": "numeric(14,2)",
+        "to": "numeric(15,3)",
+        "kinds": [
+          "precision/scale"
+        ]
+      },
+      {
+        "column": "sales_orders.tax_total",
+        "from": "numeric(14,2)",
+        "to": "numeric(15,3)",
+        "kinds": [
+          "precision/scale"
+        ]
+      },
+      {
+        "column": "sales_orders.total",
+        "from": "numeric(14,2)",
+        "to": "numeric(15,3)",
+        "kinds": [
+          "precision/scale"
+        ]
+      }
+    ]
+  },
+  "gap": {
+    "migrationsOnly": {
+      "tables": 59,
+      "columns": 609
+    },
+    "pushBuilt": {
+      "tables": 66,
+      "columns": 812
+    },
+    "sharedColumns": 608,
+    "columnsToAdd": 204,
+    "columnsToDrop": [
+      "terms_conditions_groups.content"
+    ],
+    "tablesToAdd": [
+      "advance_application_releases",
+      "advance_applications",
+      "document_attachments",
+      "document_column_configs",
+      "exchange_rates",
+      "rate_fetch_attempts",
+      "seal_signature_assets"
+    ],
+    "tablesToDrop": [],
+    "sharedColumnsDiffering": 61
+  },
+  "bookkeepingColumns": [
+    "id:integer",
+    "hash:text",
+    "created_at:bigint"
+  ],
+  "e9": {
+    "decoyFooledTheCheck": true,
+    "decoyCheckExit": 0,
+    "missingRealTriggers": [
+      "audit_logs.audit_logs_immutable",
+      "security_events.security_events_immutable"
+    ]
+  },
+  "e6b": {
+    "migrateExit": 0,
+    "markerCreated": false,
+    "preflightState": "INCONSISTENT",
+    "codes": [
+      "R6"
+    ]
+  },
+  "e7": {
+    "stamp": 1790857813013,
+    "tablesAfter": 0,
+    "migrateExit": 0,
+    "preflightState": "INCONSISTENT"
+  },
+  "e13": {
+    "migrateExit": 0,
+    "rowsRemaining": 4,
+    "preflightState": "INCONSISTENT"
+  },
+  "e19": {
+    "exit": 0,
+    "columnsBefore": 609,
+    "columnsAfter": 609,
+    "conflictPromptReached": true
+  },
+  "e18": {
+    "preflightWithReference": "BASELINE_RECONCILIATION_REQUIRED",
+    "preflightWithoutReference": "INCONSISTENT",
+    "schemaEqualsPush": true
+  },
+  "e20": {
+    "freshExit": 0,
+    "freshState": "OK",
+    "migrateExit": 0,
+    "afterExit": 0,
+    "afterState": "OK"
+  },
+  "e21": {
+    "structuralDiff": 0,
+    "preflight": "INCONSISTENT",
+    "cliExit": 20,
+    "afterRevert": "OK"
+  },
+  "e22a": {
+    "structuralDiff": 0,
+    "preflight": "INCONSISTENT",
+    "cliExit": 20,
+    "afterRevert": "OK"
+  },
+  "e22b": {
+    "structuralDiff": 0,
+    "preflight": "INCONSISTENT",
+    "cliExit": 20,
+    "afterRevert": "OK"
+  },
+  "e23": {
+    "control": "BASELINE_RECONCILIATION_REQUIRED",
+    "structuralStillPush": true,
+    "preflight": "INCONSISTENT",
+    "cliExit": 20
+  },
+  "e24": {
+    "tampered": 30,
+    "unbound": 30,
+    "inputsChanged": 30,
+    "missing": 30,
+    "schemaCopySame": 10,
+    "schemaChanged": 20,
+    "missingPrefixDigest": 20,
+    "missingEmptyDigest": 20
+  }
+}

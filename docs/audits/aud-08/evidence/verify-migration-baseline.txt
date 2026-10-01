@@ -1,0 +1,264 @@
+── AUD-08.1 — migration baseline measurement ──
+repository    : /home/user/elite-erp
+target cluster: host=127.0.0.1 port=5432 database=(per-experiment)
+db name rule  : must start with "aud081_" and the host must be local
+journal       : 5 entries, version 7, dialect postgresql
+server        : PostgreSQL 16.13 (Ubuntu 16.13-0ubuntu0.24.04.1)
+admin database: postgres
+
+── 0. Journal invariants (no database) ──
+PASS  journal idx contiguous and `when` strictly increasing, every SQL file present
+      entries: 0000_brainy_iron_lad@1784710039871, 0001_marvelous_maximus@1784710040890, 0002_strange_mad_thinker@1784730852572, 0003_careful_nomad@1784747316123, 0004_wooden_christian_walker@1784748824249
+      sha256 0000_brainy_iron_lad = eb07892c0989cb21…
+      sha256 0001_marvelous_maximus = e3ecff0f1c632df8…
+      sha256 0002_strange_mad_thinker = 7daa0aeedd0d2081…
+      sha256 0003_careful_nomad = dedbb41b7ff33984…
+      sha256 0004_wooden_christian_walker = b9c56d604fe3e7b9…
+
+── 1. Reference shapes + independent re-measurement of the historical gap ──
+PASS  drizzle-kit migrate applied the committed history to a fresh database
+PASS  drizzle-kit push built the current schema on a fresh database
+      migrations-only : 59 tables, 609 columns   (F1=609 F2=68 F3=133 F4=77 F5=1 F6=59)
+      push-built      : 66 tables, 812 columns   (F1=812 F2=78 F3=154 F4=90 F5=1 F6=65)
+      shared columns  : 608
+      columns to ADD  : 204
+      columns to DROP : 1  terms_conditions_groups.content
+      tables to ADD   : 7  advance_application_releases, advance_applications, document_attachments, document_column_configs, exchange_rates, rate_fetch_attempts, seal_signature_assets
+      tables to DROP  : 0
+PASS  arithmetic closes: shared + drop == migrations-only column count
+PASS  arithmetic closes: shared + add == push column count
+PASS  the gap is purely additive plus drops — no table needs dropping
+PASS  exactly ONE column must be dropped
+PASS  the sole dropped column is terms_conditions_groups.content
+PASS  terms_conditions_groups gains exactly one column, `terms`
+      F1 rows only in migrations-only: 62 (identity-only figure was 1)
+      F1 rows only in push-built     : 265 (identity-only figure was 204)
+      SHARED columns differing: 61 of 608
+         53x  precision/scale numeric(14,2) -> numeric(15,3)
+          8x  precision/scale numeric(12,2) -> numeric(15,3)
+      across 22 tables: bank_accounts, credit_note_items, credit_notes, debit_note_items, debit_notes, expenses, journal_lines, payments, payslips, products, proforma_invoice_items, proforma_invoices, projects, purchase_order_items, purchase_orders, quotation_items, quotations, salary_structures, sales_invoice_items, sales_invoices, sales_order_items, sales_orders
+PASS  F1 delta arithmetic closes against the identity delta plus differing shared columns
+PASS  every differing SHARED column differs ONLY in precision/scale — no type, nullability, default or length change
+PASS  every precision/scale change is a WIDENING, so no stored value can be truncated by it
+PASS  F5 enums are identical in both shapes (no enum DDL needed in 0005)
+PASS  Stage 1 comparator detects the known gap (it is not vacuously equal)
+      Stage 1 components differing: columns(-1/+204), pks(-0/+7), uniques(-0/+2), fks(-0/+21), indexes(-0/+4)
+      structural digest push = 9bf3b78e2b75ed3a…
+      structural digest mig  = fbf9575bf9cb8920…
+      semantic   digest push = f9db6a780276dce2…
+      semantic   digest mig  = 4c8fbc4b0ad88134…
+PASS  snapshot 0004 projection matches the database migrations 0000-0004 actually build
+
+── 1b. MEASURED semantic reference for every prefix, bound to its inputs ──
+PASS  a fresh database measures as EMPTY across every object class
+      prefix empty : 8cca3fcf4acf0d05…
+PASS  prefix 0: drizzle-kit migrate built exactly 1 migration(s)
+PASS  prefix 0: bookkeeping holds exactly 1 row(s)
+      prefix 0     : 97df34d3b0b73cf9…  (0000_brainy_iron_lad)
+PASS  prefix 1: drizzle-kit migrate built exactly 2 migration(s)
+PASS  prefix 1: bookkeeping holds exactly 2 row(s)
+      prefix 1     : 39d7ec4acd03e955…  (0001_marvelous_maximus)
+PASS  prefix 2: drizzle-kit migrate built exactly 3 migration(s)
+PASS  prefix 2: bookkeeping holds exactly 3 row(s)
+      prefix 2     : 20fa0afd4dad8594…  (0002_strange_mad_thinker)
+PASS  prefix 3: drizzle-kit migrate built exactly 4 migration(s)
+PASS  prefix 3: bookkeeping holds exactly 4 row(s)
+      prefix 3     : 9f6c6860887cc81c…  (0003_careful_nomad)
+PASS  prefix 4: drizzle-kit migrate built exactly 5 migration(s)
+PASS  prefix 4: bookkeeping holds exactly 5 row(s)
+      prefix 4     : 4c8fbc4b0ad88134…  (0004_wooden_christian_walker)
+PASS  the full-history prefix digest equals the migrations-only reference database's digest (two independent builds agree)
+PASS  every prefix has a DISTINCT semantic digest (each migration really changes the schema)
+PASS  the push semantic digest differs from every prefix digest
+      migrationJournalDigest = cf58434f84abb362…
+      schemaSourceDigest     = 8466be2a3289c6cc…
+      wrote docs/audits/aud-08/evidence/schema-reference.json (before any experiment reads it)
+
+── 2. Bookkeeping as the installed CLI actually writes it (A8) ──
+PASS  bookkeeping table is drizzle.__drizzle_migrations and it exists after migrate
+PASS  one bookkeeping row per journal entry (5)
+PASS  watermark equals the LAST journal entry's `when`
+PASS  each recorded hash equals sha256 of its .sql file, and created_at equals its journal `when`
+      observed bookkeeping columns: id:integer, hash:text, created_at:bigint
+PASS  observed bookkeeping columns are id/hash/created_at as the source predicted
+
+── 3. Stage 2 — hardening is a SEPARATE axis (E8, E9, E17, F7) ──
+PASS  E8a bare `drizzle-kit migrate` left the immutable audit triggers ABSENT
+PASS  E8b verify:db-hardening exits NON-ZERO on the migration-built database
+      --check exit before harden: 1
+PASS  E8c db:harden succeeded on the migration-built database
+PASS  E8d verify:db-hardening exits 0 after harden
+      --check exit after harden : 0
+PASS  E8e both required triggers now exist on their intended tables and are enabled
+      push --check exit before harden: 1 (raw `drizzle-kit push` does not harden; the npm wrapper chains it)
+PASS  db:harden succeeded on the push-built database
+PASS  F7 matches between the two shapes once BOTH have been hardened
+      F7 (both hardened): audit_logs:audit_logs_immutable:enabled=O | security_events:security_events_immutable:enabled=O
+PASS  E17 audit_logs: a row can be INSERTed (append-only, not read-only)
+PASS  E17 audit_logs: the probe row really exists, so the next two probes are not vacuous
+PASS  E17 audit_logs: UPDATE is actually REJECTED
+PASS  E17 audit_logs: DELETE is actually REJECTED
+PASS  E17 audit_logs: the refusal comes from the append-only trigger, not from some other error
+      audit_logs update refusal: Table audit_logs is append-only; UPDATE is not permitted
+PASS  E17 security_events: a row can be INSERTed (append-only, not read-only)
+PASS  E17 security_events: the probe row really exists, so the next two probes are not vacuous
+PASS  E17 security_events: UPDATE is actually REJECTED
+PASS  E17 security_events: DELETE is actually REJECTED
+PASS  E17 security_events: the refusal comes from the append-only trigger, not from some other error
+      security_events update refusal: Table security_events is append-only; UPDATE is not permitted
+PASS  E9 setup: decoy database built
+      decoy: real triggers present? no (missing audit_logs.audit_logs_immutable, security_events.security_events_immutable)
+      decoy: --check exit = 0
+PASS  E9 MEASURED: does a same-named decoy trigger on another table satisfy --check?
+      E9 RESULT: the check IS satisfied by the decoy while the real triggers are ABSENT -> AUD-08.3 requirement (tighten to (relname, tgname, tgenabled))
+
+── 4. E11 / E12 — rerun is a no-op; a failing migration leaves nothing ──
+PASS  E11 a second `migrate` exits 0 and adds no bookkeeping rows
+PASS  E12 the failing migration run exited non-zero
+PASS  E12 no partial schema survived (marker table absent, public schema empty)
+PASS  E12 no bookkeeping row was recorded
+      E12: single-transaction behaviour confirmed — 0 tables, 0 bookkeeping rows
+
+── 5. E6(b) — a pending migration at or below the watermark is SILENTLY SKIPPED ──
+PASS  E6b setup: committed history applied first, establishing a watermark
+      watermark established = 1784748824249
+      migrate exit = 0; bookkeeping rows = 5 (unchanged = true)
+PASS  E6b the marker table was NOT created although the migration was pending
+PASS  E6b no bookkeeping row was added for the skipped migration
+PASS  E6b drizzle-kit nevertheless exited 0 — the skip is silent
+PASS  E6b db:preflight classifies this INCONSISTENT and names R6/R7
+      preflight: INCONSISTENT — [R6]
+
+── 6. E7 — the Date.now() stamp hazard ──
+      stamped created_at = 1790857813013 (wall clock); highest journal when = 1784748824249
+PASS  E7 drizzle-kit migrate exited 0
+PASS  E7 the ENTIRE committed history was silently skipped — the database is still empty
+PASS  E7 db:preflight refuses it (orphan stamp row, unrecognised schema)
+      preflight: INCONSISTENT — [R3] [R7] [R7] [R7] [R7] [R7]
+
+── 7. E10 / E13 / E14 / E15 — preflight detects what drizzle cannot see ──
+PASS  E10 a tampered applied migration (0002_strange_mad_thinker) is detected as R4
+      E10 preflight: INCONSISTENT — hash mismatch for 0002_strange_mad_thinker: bookkeeping row id=3 records 7daa0aeedd0d…, file is bbf41cab77e8…
+PASS  E13 setup: migrated normally
+      E13: rows 5 -> 4; watermark unchanged = true
+PASS  E13 drizzle-kit migrate still reports success and applies nothing (the hole is invisible to it)
+PASS  E13 db:preflight returns INCONSISTENT citing R1 and naming the missing migration
+      E13 preflight: INCONSISTENT — [R1] bookkeeping is not a contiguous prefix: 0003_careful_nomad (when=1784747316123) HAS a row while an earlier migration does not (first gap at 0002_strange_mad_thinker) | [R1] bookkeeping is not a c
+PASS  E14 an orphan bookkeeping row (created_at matching no journal entry) is detected as R3
+PASS  E15 duplicate bookkeeping rows for one created_at are detected as R2
+
+── 8. E18 — BOOKKEEPING BEHIND, SCHEMA AHEAD (the historical pattern AUD-08 repairs) ──
+PASS  E19 setup: migrated to the committed prefix
+PASS  E19 `push --force` onto a database holding the legacy column hits the columns-conflict prompt
+PASS  E19 it applied NOTHING — the schema is unchanged
+PASS  E19 and it EXITED 0 — the failure is silent to any `push && next-step` chain
+      E19: columns 609 -> 609, exit 0, conflict prompt reached = true
+PASS  E18 setup: schema built at the current push shape
+PASS  E18 bookkeeping records the committed prefix exactly, with real hashes and whens
+PASS  E18 the live schema's STRUCTURAL digest equals the push reference (diagnostic)
+PASS  E18 the live schema's FULL F1–F6 semantic digest equals the measured push reference
+PASS  E18 bookkeeping alone looks healthy — exact correspondence holds over the applied prefix
+PASS  E18 db:preflight does NOT return OK
+PASS  E18 db:preflight returns BASELINE RECONCILIATION REQUIRED
+      E18 preflight: BASELINE_RECONCILIATION_REQUIRED — [BK_BEHIND_SCHEMA_AHEAD]
+      E18 ordinary migrate: REFUSED (exit 10)
+PASS  E18 without a push reference the classification is INCONSISTENT, not OK and not baseline
+
+── 9. Positive control + CLI exit codes ──
+PASS  positive control: a correctly migrated database at its own prefix returns OK
+      CLI against the migrated database: exit 0
+PASS  CLI exit code 0 corresponds to OK on the migrated database
+      CLI against the bookkeeping-behind/schema-ahead database: exit 10
+PASS  CLI exit code 10 corresponds to BASELINE RECONCILIATION REQUIRED
+PASS  CLI never printed the password or a whole connection string
+
+── 9b. E20 — a FRESH EMPTY database is a valid state (Blocker 1) ──
+      E20 CLI on a fresh empty database: exit 0, STATE OK
+PASS  E20 the REAL db:preflight CLI exits 0 on a fresh empty database
+PASS  E20 and reports STATE: OK
+PASS  E20 with the applied prefix EMPTY
+PASS  E20 with EVERY committed migration pending
+PASS  E20 and ordinary migrate PERMITTED
+PASS  E20 raw drizzle-kit migrate then initializes it normally
+PASS  E20 ... recording exactly one bookkeeping row per journal entry
+PASS  E20 the initialized database then passes preflight as OK at the full prefix (exit 0)
+PASS  E20 emptiness: a lone sequence is NOT empty
+PASS  E20 emptiness: a lone sequence -> INCONSISTENT, never OK
+PASS  E20 emptiness: a lone sequence has ZERO columns — the old narrow test would have called it fresh
+PASS  E20 emptiness: a lone enum type is NOT empty
+PASS  E20 emptiness: a lone enum type -> INCONSISTENT, never OK
+PASS  E20 emptiness: a lone enum type has ZERO columns — the old narrow test would have called it fresh
+PASS  E20 emptiness: a lone function is NOT empty
+PASS  E20 emptiness: a lone function -> INCONSISTENT, never OK
+PASS  E20 emptiness: a lone function has ZERO columns — the old narrow test would have called it fresh
+PASS  E20 emptiness: a lone view is NOT empty
+PASS  E20 emptiness: a lone view -> INCONSISTENT, never OK
+PASS  E20 emptiness: an unexpected schema is NOT empty
+PASS  E20 emptiness: an unexpected schema -> INCONSISTENT, never OK
+PASS  E20 emptiness: an unexpected schema has ZERO columns — the old narrow test would have called it fresh
+PASS  E20 emptiness: a lone table is NOT empty
+PASS  E20 emptiness: a lone table -> INCONSISTENT, never OK
+
+── 9c. E21 / E22 — semantic drift with VALID bookkeeping must be INCONSISTENT (Blocker 2) ──
+PASS  drift setup: migrated normally to the full prefix
+PASS  drift setup: bank_accounts holds no rows, so altering it puts no data at risk
+PASS  drift control: before any mutation the database is OK
+PASS  E21 numeric precision/scale drift (numeric(14,2) -> numeric(14,3)): bookkeeping is still perfectly valid (5 rows)
+PASS  E21 numeric precision/scale drift (numeric(14,2) -> numeric(14,3)): the STRUCTURAL projection sees NO difference — it would have authorized this
+PASS  E21 numeric precision/scale drift (numeric(14,2) -> numeric(14,3)): db:preflight returns INCONSISTENT
+PASS  E21 numeric precision/scale drift (numeric(14,2) -> numeric(14,3)): because the FULL semantic digest differs from the prefix reference
+PASS  E21 numeric precision/scale drift (numeric(14,2) -> numeric(14,3)): the real CLI exits 20
+PASS  E21 numeric precision/scale drift (numeric(14,2) -> numeric(14,3)): and its diagnostic says the difference is semantic, not structural
+      E21: structural diff = 0; preflight = INCONSISTENT; CLI exit = 20
+PASS  E21 after reverting the mutation the database is OK again (no false-positive residue)
+PASS  E22a column DEFAULT drift ('0' -> 1): bookkeeping is still perfectly valid (5 rows)
+PASS  E22a column DEFAULT drift ('0' -> 1): the STRUCTURAL projection sees NO difference — it would have authorized this
+PASS  E22a column DEFAULT drift ('0' -> 1): db:preflight returns INCONSISTENT
+PASS  E22a column DEFAULT drift ('0' -> 1): because the FULL semantic digest differs from the prefix reference
+PASS  E22a column DEFAULT drift ('0' -> 1): the real CLI exits 20
+PASS  E22a column DEFAULT drift ('0' -> 1): and its diagnostic says the difference is semantic, not structural
+      E22a: structural diff = 0; preflight = INCONSISTENT; CLI exit = 20
+PASS  E22a after reverting the mutation the database is OK again (no false-positive residue)
+PASS  E22b CHECK constraint drift (a new check added): bookkeeping is still perfectly valid (5 rows)
+PASS  E22b CHECK constraint drift (a new check added): the STRUCTURAL projection sees NO difference — it would have authorized this
+PASS  E22b CHECK constraint drift (a new check added): db:preflight returns INCONSISTENT
+PASS  E22b CHECK constraint drift (a new check added): because the FULL semantic digest differs from the prefix reference
+PASS  E22b CHECK constraint drift (a new check added): the real CLI exits 20
+PASS  E22b CHECK constraint drift (a new check added): and its diagnostic says the difference is semantic, not structural
+      E22b: structural diff = 0; preflight = INCONSISTENT; CLI exit = 20
+PASS  E22b after reverting the mutation the database is OK again (no false-positive residue)
+
+── 9d. E23 — push recognition uses the SEMANTIC digest, not the structural one ──
+PASS  E23 setup: a fresh database pushed to the current shape
+PASS  E23 control: exact push shape, no bookkeeping -> BASELINE RECONCILIATION REQUIRED
+PASS  E23 after a precision-only change the STRUCTURAL digest STILL equals the push reference
+      E23: the AUD-08.1 structural method would therefore still have answered BASELINE RECONCILIATION REQUIRED
+PASS  E23 db:preflight does NOT return BASELINE RECONCILIATION REQUIRED
+PASS  E23 db:preflight returns INCONSISTENT
+PASS  E23 the real CLI exits 20
+
+── 9e. E24 — a STALE reference is refused, never silently trusted ──
+PASS  E24 control: with the current reference the fresh database is OK (exit 0)
+PASS  E24a a reference bound to DIFFERENT migration inputs -> exit 30
+PASS  E24a and the output names REFERENCE_STALE
+PASS  E24b a reference carrying NO migration binding at all -> exit 30, REFERENCE_STALE
+PASS  E24c the migration INPUTS changed under an unchanged reference -> exit 30, REFERENCE_STALE
+PASS  E24d no reference file at all -> exit 30 (missing evidence is refused, not tolerated)
+PASS  E24 db:preflight never regenerated the evidence — the committed reference is byte-unchanged
+PASS  E24e setup: a fresh database pushed to the current shape
+PASS  E24e control: a byte-identical schema copy at another path is NOT stale -> BASELINE (exit 10)
+PASS  E24e changed schema source -> the push reference is NOT used (PUSH_REFERENCE_STALE)
+PASS  E24e so an exact push shape is no longer recognised as a baseline: INCONSISTENT, exit 20
+PASS  E24e and the migration reference is still fresh, so this is NOT a whole-run refusal (not exit 30)
+PASS  E24f setup: migrated normally to the full prefix
+PASS  E24f the target's STRUCTURAL projection matches its snapshot exactly (a structural fallback WOULD say OK)
+PASS  E24f bound reference missing that prefix's semantic digest -> NOT OK
+PASS  E24f -> INCONSISTENT citing REFERENCE_MISSING_PREFIX (fails closed; no structural fallback)
+PASS  E24f control: the same database with the complete reference is OK (exit 0)
+PASS  E24g a fresh database is NOT authorized on emptiness alone when the 'empty' digest is missing -> INCONSISTENT
+
+── 10. Evidence ──
+      wrote docs/audits/aud-08/evidence/gap-measurement.json
+      schema-reference.json was written in section 1b and is not rewritten
+
+159 passed, 0 failed
