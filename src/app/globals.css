@@ -168,11 +168,14 @@
      LEGACY ALIASES — pre-redesign names, kept so untouched screens inherit the new palette instead of
      breaking. New code uses the canonical names above. Each alias is a pointer, never a second value.
      ================================================================================================ */
-  /* Font aliases used by legacy CSS: Plus Jakarta Sans retired (display → UI face); money moved off
-     Plex Mono (mono → UI face, tabular figures from body). */
+  /* Font aliases used by legacy CSS. Plus Jakarta Sans is retired (display → UI face). Mono stays a
+     REAL code face (DEV-UI-01.1-C1): --font-mono is IBM Plex Mono for codes, IDs and hashes. Numeric
+     data (money, prices, rates, quantities, balances, percentages, dates) uses the UI face with
+     tabular figures via --font-numeric / the `num-tabular` utility — never by redefining Mono. */
   --font-body: var(--font-ui);
   --font-display: var(--font-ui);
-  --font-mono: var(--font-ui);
+  --font-mono: var(--font-code-family);
+  --font-numeric: var(--font-ui);
 
   --brand-orange: var(--accent);
   --brand-orange-light: light-dark(#f5a25c, #f8b57c);
@@ -280,9 +283,8 @@
   --font-body: var(--font-ui);
   /* Plus Jakarta Sans is retired from UI headings; the legacy display alias points at the UI face. */
   --font-display: var(--font-ui);
-  /* Legacy `font-mono` was used for money across the app; money is UI-face tabular figures now, so
-     the alias follows the UI face. Codes, IDs and hashes use `font-code` (IBM Plex Mono). */
-  --font-mono: var(--font-ui);
+  /* `font-mono` / `font-code` = IBM Plex Mono: codes, IDs, hashes ONLY. Numbers use `num-tabular`. */
+  --font-mono: var(--font-code-family);
   --font-code: var(--font-code-family);
 
   --color-brand-navy: var(--brand-navy);
@@ -379,6 +381,13 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .font-tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Numeric data — money, prices, rates, quantities, balances, percentages, payroll figures, dates and
+   times: the UI face with tabular figures (DEV-UI-01.1-C1). Codes and IDs use `font-mono` instead. */
+@utility num-tabular {
+  font-family: var(--font-numeric);
   font-variant-numeric: tabular-nums;
 }
 

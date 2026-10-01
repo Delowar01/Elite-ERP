@@ -131,7 +131,7 @@ export function ComboChart({
         <circle key={`r${i}`} cx={x} cy={yy} r={3.2} fill="var(--brand-orange)" />
       ))}
       {labels.map((lbl, i) => (
-        <text key={i} x={padL + i * step} y={h - 6} fontFamily="IBM Plex Mono" fontSize={10} fill="var(--ink-faint)" textAnchor="middle">
+        <text key={i} x={padL + i * step} y={h - 6} style={{ fontFamily: "var(--font-numeric)", fontVariantNumeric: "tabular-nums" }} fontSize={10} fill="var(--ink-faint)" textAnchor="middle">
           {lbl}
         </text>
       ))}

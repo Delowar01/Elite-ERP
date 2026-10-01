@@ -137,7 +137,7 @@ export function DcListClient({
                 </TableCell>
                 <TableCell className="text-ink-muted font-mono text-xs">{r.sourceLabel ?? "—"}</TableCell>
                 <TableCell>{r.customerName}</TableCell>
-                <TableCell className="font-mono text-xs">{r.dispatchDate ?? "—"}</TableCell>
+                <TableCell className="num-tabular text-xs">{r.dispatchDate ?? "—"}</TableCell>
                 <TableCell className="text-[12.5px] text-ink-muted">{r.creatorName}</TableCell>
                 <TableCell>
                   <Badge variant={STATUS_VARIANT[r.status] ?? "neutral"}>{t(locale, r.status)}</Badge>

@@ -161,7 +161,7 @@ export function ImportDialog({ locale, module, importColumns }: { locale: Locale
                   <tbody>
                     {results.map((r) => (
                       <tr key={r.row} className="border-t border-line">
-                        <td className="p-2 font-mono text-ink-muted">{r.row}</td>
+                        <td className="p-2 num-tabular text-ink-muted">{r.row}</td>
                         <td className="p-2">{r.ok ? <span className="text-success">✓</span> : <span className="text-danger">✗</span>}</td>
                         <td className="p-2 text-danger">{r.errors.join(" ")}</td>
                       </tr>

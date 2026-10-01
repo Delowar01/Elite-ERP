@@ -40,7 +40,7 @@ function FigureRow({
         {label}
         {hint ? <span className="block text-[11px] text-ink-faint font-normal">{hint}</span> : null}
       </span>
-      <span className="mono text-[13px] shrink-0" style={{ color: tone }}>
+      <span className="num-tabular text-[13px] shrink-0" style={{ color: tone }}>
         <Money amount={amount} context="summary" />
       </span>
     </div>
@@ -71,7 +71,7 @@ function DrillTable({ locale, rows, empty }: { locale: Locale; rows: CostDrillRo
                   {r.number}
                 </Link>
               </TableCell>
-              <TableCell className="mono text-xs">{r.date}</TableCell>
+              <TableCell className="num-tabular text-xs">{r.date}</TableCell>
               <TableCell className="text-[12.5px] text-ink-muted">{r.party ?? "—"}</TableCell>
               <TableCell className="text-[12.5px] text-ink-muted">{t(locale, r.status)}</TableCell>
               <TableCell className="num" style={{ whiteSpace: "nowrap", color: r.negative ? "var(--accent-red)" : undefined }}>

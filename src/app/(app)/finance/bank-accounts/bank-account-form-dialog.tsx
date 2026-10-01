@@ -155,7 +155,7 @@ export function BankAccountFormDialog({
           {isEdit && account?.opening && (
             <div className="rounded-lg border border-line bg-surface-sunken px-3 py-2.5">
               <div className="text-[11.5px] uppercase tracking-wide text-ink-faint">{t(locale, "Opening Balance")}</div>
-              <div className="font-mono text-[13.5px] mt-0.5" data-testid="opening-readonly">
+              <div className="num-tabular text-[13.5px] mt-0.5" data-testid="opening-readonly">
                 {account.opening.amount} · {account.opening.date}
               </div>
               <p className="text-[11.5px] text-ink-muted mt-1 leading-relaxed">

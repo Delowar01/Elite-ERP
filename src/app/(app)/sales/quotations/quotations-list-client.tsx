@@ -166,9 +166,9 @@ export function QuotationsListClient({
                 </TableCell>
                 <TableCell className="text-ink-faint font-mono text-xs">—</TableCell>
                 <TableCell>{r.customerName}</TableCell>
-                <TableCell className="font-mono text-xs">{r.issueDate}</TableCell>
-                <TableCell className="font-mono text-xs">{r.validUntil ?? "—"}</TableCell>
-                <TableCell className="text-right font-mono">
+                <TableCell className="num-tabular text-xs">{r.issueDate}</TableCell>
+                <TableCell className="num-tabular text-xs">{r.validUntil ?? "—"}</TableCell>
+                <TableCell className="text-right num-tabular">
                   <Money amount={r.total} />
                 </TableCell>
                 <TableCell className="text-[12.5px] text-ink-muted">{r.creatorName}</TableCell>

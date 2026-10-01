@@ -85,8 +85,8 @@ export default async function ProductsPage({
                       {p.name}
                     </Link>
                   </TableCell>
-                  <TableCell className="text-right font-mono">{p.unitPrice}</TableCell>
-                  <TableCell className="text-right font-mono">{p.quantityOnHand}</TableCell>
+                  <TableCell className="text-right num-tabular">{p.unitPrice}</TableCell>
+                  <TableCell className="text-right num-tabular">{p.quantityOnHand}</TableCell>
                   <TableCell className="flex items-center gap-1.5 flex-wrap">
                     {low ? (
                       <Badge variant="warning">Low stock</Badge>

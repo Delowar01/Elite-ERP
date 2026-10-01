@@ -99,12 +99,12 @@ export function ProjectsListClient({ locale, rows }: { locale: Locale; rows: Pro
                     </Link>
                   </TableCell>
                   <TableCell>{r.clientName ?? <span className="text-ink-faint">—</span>}</TableCell>
-                  <TableCell className="font-mono text-xs">{r.startDate ?? "—"}</TableCell>
-                  <TableCell className="font-mono text-xs">{r.endDate ?? "—"}</TableCell>
-                  <TableCell className="text-right font-mono">
+                  <TableCell className="num-tabular text-xs">{r.startDate ?? "—"}</TableCell>
+                  <TableCell className="num-tabular text-xs">{r.endDate ?? "—"}</TableCell>
+                  <TableCell className="text-right num-tabular">
                     {r.budget ? <Money amount={r.budget} context="summary" /> : <span className="text-ink-faint">—</span>}
                   </TableCell>
-                  <TableCell className="font-mono text-xs">{r.taskCount}</TableCell>
+                  <TableCell className="num-tabular text-xs">{r.taskCount}</TableCell>
                   <TableCell>
                     <Badge variant={STATUS_VARIANT[r.status] ?? "neutral"}>{t(locale, r.status)}</Badge>
                   </TableCell>

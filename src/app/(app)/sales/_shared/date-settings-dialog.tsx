@@ -50,7 +50,7 @@ export function DateSettingsDialog({
             <Input id="ds-days" type="number" min={0} value={days} onChange={(e) => setDays(e.target.value)} autoFocus />
           </div>
           <p className="text-[11.5px] text-ink-faint">
-            {baseLabel}: <span className="font-mono text-ink">{base}</span> → <span className="font-mono text-ink">{preview}</span>
+            {baseLabel}: <span className="num-tabular text-ink">{base}</span> → <span className="num-tabular text-ink">{preview}</span>
           </p>
         </div>
         <DialogFooter>

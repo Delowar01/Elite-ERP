@@ -118,7 +118,7 @@ export function RecycleBinClient({ locale, rows, isOwner }: { locale: Locale; ro
                   <TableCell>
                     <Badge variant="neutral">{t(locale, r.status)}</Badge>
                   </TableCell>
-                  <TableCell className="font-mono text-xs">{r.deletedAt || "—"}</TableCell>
+                  <TableCell className="num-tabular text-xs">{r.deletedAt || "—"}</TableCell>
                   <TableCell>
                     <div className="flex items-center justify-end gap-2">
                       <Button variant="glass" style={{ width: "auto" }} disabled={pending} onClick={() => restore(r)}>

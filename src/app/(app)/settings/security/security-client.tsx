@@ -265,8 +265,8 @@ export function SecurityCenterClient(props: {
                   </div>
                 </TableCell>
                 <TableCell className="font-mono text-xs">{s.ipAddress ?? "—"}</TableCell>
-                <TableCell className="font-mono text-xs">{fmtDateTime(s.createdAt)}</TableCell>
-                <TableCell className="font-mono text-xs">{fmtDateTime(s.lastActivityAt)}</TableCell>
+                <TableCell className="num-tabular text-xs">{fmtDateTime(s.createdAt)}</TableCell>
+                <TableCell className="num-tabular text-xs">{fmtDateTime(s.lastActivityAt)}</TableCell>
                 <TableCell className="text-right">
                   <Button variant="secondary" size="sm" disabled={pending} onClick={() => terminate(s.id)}>
                     {t(locale, "End")}
@@ -306,7 +306,7 @@ export function SecurityCenterClient(props: {
                     </TableCell>
                     <TableCell className="text-[12.5px]">{e.email ?? "—"}</TableCell>
                     <TableCell className="font-mono text-xs">{e.ipAddress ?? "—"}</TableCell>
-                    <TableCell className="font-mono text-xs">{fmtDateTime(e.createdAt)}</TableCell>
+                    <TableCell className="num-tabular text-xs">{fmtDateTime(e.createdAt)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

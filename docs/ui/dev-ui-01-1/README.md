@@ -6,6 +6,7 @@ status-registry or settings redesign; no schema, migration or business-logic cha
 | File | Content |
 |---|---|
 | `screenshot-change-report.json` | Per state: before/after sha256, % pixels changed (any channel > 8/255), height, horizontal overflow, React #418 counts, Arabic-font proof. |
+| `typography-inventory.md` | DEV-UI-01.1-C1: every Mono usage classified — code/ID kept, numeric moved, ambiguous listed. |
 | `guardrails-after.json` | Report-only guardrail counts after this batch (DEV-UI-01.0 baseline: `../dev-ui-01-0/guardrails-baseline.json`). |
 | `../../../tests/ui-baseline/candidates/dev-ui-01-1/` | The 256 candidate screenshots + manifest. **The approved DEV-UI-01.0 `baseline/` is untouched**; promoting the candidate is the reviewer's decision. |
 
@@ -60,3 +61,27 @@ it fails on all six `sm` variants without the fix).
 | `app-shell.tsx` avatar fallback | DEV-UI-01.3 |
 | kanban / employee avatar fallbacks | DEV-UI-01.7 |
 | Settings → Color Theme "Gradient Color" option and its sample swatch | settings stage — the option still saves, but is no longer painted on core controls |
+
+## DEV-UI-01.1-C1 — typography semantics correction
+
+**Root cause.** 1724131 moved money off IBM Plex Mono by redefining the *Mono alias itself*
+(`--font-mono` and Tailwind `font-mono` → the UI face). That removed Mono from every legitimate
+identifier as well — document numbers, SKUs, account codes, VAT/tax IDs.
+
+**Rule after the correction.**
+
+| Semantic | Face | How |
+|---|---|---|
+| UI, body, headings | IBM Plex Sans → IBM Plex Sans Arabic | `--font-ui` |
+| Codes, IDs, hashes, document numbers, SKUs, account codes, VAT/tax IDs, numbering samples, hex colours | **IBM Plex Mono** | `font-mono`, `font-code`, `.mono`, `var(--font-mono)` (= `--font-code-family`) |
+| Money, prices, rates, quantities, balances, percentages, payroll, counts, dates, times | UI face + `tabular-nums` | `num-tabular` utility / `var(--font-numeric)`; `Money` and `DocNum` apply it themselves |
+
+The two semantics are independent tokens: nothing in the numeric style can reach the code face.
+`verify:typography` (43 checks, part of `verify:static`) pins both sides and was mutation-tested
+against the original mistake, a numeric style pointed at Mono, `Money` losing its class, and a call
+site wrapping `Money` in Mono — each fails.
+
+**Screenshots.** Two independent runs: 256/256 byte-identical. Against the 01.1 candidate: 164 states
+differ, all text-only (0 image-size, 0 height and 0 overflow changes; max 2.1 % of pixels, median
+0.17 %). The candidate in `tests/ui-baseline/candidates/dev-ui-01-1/` is the corrected one.
+

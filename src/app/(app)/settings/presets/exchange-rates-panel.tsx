@@ -132,7 +132,7 @@ export function ExchangeRatesPanel({
               {latest.map((r) => (
                 <TableRow key={r.fromCurrency}>
                   <TableCell className="font-mono font-semibold">{r.fromCurrency} → {baseCurrency}</TableCell>
-                  <TableCell className="num font-mono">{Number(r.rate)}</TableCell>
+                  <TableCell className="num num-tabular">{Number(r.rate)}</TableCell>
                   <TableCell>
                     {r.effectiveDate}
                     {r.stale ? (
@@ -177,7 +177,7 @@ export function ExchangeRatesPanel({
                   <TableRow key={r.id}>
                     <TableCell>{r.effectiveDate}</TableCell>
                     <TableCell className="font-mono">{r.fromCurrency} → {baseCurrency}</TableCell>
-                    <TableCell className="num font-mono">{Number(r.rate)}</TableCell>
+                    <TableCell className="num num-tabular">{Number(r.rate)}</TableCell>
                     <TableCell className="text-[12px] text-ink-muted">{r.source === "manual" ? t(locale, "Manual") : r.source}</TableCell>
                   </TableRow>
                 ))}

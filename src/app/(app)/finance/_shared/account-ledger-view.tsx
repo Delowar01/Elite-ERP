@@ -112,7 +112,7 @@ export function AccountLedgerView({
                     const badge = SOURCE_BADGE[row.sourceType] ?? { label: row.sourceType, variant: "neutral" as const };
                     return (
                       <TableRow key={i}>
-                        <TableCell className="mono">{row.date}</TableCell>
+                        <TableCell className="num-tabular">{row.date}</TableCell>
                         <TableCell>{row.memo}</TableCell>
                         <TableCell>
                           <Badge variant={badge.variant}>{t(locale, badge.label)}</Badge>

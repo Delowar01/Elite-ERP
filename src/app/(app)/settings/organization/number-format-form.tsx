@@ -106,18 +106,18 @@ export function NumberFormatForm({
         <div className="flex flex-col gap-1.5 text-[13px]">
           <div className="flex justify-between gap-4">
             <span className="text-ink-muted">{t(locale, "Amount")}</span>
-            <span className="font-mono font-semibold">{sym} {formatAmount(12345679.5, cfg)}</span>
+            <span className="num-tabular font-semibold">{sym} {formatAmount(12345679.5, cfg)}</span>
           </div>
           <div className="text-[11px] text-ink-faint">
             {t(locale, "Money always follows the currency's own decimals.")}
           </div>
           <div className="flex justify-between gap-4">
             <span className="text-ink-muted">{t(locale, "Rate")}</span>
-            <span className="font-mono">{sym} {formatRate(1234.567, cfg)}</span>
+            <span className="num-tabular">{sym} {formatRate(1234.567, cfg)}</span>
           </div>
           <div className="flex justify-between gap-4">
             <span className="text-ink-muted">{t(locale, "Qty")}</span>
-            <span className="font-mono">{formatQuantity(12.5, cfg)}</span>
+            <span className="num-tabular">{formatQuantity(12.5, cfg)}</span>
           </div>
         </div>
       </div>

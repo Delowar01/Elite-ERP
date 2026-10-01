@@ -122,7 +122,7 @@ export function BundlesPanel({
             {bundles.map((bundle) => (
               <TableRow key={bundle.id}>
                 <TableCell className="font-medium">{bundle.name}</TableCell>
-                <TableCell className="text-right font-mono text-xs">{bundle.items.length}</TableCell>
+                <TableCell className="text-right num-tabular text-xs">{bundle.items.length}</TableCell>
                 <TableCell className="text-right whitespace-nowrap">
                   <Button variant="ghost" size="sm" disabled={pending} onClick={() => setManaging(bundle)}>
                     <Package className="size-3.5" /> {t(locale, "Manage")}
@@ -202,7 +202,7 @@ export function BundlesPanel({
                         {item.productName} <span className="text-ink-faint font-mono text-xs">{item.productSku}</span>
                       </span>
                       <span className="flex items-center gap-2">
-                        <span className="font-mono text-xs">× {item.quantity}</span>
+                        <span className="num-tabular text-xs">× {item.quantity}</span>
                         <Button variant="ghost" size="icon" disabled={pending} onClick={() => removeItem(item.id, managing.id)} aria-label={t(locale, "Delete")}>
                           <Trash2 className="size-3.5 text-danger" />
                         </Button>

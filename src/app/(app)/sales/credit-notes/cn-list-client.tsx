@@ -151,8 +151,8 @@ export function CnListClient({
                     </Link>
                   </TableCell>
                   <TableCell>{r.customerName}</TableCell>
-                  <TableCell className="font-mono text-xs">{r.issueDate}</TableCell>
-                  <TableCell className="text-right font-mono">
+                  <TableCell className="num-tabular text-xs">{r.issueDate}</TableCell>
+                  <TableCell className="text-right num-tabular">
                     <Money amount={r.total} />
                   </TableCell>
                   <TableCell className="text-[12.5px] text-ink-muted">{r.creatorName}</TableCell>

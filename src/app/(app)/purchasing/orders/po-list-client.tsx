@@ -156,9 +156,9 @@ export function PoListClient({
                   </TableCell>
                   <TableCell className="text-ink-faint font-mono text-xs">—</TableCell>
                   <TableCell>{r.vendorName}</TableCell>
-                  <TableCell className="font-mono text-xs">{r.orderDate}</TableCell>
-                  <TableCell className="font-mono text-xs">{r.expectedDate ?? <span className="text-ink-faint">—</span>}</TableCell>
-                  <TableCell className="text-right font-mono">
+                  <TableCell className="num-tabular text-xs">{r.orderDate}</TableCell>
+                  <TableCell className="num-tabular text-xs">{r.expectedDate ?? <span className="text-ink-faint">—</span>}</TableCell>
+                  <TableCell className="text-right num-tabular">
                     <Money amount={r.total} />
                   </TableCell>
                   <TableCell className="text-[12.5px] text-ink-muted">{r.creatorName}</TableCell>
