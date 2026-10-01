@@ -58,3 +58,6 @@ scripts/tests/.last-b1-results.json
 
 # real-provider verification run artefacts (manifests, reports, state)
 .batch3-provider-verification/
+
+# DEV-UI-01.0 visual-baseline working state (TEST-ONLY password file, fake storage, captures)
+/.ui-baseline-work/

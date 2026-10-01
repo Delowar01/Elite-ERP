@@ -61,7 +61,9 @@
     "verify:bank-opening-backfill": "tsx --env-file-if-exists=.env --conditions=react-server verify/verify-bank-opening-backfill.mts",
     "verify:note-fx": "tsx --env-file-if-exists=.env --conditions=react-server verify/verify-note-fx.mts",
     "verify:payment-reversal": "tsx --env-file-if-exists=.env --conditions=react-server verify/verify-payment-reversal.mts",
-    "verify:settlement": "tsx --env-file-if-exists=.env --conditions=react-server verify/verify-settlement.mts"
+    "verify:settlement": "tsx --env-file-if-exists=.env --conditions=react-server verify/verify-settlement.mts",
+    "ui:baseline": "node tests/ui-baseline/run.mjs",
+    "ui:guardrails": "node tests/ui-baseline/guardrails.mjs"
   },
   "dependencies": {
     "@radix-ui/react-avatar": "^1.2.2",
