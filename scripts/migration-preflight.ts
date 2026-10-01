@@ -22,16 +22,24 @@
  * read-only connection, runs SELECTs, and exits.
  *
  * Run:   npm run db:preflight
- * Exit:  0  = OK
- *        10 = BASELINE RECONCILIATION REQUIRED
- *        20 = INCONSISTENT
+ * Exit:  0  = OK                                (migrate PERMITTED)
+ *        10 = BASELINE RECONCILIATION REQUIRED  (migrate refused; stamp workflow may resolve, AUD-08.3)
+ *        20 = INCONSISTENT                      (migrate refused; stamp refused)
+ *        30 = REFERENCE_STALE                   (the gate's own evidence does not describe the current
+ *                                                migrations, or is missing; it refuses to judge at all)
  *        1  = tool error (unreadable journal, no connection, bad arguments)
+ *
+ * Authorization evidence: OK is granted ONLY when the target's FULL F1–F6 semantic digest equals the
+ * MEASURED digest for its applied prefix (schema-reference.json, produced from disposable databases
+ * by verify-migration-baseline). The structural projection is printed for diagnosis and is never a
+ * permission input. A fresh database is OK only if it is empty across every object class AND its
+ * digest equals the measured "empty" digest.
  *
  * Secrets: DATABASE_URL is never printed. Only host and database name are reported.
  */
 import { createHash } from "node:crypto";
-import { readFileSync, existsSync } from "node:fs";
-import { join } from "node:path";
+import { readFileSync, existsSync, readdirSync } from "node:fs";
+import { join, relative, sep } from "node:path";
 // ClientBase is the common supertype of Client and PoolClient, so these projections work
 // against a pooled connection or a standalone one without a cast at every call site.
 import { Pool, type ClientBase } from "pg";
@@ -287,24 +295,147 @@ export function fingerprintDigest(fp: LiveFingerprint): string {
 }
 
 // ---------------------------------------------------------------------------------------------
-// Structural projection — the subset that is SAFE to compare against a drizzle snapshot
+// Emptiness — what "a fresh database" actually means
 // ---------------------------------------------------------------------------------------------
 
 /**
- * Why there are two projections.
+ * A fresh database is a legitimate state: no bookkeeping, nothing applied, every migration pending,
+ * and `migrate` should be allowed to initialize it. The first version of this tool got that wrong
+ * and refused it.
  *
- * `projectLive` measures types, defaults, precision and scale from the database. A drizzle snapshot
- * spells the same facts differently ("serial" vs integer + a nextval default; "numeric(15, 3)" vs
- * numeric + precision + scale). Translating between the two spellings is a lossy layer that would
- * itself need testing, and a mistake in it would look exactly like a real schema divergence.
+ * But "no tables in one narrow projection" is not emptiness. A database carrying views, sequences,
+ * enum types, functions or triggers — or an unexpected application schema — is NOT fresh, and
+ * treating it as fresh would let `migrate` run against something nobody has identified. So every
+ * class of application object is counted, and `drizzle`'s own bookkeeping schema is the single
+ * permitted exception.
+ */
+export type Emptiness = {
+  empty: boolean;
+  counts: Record<string, number>;
+  extraSchemas: string[];
+  detail: string;
+};
+
+const SYSTEM_SCHEMAS = ["pg_catalog", "information_schema", "pg_toast"];
+
+export async function measureEmptiness(client: ClientBase): Promise<Emptiness> {
+  const q = async (sql: string): Promise<number> => {
+    const { rows } = await client.query<{ n: number }>(sql);
+    return Number(rows[0]?.n ?? 0);
+  };
+
+  const counts: Record<string, number> = {
+    tables: await q(`select count(*)::int as n from information_schema.tables where table_schema='public' and table_type='BASE TABLE'`),
+    views: await q(`select count(*)::int as n from information_schema.tables where table_schema='public' and table_type='VIEW'`),
+    matviews: await q(`select count(*)::int as n from pg_matviews where schemaname='public'`),
+    sequences: await q(`select count(*)::int as n from pg_class c join pg_namespace n on n.oid=c.relnamespace where c.relkind='S' and n.nspname='public'`),
+    // Enums, composites and domains all live in pg_type. Exclude the row-types PostgreSQL creates
+    // implicitly for every table/view/sequence, otherwise this can never read zero.
+    types: await q(`select count(*)::int as n from pg_type t join pg_namespace n on n.oid=t.typnamespace
+                     where n.nspname='public' and t.typtype in ('e','c','d')
+                       and not exists (select 1 from pg_class c where c.reltype = t.oid)`),
+    routines: await q(`select count(*)::int as n from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public'`),
+    triggers: await q(`select count(*)::int as n from pg_trigger t join pg_class c on c.oid=t.tgrelid
+                        join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and not t.tgisinternal`),
+  };
+
+  // Any non-system schema other than `public` and drizzle's own bookkeeping schema is unexpected.
+  const { rows: schemaRows } = await client.query<{ nspname: string }>(
+    `select nspname from pg_namespace
+      where nspname <> all($1::text[]) and nspname not like 'pg_temp%' and nspname not like 'pg_toast%'
+        and nspname not in ('public', $2) order by 1`,
+    [SYSTEM_SCHEMAS, BOOKKEEPING_SCHEMA],
+  );
+  const extraSchemas = schemaRows.map((r) => r.nspname);
+
+  const nonZero = Object.entries(counts).filter(([, n]) => n > 0);
+  const empty = nonZero.length === 0 && extraSchemas.length === 0;
+  const detail = empty
+    ? "public schema holds no tables, views, materialized views, sequences, enum/composite/domain types, routines or triggers, and there is no unexpected schema"
+    : [
+        nonZero.length > 0 ? nonZero.map(([k, n]) => `${k}=${n}`).join(" ") : "",
+        extraSchemas.length > 0 ? `unexpected schemas: ${extraSchemas.join(", ")}` : "",
+      ].filter(Boolean).join("; ");
+
+  return { empty, counts, extraSchemas, detail };
+}
+
+// ---------------------------------------------------------------------------------------------
+// Reference binding — a stale reference must never be trusted silently
+// ---------------------------------------------------------------------------------------------
+
+/**
+ * Identity of the MIGRATION inputs: ordered journal tuples plus each migration file's own sha256.
  *
- * So the snapshot comparison is restricted to the subset where both sides are unambiguous:
- * column identity, NOT NULL, primary keys, uniques, foreign keys WITH their actions, declared
- * indexes and enum values. That is more than enough to detect the case AUD-08 exists to repair —
- * bookkeeping behind, schema ahead — because a missing table or column shows up immediately.
+ * Deliberately NOT the git HEAD. A tooling-only commit legitimately moves HEAD without changing a
+ * single migration, and a reference refused for that reason would train people to bypass the gate.
+ * Content identity moves if and only if the migrations or the journal move.
+ */
+export function migrationJournalDigest(journal: Journal, fileHashes: Map<string, string>): string {
+  const body = journal.entries
+    .map((e) => `${e.idx}|${e.when}|${e.tag}|${fileHashes.get(e.tag) ?? "MISSING"}`)
+    .join("\n");
+  return createHash("sha256").update(`${journal.version}|${journal.dialect}\n${body}`).digest("hex");
+}
+
+/**
+ * Identity of the SCHEMA SOURCE inputs that produced the push reference: every schema module plus
+ * the drizzle config, hashed in a stable path order. If these move, `db:push` may produce a
+ * different shape, so `pushSemanticDigest` must no longer be used to recognise a baseline.
+ */
+export function schemaSourceDigest(schemaDir = join("src", "db", "schema"), configPath = "drizzle.config.ts"): string {
+  const hash = createHash("sha256");
+  const files: string[] = [];
+  const walk = (dir: string): void => {
+    for (const entry of readdirSync(dir, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
+      const p = join(dir, entry.name);
+      if (entry.isDirectory()) walk(p);
+      else if (entry.isFile() && /\.(ts|mts)$/.test(entry.name)) files.push(p);
+    }
+  };
+  if (existsSync(schemaDir)) walk(schemaDir);
+  // Paths are hashed RELATIVE to the schema directory, and the config under a fixed label, so the
+  // identity is a function of CONTENT and layout only. Hashing absolute paths would make a
+  // byte-identical checkout at another location read as stale — a false REFERENCE_STALE that
+  // would teach people to ignore the gate.
+  const entries = files
+    .map((f) => ({ label: relative(schemaDir, f).split(sep).join("/"), path: f }))
+    .sort((a, b) => a.label.localeCompare(b.label));
+  if (existsSync(configPath)) entries.push({ label: "<drizzle.config>", path: configPath });
+  for (const e of entries) {
+    hash.update(`${e.label}\n`);
+    hash.update(readFileSync(e.path));
+    hash.update("\n");
+  }
+  return hash.digest("hex");
+}
+
+// ---------------------------------------------------------------------------------------------
+// Structural projection — DIAGNOSTIC ONLY
+// ---------------------------------------------------------------------------------------------
+
+/**
+ * ===============================================================================================
+ *   STRUCTURAL EQUALITY IS DIAGNOSTIC ONLY.
+ *   IT MUST NEVER AUTHORIZE MIGRATION EXECUTION.
+ * ===============================================================================================
  *
- * Full type/default/precision equality is proven live-against-live by verify-migration-baseline,
- * where both sides are measured the same way and no translation is involved.
+ * This projection exists to tell a HUMAN what differs between a database and a drizzle snapshot,
+ * in terms both sides can express: column identity, NOT NULL, primary keys, uniques, foreign keys
+ * with their actions, declared indexes and enum values.
+ *
+ * It deliberately omits column types, defaults, numeric precision and scale, CHECK constraints and
+ * sequence ownership, because a drizzle snapshot spells those differently from the catalog
+ * ("serial" vs integer + a nextval default; "numeric(15, 3)" vs numeric + precision + scale) and an
+ * approximate translation would be a second thing to get wrong.
+ *
+ * That omission is exactly why it cannot gate anything. AUD-08.1 MEASURED that 61 money columns
+ * differ ONLY in precision/scale between a migrations-built and a push-built database — a
+ * difference this projection cannot see at all. An earlier version of this tool used it as the
+ * equality gate for OK; review correctly rejected that (AUD-08.1-C1, Blocker 2).
+ *
+ * The permission decision uses the FULL semantic F1–F6 digest (`projectLive` + `fingerprintDigest`)
+ * compared against MEASURED reference digests. See `classify`.
  */
 export type StructuralProjection = {
   columns: string[];  // "table.column:notNull=<bool>"
@@ -477,6 +608,8 @@ export const EXIT: Record<PreflightState, number> = {
   BASELINE_RECONCILIATION_REQUIRED: 10,
   INCONSISTENT: 20,
 };
+/** Distinct from all three states: the gate's own evidence is unusable, so it refuses to judge. */
+export const EXIT_REFERENCE_STALE = 30;
 
 export type Finding = { code: string; detail: string };
 
@@ -488,13 +621,31 @@ export type PreflightResult = {
   watermark: number | null;
   bookkeepingPresent: boolean;
   bookkeepingRowCount: number;
-  schemaChecked: boolean;
-  schemaMatchesPrefix: boolean | null;
-  structuralDigestActual: string | null;
+  /** The reference key the applied prefix maps to: "empty", or the idx of the last applied entry. */
+  prefixKey: string;
+  semanticDigestActual: string | null;
+  semanticDigestExpected: string | null;
 };
 
-/** The reference registry verify-migration-baseline emits, used only to recognise a push shape. */
-export type SchemaReference = { pushStructuralDigest?: string; prefixStructuralDigests?: Record<string, string> };
+/**
+ * The reference registry verify-migration-baseline emits from DISPOSABLE databases.
+ *
+ * Every digest here is MEASURED — `projectLive` + `fingerprintDigest` against a database that the
+ * migrations (or `db:push`) actually built — never translated from snapshot JSON.
+ */
+export type SchemaReference = {
+  /** Content identity of the migration inputs that produced the prefix digests. */
+  migrationJournalDigest?: string;
+  /** Content identity of the schema-source inputs that produced the push digest. */
+  schemaSourceDigest?: string;
+  /** FULL F1–F6 semantic digests keyed by prefix: "empty", "0", "1", ... */
+  prefixSemanticDigests?: Record<string, string>;
+  /** FULL F1–F6 semantic digest of the current db:push shape. */
+  pushSemanticDigest?: string;
+  /** Diagnostic only — never consulted for a permission decision. */
+  pushStructuralDigest?: string;
+  prefixStructuralDigests?: Record<string, string>;
+};
 
 export function readSchemaReference(path: string): SchemaReference | null {
   if (!existsSync(path)) return null;
@@ -505,34 +656,95 @@ export function readSchemaReference(path: string): SchemaReference | null {
   }
 }
 
+/** "empty" when nothing is applied, else the idx of the last applied journal entry. */
+export function prefixKeyFor(applied: JournalEntry[]): string {
+  return applied.length === 0 ? "empty" : String(applied[applied.length - 1].idx);
+}
+
+/**
+ * Freshness binding. Returns the reasons the reference may not be used, split by WHICH part:
+ *   - migration identity stale  => the prefix digests are unusable => REFUSE the whole run
+ *   - schema-source identity stale => only the push digest is unusable => no baseline recognition
+ * Never regenerated here: db:preflight is read-only and evidence is produced by the verify suite.
+ */
+export function referenceFreshness(args: {
+  reference: SchemaReference | null;
+  currentMigrationDigest: string;
+  currentSchemaSourceDigest: string;
+}): { migrationsUsable: boolean; pushUsable: boolean; findings: Finding[] } {
+  const { reference } = args;
+  const findings: Finding[] = [];
+  if (reference === null) {
+    findings.push({ code: "REFERENCE_MISSING", detail: "no readable schema-reference.json; the gate has no measured digests to compare against" });
+    return { migrationsUsable: false, pushUsable: false, findings };
+  }
+
+  let migrationsUsable = true;
+  if (!reference.migrationJournalDigest) {
+    migrationsUsable = false;
+    findings.push({ code: "REFERENCE_STALE", detail: "reference carries no migrationJournalDigest, so it cannot be bound to the current migrations" });
+  } else if (reference.migrationJournalDigest !== args.currentMigrationDigest) {
+    migrationsUsable = false;
+    findings.push({
+      code: "REFERENCE_STALE",
+      detail: `reference was measured against different migration inputs (reference ${reference.migrationJournalDigest.slice(0, 12)}…, current ${args.currentMigrationDigest.slice(0, 12)}…). Re-run verify-migration-baseline to regenerate it.`,
+    });
+  }
+
+  let pushUsable = true;
+  if (!reference.schemaSourceDigest || !reference.pushSemanticDigest) {
+    pushUsable = false;
+    findings.push({ code: "PUSH_REFERENCE_UNAVAILABLE", detail: "reference carries no schemaSourceDigest/pushSemanticDigest; baseline recognition disabled" });
+  } else if (reference.schemaSourceDigest !== args.currentSchemaSourceDigest) {
+    pushUsable = false;
+    findings.push({
+      code: "PUSH_REFERENCE_STALE",
+      detail: `schema source changed since the push reference was measured (reference ${reference.schemaSourceDigest.slice(0, 12)}…, current ${args.currentSchemaSourceDigest.slice(0, 12)}…); baseline recognition disabled`,
+    });
+  }
+
+  return { migrationsUsable, pushUsable, findings };
+}
+
 /**
  * The state machine.
  *
- * Bookkeeping validity alone is NOT sufficient for OK (AUD-08.1 mandatory correction): the live
- * schema must also match the schema expected at the applied prefix.
+ * OK requires the target's FULL F1–F6 semantic digest to equal the MEASURED digest for its applied
+ * prefix. Structural equality is never consulted for a permission decision.
+ *
+ *   NO bookkeeping
+ *     + empty application schema AND digest == reference["empty"]   -> OK (prefix 0, all pending)
+ *     + digest == pushSemanticDigest (and push reference fresh)      -> BASELINE RECONCILIATION REQUIRED
+ *     + anything else                                                -> INCONSISTENT
+ *   bookkeeping present
+ *     + any of R1–R7                                                 -> INCONSISTENT
+ *     + digest == reference[prefix]                                  -> OK
+ *     + digest == pushSemanticDigest (and push reference fresh)      -> BASELINE RECONCILIATION REQUIRED
+ *     + anything else, or no reference for that prefix               -> INCONSISTENT
  */
 export function classify(args: {
   journal: Journal;
   journalFindings: Finding[];
   bookkeeping: Bookkeeping;
   fileHashes: Map<string, string>;
-  schemaMatchesPrefix: boolean | null;
-  actualMatchesPushReference: boolean | null;
-  structuralDigestActual: string | null;
+  emptiness: Emptiness;
+  semanticDigestActual: string;
+  /** Measured F1–F6 digests by prefix key. null => no usable reference (fail closed). */
+  prefixSemanticDigests: Record<string, string> | null;
+  /** null => no usable push reference (missing or stale); baseline recognition is then impossible. */
+  pushSemanticDigest: string | null;
 }): PreflightResult {
   const { journal, bookkeeping, fileHashes } = args;
   const findings: Finding[] = [...args.journalFindings];
   const w = watermark(bookkeeping);
 
-  // Index the bookkeeping by created_at up front: the applied prefix is defined by ROW PRESENCE,
-  // not by the watermark.
+  // The applied prefix is defined by ROW PRESENCE, not by the watermark.
   //
-  // Defining it by the watermark (`when <= MAX(created_at)`) was wrong in two ways. It made R7
-  // unreachable — `pending` was then "when > watermark" by construction, so no pending entry could
-  // ever be at or below it — and it mis-diagnosed a wall-clock stamp as five missing rows rather
-  // than as five migrations that will be silently skipped. Row presence gives the honest picture:
-  // the applied set MUST be a contiguous prefix, a row outside it is a hole, and anything after it
-  // whose `when` sits at or below the watermark is a migration drizzle will skip in silence.
+  // Defining it by `when <= MAX(created_at)` made R7 unreachable — `pending` was then "when >
+  // watermark" by construction — and mis-diagnosed a wall-clock stamp as missing rows rather than as
+  // migrations drizzle will skip in silence. Row presence gives the honest picture: the applied set
+  // MUST be a contiguous prefix, a row outside it is a hole, and anything after it at or below the
+  // watermark is a silent skip.
   const rowsByWhen = new Map<number, BookkeepingRow[]>();
   for (const r of bookkeeping.rows) {
     const n = r.created_at === null ? NaN : Number(r.created_at);
@@ -541,11 +753,12 @@ export function classify(args: {
     list.push(r);
     rowsByWhen.set(n, list);
   }
-
   let prefixLen = 0;
   while (prefixLen < journal.entries.length && rowsByWhen.has(journal.entries[prefixLen].when)) prefixLen++;
   const applied = journal.entries.slice(0, prefixLen);
   const pending = journal.entries.slice(prefixLen);
+  const prefixKey = prefixKeyFor(applied);
+  const expected = args.prefixSemanticDigests?.[prefixKey] ?? null;
 
   const base = {
     appliedPrefix: applied.map((e) => e.tag),
@@ -553,43 +766,58 @@ export function classify(args: {
     watermark: w,
     bookkeepingPresent: bookkeeping.present,
     bookkeepingRowCount: bookkeeping.rows.length,
-    schemaChecked: args.schemaMatchesPrefix !== null,
-    schemaMatchesPrefix: args.schemaMatchesPrefix,
-    structuralDigestActual: args.structuralDigestActual,
+    prefixKey,
+    semanticDigestActual: args.semanticDigestActual,
+    semanticDigestExpected: expected,
   };
 
-  // A journal that is structurally broken is never anything but INCONSISTENT — it is the input to
-  // every other decision, so nothing downstream can be trusted.
-  if (findings.length > 0) {
-    return { state: "INCONSISTENT", findings, ...base };
-  }
+  // A structurally broken journal is the input to every other decision; nothing downstream holds.
+  if (findings.length > 0) return { state: "INCONSISTENT", findings, ...base };
 
-  // --- Case 1: no bookkeeping at all, or an empty table. This is the shape a `db:push` database
-  // has. It is NOT corruption and it is NOT healthy either: history has never been recorded.
+  const matchesPush = args.pushSemanticDigest !== null && args.semanticDigestActual === args.pushSemanticDigest;
+
+  // --- Case 1: no bookkeeping at all, or an empty table.
   if (!bookkeeping.present || bookkeeping.rows.length === 0) {
     findings.push({
       code: "BK_ABSENT",
       detail: bookkeeping.present
-        ? `${BOOKKEEPING_SCHEMA}.${BOOKKEEPING_TABLE} exists but holds 0 rows: no migration history has been recorded`
-        : `${BOOKKEEPING_SCHEMA}.${BOOKKEEPING_TABLE} does not exist: no migration history has been recorded`,
+        ? `${BOOKKEEPING_SCHEMA}.${BOOKKEEPING_TABLE} exists but holds 0 rows`
+        : `${BOOKKEEPING_SCHEMA}.${BOOKKEEPING_TABLE} does not exist`,
     });
-    // Only call it a baseline situation if the live schema is a recognised push-equivalent shape.
-    // Otherwise we do not know what this database is, and guessing is exactly what must not happen.
-    if (args.actualMatchesPushReference === true) {
-      findings.push({ code: "SCHEMA_IS_PUSH_SHAPE", detail: "live schema matches the proven db:push reference shape" });
+
+    // A) A genuinely fresh database. Emptiness is measured across every object class, AND the full
+    //    semantic digest must equal the measured "empty" reference. Both, not either.
+    if (args.emptiness.empty) {
+      const emptyRef = args.prefixSemanticDigests?.["empty"] ?? null;
+      if (emptyRef === null) {
+        findings.push({ code: "REFERENCE_MISSING_PREFIX", detail: "no measured semantic digest for the empty prefix; refusing to authorize" });
+        return { state: "INCONSISTENT", findings, ...base };
+      }
+      if (args.semanticDigestActual !== emptyRef) {
+        findings.push({ code: "EMPTY_DIGEST_MISMATCH", detail: "object counts read as empty but the F1–F6 digest is not the measured empty digest" });
+        return { state: "INCONSISTENT", findings, ...base };
+      }
+      findings.push({ code: "FRESH_EMPTY", detail: args.emptiness.detail });
+      return { state: "OK", findings, ...base };
+    }
+
+    // B) The exact proven push shape, recognised by the FULL semantic digest.
+    if (matchesPush) {
+      findings.push({ code: "SCHEMA_IS_PUSH_SHAPE", detail: "full F1–F6 semantic digest equals the measured db:push reference" });
       return { state: "BASELINE_RECONCILIATION_REQUIRED", findings, ...base };
     }
+
+    // C) Anything else.
     findings.push({
       code: "SCHEMA_UNRECOGNISED",
-      detail:
-        args.actualMatchesPushReference === null
-          ? "no db:push reference digest available, so the live schema cannot be recognised; refusing to classify this as a baseline situation"
-          : "live schema does not match the proven db:push reference shape",
+      detail: `database is not empty (${args.emptiness.detail}) and its semantic digest matches ${
+        args.pushSemanticDigest === null ? "no usable push reference" : "neither the empty nor the push reference"
+      }`,
     });
     return { state: "INCONSISTENT", findings, ...base };
   }
 
-  // --- Case 2: bookkeeping exists. Require EXACT correspondence over the applied prefix.
+  // --- Case 2: bookkeeping exists. Exact correspondence over the applied prefix.
   for (const r of bookkeeping.rows) {
     if (r.created_at === null || !Number.isFinite(Number(r.created_at))) {
       findings.push({ code: "BK_BAD_CREATED_AT", detail: `bookkeeping row id=${r.id} has a non-numeric created_at` });
@@ -603,24 +831,20 @@ export function classify(args: {
     }
   }
 
-  const journalWhens = new Set(journal.entries.map((e) => e.when));
-
   // R3 — orphan bookkeeping rows.
+  const journalWhens = new Set(journal.entries.map((e) => e.when));
   for (const when of rowsByWhen.keys()) {
-    if (!journalWhens.has(when)) {
-      findings.push({ code: "R3", detail: `bookkeeping row created_at=${when} matches no journal entry` });
-    }
+    if (!journalWhens.has(when)) findings.push({ code: "R3", detail: `bookkeeping row created_at=${when} matches no journal entry` });
   }
 
-  // R1 — a hole: a row exists for an entry that is NOT inside the contiguous applied prefix, which
-  // means an earlier entry's row is missing. Drizzle cannot see this at all, because it only ever
-  // reads the single highest row.
+  // R1 — a hole: a row exists for an entry outside the contiguous applied prefix. Drizzle cannot see
+  // this at all, because it only ever reads the single highest row.
   for (const e of pending) {
     if (rowsByWhen.has(e.when)) {
       findings.push({
         code: "R1",
         detail: `bookkeeping is not a contiguous prefix: ${e.tag} (when=${e.when}) HAS a row while an earlier migration does not${
-          pending.length > 0 && pending[0].tag !== e.tag ? ` (first gap at ${pending[0].tag})` : ""
+          pending[0].tag !== e.tag ? ` (first gap at ${pending[0].tag})` : ""
         }`,
       });
     }
@@ -628,61 +852,56 @@ export function classify(args: {
 
   // X3 / R4 — hash equality over the applied prefix. Drizzle writes this column and never reads it.
   for (const e of applied) {
-    const rows = rowsByWhen.get(e.when) ?? [];
-    const expected = fileHashes.get(e.tag);
-    if (expected === undefined) continue; // MISSING_SQL already recorded by journalInvariants
-    for (const r of rows) {
-      if (r.hash !== expected) {
+    const expectedHash = fileHashes.get(e.tag);
+    if (expectedHash === undefined) continue; // MISSING_SQL already recorded by journalInvariants
+    for (const r of rowsByWhen.get(e.when) ?? []) {
+      if (r.hash !== expectedHash) {
         findings.push({
           code: "R4",
-          detail: `hash mismatch for ${e.tag}: bookkeeping row id=${r.id} records ${r.hash.slice(0, 12)}…, file is ${expected.slice(0, 12)}…`,
+          detail: `hash mismatch for ${e.tag}: bookkeeping row id=${r.id} records ${r.hash.slice(0, 12)}…, file is ${expectedHash.slice(0, 12)}…`,
         });
       }
     }
   }
 
-  // R7 — a pending migration whose `when` is at or below the watermark. Drizzle's test is
-  // `Number(last.created_at) < folderMillis`, so such a migration is SKIPPED, silently, exit 0.
+  // R7 — a pending migration at or below the watermark is SKIPPED by drizzle, silently, exit 0.
   for (const e of pending) {
     if (w !== null && e.when <= w) {
       findings.push({ code: "R7", detail: `pending migration ${e.tag} (when=${e.when}) is at or below the watermark ${w} and would be SILENTLY SKIPPED` });
     }
   }
 
-  if (findings.length > 0) {
-    return { state: "INCONSISTENT", findings, ...base };
-  }
+  if (findings.length > 0) return { state: "INCONSISTENT", findings, ...base };
 
-  // --- Mandatory schema/bookkeeping consistency. Bookkeeping being valid is not enough.
-  if (args.schemaMatchesPrefix === null) {
+  // --- Mandatory schema/bookkeeping consistency, on the FULL semantic digest.
+  if (expected === null) {
     findings.push({
-      code: "SCHEMA_UNCHECKED",
-      detail: "the live schema could not be compared against the applied prefix (no snapshot for that prefix); refusing to return OK",
+      code: "REFERENCE_MISSING_PREFIX",
+      detail: `no measured F1–F6 semantic digest for applied prefix "${prefixKey}"; refusing to authorize (no structural fallback)`,
     });
     return { state: "INCONSISTENT", findings, ...base };
   }
 
-  if (args.schemaMatchesPrefix === false) {
-    // Bookkeeping is internally valid but the database is not at the shape that prefix implies.
-    // If it is demonstrably the current push shape, this is the historical pattern AUD-08 repairs.
-    if (args.actualMatchesPushReference === true) {
-      findings.push({
-        code: "BK_BEHIND_SCHEMA_AHEAD",
-        detail: "bookkeeping is valid but behind; the live schema matches the proven db:push reference shape",
-      });
-      return { state: "BASELINE_RECONCILIATION_REQUIRED", findings, ...base };
-    }
-    findings.push({
-      code: "SCHEMA_PREFIX_MISMATCH",
-      detail:
-        args.actualMatchesPushReference === null
-          ? "live schema does not match the applied prefix, and no db:push reference digest is available to explain it"
-          : "live schema matches neither the applied prefix nor the proven db:push reference shape",
-    });
-    return { state: "INCONSISTENT", findings, ...base };
+  if (args.semanticDigestActual === expected) {
+    findings.push({ code: "SCHEMA_MATCHES_PREFIX", detail: `full F1–F6 semantic digest equals the measured digest for prefix "${prefixKey}"` });
+    return { state: "OK", findings, ...base };
   }
 
-  return { state: "OK", findings, ...base };
+  if (matchesPush) {
+    findings.push({
+      code: "BK_BEHIND_SCHEMA_AHEAD",
+      detail: "bookkeeping is valid but behind; the full F1–F6 semantic digest equals the measured db:push reference",
+    });
+    return { state: "BASELINE_RECONCILIATION_REQUIRED", findings, ...base };
+  }
+
+  findings.push({
+    code: "SCHEMA_PREFIX_MISMATCH",
+    detail: `full F1–F6 semantic digest matches neither prefix "${prefixKey}" nor ${
+      args.pushSemanticDigest === null ? "any usable push reference" : "the db:push reference"
+    }`,
+  });
+  return { state: "INCONSISTENT", findings, ...base };
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -704,6 +923,8 @@ export function describeTarget(url: string): string {
 
 const MIGRATIONS_FOLDER = process.env.AUD08_MIGRATIONS_FOLDER ?? "drizzle";
 const REFERENCE_PATH = process.env.AUD08_SCHEMA_REFERENCE ?? join("docs", "audits", "aud-08", "evidence", "schema-reference.json");
+const SCHEMA_DIR = process.env.AUD08_SCHEMA_DIR ?? join("src", "db", "schema");
+const SCHEMA_CONFIG = process.env.AUD08_SCHEMA_CONFIG ?? "drizzle.config.ts";
 
 async function main(): Promise<void> {
   const url = process.env.DATABASE_URL;
@@ -725,68 +946,72 @@ async function main(): Promise<void> {
   }
   console.log(`journal       : ${journal.entries.length} entries, version ${journal.version}, dialect ${journal.dialect}`);
 
+  // Freshness FIRST, before touching the database: if the migration reference is stale, nothing the
+  // database says can be judged, and a judgement against stale evidence is worse than none.
   const reference = readSchemaReference(REFERENCE_PATH);
+  const currentMigrationDigest = migrationJournalDigest(journal, fileHashes);
+  const currentSchemaDigest = schemaSourceDigest(SCHEMA_DIR, SCHEMA_CONFIG);
+  const fresh = referenceFreshness({ reference, currentMigrationDigest, currentSchemaSourceDigest: currentSchemaDigest });
+  console.log(`reference     : ${existsSync(REFERENCE_PATH) ? REFERENCE_PATH : "(not found)"}`);
+  console.log(`migration id  : current ${currentMigrationDigest.slice(0, 16)}… reference ${reference?.migrationJournalDigest?.slice(0, 16) ?? "(none)"}${reference?.migrationJournalDigest ? "…" : ""}`);
+  console.log(`schema src id : current ${currentSchemaDigest.slice(0, 16)}… reference ${reference?.schemaSourceDigest?.slice(0, 16) ?? "(none)"}${reference?.schemaSourceDigest ? "…" : ""}`);
+
+  if (!fresh.migrationsUsable) {
+    console.log("");
+    for (const f of fresh.findings) console.log(`  [${f.code}] ${f.detail}`);
+    console.log("");
+    console.log("STATE: REFERENCE_STALE");
+    console.log("migrate: REFUSED. The gate's measured evidence does not describe the current migrations,");
+    console.log("         so it will not judge this database. db:preflight never regenerates evidence.");
+    process.exit(EXIT_REFERENCE_STALE);
+  }
+
   const pool = new Pool({ connectionString: url, max: 1 });
   let result: PreflightResult;
   try {
     const client = await pool.connect();
     try {
       const bookkeeping = await readBookkeeping(client);
-      const w = watermark(bookkeeping);
-      const applied = journal.entries.filter((e) => w !== null && e.when <= w);
-
-      const actualStructural = await projectLiveStructural(client);
-      const actualDigest = structuralDigest(actualStructural);
-
-      // Compare against the snapshot for the applied prefix. "Applied prefix N" means snapshot
-      // idx N-1 (0 entries applied => an empty schema is expected).
-      let schemaMatchesPrefix: boolean | null = null;
-      let prefixDiffs: StructuralDiff[] = [];
-      if (applied.length === 0) {
-        schemaMatchesPrefix = actualStructural.columns.length === 0;
-        if (!schemaMatchesPrefix) {
-          prefixDiffs = diffStructural(emptyStructural(), actualStructural);
-        }
-      } else {
-        const lastIdx = applied[applied.length - 1].idx;
-        try {
-          const snap = readSnapshot(MIGRATIONS_FOLDER, lastIdx);
-          const expected = projectSnapshotStructural(snap);
-          prefixDiffs = diffStructural(expected, actualStructural);
-          schemaMatchesPrefix = prefixDiffs.length === 0;
-        } catch {
-          schemaMatchesPrefix = null;
-        }
-      }
-
-      const actualMatchesPushReference =
-        reference?.pushStructuralDigest === undefined ? null : reference.pushStructuralDigest === actualDigest;
+      const emptiness = await measureEmptiness(client);
+      const live = await projectLive(client);
+      const semanticDigest = fingerprintDigest(live);
 
       result = classify({
         journal,
         journalFindings,
         bookkeeping,
         fileHashes,
-        schemaMatchesPrefix,
-        actualMatchesPushReference,
-        structuralDigestActual: actualDigest,
+        emptiness,
+        semanticDigestActual: semanticDigest,
+        prefixSemanticDigests: reference?.prefixSemanticDigests ?? null,
+        pushSemanticDigest: fresh.pushUsable ? (reference?.pushSemanticDigest ?? null) : null,
       });
 
       console.log(`bookkeeping   : ${bookkeeping.present ? `present, ${bookkeeping.rows.length} row(s)` : "ABSENT"}`);
-      console.log(`watermark     : ${w === null ? "(none)" : w}`);
+      console.log(`watermark     : ${result.watermark === null ? "(none)" : result.watermark}`);
       console.log(`applied       : ${result.appliedPrefix.length === 0 ? "(none)" : result.appliedPrefix.join(", ")}`);
       console.log(`pending       : ${result.pending.length === 0 ? "(none)" : result.pending.join(", ")}`);
-      console.log(`schema digest : ${actualDigest.slice(0, 16)}… (structural)`);
-      console.log(`push reference: ${reference?.pushStructuralDigest ? `${reference.pushStructuralDigest.slice(0, 16)}…` : "(not available)"}`);
-      console.log(`schema vs prefix: ${schemaMatchesPrefix === null ? "UNCHECKED" : schemaMatchesPrefix ? "match" : "MISMATCH"}`);
+      console.log(`emptiness     : ${emptiness.empty ? "EMPTY" : "not empty"} — ${emptiness.detail}`);
+      console.log(`prefix key    : ${result.prefixKey}`);
+      console.log(`semantic F1-6 : actual   ${semanticDigest.slice(0, 16)}…`);
+      console.log(`                expected ${result.semanticDigestExpected ? `${result.semanticDigestExpected.slice(0, 16)}…` : "(no reference for this prefix)"}`);
+      console.log(`                push     ${fresh.pushUsable && reference?.pushSemanticDigest ? `${reference.pushSemanticDigest.slice(0, 16)}…` : "(not usable)"}`);
 
-      if (prefixDiffs.length > 0) {
-        for (const d of prefixDiffs) {
-          const miss = d.onlyExpected.length;
-          const extra = d.onlyActual.length;
-          console.log(`  ${d.component}: ${miss} expected-but-absent, ${extra} present-but-unexpected`);
-          for (const x of d.onlyExpected.slice(0, 3)) console.log(`     - missing : ${x}`);
-          for (const x of d.onlyActual.slice(0, 3)) console.log(`     + extra   : ${x}`);
+      // DIAGNOSTIC ONLY. Printed to help a human locate a difference; never consulted above.
+      if (result.state !== "OK" && result.appliedPrefix.length > 0) {
+        const lastIdx = journal.entries[result.appliedPrefix.length - 1].idx;
+        try {
+          const actualStructural = await projectLiveStructural(client);
+          const expectedStructural = projectSnapshotStructural(readSnapshot(MIGRATIONS_FOLDER, lastIdx));
+          const diffs = diffStructural(expectedStructural, actualStructural);
+          console.log(`structural    : ${diffs.length === 0 ? "no structural difference (the difference is semantic: type/default/precision/check/sequence)" : "differences below"}  [DIAGNOSTIC ONLY]`);
+          for (const d of diffs) {
+            console.log(`  ${d.component}: ${d.onlyExpected.length} expected-but-absent, ${d.onlyActual.length} present-but-unexpected`);
+            for (const x of d.onlyExpected.slice(0, 3)) console.log(`     - missing : ${x}`);
+            for (const x of d.onlyActual.slice(0, 3)) console.log(`     + extra   : ${x}`);
+          }
+        } catch {
+          console.log("structural    : (no snapshot available for that prefix)  [DIAGNOSTIC ONLY]");
         }
       }
     } finally {
@@ -800,7 +1025,7 @@ async function main(): Promise<void> {
   await pool.end();
 
   console.log("");
-  for (const f of result.findings) console.log(`  [${f.code}] ${f.detail}`);
+  for (const f of [...fresh.findings, ...result.findings]) console.log(`  [${f.code}] ${f.detail}`);
   console.log("");
   console.log(`STATE: ${result.state}`);
   if (result.state === "OK") {

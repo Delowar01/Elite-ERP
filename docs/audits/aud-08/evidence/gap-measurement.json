@@ -570,7 +570,7 @@
     ]
   },
   "e7": {
-    "stamp": 1790855736013,
+    "stamp": 1790857813013,
     "tablesAfter": 0,
     "migrateExit": 0,
     "preflightState": "INCONSISTENT"
@@ -590,5 +590,46 @@
     "preflightWithReference": "BASELINE_RECONCILIATION_REQUIRED",
     "preflightWithoutReference": "INCONSISTENT",
     "schemaEqualsPush": true
+  },
+  "e20": {
+    "freshExit": 0,
+    "freshState": "OK",
+    "migrateExit": 0,
+    "afterExit": 0,
+    "afterState": "OK"
+  },
+  "e21": {
+    "structuralDiff": 0,
+    "preflight": "INCONSISTENT",
+    "cliExit": 20,
+    "afterRevert": "OK"
+  },
+  "e22a": {
+    "structuralDiff": 0,
+    "preflight": "INCONSISTENT",
+    "cliExit": 20,
+    "afterRevert": "OK"
+  },
+  "e22b": {
+    "structuralDiff": 0,
+    "preflight": "INCONSISTENT",
+    "cliExit": 20,
+    "afterRevert": "OK"
+  },
+  "e23": {
+    "control": "BASELINE_RECONCILIATION_REQUIRED",
+    "structuralStillPush": true,
+    "preflight": "INCONSISTENT",
+    "cliExit": 20
+  },
+  "e24": {
+    "tampered": 30,
+    "unbound": 30,
+    "inputsChanged": 30,
+    "missing": 30,
+    "schemaCopySame": 10,
+    "schemaChanged": 20,
+    "missingPrefixDigest": 20,
+    "missingEmptyDigest": 20
   }
 }

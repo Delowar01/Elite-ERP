@@ -7,10 +7,10 @@ authors no migration.** `drizzle/` is untouched, `src/` is untouched, nothing is
 
 | Path | Purpose |
 |---|---|
-| `../../../scripts/migration-preflight.ts` | `npm run db:preflight` — the read-only gate. Journal invariants, exact bookkeeping correspondence, schema/bookkeeping consistency, three outcome states. |
-| `../../../verify/verify-migration-baseline.mts` | Reference shapes, the F1–F6 / F7 two-stage fingerprint, the gap re-measurement, experiments E6b–E19. |
+| `../../../scripts/migration-preflight.ts` | `npm run db:preflight` — the read-only gate. Journal invariants, exact bookkeeping correspondence, a FULL semantic F1–F6 equality gate against measured per-prefix references, reference freshness binding, three outcome states plus `REFERENCE_STALE`. |
+| `../../../verify/verify-migration-baseline.mts` | Measures the per-prefix semantic references, the F1–F6 / F7 two-stage fingerprint, the gap re-measurement, and experiments E6b–E24. |
 | `../../../verify/verify-terms-split.mts` | E16 — the 18 approved fixtures pinning `splitGroupTerms()` semantics, plus the frozen-copy drift test. |
-| `evidence/schema-reference.json` | Measured reference digests. `db:preflight` reads this to recognise a `db:push`-equivalent shape. |
+| `evidence/schema-reference.json` | MEASURED full F1–F6 semantic digests for every prefix (`empty`, `0`…`4`) and for the current `db:push` shape, bound to their inputs by `migrationJournalDigest` and `schemaSourceDigest`. The only authorization evidence `db:preflight` accepts. |
 | `evidence/gap-measurement.json` | The re-measured historical gap and every experiment's recorded outcome. |
 | `evidence/verify-migration-baseline.txt` | Full transcript of the last run. |
 
@@ -32,7 +32,37 @@ DATABASE_URL="postgresql://..." npm run db:preflight
 ```
 
 `db:preflight` exit codes: `0` OK · `10` BASELINE RECONCILIATION REQUIRED · `20` INCONSISTENT ·
-`1` tool error. The baseline suite exits `2` when no disposable target was supplied.
+`30` REFERENCE_STALE · `1` tool error. The baseline suite exits `2` when no disposable target was
+supplied.
+
+## How `db:preflight` decides (AUD-08.1-C1)
+
+**OK is authorized by exactly one thing:** the target's FULL F1–F6 semantic digest (`projectLive` +
+`fingerprintDigest` — types, defaults, precision, scale, identity, generated, constraints with CHECK
+expressions, FK actions, indexes, enums, sequence ownership) equals the **measured** digest for its
+applied prefix.
+
+| Bookkeeping | Live schema | State |
+|---|---|---|
+| absent / empty | empty across **every** object class (tables, views, matviews, sequences, enum/composite/domain types, routines, triggers, unexpected schemas) **and** digest = measured `empty` | **OK** — all migrations pending, `migrate` permitted |
+| absent / empty | digest = measured `db:push` digest | **BASELINE RECONCILIATION REQUIRED** |
+| absent / empty | anything else | **INCONSISTENT** |
+| valid contiguous prefix | digest = measured digest for that prefix | **OK** |
+| valid contiguous prefix | digest = measured `db:push` digest | **BASELINE RECONCILIATION REQUIRED** |
+| valid contiguous prefix | anything else, or no measured digest for that prefix | **INCONSISTENT** |
+| any of R1–R7 | — | **INCONSISTENT** |
+
+**Structural equality is diagnostic only and never authorizes migration.** It is printed to help a
+human locate a difference; it omits types, defaults, precision, scale, CHECK constraints and sequence
+ownership, which is exactly why it cannot gate anything (E21–E23 each produce a structural diff of
+zero on a database that must be refused).
+
+**Reference binding.** The reference is bound by content, not by git HEAD — a tooling-only commit
+moves HEAD without changing the schema. `migrationJournalDigest` covers the journal and every
+migration file's sha256; if it does not match, the run is refused with `REFERENCE_STALE` (exit 30).
+`schemaSourceDigest` covers `src/db/schema/**` and `drizzle.config.ts` by relative path and content,
+so a byte-identical copy elsewhere is not stale; if it does not match, only the push reference is
+disabled. `db:preflight` never regenerates evidence.
 
 ## Findings this batch established
 
@@ -52,5 +82,12 @@ DATABASE_URL="postgresql://..." npm run db:preflight
 4. **Three ways drizzle fails silently with exit 0**, each now demonstrated: a pending migration at
    or below the watermark is skipped (E6b); a wall-clock stamp skips the entire history (E7); a
    missing middle bookkeeping row is invisible because only `MAX(created_at)` is ever read (E13).
+
+5. **The first AUD-08.1 gate authorized on the wrong evidence** (corrected in AUD-08.1-C1). It
+   compared a structural projection, which cannot see precision, defaults or CHECK constraints, and
+   it refused a genuinely fresh database. E20–E24 prove the correction: a fresh empty database is OK
+   and initializes normally; precision, default and CHECK drift on valid bookkeeping are all refused;
+   a drifted push shape is not mistaken for a baseline; and a stale or incomplete reference is
+   refused rather than trusted.
 
 See the DEV-00-C2 and AUD-08-P0-C1 correction documents for how these feed AUD-08.2 and AUD-08.3.

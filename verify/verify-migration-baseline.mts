@@ -17,6 +17,14 @@
  * that `drizzle-kit migrate` reports as success with exit code 0. A safeguard whose failure mode has
  * never been observed is decoration.
  *
+ * AUD-08.1-C1 added E20–E24, which test the GATE rather than drizzle: a fresh empty database must be
+ * OK (E20) while a database holding any unidentified object must not; semantic drift that a
+ * structural projection cannot see must be refused (E21 precision, E22 default/CHECK); a drifted push
+ * shape must not be mistaken for a baseline (E23); and stale, unbound, missing or incomplete
+ * reference evidence must be refused, never silently trusted and never replaced by a structural
+ * fallback (E24a–g). Every reference digest is measured from a database the real CLI built — none is
+ * translated from snapshot JSON.
+ *
  * ## Verified call chain (drizzle-kit 0.31.10 / drizzle-orm 0.45.2 / pg 8.22.0)
  *
  *   drizzle-kit migrate (bin.cjs:92010)
@@ -53,8 +61,11 @@ import { Client } from "pg";
 import {
   classify,
   diffStructural,
+  EXIT_REFERENCE_STALE,
   fingerprintDigest,
   journalInvariants,
+  measureEmptiness,
+  migrationJournalDigest,
   migrationSqlPath,
   projectLive,
   projectLiveStructural,
@@ -63,11 +74,16 @@ import {
   readBookkeeping,
   readJournal,
   readSnapshot,
+  schemaSourceDigest,
   sha256File,
   structuralDigest,
   watermark,
+  type Bookkeeping,
+  type Finding,
   type Journal,
   type LiveFingerprint,
+  type PreflightResult,
+  type SchemaReference,
 } from "../scripts/migration-preflight";
 
 // -------------------------------------------------------------------------------------------------
@@ -235,6 +251,73 @@ function addTempMigration(folder: string, tag: string, when: number, sql: string
   const journal = JSON.parse(readFileSync(jp, "utf8")) as Journal;
   journal.entries.push({ idx: journal.entries.length, version: "7", when, tag, breakpoints: true });
   writeFileSync(jp, JSON.stringify(journal, null, 2));
+}
+
+/**
+ * A temp migrations copy whose journal is truncated to the first `n` entries, so `drizzle-kit
+ * migrate` builds EXACTLY prefix n-1. This is how every per-prefix reference digest is measured:
+ * by letting the real CLI build each prefix, never by translating snapshot JSON.
+ */
+function tempMigrationsPrefix(label: string, n: number): { folder: string; config: string; root: string } {
+  const t = tempMigrations(label);
+  const jp = join(t.folder, "meta", "_journal.json");
+  const j = JSON.parse(readFileSync(jp, "utf8")) as Journal;
+  j.entries = j.entries.slice(0, n);
+  writeFileSync(jp, JSON.stringify(j, null, 2));
+  return t;
+}
+
+/** The measured reference, held for every experiment after section 1b writes it. */
+let REF: SchemaReference = {};
+let REFERENCE_FILE = "";
+
+/**
+ * Run the REAL classification path against a live database: emptiness and the FULL F1–F6 semantic
+ * digest are measured from the database itself. Overrides exist only to inject a deliberately
+ * corrupted input (a tampered hash, a synthetic orphan row) — never to bypass the semantic gate.
+ */
+async function preflightFor(
+  name: string,
+  overrides: {
+    bookkeeping?: Bookkeeping;
+    fileHashes?: Map<string, string>;
+    journal?: Journal;
+    journalFindings?: Finding[];
+    prefixSemanticDigests?: Record<string, string> | null;
+    pushSemanticDigest?: string | null;
+  } = {},
+): Promise<PreflightResult> {
+  return withClient(name, async (c) => {
+    const bookkeeping = overrides.bookkeeping ?? (await readBookkeeping(c));
+    const emptiness = await measureEmptiness(c);
+    const digest = fingerprintDigest(await projectLive(c));
+    const j = overrides.journal ?? journal;
+    return classify({
+      journal: j,
+      journalFindings: overrides.journalFindings ?? journalInvariants(j, "drizzle"),
+      bookkeeping,
+      fileHashes: overrides.fileHashes ?? fileHashes,
+      emptiness,
+      semanticDigestActual: digest,
+      prefixSemanticDigests: "prefixSemanticDigests" in overrides ? overrides.prefixSemanticDigests! : (REF.prefixSemanticDigests ?? null),
+      pushSemanticDigest: "pushSemanticDigest" in overrides ? overrides.pushSemanticDigest! : (REF.pushSemanticDigest ?? null),
+    });
+  });
+}
+
+/** The real `db:preflight` CLI, as an operator would run it. */
+function runPreflightCli(target: string, env: Record<string, string> = {}): Run {
+  const r = spawnSync("npx", ["tsx", "scripts/migration-preflight.ts"], {
+    cwd: REPO,
+    encoding: "utf8",
+    shell: false,
+    env: { ...process.env, DATABASE_URL: dbUrl(target), AUD08_SCHEMA_REFERENCE: REFERENCE_FILE, ...env },
+  });
+  return { status: r.status ?? -1, stdout: r.stdout ?? "", stderr: r.stderr ?? "" };
+}
+
+function stateLine(r: Run): string {
+  return (r.stdout.match(/^STATE: (\S+)/m)?.[1]) ?? "(no state line)";
 }
 
 function counts(fp: LiveFingerprint): string {
@@ -549,6 +632,92 @@ async function main(): Promise<void> {
   };
 
   // ===========================================================================================
+  section("1b. MEASURED semantic reference for every prefix, bound to its inputs");
+
+  // Every prefix the preflight may ever accept gets a FULL F1–F6 digest, measured from a database
+  // the real CLI built. "empty" is a fresh database with nothing applied.
+  const prefixSemantic: Record<string, string> = {};
+  const prefixStructural: Record<string, string> = {};
+
+  const EMPTYREF = `${DB_PREFIX}ref_empty`;
+  await freshDb(EMPTYREF);
+  prefixSemantic.empty = fingerprintDigest(await withClient(EMPTYREF, projectLive));
+  prefixStructural.empty = structuralDigest(await withClient(EMPTYREF, projectLiveStructural));
+  const emptyMeasured = await withClient(EMPTYREF, measureEmptiness);
+  check("a fresh database measures as EMPTY across every object class", emptyMeasured.empty, emptyMeasured.detail);
+  log(`      prefix empty : ${prefixSemantic.empty.slice(0, 16)}…`);
+  await dropDb(EMPTYREF);
+
+  for (let n = 1; n <= journal.entries.length; n++) {
+    const key = String(journal.entries[n - 1].idx);
+    const name = `${DB_PREFIX}ref_p${key}`;
+    const t = tempMigrationsPrefix(`ref${key}`, n);
+    await freshDb(name);
+    const r = runDrizzleKit(["migrate"], name, t.config);
+    check(`prefix ${key}: drizzle-kit migrate built exactly ${n} migration(s)`, r.status === 0, `exit ${r.status}`);
+    const bk = await withClient(name, readBookkeeping);
+    check(`prefix ${key}: bookkeeping holds exactly ${n} row(s)`, bk.rows.length === n, `rows ${bk.rows.length}`);
+    prefixSemantic[key] = fingerprintDigest(await withClient(name, projectLive));
+    prefixStructural[key] = structuralDigest(await withClient(name, projectLiveStructural));
+    log(`      prefix ${key}     : ${prefixSemantic[key].slice(0, 16)}…  (${journal.entries[n - 1].tag})`);
+    await dropDb(name);
+    rmSync(t.root, { recursive: true, force: true });
+  }
+
+  const lastKey = String(journal.entries[journal.entries.length - 1].idx);
+  check("the full-history prefix digest equals the migrations-only reference database's digest (two independent builds agree)",
+    prefixSemantic[lastKey] === fingerprintDigest(fpMig),
+    `${prefixSemantic[lastKey].slice(0, 12)} vs ${fingerprintDigest(fpMig).slice(0, 12)}`);
+  const distinct = new Set(Object.values(prefixSemantic));
+  check("every prefix has a DISTINCT semantic digest (each migration really changes the schema)",
+    distinct.size === Object.keys(prefixSemantic).length, `${distinct.size} distinct of ${Object.keys(prefixSemantic).length}`);
+  check("the push semantic digest differs from every prefix digest", !distinct.has(fingerprintDigest(fpPush)));
+
+  const migDigestInput = migrationJournalDigest(journal, fileHashes);
+  // Location-independent by construction (relative labels + content), so the harness and the CLI
+  // agree regardless of either one's working directory.
+  const schemaDigestRelative = schemaSourceDigest(join(REPO, "src", "db", "schema"), join(REPO, "drizzle.config.ts"));
+  log(`      migrationJournalDigest = ${migDigestInput.slice(0, 16)}…`);
+  log(`      schemaSourceDigest     = ${schemaDigestRelative.slice(0, 16)}…`);
+
+  REF = {
+    migrationJournalDigest: migDigestInput,
+    schemaSourceDigest: schemaDigestRelative,
+    prefixSemanticDigests: prefixSemantic,
+    pushSemanticDigest: fingerprintDigest(fpPush),
+    pushStructuralDigest: digestPush,
+    prefixStructuralDigests: prefixStructural,
+  };
+
+  // Written NOW, before any experiment reads it. The previous version wrote it at the very end, so
+  // the CLI experiments silently read whatever a PRIOR run had left behind — and on a first-ever
+  // run, nothing. With freshness binding, that ordering bug would have surfaced as REFERENCE_STALE.
+  mkdirSync(EVIDENCE_DIR, { recursive: true });
+  REFERENCE_FILE = join(EVIDENCE_DIR, "schema-reference.json");
+  writeFileSync(
+    REFERENCE_FILE,
+    `${JSON.stringify(
+      {
+        note:
+          "AUD-08.1 MEASURED reference. prefixSemanticDigests and pushSemanticDigest are FULL F1–F6 digests (projectLive + fingerprintDigest) " +
+          "from databases the real drizzle-kit CLI built. These alone authorize migrate. Structural digests are DIAGNOSTIC ONLY.",
+        measuredAt: new Date().toISOString(),
+        binding: {
+          migrationJournalDigest: "sha256 over journal version/dialect + ordered (idx|when|tag|sha256(sql)) — content identity, not git HEAD",
+          schemaSourceDigest: "sha256 over src/db/schema/**/*.{ts,mts} + drizzle.config.ts in stable path order",
+        },
+        drizzleOrm: JSON.parse(readFileSync(join(REPO, "node_modules/drizzle-orm/package.json"), "utf8")).version,
+        drizzleKit: JSON.parse(readFileSync(join(REPO, "node_modules/drizzle-kit/package.json"), "utf8")).version,
+        pgDriver: JSON.parse(readFileSync(join(REPO, "node_modules/pg/package.json"), "utf8")).version,
+        ...REF,
+      },
+      null,
+      2,
+    )}\n`,
+  );
+  log(`      wrote docs/audits/aud-08/evidence/schema-reference.json (before any experiment reads it)`);
+
+  // ===========================================================================================
   section("2. Bookkeeping as the installed CLI actually writes it (A8)");
 
   const bkMig = await withClient(MIG, readBookkeeping);
@@ -716,14 +885,10 @@ async function main(): Promise<void> {
   const e6Journal = readJournal(e6.folder);
   const e6Hashes = new Map<string, string>();
   for (const e of e6Journal.entries) e6Hashes.set(e.tag, sha256File(migrationSqlPath(e6.folder, e.tag)));
-  const e6Pre = classify({
+  const e6Pre = await preflightFor(E6DB, {
     journal: e6Journal,
     journalFindings: journalInvariants(e6Journal, e6.folder),
-    bookkeeping: e6State.bk,
     fileHashes: e6Hashes,
-    schemaMatchesPrefix: true,
-    actualMatchesPushReference: false,
-    structuralDigestActual: null,
   });
   check("E6b db:preflight classifies this INCONSISTENT and names R6/R7",
     e6Pre.state === "INCONSISTENT" && e6Pre.findings.some((f) => f.code === "R7" || f.code === "R6"),
@@ -755,10 +920,7 @@ async function main(): Promise<void> {
   check("E7 drizzle-kit migrate exited 0", e7Run.status === 0, `exit ${e7Run.status}`);
   check("E7 the ENTIRE committed history was silently skipped — the database is still empty",
     e7State.tables === 0, `${e7State.tables} tables exist`);
-  const e7Pre = classify({
-    journal, journalFindings, bookkeeping: e7State.bk, fileHashes,
-    schemaMatchesPrefix: false, actualMatchesPushReference: false, structuralDigestActual: null,
-  });
+  const e7Pre = await preflightFor(E7DB);
   check("E7 db:preflight refuses it (orphan stamp row, unrecognised schema)",
     e7Pre.state === "INCONSISTENT" && e7Pre.findings.some((f) => f.code === "R3"),
     `${e7Pre.state}: ${e7Pre.findings.map((f) => f.code).join(",")}`);
@@ -776,10 +938,7 @@ async function main(): Promise<void> {
   writeFileSync(victimPath, `${readFileSync(victimPath, "utf8")}\n-- aud081 e10 tamper\n`);
   const e10Hashes = new Map(fileHashes);
   e10Hashes.set(victim.tag, sha256File(victimPath));
-  const e10Pre = classify({
-    journal, journalFindings, bookkeeping: bkMig, fileHashes: e10Hashes,
-    schemaMatchesPrefix: true, actualMatchesPushReference: false, structuralDigestActual: null,
-  });
+  const e10Pre = await preflightFor(MIG, { fileHashes: e10Hashes });
   check(`E10 a tampered applied migration (${victim.tag}) is detected as R4`,
     e10Pre.state === "INCONSISTENT" && e10Pre.findings.some((f) => f.code === "R4"),
     `${e10Pre.state}: ${e10Pre.findings.map((f) => f.code).join(",")}`);
@@ -799,10 +958,7 @@ async function main(): Promise<void> {
   check("E13 drizzle-kit migrate still reports success and applies nothing (the hole is invisible to it)",
     e13Rerun.status === 0 && e13Bk.rows.length === journal.entries.length - 1,
     `exit ${e13Rerun.status}, rows ${e13Bk.rows.length}`);
-  const e13Pre = classify({
-    journal, journalFindings, bookkeeping: e13Bk, fileHashes,
-    schemaMatchesPrefix: true, actualMatchesPushReference: false, structuralDigestActual: null,
-  });
+  const e13Pre = await preflightFor(E13DB);
   check("E13 db:preflight returns INCONSISTENT citing R1 and naming the missing migration",
     e13Pre.state === "INCONSISTENT" && e13Pre.findings.some((f) => f.code === "R1" && f.detail.includes(journal.entries[2].tag)),
     `${e13Pre.state}: ${e13Pre.findings.map((f) => f.code).join(",")}`);
@@ -812,10 +968,7 @@ async function main(): Promise<void> {
 
   // E14 — orphan bookkeeping row.
   const e14Bk = { present: true, rows: [...bkMig.rows, { id: 999, hash: "deadbeef", created_at: String(lastWhen + 7777) }] };
-  const e14Pre = classify({
-    journal, journalFindings, bookkeeping: e14Bk, fileHashes,
-    schemaMatchesPrefix: true, actualMatchesPushReference: false, structuralDigestActual: null,
-  });
+  const e14Pre = await preflightFor(MIG, { bookkeeping: e14Bk });
   check("E14 an orphan bookkeeping row (created_at matching no journal entry) is detected as R3",
     e14Pre.state === "INCONSISTENT" && e14Pre.findings.some((f) => f.code === "R3"),
     `${e14Pre.state}: ${e14Pre.findings.map((f) => f.code).join(",")}`);
@@ -823,10 +976,7 @@ async function main(): Promise<void> {
   // E15 — duplicate created_at.
   const dupe = bkMig.rows[1];
   const e15Bk = { present: true, rows: [...bkMig.rows, { id: 998, hash: dupe.hash, created_at: dupe.created_at }] };
-  const e15Pre = classify({
-    journal, journalFindings, bookkeeping: e15Bk, fileHashes,
-    schemaMatchesPrefix: true, actualMatchesPushReference: false, structuralDigestActual: null,
-  });
+  const e15Pre = await preflightFor(MIG, { bookkeeping: e15Bk });
   check("E15 duplicate bookkeeping rows for one created_at are detected as R2",
     e15Pre.state === "INCONSISTENT" && e15Pre.findings.some((f) => f.code === "R2"),
     `${e15Pre.state}: ${e15Pre.findings.map((f) => f.code).join(",")}`);
@@ -878,16 +1028,13 @@ async function main(): Promise<void> {
   check("E18 bookkeeping records the committed prefix exactly, with real hashes and whens",
     e18BkAfter.rows.length === journal.entries.length && watermark(e18BkAfter) === lastWhen,
     `rows ${e18BkAfter.rows.length}, watermark ${watermark(e18BkAfter)}`);
-  check("E18 the live schema equals the proven db:push reference shape", e18Digest === digestPush,
+  check("E18 the live schema's STRUCTURAL digest equals the push reference (diagnostic)", e18Digest === digestPush,
     `${e18Digest.slice(0, 12)} vs ${digestPush.slice(0, 12)}`);
+  const e18Semantic = fingerprintDigest(await withClient(E18DB, projectLive));
+  check("E18 the live schema's FULL F1–F6 semantic digest equals the measured push reference",
+    e18Semantic === REF.pushSemanticDigest, `${e18Semantic.slice(0, 12)} vs ${(REF.pushSemanticDigest ?? "").slice(0, 12)}`);
 
-  const e18PrefixDiff = diffStructural(expected4, e18St);
-  const e18Pre = classify({
-    journal, journalFindings, bookkeeping: e18BkAfter, fileHashes,
-    schemaMatchesPrefix: e18PrefixDiff.length === 0,
-    actualMatchesPushReference: e18Digest === digestPush,
-    structuralDigestActual: e18Digest,
-  });
+  const e18Pre = await preflightFor(E18DB);
   check("E18 bookkeeping alone looks healthy — exact correspondence holds over the applied prefix",
     !e18Pre.findings.some((f) => ["R1", "R2", "R3", "R4", "R7"].includes(f.code)),
     e18Pre.findings.map((f) => f.code).join(","));
@@ -900,10 +1047,7 @@ async function main(): Promise<void> {
 
   // The same database, but with the push reference unavailable: the answer must get STRICTER,
   // never looser. An unexplained shape is INCONSISTENT, not a baseline situation.
-  const e18NoRef = classify({
-    journal, journalFindings, bookkeeping: e18BkAfter, fileHashes,
-    schemaMatchesPrefix: false, actualMatchesPushReference: null, structuralDigestActual: e18Digest,
-  });
+  const e18NoRef = await preflightFor(E18DB, { pushSemanticDigest: null });
   check("E18 without a push reference the classification is INCONSISTENT, not OK and not baseline",
     e18NoRef.state === "INCONSISTENT", `state ${e18NoRef.state}`);
   evidence.e18 = { preflightWithReference: e18Pre.state, preflightWithoutReference: e18NoRef.state, schemaEqualsPush: e18Digest === digestPush };
@@ -913,24 +1057,15 @@ async function main(): Promise<void> {
 
   // A migration-managed database at its own prefix, with correct bookkeeping, MUST return OK —
   // otherwise the gate is useless because it never passes.
-  const okPre = classify({
-    journal, journalFindings, bookkeeping: bkMig, fileHashes,
-    schemaMatchesPrefix: true, actualMatchesPushReference: false, structuralDigestActual: digestMig,
-  });
+  const okPre = await preflightFor(MIG);
   check("positive control: a correctly migrated database at its own prefix returns OK",
     okPre.state === "OK", `${okPre.state}: ${okPre.findings.map((f) => f.code).join(",")}`);
 
   // Exit codes through the real CLI, so the documented contract is observed rather than asserted.
-  const cliOnMig = spawnSync("npx", ["tsx", "scripts/migration-preflight.ts"], {
-    cwd: REPO, encoding: "utf8", shell: false,
-    env: { ...process.env, DATABASE_URL: dbUrl(MIG), AUD08_SCHEMA_REFERENCE: join(EVIDENCE_DIR, "schema-reference.json") },
-  });
+  const cliOnMig = runPreflightCli(MIG);
   log(`      CLI against the migrated database: exit ${cliOnMig.status}`);
   check("CLI exit code 0 corresponds to OK on the migrated database", cliOnMig.status === 0, `exit ${cliOnMig.status}`);
-  const cliOnE18 = spawnSync("npx", ["tsx", "scripts/migration-preflight.ts"], {
-    cwd: REPO, encoding: "utf8", shell: false,
-    env: { ...process.env, DATABASE_URL: dbUrl(E18DB), AUD08_SCHEMA_REFERENCE: join(EVIDENCE_DIR, "schema-reference.json") },
-  });
+  const cliOnE18 = runPreflightCli(E18DB);
   log(`      CLI against the bookkeeping-behind/schema-ahead database: exit ${cliOnE18.status}`);
   check("CLI exit code 10 corresponds to BASELINE RECONCILIATION REQUIRED", cliOnE18.status === 10, `exit ${cliOnE18.status}`);
   // The secret is taken FROM the supplied URL rather than written here: a literal in this file would
@@ -944,26 +1079,271 @@ async function main(): Promise<void> {
   await dropDb(E18DB);
 
   // ===========================================================================================
+  section("9b. E20 — a FRESH EMPTY database is a valid state (Blocker 1)");
+
+  const E20DB = `${DB_PREFIX}e20`;
+  await freshDb(E20DB);
+  const e20Cli = runPreflightCli(E20DB);
+  log(`      E20 CLI on a fresh empty database: exit ${e20Cli.status}, STATE ${stateLine(e20Cli)}`);
+  check("E20 the REAL db:preflight CLI exits 0 on a fresh empty database", e20Cli.status === 0,
+    `exit ${e20Cli.status}; ${e20Cli.stdout.split("\n").filter((l) => l.includes("[")).join(" | ").slice(0, 200)}`);
+  check("E20 and reports STATE: OK", stateLine(e20Cli) === "OK", stateLine(e20Cli));
+  check("E20 with the applied prefix EMPTY", /^applied\s+: \(none\)$/m.test(e20Cli.stdout));
+  check("E20 with EVERY committed migration pending",
+    journal.entries.every((e) => new RegExp(`^pending\\s+: .*${e.tag}`, "m").test(e20Cli.stdout)));
+  check("E20 and ordinary migrate PERMITTED", /^migrate: PERMITTED$/m.test(e20Cli.stdout));
+  const e20Migrate = runDrizzleKit(["migrate"], E20DB, base.config);
+  check("E20 raw drizzle-kit migrate then initializes it normally", e20Migrate.status === 0, `exit ${e20Migrate.status}`);
+  const e20Bk = await withClient(E20DB, readBookkeeping);
+  check("E20 ... recording exactly one bookkeeping row per journal entry", e20Bk.rows.length === journal.entries.length,
+    `rows ${e20Bk.rows.length}`);
+  const e20After = runPreflightCli(E20DB);
+  check("E20 the initialized database then passes preflight as OK at the full prefix (exit 0)",
+    e20After.status === 0 && stateLine(e20After) === "OK", `exit ${e20After.status}, ${stateLine(e20After)}`);
+  evidence.e20 = { freshExit: e20Cli.status, freshState: stateLine(e20Cli), migrateExit: e20Migrate.status, afterExit: e20After.status, afterState: stateLine(e20After) };
+  await dropDb(E20DB);
+
+  // What counts as EMPTY. Each case holds exactly ONE non-table application object and nothing else.
+  // The previous emptiness test was "no columns in the structural projection" — every case below
+  // except the view and the table has zero columns, so the old logic would have called it fresh and
+  // let migrate run against an object nobody had identified.
+  const NOT_EMPTY_CASES: { label: string; sql: string; hasColumns: boolean }[] = [
+    { label: "a lone sequence", sql: "create sequence aud081_e20_seq", hasColumns: false },
+    { label: "a lone enum type", sql: "create type aud081_e20_enum as enum ('a', 'b')", hasColumns: false },
+    { label: "a lone function", sql: "create function aud081_e20_fn() returns int language sql as 'select 1'", hasColumns: false },
+    { label: "a lone view", sql: "create view aud081_e20_view as select 1 as x", hasColumns: true },
+    { label: "an unexpected schema", sql: "create schema aud081_e20_extra", hasColumns: false },
+    { label: "a lone table", sql: "create table aud081_e20_table (id integer)", hasColumns: true },
+  ];
+  const E20B = `${DB_PREFIX}e20b`;
+  for (const c of NOT_EMPTY_CASES) {
+    await freshDb(E20B);
+    await withClient(E20B, async (cl) => {
+      await cl.query(c.sql);
+    });
+    const em = await withClient(E20B, measureEmptiness);
+    const cols = (await withClient(E20B, projectLiveStructural)).columns.length;
+    const r = await preflightFor(E20B);
+    check(`E20 emptiness: ${c.label} is NOT empty`, !em.empty, em.detail);
+    check(`E20 emptiness: ${c.label} -> INCONSISTENT, never OK`, r.state === "INCONSISTENT",
+      `${r.state}: ${r.findings.map((f) => f.code).join(",")}`);
+    if (!c.hasColumns) {
+      check(`E20 emptiness: ${c.label} has ZERO columns — the old narrow test would have called it fresh`, cols === 0, `${cols} columns`);
+    }
+    await dropDb(E20B);
+  }
+
+  // ===========================================================================================
+  section("9c. E21 / E22 — semantic drift with VALID bookkeeping must be INCONSISTENT (Blocker 2)");
+
+  const DRIFT = `${DB_PREFIX}drift`;
+  await freshDb(DRIFT);
+  check("drift setup: migrated normally to the full prefix", runDrizzleKit(["migrate"], DRIFT, base.config).status === 0);
+  const driftRows = await withClient(DRIFT, async (c) => {
+    const { rows } = await c.query<{ n: number }>(`select count(*)::int as n from bank_accounts`);
+    return rows[0].n;
+  });
+  check("drift setup: bank_accounts holds no rows, so altering it puts no data at risk", driftRows === 0, `${driftRows} rows`);
+  const driftControl = await preflightFor(DRIFT);
+  check("drift control: before any mutation the database is OK", driftControl.state === "OK",
+    `${driftControl.state}: ${driftControl.findings.map((f) => f.code).join(",")}`);
+  const driftStructuralBase = await withClient(DRIFT, projectLiveStructural);
+
+  type Drift = { id: string; label: string; apply: string; revert: string };
+  const DRIFTS: Drift[] = [
+    {
+      id: "E21",
+      label: "numeric precision/scale drift (numeric(14,2) -> numeric(14,3))",
+      apply: "alter table bank_accounts alter column opening_balance type numeric(14,3)",
+      revert: "alter table bank_accounts alter column opening_balance type numeric(14,2)",
+    },
+    {
+      id: "E22a",
+      label: "column DEFAULT drift ('0' -> 1)",
+      apply: "alter table bank_accounts alter column opening_balance set default 1",
+      revert: "alter table bank_accounts alter column opening_balance set default '0'",
+    },
+    {
+      id: "E22b",
+      label: "CHECK constraint drift (a new check added)",
+      apply: "alter table bank_accounts add constraint aud081_e22_check check (opening_balance >= 0)",
+      revert: "alter table bank_accounts drop constraint aud081_e22_check",
+    },
+  ];
+
+  for (const d of DRIFTS) {
+    await withClient(DRIFT, async (c) => {
+      await c.query(d.apply);
+    });
+    const bkStill = await withClient(DRIFT, readBookkeeping);
+    const st = await withClient(DRIFT, projectLiveStructural);
+    const structuralDiff = diffStructural(driftStructuralBase, st);
+    const r = await preflightFor(DRIFT);
+    check(`${d.id} ${d.label}: bookkeeping is still perfectly valid (${bkStill.rows.length} rows)`,
+      bkStill.rows.length === journal.entries.length && !r.findings.some((f) => ["R1", "R2", "R3", "R4", "R7"].includes(f.code)));
+    check(`${d.id} ${d.label}: the STRUCTURAL projection sees NO difference — it would have authorized this`,
+      structuralDiff.length === 0, structuralDiff.map((x) => x.component).join(","));
+    check(`${d.id} ${d.label}: db:preflight returns INCONSISTENT`, r.state === "INCONSISTENT",
+      `${r.state}: ${r.findings.map((f) => f.code).join(",")}`);
+    check(`${d.id} ${d.label}: because the FULL semantic digest differs from the prefix reference`,
+      r.findings.some((f) => f.code === "SCHEMA_PREFIX_MISMATCH"), r.findings.map((f) => f.code).join(","));
+    const cli = runPreflightCli(DRIFT);
+    check(`${d.id} ${d.label}: the real CLI exits 20`, cli.status === 20, `exit ${cli.status}`);
+    check(`${d.id} ${d.label}: and its diagnostic says the difference is semantic, not structural`,
+      /no structural difference \(the difference is semantic/.test(cli.stdout));
+    log(`      ${d.id}: structural diff = ${structuralDiff.length}; preflight = ${r.state}; CLI exit = ${cli.status}`);
+    await withClient(DRIFT, async (c) => {
+      await c.query(d.revert);
+    });
+    const back = await preflightFor(DRIFT);
+    check(`${d.id} after reverting the mutation the database is OK again (no false-positive residue)`,
+      back.state === "OK", `${back.state}: ${back.findings.map((f) => f.code).join(",")}`);
+    (evidence as Record<string, unknown>)[d.id.toLowerCase()] = { structuralDiff: structuralDiff.length, preflight: r.state, cliExit: cli.status, afterRevert: back.state };
+  }
+  await dropDb(DRIFT);
+
+  // ===========================================================================================
+  section("9d. E23 — push recognition uses the SEMANTIC digest, not the structural one");
+
+  const E23DB = `${DB_PREFIX}e23`;
+  await freshDb(E23DB);
+  check("E23 setup: a fresh database pushed to the current shape", runDrizzleKit(["push", "--force"], E23DB, base.config).status === 0);
+  const e23Control = await preflightFor(E23DB);
+  check("E23 control: exact push shape, no bookkeeping -> BASELINE RECONCILIATION REQUIRED",
+    e23Control.state === "BASELINE_RECONCILIATION_REQUIRED", `${e23Control.state}: ${e23Control.findings.map((f) => f.code).join(",")}`);
+  await withClient(E23DB, async (c) => {
+    await c.query("alter table bank_accounts alter column opening_balance type numeric(15,4)");
+  });
+  const e23Structural = structuralDigest(await withClient(E23DB, projectLiveStructural));
+  check("E23 after a precision-only change the STRUCTURAL digest STILL equals the push reference",
+    e23Structural === REF.pushStructuralDigest, "the structural digest moved, so this would not prove anything");
+  log(`      E23: the AUD-08.1 structural method would therefore still have answered BASELINE RECONCILIATION REQUIRED`);
+  const e23 = await preflightFor(E23DB);
+  check("E23 db:preflight does NOT return BASELINE RECONCILIATION REQUIRED", e23.state !== "BASELINE_RECONCILIATION_REQUIRED", e23.state);
+  check("E23 db:preflight returns INCONSISTENT", e23.state === "INCONSISTENT",
+    `${e23.state}: ${e23.findings.map((f) => f.code).join(",")}`);
+  const e23Cli = runPreflightCli(E23DB);
+  check("E23 the real CLI exits 20", e23Cli.status === 20, `exit ${e23Cli.status}`);
+  evidence.e23 = { control: e23Control.state, structuralStillPush: e23Structural === REF.pushStructuralDigest, preflight: e23.state, cliExit: e23Cli.status };
+  await dropDb(E23DB);
+
+  // ===========================================================================================
+  section("9e. E24 — a STALE reference is refused, never silently trusted");
+
+  // Snapshot the committed reference so we can prove db:preflight never rewrote it.
+  const refBytesBefore = readFileSync(REFERENCE_FILE);
+
+  // The target is a fresh empty database: absent staleness it is OK, so a refusal here is caused by
+  // the reference and nothing else.
+  const E24DB = `${DB_PREFIX}e24`;
+  await freshDb(E24DB);
+  check("E24 control: with the current reference the fresh database is OK (exit 0)", runPreflightCli(E24DB).status === 0);
+
+  const e24Root = mkdtempSync(join(tmpdir(), "aud081-e24-"));
+  const refTampered = join(e24Root, "reference-tampered.json");
+  writeFileSync(refTampered, JSON.stringify({ ...REF, migrationJournalDigest: "0".repeat(64) }, null, 2));
+  const e24a = runPreflightCli(E24DB, { AUD08_SCHEMA_REFERENCE: refTampered });
+  check("E24a a reference bound to DIFFERENT migration inputs -> exit 30", e24a.status === EXIT_REFERENCE_STALE, `exit ${e24a.status}`);
+  check("E24a and the output names REFERENCE_STALE", /\[REFERENCE_STALE\]/.test(e24a.stdout) && /^STATE: REFERENCE_STALE$/m.test(e24a.stdout));
+
+  const refUnbound = join(e24Root, "reference-unbound.json");
+  const unbound: SchemaReference = { ...REF };
+  delete unbound.migrationJournalDigest;
+  writeFileSync(refUnbound, JSON.stringify(unbound, null, 2));
+  const e24b = runPreflightCli(E24DB, { AUD08_SCHEMA_REFERENCE: refUnbound });
+  check("E24b a reference carrying NO migration binding at all -> exit 30, REFERENCE_STALE",
+    e24b.status === EXIT_REFERENCE_STALE && /\[REFERENCE_STALE\]/.test(e24b.stdout), `exit ${e24b.status}`);
+
+  // The current migration INPUTS change while the reference does not: one byte appended to a copy.
+  const e24m = tempMigrations("e24m");
+  const e24victim = migrationSqlPath(e24m.folder, journal.entries[1].tag);
+  writeFileSync(e24victim, `${readFileSync(e24victim, "utf8")}\n-- aud081 e24\n`);
+  const e24c = runPreflightCli(E24DB, { AUD08_MIGRATIONS_FOLDER: e24m.folder });
+  check("E24c the migration INPUTS changed under an unchanged reference -> exit 30, REFERENCE_STALE",
+    e24c.status === EXIT_REFERENCE_STALE && /\[REFERENCE_STALE\]/.test(e24c.stdout), `exit ${e24c.status}`);
+  rmSync(e24m.root, { recursive: true, force: true });
+
+  const refMissing = join(e24Root, "does-not-exist.json");
+  const e24d = runPreflightCli(E24DB, { AUD08_SCHEMA_REFERENCE: refMissing });
+  check("E24d no reference file at all -> exit 30 (missing evidence is refused, not tolerated)",
+    e24d.status === EXIT_REFERENCE_STALE && /\[REFERENCE_MISSING\]/.test(e24d.stdout), `exit ${e24d.status}`);
+
+  check("E24 db:preflight never regenerated the evidence — the committed reference is byte-unchanged",
+    Buffer.compare(refBytesBefore, readFileSync(REFERENCE_FILE)) === 0);
+  await dropDb(E24DB);
+
+  // E24e — SCHEMA-SOURCE staleness disables only push recognition. Needs a push-shaped target.
+  const E24P = `${DB_PREFIX}e24p`;
+  await freshDb(E24P);
+  check("E24e setup: a fresh database pushed to the current shape", runDrizzleKit(["push", "--force"], E24P, base.config).status === 0);
+  const schemaCopy = join(e24Root, "schema");
+  cpSync(join(REPO, "src", "db", "schema"), schemaCopy, { recursive: true });
+  // A byte-identical copy elsewhere must NOT read as stale — identity is content, not location.
+  const e24eSame = runPreflightCli(E24P, { AUD08_SCHEMA_DIR: schemaCopy, AUD08_SCHEMA_CONFIG: join(REPO, "drizzle.config.ts") });
+  check("E24e control: a byte-identical schema copy at another path is NOT stale -> BASELINE (exit 10)",
+    e24eSame.status === 10, `exit ${e24eSame.status}, ${stateLine(e24eSame)}`);
+  const victimSchema = join(schemaCopy, "orgs.ts");
+  writeFileSync(victimSchema, `${readFileSync(victimSchema, "utf8")}\n// aud081 e24e\n`);
+  const e24e = runPreflightCli(E24P, { AUD08_SCHEMA_DIR: schemaCopy, AUD08_SCHEMA_CONFIG: join(REPO, "drizzle.config.ts") });
+  check("E24e changed schema source -> the push reference is NOT used (PUSH_REFERENCE_STALE)",
+    /\[PUSH_REFERENCE_STALE\]/.test(e24e.stdout), e24e.stdout.split("\n").filter((l) => l.includes("[")).join(" | ").slice(0, 200));
+  check("E24e so an exact push shape is no longer recognised as a baseline: INCONSISTENT, exit 20",
+    e24e.status === 20 && stateLine(e24e) === "INCONSISTENT", `exit ${e24e.status}, ${stateLine(e24e)}`);
+  check("E24e and the migration reference is still fresh, so this is NOT a whole-run refusal (not exit 30)",
+    e24e.status !== EXIT_REFERENCE_STALE);
+  await dropDb(E24P);
+
+  // E24f — a reference that is correctly BOUND but lacks the semantic digest for the prefix in
+  // question. The rule under test: missing semantic evidence must never fall back to structural
+  // equality. The target is a perfectly healthy migrated database whose STRUCTURAL projection
+  // matches its snapshot exactly — so the only thing standing between it and OK is the missing digest.
+  const E24F = `${DB_PREFIX}e24f`;
+  await freshDb(E24F);
+  check("E24f setup: migrated normally to the full prefix", runDrizzleKit(["migrate"], E24F, base.config).status === 0);
+  const e24fStructural = diffStructural(projectSnapshotStructural(readSnapshot("drizzle", Number(lastKey))), await withClient(E24F, projectLiveStructural));
+  check("E24f the target's STRUCTURAL projection matches its snapshot exactly (a structural fallback WOULD say OK)",
+    e24fStructural.length === 0, e24fStructural.map((d) => d.component).join(","));
+  const refNoPrefix = join(e24Root, "reference-no-prefix-digest.json");
+  const strippedPrefixes = { ...(REF.prefixSemanticDigests ?? {}) };
+  delete strippedPrefixes[lastKey];
+  writeFileSync(refNoPrefix, JSON.stringify({ ...REF, prefixSemanticDigests: strippedPrefixes }, null, 2));
+  const e24f = runPreflightCli(E24F, { AUD08_SCHEMA_REFERENCE: refNoPrefix });
+  check("E24f bound reference missing that prefix's semantic digest -> NOT OK", e24f.status !== 0 && stateLine(e24f) !== "OK",
+    `exit ${e24f.status}, ${stateLine(e24f)}`);
+  check("E24f -> INCONSISTENT citing REFERENCE_MISSING_PREFIX (fails closed; no structural fallback)",
+    e24f.status === 20 && /\[REFERENCE_MISSING_PREFIX\]/.test(e24f.stdout), `exit ${e24f.status}`);
+  const e24fControl = runPreflightCli(E24F);
+  check("E24f control: the same database with the complete reference is OK (exit 0)", e24fControl.status === 0, `exit ${e24fControl.status}`);
+  await dropDb(E24F);
+
+  // And the same rule for the EMPTY prefix: a fresh database must not be authorized on emptiness alone.
+  const E24G = `${DB_PREFIX}e24g`;
+  await freshDb(E24G);
+  const refNoEmpty = join(e24Root, "reference-no-empty-digest.json");
+  const strippedEmpty = { ...(REF.prefixSemanticDigests ?? {}) };
+  delete strippedEmpty.empty;
+  writeFileSync(refNoEmpty, JSON.stringify({ ...REF, prefixSemanticDigests: strippedEmpty }, null, 2));
+  const e24g = runPreflightCli(E24G, { AUD08_SCHEMA_REFERENCE: refNoEmpty });
+  check("E24g a fresh database is NOT authorized on emptiness alone when the 'empty' digest is missing -> INCONSISTENT",
+    e24g.status === 20 && /\[REFERENCE_MISSING_PREFIX\]/.test(e24g.stdout), `exit ${e24g.status}, ${stateLine(e24g)}`);
+  await dropDb(E24G);
+
+  evidence.e24 = {
+    tampered: e24a.status, unbound: e24b.status, inputsChanged: e24c.status, missing: e24d.status,
+    schemaCopySame: e24eSame.status, schemaChanged: e24e.status,
+    missingPrefixDigest: e24f.status, missingEmptyDigest: e24g.status,
+  };
+  rmSync(e24Root, { recursive: true, force: true });
+
+  // ===========================================================================================
   section("10. Evidence");
 
-  mkdirSync(EVIDENCE_DIR, { recursive: true });
-  const reference = {
-    note: "AUD-08.1 measured reference digests. Structural projection only — see scripts/migration-preflight.ts for why types are excluded from snapshot comparison.",
-    measuredAt: new Date().toISOString(),
-    repoHead: spawnSync("git", ["rev-parse", "HEAD"], { cwd: REPO, encoding: "utf8" }).stdout.trim(),
-    drizzleOrm: JSON.parse(readFileSync(join(REPO, "node_modules/drizzle-orm/package.json"), "utf8")).version,
-    drizzleKit: JSON.parse(readFileSync(join(REPO, "node_modules/drizzle-kit/package.json"), "utf8")).version,
-    pgDriver: JSON.parse(readFileSync(join(REPO, "node_modules/pg/package.json"), "utf8")).version,
-    pushStructuralDigest: digestPush,
-    migrationsOnlyStructuralDigest: digestMig,
-    prefixStructuralDigests: { [String(journal.entries[journal.entries.length - 1].idx)]: digestMig },
-    pushSemanticDigest: fingerprintDigest(fpPush),
-    migrationsOnlySemanticDigest: fingerprintDigest(fpMig),
-  };
-  writeFileSync(join(EVIDENCE_DIR, "schema-reference.json"), `${JSON.stringify(reference, null, 2)}\n`);
+  // The reference was written ONCE, bound to its inputs, in section 1b. It is deliberately NOT
+  // rewritten here: the previous version did, which would have replaced the bound semantic reference
+  // with an unbound structural one and turned every later CLI run into REFERENCE_STALE.
   writeFileSync(join(EVIDENCE_DIR, "gap-measurement.json"), `${JSON.stringify(evidence, null, 2)}\n`);
-  log(`      wrote ${join("docs/audits/aud-08/evidence", "schema-reference.json")}`);
   log(`      wrote ${join("docs/audits/aud-08/evidence", "gap-measurement.json")}`);
+  log(`      schema-reference.json was written in section 1b and is not rewritten`);
 
   await dropDb(MIG);
   await dropDb(PUSH);
