@@ -1,9 +1,9 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 
-// Matches the mockup's .card exactly (literal class, defined in mockup-parity.css) —
-// not a Tailwind approximation of the same radius/border/shadow values. .card already
-// has its own hover lift built in, so `hoverable` is accepted but unused.
+// Navy Command card foundation (DEV-UI-01.1): the literal `.card` class (mockup-parity.css) is now an
+// 8px, border-led, solid surface with no default shadow and no hover lift. `hoverable` is accepted for
+// compatibility and deliberately does nothing — a universal hover lift is not part of the design.
 function Card({ className, hoverable, ...props }: React.ComponentProps<"div"> & { hoverable?: boolean }) {
   void hoverable;
   return <div data-slot="card" className={cn("card", className)} {...props} />;
@@ -23,7 +23,7 @@ function CardTitle({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="card-title"
-      className={cn("text-[13.5px] font-semibold text-ink", className)}
+      className={cn("text-title-sm font-semibold text-ink", className)}
       {...props}
     />
   );

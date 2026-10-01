@@ -1,233 +1,289 @@
 @import "tailwindcss";
 
+/* =================================================================================================
+   NAVY COMMAND DESIGN TOKENS (DEV-UI-01.1)
+
+   ONE definition per token. Every colour is declared once as `light-dark(<light>, <dark>)` and the
+   active appearance is chosen by `color-scheme` (below), so light and dark can never drift apart into
+   two blocks. The values are mirrored in src/lib/design-tokens.ts; verify-contrast parses this file
+   and fails if they differ, then checks every pairing against WCAG.
+
+   Direction (owner decisions D-02…D-04): dark navy structure, light restrained work area, SOLID
+   colours only, navy primary actions with white text, orange as accent / focus / active marker.
+   The Mockup V12 contract (mockup-parity.css) is superseded (D-01).
+   ================================================================================================= */
+
+/* Every colour token that is ever assigned a light-dark() value — here or in the per-org theme CSS —
+   is registered as a <color>. A registered colour property COMPUTES to the resolved colour for the
+   active color-scheme, so getComputedStyle() and any script reading a token get the real value
+   (unregistered, they would read the unresolved "light-dark(a, b)" string in both modes).
+   verify-contrast fails if a light-dark() token is ever left unregistered. */
+@property --canvas { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --surface { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --surface-subtle { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --surface-raised { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --text { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --text-muted { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --text-faint { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --border { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --border-strong { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --border-control { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --primary { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --primary-foreground { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --primary-hover { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --accent { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --accent-foreground { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --accent-ink { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --accent-tint { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --focus { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --link { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --success { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --success-bg { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --warning { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --warning-bg { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --danger { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --danger-bg { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --danger-foreground { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --info { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --info-bg { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --corrective { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --corrective-bg { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --neutral { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --neutral-bg { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --disabled-background { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --disabled-text { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --shadow-color { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --shadow-overlay-color { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --focus-ring { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --brand-orange-light { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --chart-navy { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --input-background { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --accent-hover { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --sidebar-bg { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --sidebar-ink { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --sidebar-border { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --brand-orange { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --brand-gradient { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --brand-primary { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --brand-primary-foreground { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --brand-accent { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --brand-accent-foreground { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --sidebar-active-bg { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --accent-orange-bg { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --background { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --surface-elevated { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --text-primary { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --text-secondary { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --primary-background { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --primary-text { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --accent-background { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --accent-text { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --active-tab-background { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --active-tab-text { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --selected-item-background { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --selected-item-text { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --badge-background { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --badge-text { syntax: "<color>"; inherits: true; initial-value: transparent; }
+
 :root {
+  /* Follow the OS unless the user picked an appearance (the `theme` cookie → data-theme). */
+  color-scheme: light dark;
+
+  /* ---- brand constants (not appearance-dependent) ---- */
   --brand-navy: #1b1b4e;
   --brand-navy-deep: #100f32;
-  --brand-orange: #e87722;
-  --brand-orange-light: #f5a25c;
-  --chart-navy: #1b1b4e;
 
-  /* Color Theme (Business Settings). Defaults render the Elite gradient; Single mode overrides
-     these in the app shell. Foregrounds are auto-contrasted so button text is always readable. */
-  --brand-primary: var(--brand-orange);
-  --brand-primary-foreground: #ffffff;
-  --brand-accent: var(--brand-orange);
-  --brand-accent-foreground: #ffffff;
-  --brand-gradient: linear-gradient(135deg, var(--brand-orange-light), var(--brand-orange));
+  /* ---- canonical semantic tokens ---- */
+  --canvas: light-dark(#f5f6f8, #090b17);
+  --surface: light-dark(#ffffff, #171b31);
+  --surface-subtle: light-dark(#eef0f4, #1e2239);
+  --surface-raised: light-dark(#ffffff, #20253f);
+  --text: light-dark(#17173f, #eceef7);
+  --text-muted: light-dark(#555a75, #a9aecb);
+  --text-faint: light-dark(#646982, #959bbb);
+  --border: light-dark(#e2e5eb, #2b3050);
+  --border-strong: light-dark(#c9ced8, #3c4268);
+  --border-control: light-dark(#868ca3, #646b8f);
+  --primary: light-dark(#1b1b4e, #5a60d6);
+  --primary-foreground: light-dark(#ffffff, #ffffff);
+  --primary-hover: light-dark(#2b2c6e, #4e54c8);
+  --accent: light-dark(#e87722, #f0924a);
+  --accent-foreground: light-dark(#17173f, #17173f);
+  --accent-ink: light-dark(#a9500c, #f5a868);
+  --accent-tint: light-dark(#fdf0e6, #3a2615);
+  --focus: light-dark(#c55f0e, #f0924a);
+  --link: light-dark(#1b1b4e, #a9b0ff);
+  --success: light-dark(#17734a, #5fcf9a);
+  --success-bg: light-dark(#e3f2ea, #13301f);
+  --warning: light-dark(#8a5a00, #f0c060);
+  --warning-bg: light-dark(#fbf0d9, #33270a);
+  --danger: light-dark(#b4322d, #f08a83);
+  --danger-bg: light-dark(#fbe6e4, #3a1716);
+  --danger-foreground: light-dark(#ffffff, #17173f);
+  --info: light-dark(#2f4fb8, #93a6f0);
+  --info-bg: light-dark(#e7ecfa, #19203f);
+  --corrective: light-dark(#5b3fb8, #b3a3f5);
+  --corrective-bg: light-dark(#eeeafb, #251d45);
+  --neutral: light-dark(#4f546e, #b3b7cf);
+  --neutral-bg: light-dark(#eceef3, #232741);
+  --disabled-background: light-dark(#eceef2, #1f2338);
+  --disabled-text: light-dark(#6b6f86, #9a9fbd);
 
-  --canvas: #f3f1ec;
-  --surface: #ffffff;
-  --surface-raised: #ffffff;
-  --surface-glass: rgba(255, 255, 255, 0.72);
+  /* ---- type families ---- */
+  /* Latin UI → IBM Plex Sans; Arabic glyphs fall through to IBM Plex Sans Arabic (Plex Sans ships no
+     Arabic), so mixed Arabic/English text uses each script's intended face. Plex Mono is for codes,
+     IDs and hashes ONLY — money uses the UI face with tabular figures. */
+  --font-ui: var(--font-body-raw), var(--font-arabic-raw), system-ui, sans-serif;
+  --font-code-family: var(--font-mono-raw), ui-monospace, monospace;
 
-  --ink: #17173f;
-  --ink-muted: #5c5d82;
-  --ink-faint: #6a6b8d; /* AA on white (5.12) and canvas (4.54); was #8b8cad = 3.25 */
+  /* ---- elevation: borders lead, shadows are restrained ---- */
+  --shadow-color: light-dark(rgba(23, 23, 63, 0.06), rgba(0, 0, 0, 0.35));
+  --shadow-overlay-color: light-dark(rgba(16, 15, 50, 0.22), rgba(0, 0, 0, 0.6));
+  --shadow-sm: 0 1px 2px var(--shadow-color);
+  --shadow-overlay: 0 12px 32px -8px var(--shadow-overlay-color);
+  --focus-ring: light-dark(rgba(197, 95, 14, 0.35), rgba(240, 146, 74, 0.5));
 
-  --line: #e5e2d9;
-  --line-strong: #d2cec0;
+  /* ---- spacing (4px base) and radius families ---- */
+  --space-0: 0px;
+  --space-2: 2px;
+  --space-4: 4px;
+  --space-6: 6px;
+  --space-8: 8px;
+  --space-12: 12px;
+  --space-16: 16px;
+  --space-20: 20px;
+  --space-24: 24px;
+  --space-32: 32px;
+  --space-40: 40px;
+  --space-48: 48px;
+  --space-64: 64px;
+  --radius: 8px;
 
-  --success: #1e8e5a;
-  --success-bg: #e4f3ec;
-  --warning: #c98a1d;
-  --warning-bg: #fbf0dc;
-  --warning-ink: #7a5104; /* readable warning text on light surfaces (7.1:1 on white) */
-  --danger: #c1403b;
-  --danger-bg: #fbe7e5;
-  --info: #3a5ac9;
-  --info-bg: #e8ecfa;
-  --accent-orange-bg: rgba(232, 119, 34, 0.12);
-  --accent-purple: #6d5dd3;
-  --accent-purple-bg: rgba(109, 93, 211, 0.12);
-  --accent-green: #1e8e5a;
-  --accent-green-bg: rgba(30, 142, 90, 0.12);
-  --accent-red: #d64550;
-  --accent-red-bg: rgba(214, 69, 80, 0.12);
+  /* ---- density foundation (D-05: comfortable default; compact is a later preference) ---- */
+  --control-height: 36px;
+  --control-height-compact: 32px;
+  --control-height-touch: 40px;
 
-  --sidebar-bg: #ffffff;
-  --sidebar-ink: #2a2b57;
-  --sidebar-ink-muted: #6a6b8d; /* AA on the white sidebar (5.12); was #8587ac = 3.47 */
-  --sidebar-active-bg: var(--brand-orange);
-  --sidebar-border: #efeff5;
+  /* ================================================================================================
+     LEGACY ALIASES — pre-redesign names, kept so untouched screens inherit the new palette instead of
+     breaking. New code uses the canonical names above. Each alias is a pointer, never a second value.
+     ================================================================================================ */
+  /* Font aliases used by legacy CSS: Plus Jakarta Sans retired (display → UI face); money moved off
+     Plex Mono (mono → UI face, tabular figures from body). */
+  --font-body: var(--font-ui);
+  --font-display: var(--font-ui);
+  --font-mono: var(--font-ui);
 
-  --shadow-sm: 0 1px 2px rgba(23, 23, 63, 0.06);
-  --shadow-card: 0 1px 2px rgba(23, 23, 63, 0.05), 0 10px 28px -8px rgba(23, 23, 63, 0.14),
-    0 3px 8px -3px rgba(23, 23, 63, 0.08);
-  --shadow-card-hover: 0 2px 4px rgba(23, 23, 63, 0.06), 0 20px 44px -10px rgba(23, 23, 63, 0.2),
-    0 6px 14px -4px rgba(23, 23, 63, 0.1);
-  --shadow-glass: 0 8px 40px -8px rgba(16, 15, 50, 0.35);
-  --ring-orange: 0 0 0 3px rgba(232, 119, 34, 0.18);
+  --brand-orange: var(--accent);
+  --brand-orange-light: light-dark(#f5a25c, #f8b57c);
+  --chart-navy: light-dark(#1b1b4e, #8c90e0);
+  --brand-primary: var(--primary);
+  --brand-primary-foreground: var(--primary-foreground);
+  --brand-accent: var(--accent);
+  --brand-accent-foreground: var(--accent-foreground);
+  /* D-04 SOLID-ONLY: the legacy gradient token now resolves to a solid colour. */
+  --brand-gradient: var(--accent);
 
-  --radius: 0.75rem;
-
-  /* Semantic interface tokens (light). Components style themselves from THESE, never from raw
-     brand colors or hardcoded hexes, so an org's Color Theme can re-map them per appearance.
-     The per-org theme (lib/brand-theme.ts) recalculates the brand-derived ones for light and dark
-     separately; these defaults keep the stock Elite look when no theme is customized. */
   --background: var(--canvas);
   --surface-elevated: var(--surface-raised);
-  --text-primary: var(--ink);
-  --text-secondary: var(--ink-muted);
-  --text-muted: #6f7093;
-  --border: var(--line);
-  --input-background: var(--surface);
-  /* Foregrounds are the CONTRAST-CORRECT choice, not the prettiest guess: white on the brand
-     orange is only 2.96:1 (fails AA and even the 3:1 UI floor), while the dark ink is 5.76:1. */
-  --primary-background: var(--brand-gradient);
-  --primary-text: var(--ink);
-  --primary-hover: #cf6414;
-  --accent-background: var(--brand-orange);
-  --accent-text: var(--ink);
-  --accent-hover: #cf6414;
-  --active-tab-background: var(--brand-orange);
-  --active-tab-text: var(--ink);
-  --selected-item-background: var(--brand-orange);
-  --selected-item-text: var(--ink);
-  --badge-background: #fdeee1;
-  --badge-text: #8a4410;
-  --focus-ring: rgba(232, 119, 34, 0.4);
-  --disabled-background: #eceade;
-  --disabled-text: #6b6c8d;
-  --danger-text: #ffffff; /* 5.17:1 on the light danger red */
+  --surface-glass: var(--surface-raised);
+  --ink: var(--text);
+  --ink-muted: var(--text-muted);
+  --ink-faint: var(--text-faint);
+  --text-primary: var(--text);
+  --text-secondary: var(--text-muted);
+  --line: var(--border);
+  --line-strong: var(--border-strong);
+  --input-background: light-dark(#ffffff, #1e2239);
+
+  --primary-background: var(--primary);
+  --primary-text: var(--primary-foreground);
+  --accent-background: var(--accent);
+  --accent-text: var(--accent-foreground);
+  --accent-hover: light-dark(#cf6414, #f4a76b);
+  --active-tab-background: var(--accent);
+  --active-tab-text: var(--accent-foreground);
+  --selected-item-background: var(--accent);
+  --selected-item-text: var(--accent-foreground);
+  --badge-background: var(--accent-tint);
+  --badge-text: var(--accent-ink);
+  --danger-text: var(--danger-foreground);
+
+  --warning-ink: var(--warning);
+  --accent-orange-bg: var(--accent-tint);
+  --accent-purple: var(--corrective);
+  --accent-purple-bg: var(--corrective-bg);
+  --accent-green: var(--success);
+  --accent-green-bg: var(--success-bg);
+  --accent-red: var(--danger);
+  --accent-red-bg: var(--danger-bg);
+
+  /* Sidebar keeps its current light/white structure until DEV-UI-01.3 (application shell). */
+  --sidebar-bg: light-dark(#ffffff, #10132a);
+  --sidebar-ink: light-dark(#2a2b57, #ededf8);
+  --sidebar-ink-muted: var(--text-faint);
+  --sidebar-active-bg: var(--accent);
+  --sidebar-border: light-dark(#eceef3, #1f2338);
+
+  --shadow-card: var(--shadow-sm);
+  --shadow-card-hover: var(--shadow-sm);
+  --shadow-glass: var(--shadow-overlay);
+  --ring-orange: 0 0 0 3px var(--focus-ring);
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
 }
 
 :root[data-theme="dark"] {
-  --canvas: #0c0b22;
-  --surface: #16152f;
-  --surface-raised: #1b1a38;
-  --surface-glass: rgba(27, 26, 56, 0.72);
-  --ink: #eeeef7;
-  --ink-muted: #ababd1;
-  --ink-faint: #9a9ac2; /* AA on dark surfaces (6.58); was #74749d = 4.00 */
-  --line: #2a2952;
-  --line-strong: #363564;
-  --brand-orange: #f0924a;
-  --brand-orange-light: #f8b57c;
-  --chart-navy: #8c90e0;
-  --success: #4fbe8b;
-  --success-bg: #143128;
-  --warning: #e0a947;
-  --warning-bg: #362909;
-  --warning-ink: #f0c778; /* readable warning text on dark surfaces */
-  --danger: #e27069;
-  --danger-bg: #351715;
-  --info: #7c93e8;
-  --info-bg: #1b2142;
-  --accent-orange-bg: rgba(240, 146, 74, 0.16);
-  --accent-purple: #9a8cf0;
-  --accent-purple-bg: rgba(154, 140, 240, 0.16);
-  --accent-green: #4fbe8b;
-  --accent-green-bg: rgba(79, 190, 139, 0.16);
-  --accent-red: #e27069;
-  --accent-red-bg: rgba(226, 112, 105, 0.16);
-  --sidebar-bg: #12112a;
-  --sidebar-ink: #ededf8;
-  --sidebar-ink-muted: #9a9ac2; /* AA on the dark sidebar (6.82); was #7a7aa8 = 4.54 */
-  --sidebar-active-bg: var(--brand-orange);
-  --sidebar-border: #232152;
-  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3), 0 10px 30px -8px rgba(0, 0, 0, 0.5);
-  --shadow-card-hover: 0 2px 4px rgba(0, 0, 0, 0.35), 0 20px 46px -10px rgba(0, 0, 0, 0.6);
-  --shadow-glass: 0 8px 44px -8px rgba(0, 0, 0, 0.6);
-
-  /* Semantic interface tokens (dark) — calculated SEPARATELY from light. Foregrounds are chosen by
-     contrast against the dark-mode brand orange (#f0924a): white would be 2.36:1, the ink is 7.24:1. */
-  --background: var(--canvas);
-  --surface-elevated: var(--surface-raised);
-  --text-primary: var(--ink);
-  --text-secondary: #b9b9db;
-  --text-muted: #9a9ac2;
-  --border: var(--line);
-  --input-background: #1b1a38;
-  --primary-background: var(--brand-gradient);
-  --primary-text: #17173f;
-  --primary-hover: #f4a76b;
-  --accent-background: var(--brand-orange);
-  --accent-text: #17173f;
-  --accent-hover: #f4a76b;
-  --active-tab-background: var(--brand-orange);
-  --active-tab-text: #17173f;
-  --selected-item-background: var(--brand-orange);
-  --selected-item-text: #17173f;
-  --badge-background: #52393d;
-  --badge-text: #f29d5c;
-  --focus-ring: rgba(240, 146, 74, 0.55);
-  --disabled-background: #232247;
-  --disabled-text: #9a9ac2;
-  --danger-text: #17173f; /* white is only 3.11:1 on the dark-mode danger red */
+  color-scheme: dark;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --canvas: #0c0b22;
-    --surface: #16152f;
-    --surface-raised: #1b1a38;
-    --surface-glass: rgba(27, 26, 56, 0.72);
-    --ink: #eeeef7;
-    --ink-muted: #ababd1;
-    --ink-faint: #9a9ac2; /* AA on dark surfaces (6.58); was #74749d = 4.00 */
-    --line: #2a2952;
-    --line-strong: #363564;
-    --brand-orange: #f0924a;
-    --brand-orange-light: #f8b57c;
-    --chart-navy: #8c90e0;
-    --success: #4fbe8b;
-    --success-bg: #143128;
-    --warning: #e0a947;
-    --warning-ink: #f0c778; /* readable warning text on dark surfaces */
-    --warning-bg: #362909;
-    --danger: #e27069;
-    --danger-bg: #351715;
-    --info: #7c93e8;
-    --info-bg: #1b2142;
-    --accent-orange-bg: rgba(240, 146, 74, 0.16);
-    --accent-purple: #9a8cf0;
-    --accent-purple-bg: rgba(154, 140, 240, 0.16);
-    --accent-green: #4fbe8b;
-    --accent-green-bg: rgba(79, 190, 139, 0.16);
-    --accent-red: #e27069;
-    --accent-red-bg: rgba(226, 112, 105, 0.16);
-    --sidebar-bg: #12112a;
-    --sidebar-ink: #ededf8;
-    --sidebar-ink-muted: #9a9ac2; /* AA on the dark sidebar (6.82); was #7a7aa8 = 4.54 */
-    --sidebar-active-bg: var(--brand-orange);
-    --sidebar-border: #232152;
-    --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3), 0 10px 30px -8px rgba(0, 0, 0, 0.5);
-    --shadow-card-hover: 0 2px 4px rgba(0, 0, 0, 0.35), 0 20px 46px -10px rgba(0, 0, 0, 0.6);
-    --shadow-glass: 0 8px 44px -8px rgba(0, 0, 0, 0.6);
+/* Nine-step type scale (DEV-UI-00 §7.1) — utilities text-caption … text-display. Declared with
+   plain @theme (not inline) so the Arabic line heights below can re-point the same variables. */
+@theme {
+  --text-caption: 11px;
+  --text-caption--line-height: 16px;
+  --text-body-sm: 12px;
+  --text-body-sm--line-height: 16px;
+  --text-body: 13px;
+  --text-body--line-height: 20px;
+  --text-body-lg: 14px;
+  --text-body-lg--line-height: 20px;
+  --text-title-sm: 16px;
+  --text-title-sm--line-height: 24px;
+  --text-title: 18px;
+  --text-title--line-height: 26px;
+  --text-page: 20px;
+  --text-page--line-height: 28px;
+  --text-display-sm: 24px;
+  --text-display-sm--line-height: 32px;
+  --text-display: 30px;
+  --text-display--line-height: 38px;
+}
 
-  /* Semantic interface tokens (dark) — calculated SEPARATELY from light. Foregrounds are chosen by
-     contrast against the dark-mode brand orange (#f0924a): white would be 2.36:1, the ink is 7.24:1. */
-  --background: var(--canvas);
-  --surface-elevated: var(--surface-raised);
-  --text-primary: var(--ink);
-  --text-secondary: #b9b9db;
-  --text-muted: #9a9ac2;
-  --border: var(--line);
-  --input-background: #1b1a38;
-  --primary-background: var(--brand-gradient);
-  --primary-text: #17173f;
-  --primary-hover: #f4a76b;
-  --accent-background: var(--brand-orange);
-  --accent-text: #17173f;
-  --accent-hover: #f4a76b;
-  --active-tab-background: var(--brand-orange);
-  --active-tab-text: #17173f;
-  --selected-item-background: var(--brand-orange);
-  --selected-item-text: #17173f;
-  --badge-background: #52393d;
-  --badge-text: #f29d5c;
-  --focus-ring: rgba(240, 146, 74, 0.55);
-  --disabled-background: #232247;
-  --disabled-text: #9a9ac2;
-  --danger-text: #17173f; /* white is only 3.11:1 on the dark-mode danger red */
-  }
+/* Arabic runs ~10% taller (ascenders/descenders and diacritics). */
+:root[lang="ar"] {
+  --text-caption--line-height: 18px;
+  --text-body-sm--line-height: 20px;
+  --text-body--line-height: 22px;
+  --text-body-lg--line-height: 24px;
+  --text-title-sm--line-height: 26px;
+  --text-title--line-height: 28px;
+  --text-page--line-height: 32px;
+  --text-display-sm--line-height: 36px;
+  --text-display--line-height: 44px;
 }
 
 @theme inline {
-  --font-sans: var(--font-body-raw);
-  --font-body: var(--font-body-raw);
-  --font-display: var(--font-display-raw);
-  --font-mono: var(--font-mono-raw);
+  --font-sans: var(--font-ui);
+  --font-body: var(--font-ui);
+  /* Plus Jakarta Sans is retired from UI headings; the legacy display alias points at the UI face. */
+  --font-display: var(--font-ui);
+  /* Legacy `font-mono` was used for money across the app; money is UI-face tabular figures now, so
+     the alias follows the UI face. Codes, IDs and hashes use `font-code` (IBM Plex Mono). */
+  --font-mono: var(--font-ui);
+  --font-code: var(--font-code-family);
 
   --color-brand-navy: var(--brand-navy);
   --color-brand-navy-deep: var(--brand-navy-deep);
@@ -236,6 +292,7 @@
 
   --color-canvas: var(--canvas);
   --color-surface: var(--surface);
+  --color-surface-subtle: var(--surface-subtle);
   --color-surface-raised: var(--surface-raised);
 
   --color-ink: var(--ink);
@@ -244,6 +301,19 @@
 
   --color-line: var(--line);
   --color-line-strong: var(--line-strong);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-border-control: var(--border-control);
+
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-hover: var(--primary-hover);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-tint: var(--accent-tint);
+  --color-focus: var(--focus);
+  --color-link: var(--link);
 
   --color-success: var(--success);
   --color-success-bg: var(--success-bg);
@@ -252,23 +322,42 @@
   --color-warning-ink: var(--warning-ink);
   --color-danger: var(--danger);
   --color-danger-bg: var(--danger-bg);
+  --color-danger-foreground: var(--danger-foreground);
   --color-info: var(--info);
   --color-info-bg: var(--info-bg);
+  --color-corrective: var(--corrective);
+  --color-corrective-bg: var(--corrective-bg);
+  --color-neutral: var(--neutral);
+  --color-neutral-bg: var(--neutral-bg);
 
-  --radius-lg: var(--radius);
-  --radius-md: calc(var(--radius) - 4px);
-  --radius-sm: calc(var(--radius) - 6px);
+  /* Approved radius family: 4 · 6 · 8 · 12. */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
 }
 
 * {
-  border-color: var(--line);
+  border-color: var(--border);
 }
 
 body {
   background: var(--canvas);
-  color: var(--ink);
-  font-family: var(--font-sans), sans-serif;
-  font-size: 14.5px;
+  color: var(--text);
+  font-family: var(--font-ui);
+  /* body-lg: default reading size on the nine-step scale (was an off-scale 14.5px). */
+  font-size: var(--text-body-lg);
+  line-height: var(--text-body-lg--line-height);
+  /* Figures line up in every table, total and KPI without a monospace face. */
+  font-variant-numeric: tabular-nums;
+}
+
+/* Arabic: no uppercase, no Latin-style tracking — letter-spacing breaks Arabic joining. Applied to
+   the whole Arabic document so a legacy `uppercase` / `tracking-*` utility cannot reach it. */
+:root[lang="ar"] body,
+:root[lang="ar"] body * {
+  text-transform: none !important;
+  letter-spacing: normal !important;
 }
 
 /* Batch E — smooth light/dark cross-fade. Scoped to structural surfaces so switching the
@@ -284,7 +373,8 @@ main {
 }
 
 h1, h2, h3, h4, h5, h6 {
-  font-family: var(--font-display), sans-serif;
+  font-family: var(--font-ui);
+  font-weight: 600;
   text-wrap: balance;
 }
 

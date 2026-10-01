@@ -42,6 +42,7 @@ const {p, orgId}=await reg(ctx1);
 
 console.log("\n== Gradient: editable start/end + live preview + save + apply + persist ==");
 await p.goto(`${BASE}/settings/organization?tab=color-theme`,{waitUntil:"networkidle"}); await p.waitForTimeout(500);
+const accentBefore = await p.locator('span',{hasText:"Accent button"}).first().evaluate(el=>el.style.background||el.style.backgroundColor);
 await setMain(p,"Gradient start color","#2244AA");
 await setMain(p,"Gradient end color","#11CC88");
 await p.waitForTimeout(250);
@@ -52,13 +53,23 @@ await p.waitForTimeout(250);
 // .first() is the LIGHT-mode preview: the panel renders one ModePreview per appearance and the
 // dark one derives different colours, so .last() would be asserting the wrong swatch.
 const prevBg = await p.locator('span',{hasText:"Primary button"}).first().evaluate(el=>el.style.background||el.style.backgroundImage);
-ok("Live preview shows edited gradient immediately", prevBg.includes("34, 68, 170") || prevBg.includes("17, 204, 136"));
+// DEV-UI-01.1 / owner decision D-04 (SOLID-ONLY). This used to assert that the preview's primary
+// button PAINTED the edited gradient. Core controls may no longer paint a gradient; the legacy
+// gradient's end stop now drives the solid accent. The replacement asserts the new contract just as
+// specifically: the edit is reflected live (accent changes), and the primary sample is solid.
+const accentAfter = await p.locator('span',{hasText:"Accent button"}).first().evaluate(el=>el.style.background||el.style.backgroundColor);
+ok("Live preview reflects the edited colours immediately (accent follows the gradient end stop)", accentAfter !== accentBefore && accentAfter !== "", `${accentBefore} → ${accentAfter}`);
+ok("Live preview primary button is SOLID, never a gradient (D-04)", prevBg !== "" && !/gradient/i.test(prevBg), prevBg);
 await p.getByRole("button",{name:/^Save theme$/}).click(); await p.waitForTimeout(1000);
 const {rows:g}=await pool.query("select gradient_from,gradient_to from orgs where id=$1",[orgId]);
 ok("DB saved gradient start (#2244AA)", g[0].gradient_from.toLowerCase()==="#2244aa");
 ok("DB saved gradient end (#11CC88)", g[0].gradient_to.toLowerCase()==="#11cc88");
 await p.goto(`${BASE}/dashboard`,{waitUntil:"networkidle"}); await p.waitForTimeout(400);
-ok("Theme applies app-wide (custom gradient in injected style on dashboard)", (await styleText(p)).toLowerCase().includes("#2244aa"));
+// DEV-UI-01.1 / D-04: was "custom gradient in injected style" (#2244aa, the start stop). The start
+// stop is no longer painted anywhere; the org's hue reaches the app as the solid accent.
+const dashStyle = (await styleText(p)).toLowerCase();
+ok("Theme applies app-wide (the org's gradient-end hue is in the injected style on dashboard)", dashStyle.includes("#11cc88"));
+ok("Injected theme paints no gradient anywhere (D-04)", dashStyle.length > 0 && !dashStyle.includes("gradient("));
 await p.reload({waitUntil:"networkidle"}); await p.waitForTimeout(300);
 ok("Theme persists after refresh", (await styleText(p)).toLowerCase().includes("#11cc88"));
 

@@ -1,22 +1,30 @@
 import type { Metadata } from "next";
-import { Plus_Jakarta_Sans, IBM_Plex_Sans, IBM_Plex_Mono } from "next/font/google";
+import { IBM_Plex_Sans, IBM_Plex_Sans_Arabic, IBM_Plex_Mono } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
 import { getLocale } from "@/lib/i18n/server";
 import { getTheme } from "@/lib/theme";
 import "./globals.css";
 
-const display = Plus_Jakarta_Sans({
-  variable: "--font-display-raw",
-  subsets: ["latin"],
-  weight: ["600", "700", "800"],
-});
+// Navy Command typography (DEV-UI-01.1). All three families are self-hosted by next/font at build
+// time — no runtime request to Google. Weights follow the approved set: 400 body, 500 labels and
+// table headers, 600 titles and emphasis (no 800). Plus Jakarta Sans is retired from the UI.
 
+// Latin UI, body and headings.
 const body = IBM_Plex_Sans({
   variable: "--font-body-raw",
   subsets: ["latin"],
   weight: ["400", "500", "600"],
 });
 
+// Arabic UI. Sits after Plex Sans in --font-ui, so Arabic glyphs render in Plex Sans Arabic and Latin
+// glyphs keep Plex Sans — mixed Arabic/English stays in one designed family.
+const arabic = IBM_Plex_Sans_Arabic({
+  variable: "--font-arabic-raw",
+  subsets: ["arabic"],
+  weight: ["400", "500", "600"],
+});
+
+// Codes, IDs and hashes only — never money.
 const mono = IBM_Plex_Mono({
   variable: "--font-mono-raw",
   subsets: ["latin"],
@@ -41,7 +49,7 @@ export default async function RootLayout({
       lang={locale}
       dir={locale === "ar" ? "rtl" : "ltr"}
       data-theme={theme ?? undefined}
-      className={`${display.variable} ${body.variable} ${mono.variable} h-full antialiased`}
+      className={`${body.variable} ${arabic.variable} ${mono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col bg-canvas text-ink">
