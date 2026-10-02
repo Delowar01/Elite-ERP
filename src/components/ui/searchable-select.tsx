@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { ChevronDown, Search, Check, Plus } from "lucide-react";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
@@ -10,7 +10,10 @@ import { cn } from "@/lib/utils";
 export type SearchOption = { value: string; label: string; sublabel?: string; keywords?: string };
 
 // A searchable dropdown (combobox): a trigger showing the selected label, and a popover with a
-// filter input + option list. Solid surface (inherits the Popover fix). Keyboard + click.
+// filter input + option list. Solid surface (inherits the Popover fix). DEV-UI-01.4: the filter box
+// is the combobox (aria-controls + aria-activedescendant) for a role="listbox" of role="option"s;
+// ArrowDown / ArrowUp move the active option, Enter selects it, Escape closes (Radix). Filtering,
+// options, onChange and Add New are unchanged.
 export function SearchableSelect({
   options,
   value,
@@ -44,7 +47,13 @@ export function SearchableSelect({
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  // The keyboard-active option (index into `filtered`), exposed via aria-activedescendant.
+  const [active, setActive] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+  const baseId = useId();
+  const listboxId = `${baseId}-listbox`;
+  const optionId = (i: number) => `${baseId}-option-${i}`;
   const selected = options.find((o) => o.value === value);
 
   const filtered = useMemo(() => {
@@ -52,13 +61,32 @@ export function SearchableSelect({
     if (!q) return options;
     return options.filter((o) => o.label.toLowerCase().includes(q) || (o.sublabel ?? "").toLowerCase().includes(q) || (o.keywords ?? "").toLowerCase().includes(q));
   }, [options, query]);
+  const activeIdx = filtered.length ? Math.min(active, filtered.length - 1) : -1;
+
+  // Keep the keyboard-active option visible while arrowing through a long list.
+  useEffect(() => {
+    if (!open || activeIdx < 0) return;
+    listRef.current?.querySelector(`#${CSS.escape(optionId(activeIdx))}`)?.scrollIntoView({ block: "nearest" });
+    // optionId is derived from the stable baseId
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, activeIdx]);
+
+  function choose(o: SearchOption) {
+    onChange(o.value);
+    setOpen(false);
+  }
 
   return (
     <Popover
       open={open}
       onOpenChange={(o) => {
         setOpen(o);
-        if (o) { setQuery(""); requestAnimationFrame(() => inputRef.current?.focus()); }
+        if (o) {
+          setQuery("");
+          // Start on the current selection so Enter keeps it and the arrows move from it.
+          setActive(Math.max(0, options.findIndex((x) => x.value === value)));
+          requestAnimationFrame(() => inputRef.current?.focus());
+        }
       }}
     >
       <PopoverTrigger asChild>
@@ -67,56 +95,94 @@ export function SearchableSelect({
           id={id}
           aria-label={ariaLabel}
           disabled={disabled}
+          data-slot="searchable-select-trigger"
           className={cn(
-            "flex h-10 w-full items-center justify-between gap-2 rounded-lg border border-line-strong bg-surface px-3 text-[13.5px] outline-none focus:border-brand-orange focus:ring-[3px] focus:ring-brand-orange/18 disabled:opacity-50",
+            // Same foundation as <Input> / <SelectTrigger> (DEV-UI-01.4).
+            "flex h-(--control-height) w-full items-center justify-between gap-2 rounded-md border border-border-control! bg-[var(--input-background)] px-3 text-body transition-[border-color,outline-color] duration-150",
+            "hover:border-ink-muted!",
+            "focus-visible:border-focus! focus-visible:outline-2 focus-visible:-outline-offset-1 focus-visible:outline-focus",
+            "aria-invalid:border-danger! aria-invalid:focus-visible:outline-danger",
+            "disabled:cursor-not-allowed disabled:bg-[var(--disabled-background)] disabled:text-[var(--disabled-text)] disabled:border-border!",
             triggerClassName,
           )}
         >
           <span className={cn("truncate", selected ? "text-ink" : "text-ink-faint")}>{selected ? selected.label : placeholder}</span>
-          <ChevronDown className="size-4 shrink-0 text-ink-faint" />
+          <ChevronDown className="size-4 shrink-0 text-ink-faint" aria-hidden />
         </button>
       </PopoverTrigger>
-      <PopoverContent align="start" className={cn("w-[--radix-popover-trigger-width] p-0", className)}>
+      <PopoverContent align="start" className={cn("w-[--radix-popover-trigger-width] rounded-lg p-0", className)}>
         <div className="flex items-center gap-2 border-b border-line px-3">
-          <Search className="size-4 shrink-0 text-ink-faint" />
+          <Search className="size-4 shrink-0 text-ink-faint" aria-hidden />
           <input
             ref={inputRef}
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              setActive(0);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "ArrowDown") {
+                e.preventDefault();
+                if (filtered.length) setActive(activeIdx < filtered.length - 1 ? activeIdx + 1 : activeIdx);
+              } else if (e.key === "ArrowUp") {
+                e.preventDefault();
+                if (filtered.length) setActive(activeIdx > 0 ? activeIdx - 1 : 0);
+              } else if (e.key === "Enter") {
+                // Never submit an enclosing form from the filter box.
+                e.preventDefault();
+                if (activeIdx >= 0) choose(filtered[activeIdx]);
+              }
+              // Escape is handled by the popover (closes and returns focus to the trigger).
+            }}
             placeholder={searchPlaceholder}
-            className="h-10 flex-1 bg-transparent text-[13.5px] outline-none"
+            role="combobox"
+            aria-expanded={open}
+            aria-controls={listboxId}
+            aria-autocomplete="list"
+            aria-activedescendant={activeIdx >= 0 ? optionId(activeIdx) : undefined}
+            aria-label={ariaLabel ?? searchPlaceholder}
+            className="h-(--control-height) flex-1 bg-transparent text-body outline-none"
           />
         </div>
-        <div className="max-h-60 overflow-y-auto p-1">
+        <div ref={listRef} id={listboxId} role="listbox" aria-label={ariaLabel ?? placeholder} className="max-h-60 overflow-y-auto p-1">
           {filtered.length === 0 ? (
-            <div className="px-3 py-6 text-center text-[12.5px] text-ink-faint">{emptyText}</div>
+            <div role="status" className="px-3 py-6 text-center text-body-sm text-ink-faint">{emptyText}</div>
           ) : (
-            filtered.map((o) => (
-              <button
-                key={o.value}
-                type="button"
-                onClick={() => { onChange(o.value); setOpen(false); }}
-                className={cn(
-                  "flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-start text-[13px] hover:bg-canvas",
-                  o.value === value && "bg-brand-orange/10 font-medium",
-                )}
-              >
-                <span className="flex-1 min-w-0 truncate">
-                  {o.label}
-                  {o.sublabel && <span className="text-ink-faint"> · {o.sublabel}</span>}
-                </span>
-                {o.value === value && <Check className="size-3.5 shrink-0 text-brand-orange" />}
-              </button>
-            ))
+            filtered.map((o, i) => {
+              const isSelected = o.value === value;
+              return (
+                <div
+                  key={o.value}
+                  id={optionId(i)}
+                  role="option"
+                  aria-selected={isSelected}
+                  data-active={i === activeIdx || undefined}
+                  onMouseEnter={() => setActive(i)}
+                  onMouseDown={(e) => e.preventDefault() /* keep focus in the filter box */}
+                  onClick={() => choose(o)}
+                  className={cn(
+                    "flex w-full cursor-pointer items-center gap-2 rounded-md px-2.5 py-2 text-start text-body",
+                    "data-[active]:bg-canvas",
+                    isSelected && "bg-accent-tint font-medium",
+                  )}
+                >
+                  <span className="flex-1 min-w-0 truncate">
+                    {o.label}
+                    {o.sublabel && <span className="text-ink-faint"> · {o.sublabel}</span>}
+                  </span>
+                  {isSelected && <Check className="size-3.5 shrink-0 text-accent-ink" aria-hidden />}
+                </div>
+              );
+            })
           )}
         </div>
         {onAddNew && (
           <button
             type="button"
             onClick={() => { setOpen(false); onAddNew(); }}
-            className="flex w-full items-center gap-2 border-t border-line px-3 py-2.5 text-start text-[13px] font-medium text-brand-orange hover:bg-canvas"
+            className="flex w-full items-center gap-2 border-t border-line px-3 py-2.5 text-start text-body font-medium text-accent-ink hover:bg-canvas focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus"
           >
-            <Plus className="size-4 shrink-0" />
+            <Plus className="size-4 shrink-0" aria-hidden />
             {addNewLabel ?? "Add New"}
           </button>
         )}

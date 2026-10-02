@@ -290,8 +290,8 @@ export function ImportV2Dialog({ locale, module, moduleLabel, fields, entity = "
               </table>
             </div>
             <div className="flex items-center justify-end gap-2">
-              <Button variant="ghost" style={{ width: "auto" }} onClick={reset}>{t(locale, "Cancel")}</Button>
-              <Button style={{ width: "auto" }} disabled={pending || missingRequired.length > 0} onClick={() => runPreview()}>
+              <Button variant="outline" onClick={reset}>{t(locale, "Cancel")}</Button>
+              <Button disabled={pending || missingRequired.length > 0} onClick={() => runPreview()}>
                 {pending ? t(locale, "Validating…") : t(locale, "Validate")}
               </Button>
             </div>
@@ -383,14 +383,14 @@ export function ImportV2Dialog({ locale, module, moduleLabel, fields, entity = "
                   <ArrowLeft className="size-3" /> {t(locale, "Back to mapping")}
                 </button>
                 {cs.invalidRows > 0 && (
-                  <Button variant="glass" style={{ width: "auto" }} onClick={downloadErrors} disabled={pending}>
+                  <Button variant="glass" onClick={downloadErrors} disabled={pending}>
                     <Download className="size-3.5" /> {t(locale, "Download invalid rows")}
                   </Button>
                 )}
               </div>
               <div className="flex items-center gap-2">
-                <Button variant="ghost" style={{ width: "auto" }} onClick={() => { setOpen(false); reset(); }}>{t(locale, "Cancel")}</Button>
-                <Button style={{ width: "auto" }} disabled={pending || cs.willCreate + cs.willUpdate === 0} onClick={confirmImport}>
+                <Button variant="outline" onClick={() => { setOpen(false); reset(); }}>{t(locale, "Cancel")}</Button>
+                <Button disabled={pending || cs.willCreate + cs.willUpdate === 0} onClick={confirmImport}>
                   {pending ? t(locale, "Importing…") : `${t(locale, "Confirm Import")} (${cs.willCreate + cs.willUpdate})`}
                 </Button>
               </div>
@@ -465,14 +465,14 @@ export function ImportV2Dialog({ locale, module, moduleLabel, fields, entity = "
                   <ArrowLeft className="size-3" /> {t(locale, "Back to mapping")}
                 </button>
                 {s.invalidRows > 0 && (
-                  <Button variant="glass" style={{ width: "auto" }} onClick={downloadErrors} disabled={pending}>
+                  <Button variant="glass" onClick={downloadErrors} disabled={pending}>
                     <Download className="size-3.5" /> {t(locale, "Download invalid rows")}
                   </Button>
                 )}
               </div>
               <div className="flex items-center gap-2">
-                <Button variant="ghost" style={{ width: "auto" }} onClick={() => { setOpen(false); reset(); }}>{t(locale, "Cancel")}</Button>
-                <Button style={{ width: "auto" }} disabled={pending || s.willCreate === 0} onClick={confirmImport}>
+                <Button variant="outline" onClick={() => { setOpen(false); reset(); }}>{t(locale, "Cancel")}</Button>
+                <Button disabled={pending || s.willCreate === 0} onClick={confirmImport}>
                   {pending ? t(locale, "Importing…") : `${t(locale, "Confirm Import")} (${s.willCreate})`}
                 </Button>
               </div>
@@ -514,11 +514,11 @@ export function ImportV2Dialog({ locale, module, moduleLabel, fields, entity = "
             </p>
             <div className="flex items-center justify-end gap-2">
               {result.errorCsv && (
-                <Button variant="glass" style={{ width: "auto" }} onClick={() => downloadText(`${module}-import-errors.csv`, result.errorCsv!)}>
+                <Button variant="glass" onClick={() => downloadText(`${module}-import-errors.csv`, result.errorCsv!)}>
                   <Download className="size-3.5" /> {t(locale, "Download error file")}
                 </Button>
               )}
-              <Button style={{ width: "auto" }} onClick={() => { setOpen(false); reset(); }}>{t(locale, "Done")}</Button>
+              <Button onClick={() => { setOpen(false); reset(); }}>{t(locale, "Done")}</Button>
             </div>
           </div>
         )}

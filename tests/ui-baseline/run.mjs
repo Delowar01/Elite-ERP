@@ -6,6 +6,7 @@
  *   node tests/ui-baseline/run.mjs compare A B        pixel-compare two capture directories
  *   node tests/ui-baseline/run.mjs check              capture, then compare against the committed baseline
  *   node tests/ui-baseline/run.mjs capture-shell [--out=D]  the DEV-UI-01.3 app-shell states (shell-states.mjs)
+ *   node tests/ui-baseline/run.mjs capture-controls [--out=D]  the DEV-UI-01.4 control gallery (controls-states.mjs)
  *
  * Flags: --skip-build (reuse .next — only when it was built from the current tree), --only=<substr>.
  *
@@ -26,6 +27,7 @@ import pg from "pg";
 import { chromium } from "playwright";
 import { BASE, FROZEN_NOW, OWNER_EMAIL, PORT, matrix } from "./config.mjs";
 import { STAFF_EMAIL, shellMatrix } from "./shell-states.mjs";
+import { controlsMatrix } from "./controls-states.mjs";
 import { IsolationError, RUN_DB, TEMPLATE_DB, adminUrl, dbUrl, describe, serverEnv } from "./isolation.mjs";
 
 const ROOT = resolve(new URL("../..", import.meta.url).pathname);
@@ -355,6 +357,153 @@ async function capture(outDir, shell = false) {
   console.log(`• captured ${Object.keys(manifest.states).length} states → ${outDir}`);
 }
 
+// ------------------------------------------------------------------------------------- controls
+/**
+ * DEV-UI-01.4 control gallery. The real primitives (tests/ui-baseline/controls-gallery.tsx) are
+ * bundled with esbuild and served ONLY through Playwright request interception on the baseline
+ * server's origin — no application route exists for it — inside a page that links the app's own
+ * compiled stylesheets and carries the root layout's font classes, so the controls render exactly
+ * as in the app. The server is still needed for those stylesheets and the self-hosted fonts.
+ */
+const CONTROL_ACTIONS = {
+  "select-open": async (page) => {
+    await page.click("[data-gallery=select-main]");
+    await page.locator('[role="listbox"]').waitFor();
+  },
+  "searchable-open": async (page) => {
+    await page.click("#g-ss1");
+    await page.locator('[role="listbox"]').waitFor();
+  },
+  "searchable-filter": async (page, s) => {
+    await CONTROL_ACTIONS["searchable-open"](page);
+    await page.keyboard.type(s.locale === "ar" ? "الميناء" : "har");
+  },
+  "searchable-active": async (page) => {
+    await CONTROL_ACTIONS["searchable-open"](page);
+    await page.keyboard.press("ArrowDown");
+    await page.keyboard.press("ArrowDown");
+  },
+  "focus-radio": async (page) => {
+    await tabTo(page, "[data-slot=radio]:checked");
+  },
+  "menu-row-open": async (page) => {
+    await page.click(".row-menu-btn");
+    await page.locator('[role="menu"]').waitFor();
+    await page.locator('[role="menu"] .row-menu-item.has-submenu').click();
+    await page.locator(".row-menu-submenu.open").waitFor();
+  },
+  "menu-sub-open": async (page) => {
+    await tabTo(page, "[data-gallery=sub-trigger]");
+    await page.keyboard.press("Enter");
+    await page.locator('[role="menu"]').waitFor();
+    // Radix moves focus into the menu asynchronously; key presses before that are lost.
+    await page.waitForFunction(() => document.activeElement?.getAttribute("role") === "menuitem");
+    await page.keyboard.press("ArrowDown"); // Duplicate → Export (the sub trigger)
+    await page.waitForFunction(() => document.activeElement?.getAttribute("data-gallery") === "sub");
+    await page.keyboard.press(page.__dir === "rtl" ? "ArrowLeft" : "ArrowRight");
+    await page.locator('[role="menu"]').nth(1).waitFor();
+  },
+  "focus-tab": async (page) => {
+    await tabTo(page, '[role="tab"]');
+    await page.keyboard.press(page.__dir === "rtl" ? "ArrowLeft" : "ArrowRight");
+  },
+};
+/** Reach a control with the keyboard (Tab), so :focus-visible matches as it would for a user. */
+async function tabTo(page, selector) {
+  for (let i = 0; i < 60; i++) {
+    await page.keyboard.press("Tab");
+    if (await page.evaluate((sel) => document.activeElement?.matches(sel) ?? false, selector)) return;
+  }
+  throw new Error(`keyboard focus never reached ${selector}`);
+}
+
+async function captureControls(outDir) {
+  if (!existsSync(PASSWORD_FILE)) {
+    console.error("✗ no seeded template — run `prepare` first");
+    process.exit(2);
+  }
+  const storageDir = join(WORK, "storage-fake");
+  rmSync(storageDir, { recursive: true, force: true });
+  mkdirSync(storageDir, { recursive: true });
+  const env = serverEnv({ frozenNow: FROZEN_NOW, storageDir });
+  console.log(`• run database: ${describe(env.DATABASE_URL)} (TEST-ONLY, fresh copy of ${TEMPLATE_DB})`);
+  await recreate(RUN_DB, TEMPLATE_DB);
+  if (!flag("skip-build")) {
+    console.log("• building (test environment)…");
+    const b = spawnSync("npm", ["run", "build"], { env, stdio: ["ignore", "pipe", "pipe"], encoding: "utf8", maxBuffer: 256 * 1024 * 1024 });
+    if (b.status !== 0) {
+      console.error(`✗ build failed\n${(b.stdout ?? "").slice(-3000)}${(b.stderr ?? "").slice(-3000)}`);
+      process.exit(2);
+    }
+  }
+  const { build } = await import("esbuild");
+  const bundle = await build({
+    entryPoints: [join(ROOT, "tests/ui-baseline/controls-gallery.tsx")],
+    bundle: true, write: false, format: "iife", platform: "browser", jsx: "automatic", target: "es2022",
+    tsconfig: join(ROOT, "tsconfig.json"), define: { "process.env.NODE_ENV": '"production"' }, logLevel: "error", minify: true, alias: { "next/link": join(ROOT, "tests/ui-baseline/gallery-link-stub.tsx") },
+  });
+  const galleryJs = bundle.outputFiles[0].text;
+  const buildId = readFileSync(".next/BUILD_ID", "utf8").trim();
+  const { server, log } = await startServer(env);
+  console.log(`• server on ${BASE}, build ${buildId}`);
+  rmSync(outDir, { recursive: true, force: true });
+  mkdirSync(outDir, { recursive: true });
+  const browser = await chromium.launch({ executablePath: CHROMIUM, args: ["--font-render-hinting=none", "--disable-skia-runtime-opts", "--force-color-profile=srgb", "--disable-gpu", "--disable-partial-raster", "--disable-lcd-text"] });
+  const manifest = { frozenNow: FROZEN_NOW, buildId, chromium: browser.version(), galleryBytes: galleryJs.length, states: {} };
+  try {
+    // The app's own stylesheets and font classes, read from a real authenticated page.
+    const lc = await browser.newContext({ timezoneId: "UTC" });
+    const lp = await lc.newPage();
+    await lp.goto(`${BASE}/login`, { waitUntil: "networkidle" });
+    await lp.fill("#email", OWNER_EMAIL);
+    await lp.fill("#password", readFileSync(PASSWORD_FILE, "utf8"));
+    await Promise.all([lp.waitForURL(`${BASE}/dashboard`, { timeout: 30000 }), lp.click('button[type="submit"]')]);
+    const shellInfo = await lp.evaluate(() => ({
+      sheets: [...document.querySelectorAll('link[rel="stylesheet"]')].map((l) => l.getAttribute("href")),
+      htmlClass: document.documentElement.className,
+    }));
+    await lc.close();
+    if (!shellInfo.sheets.length) throw new Error("no application stylesheets found");
+    const only = value("only");
+    const states = controlsMatrix().filter((s) => !only || s.id.includes(only));
+    let n = 0;
+    for (const s of states) {
+      n++;
+      const ctx = await browser.newContext({ viewport: { width: s.viewport.width, height: s.viewport.height }, deviceScaleFactor: 1, colorScheme: s.theme, reducedMotion: "reduce", timezoneId: "UTC", locale: s.locale === "ar" ? "ar-SA" : "en-US" });
+      const page = await ctx.newPage();
+      const consoleErrors = [];
+      page.on("console", (m) => m.type() === "error" && consoleErrors.push(m.text().slice(0, 200)));
+      page.on("pageerror", (e) => consoleErrors.push(`pageerror: ${String(e.message).slice(0, 200)}`));
+      const dir = s.locale === "ar" ? "rtl" : "ltr";
+      const html = `<!doctype html><html lang="${s.locale}" dir="${dir}" data-theme="${s.theme}" class="${shellInfo.htmlClass}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">${shellInfo.sheets.map((h) => `<link rel="stylesheet" href="${h}">`).join("")}</head><body class="min-h-full bg-canvas text-ink"><div id="gallery-root"></div><script>window.__GALLERY__=${JSON.stringify({ group: s.group, locale: s.locale })}</script><script>${galleryJs.replace(/<\/script/g, "<\\/script")}</script></body></html>`;
+      await page.route(`${BASE}/__ui-baseline/controls/**`, (route) => route.fulfill({ status: 200, contentType: "text/html; charset=utf-8", body: html }));
+      const resp = await page.goto(`${BASE}${s.route.path}`, { waitUntil: "networkidle" });
+      await page.locator("[data-gallery-group]").waitFor();
+      await page.evaluate(() => document.fonts.ready.then(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))));
+      page.__dir = dir;
+      if (s.action) {
+        if (s.action.startsWith("focus:")) await tabTo(page, s.action.slice(6));
+        else await CONTROL_ACTIONS[s.action](page, s);
+        await page.waitForTimeout(250); // transitions are reduced, but let Radix settle
+        await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
+      }
+      const facts = await page.evaluate(() => ({ scrollWidth: document.documentElement.scrollWidth, clientWidth: document.documentElement.clientWidth, scrollHeight: document.documentElement.scrollHeight, fontsLoaded: [...document.fonts].filter((f) => f.status === "loaded").map((f) => f.family).sort().filter((v, i, a) => a.indexOf(v) === i), active: document.activeElement?.getAttribute("data-slot") || document.activeElement?.getAttribute("role") || document.activeElement?.tagName }));
+      const file = join(outDir, `${s.id}.png`);
+      await page.screenshot({ path: file, fullPage: true, animations: "disabled", caret: "hide", scale: "css" });
+      const png = readFileSync(file);
+      manifest.states[s.id] = { route: s.route.path, area: s.route.area, group: s.group, action: s.action, locale: s.locale, theme: s.theme, viewport: `${s.viewport.width}x${s.viewport.height}`, status: resp?.status() ?? null, horizontalOverflowPx: Math.max(0, facts.scrollWidth - facts.clientWidth), ...facts, consoleErrors, sha256: createHash("sha256").update(png).digest("hex"), bytes: png.length };
+      await ctx.close();
+      if (n % 16 === 0 || n === states.length) console.log(`  ${n}/${states.length}`);
+    }
+  } finally {
+    await browser.close();
+    try { process.kill(-server.pid, "SIGTERM"); } catch { /* already gone */ }
+  }
+  writeFileSync(join(outDir, "manifest.json"), JSON.stringify(manifest, null, 2) + "\n");
+  writeFileSync(join(WORK, "server-last-capture.log"), log());
+  console.log(`• captured ${Object.keys(manifest.states).length} states → ${outDir}`);
+}
+
 // ------------------------------------------------------------------------------------- compare
 /**
  * Software rasterisation is not bit-exact between runs on this machine: a handful of anti-aliased
@@ -425,13 +574,14 @@ try {
   if (cmd === "prepare") await prepare();
   else if (cmd === "capture") await capture(resolve(value("out") ?? join(WORK, "captures/latest")));
   else if (cmd === "capture-shell") await capture(resolve(value("out") ?? join(WORK, "captures/shell-latest")), true);
+  else if (cmd === "capture-controls") await captureControls(resolve(value("out") ?? join(WORK, "captures/controls-latest")));
   else if (cmd === "compare") process.exit((await compare(resolve(positional[0]), resolve(positional[1]))) === 0 ? 0 : 1);
   else if (cmd === "check") {
     const out = join(WORK, "captures/check");
     await capture(out);
     process.exit((await compare(BASELINE_DIR, out)) === 0 ? 0 : 1);
   } else {
-    console.error("usage: run.mjs prepare | capture [--out=DIR] | capture-shell [--out=DIR] | compare A B | check   [--skip-build] [--only=substr]");
+    console.error("usage: run.mjs prepare | capture [--out=DIR] | capture-shell [--out=DIR] | capture-controls [--out=DIR] | compare A B | check   [--skip-build] [--only=substr]");
     process.exit(2);
   }
 } catch (e) {

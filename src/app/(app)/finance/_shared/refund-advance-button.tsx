@@ -172,8 +172,8 @@ export function RefundAdvanceButton({
             )}
           </div>
           <DialogFooter>
-            <Button variant="ghost" style={{ width: "auto" }} onClick={() => setOpen(false)}>{t(locale, "Cancel")}</Button>
-            <Button style={{ width: "auto" }} disabled={pending || Number(amount) <= 0 || overAvailable} onClick={submit}>
+            <Button variant="outline" onClick={() => setOpen(false)}>{t(locale, "Cancel")}</Button>
+            <Button disabled={pending || Number(amount) <= 0 || overAvailable} onClick={submit}>
               {t(locale, "Refund Advance")}
             </Button>
           </DialogFooter>

@@ -84,10 +84,10 @@ export function PoDetailActions({
   if (status === "draft") {
     return (
       <div className="flex items-center gap-2.5">
-        <Button variant="ghost" style={{ width: "auto" }} disabled={pending} onClick={cancel}>
+        <Button variant="outline" disabled={pending} onClick={cancel}>
           {t(locale, "Cancel")}
         </Button>
-        <Button style={{ width: "auto" }} disabled={pending} onClick={send}>
+        <Button disabled={pending} onClick={send}>
           {t(locale, "Send to Vendor")}
         </Button>
       </div>
@@ -97,10 +97,10 @@ export function PoDetailActions({
   if (status === "ordered") {
     return (
       <div className="flex items-center gap-2.5">
-        <Button variant="glass" style={{ width: "auto" }} disabled={pending} onClick={cancel}>
+        <Button variant="glass" disabled={pending} onClick={cancel}>
           {t(locale, "Cancel")}
         </Button>
-        <Button style={{ width: "auto" }} disabled={pending} onClick={receive}>
+        <Button disabled={pending} onClick={receive}>
           {t(locale, "Receive")}
         </Button>
       </div>
@@ -121,7 +121,7 @@ export function PoDetailActions({
             purchaseOrders={[{ id: poId, poNumber, vendorName, balance, currency }]}
             lockedDirection="out"
             lockedSourceId={poId}
-            trigger={<Button style={{ width: "auto" }}>{t(locale, "Record Payment")}</Button>}
+            trigger={<Button>{t(locale, "Record Payment")}</Button>}
           />
         )}
       </div>

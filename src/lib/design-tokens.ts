@@ -39,6 +39,9 @@ export type CoreTokens = {
   danger: string;
   dangerTint: string;
   dangerForeground: string;
+  /** Hover fill of the solid destructive button (DEV-UI-01.4-C1): --danger mixed 15% toward black in
+   *  light, 15% toward white in dark — away from the foreground, so the label gains contrast. */
+  dangerHover: string;
   info: string;
   infoTint: string;
   corrective: string;
@@ -80,6 +83,7 @@ export const TOKENS: Record<Appearance, CoreTokens> = {
     danger: "#b4322d",
     dangerTint: "#fbe6e4",
     dangerForeground: "#ffffff",
+    dangerHover: "#992b26",
     info: "#2f4fb8",
     infoTint: "#e7ecfa",
     corrective: "#5b3fb8",
@@ -118,6 +122,7 @@ export const TOKENS: Record<Appearance, CoreTokens> = {
     danger: "#f08a83",
     dangerTint: "#3a1716",
     dangerForeground: "#17173f",
+    dangerHover: "#f29c96",
     info: "#93a6f0",
     infoTint: "#19203f",
     corrective: "#b3a3f5",
@@ -157,6 +162,7 @@ export const TOKEN_CSS_NAME: Record<keyof CoreTokens, string> = {
   danger: "--danger",
   dangerTint: "--danger-bg",
   dangerForeground: "--danger-foreground",
+  dangerHover: "--danger-hover",
   info: "--info",
   infoTint: "--info-bg",
   corrective: "--corrective",

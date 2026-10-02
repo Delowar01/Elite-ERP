@@ -81,7 +81,7 @@ export function ApplyAdvanceDialog({
 
   return (
     <>
-      <Button variant="glass" style={{ width: "auto" }} onClick={() => setOpen(true)} disabled={eligible.length === 0}>
+      <Button variant="glass" onClick={() => setOpen(true)} disabled={eligible.length === 0}>
         <Wallet className="size-3.5" /> {t(locale, "Apply Advance")}
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>

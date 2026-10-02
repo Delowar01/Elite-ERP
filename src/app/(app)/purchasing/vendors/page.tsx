@@ -41,7 +41,7 @@ export default async function VendorsPage({
         description="Suppliers used for purchase orders and debit notes."
         actions={
           <>
-            <Button variant="ghost" asChild>
+            <Button variant="outline" asChild>
               <Link href="/purchasing/vendors/recycle-bin">
                 <Trash2 className="size-4" /> Recycle Bin
               </Link>

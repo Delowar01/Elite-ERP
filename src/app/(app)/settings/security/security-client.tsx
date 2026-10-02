@@ -197,7 +197,7 @@ export function SecurityCenterClient(props: {
               {t(locale, "Disable")}
             </Button>
           ) : (
-            <Button disabled={pending} onClick={openMfaSetup} style={{ width: "auto" }}>
+            <Button disabled={pending} onClick={openMfaSetup}>
               {t(locale, "Enable MFA")}
             </Button>
           )}

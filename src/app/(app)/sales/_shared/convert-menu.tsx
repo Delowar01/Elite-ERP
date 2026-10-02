@@ -36,7 +36,7 @@ export function ConvertMenu({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="glass" style={{ width: "auto" }} disabled={disabled}>
+        <Button variant="glass" disabled={disabled}>
           {t(locale, "Convert to…")} <ChevronDown className="size-3.5" />
         </Button>
       </DropdownMenuTrigger>

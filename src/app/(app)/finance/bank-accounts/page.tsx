@@ -79,7 +79,7 @@ export default async function BankAccountsPage() {
           locale={locale}
           glAccounts={glOptions}
           trigger={
-            <Button style={{ width: "auto" }}>
+            <Button>
               <Landmark className="size-4" /> {t(locale, "New Account")}
             </Button>
           }

@@ -1,12 +1,13 @@
 "use client";
 
+import { useId } from "react";
 import { HelpCircle } from "lucide-react";
 import { t, type Locale } from "@/lib/i18n/dict";
-import { cn } from "@/lib/utils";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 export type ClientType = "individual" | "company";
 
-// Required Client Type selector (Individual / Company). The selected option shows a filled radio dot.
+// Required Client Type selector (Individual / Company), on the shared native RadioGroup.
 export function ClientTypeSelect({
   locale,
   value,
@@ -20,37 +21,28 @@ export function ClientTypeSelect({
     { key: "individual", label: "Individual" },
     { key: "company", label: "Company" },
   ];
+  const labelId = useId();
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center gap-1.5">
-        <span className="text-[14px] font-semibold">{t(locale, "Client Type")}</span>
+        <span id={labelId} className="text-[14px] font-semibold">{t(locale, "Client Type")}</span>
         <HelpCircle className="size-3.5 text-ink-faint" aria-hidden />
       </div>
-      <div role="radiogroup" aria-label={t(locale, "Client Type")} className="flex items-center gap-10">
-        {options.map((o) => {
-          const selected = value === o.key;
-          return (
-            <button
-              key={o.key}
-              type="button"
-              role="radio"
-              aria-checked={selected}
-              onClick={() => onChange(o.key)}
-              className="inline-flex items-center gap-2.5 text-[14px]"
-            >
-              <span
-                className={cn(
-                  "inline-flex size-[18px] items-center justify-center rounded-full border-2 transition-colors",
-                  selected ? "border-brand-orange" : "border-line-strong",
-                )}
-              >
-                {selected && <span className="size-2.5 rounded-full bg-brand-orange" />}
-              </span>
-              <span className={cn(selected && "font-medium")}>{t(locale, o.label)}</span>
-            </button>
-          );
-        })}
-      </div>
+      {/* Native radios (DEV-UI-01.4). The value still reaches the server through the form's own hidden
+          `clientType` input; this group's name is deliberately different so it never collides. */}
+      <RadioGroup
+        name={`client-type-choice${labelId}`}
+        value={value}
+        onValueChange={(v) => onChange(v as ClientType)}
+        aria-labelledby={labelId}
+        className="gap-x-10 gap-y-2"
+      >
+        {options.map((o) => (
+          <RadioGroupItem key={o.key} value={o.key}>
+            {t(locale, o.label)}
+          </RadioGroupItem>
+        ))}
+      </RadioGroup>
     </div>
   );
 }

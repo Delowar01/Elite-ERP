@@ -60,7 +60,7 @@ export function ProformaDetailActions({
   // Once converted, the proforma is read-only: it just links to the sales invoice.
   if (converted) {
     return (
-      <Button variant="glass" style={{ width: "auto" }} asChild>
+      <Button variant="glass" asChild>
         <Link href={`/sales/invoices/${convertedInvoiceId}`}>{t(locale, "View Sales Invoice")}</Link>
       </Button>
     );
@@ -94,7 +94,7 @@ export function ProformaDetailActions({
           lockedDirection="in"
           lockedSourceType="proforma"
           lockedSourceId={proformaId}
-          trigger={<Button style={{ width: "auto" }}>{t(locale, "Record Payment")}</Button>}
+          trigger={<Button>{t(locale, "Record Payment")}</Button>}
         />
       )}
       <ConvertMenu locale={locale} source="proforma" id={proformaId} number={proformaNumber} typeLabel="Proforma Invoice" ctx={{ status, converted }} disabled={pending} />

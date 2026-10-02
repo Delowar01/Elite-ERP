@@ -39,7 +39,7 @@ export function AddAccountDialog({ locale }: { locale: Locale }) {
 
   return (
     <>
-      <Button variant="ghost" size="sm" className="w-full" onClick={() => setOpen(true)}>
+      <Button variant="outline" size="sm" className="w-full" onClick={() => setOpen(true)}>
         <Plus className="size-3.5" /> {t(locale, "Add Account")}
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>

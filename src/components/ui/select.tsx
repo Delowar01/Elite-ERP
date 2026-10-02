@@ -4,8 +4,14 @@ import * as React from "react";
 import * as SelectPrimitive from "@radix-ui/react-select";
 import { CheckIcon, ChevronDownIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useDocumentDir } from "./use-document-dir";
 
-const Select = SelectPrimitive.Root;
+// Radix Select writes its own direction onto the portalled list (default "ltr"), so in Arabic the
+// options were laid out left-to-right with the tick on the physical left (DEV-UI-01.4).
+function Select({ dir, ...props }: React.ComponentProps<typeof SelectPrimitive.Root>) {
+  const docDir = useDocumentDir();
+  return <SelectPrimitive.Root dir={dir ?? docDir} {...props} />;
+}
 const SelectValue = SelectPrimitive.Value;
 const SelectGroup = SelectPrimitive.Group;
 
@@ -17,14 +23,21 @@ function SelectTrigger({
   return (
     <SelectPrimitive.Trigger
       className={cn(
-        "flex h-10 w-full items-center justify-between rounded-lg border border-line-strong bg-surface px-3 text-[13.5px] text-ink outline-none data-[placeholder]:text-ink-faint focus:border-brand-orange focus:ring-[3px] focus:ring-brand-orange/18",
+        // Same foundation as <Input> (DEV-UI-01.4): 36px control height, 6px radius, body text, control
+        // border on the input background, a 2px orange outline for KEYBOARD focus only (Radix gives the
+        // trigger focus on pointer activation too), aria-invalid in danger, disabled in the tokens.
+        "flex h-(--control-height) w-full items-center justify-between gap-2 rounded-md border border-border-control! bg-[var(--input-background)] px-3 text-body text-ink transition-[border-color,outline-color] duration-150 data-[placeholder]:text-ink-faint",
+        "hover:border-ink-muted!",
+        "focus-visible:border-focus! focus-visible:outline-2 focus-visible:-outline-offset-1 focus-visible:outline-focus",
+        "aria-invalid:border-danger! aria-invalid:focus-visible:outline-danger",
+        "disabled:cursor-not-allowed disabled:bg-[var(--disabled-background)] disabled:text-[var(--disabled-text)] disabled:border-border!",
         className,
       )}
       {...props}
     >
       {children}
       <SelectPrimitive.Icon asChild>
-        <ChevronDownIcon className="size-4 text-ink-faint" />
+        <ChevronDownIcon className="size-4 shrink-0 text-ink-faint" aria-hidden />
       </SelectPrimitive.Icon>
     </SelectPrimitive.Trigger>
   );
@@ -41,7 +54,7 @@ function SelectContent({
       <SelectPrimitive.Content
         position={position}
         className={cn(
-          "z-50 max-h-72 min-w-[8rem] overflow-hidden rounded-xl border border-line-strong bg-surface-raised shadow-glass",
+          "z-50 max-h-72 min-w-[8rem] overflow-hidden rounded-lg border border-line-strong bg-surface-raised shadow-glass",
           position === "popper" && "translate-y-1",
           className,
         )}
@@ -61,14 +74,16 @@ function SelectItem({
   return (
     <SelectPrimitive.Item
       className={cn(
-        "relative flex w-full cursor-default select-none items-center rounded-lg py-2 pl-8 pr-3 text-[13.5px] text-ink outline-none data-[highlighted]:bg-canvas data-[highlighted]:text-ink data-[state=checked]:bg-brand-orange/12 data-[state=checked]:font-semibold data-[state=checked]:text-ink",
+        // Logical padding + indicator (DEV-UI-01.4): the tick sits at the inline start, next to the label,
+        // in Arabic as in English. Selected = the approved accent tint + accent ink, weight 600.
+        "relative flex w-full cursor-default select-none items-center rounded-md py-2 ps-8 pe-3 text-body text-ink outline-none data-[highlighted]:bg-canvas data-[highlighted]:text-ink data-[state=checked]:bg-accent-tint data-[state=checked]:font-semibold data-[state=checked]:text-ink data-[disabled]:opacity-50",
         className,
       )}
       {...props}
     >
-      <span className="absolute left-2.5 flex size-3.5 items-center justify-center">
+      <span className="absolute start-2.5 flex size-3.5 items-center justify-center">
         <SelectPrimitive.ItemIndicator>
-          <CheckIcon className="size-3.5 text-brand-orange" />
+          <CheckIcon className="size-3.5 text-accent-ink" aria-hidden />
         </SelectPrimitive.ItemIndicator>
       </span>
       <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>

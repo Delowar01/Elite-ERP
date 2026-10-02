@@ -61,15 +61,17 @@ export function BaseCurrencyNotice({
           </Button>
         </div>
       </div>
-      <button
+      <Button
         type="button"
+        variant="ghost"
+        size="icon-sm"
         onClick={dismiss}
         disabled={pending}
         aria-label={t(locale, "Dismiss")}
-        className="shrink-0 rounded-md p-1 text-ink-faint hover:text-ink"
+        className="shrink-0"
       >
         <X size={15} />
-      </button>
+      </Button>
     </div>
   );
 }

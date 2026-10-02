@@ -43,10 +43,10 @@ export function ProductRecycleBinActions({ id, name, isOwner }: { id: number; na
 
   return (
     <div className="flex items-center gap-2">
-      <Button variant="ghost" size="sm" disabled={pending} onClick={restore}>
+      <Button variant="outline" size="sm" disabled={pending} onClick={restore}>
         <ArchiveRestore className="size-3.5" /> Restore
       </Button>
-      {isOwner && (<Button variant="ghost" size="sm" disabled={pending} onClick={permanentlyDelete} className="text-danger hover:bg-danger-bg">
+      {isOwner && (<Button variant="destructive-ghost" size="sm" disabled={pending} onClick={permanentlyDelete}>
         <Trash2 className="size-3.5" /> Delete Permanently
       </Button>)}
     </div>

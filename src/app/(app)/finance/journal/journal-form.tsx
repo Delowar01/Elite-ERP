@@ -206,7 +206,7 @@ export function JournalForm({ locale, accounts, currency, projects = [] }: { loc
       </div>
 
       <div>
-        <Button style={{ width: "auto" }} disabled={!canPost || pending} onClick={submit}>
+        <Button disabled={!canPost || pending} onClick={submit}>
           {pending ? t(locale, "Saving…") : t(locale, "Post entry")}
         </Button>
       </div>

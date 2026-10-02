@@ -26,7 +26,7 @@ await pool.query("update orgs set print_layout='minimal', document_color_theme='
 // create a quotation
 await p.goto(`${BASE}/sales/quotations/new`,{waitUntil:"networkidle"});await p.waitForTimeout(500);
 await p.locator(".party-card-v2").getByRole("button",{name:"To Client"}).click();
-await p.getByRole("button",{name:/Acme Co/}).click();
+await p.getByRole("option",{name:/Acme Co/}).click();
 const row=p.locator(".doc-items-table .item-row").first();
 await row.getByPlaceholder("Item name").fill("Widget");
 const nums=row.locator("input[type=number]");await nums.nth(1).fill("1");await nums.nth(2).fill("50");

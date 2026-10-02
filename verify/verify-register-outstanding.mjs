@@ -34,7 +34,7 @@ await page.fill("#orgName", `Reg ${uniq()}`); await page.fill("#name", "RG");
 await page.fill("#email", email); await page.fill("#password", pass);
 await page.locator("#country").click(); await page.waitForTimeout(300);
 await page.keyboard.type("Saudi Arabi"); await page.waitForTimeout(500);
-await page.getByRole("button", { name: /^Saudi Arabia ·/ }).first().click(); await page.waitForTimeout(400);
+await page.getByRole("option", { name: /^Saudi Arabia ·/ }).first().click(); await page.waitForTimeout(400);
 await Promise.all([page.waitForURL(`${BASE}/dashboard`, { timeout: 40000 }), page.click('button[type="submit"]')]);
 
 const org = (await db.query("select org_id from users where email=$1", [email])).rows[0].org_id;

@@ -48,13 +48,13 @@ async function register(orgName, email, countryName, overrideCurrency) {
   await page.fill('input[name="email"]', email);
   await page.fill('input[name="password"]', pass);
 
-  // Country is a SearchableSelect: a trigger, an auto-focused filter input, and plain <button>
-  // rows rendering "{name} · {code}" — not role="option", so match the button's accessible name.
+  // Country is a SearchableSelect: a trigger, an auto-focused filter input, and role="option" rows
+  // rendering "{name} · {code}" (role="option" since DEV-UI-01.4 — they were plain <button>s).
   await page.locator("#country").click();
   await page.waitForTimeout(300);
   await page.keyboard.type(countryName.slice(0, 12));
   await page.waitForTimeout(500);
-  await page.getByRole("button", { name: new RegExp(`^${countryName} ·`) }).first().click();
+  await page.getByRole("option", { name: new RegExp(`^${countryName} ·`) }).first().click();
   await page.waitForTimeout(400);
 
   const currencyAfterCountry = (await page.locator("#currency").innerText()).trim();

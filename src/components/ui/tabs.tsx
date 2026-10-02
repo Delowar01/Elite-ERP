@@ -3,8 +3,14 @@
 import * as React from "react";
 import * as TabsPrimitive from "@radix-ui/react-tabs";
 import { cn } from "@/lib/utils";
+import { useDocumentDir } from "./use-document-dir";
 
-const Tabs = TabsPrimitive.Root;
+// Radix Tabs need the direction passed in (no DirectionProvider): without it the arrow keys ran
+// backwards in Arabic (DEV-UI-01.4).
+function Tabs({ dir, ...props }: React.ComponentProps<typeof TabsPrimitive.Root>) {
+  const docDir = useDocumentDir();
+  return <TabsPrimitive.Root dir={dir ?? docDir} {...props} />;
+}
 
 // Matches the mockup's .tab-row/.tab/.tab.active exactly (literal classes).
 function TabsList({ className, ...props }: React.ComponentProps<typeof TabsPrimitive.List>) {

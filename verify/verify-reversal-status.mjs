@@ -56,7 +56,7 @@ await page.fill("#orgName", `RevSt ${uniq()}`); await page.fill("#name", "RS");
 await page.fill("#email", email); await page.fill("#password", pass);
 await page.locator("#country").click(); await page.waitForTimeout(300);
 await page.keyboard.type("Saudi Arabi"); await page.waitForTimeout(500);
-await page.getByRole("button", { name: /^Saudi Arabia ·/ }).first().click(); await page.waitForTimeout(400);
+await page.getByRole("option", { name: /^Saudi Arabia ·/ }).first().click(); await page.waitForTimeout(400);
 await Promise.all([page.waitForURL(`${BASE}/dashboard`, { timeout: 40000 }), page.click('button[type="submit"]')]);
 const cookieHeader = (await ctx.cookies()).map((c) => `${c.name}=${c.value}`).join("; ");
 await browser.close();

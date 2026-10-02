@@ -46,9 +46,10 @@
   box-shadow: 0 2px 4px rgba(17,17,40,0.04), 0 20px 40px -18px rgba(17,17,40,0.18);
 }
 
-/* DEV-UI-01.1 — legacy button classes follow the button foundation: flat, solid, 6px radius, no glow,
-   no lift. Heights are left as they are; control sizing belongs to DEV-UI-01.4. */
-.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 42px; border-radius: 6px; font-family: var(--font-body); font-weight: 600; font-size: 13px; border: none; cursor: pointer; position: relative; }
+/* Legacy button classes follow the button foundation (DEV-UI-01.1 flat / solid / 6px; DEV-UI-01.4,
+   R1: the control height token, body type, weight 500, the shared disabled and focus recipes). The
+   markup is not migrated; `.btn-primary` keeps its full-width layout rule. */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: var(--control-height); border-radius: 6px; font-family: var(--font-body); font-weight: 500; font-size: var(--text-body); line-height: var(--text-body--line-height); border: none; cursor: pointer; position: relative; }
 
 .btn-primary { background: var(--primary-background); color: var(--primary-text); width: 100%; box-shadow: none; }
 
@@ -67,7 +68,7 @@
 /* Not in the mockup (its buttons are static HTML, never actually disabled) — a real app
    needs a visible "this doesn't do anything yet" state for decorative prototype-fidelity
    chrome (Filters, Views, Export, Import, Recycle Bin, the titlebar's shortcut buttons). */
-.btn:disabled, .doc-pill-btn:disabled { opacity: 0.55; cursor: not-allowed; pointer-events: none; }
+.btn:disabled, .doc-pill-btn:disabled { opacity: 0.5; cursor: not-allowed; pointer-events: none; }
 
 .main-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 22px; }
 
@@ -153,7 +154,7 @@ table.data-table tbody tr.row-clickable { cursor: pointer; }
 
 .field { margin-bottom: 17px; }
 
-.field label { display: block; font-size: 12.5px; font-weight: 500; color: var(--ink-muted); margin-bottom: 7px; }
+.field label { display: block; font-size: var(--text-body-sm); line-height: var(--text-body-sm--line-height); font-weight: 500; color: var(--ink-muted); margin-bottom: 7px; }
 
 .field .input { height: 42px; border-radius: 10px; border: 1px solid var(--line-strong); background: var(--surface); display: flex; align-items: center; padding: 0 13px; font-size: 13.5px; color: var(--ink-faint); }
 
@@ -228,14 +229,17 @@ table.data-table tbody tr.row-clickable { cursor: pointer; }
 
 .doc-pills-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
 
-.doc-pill-btn { display: inline-flex; align-items: center; gap: 7px; height: 36px; padding: 0 13px; border-radius: 9px; border: 1px solid var(--line-strong); background: var(--surface); font-size: 12px; font-weight: 500; color: var(--ink-muted); cursor: pointer; }
+.doc-pill-btn { display: inline-flex; align-items: center; gap: 7px; height: var(--control-height); padding: 0 13px; border-radius: 8px; border: 1px solid var(--line-strong); background: var(--surface); font-size: var(--text-body-sm); line-height: var(--text-body-sm--line-height); font-weight: 500; color: var(--ink-muted); cursor: pointer; }
 
 .doc-pill-btn:hover { background: var(--canvas); color: var(--ink); }
 
 /* Config pill keeps a visible fill while the dialog/menu it opens is open (data-state=open). */
 .doc-pill-btn[data-state="open"] { background: var(--accent-orange-bg); color: var(--ink); border-color: var(--brand-orange); }
 
-.doc-pill-btn .dpb-val { font-weight: 700; color: var(--ink); }
+.doc-pill-btn .dpb-val { font-weight: 600; color: var(--ink); }
+
+/* DEV-UI-01.4: the shared keyboard-focus recipe (was the browser default). */
+.doc-pill-btn:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 
 .table-scroll { overflow-x: auto; border-radius: 12px; box-shadow: var(--shadow-card); }
 
@@ -393,11 +397,16 @@ table.data-table.list-table td.mono, table.data-table.list-table td.num { white-
 /* Kebab / menu trigger keeps a visible fill while its menu is open (data-state=open). */
 .row-menu-btn[data-state="open"] { background: var(--canvas); color: var(--ink); }
 
+/* DEV-UI-01.4 (R5): the row actions button had no visible keyboard focus at all. */
+.row-menu-btn:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; color: var(--ink); }
+
 .row-menu { display: none; flex-direction: column; min-width: 224px; background: var(--surface); border: 1px solid var(--line-strong); border-radius: 12px; box-shadow: var(--shadow-card-hover); padding: 6px; z-index: 200; }
 
 .row-menu.open { display: flex; }
 
-.row-menu-item { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px; font-size: 12.5px; font-weight: 500; color: var(--ink); cursor: pointer; }
+/* DEV-UI-01.4: menu items on the type scale (body, 13px — was 12.5px); also used by the shell's account /
+   favorites / notifications menus. */
+.row-menu-item { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px; font-size: var(--text-body); line-height: var(--text-body--line-height); font-weight: 500; color: var(--ink); cursor: pointer; }
 
 .row-menu-item svg { flex-shrink: 0; opacity: .8; }
 
@@ -415,23 +424,27 @@ table.data-table.list-table td.mono, table.data-table.list-table td.num { white-
 
 .row-menu-divider { height: 1px; background: var(--line); margin: 5px 2px; }
 
-.row-menu-item.has-submenu svg:last-child { margin-left: auto; transition: transform .15s ease; }
+.row-menu-item.has-submenu svg:last-child { margin-inline-start: auto; transition: transform .15s ease; }
+
+/* DEV-UI-01.4-C1: the collapsed "forward" chevron points to the inline end, so it is mirrored when the
+   Radix menu content carries dir="rtl" (since C1 it does in Arabic). A glyph mirror, not geometry; the
+   expanded state still rotates it down in both directions. (`:dir()` is not used: the CSS pipeline
+   rewrites it to a :lang() list.) */
+[data-radix-menu-content][dir="rtl"] .row-menu-item.has-submenu:not(.expanded) svg:last-child { transform: scaleX(-1); }
 
 .row-menu-item.has-submenu.expanded svg:last-child { transform: rotate(90deg); }
 
 .row-menu-item.has-submenu.expanded { background: var(--canvas); }
 
-.row-menu-submenu { display: none; flex-direction: column; padding-left: 10px; margin: 2px 0 2px 12px; border-left: 2px solid var(--line); }
+.row-menu-submenu { display: none; flex-direction: column; padding-inline-start: 10px; margin-block: 2px; margin-inline: 12px 0; border-inline-start: 2px solid var(--line); }
 
 .row-menu-submenu.open { display: flex; }
 
-.row-menu-submenu .row-menu-item { font-size: 12px; color: var(--ink-muted); padding: 7px 10px; }
+.row-menu-submenu .row-menu-item { font-size: var(--text-body-sm); line-height: var(--text-body-sm--line-height); color: var(--ink-muted); padding: 7px 10px; }
 
 .row-menu-submenu .row-menu-item svg { opacity: .6; }
 
-[dir="rtl"] .row-menu-item.has-submenu svg:last-child { margin-left: 0; margin-right: auto; }
 
-[dir="rtl"] .row-menu-submenu { padding-left: 0; padding-right: 10px; margin: 2px 12px 2px 0; border-left: none; border-right: 2px solid var(--line); }
 
 .creator-chip { display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; }
 
@@ -474,16 +487,20 @@ table.data-table.list-table td.mono, table.data-table.list-table td.num { white-
 
 .pill.live::before { animation: pulse-ring 1.8s infinite; }
 
-.tab-row { display: inline-flex; flex-wrap: wrap; gap: 4px; padding: 4px; border-radius: 16px; border: 1px solid var(--line-strong); background: var(--surface); box-shadow: var(--shadow-sm); margin-bottom: 18px; }
+/* Tabs (DEV-UI-01.4): a restrained segmented surface on the radius family — 8px container, 6px tabs, no
+   pill, no shadow. Active colours stay org-themeable (--active-tab-*, brand-theme activeTab). */
+.tab-row { display: inline-flex; flex-wrap: wrap; gap: 4px; padding: 4px; border-radius: 8px; border: 1px solid var(--line-strong); background: var(--surface); margin-bottom: 18px; }
 
-.tab { font-size: 12.5px; font-weight: 600; padding: 7px 16px; border-radius: 999px; color: var(--ink-muted); cursor: pointer; transition: background-color .12s ease, color .12s ease; }
+.tab { font-size: var(--text-body-sm); line-height: var(--text-body-sm--line-height); font-weight: 500; padding: 7px 14px; border-radius: 6px; color: var(--ink-muted); cursor: pointer; transition: background-color .12s ease, color .12s ease; }
+
+.tab:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 
 /* Hover on an inactive tab shows a neutral fill, kept visually distinct from the solid orange active fill.
    (Radix TabsTrigger marks the active tab with data-state="active", not a literal .active class.) */
 .tab:not(.active):not([data-state="active"]):hover { background: var(--canvas); color: var(--ink); }
 
 .tab.active,
-.tab[data-state="active"] { background: var(--active-tab-background); color: var(--active-tab-text); }
+.tab[data-state="active"] { background: var(--active-tab-background); color: var(--active-tab-text); font-weight: 600; }
 
 .add-row-btn { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600; color: var(--brand-orange); padding: 8px 4px; cursor: pointer; }
 
@@ -817,11 +834,12 @@ table.data-table.line-table td { padding: 9px 14px; }
    Color Theme <style> (buildThemeOverrideCss) recolors these selectors when customized. */
 .btn-accent {
   display: inline-flex; align-items: center; justify-content: center; gap: 7px;
-  height: 40px; padding: 0 18px; border-radius: 6px; font-size: 13px; font-weight: 600; /* DEV-UI-01.1: 6px */
+  height: var(--control-height); padding: 0 18px; border-radius: 6px; font-size: var(--text-body); font-weight: 500; /* DEV-UI-01.1: 6px; DEV-UI-01.4: control height, body, 500 */
   border: none; cursor: pointer; background: var(--accent-background); color: var(--accent-text);
   transition: filter .15s ease;
 }
 .btn-accent:hover { background: var(--accent-hover); }
+.btn-accent:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .badge-accent, .pill-accent {
   display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600;
   padding: 4px 10px; border-radius: 999px; background: var(--badge-background); color: var(--badge-text);
