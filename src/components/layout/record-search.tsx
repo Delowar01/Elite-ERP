@@ -2,6 +2,7 @@
 
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { Search, Loader2, CornerDownLeft, FileText, AlertCircle } from "lucide-react";
 import { t, type Locale } from "@/lib/i18n/dict";
 import { globalSearchAction } from "@/app/(app)/search-actions";
@@ -78,20 +79,17 @@ export function RecordSearchPanel({ locale, onClose }: { locale: Locale; onClose
   }
 
   return (
-    <div
-      className="fixed inset-0 z-[100] flex items-start justify-center bg-black/40 backdrop-blur-sm pt-[12vh] px-4"
-      onClick={onClose}
-      role="dialog"
-      aria-modal="true"
-      aria-label={t(locale, "Search records")}
-    >
-      <div
-        className="w-full max-w-[560px] rounded-2xl border border-line bg-surface shadow-glass overflow-hidden animate-fade-up"
-        onClick={(e) => e.stopPropagation()}
-      >
+    // Radix Dialog supplies the focus trap, focus return to the trigger, Escape and the inert page
+    // behind (DEV-UI-01.3). Mounted only while open, so `open` is constant.
+    <DialogPrimitive.Root open onOpenChange={(open) => !open && onClose()}>
+      <DialogPrimitive.Portal>
+        <DialogPrimitive.Overlay className="fixed inset-0 z-[100] bg-brand-navy-deep/40" />
+        <DialogPrimitive.Content
+          className="shell-overlay-panel fixed inset-x-4 top-[12vh] z-[100] mx-auto w-auto max-w-[560px] rounded-xl border border-line bg-surface shadow-glass overflow-hidden outline-none focus-visible:ring-2 focus-visible:ring-focus"
+        >
         <div className="px-4 pt-3 pb-2 border-b border-line">
-          <div className="text-[13px] font-semibold text-ink">{t(locale, "Search records")}</div>
-          <div className="text-[11px] text-ink-faint">{t(locale, "Find clients, documents, products, employees and more")}</div>
+          <DialogPrimitive.Title className="text-body font-semibold text-ink">{t(locale, "Search records")}</DialogPrimitive.Title>
+          <DialogPrimitive.Description className="text-caption text-ink-faint">{t(locale, "Find clients, documents, products, employees and more")}</DialogPrimitive.Description>
         </div>
         <div className="flex items-center gap-2 px-4 border-b border-line">
           <Search className="size-4 text-ink-faint shrink-0" />
@@ -118,31 +116,31 @@ export function RecordSearchPanel({ locale, onClose }: { locale: Locale; onClose
               }
             }}
             placeholder={t(locale, "Search ERP records…")}
-            className="flex-1 h-12 bg-transparent outline-none text-[14px]"
+            className="shell-search-input flex-1 h-12 bg-transparent text-body-lg"
           />
           {loading && <Loader2 className="size-4 text-ink-faint animate-spin shrink-0" />}
         </div>
         <div className="max-h-[380px] overflow-y-auto py-2">
           {showHint && (
-            <div className="px-4 py-6 text-center text-[12.5px] text-ink-faint">{t(locale, "Type at least 2 characters to search.")}</div>
+            <div className="px-4 py-6 text-center text-body-sm text-ink-faint">{t(locale, "Type at least 2 characters to search.")}</div>
           )}
           {error && (
-            <div className="px-4 py-6 flex flex-col items-center gap-1.5 text-center text-[12.5px] text-danger">
+            <div className="px-4 py-6 flex flex-col items-center gap-1.5 text-center text-body-sm text-danger">
               <AlertCircle className="size-5" />
               {t(locale, "Search failed. Please try again.")}
             </div>
           )}
-          {showEmpty && <div className="px-4 py-6 text-center text-[12.5px] text-ink-faint">{t(locale, "No records found.")}</div>}
+          {showEmpty && <div className="px-4 py-6 text-center text-body-sm text-ink-faint">{t(locale, "No records found.")}</div>}
           {grouped.map((group) => (
             <Fragment key={group.type}>
-              <div className="px-4 pt-2.5 pb-1 text-[10.5px] font-semibold uppercase tracking-wide text-ink-faint">{t(locale, group.type)}</div>
+              <div className="px-4 pt-2.5 pb-1 text-caption font-semibold uppercase tracking-wide text-ink-faint">{t(locale, group.type)}</div>
               {group.items.map(({ r, index }) => (
                 <button
                   key={`${r.type}-${r.id}`}
                   type="button"
                   onMouseEnter={() => setActive(index)}
                   onClick={() => go(r.href)}
-                  className={`w-full flex items-center gap-3 px-4 py-2.5 text-start text-[13px] ${index === activeIdx ? "bg-canvas" : ""}`}
+                  className={`w-full flex items-center gap-3 px-4 py-2.5 text-start text-body ${index === activeIdx ? "bg-canvas" : ""}`}
                 >
                   <FileText className="size-4 text-ink-muted shrink-0" />
                   <span className="flex-1 min-w-0 truncate">
@@ -155,7 +153,8 @@ export function RecordSearchPanel({ locale, onClose }: { locale: Locale; onClose
             </Fragment>
           ))}
         </div>
-      </div>
-    </div>
+        </DialogPrimitive.Content>
+      </DialogPrimitive.Portal>
+    </DialogPrimitive.Root>
   );
 }

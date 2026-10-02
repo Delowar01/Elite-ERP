@@ -27,6 +27,8 @@ import {
   SlidersHorizontal,
   Settings,
   ShieldCheck,
+  BookUser,
+  ClipboardCheck,
 } from "lucide-react";
 
 export type NavItem = {
@@ -86,7 +88,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: "Account Ledger", href: "/finance/ledger", icon: ScrollText },
       { label: "Account Reporting", href: "/finance/reports", icon: BarChart3 },
       { label: "Payment Records", href: "/finance/payments", icon: Wallet },
-      { label: "Client & Vendor Statements", href: "/finance/statements", icon: FileText },
+      { label: "Client & Vendor Statements", href: "/finance/statements", icon: BookUser },
     ],
   },
   {
@@ -105,7 +107,41 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: "Preset Management", href: "/settings/presets", icon: SlidersHorizontal, roles: ["owner", "admin"] },
       { label: "Business Settings", href: "/settings/organization", icon: Settings, roles: ["owner", "admin"] },
       { label: "Security Center", href: "/settings/security", icon: ShieldCheck },
-      { label: "Compliance Center", href: "/settings/compliance", icon: FileCheck2, roles: ["owner", "admin"] },
+      { label: "Compliance Center", href: "/settings/compliance", icon: ClipboardCheck, roles: ["owner", "admin"] },
     ],
   },
 ];
+
+export type Role = "owner" | "admin" | "staff";
+
+/**
+ * The navigation a role can see — the ONE role filter for the sidebar, the mobile drawer and the
+ * command palette. It only mirrors the server-side page guards (`requireRole` on each page); it
+ * grants nothing. Groups left with no visible item are dropped.
+ */
+export function visibleNavGroups(role: Role): NavGroup[] {
+  return NAV_GROUPS.map((g) => ({ ...g, items: g.items.filter((it) => !it.roles || it.roles.includes(role)) })).filter(
+    (g) => g.items.length > 0,
+  );
+}
+
+/** Active-route rule shared by every nav surface: the item's own page or any page beneath it. */
+export function isNavActive(pathname: string, href: string): boolean {
+  return pathname === href || pathname.startsWith(href + "/");
+}
+
+// Shell titles for authenticated routes that have no navigation entry. Presentation only — these
+// routes stay out of the sidebar.
+const EXTRA_SHELL_TITLES: { href: string; label: string }[] = [{ href: "/recycle-bin", label: "Recycle Bin" }];
+
+/**
+ * The dictionary key of the persistent shell title for `pathname`: the most specific nav item (or
+ * extra shell route) that is the page itself or one of its ancestors, so `/new`, `/[id]` and nested
+ * recycle bins resolve to their parent context. Falls back to "Dashboard", as before.
+ */
+export function shellTitleKey(pathname: string): string {
+  const candidates = [...NAV_GROUPS.flatMap((g) => g.items), ...EXTRA_SHELL_TITLES];
+  let best: { href: string; label: string } | undefined;
+  for (const c of candidates) if (isNavActive(pathname, c.href) && (!best || c.href.length > best.href.length)) best = c;
+  return best?.label ?? "Dashboard";
+}

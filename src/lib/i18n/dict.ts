@@ -1869,6 +1869,11 @@ const DICT: Record<string, string> = {
   "status.severity_critical": "حرج",
   "status.low_stock": "مخزون منخفض",
   "status.in_stock": "متوفر",
+  // App shell (DEV-UI-01.3)
+  "Main navigation": "التنقل الرئيسي",
+  "Skip to main content": "تخطَّ إلى المحتوى الرئيسي",
+  "Open navigation": "فتح قائمة التنقل",
+  "Close navigation": "إغلاق قائمة التنقل",
 };
 
 export function t(locale: Locale, en: string): string {

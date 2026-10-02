@@ -221,12 +221,22 @@
   --accent-red: var(--danger);
   --accent-red-bg: var(--danger-bg);
 
-  /* Sidebar keeps its current light/white structure until DEV-UI-01.3 (application shell). */
-  --sidebar-bg: light-dark(#ffffff, #10132a);
-  --sidebar-ink: light-dark(#2a2b57, #ededf8);
-  --sidebar-ink-muted: var(--text-faint);
+  /* Application frame (DEV-UI-01.3, D-01.3-A): a navy sidebar in BOTH appearances — brand navy in
+     light, the deeper brand navy in dark. Its text is the approved light ink (white / the dark-mode
+     text value); muted text, borders, hover and the selected tint are mixes of those approved colours,
+     so no new palette is introduced. `--sidebar-active-bg` is kept for the org theme engine, which
+     still writes it; the shell paints the selected state from the tint + indicator below, both of
+     which follow the org's Selected-item colour (`--selected-item-background`). */
+  --sidebar-bg: light-dark(var(--brand-navy), var(--brand-navy-deep));
+  --sidebar-ink: light-dark(#ffffff, #eceef7);
+  --sidebar-ink-muted: color-mix(in srgb, var(--sidebar-ink) 72%, var(--sidebar-bg));
   --sidebar-active-bg: var(--accent);
-  --sidebar-border: light-dark(#eceef3, #1f2338);
+  --sidebar-border: color-mix(in srgb, var(--sidebar-ink) 14%, var(--sidebar-bg));
+  --sidebar-hover-bg: color-mix(in srgb, var(--sidebar-ink) 9%, var(--sidebar-bg));
+  --sidebar-selected-tint: color-mix(in srgb, var(--selected-item-background) 22%, var(--sidebar-bg));
+  --sidebar-indicator: var(--selected-item-background);
+  /* Uploaded organisation logos are designed for white paper; they sit on a white plate on the rail. */
+  --sidebar-logo-plate: #ffffff;
 
   --shadow-card: var(--shadow-sm);
   --shadow-card-hover: var(--shadow-sm);

@@ -3,9 +3,10 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LogOut, Settings } from "lucide-react";
-import { NAV_GROUPS } from "./nav-config";
+import { shellTitleKey, type Role } from "./nav-config";
 import { buildThemeOverrideCss, isColorThemeMode, type ThemeOverrides, type ThemeOverridesByMode } from "@/lib/brand-theme";
 import { Sidebar } from "./sidebar";
+import { MobileNav } from "./mobile-nav";
 import { TopbarSearch } from "./topbar-search";
 import { NotificationsMenu } from "./notifications-menu";
 import { ThemeToggle } from "./theme-toggle";
@@ -32,8 +33,38 @@ const ROLE_LABELS: Record<SessionUser["role"], string> = { owner: "Owner", admin
 type SessionUser = {
   name: string;
   email: string;
-  role: "owner" | "admin" | "staff";
+  role: Role;
 };
+
+// Mirrors the server guard on /settings/organization — requireRole("owner", "admin") — so the gear is
+// never shown to someone the page would bounce (D-01.3-D). Presentation only; the guard is unchanged.
+const SETTINGS_ROLES: readonly Role[] = ["owner", "admin"];
+
+function AccountMenu({ user, locale, initials }: { user: SessionUser; locale: Locale; initials: string }) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger className="topbar-profile" aria-label={user.name}>
+        <span className="topbar-profile-text">
+          <span className="topbar-profile-name">{user.name}</span>
+          <span className="topbar-profile-role">{t(locale, ROLE_LABELS[user.role])}</span>
+        </span>
+        <Avatar className="size-8 font-semibold">
+          {/* Solid fallback (D-04 solid-only) — no gradient. */}
+          <AvatarFallback className="topbar-avatar">{initials}</AvatarFallback>
+        </Avatar>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuLabel>{user.name}</DropdownMenuLabel>
+        <div className="px-3 pb-2 -mt-1 text-xs text-ink-faint">{user.email}</div>
+        <div className="px-3 pb-2 text-xs text-ink-faint">{t(locale, ROLE_LABELS[user.role])}</div>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onSelect={() => logoutAction()} className="cursor-pointer">
+          <LogOut className="size-3.5" aria-hidden /> {t(locale, "Log out")}
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
 
 export function AppShell({
   user,
@@ -79,10 +110,8 @@ export function AppShell({
     .join("")
     .toUpperCase();
 
-  const activeItem = NAV_GROUPS.flatMap((g) => g.items).find(
-    (it) => pathname === it.href || pathname.startsWith(it.href + "/"),
-  );
-  const pageTitle = t(locale, activeItem?.label ?? "Dashboard");
+  // Persistent shell title (contextual, not the page's heading — never an <h1>, D-01.3-F).
+  const pageTitle = t(locale, shellTitleKey(pathname));
 
   // Per-org Color Theme. Gradient mode → no override (the built-in Elite gradient renders as-is).
   // Single mode → flatten the main gradient to a solid Primary + route secondary highlights to
@@ -96,61 +125,57 @@ export function AppShell({
     overrides: orgThemeOverrides,
   });
 
-  return (
-    <div className="flex min-h-screen">
-      <style>{themeOverrideCss}</style>
-      <Sidebar
-        role={user.role}
-        locale={locale}
-        orgName={orgName}
-        orgLogoUrl={orgLogoUrl}
-        initialCollapsed={sidebarPrefs.collapsed}
-        initialCollapsedGroups={sidebarPrefs.collapsedGroups}
-      />
+  const canOpenSettings = SETTINGS_ROLES.includes(user.role);
+  // The utilities: in the top bar from 640px up; below that, in the navigation drawer (shell.css
+  // decides which copy is displayed, so a hidden copy is never focusable).
+  const utilities = (
+    <>
+      <ThemeToggle locale={locale} initial={theme} />
+      <FavoritesMenu locale={locale} favorites={favorites} currentLabel={pageTitle} />
+      <NotificationsMenu locale={locale} notifications={notifications} unreadCount={unreadCount} />
+      {canOpenSettings && (
+        <Link href="/settings/organization" className="topbar-icon-btn" aria-label={t(locale, "Business Settings")} title={t(locale, "Business Settings")}>
+          <Settings className="size-4" aria-hidden />
+        </Link>
+      )}
+      <AccountMenu user={user} locale={locale} initials={initials} />
+    </>
+  );
 
-      <div className="flex-1 flex flex-col min-w-0">
-        <header className="topbar sticky top-0 z-30">
-          <div className="topbar-greeting">
-            <h3>{pageTitle}</h3>
-            <p>{orgName}</p>
-          </div>
-          <div className="topbar-actions">
-            <TopbarSearch locale={locale} role={user.role} />
-            <LanguageSwitcher locale={locale} />
-            <ThemeToggle locale={locale} initial={theme} />
-            <FavoritesMenu locale={locale} favorites={favorites} currentLabel={pageTitle} />
-            <NotificationsMenu locale={locale} notifications={notifications} unreadCount={unreadCount} />
-            <Link href="/settings/organization" className="topbar-icon-btn" aria-label={t(locale, "Business Settings")}>
-              <Settings className="size-4" />
-            </Link>
-            <DropdownMenu>
-              <DropdownMenuTrigger className="topbar-profile outline-none">
-                <div className="text-right rtl:text-left hidden sm:block">
-                  <div className="topbar-profile-name">{user.name}</div>
-                  <div className="topbar-profile-role">{t(locale, ROLE_LABELS[user.role])}</div>
-                </div>
-                <Avatar className="size-8">
-                  <AvatarFallback
-                    className="text-[11px]"
-                    style={{ background: "linear-gradient(135deg, var(--brand-orange-light), var(--brand-orange))" }}
-                  >
-                    {initials}
-                  </AvatarFallback>
-                </Avatar>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuLabel>{user.name}</DropdownMenuLabel>
-                <div className="px-3 pb-2 -mt-1 text-xs text-ink-faint">{user.email}</div>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onSelect={() => logoutAction()} className="cursor-pointer">
-                  <LogOut className="size-3.5" /> {t(locale, "Log out")}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </header>
-        <main className="flex-1 p-7 bg-canvas">{children}</main>
+  return (
+    <>
+      <a href="#main-content" className="skip-link">
+        {t(locale, "Skip to main content")}
+      </a>
+      <div className="app-frame">
+        <style>{themeOverrideCss}</style>
+        <Sidebar
+          role={user.role}
+          locale={locale}
+          orgName={orgName}
+          orgLogoUrl={orgLogoUrl}
+          initialCollapsed={sidebarPrefs.collapsed}
+          initialCollapsedGroups={sidebarPrefs.collapsedGroups}
+        />
+
+        <div className="app-column">
+          <header className="topbar">
+            <MobileNav role={user.role} locale={locale} orgName={orgName} orgLogoUrl={orgLogoUrl} utilities={utilities} />
+            <div className="topbar-greeting">
+              <h3 className="topbar-title">{pageTitle}</h3>
+              <p className="topbar-org">{orgName}</p>
+            </div>
+            <div className="topbar-actions">
+              <TopbarSearch locale={locale} role={user.role} />
+              <LanguageSwitcher locale={locale} />
+              <div className="topbar-utilities">{utilities}</div>
+            </div>
+          </header>
+          <main id="main-content" tabIndex={-1} className="app-main">
+            {children}
+          </main>
+        </div>
       </div>
-    </div>
+    </>
   );
 }

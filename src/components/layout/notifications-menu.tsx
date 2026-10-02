@@ -60,26 +60,26 @@ export function NotificationsMenu({
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger className="topbar-icon-btn outline-none" aria-label={t(locale, "Notifications")}>
-        <Bell className="size-4" />
+      <DropdownMenuTrigger className="topbar-icon-btn" aria-label={t(locale, "Notifications")} title={t(locale, "Notifications")}>
+        <Bell className="size-4" aria-hidden />
         {unreadCount > 0 && <span className="topbar-icon-badge">{unreadCount > 9 ? "9+" : unreadCount}</span>}
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-[340px] p-0">
         <div className="flex items-center justify-between px-3 py-2.5 border-b border-line">
-          <span className="text-[13px] font-semibold">{t(locale, "Notifications")}</span>
+          <span className="text-body font-semibold">{t(locale, "Notifications")}</span>
           {unreadCount > 0 && (
             <button
               type="button"
               onClick={markAll}
               disabled={pending}
-              className="inline-flex items-center gap-1 text-[11.5px] text-brand-orange hover:underline disabled:opacity-50"
+              className="inline-flex items-center gap-1 text-caption text-brand-orange hover:underline disabled:opacity-50"
             >
               <CheckCheck className="size-3.5" /> {t(locale, "Mark all as read")}
             </button>
           )}
         </div>
         {notifications.length === 0 ? (
-          <div className="px-3 py-6 text-center text-[12.5px] text-ink-faint">{t(locale, "No activity yet.")}</div>
+          <div className="px-3 py-6 text-center text-body-sm text-ink-faint">{t(locale, "No activity yet.")}</div>
         ) : (
           <div className="max-h-[360px] overflow-y-auto">
             {notifications.map((n) => (
@@ -89,8 +89,8 @@ export function NotificationsMenu({
               >
                 {!n.read && <span className="mt-1.5 size-1.5 rounded-full bg-brand-orange shrink-0" aria-hidden />}
                 <button type="button" onClick={() => open(n)} disabled={pending} className="flex-1 text-start min-w-0">
-                  <div className={`text-[12.5px] leading-snug ${n.read ? "text-ink-muted" : "font-medium"}`}>{n.description}</div>
-                  <div className="text-[11px] text-ink-faint mt-0.5 flex items-center gap-1">
+                  <div className={`text-body-sm leading-snug ${n.read ? "text-ink-muted" : "font-medium"}`}>{n.description}</div>
+                  <div className="text-caption text-ink-faint mt-0.5 flex items-center gap-1">
                     {n.userName ? `${n.userName} · ` : ""}
                     {timeAgo(n.createdAt, locale)}
                     {n.href && <ExternalLink className="size-3 opacity-0 group-hover:opacity-100" />}

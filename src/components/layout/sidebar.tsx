@@ -1,50 +1,33 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useRef, useState } from "react";
-import { ChevronDown, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { useRef, useState, useSyncExternalStore } from "react";
+import { PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen } from "lucide-react";
 import { LogoMark } from "@/components/brand/logo-mark";
-import { NAV_GROUPS } from "./nav-config";
+import { NavList } from "./nav-list";
+import type { Role } from "./nav-config";
 import { cn } from "@/lib/utils";
 import { t, type Locale } from "@/lib/i18n/dict";
 import { SIDEBAR_COLLAPSED_COOKIE, SIDEBAR_GROUPS_COOKIE } from "@/lib/sidebar-cookies";
 import { useSidebarScroll } from "./use-sidebar-scroll";
 
-// Routes with a built page — the rest are planned nav items for sections not yet implemented.
-// Keeping prefetch off for those avoids prefetching 404s on every render.
-const BUILT_ROUTES = new Set([
-  "/dashboard",
-  "/clients",
-  "/purchasing/vendors",
-  "/inventory/products",
-  "/settings/presets",
-  "/settings/organization",
-  "/finance/bank-accounts",
-  "/finance/journal",
-  "/finance/chart-of-accounts",
-  "/finance/ledger",
-  "/finance/reports",
-  "/sales/quotations",
-  "/sales/orders",
-  "/sales/proforma",
-  "/sales/invoices",
-  "/sales/delivery-challans",
-  "/sales/credit-notes",
-  "/purchasing/orders",
-  "/purchasing/debit-notes",
-  "/finance/payments",
-  "/finance/statements",
-  "/projects",
-  "/hr/employees",
-  "/hr/departments",
-  "/hr/attendance",
-  "/hr/leave",
-  "/hr/payroll",
-  "/settings/security",
-  "/settings/compliance",
-  "/recycle-bin",
-]);
+// Breakpoint model (D-01.3-G): ≥1280 the user's expanded/compact preference; 1024–1279 always the
+// compact 66px rail; <1024 no persistent rail (the mobile drawer takes over, see mobile-nav.tsx).
+// shell.css enforces the geometry from the first paint; this query only switches the rendered
+// content (labels → tooltips, group headers off) once the client knows the width.
+const TABLET_RAIL_QUERY = "(min-width: 1024px) and (max-width: 1279.98px)";
+
+function useTabletRail(): boolean {
+  return useSyncExternalStore(
+    (cb) => {
+      const mq = window.matchMedia(TABLET_RAIL_QUERY);
+      mq.addEventListener("change", cb);
+      return () => mq.removeEventListener("change", cb);
+    },
+    () => window.matchMedia(TABLET_RAIL_QUERY).matches,
+    () => false, // server snapshot — the CSS rail already applies; content reconciles after hydration
+  );
+}
 
 function writeCookie(name: string, value: string) {
   // Year-long, lax, root path — a durable UI preference the server layout reads on next load.
@@ -59,7 +42,7 @@ export function Sidebar({
   initialCollapsed,
   initialCollapsedGroups,
 }: {
-  role: "owner" | "admin" | "staff";
+  role: Role;
   locale: Locale;
   orgName: string;
   orgLogoUrl: string | null;
@@ -69,6 +52,8 @@ export function Sidebar({
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(initialCollapsed);
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(() => new Set(initialCollapsedGroups));
+  const tabletRail = useTabletRail();
+  const rail = collapsed || tabletRail;
   // The <aside> is the scrolling element (.sidebar has overflow-y: auto).
   const navRef = useRef<HTMLElement>(null);
   useSidebarScroll(navRef);
@@ -91,11 +76,12 @@ export function Sidebar({
     });
   }
 
-  const isActive = (href: string) => pathname === href || pathname.startsWith(href + "/");
-  const ToggleIcon = collapsed ? PanelLeftOpen : PanelLeftClose;
+  // The panel icon points at the sidebar's own edge — the inline-start edge: left in LTR, right in RTL.
+  const rtl = locale === "ar";
+  const ToggleIcon = collapsed ? (rtl ? PanelRightOpen : PanelLeftOpen) : rtl ? PanelRightClose : PanelLeftClose;
 
   return (
-    <aside ref={navRef} className={cn("sidebar", collapsed && "collapsed")}>
+    <aside ref={navRef} className={cn("sidebar", collapsed && "collapsed")} data-rail={rail ? "true" : undefined}>
       <div className="sidebar-head">
         {orgLogoUrl ? (
           <div className="sidebar-brand">
@@ -104,8 +90,8 @@ export function Sidebar({
           </div>
         ) : (
           <div className="sidebar-brand">
-            <LogoMark size={30} color="var(--brand-orange)" />
-            {!collapsed && (
+            <LogoMark size={30} color="var(--accent)" />
+            {!rail && (
               <div className="sidebar-brand-text">
                 <div className="word1">ELITE</div>
                 <div className="word2">INNOVATION SOLUTIONS</div>
@@ -121,60 +107,21 @@ export function Sidebar({
           title={t(locale, collapsed ? "Expand sidebar" : "Collapse sidebar")}
           aria-expanded={!collapsed}
         >
-          <ToggleIcon className="size-4" />
+          <ToggleIcon className="size-4" aria-hidden />
         </button>
       </div>
-      {!orgLogoUrl && !collapsed && <div className="sidebar-product">Elite ERP</div>}
+      {!orgLogoUrl && !rail && <div className="sidebar-product">Elite ERP</div>}
 
-      <div className="sidebar-nav">
-        {NAV_GROUPS.map((group, gi) => {
-          const items = group.items.filter((it) => !it.roles || it.roles.includes(role));
-          if (items.length === 0) return null;
-          const activeGroup = items.some((it) => isActive(it.href));
-          // The active group is always shown expanded (it stays open after navigation / on refresh);
-          // any other labelled group collapses when the user clicks its header. When the whole
-          // sidebar is collapsed to icons, group toggling is disabled and every item shows.
-          const groupCollapsed = !collapsed && !!group.label && collapsedGroups.has(group.label) && !activeGroup;
-
-          return (
-            <div key={gi} className={cn("nav-group", groupCollapsed && "group-collapsed")}>
-              {group.label && !collapsed && (
-                <button
-                  type="button"
-                  className="nav-divider"
-                  onClick={() => toggleGroup(group.label!)}
-                  aria-expanded={!groupCollapsed}
-                >
-                  <span>{t(locale, group.label)}</span>
-                  <ChevronDown className={cn("nav-divider-chevron size-3.5", groupCollapsed && "is-collapsed")} />
-                </button>
-              )}
-              {!groupCollapsed && (
-                <div className="nav-group-items">
-                  {items.map((item) => {
-                    const active = isActive(item.href);
-                    const Icon = item.icon;
-                    const label = t(locale, item.label);
-                    return (
-                      <Link
-                        key={item.href}
-                        href={item.href}
-                        prefetch={BUILT_ROUTES.has(item.href) ? undefined : false}
-                        className={cn("nav-item", active && "active")}
-                        aria-current={active ? "page" : undefined}
-                        title={label}
-                      >
-                        <Icon className="size-4" />
-                        <span className="nav-item-label">{label}</span>
-                      </Link>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
+      <NavList
+        role={role}
+        locale={locale}
+        pathname={pathname}
+        rail={rail}
+        collapsedGroups={collapsedGroups}
+        onToggleGroup={toggleGroup}
+        idPrefix="sidebar"
+        label={t(locale, "Main navigation")}
+      />
     </aside>
   );
 }

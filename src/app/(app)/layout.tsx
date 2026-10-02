@@ -11,6 +11,7 @@ import { DirtyFormProvider } from "./_shared/dirty-form";
 import { FavoriteHrefsProvider } from "./_shared/favorites-context";
 import { buildMoneyMark } from "@/lib/currency/currencies";
 import "./mockup-parity.css";
+import "./shell.css";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await requireSession();

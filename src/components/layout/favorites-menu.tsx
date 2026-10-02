@@ -38,24 +38,24 @@ export function FavoritesMenu({ locale, favorites, currentLabel }: { locale: Loc
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger className="topbar-icon-btn outline-none relative" aria-label={t(locale, "Favorites")}>
-        <Star className="size-4" fill={isFavorited ? "currentColor" : "none"} style={isFavorited ? { color: "var(--brand-orange)" } : undefined} />
+      <DropdownMenuTrigger className="topbar-icon-btn" aria-label={t(locale, "Favorites")} title={t(locale, "Favorites")}>
+        <Star className="size-4" aria-hidden fill={isFavorited ? "currentColor" : "none"} style={isFavorited ? { color: "var(--accent)" } : undefined} />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-[300px] p-0">
         <div className="flex items-center justify-between px-3 py-2.5 border-b border-line">
-          <span className="text-[13px] font-semibold">{t(locale, "Favorites")}</span>
-          <button type="button" onClick={toggleCurrent} disabled={pending} className="inline-flex items-center gap-1 text-[11.5px] text-brand-orange hover:underline disabled:opacity-50">
+          <span className="text-body font-semibold">{t(locale, "Favorites")}</span>
+          <button type="button" onClick={toggleCurrent} disabled={pending} className="inline-flex items-center gap-1 text-caption text-brand-orange hover:underline disabled:opacity-50">
             {isFavorited ? (<><X className="size-3.5" /> {t(locale, "Remove this page")}</>) : (<><Plus className="size-3.5" /> {t(locale, "Add this page")}</>)}
           </button>
         </div>
         {favorites.length === 0 ? (
-          <div className="px-3 py-6 text-center text-[12.5px] text-ink-faint">{t(locale, "No favorites yet.")}</div>
+          <div className="px-3 py-6 text-center text-body-sm text-ink-faint">{t(locale, "No favorites yet.")}</div>
         ) : (
           <div className="max-h-[340px] overflow-y-auto py-1">
             {favorites.map((f) => (
               <div key={f.id} className="group flex items-center gap-2 px-3 py-2 hover:bg-canvas">
                 <Star className="size-3.5 text-brand-orange shrink-0" fill="currentColor" />
-                <Link href={f.href} className="flex-1 min-w-0 truncate text-[13px]">{f.label}</Link>
+                <Link href={f.href} className="flex-1 min-w-0 truncate text-body">{f.label}</Link>
                 <button type="button" onClick={() => remove(f.id)} disabled={pending} className="p-1 text-ink-faint hover:text-danger shrink-0 opacity-0 group-hover:opacity-100" title={t(locale, "Remove")} aria-label={t(locale, "Remove")}>
                   <X className="size-3.5" />
                 </button>

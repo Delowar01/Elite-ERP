@@ -82,7 +82,14 @@ async function dirtyIt() {
   await qty.fill("7");
   return { locator: qty, original };
 }
-const sidebarLink = () => page.locator('.sidebar a[href="/dashboard"], a[href="/dashboard"]').first();
+// Shell navigation to the dashboard. Below 1024px there is no persistent rail (DEV-UI-01.3): the same
+// link lives in the navigation drawer, so open it first — the dirty-form guard must hold there too.
+async function sidebarLink() {
+  if (await page.locator("aside.sidebar").isVisible()) return page.locator('.sidebar a[href="/dashboard"]').first();
+  await page.click(".topbar-menu-btn");
+  await page.locator(".mobile-nav").waitFor();
+  return page.locator('.mobile-nav a[href="/dashboard"]');
+}
 
 // ---- 16: light, dark, Arabic RTL, mobile ----
 // A fresh page in the same (logged-in) context, so theme/locale switching starts from a known state
@@ -93,7 +100,7 @@ async function openDiscard() {
   await page.goto(`${BASE}/sales/quotations/new`, { waitUntil: "networkidle" });
   await dirtyIt();
   await page.waitForTimeout(350);
-  await sidebarLink().click();
+  await (await sidebarLink()).click();
   await page.waitForTimeout(600);
 }
 await openDiscard();
