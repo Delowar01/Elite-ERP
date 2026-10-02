@@ -2,6 +2,7 @@
 
 import { Fragment, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import * as DialogPrimitive from "@radix-ui/react-dialog";
 import {
   Search,
   CornerDownLeft,
@@ -14,13 +15,12 @@ import {
   Languages,
   SunMoon,
 } from "lucide-react";
-import { NAV_GROUPS } from "./nav-config";
+import { visibleNavGroups, type Role } from "./nav-config";
 import { t, type Locale } from "@/lib/i18n/dict";
 import { setLocaleAction } from "@/lib/i18n/actions";
 import { setThemeAction } from "@/lib/theme-actions";
 import type { Theme } from "@/lib/theme";
 
-type Role = "owner" | "admin" | "staff";
 
 type Command = {
   id: string;
@@ -62,10 +62,8 @@ export function CommandPalettePanel({ locale, role, onClose }: { locale: Locale;
     const actionsLabel = t(locale, "Quick Actions");
 
     // Navigation — every sidebar page the current role can see.
-    const pages: Command[] = NAV_GROUPS.flatMap((g) =>
-      g.items
-        .filter((it) => !it.roles || it.roles.includes(role))
-        .map((it) => ({ id: `nav:${it.href}`, label: t(locale, it.label), group: pagesLabel, Icon: it.icon, href: it.href })),
+    const pages: Command[] = visibleNavGroups(role).flatMap((g) =>
+      g.items.map((it) => ({ id: `nav:${it.href}`, label: t(locale, it.label), group: pagesLabel, Icon: it.icon, href: it.href })),
     );
 
     // Quick actions — create documents / master records and toggle language / appearance.
@@ -122,20 +120,17 @@ export function CommandPalettePanel({ locale, role, onClose }: { locale: Locale;
   }
 
   return (
-    <div
-      className="fixed inset-0 z-[100] flex items-start justify-center bg-black/40 backdrop-blur-sm pt-[12vh] px-4"
-      onClick={onClose}
-      role="dialog"
-      aria-modal="true"
-      aria-label={t(locale, "Command menu")}
-    >
-      <div
-        className="w-full max-w-[520px] rounded-2xl border border-line bg-surface shadow-glass overflow-hidden animate-fade-up"
-        onClick={(e) => e.stopPropagation()}
-      >
+    // Radix Dialog supplies the focus trap, focus return to the trigger, Escape and the inert page
+    // behind (DEV-UI-01.3). Mounted only while open, so `open` is constant.
+    <DialogPrimitive.Root open onOpenChange={(open) => !open && onClose()}>
+      <DialogPrimitive.Portal>
+        <DialogPrimitive.Overlay className="fixed inset-0 z-[100] bg-brand-navy-deep/40" />
+        <DialogPrimitive.Content
+          className="shell-overlay-panel fixed inset-x-4 top-[12vh] z-[100] mx-auto w-auto max-w-[520px] rounded-xl border border-line bg-surface shadow-glass overflow-hidden outline-none focus-visible:ring-2 focus-visible:ring-focus"
+        >
         <div className="px-4 pt-3 pb-2 border-b border-line">
-          <div className="text-[13px] font-semibold text-ink">{t(locale, "Command menu")}</div>
-          <div className="text-[11px] text-ink-faint">{t(locale, "Jump to a page or run a quick action")}</div>
+          <DialogPrimitive.Title className="text-body font-semibold text-ink">{t(locale, "Command menu")}</DialogPrimitive.Title>
+          <DialogPrimitive.Description className="text-caption text-ink-faint">{t(locale, "Jump to a page or run a quick action")}</DialogPrimitive.Description>
         </div>
         <div className="flex items-center gap-2 px-4 border-b border-line">
           <Search className="size-4 text-ink-faint shrink-0" />
@@ -162,21 +157,21 @@ export function CommandPalettePanel({ locale, role, onClose }: { locale: Locale;
               }
             }}
             placeholder={t(locale, "Type a command or search a page…")}
-            className="flex-1 h-12 bg-transparent outline-none text-[14px]"
+            className="shell-search-input flex-1 h-12 bg-transparent text-body-lg"
           />
         </div>
         <div className="max-h-[380px] overflow-y-auto py-2">
-          {filtered.length === 0 && <div className="px-4 py-6 text-center text-[12.5px] text-ink-faint">{t(locale, "No matches.")}</div>}
+          {filtered.length === 0 && <div className="px-4 py-6 text-center text-body-sm text-ink-faint">{t(locale, "No matches.")}</div>}
           {grouped.map((group) => (
             <Fragment key={group.group}>
-              <div className="px-4 pt-2.5 pb-1 text-[10.5px] font-semibold uppercase tracking-wide text-ink-faint">{group.group}</div>
+              <div className="px-4 pt-2.5 pb-1 text-caption font-semibold uppercase tracking-wide text-ink-faint">{group.group}</div>
               {group.items.map(({ c, index }) => (
                 <button
                   key={c.id}
                   type="button"
                   onMouseEnter={() => setActive(index)}
                   onClick={() => run(c)}
-                  className={`w-full flex items-center gap-3 px-4 py-2.5 text-start text-[13px] ${index === activeIdx ? "bg-canvas" : ""}`}
+                  className={`w-full flex items-center gap-3 px-4 py-2.5 text-start text-body ${index === activeIdx ? "bg-canvas" : ""}`}
                 >
                   <c.Icon className="size-4 text-ink-muted shrink-0" />
                   <span className="flex-1 min-w-0 truncate">{c.label}</span>
@@ -186,7 +181,8 @@ export function CommandPalettePanel({ locale, role, onClose }: { locale: Locale;
             </Fragment>
           ))}
         </div>
-      </div>
-    </div>
+        </DialogPrimitive.Content>
+      </DialogPrimitive.Portal>
+    </DialogPrimitive.Root>
   );
 }

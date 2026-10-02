@@ -5,6 +5,7 @@
  *   node tests/ui-baseline/run.mjs capture [--out=D]  build, serve a TEST-ONLY copy, capture the matrix
  *   node tests/ui-baseline/run.mjs compare A B        pixel-compare two capture directories
  *   node tests/ui-baseline/run.mjs check              capture, then compare against the committed baseline
+ *   node tests/ui-baseline/run.mjs capture-shell [--out=D]  the DEV-UI-01.3 app-shell states (shell-states.mjs)
  *
  * Flags: --skip-build (reuse .next — only when it was built from the current tree), --only=<substr>.
  *
@@ -24,6 +25,7 @@ import { setTimeout as sleep } from "node:timers/promises";
 import pg from "pg";
 import { chromium } from "playwright";
 import { BASE, FROZEN_NOW, OWNER_EMAIL, PORT, matrix } from "./config.mjs";
+import { STAFF_EMAIL, shellMatrix } from "./shell-states.mjs";
 import { IsolationError, RUN_DB, TEMPLATE_DB, adminUrl, dbUrl, describe, serverEnv } from "./isolation.mjs";
 
 const ROOT = resolve(new URL("../..", import.meta.url).pathname);
@@ -143,8 +145,48 @@ async function startServer(env) {
   process.exit(2);
 }
 
+// ------------------------------------------------------------------------------------- shell
+/** Steps for shell states (DEV-UI-01.3). Keyboard focus is reached with Tab, so :focus-visible shows. */
+const SHELL_ACTIONS = {
+  drawer: async (page) => {
+    await page.click(".topbar-menu-btn");
+    await page.locator(".mobile-nav").waitFor();
+  },
+  palette: async (page) => {
+    await page.click(".cmdk-trigger-pill");
+    await page.locator('[role="dialog"]').waitFor();
+  },
+  search: async (page, s) => {
+    await page.click(s.viewport.width >= 1024 ? "header.topbar .topbar-search" : ".topbar-search-icon");
+    await page.locator('[role="dialog"]').waitFor();
+  },
+  account: async (page, s) => {
+    if (s.viewport.width < 640) {
+      await SHELL_ACTIONS.drawer(page);
+      await page.click(".mobile-nav-utilities .topbar-profile");
+    } else await page.click(".topbar-utilities .topbar-profile");
+    await page.locator('[role="menu"]').waitFor();
+  },
+  notifications: async (page) => {
+    await page.click('.topbar-utilities [aria-haspopup="menu"]:has(.lucide-bell)');
+    await page.locator('[role="menu"]').waitFor();
+  },
+  language: async (page) => {
+    await page.locator('.topbar-lang-option[lang="en"]').focus();
+    await page.keyboard.press("Tab");
+  },
+  "focus-nav": async (page) => {
+    await page.locator('aside.sidebar a[href="/dashboard"]').focus();
+    await page.keyboard.press("Tab");
+  },
+  "focus-topbar": async (page) => {
+    await page.locator('.topbar-lang-option[lang="en"]').focus();
+    await page.keyboard.press("Shift+Tab");
+  },
+};
+
 // ------------------------------------------------------------------------------------- capture
-async function capture(outDir) {
+async function capture(outDir, shell = false) {
   if (!existsSync(PASSWORD_FILE)) {
     console.error("✗ no seeded template — run `prepare` first");
     process.exit(2);
@@ -184,8 +226,52 @@ async function capture(outDir) {
     const storageState = await loginCtx.storageState();
     await loginCtx.close();
 
+    // Shell states also need a Staff session: a Staff member is added to this run's TEST-ONLY copy
+    // (never the template), sharing the owner's synthetic password.
+    let staffState = null;
+    if (shell) {
+      const c = new pg.Client({ connectionString: env.DATABASE_URL });
+      await c.connect();
+      await c.query(
+        `insert into users (org_id, name, email, password_hash, role)
+         select org_id, 'Baseline Staff', $1, password_hash, 'staff' from users where email = $2`,
+        [STAFF_EMAIL, OWNER_EMAIL],
+      );
+      // Deterministic notification fixtures (the seed has an empty activity feed): two unread, one
+      // read, at fixed offsets from the frozen clock — synthetic text only.
+      const now = new Date(FROZEN_NOW).getTime();
+      const feed = [
+        ["created", "Project created: Riyadh Expo Stand (Fictional)", "project", 1, 3 * 24 * 3600e3],
+        ["created", "Client added: Sara Sample (Fictional)", "customer", 1, 2 * 3600e3],
+        ["created", "Invoice created: INV-0006 · Omar Example (Fictional)", null, null, 5 * 60e3],
+      ];
+      const ids = [];
+      for (const [type, description, entityType, entityId, ago] of feed) {
+        const r = await c.query(
+          `insert into activity_logs (org_id, type, description, entity_type, entity_id, user_id, user_name, created_at)
+           select org_id, $1, $2, $3, $4, id, name, $5 from users where email = $6 returning id`,
+          [type, description, entityType, entityId, new Date(now - ago), OWNER_EMAIL],
+        );
+        ids.push(r.rows[0].id);
+      }
+      await c.query(
+        `insert into notification_reads (org_id, user_id, activity_id, created_at) select org_id, id, $1, $2 from users where email = $3`,
+        [ids[0], new Date(now - 3600e3), OWNER_EMAIL],
+      );
+      await c.end();
+      const sc = await browser.newContext({ timezoneId: "UTC" });
+      const sp = await sc.newPage();
+      await sp.clock.setFixedTime(new Date(FROZEN_NOW));
+      await sp.goto(`${BASE}/login`, { waitUntil: "networkidle" });
+      await sp.fill("#email", STAFF_EMAIL);
+      await sp.fill("#password", readFileSync(PASSWORD_FILE, "utf8"));
+      await Promise.all([sp.waitForURL(`${BASE}/dashboard`, { timeout: 30000 }), sp.click('button[type="submit"]')]);
+      staffState = await sc.storageState();
+      await sc.close();
+    }
+
     const only = value("only");
-    const states = matrix().filter((s) => !only || s.id.includes(only));
+    const states = (shell ? shellMatrix() : matrix()).filter((s) => !only || s.id.includes(only));
     let n = 0;
     for (const s of states) {
       n++;
@@ -196,11 +282,12 @@ async function capture(outDir) {
         reducedMotion: "reduce",
         timezoneId: "UTC",
         locale: s.locale === "ar" ? "ar-SA" : "en-US",
-        storageState: s.route.auth === false ? undefined : storageState,
+        storageState: s.route.auth === false ? undefined : s.role === "staff" ? staffState : storageState,
       });
       await ctx.addCookies([
         { name: "locale", value: s.locale, url: BASE },
         { name: "theme", value: s.theme, url: BASE },
+        ...Object.entries(s.cookies ?? {}).map(([name, v]) => ({ name, value: v, url: BASE })),
       ]);
       const page = await ctx.newPage();
       await page.clock.setFixedTime(new Date(FROZEN_NOW));
@@ -222,12 +309,17 @@ async function capture(outDir) {
           title: document.title,
         };
       });
+      if (s.action) {
+        await SHELL_ACTIONS[s.action](page, s);
+        await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
+      }
       const file = join(outDir, `${s.id}.png`);
-      await page.screenshot({ path: file, fullPage: true, animations: "disabled", caret: "hide", scale: "css" });
+      await page.screenshot({ path: file, fullPage: !shell, animations: "disabled", caret: "hide", scale: "css" });
       const png = readFileSync(file);
       manifest.states[s.id] = {
         route: s.route.path,
         area: s.route.area,
+        ...(shell ? { action: s.action, role: s.role, cookies: s.cookies } : {}),
         locale: s.locale,
         theme: s.theme,
         viewport: `${s.viewport.width}x${s.viewport.height}`,
@@ -332,13 +424,14 @@ async function compare(a, b) {
 try {
   if (cmd === "prepare") await prepare();
   else if (cmd === "capture") await capture(resolve(value("out") ?? join(WORK, "captures/latest")));
+  else if (cmd === "capture-shell") await capture(resolve(value("out") ?? join(WORK, "captures/shell-latest")), true);
   else if (cmd === "compare") process.exit((await compare(resolve(positional[0]), resolve(positional[1]))) === 0 ? 0 : 1);
   else if (cmd === "check") {
     const out = join(WORK, "captures/check");
     await capture(out);
     process.exit((await compare(BASELINE_DIR, out)) === 0 ? 0 : 1);
   } else {
-    console.error("usage: run.mjs prepare | capture [--out=DIR] | compare A B | check   [--skip-build] [--only=substr]");
+    console.error("usage: run.mjs prepare | capture [--out=DIR] | capture-shell [--out=DIR] | compare A B | check   [--skip-build] [--only=substr]");
     process.exit(2);
   }
 } catch (e) {
