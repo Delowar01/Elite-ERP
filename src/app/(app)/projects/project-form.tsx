@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { FormField } from "@/components/ui/form-field";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { t, type Locale } from "@/lib/i18n/dict";
+import { statusLabel } from "@/lib/status-registry";
 import type { ActionState } from "./actions";
 
 const STATUSES = ["planned", "active", "on_hold", "completed"] as const;
@@ -54,7 +55,7 @@ export function ProjectForm({
             <SelectContent>
               {STATUSES.map((s) => (
                 <SelectItem key={s} value={s}>
-                  {t(locale, s)}
+                  {statusLabel(locale, "project", s)}
                 </SelectItem>
               ))}
             </SelectContent>

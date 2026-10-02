@@ -1,6 +1,7 @@
 "use client";
 
 import { toast } from "sonner";
+import { statusLabel } from "@/lib/status-registry";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { t, type Locale } from "@/lib/i18n/dict";
 import { useConfirm } from "../../_shared/confirm-provider";
@@ -19,7 +20,7 @@ export function DcDetailActions({ locale, dcId, dcNumber, status }: { locale: Lo
       entityType: "Delivery Challan",
       entityNumber: dcNumber,
       description: "Changing the status moves this delivery challan forward in its workflow.",
-      details: [{ label: "Status", value: t(locale, value) }],
+      details: [{ label: "Status", value: statusLabel(locale, "delivery_challan", value) }],
       onConfirm: async () => {
         const result = await updateDeliveryChallanStatusAction(dcId, value);
         if (result?.error) return result;
@@ -37,7 +38,7 @@ export function DcDetailActions({ locale, dcId, dcNumber, status }: { locale: Lo
         <SelectContent>
           {STATUSES.map((s) => (
             <SelectItem key={s} value={s}>
-              {t(locale, s)}
+              {statusLabel(locale, "delivery_challan", s)}
             </SelectItem>
           ))}
         </SelectContent>

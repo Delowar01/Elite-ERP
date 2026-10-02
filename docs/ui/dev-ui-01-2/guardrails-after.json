@@ -1,0 +1,4542 @@
+{
+  "batch": "DEV-UI-01.0",
+  "mode": "REPORT-ONLY — never fails",
+  "scanned": {
+    "root": "src/",
+    "files": 485,
+    "extensions": [
+      ".ts",
+      ".tsx",
+      ".css"
+    ]
+  },
+  "typeScalePx": [
+    11,
+    12,
+    13,
+    14,
+    16,
+    18,
+    20,
+    24,
+    30
+  ],
+  "G1_physicalDirection": {
+    "total": 204,
+    "byKind": {
+      "tailwind": 162,
+      "css": 38,
+      "inline-style": 4
+    },
+    "byToken": {
+      "text-right": 133,
+      "margin-left": 9,
+      "margin-right": 8,
+      "text-left": 7,
+      "padding-left": 6,
+      "border-left": 4,
+      "padding-right": 4,
+      "border-right": 3,
+      "left-3": 3,
+      "pl-9": 3,
+      "right": 3,
+      "borderLeft": 2,
+      "left": 2,
+      "ml-auto": 2,
+      "mr-auto": 2,
+      "right-4": 2,
+      "border-l": 1,
+      "border-r": 1,
+      "left-0": 1,
+      "left-1/2": 1,
+      "left-2.5": 1,
+      "mr-2": 1,
+      "paddingLeft": 1,
+      "pl-8": 1,
+      "pr-3": 1,
+      "right-0": 1,
+      "right-3": 1
+    },
+    "byFile": {
+      "src/app/(app)/mockup-parity.css": 36,
+      "src/app/(app)/settings/presets/numbering-panel.tsx": 13,
+      "src/app/(app)/purchasing/orders/[id]/page.tsx": 8,
+      "src/app/(app)/sales/_shared/preview-dialog.tsx": 8,
+      "src/app/(app)/sales/invoices/[id]/page.tsx": 8,
+      "src/app/(app)/sales/orders/[id]/page.tsx": 8,
+      "src/app/(app)/sales/proforma/[id]/page.tsx": 8,
+      "src/app/(app)/sales/quotations/[id]/page.tsx": 8,
+      "src/app/(app)/hr/payroll/payroll-client.tsx": 6,
+      "src/app/(app)/purchasing/debit-notes/[id]/page.tsx": 6,
+      "src/app/(app)/sales/credit-notes/[id]/page.tsx": 6,
+      "src/app/(app)/inventory/products/page.tsx": 5,
+      "src/components/ui/drawer.tsx": 5,
+      "src/app/(app)/projects/[id]/page.tsx": 4,
+      "src/app/(app)/settings/presets/bundles-panel.tsx": 3,
+      "src/app/(app)/settings/presets/simple-preset-panel.tsx": 3,
+      "src/components/ui/select.tsx": 3,
+      "src/app/(app)/clients/clients-toolbar.tsx": 2,
+      "src/app/(app)/clients/recycle-bin/page.tsx": 2,
+      "src/app/(app)/dashboard/page.tsx": 2,
+      "src/app/(app)/finance/journal/journal-form.tsx": 2,
+      "src/app/(app)/finance/payments/payments-list-client.tsx": 2,
+      "src/app/(app)/hr/payroll/page.tsx": 2,
+      "src/app/(app)/inventory/products/products-toolbar.tsx": 2,
+      "src/app/(app)/inventory/products/recycle-bin/page.tsx": 2,
+      "src/app/(app)/projects/projects-list-client.tsx": 2,
+      "src/app/(app)/purchasing/debit-notes/dn-list-client.tsx": 2,
+      "src/app/(app)/purchasing/orders/po-list-client.tsx": 2,
+      "src/app/(app)/purchasing/vendors/recycle-bin/page.tsx": 2,
+      "src/app/(app)/purchasing/vendors/vendors-toolbar.tsx": 2,
+      "src/app/(app)/sales/credit-notes/cn-list-client.tsx": 2,
+      "src/app/(app)/sales/delivery-challans/[id]/page.tsx": 2,
+      "src/app/(app)/sales/invoices/invoices-list-client.tsx": 2,
+      "src/app/(app)/sales/orders/orders-list-client.tsx": 2,
+      "src/app/(app)/sales/proforma/proforma-list-client.tsx": 2,
+      "src/app/(app)/sales/quotations/quotations-list-client.tsx": 2,
+      "src/app/(app)/settings/organization/company-panels.tsx": 2,
+      "src/app/(app)/settings/presets/print-layout-panel.tsx": 2,
+      "src/app/(app)/settings/security/security-client.tsx": 2,
+      "src/app/print/print.css": 2,
+      "src/components/layout/app-shell.tsx": 2,
+      "src/components/ui/dialog.tsx": 2,
+      "src/components/ui/settings-nav.tsx": 2,
+      "src/app/(app)/clients/page.tsx": 1,
+      "src/app/(app)/hr/attendance/page.tsx": 1,
+      "src/app/(app)/hr/leave/leave-client.tsx": 1,
+      "src/app/(app)/purchasing/vendors/page.tsx": 1,
+      "src/app/(app)/recycle-bin/recycle-bin-client.tsx": 1,
+      "src/app/(app)/sales/_shared/client-create-dialog.tsx": 1,
+      "src/app/(app)/sales/_shared/item-entry-cell.tsx": 1,
+      "src/app/(app)/sales/_shared/terms-editor.tsx": 1,
+      "src/app/(app)/sales/_shared/vendor-create-dialog.tsx": 1,
+      "src/app/(app)/settings/compliance/compliance-client.tsx": 1,
+      "src/app/(app)/settings/presets/note-templates-panel.tsx": 1,
+      "src/app/(app)/settings/presets/terms-groups-panel.tsx": 1,
+      "src/app/(app)/settings/team/team-panel.tsx": 1,
+      "src/components/client/address-fields.tsx": 1
+    },
+    "hits": [
+      {
+        "file": "src/app/(app)/clients/clients-toolbar.tsx",
+        "line": 30,
+        "kind": "tailwind",
+        "token": "left-3"
+      },
+      {
+        "file": "src/app/(app)/clients/clients-toolbar.tsx",
+        "line": 36,
+        "kind": "tailwind",
+        "token": "pl-9"
+      },
+      {
+        "file": "src/app/(app)/clients/page.tsx",
+        "line": 103,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/clients/recycle-bin/page.tsx",
+        "line": 45,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/clients/recycle-bin/page.tsx",
+        "line": 53,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/dashboard/page.tsx",
+        "line": 129,
+        "kind": "inline-style",
+        "token": "borderLeft"
+      },
+      {
+        "file": "src/app/(app)/dashboard/page.tsx",
+        "line": 129,
+        "kind": "inline-style",
+        "token": "paddingLeft"
+      },
+      {
+        "file": "src/app/(app)/finance/journal/journal-form.tsx",
+        "line": 162,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/finance/journal/journal-form.tsx",
+        "line": 171,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/finance/payments/payments-list-client.tsx",
+        "line": 116,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/finance/payments/payments-list-client.tsx",
+        "line": 144,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/hr/attendance/page.tsx",
+        "line": 82,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/hr/leave/leave-client.tsx",
+        "line": 117,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/hr/payroll/page.tsx",
+        "line": 153,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/hr/payroll/page.tsx",
+        "line": 165,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/hr/payroll/payroll-client.tsx",
+        "line": 60,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/hr/payroll/payroll-client.tsx",
+        "line": 61,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/hr/payroll/payroll-client.tsx",
+        "line": 62,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/hr/payroll/payroll-client.tsx",
+        "line": 74,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/hr/payroll/payroll-client.tsx",
+        "line": 75,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/hr/payroll/payroll-client.tsx",
+        "line": 76,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/inventory/products/page.tsx",
+        "line": 73,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/inventory/products/page.tsx",
+        "line": 74,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/inventory/products/page.tsx",
+        "line": 90,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/inventory/products/page.tsx",
+        "line": 91,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/inventory/products/page.tsx",
+        "line": 100,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/inventory/products/products-toolbar.tsx",
+        "line": 37,
+        "kind": "tailwind",
+        "token": "left-3"
+      },
+      {
+        "file": "src/app/(app)/inventory/products/products-toolbar.tsx",
+        "line": 43,
+        "kind": "tailwind",
+        "token": "pl-9"
+      },
+      {
+        "file": "src/app/(app)/inventory/products/recycle-bin/page.tsx",
+        "line": 45,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/inventory/products/recycle-bin/page.tsx",
+        "line": 53,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 114,
+        "kind": "css",
+        "token": "padding-left"
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 114,
+        "kind": "css",
+        "token": "padding-right"
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 221,
+        "kind": "css",
+        "token": "right"
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 225,
+        "kind": "css",
+        "token": "right"
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 225,
+        "kind": "css",
+        "token": "left"
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 314,
+        "kind": "css",
+        "token": "margin-left"
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 316,
+        "kind": "css",
+        "token": "margin-left"
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 316,
+        "kind": "css",
+        "token": "margin-right"
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 350,
+        "kind": "css",
+        "token": "margin-left"
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 352,
+        "kind": "css",
+        "token": "margin-left"
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 352,
+        "kind": "css",
+        "token": "margin-right"
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 364,
+        "kind": "css",
+        "token": "border-right"
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 442,
+        "kind": "css",
+        "token": "right"
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 449,
+        "kind": "css",
+        "token": "padding-left"
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 449,
+        "kind": "css",
+        "token": "border-left"
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 464,
+        "kind": "css",
+        "token": "padding-left"
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 464,
+        "kind": "css",
+        "token": "padding-right"
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 464,
+        "kind": "css",
+        "token": "border-left"
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 464,
+        "kind": "css",
+        "token": "border-right"
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 470,
+        "kind": "css",
+        "token": "margin-left"
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 474,
+        "kind": "css",
+        "token": "margin-left"
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 474,
+        "kind": "css",
+        "token": "margin-right"
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 484,
+        "kind": "css",
+        "token": "padding-left"
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 484,
+        "kind": "css",
+        "token": "padding-right"
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 519,
+        "kind": "css",
+        "token": "margin-left"
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 525,
+        "kind": "css",
+        "token": "padding-left"
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 525,
+        "kind": "css",
+        "token": "border-left"
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 533,
+        "kind": "css",
+        "token": "margin-left"
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 533,
+        "kind": "css",
+        "token": "margin-right"
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 535,
+        "kind": "css",
+        "token": "padding-left"
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 535,
+        "kind": "css",
+        "token": "padding-right"
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 535,
+        "kind": "css",
+        "token": "border-left"
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 535,
+        "kind": "css",
+        "token": "border-right"
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 687,
+        "kind": "css",
+        "token": "margin-left"
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 697,
+        "kind": "css",
+        "token": "margin-right"
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 707,
+        "kind": "css",
+        "token": "margin-right"
+      },
+      {
+        "file": "src/app/(app)/projects/[id]/page.tsx",
+        "line": 205,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/projects/[id]/page.tsx",
+        "line": 217,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/projects/[id]/page.tsx",
+        "line": 238,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/projects/[id]/page.tsx",
+        "line": 252,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/projects/projects-list-client.tsx",
+        "line": 79,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/projects/projects-list-client.tsx",
+        "line": 98,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/purchasing/debit-notes/[id]/page.tsx",
+        "line": 102,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/purchasing/debit-notes/[id]/page.tsx",
+        "line": 103,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/purchasing/debit-notes/[id]/page.tsx",
+        "line": 104,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/purchasing/debit-notes/[id]/page.tsx",
+        "line": 112,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/purchasing/debit-notes/[id]/page.tsx",
+        "line": 113,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/purchasing/debit-notes/[id]/page.tsx",
+        "line": 114,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/purchasing/debit-notes/dn-list-client.tsx",
+        "line": 121,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/purchasing/debit-notes/dn-list-client.tsx",
+        "line": 153,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/purchasing/orders/[id]/page.tsx",
+        "line": 121,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/purchasing/orders/[id]/page.tsx",
+        "line": 122,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/purchasing/orders/[id]/page.tsx",
+        "line": 123,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/purchasing/orders/[id]/page.tsx",
+        "line": 124,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/purchasing/orders/[id]/page.tsx",
+        "line": 132,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/purchasing/orders/[id]/page.tsx",
+        "line": 133,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/purchasing/orders/[id]/page.tsx",
+        "line": 134,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/purchasing/orders/[id]/page.tsx",
+        "line": 135,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/purchasing/orders/po-list-client.tsx",
+        "line": 116,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/purchasing/orders/po-list-client.tsx",
+        "line": 157,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/purchasing/vendors/page.tsx",
+        "line": 91,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/purchasing/vendors/recycle-bin/page.tsx",
+        "line": 45,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/purchasing/vendors/recycle-bin/page.tsx",
+        "line": 53,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/purchasing/vendors/vendors-toolbar.tsx",
+        "line": 26,
+        "kind": "tailwind",
+        "token": "left-3"
+      },
+      {
+        "file": "src/app/(app)/purchasing/vendors/vendors-toolbar.tsx",
+        "line": 32,
+        "kind": "tailwind",
+        "token": "pl-9"
+      },
+      {
+        "file": "src/app/(app)/recycle-bin/recycle-bin-client.tsx",
+        "line": 103,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/sales/_shared/client-create-dialog.tsx",
+        "line": 75,
+        "kind": "tailwind",
+        "token": "mr-auto"
+      },
+      {
+        "file": "src/app/(app)/sales/_shared/item-entry-cell.tsx",
+        "line": 156,
+        "kind": "inline-style",
+        "token": "left"
+      },
+      {
+        "file": "src/app/(app)/sales/_shared/preview-dialog.tsx",
+        "line": 70,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/sales/_shared/preview-dialog.tsx",
+        "line": 85,
+        "kind": "tailwind",
+        "token": "text-left"
+      },
+      {
+        "file": "src/app/(app)/sales/_shared/preview-dialog.tsx",
+        "line": 87,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/sales/_shared/preview-dialog.tsx",
+        "line": 88,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/sales/_shared/preview-dialog.tsx",
+        "line": 89,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/sales/_shared/preview-dialog.tsx",
+        "line": 99,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/sales/_shared/preview-dialog.tsx",
+        "line": 100,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/sales/_shared/preview-dialog.tsx",
+        "line": 101,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/sales/_shared/terms-editor.tsx",
+        "line": 41,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/sales/_shared/vendor-create-dialog.tsx",
+        "line": 75,
+        "kind": "tailwind",
+        "token": "mr-auto"
+      },
+      {
+        "file": "src/app/(app)/sales/credit-notes/[id]/page.tsx",
+        "line": 102,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/sales/credit-notes/[id]/page.tsx",
+        "line": 103,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/sales/credit-notes/[id]/page.tsx",
+        "line": 104,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/sales/credit-notes/[id]/page.tsx",
+        "line": 112,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/sales/credit-notes/[id]/page.tsx",
+        "line": 113,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/sales/credit-notes/[id]/page.tsx",
+        "line": 114,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/sales/credit-notes/cn-list-client.tsx",
+        "line": 121,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/sales/credit-notes/cn-list-client.tsx",
+        "line": 153,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/sales/delivery-challans/[id]/page.tsx",
+        "line": 94,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/sales/delivery-challans/[id]/page.tsx",
+        "line": 102,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/sales/invoices/[id]/page.tsx",
+        "line": 199,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/sales/invoices/[id]/page.tsx",
+        "line": 200,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/sales/invoices/[id]/page.tsx",
+        "line": 201,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/sales/invoices/[id]/page.tsx",
+        "line": 202,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/sales/invoices/[id]/page.tsx",
+        "line": 210,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/sales/invoices/[id]/page.tsx",
+        "line": 211,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/sales/invoices/[id]/page.tsx",
+        "line": 212,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/sales/invoices/[id]/page.tsx",
+        "line": 213,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/sales/invoices/invoices-list-client.tsx",
+        "line": 116,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/sales/invoices/invoices-list-client.tsx",
+        "line": 158,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/sales/orders/[id]/page.tsx",
+        "line": 110,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/sales/orders/[id]/page.tsx",
+        "line": 111,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/sales/orders/[id]/page.tsx",
+        "line": 112,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/sales/orders/[id]/page.tsx",
+        "line": 113,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/sales/orders/[id]/page.tsx",
+        "line": 121,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/sales/orders/[id]/page.tsx",
+        "line": 122,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/sales/orders/[id]/page.tsx",
+        "line": 123,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/sales/orders/[id]/page.tsx",
+        "line": 124,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/sales/orders/orders-list-client.tsx",
+        "line": 118,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/sales/orders/orders-list-client.tsx",
+        "line": 159,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/sales/proforma/[id]/page.tsx",
+        "line": 201,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/sales/proforma/[id]/page.tsx",
+        "line": 202,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/sales/proforma/[id]/page.tsx",
+        "line": 203,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/sales/proforma/[id]/page.tsx",
+        "line": 204,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/sales/proforma/[id]/page.tsx",
+        "line": 212,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/sales/proforma/[id]/page.tsx",
+        "line": 213,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/sales/proforma/[id]/page.tsx",
+        "line": 214,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/sales/proforma/[id]/page.tsx",
+        "line": 215,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/sales/proforma/proforma-list-client.tsx",
+        "line": 116,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/sales/proforma/proforma-list-client.tsx",
+        "line": 157,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/sales/quotations/[id]/page.tsx",
+        "line": 96,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/sales/quotations/[id]/page.tsx",
+        "line": 97,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/sales/quotations/[id]/page.tsx",
+        "line": 98,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/sales/quotations/[id]/page.tsx",
+        "line": 99,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/sales/quotations/[id]/page.tsx",
+        "line": 107,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/sales/quotations/[id]/page.tsx",
+        "line": 108,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/sales/quotations/[id]/page.tsx",
+        "line": 109,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/sales/quotations/[id]/page.tsx",
+        "line": 110,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/sales/quotations/quotations-list-client.tsx",
+        "line": 124,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/sales/quotations/quotations-list-client.tsx",
+        "line": 166,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/settings/compliance/compliance-client.tsx",
+        "line": 297,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/settings/organization/company-panels.tsx",
+        "line": 459,
+        "kind": "tailwind",
+        "token": "text-left"
+      },
+      {
+        "file": "src/app/(app)/settings/organization/company-panels.tsx",
+        "line": 461,
+        "kind": "tailwind",
+        "token": "right-3"
+      },
+      {
+        "file": "src/app/(app)/settings/presets/bundles-panel.tsx",
+        "line": 117,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/settings/presets/bundles-panel.tsx",
+        "line": 125,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/settings/presets/bundles-panel.tsx",
+        "line": 126,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/settings/presets/note-templates-panel.tsx",
+        "line": 114,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/settings/presets/numbering-panel.tsx",
+        "line": 71,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/settings/presets/numbering-panel.tsx",
+        "line": 72,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/settings/presets/numbering-panel.tsx",
+        "line": 92,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/settings/presets/numbering-panel.tsx",
+        "line": 97,
+        "kind": "tailwind",
+        "token": "ml-auto"
+      },
+      {
+        "file": "src/app/(app)/settings/presets/numbering-panel.tsx",
+        "line": 97,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/settings/presets/numbering-panel.tsx",
+        "line": 100,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/settings/presets/numbering-panel.tsx",
+        "line": 105,
+        "kind": "tailwind",
+        "token": "ml-auto"
+      },
+      {
+        "file": "src/app/(app)/settings/presets/numbering-panel.tsx",
+        "line": 105,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/settings/presets/numbering-panel.tsx",
+        "line": 108,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/settings/presets/numbering-panel.tsx",
+        "line": 121,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/settings/presets/numbering-panel.tsx",
+        "line": 122,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/settings/presets/numbering-panel.tsx",
+        "line": 123,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/settings/presets/numbering-panel.tsx",
+        "line": 124,
+        "kind": "tailwind",
+        "token": "mr-2"
+      },
+      {
+        "file": "src/app/(app)/settings/presets/print-layout-panel.tsx",
+        "line": 100,
+        "kind": "tailwind",
+        "token": "text-left"
+      },
+      {
+        "file": "src/app/(app)/settings/presets/print-layout-panel.tsx",
+        "line": 111,
+        "kind": "tailwind",
+        "token": "text-left"
+      },
+      {
+        "file": "src/app/(app)/settings/presets/simple-preset-panel.tsx",
+        "line": 79,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/settings/presets/simple-preset-panel.tsx",
+        "line": 87,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/settings/presets/simple-preset-panel.tsx",
+        "line": 88,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/settings/presets/terms-groups-panel.tsx",
+        "line": 113,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/settings/security/security-client.tsx",
+        "line": 267,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/(app)/settings/security/security-client.tsx",
+        "line": 151,
+        "kind": "inline-style",
+        "token": "borderLeft"
+      },
+      {
+        "file": "src/app/(app)/settings/team/team-panel.tsx",
+        "line": 121,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/app/print/print.css",
+        "line": 47,
+        "kind": "css",
+        "token": "margin-right"
+      },
+      {
+        "file": "src/app/print/print.css",
+        "line": 127,
+        "kind": "css",
+        "token": "margin-right"
+      },
+      {
+        "file": "src/components/client/address-fields.tsx",
+        "line": 156,
+        "kind": "tailwind",
+        "token": "text-left"
+      },
+      {
+        "file": "src/components/layout/app-shell.tsx",
+        "line": 128,
+        "kind": "tailwind",
+        "token": "text-right"
+      },
+      {
+        "file": "src/components/layout/app-shell.tsx",
+        "line": 128,
+        "kind": "tailwind",
+        "token": "text-left"
+      },
+      {
+        "file": "src/components/ui/dialog.tsx",
+        "line": 34,
+        "kind": "tailwind",
+        "token": "left-1/2"
+      },
+      {
+        "file": "src/components/ui/dialog.tsx",
+        "line": 40,
+        "kind": "tailwind",
+        "token": "right-4"
+      },
+      {
+        "file": "src/components/ui/drawer.tsx",
+        "line": 26,
+        "kind": "tailwind",
+        "token": "right-0"
+      },
+      {
+        "file": "src/components/ui/drawer.tsx",
+        "line": 26,
+        "kind": "tailwind",
+        "token": "border-l"
+      },
+      {
+        "file": "src/components/ui/drawer.tsx",
+        "line": 26,
+        "kind": "tailwind",
+        "token": "left-0"
+      },
+      {
+        "file": "src/components/ui/drawer.tsx",
+        "line": 26,
+        "kind": "tailwind",
+        "token": "border-r"
+      },
+      {
+        "file": "src/components/ui/drawer.tsx",
+        "line": 32,
+        "kind": "tailwind",
+        "token": "right-4"
+      },
+      {
+        "file": "src/components/ui/select.tsx",
+        "line": 64,
+        "kind": "tailwind",
+        "token": "pl-8"
+      },
+      {
+        "file": "src/components/ui/select.tsx",
+        "line": 64,
+        "kind": "tailwind",
+        "token": "pr-3"
+      },
+      {
+        "file": "src/components/ui/select.tsx",
+        "line": 69,
+        "kind": "tailwind",
+        "token": "left-2.5"
+      },
+      {
+        "file": "src/components/ui/settings-nav.tsx",
+        "line": 20,
+        "kind": "tailwind",
+        "token": "text-left"
+      },
+      {
+        "file": "src/components/ui/settings-nav.tsx",
+        "line": 20,
+        "kind": "tailwind",
+        "token": "text-right"
+      }
+    ]
+  },
+  "G2_fontSizeOffScale": {
+    "total": 358,
+    "screen": 338,
+    "print": 20,
+    "byPx": {
+      "8": 4,
+      "9": 3,
+      "10": 9,
+      "15": 16,
+      "17": 19,
+      "19": 14,
+      "21": 1,
+      "22": 4,
+      "25": 1,
+      "64": 1,
+      "12.5": 135,
+      "11.5": 93,
+      "10.5": 31,
+      "13.5": 16,
+      "9.5": 4,
+      "12.8": 2,
+      "14.5": 2,
+      "6.5": 1,
+      "7.5": 1,
+      "8.5": 1
+    },
+    "byFile": {
+      "src/app/(app)/mockup-parity.css": 73,
+      "src/app/(app)/settings/organization/company-panels.tsx": 26,
+      "src/app/print/print.css": 19,
+      "src/app/(app)/documents/_workspace/import-v2-dialog.tsx": 13,
+      "src/app/(app)/finance/statements/statement-view.tsx": 12,
+      "src/app/(app)/settings/presets/print-layout-panel.tsx": 10,
+      "src/app/(app)/settings/presets/seal-signature-panel.tsx": 10,
+      "src/app/(app)/settings/security/security-client.tsx": 10,
+      "src/app/(app)/sales/_shared/terms-editor.tsx": 8,
+      "src/app/(app)/projects/[id]/cost-control.tsx": 6,
+      "src/app/(app)/projects/[id]/page.tsx": 6,
+      "src/app/(app)/sales/_shared/configure-columns-dialog.tsx": 6,
+      "src/app/(app)/hr/payroll/page.tsx": 5,
+      "src/app/(app)/settings/compliance/compliance-client.tsx": 5,
+      "src/app/(app)/finance/_shared/payment-history.tsx": 4,
+      "src/app/(app)/hr/employees/employees-client.tsx": 4,
+      "src/app/(app)/sales/_shared/terms-block.tsx": 4,
+      "src/app/(app)/settings/organization/reference-panels.tsx": 4,
+      "src/app/(app)/settings/organization/zatca-panel.tsx": 4,
+      "src/app/(app)/settings/presets/exchange-rates-panel.tsx": 4,
+      "src/components/layout/record-search.tsx": 4,
+      "src/app/(app)/finance/bank-accounts/bank-account-form-dialog.tsx": 3,
+      "src/app/(app)/finance/bank-accounts/page.tsx": 3,
+      "src/app/(app)/finance/reports/reports-workspace.tsx": 3,
+      "src/app/(app)/purchasing/debit-notes/dn-list-client.tsx": 3,
+      "src/app/(app)/purchasing/orders/po-list-client.tsx": 3,
+      "src/app/(app)/recycle-bin/recycle-bin-client.tsx": 3,
+      "src/app/(app)/sales/_shared/preview-dialog.tsx": 3,
+      "src/app/(app)/sales/credit-notes/cn-list-client.tsx": 3,
+      "src/app/(app)/sales/delivery-challans/dc-list-client.tsx": 3,
+      "src/app/(app)/sales/invoices/invoices-list-client.tsx": 3,
+      "src/app/(app)/sales/orders/orders-list-client.tsx": 3,
+      "src/app/(app)/sales/proforma/proforma-list-client.tsx": 3,
+      "src/app/(app)/sales/quotations/quotations-list-client.tsx": 3,
+      "src/app/(app)/settings/organization/number-format-form.tsx": 3,
+      "src/app/(auth)/register/register-form.tsx": 3,
+      "src/components/client/address-fields.tsx": 3,
+      "src/components/layout/notifications-menu.tsx": 3,
+      "src/components/ui/searchable-select.tsx": 3,
+      "src/app/(app)/_shared/confirm-provider.tsx": 2,
+      "src/app/(app)/dashboard/base-currency-notice.tsx": 2,
+      "src/app/(app)/finance/_shared/account-ledger-view.tsx": 2,
+      "src/app/(app)/projects/projects-list-client.tsx": 2,
+      "src/app/(app)/sales/_shared/number-settings-dialog.tsx": 2,
+      "src/app/(app)/sales/_shared/party-card.tsx": 2,
+      "src/app/(app)/sales/_shared/pill-settings-dialog.tsx": 2,
+      "src/app/(app)/sales/invoices/apply-advance-dialog.tsx": 2,
+      "src/app/(app)/settings/organization/finance-panel.tsx": 2,
+      "src/app/(app)/settings/organization/vat-settings-form.tsx": 2,
+      "src/app/(app)/settings/presets/default-bank-accounts-panel.tsx": 2,
+      "src/app/(auth)/login/login-form.tsx": 2,
+      "src/components/layout/command-palette.tsx": 2,
+      "src/components/layout/favorites-menu.tsx": 2,
+      "src/components/ui/select.tsx": 2,
+      "src/app/(app)/clients/client-form.tsx": 1,
+      "src/app/(app)/dashboard/customize-layout-dialog.tsx": 1,
+      "src/app/(app)/dashboard/page.tsx": 1,
+      "src/app/(app)/documents/_workspace/import-dialog.tsx": 1,
+      "src/app/(app)/documents/_workspace/list-workspace-toolbar.tsx": 1,
+      "src/app/(app)/error.tsx": 1,
+      "src/app/(app)/finance/journal/page.tsx": 1,
+      "src/app/(app)/finance/payments/payments-list-client.tsx": 1,
+      "src/app/(app)/finance/statements/page.tsx": 1,
+      "src/app/(app)/hr/departments/page.tsx": 1,
+      "src/app/(app)/hr/employees/employee-form.tsx": 1,
+      "src/app/(app)/inventory/products/product-form.tsx": 1,
+      "src/app/(app)/not-found.tsx": 1,
+      "src/app/(app)/projects/new/page.tsx": 1,
+      "src/app/(app)/projects/project-form.tsx": 1,
+      "src/app/(app)/purchasing/debit-notes/dn-form.tsx": 1,
+      "src/app/(app)/purchasing/vendors/vendor-form.tsx": 1,
+      "src/app/(app)/sales/_shared/bank-account-blocks.tsx": 1,
+      "src/app/(app)/sales/_shared/bank-accounts-field.tsx": 1,
+      "src/app/(app)/sales/_shared/client-create-dialog.tsx": 1,
+      "src/app/(app)/sales/_shared/date-settings-dialog.tsx": 1,
+      "src/app/(app)/sales/_shared/item-entry-cell.tsx": 1,
+      "src/app/(app)/sales/_shared/list-empty-state.tsx": 1,
+      "src/app/(app)/sales/_shared/seal-signature.tsx": 1,
+      "src/app/(app)/sales/_shared/stat-row.tsx": 1,
+      "src/app/(app)/sales/_shared/validity-days-dialog.tsx": 1,
+      "src/app/(app)/sales/_shared/vendor-create-dialog.tsx": 1,
+      "src/app/(app)/sales/credit-notes/cn-form.tsx": 1,
+      "src/app/(app)/sales/proforma/[id]/page.tsx": 1,
+      "src/app/(app)/settings/team/team-panel.tsx": 1,
+      "src/app/not-found.tsx": 1,
+      "src/app/print/[type]/[id]/page.tsx": 1,
+      "src/components/ui/dropdown-menu.tsx": 1,
+      "src/components/ui/filter-panel.tsx": 1,
+      "src/components/ui/label.tsx": 1,
+      "src/components/ui/summary-card.tsx": 1,
+      "src/components/ui/textarea.tsx": 1
+    },
+    "unresolved": [
+      {
+        "file": "src/app/globals.css",
+        "line": 351,
+        "value": "var(--text-body-lg)"
+      },
+      {
+        "file": "src/app/globals.css",
+        "line": 405,
+        "value": "var(--text-caption)"
+      }
+    ],
+    "hits": [
+      {
+        "file": "src/app/(app)/_shared/confirm-provider.tsx",
+        "line": 186,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/_shared/confirm-provider.tsx",
+        "line": 197,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/clients/client-form.tsx",
+        "line": 114,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/dashboard/base-currency-notice.tsx",
+        "line": 46,
+        "scope": "screen",
+        "value": "text-[13.5px]",
+        "px": 13.5
+      },
+      {
+        "file": "src/app/(app)/dashboard/base-currency-notice.tsx",
+        "line": 49,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/dashboard/customize-layout-dialog.tsx",
+        "line": 88,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/dashboard/page.tsx",
+        "line": 300,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/documents/_workspace/import-dialog.tsx",
+        "line": 133,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/documents/_workspace/import-v2-dialog.tsx",
+        "line": 191,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/documents/_workspace/import-v2-dialog.tsx",
+        "line": 213,
+        "scope": "screen",
+        "value": "text-[11.5px]",
+        "px": 11.5
+      },
+      {
+        "file": "src/app/(app)/documents/_workspace/import-v2-dialog.tsx",
+        "line": 224,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/documents/_workspace/import-v2-dialog.tsx",
+        "line": 277,
+        "scope": "screen",
+        "value": "text-[11.5px]",
+        "px": 11.5
+      },
+      {
+        "file": "src/app/(app)/documents/_workspace/import-v2-dialog.tsx",
+        "line": 316,
+        "scope": "screen",
+        "value": "text-[10.5px]",
+        "px": 10.5
+      },
+      {
+        "file": "src/app/(app)/documents/_workspace/import-v2-dialog.tsx",
+        "line": 317,
+        "scope": "screen",
+        "value": "text-[17px]",
+        "px": 17
+      },
+      {
+        "file": "src/app/(app)/documents/_workspace/import-v2-dialog.tsx",
+        "line": 330,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/documents/_workspace/import-v2-dialog.tsx",
+        "line": 343,
+        "scope": "screen",
+        "value": "text-[11.5px]",
+        "px": 11.5
+      },
+      {
+        "file": "src/app/(app)/documents/_workspace/import-v2-dialog.tsx",
+        "line": 413,
+        "scope": "screen",
+        "value": "text-[10.5px]",
+        "px": 10.5
+      },
+      {
+        "file": "src/app/(app)/documents/_workspace/import-v2-dialog.tsx",
+        "line": 414,
+        "scope": "screen",
+        "value": "text-[17px]",
+        "px": 17
+      },
+      {
+        "file": "src/app/(app)/documents/_workspace/import-v2-dialog.tsx",
+        "line": 418,
+        "scope": "screen",
+        "value": "text-[11.5px]",
+        "px": 11.5
+      },
+      {
+        "file": "src/app/(app)/documents/_workspace/import-v2-dialog.tsx",
+        "line": 505,
+        "scope": "screen",
+        "value": "text-[10.5px]",
+        "px": 10.5
+      },
+      {
+        "file": "src/app/(app)/documents/_workspace/import-v2-dialog.tsx",
+        "line": 506,
+        "scope": "screen",
+        "value": "text-[17px]",
+        "px": 17
+      },
+      {
+        "file": "src/app/(app)/documents/_workspace/list-workspace-toolbar.tsx",
+        "line": 190,
+        "scope": "screen",
+        "value": "text-[11.5px]",
+        "px": 11.5
+      },
+      {
+        "file": "src/app/(app)/error.tsx",
+        "line": 22,
+        "scope": "screen",
+        "value": "text-[19px]",
+        "px": 19
+      },
+      {
+        "file": "src/app/(app)/finance/_shared/account-ledger-view.tsx",
+        "line": 90,
+        "scope": "screen",
+        "value": "text-[11.5px]",
+        "px": 11.5
+      },
+      {
+        "file": "src/app/(app)/finance/_shared/account-ledger-view.tsx",
+        "line": 87,
+        "scope": "screen",
+        "value": "fontSize: 15",
+        "px": 15
+      },
+      {
+        "file": "src/app/(app)/finance/_shared/payment-history.tsx",
+        "line": 134,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/finance/_shared/payment-history.tsx",
+        "line": 137,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/finance/_shared/payment-history.tsx",
+        "line": 162,
+        "scope": "screen",
+        "value": "text-[10.5px]",
+        "px": 10.5
+      },
+      {
+        "file": "src/app/(app)/finance/_shared/payment-history.tsx",
+        "line": 165,
+        "scope": "screen",
+        "value": "text-[10.5px]",
+        "px": 10.5
+      },
+      {
+        "file": "src/app/(app)/finance/bank-accounts/bank-account-form-dialog.tsx",
+        "line": 157,
+        "scope": "screen",
+        "value": "text-[11.5px]",
+        "px": 11.5
+      },
+      {
+        "file": "src/app/(app)/finance/bank-accounts/bank-account-form-dialog.tsx",
+        "line": 158,
+        "scope": "screen",
+        "value": "text-[13.5px]",
+        "px": 13.5
+      },
+      {
+        "file": "src/app/(app)/finance/bank-accounts/bank-account-form-dialog.tsx",
+        "line": 161,
+        "scope": "screen",
+        "value": "text-[11.5px]",
+        "px": 11.5
+      },
+      {
+        "file": "src/app/(app)/finance/bank-accounts/page.tsx",
+        "line": 112,
+        "scope": "screen",
+        "value": "fontSize: 11.5",
+        "px": 11.5
+      },
+      {
+        "file": "src/app/(app)/finance/bank-accounts/page.tsx",
+        "line": 144,
+        "scope": "screen",
+        "value": "fontSize: 22",
+        "px": 22
+      },
+      {
+        "file": "src/app/(app)/finance/bank-accounts/page.tsx",
+        "line": 154,
+        "scope": "screen",
+        "value": "fontSize: 15",
+        "px": 15
+      },
+      {
+        "file": "src/app/(app)/finance/journal/page.tsx",
+        "line": 44,
+        "scope": "screen",
+        "value": "fontSize: 15",
+        "px": 15
+      },
+      {
+        "file": "src/app/(app)/finance/payments/payments-list-client.tsx",
+        "line": 143,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/finance/reports/reports-workspace.tsx",
+        "line": 231,
+        "scope": "screen",
+        "value": "text-[19px]",
+        "px": 19
+      },
+      {
+        "file": "src/app/(app)/finance/reports/reports-workspace.tsx",
+        "line": 431,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/finance/reports/reports-workspace.tsx",
+        "line": 153,
+        "scope": "screen",
+        "value": "fontSize: 11.5",
+        "px": 11.5
+      },
+      {
+        "file": "src/app/(app)/finance/statements/page.tsx",
+        "line": 35,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/finance/statements/statement-view.tsx",
+        "line": 154,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/finance/statements/statement-view.tsx",
+        "line": 167,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/finance/statements/statement-view.tsx",
+        "line": 176,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/finance/statements/statement-view.tsx",
+        "line": 181,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/finance/statements/statement-view.tsx",
+        "line": 188,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/finance/statements/statement-view.tsx",
+        "line": 201,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/finance/statements/statement-view.tsx",
+        "line": 213,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/finance/statements/statement-view.tsx",
+        "line": 226,
+        "scope": "screen",
+        "value": "text-[11.5px]",
+        "px": 11.5
+      },
+      {
+        "file": "src/app/(app)/finance/statements/statement-view.tsx",
+        "line": 232,
+        "scope": "screen",
+        "value": "text-[11.5px]",
+        "px": 11.5
+      },
+      {
+        "file": "src/app/(app)/finance/statements/statement-view.tsx",
+        "line": 253,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/finance/statements/statement-view.tsx",
+        "line": 285,
+        "scope": "screen",
+        "value": "text-[10.5px]",
+        "px": 10.5
+      },
+      {
+        "file": "src/app/(app)/finance/statements/statement-view.tsx",
+        "line": 298,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/hr/departments/page.tsx",
+        "line": 26,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/hr/employees/employee-form.tsx",
+        "line": 122,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/hr/employees/employees-client.tsx",
+        "line": 79,
+        "scope": "screen",
+        "value": "fontSize: 11.5",
+        "px": 11.5
+      },
+      {
+        "file": "src/app/(app)/hr/employees/employees-client.tsx",
+        "line": 83,
+        "scope": "screen",
+        "value": "fontSize: 11.5",
+        "px": 11.5
+      },
+      {
+        "file": "src/app/(app)/hr/employees/employees-client.tsx",
+        "line": 89,
+        "scope": "screen",
+        "value": "fontSize: 11.5",
+        "px": 11.5
+      },
+      {
+        "file": "src/app/(app)/hr/employees/employees-client.tsx",
+        "line": 95,
+        "scope": "screen",
+        "value": "fontSize: 11.5",
+        "px": 11.5
+      },
+      {
+        "file": "src/app/(app)/hr/payroll/page.tsx",
+        "line": 109,
+        "scope": "screen",
+        "value": "fontSize: 11.5",
+        "px": 11.5
+      },
+      {
+        "file": "src/app/(app)/hr/payroll/page.tsx",
+        "line": 113,
+        "scope": "screen",
+        "value": "fontSize: 11.5",
+        "px": 11.5
+      },
+      {
+        "file": "src/app/(app)/hr/payroll/page.tsx",
+        "line": 117,
+        "scope": "screen",
+        "value": "fontSize: 11.5",
+        "px": 11.5
+      },
+      {
+        "file": "src/app/(app)/hr/payroll/page.tsx",
+        "line": 121,
+        "scope": "screen",
+        "value": "fontSize: 11.5",
+        "px": 11.5
+      },
+      {
+        "file": "src/app/(app)/hr/payroll/page.tsx",
+        "line": 146,
+        "scope": "screen",
+        "value": "fontSize: 15",
+        "px": 15
+      },
+      {
+        "file": "src/app/(app)/inventory/products/product-form.tsx",
+        "line": 64,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 74,
+        "scope": "screen",
+        "value": "19px",
+        "px": 19
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 78,
+        "scope": "screen",
+        "value": "22px",
+        "px": 22
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 80,
+        "scope": "screen",
+        "value": "12.5px",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 92,
+        "scope": "screen",
+        "value": "10.5px",
+        "px": 10.5
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 102,
+        "scope": "screen",
+        "value": "13.5px",
+        "px": 13.5
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 130,
+        "scope": "screen",
+        "value": "13.5px",
+        "px": 13.5
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 132,
+        "scope": "screen",
+        "value": "10px",
+        "px": 10
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 144,
+        "scope": "screen",
+        "value": "11.5px",
+        "px": 11.5
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 150,
+        "scope": "screen",
+        "value": "10px",
+        "px": 10
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 152,
+        "scope": "screen",
+        "value": "9px",
+        "px": 9
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 156,
+        "scope": "screen",
+        "value": "12.5px",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 158,
+        "scope": "screen",
+        "value": "13.5px",
+        "px": 13.5
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 168,
+        "scope": "screen",
+        "value": "11.5px",
+        "px": 11.5
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 174,
+        "scope": "screen",
+        "value": "22px",
+        "px": 22
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 176,
+        "scope": "screen",
+        "value": "12.5px",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 186,
+        "scope": "screen",
+        "value": "9.5px",
+        "px": 9.5
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 192,
+        "scope": "screen",
+        "value": "11.5px",
+        "px": 11.5
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 198,
+        "scope": "screen",
+        "value": "12.5px",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 211,
+        "scope": "screen",
+        "value": "10.5px",
+        "px": 10.5
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 213,
+        "scope": "screen",
+        "value": "15px",
+        "px": 15
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 248,
+        "scope": "screen",
+        "value": "10.5px",
+        "px": 10.5
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 264,
+        "scope": "screen",
+        "value": "12.8px",
+        "px": 12.8
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 266,
+        "scope": "screen",
+        "value": "11.5px",
+        "px": 11.5
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 280,
+        "scope": "screen",
+        "value": "12.5px",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 318,
+        "scope": "screen",
+        "value": "12.5px",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 322,
+        "scope": "screen",
+        "value": "12.5px",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 328,
+        "scope": "screen",
+        "value": "22px",
+        "px": 22
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 338,
+        "scope": "screen",
+        "value": "10.5px",
+        "px": 10.5
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 340,
+        "scope": "screen",
+        "value": "11.5px",
+        "px": 11.5
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 350,
+        "scope": "screen",
+        "value": "11.5px",
+        "px": 11.5
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 354,
+        "scope": "screen",
+        "value": "11.5px",
+        "px": 11.5
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 356,
+        "scope": "screen",
+        "value": "12.5px",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 372,
+        "scope": "screen",
+        "value": "15px",
+        "px": 15
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 374,
+        "scope": "screen",
+        "value": "7.5px",
+        "px": 7.5
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 380,
+        "scope": "screen",
+        "value": "17px",
+        "px": 17
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 388,
+        "scope": "screen",
+        "value": "12.8px",
+        "px": 12.8
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 402,
+        "scope": "screen",
+        "value": "10.5px",
+        "px": 10.5
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 431,
+        "scope": "screen",
+        "value": "17px",
+        "px": 17
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 442,
+        "scope": "screen",
+        "value": "9px",
+        "px": 9
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 454,
+        "scope": "screen",
+        "value": "12.5px",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 456,
+        "scope": "screen",
+        "value": "10.5px",
+        "px": 10.5
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 458,
+        "scope": "screen",
+        "value": "11.5px",
+        "px": 11.5
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 460,
+        "scope": "screen",
+        "value": "10.5px",
+        "px": 10.5
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 501,
+        "scope": "screen",
+        "value": "12.5px",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 539,
+        "scope": "screen",
+        "value": "9.5px",
+        "px": 9.5
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 543,
+        "scope": "screen",
+        "value": "11.5px",
+        "px": 11.5
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 557,
+        "scope": "screen",
+        "value": "15px",
+        "px": 15
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 580,
+        "scope": "screen",
+        "value": "12.5px",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 589,
+        "scope": "screen",
+        "value": "12.5px",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 593,
+        "scope": "screen",
+        "value": "10.5px",
+        "px": 10.5
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 607,
+        "scope": "screen",
+        "value": "11.5px",
+        "px": 11.5
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 611,
+        "scope": "screen",
+        "value": "12.5px",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 619,
+        "scope": "screen",
+        "value": "10.5px",
+        "px": 10.5
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 637,
+        "scope": "screen",
+        "value": "10.5px",
+        "px": 10.5
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 639,
+        "scope": "screen",
+        "value": "15px",
+        "px": 15
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 645,
+        "scope": "screen",
+        "value": "15px",
+        "px": 15
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 673,
+        "scope": "screen",
+        "value": "21px",
+        "px": 21
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 679,
+        "scope": "screen",
+        "value": "11.5px",
+        "px": 11.5
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 701,
+        "scope": "screen",
+        "value": "12.5px",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 703,
+        "scope": "screen",
+        "value": "25px",
+        "px": 25
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 705,
+        "scope": "screen",
+        "value": "12.5px",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 733,
+        "scope": "screen",
+        "value": "12.5px",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 735,
+        "scope": "screen",
+        "value": "10.5px",
+        "px": 10.5
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 743,
+        "scope": "screen",
+        "value": "11.5px",
+        "px": 11.5
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 747,
+        "scope": "screen",
+        "value": "12.5px",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 757,
+        "scope": "screen",
+        "value": "11.5px",
+        "px": 11.5
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 773,
+        "scope": "screen",
+        "value": "10.5px",
+        "px": 10.5
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 775,
+        "scope": "screen",
+        "value": "8.5px",
+        "px": 8.5
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 784,
+        "scope": "screen",
+        "value": "11.5px",
+        "px": 11.5
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 786,
+        "scope": "screen",
+        "value": "12.5px",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 788,
+        "scope": "screen",
+        "value": "9px",
+        "px": 9
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 799,
+        "scope": "screen",
+        "value": "13.5px",
+        "px": 13.5
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 800,
+        "scope": "screen",
+        "value": "11.5px",
+        "px": 11.5
+      },
+      {
+        "file": "src/app/(app)/not-found.tsx",
+        "line": 16,
+        "scope": "screen",
+        "value": "text-[19px]",
+        "px": 19
+      },
+      {
+        "file": "src/app/(app)/projects/[id]/cost-control.tsx",
+        "line": 40,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/projects/[id]/cost-control.tsx",
+        "line": 76,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/projects/[id]/cost-control.tsx",
+        "line": 77,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/projects/[id]/cost-control.tsx",
+        "line": 167,
+        "scope": "screen",
+        "value": "text-[11.5px]",
+        "px": 11.5
+      },
+      {
+        "file": "src/app/(app)/projects/[id]/cost-control.tsx",
+        "line": 16,
+        "scope": "screen",
+        "value": "fontSize: 11.5",
+        "px": 11.5
+      },
+      {
+        "file": "src/app/(app)/projects/[id]/cost-control.tsx",
+        "line": 108,
+        "scope": "screen",
+        "value": "fontSize: 15",
+        "px": 15
+      },
+      {
+        "file": "src/app/(app)/projects/[id]/page.tsx",
+        "line": 143,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/projects/[id]/page.tsx",
+        "line": 255,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/projects/[id]/page.tsx",
+        "line": 165,
+        "scope": "screen",
+        "value": "fontSize: 11.5",
+        "px": 11.5
+      },
+      {
+        "file": "src/app/(app)/projects/[id]/page.tsx",
+        "line": 171,
+        "scope": "screen",
+        "value": "fontSize: 11.5",
+        "px": 11.5
+      },
+      {
+        "file": "src/app/(app)/projects/[id]/page.tsx",
+        "line": 183,
+        "scope": "screen",
+        "value": "fontSize: 15",
+        "px": 15
+      },
+      {
+        "file": "src/app/(app)/projects/[id]/page.tsx",
+        "line": 225,
+        "scope": "screen",
+        "value": "fontSize: 15",
+        "px": 15
+      },
+      {
+        "file": "src/app/(app)/projects/new/page.tsx",
+        "line": 26,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/projects/project-form.tsx",
+        "line": 77,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/projects/projects-list-client.tsx",
+        "line": 45,
+        "scope": "screen",
+        "value": "text-[19px]",
+        "px": 19
+      },
+      {
+        "file": "src/app/(app)/projects/projects-list-client.tsx",
+        "line": 115,
+        "scope": "screen",
+        "value": "text-[11.5px]",
+        "px": 11.5
+      },
+      {
+        "file": "src/app/(app)/purchasing/debit-notes/dn-form.tsx",
+        "line": 186,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/purchasing/debit-notes/dn-list-client.tsx",
+        "line": 83,
+        "scope": "screen",
+        "value": "text-[19px]",
+        "px": 19
+      },
+      {
+        "file": "src/app/(app)/purchasing/debit-notes/dn-list-client.tsx",
+        "line": 156,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/purchasing/debit-notes/dn-list-client.tsx",
+        "line": 175,
+        "scope": "screen",
+        "value": "text-[11.5px]",
+        "px": 11.5
+      },
+      {
+        "file": "src/app/(app)/purchasing/orders/po-list-client.tsx",
+        "line": 77,
+        "scope": "screen",
+        "value": "text-[19px]",
+        "px": 19
+      },
+      {
+        "file": "src/app/(app)/purchasing/orders/po-list-client.tsx",
+        "line": 160,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/purchasing/orders/po-list-client.tsx",
+        "line": 179,
+        "scope": "screen",
+        "value": "text-[11.5px]",
+        "px": 11.5
+      },
+      {
+        "file": "src/app/(app)/purchasing/vendors/vendor-form.tsx",
+        "line": 76,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/recycle-bin/recycle-bin-client.tsx",
+        "line": 71,
+        "scope": "screen",
+        "value": "text-[19px]",
+        "px": 19
+      },
+      {
+        "file": "src/app/(app)/recycle-bin/recycle-bin-client.tsx",
+        "line": 76,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/recycle-bin/recycle-bin-client.tsx",
+        "line": 111,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/sales/_shared/bank-account-blocks.tsx",
+        "line": 20,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/sales/_shared/bank-accounts-field.tsx",
+        "line": 55,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/sales/_shared/client-create-dialog.tsx",
+        "line": 75,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/sales/_shared/configure-columns-dialog.tsx",
+        "line": 133,
+        "scope": "screen",
+        "value": "text-[17px]",
+        "px": 17
+      },
+      {
+        "file": "src/app/(app)/sales/_shared/configure-columns-dialog.tsx",
+        "line": 198,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/sales/_shared/configure-columns-dialog.tsx",
+        "line": 202,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/sales/_shared/configure-columns-dialog.tsx",
+        "line": 210,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/sales/_shared/configure-columns-dialog.tsx",
+        "line": 219,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/sales/_shared/configure-columns-dialog.tsx",
+        "line": 232,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/sales/_shared/date-settings-dialog.tsx",
+        "line": 52,
+        "scope": "screen",
+        "value": "text-[11.5px]",
+        "px": 11.5
+      },
+      {
+        "file": "src/app/(app)/sales/_shared/item-entry-cell.tsx",
+        "line": 159,
+        "scope": "screen",
+        "value": "text-[10px]",
+        "px": 10
+      },
+      {
+        "file": "src/app/(app)/sales/_shared/list-empty-state.tsx",
+        "line": 32,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/sales/_shared/number-settings-dialog.tsx",
+        "line": 57,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/sales/_shared/number-settings-dialog.tsx",
+        "line": 74,
+        "scope": "screen",
+        "value": "text-[11.5px]",
+        "px": 11.5
+      },
+      {
+        "file": "src/app/(app)/sales/_shared/party-card.tsx",
+        "line": 203,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/sales/_shared/party-card.tsx",
+        "line": 204,
+        "scope": "screen",
+        "value": "text-[11.5px]",
+        "px": 11.5
+      },
+      {
+        "file": "src/app/(app)/sales/_shared/pill-settings-dialog.tsx",
+        "line": 38,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/sales/_shared/pill-settings-dialog.tsx",
+        "line": 40,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/sales/_shared/preview-dialog.tsx",
+        "line": 105,
+        "scope": "screen",
+        "value": "text-[11.5px]",
+        "px": 11.5
+      },
+      {
+        "file": "src/app/(app)/sales/_shared/preview-dialog.tsx",
+        "line": 139,
+        "scope": "screen",
+        "value": "text-[11.5px]",
+        "px": 11.5
+      },
+      {
+        "file": "src/app/(app)/sales/_shared/preview-dialog.tsx",
+        "line": 158,
+        "scope": "screen",
+        "value": "text-[10px]",
+        "px": 10
+      },
+      {
+        "file": "src/app/(app)/sales/_shared/seal-signature.tsx",
+        "line": 59,
+        "scope": "screen",
+        "value": "text-[11.5px]",
+        "px": 11.5
+      },
+      {
+        "file": "src/app/(app)/sales/_shared/stat-row.tsx",
+        "line": 27,
+        "scope": "screen",
+        "value": "fontSize: 11.5",
+        "px": 11.5
+      },
+      {
+        "file": "src/app/(app)/sales/_shared/terms-block.tsx",
+        "line": 114,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/sales/_shared/terms-block.tsx",
+        "line": 116,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/sales/_shared/terms-block.tsx",
+        "line": 128,
+        "scope": "screen",
+        "value": "fontSize: 11.5",
+        "px": 11.5
+      },
+      {
+        "file": "src/app/(app)/sales/_shared/terms-block.tsx",
+        "line": 147,
+        "scope": "screen",
+        "value": "fontSize: 11.5",
+        "px": 11.5
+      },
+      {
+        "file": "src/app/(app)/sales/_shared/terms-editor.tsx",
+        "line": 41,
+        "scope": "screen",
+        "value": "text-[11.5px]",
+        "px": 11.5
+      },
+      {
+        "file": "src/app/(app)/sales/_shared/terms-editor.tsx",
+        "line": 119,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/sales/_shared/terms-editor.tsx",
+        "line": 123,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/sales/_shared/terms-editor.tsx",
+        "line": 149,
+        "scope": "screen",
+        "value": "text-[11.5px]",
+        "px": 11.5
+      },
+      {
+        "file": "src/app/(app)/sales/_shared/terms-editor.tsx",
+        "line": 204,
+        "scope": "screen",
+        "value": "text-[11.5px]",
+        "px": 11.5
+      },
+      {
+        "file": "src/app/(app)/sales/_shared/terms-editor.tsx",
+        "line": 51,
+        "scope": "screen",
+        "value": "fontSize: 10",
+        "px": 10
+      },
+      {
+        "file": "src/app/(app)/sales/_shared/terms-editor.tsx",
+        "line": 168,
+        "scope": "screen",
+        "value": "fontSize: 11.5",
+        "px": 11.5
+      },
+      {
+        "file": "src/app/(app)/sales/_shared/terms-editor.tsx",
+        "line": 221,
+        "scope": "screen",
+        "value": "fontSize: 11.5",
+        "px": 11.5
+      },
+      {
+        "file": "src/app/(app)/sales/_shared/validity-days-dialog.tsx",
+        "line": 62,
+        "scope": "screen",
+        "value": "text-[11.5px]",
+        "px": 11.5
+      },
+      {
+        "file": "src/app/(app)/sales/_shared/vendor-create-dialog.tsx",
+        "line": 75,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/sales/credit-notes/cn-form.tsx",
+        "line": 187,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/sales/credit-notes/cn-list-client.tsx",
+        "line": 83,
+        "scope": "screen",
+        "value": "text-[19px]",
+        "px": 19
+      },
+      {
+        "file": "src/app/(app)/sales/credit-notes/cn-list-client.tsx",
+        "line": 156,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/sales/credit-notes/cn-list-client.tsx",
+        "line": 175,
+        "scope": "screen",
+        "value": "text-[11.5px]",
+        "px": 11.5
+      },
+      {
+        "file": "src/app/(app)/sales/delivery-challans/dc-list-client.tsx",
+        "line": 72,
+        "scope": "screen",
+        "value": "text-[19px]",
+        "px": 19
+      },
+      {
+        "file": "src/app/(app)/sales/delivery-challans/dc-list-client.tsx",
+        "line": 138,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/sales/delivery-challans/dc-list-client.tsx",
+        "line": 156,
+        "scope": "screen",
+        "value": "text-[11.5px]",
+        "px": 11.5
+      },
+      {
+        "file": "src/app/(app)/sales/invoices/apply-advance-dialog.tsx",
+        "line": 119,
+        "scope": "screen",
+        "value": "text-[11.5px]",
+        "px": 11.5
+      },
+      {
+        "file": "src/app/(app)/sales/invoices/apply-advance-dialog.tsx",
+        "line": 124,
+        "scope": "screen",
+        "value": "text-[11.5px]",
+        "px": 11.5
+      },
+      {
+        "file": "src/app/(app)/sales/invoices/invoices-list-client.tsx",
+        "line": 78,
+        "scope": "screen",
+        "value": "text-[19px]",
+        "px": 19
+      },
+      {
+        "file": "src/app/(app)/sales/invoices/invoices-list-client.tsx",
+        "line": 161,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/sales/invoices/invoices-list-client.tsx",
+        "line": 179,
+        "scope": "screen",
+        "value": "text-[11.5px]",
+        "px": 11.5
+      },
+      {
+        "file": "src/app/(app)/sales/orders/orders-list-client.tsx",
+        "line": 79,
+        "scope": "screen",
+        "value": "text-[19px]",
+        "px": 19
+      },
+      {
+        "file": "src/app/(app)/sales/orders/orders-list-client.tsx",
+        "line": 162,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/sales/orders/orders-list-client.tsx",
+        "line": 180,
+        "scope": "screen",
+        "value": "text-[11.5px]",
+        "px": 11.5
+      },
+      {
+        "file": "src/app/(app)/sales/proforma/[id]/page.tsx",
+        "line": 173,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/sales/proforma/proforma-list-client.tsx",
+        "line": 79,
+        "scope": "screen",
+        "value": "text-[19px]",
+        "px": 19
+      },
+      {
+        "file": "src/app/(app)/sales/proforma/proforma-list-client.tsx",
+        "line": 160,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/sales/proforma/proforma-list-client.tsx",
+        "line": 178,
+        "scope": "screen",
+        "value": "text-[11.5px]",
+        "px": 11.5
+      },
+      {
+        "file": "src/app/(app)/sales/quotations/quotations-list-client.tsx",
+        "line": 85,
+        "scope": "screen",
+        "value": "text-[19px]",
+        "px": 19
+      },
+      {
+        "file": "src/app/(app)/sales/quotations/quotations-list-client.tsx",
+        "line": 169,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/sales/quotations/quotations-list-client.tsx",
+        "line": 187,
+        "scope": "screen",
+        "value": "text-[11.5px]",
+        "px": 11.5
+      },
+      {
+        "file": "src/app/(app)/settings/compliance/compliance-client.tsx",
+        "line": 192,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/settings/compliance/compliance-client.tsx",
+        "line": 202,
+        "scope": "screen",
+        "value": "text-[11.5px]",
+        "px": 11.5
+      },
+      {
+        "file": "src/app/(app)/settings/compliance/compliance-client.tsx",
+        "line": 225,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/settings/compliance/compliance-client.tsx",
+        "line": 260,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/settings/compliance/compliance-client.tsx",
+        "line": 305,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/settings/organization/company-panels.tsx",
+        "line": 96,
+        "scope": "screen",
+        "value": "text-[17px]",
+        "px": 17
+      },
+      {
+        "file": "src/app/(app)/settings/organization/company-panels.tsx",
+        "line": 169,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/settings/organization/company-panels.tsx",
+        "line": 170,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/settings/organization/company-panels.tsx",
+        "line": 180,
+        "scope": "screen",
+        "value": "text-[11.5px]",
+        "px": 11.5
+      },
+      {
+        "file": "src/app/(app)/settings/organization/company-panels.tsx",
+        "line": 204,
+        "scope": "screen",
+        "value": "text-[17px]",
+        "px": 17
+      },
+      {
+        "file": "src/app/(app)/settings/organization/company-panels.tsx",
+        "line": 224,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/settings/organization/company-panels.tsx",
+        "line": 252,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/settings/organization/company-panels.tsx",
+        "line": 262,
+        "scope": "screen",
+        "value": "text-[11.5px]",
+        "px": 11.5
+      },
+      {
+        "file": "src/app/(app)/settings/organization/company-panels.tsx",
+        "line": 277,
+        "scope": "screen",
+        "value": "text-[10.5px]",
+        "px": 10.5
+      },
+      {
+        "file": "src/app/(app)/settings/organization/company-panels.tsx",
+        "line": 279,
+        "scope": "screen",
+        "value": "text-[10px]",
+        "px": 10
+      },
+      {
+        "file": "src/app/(app)/settings/organization/company-panels.tsx",
+        "line": 283,
+        "scope": "screen",
+        "value": "text-[10px]",
+        "px": 10
+      },
+      {
+        "file": "src/app/(app)/settings/organization/company-panels.tsx",
+        "line": 331,
+        "scope": "screen",
+        "value": "text-[11.5px]",
+        "px": 11.5
+      },
+      {
+        "file": "src/app/(app)/settings/organization/company-panels.tsx",
+        "line": 334,
+        "scope": "screen",
+        "value": "text-[10.5px]",
+        "px": 10.5
+      },
+      {
+        "file": "src/app/(app)/settings/organization/company-panels.tsx",
+        "line": 337,
+        "scope": "screen",
+        "value": "text-[11.5px]",
+        "px": 11.5
+      },
+      {
+        "file": "src/app/(app)/settings/organization/company-panels.tsx",
+        "line": 442,
+        "scope": "screen",
+        "value": "text-[17px]",
+        "px": 17
+      },
+      {
+        "file": "src/app/(app)/settings/organization/company-panels.tsx",
+        "line": 443,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/settings/organization/company-panels.tsx",
+        "line": 465,
+        "scope": "screen",
+        "value": "text-[13.5px]",
+        "px": 13.5
+      },
+      {
+        "file": "src/app/(app)/settings/organization/company-panels.tsx",
+        "line": 466,
+        "scope": "screen",
+        "value": "text-[11.5px]",
+        "px": 11.5
+      },
+      {
+        "file": "src/app/(app)/settings/organization/company-panels.tsx",
+        "line": 496,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/settings/organization/company-panels.tsx",
+        "line": 500,
+        "scope": "screen",
+        "value": "text-[11.5px]",
+        "px": 11.5
+      },
+      {
+        "file": "src/app/(app)/settings/organization/company-panels.tsx",
+        "line": 530,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/settings/organization/company-panels.tsx",
+        "line": 533,
+        "scope": "screen",
+        "value": "text-[10.5px]",
+        "px": 10.5
+      },
+      {
+        "file": "src/app/(app)/settings/organization/company-panels.tsx",
+        "line": 585,
+        "scope": "screen",
+        "value": "text-[11.5px]",
+        "px": 11.5
+      },
+      {
+        "file": "src/app/(app)/settings/organization/company-panels.tsx",
+        "line": 339,
+        "scope": "screen",
+        "value": "fontSize: 11.5",
+        "px": 11.5
+      },
+      {
+        "file": "src/app/(app)/settings/organization/company-panels.tsx",
+        "line": 342,
+        "scope": "screen",
+        "value": "fontSize: 11.5",
+        "px": 11.5
+      },
+      {
+        "file": "src/app/(app)/settings/organization/company-panels.tsx",
+        "line": 353,
+        "scope": "screen",
+        "value": "fontSize: 10.5",
+        "px": 10.5
+      },
+      {
+        "file": "src/app/(app)/settings/organization/finance-panel.tsx",
+        "line": 35,
+        "scope": "screen",
+        "value": "text-[17px]",
+        "px": 17
+      },
+      {
+        "file": "src/app/(app)/settings/organization/finance-panel.tsx",
+        "line": 77,
+        "scope": "screen",
+        "value": "text-[17px]",
+        "px": 17
+      },
+      {
+        "file": "src/app/(app)/settings/organization/number-format-form.tsx",
+        "line": 96,
+        "scope": "screen",
+        "value": "text-[17px]",
+        "px": 17
+      },
+      {
+        "file": "src/app/(app)/settings/organization/number-format-form.tsx",
+        "line": 105,
+        "scope": "screen",
+        "value": "text-[10.5px]",
+        "px": 10.5
+      },
+      {
+        "file": "src/app/(app)/settings/organization/number-format-form.tsx",
+        "line": 179,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/settings/organization/reference-panels.tsx",
+        "line": 24,
+        "scope": "screen",
+        "value": "text-[17px]",
+        "px": 17
+      },
+      {
+        "file": "src/app/(app)/settings/organization/reference-panels.tsx",
+        "line": 25,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/settings/organization/reference-panels.tsx",
+        "line": 59,
+        "scope": "screen",
+        "value": "text-[13.5px]",
+        "px": 13.5
+      },
+      {
+        "file": "src/app/(app)/settings/organization/reference-panels.tsx",
+        "line": 60,
+        "scope": "screen",
+        "value": "text-[11.5px]",
+        "px": 11.5
+      },
+      {
+        "file": "src/app/(app)/settings/organization/vat-settings-form.tsx",
+        "line": 74,
+        "scope": "screen",
+        "value": "text-[17px]",
+        "px": 17
+      },
+      {
+        "file": "src/app/(app)/settings/organization/vat-settings-form.tsx",
+        "line": 75,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/settings/organization/zatca-panel.tsx",
+        "line": 64,
+        "scope": "screen",
+        "value": "text-[17px]",
+        "px": 17
+      },
+      {
+        "file": "src/app/(app)/settings/organization/zatca-panel.tsx",
+        "line": 65,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/settings/organization/zatca-panel.tsx",
+        "line": 78,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/settings/organization/zatca-panel.tsx",
+        "line": 90,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/settings/presets/default-bank-accounts-panel.tsx",
+        "line": 39,
+        "scope": "screen",
+        "value": "text-[15px]",
+        "px": 15
+      },
+      {
+        "file": "src/app/(app)/settings/presets/default-bank-accounts-panel.tsx",
+        "line": 45,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/settings/presets/exchange-rates-panel.tsx",
+        "line": 92,
+        "scope": "screen",
+        "value": "text-[13.5px]",
+        "px": 13.5
+      },
+      {
+        "file": "src/app/(app)/settings/presets/exchange-rates-panel.tsx",
+        "line": 110,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/settings/presets/exchange-rates-panel.tsx",
+        "line": 160,
+        "scope": "screen",
+        "value": "text-[13.5px]",
+        "px": 13.5
+      },
+      {
+        "file": "src/app/(app)/settings/presets/exchange-rates-panel.tsx",
+        "line": 190,
+        "scope": "screen",
+        "value": "text-[11.5px]",
+        "px": 11.5
+      },
+      {
+        "file": "src/app/(app)/settings/presets/print-layout-panel.tsx",
+        "line": 25,
+        "scope": "screen",
+        "value": "text-[8px]",
+        "px": 8
+      },
+      {
+        "file": "src/app/(app)/settings/presets/print-layout-panel.tsx",
+        "line": 84,
+        "scope": "screen",
+        "value": "text-[17px]",
+        "px": 17
+      },
+      {
+        "file": "src/app/(app)/settings/presets/print-layout-panel.tsx",
+        "line": 85,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/settings/presets/print-layout-panel.tsx",
+        "line": 93,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/settings/presets/print-layout-panel.tsx",
+        "line": 104,
+        "scope": "screen",
+        "value": "text-[10.5px]",
+        "px": 10.5
+      },
+      {
+        "file": "src/app/(app)/settings/presets/print-layout-panel.tsx",
+        "line": 118,
+        "scope": "screen",
+        "value": "text-[10.5px]",
+        "px": 10.5
+      },
+      {
+        "file": "src/app/(app)/settings/presets/print-layout-panel.tsx",
+        "line": 124,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/settings/presets/print-layout-panel.tsx",
+        "line": 166,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/settings/presets/print-layout-panel.tsx",
+        "line": 170,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/settings/presets/print-layout-panel.tsx",
+        "line": 193,
+        "scope": "screen",
+        "value": "text-[11.5px]",
+        "px": 11.5
+      },
+      {
+        "file": "src/app/(app)/settings/presets/seal-signature-panel.tsx",
+        "line": 82,
+        "scope": "screen",
+        "value": "text-[17px]",
+        "px": 17
+      },
+      {
+        "file": "src/app/(app)/settings/presets/seal-signature-panel.tsx",
+        "line": 83,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/settings/presets/seal-signature-panel.tsx",
+        "line": 91,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/settings/presets/seal-signature-panel.tsx",
+        "line": 94,
+        "scope": "screen",
+        "value": "text-[11.5px]",
+        "px": 11.5
+      },
+      {
+        "file": "src/app/(app)/settings/presets/seal-signature-panel.tsx",
+        "line": 100,
+        "scope": "screen",
+        "value": "text-[10.5px]",
+        "px": 10.5
+      },
+      {
+        "file": "src/app/(app)/settings/presets/seal-signature-panel.tsx",
+        "line": 104,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/settings/presets/seal-signature-panel.tsx",
+        "line": 107,
+        "scope": "screen",
+        "value": "text-[11.5px]",
+        "px": 11.5
+      },
+      {
+        "file": "src/app/(app)/settings/presets/seal-signature-panel.tsx",
+        "line": 113,
+        "scope": "screen",
+        "value": "text-[10.5px]",
+        "px": 10.5
+      },
+      {
+        "file": "src/app/(app)/settings/presets/seal-signature-panel.tsx",
+        "line": 120,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/settings/presets/seal-signature-panel.tsx",
+        "line": 126,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/settings/security/security-client.tsx",
+        "line": 154,
+        "scope": "screen",
+        "value": "text-[13.5px]",
+        "px": 13.5
+      },
+      {
+        "file": "src/app/(app)/settings/security/security-client.tsx",
+        "line": 155,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/settings/security/security-client.tsx",
+        "line": 186,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/settings/security/security-client.tsx",
+        "line": 213,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/settings/security/security-client.tsx",
+        "line": 304,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/settings/security/security-client.tsx",
+        "line": 323,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/settings/security/security-client.tsx",
+        "line": 344,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/settings/security/security-client.tsx",
+        "line": 172,
+        "scope": "screen",
+        "value": "fontSize: 11.5",
+        "px": 11.5
+      },
+      {
+        "file": "src/app/(app)/settings/security/security-client.tsx",
+        "line": 235,
+        "scope": "screen",
+        "value": "fontSize: 15",
+        "px": 15
+      },
+      {
+        "file": "src/app/(app)/settings/security/security-client.tsx",
+        "line": 282,
+        "scope": "screen",
+        "value": "fontSize: 15",
+        "px": 15
+      },
+      {
+        "file": "src/app/(app)/settings/team/team-panel.tsx",
+        "line": 99,
+        "scope": "screen",
+        "value": "text-[17px]",
+        "px": 17
+      },
+      {
+        "file": "src/app/(auth)/login/login-form.tsx",
+        "line": 57,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(auth)/login/login-form.tsx",
+        "line": 63,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(auth)/register/register-form.tsx",
+        "line": 84,
+        "scope": "screen",
+        "value": "text-[11.5px]",
+        "px": 11.5
+      },
+      {
+        "file": "src/app/(auth)/register/register-form.tsx",
+        "line": 96,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(auth)/register/register-form.tsx",
+        "line": 102,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/not-found.tsx",
+        "line": 9,
+        "scope": "screen",
+        "value": "fontSize: 64",
+        "px": 64
+      },
+      {
+        "file": "src/app/print/[type]/[id]/page.tsx",
+        "line": 527,
+        "scope": "print",
+        "value": "fontSize: 15",
+        "px": 15
+      },
+      {
+        "file": "src/app/print/print.css",
+        "line": 44,
+        "scope": "print",
+        "value": "12.5px",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/print/print.css",
+        "line": 51,
+        "scope": "print",
+        "value": "14.5px",
+        "px": 14.5
+      },
+      {
+        "file": "src/app/print/print.css",
+        "line": 56,
+        "scope": "print",
+        "value": "17px",
+        "px": 17
+      },
+      {
+        "file": "src/app/print/print.css",
+        "line": 57,
+        "scope": "print",
+        "value": "8px",
+        "px": 8
+      },
+      {
+        "file": "src/app/print/print.css",
+        "line": 64,
+        "scope": "print",
+        "value": "14.5px",
+        "px": 14.5
+      },
+      {
+        "file": "src/app/print/print.css",
+        "line": 66,
+        "scope": "print",
+        "value": "11.5px",
+        "px": 11.5
+      },
+      {
+        "file": "src/app/print/print.css",
+        "line": 73,
+        "scope": "print",
+        "value": "10px",
+        "px": 10
+      },
+      {
+        "file": "src/app/print/print.css",
+        "line": 79,
+        "scope": "print",
+        "value": "11.5px",
+        "px": 11.5
+      },
+      {
+        "file": "src/app/print/print.css",
+        "line": 85,
+        "scope": "print",
+        "value": "10px",
+        "px": 10
+      },
+      {
+        "file": "src/app/print/print.css",
+        "line": 93,
+        "scope": "print",
+        "value": "10.5px",
+        "px": 10.5
+      },
+      {
+        "file": "src/app/print/print.css",
+        "line": 125,
+        "scope": "print",
+        "value": "11.5px",
+        "px": 11.5
+      },
+      {
+        "file": "src/app/print/print.css",
+        "line": 131,
+        "scope": "print",
+        "value": "11.5px",
+        "px": 11.5
+      },
+      {
+        "file": "src/app/print/print.css",
+        "line": 137,
+        "scope": "print",
+        "value": "11.5px",
+        "px": 11.5
+      },
+      {
+        "file": "src/app/print/print.css",
+        "line": 146,
+        "scope": "print",
+        "value": "8px",
+        "px": 8
+      },
+      {
+        "file": "src/app/print/print.css",
+        "line": 147,
+        "scope": "print",
+        "value": "8px",
+        "px": 8
+      },
+      {
+        "file": "src/app/print/print.css",
+        "line": 148,
+        "scope": "print",
+        "value": "6.5px",
+        "px": 6.5
+      },
+      {
+        "file": "src/app/print/print.css",
+        "line": 152,
+        "scope": "print",
+        "value": "9.5px",
+        "px": 9.5
+      },
+      {
+        "file": "src/app/print/print.css",
+        "line": 160,
+        "scope": "print",
+        "value": "11.5px",
+        "px": 11.5
+      },
+      {
+        "file": "src/app/print/print.css",
+        "line": 162,
+        "scope": "print",
+        "value": "9.5px",
+        "px": 9.5
+      },
+      {
+        "file": "src/components/client/address-fields.tsx",
+        "line": 30,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/components/client/address-fields.tsx",
+        "line": 146,
+        "scope": "screen",
+        "value": "text-[11.5px]",
+        "px": 11.5
+      },
+      {
+        "file": "src/components/client/address-fields.tsx",
+        "line": 170,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/components/layout/command-palette.tsx",
+        "line": 169,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/components/layout/command-palette.tsx",
+        "line": 172,
+        "scope": "screen",
+        "value": "text-[10.5px]",
+        "px": 10.5
+      },
+      {
+        "file": "src/components/layout/favorites-menu.tsx",
+        "line": 47,
+        "scope": "screen",
+        "value": "text-[11.5px]",
+        "px": 11.5
+      },
+      {
+        "file": "src/components/layout/favorites-menu.tsx",
+        "line": 52,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/components/layout/notifications-menu.tsx",
+        "line": 75,
+        "scope": "screen",
+        "value": "text-[11.5px]",
+        "px": 11.5
+      },
+      {
+        "file": "src/components/layout/notifications-menu.tsx",
+        "line": 82,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/components/layout/notifications-menu.tsx",
+        "line": 92,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/components/layout/record-search.tsx",
+        "line": 127,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/components/layout/record-search.tsx",
+        "line": 130,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/components/layout/record-search.tsx",
+        "line": 135,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/components/layout/record-search.tsx",
+        "line": 138,
+        "scope": "screen",
+        "value": "text-[10.5px]",
+        "px": 10.5
+      },
+      {
+        "file": "src/components/ui/dropdown-menu.tsx",
+        "line": 43,
+        "scope": "screen",
+        "value": "text-[10.5px]",
+        "px": 10.5
+      },
+      {
+        "file": "src/components/ui/filter-panel.tsx",
+        "line": 51,
+        "scope": "screen",
+        "value": "text-[11.5px]",
+        "px": 11.5
+      },
+      {
+        "file": "src/components/ui/label.tsx",
+        "line": 11,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/components/ui/searchable-select.tsx",
+        "line": 71,
+        "scope": "screen",
+        "value": "text-[13.5px]",
+        "px": 13.5
+      },
+      {
+        "file": "src/components/ui/searchable-select.tsx",
+        "line": 87,
+        "scope": "screen",
+        "value": "text-[13.5px]",
+        "px": 13.5
+      },
+      {
+        "file": "src/components/ui/searchable-select.tsx",
+        "line": 92,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/components/ui/select.tsx",
+        "line": 20,
+        "scope": "screen",
+        "value": "text-[13.5px]",
+        "px": 13.5
+      },
+      {
+        "file": "src/components/ui/select.tsx",
+        "line": 64,
+        "scope": "screen",
+        "value": "text-[13.5px]",
+        "px": 13.5
+      },
+      {
+        "file": "src/components/ui/summary-card.tsx",
+        "line": 40,
+        "scope": "screen",
+        "value": "text-[11.5px]",
+        "px": 11.5
+      },
+      {
+        "file": "src/components/ui/textarea.tsx",
+        "line": 9,
+        "scope": "screen",
+        "value": "text-[13.5px]",
+        "px": 13.5
+      }
+    ]
+  },
+  "G3_outlineWithoutFocusVisible": {
+    "total": 56,
+    "withFocusVisibleReplacement": 1,
+    "byKind": {
+      "tailwind": 56
+    },
+    "byFile": {
+      "src/app/(app)/documents/_workspace/list-workspace-toolbar.tsx": 6,
+      "src/app/(app)/sales/invoices/invoice-form.tsx": 5,
+      "src/app/(app)/sales/orders/order-form.tsx": 4,
+      "src/app/(app)/sales/quotations/quotation-form.tsx": 4,
+      "src/app/(app)/purchasing/orders/po-form.tsx": 3,
+      "src/app/(app)/sales/delivery-challans/dc-form.tsx": 3,
+      "src/app/(app)/purchasing/debit-notes/dn-form.tsx": 2,
+      "src/app/(app)/sales/credit-notes/cn-form.tsx": 2,
+      "src/app/(app)/sales/proforma/proforma-form.tsx": 2,
+      "src/components/ui/dialog.tsx": 2,
+      "src/components/ui/drawer.tsx": 2,
+      "src/components/ui/dropdown-menu.tsx": 2,
+      "src/components/ui/searchable-select.tsx": 2,
+      "src/components/ui/select.tsx": 2,
+      "src/app/(app)/dashboard/dashboard-toolbar.tsx": 1,
+      "src/app/(app)/recycle-bin/recycle-bin-client.tsx": 1,
+      "src/app/(app)/sales/_shared/item-entry-cell.tsx": 1,
+      "src/app/(app)/sales/_shared/list-toolbar.tsx": 1,
+      "src/app/(app)/sales/_shared/rich-text-field.tsx": 1,
+      "src/app/(app)/sales/_shared/row-menu.tsx": 1,
+      "src/components/layout/app-shell.tsx": 1,
+      "src/components/layout/command-palette.tsx": 1,
+      "src/components/layout/favorites-menu.tsx": 1,
+      "src/components/layout/language-switcher.tsx": 1,
+      "src/components/layout/notifications-menu.tsx": 1,
+      "src/components/layout/record-search.tsx": 1,
+      "src/components/ui/checkbox.tsx": 1,
+      "src/components/ui/popover.tsx": 1,
+      "src/components/ui/textarea.tsx": 1
+    },
+    "hits": [
+      {
+        "file": "src/app/(app)/dashboard/dashboard-toolbar.tsx",
+        "line": 31,
+        "kind": "tailwind",
+        "classes": "doc-pill-btn outline-none"
+      },
+      {
+        "file": "src/app/(app)/documents/_workspace/list-workspace-toolbar.tsx",
+        "line": 109,
+        "kind": "tailwind",
+        "classes": "flex-1 min-w-0 bg-transparent outline-none placeholder:text-ink-faint"
+      },
+      {
+        "file": "src/app/(app)/documents/_workspace/list-workspace-toolbar.tsx",
+        "line": 125,
+        "kind": "tailwind",
+        "classes": "input plain w-full h-9 outline-none"
+      },
+      {
+        "file": "src/app/(app)/documents/_workspace/list-workspace-toolbar.tsx",
+        "line": 135,
+        "kind": "tailwind",
+        "classes": "input plain w-full h-9 outline-none"
+      },
+      {
+        "file": "src/app/(app)/documents/_workspace/list-workspace-toolbar.tsx",
+        "line": 139,
+        "kind": "tailwind",
+        "classes": "input plain w-full h-9 outline-none"
+      },
+      {
+        "file": "src/app/(app)/documents/_workspace/list-workspace-toolbar.tsx",
+        "line": 144,
+        "kind": "tailwind",
+        "classes": "input plain w-full h-9 outline-none"
+      },
+      {
+        "file": "src/app/(app)/documents/_workspace/list-workspace-toolbar.tsx",
+        "line": 153,
+        "kind": "tailwind",
+        "classes": "input plain w-full h-9 outline-none"
+      },
+      {
+        "file": "src/app/(app)/purchasing/debit-notes/dn-form.tsx",
+        "line": 144,
+        "kind": "tailwind",
+        "classes": "w-full bg-transparent outline-none"
+      },
+      {
+        "file": "src/app/(app)/purchasing/debit-notes/dn-form.tsx",
+        "line": 169,
+        "kind": "tailwind",
+        "classes": "w-full bg-transparent outline-none"
+      },
+      {
+        "file": "src/app/(app)/purchasing/orders/po-form.tsx",
+        "line": 193,
+        "kind": "tailwind",
+        "classes": "s content. Leaving a field out would leave it // unprotected, so line items, terms, notes, attachments, bank accounts and the seal are all i"
+      },
+      {
+        "file": "src/app/(app)/purchasing/orders/po-form.tsx",
+        "line": 220,
+        "kind": "tailwind",
+        "classes": "w-full bg-transparent outline-none"
+      },
+      {
+        "file": "src/app/(app)/purchasing/orders/po-form.tsx",
+        "line": 236,
+        "kind": "tailwind",
+        "classes": "input plain w-full outline-none"
+      },
+      {
+        "file": "src/app/(app)/recycle-bin/recycle-bin-client.tsx",
+        "line": 86,
+        "kind": "tailwind",
+        "classes": "flex-1 min-w-0 bg-transparent outline-none placeholder:text-ink-faint"
+      },
+      {
+        "file": "src/app/(app)/sales/_shared/item-entry-cell.tsx",
+        "line": 136,
+        "kind": "tailwind",
+        "classes": "flex-1 h-8 rounded-[8px] border border-line px-2 text-xs outline-none focus:border-brand-orange bg-surface"
+      },
+      {
+        "file": "src/app/(app)/sales/_shared/list-toolbar.tsx",
+        "line": 35,
+        "kind": "tailwind",
+        "classes": "flex-1 min-w-0 bg-transparent outline-none placeholder:text-ink-faint"
+      },
+      {
+        "file": "src/app/(app)/sales/_shared/rich-text-field.tsx",
+        "line": 120,
+        "kind": "tailwind",
+        "classes": "rte-body w-full outline-none bg-transparent overflow-auto rte-editable"
+      },
+      {
+        "file": "src/app/(app)/sales/_shared/row-menu.tsx",
+        "line": 19,
+        "kind": "tailwind",
+        "classes": "row-menu-btn outline-none"
+      },
+      {
+        "file": "src/app/(app)/sales/credit-notes/cn-form.tsx",
+        "line": 145,
+        "kind": "tailwind",
+        "classes": "w-full bg-transparent outline-none"
+      },
+      {
+        "file": "src/app/(app)/sales/credit-notes/cn-form.tsx",
+        "line": 170,
+        "kind": "tailwind",
+        "classes": "w-full bg-transparent outline-none"
+      },
+      {
+        "file": "src/app/(app)/sales/delivery-challans/dc-form.tsx",
+        "line": 126,
+        "kind": "tailwind",
+        "classes": "w-full bg-transparent outline-none"
+      },
+      {
+        "file": "src/app/(app)/sales/delivery-challans/dc-form.tsx",
+        "line": 131,
+        "kind": "tailwind",
+        "classes": "w-full bg-transparent outline-none"
+      },
+      {
+        "file": "src/app/(app)/sales/delivery-challans/dc-form.tsx",
+        "line": 134,
+        "kind": "tailwind",
+        "classes": "w-full bg-transparent outline-none"
+      },
+      {
+        "file": "src/app/(app)/sales/invoices/invoice-form.tsx",
+        "line": 214,
+        "kind": "tailwind",
+        "classes": "w-full bg-transparent outline-none"
+      },
+      {
+        "file": "src/app/(app)/sales/invoices/invoice-form.tsx",
+        "line": 221,
+        "kind": "tailwind",
+        "classes": "w-full bg-transparent outline-none"
+      },
+      {
+        "file": "src/app/(app)/sales/invoices/invoice-form.tsx",
+        "line": 231,
+        "kind": "tailwind",
+        "classes": "w-full bg-transparent outline-none"
+      },
+      {
+        "file": "src/app/(app)/sales/invoices/invoice-form.tsx",
+        "line": 236,
+        "kind": "tailwind",
+        "classes": "w-full bg-transparent outline-none"
+      },
+      {
+        "file": "src/app/(app)/sales/invoices/invoice-form.tsx",
+        "line": 253,
+        "kind": "tailwind",
+        "classes": "input plain w-full outline-none"
+      },
+      {
+        "file": "src/app/(app)/sales/orders/order-form.tsx",
+        "line": 172,
+        "kind": "tailwind",
+        "classes": "w-full bg-transparent outline-none"
+      },
+      {
+        "file": "src/app/(app)/sales/orders/order-form.tsx",
+        "line": 198,
+        "kind": "tailwind",
+        "classes": "w-full bg-transparent outline-none"
+      },
+      {
+        "file": "src/app/(app)/sales/orders/order-form.tsx",
+        "line": 202,
+        "kind": "tailwind",
+        "classes": "w-full bg-transparent outline-none"
+      },
+      {
+        "file": "src/app/(app)/sales/orders/order-form.tsx",
+        "line": 218,
+        "kind": "tailwind",
+        "classes": "input plain w-full outline-none"
+      },
+      {
+        "file": "src/app/(app)/sales/proforma/proforma-form.tsx",
+        "line": 167,
+        "kind": "tailwind",
+        "classes": "w-full bg-transparent outline-none"
+      },
+      {
+        "file": "src/app/(app)/sales/proforma/proforma-form.tsx",
+        "line": 176,
+        "kind": "tailwind",
+        "classes": "input plain w-full outline-none"
+      },
+      {
+        "file": "src/app/(app)/sales/quotations/quotation-form.tsx",
+        "line": 186,
+        "kind": "tailwind",
+        "classes": "w-full bg-transparent outline-none"
+      },
+      {
+        "file": "src/app/(app)/sales/quotations/quotation-form.tsx",
+        "line": 219,
+        "kind": "tailwind",
+        "classes": "w-full bg-transparent outline-none"
+      },
+      {
+        "file": "src/app/(app)/sales/quotations/quotation-form.tsx",
+        "line": 223,
+        "kind": "tailwind",
+        "classes": "w-full bg-transparent outline-none"
+      },
+      {
+        "file": "src/app/(app)/sales/quotations/quotation-form.tsx",
+        "line": 239,
+        "kind": "tailwind",
+        "classes": "input plain w-full outline-none"
+      },
+      {
+        "file": "src/components/layout/app-shell.tsx",
+        "line": 127,
+        "kind": "tailwind",
+        "classes": "topbar-profile outline-none"
+      },
+      {
+        "file": "src/components/layout/command-palette.tsx",
+        "line": 165,
+        "kind": "tailwind",
+        "classes": ", label: t(locale, it.label), group: pagesLabel, Icon: it.icon, href: it.href })), ); // Quick actions — create documents / master records a"
+      },
+      {
+        "file": "src/components/layout/favorites-menu.tsx",
+        "line": 41,
+        "kind": "tailwind",
+        "classes": "topbar-icon-btn outline-none relative"
+      },
+      {
+        "file": "src/components/layout/language-switcher.tsx",
+        "line": 14,
+        "kind": "tailwind",
+        "classes": "topbar-lang outline-none disabled:opacity-60"
+      },
+      {
+        "file": "src/components/layout/notifications-menu.tsx",
+        "line": 63,
+        "kind": "tailwind",
+        "classes": "; } // Topbar notifications bell — real, backed by the org activity feed. Read state is per-user: // each item can be marked read or opened "
+      },
+      {
+        "file": "src/components/layout/record-search.tsx",
+        "line": 121,
+        "kind": "tailwind",
+        "classes": "flex-1 h-12 bg-transparent outline-none text-[14px]"
+      },
+      {
+        "file": "src/components/ui/checkbox.tsx",
+        "line": 12,
+        "kind": "tailwind",
+        "classes": "peer size-4 shrink-0 rounded-[5px] border border-line-strong bg-surface outline-none transition-colors"
+      },
+      {
+        "file": "src/components/ui/dialog.tsx",
+        "line": 34,
+        "kind": "tailwind",
+        "classes": "fixed left-1/2 top-1/2 z-50 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-line-strong bg-surface-raised p-6 sh"
+      },
+      {
+        "file": "src/components/ui/dialog.tsx",
+        "line": 40,
+        "kind": "tailwind",
+        "classes": "absolute right-4 top-4 rounded-md p-1 text-ink-faint hover:text-ink outline-none"
+      },
+      {
+        "file": "src/components/ui/drawer.tsx",
+        "line": 25,
+        "kind": "tailwind",
+        "classes": "fixed top-0 z-50 h-full w-full max-w-md border-line bg-surface p-6 shadow-glass outline-none overflow-y-auto"
+      },
+      {
+        "file": "src/components/ui/drawer.tsx",
+        "line": 32,
+        "kind": "tailwind",
+        "classes": "absolute right-4 top-4 rounded-md p-1 text-ink-faint hover:text-ink outline-none"
+      },
+      {
+        "file": "src/components/ui/dropdown-menu.tsx",
+        "line": 30,
+        "kind": "tailwind",
+        "classes": "row-menu-item outline-none"
+      },
+      {
+        "file": "src/components/ui/dropdown-menu.tsx",
+        "line": 57,
+        "kind": "tailwind",
+        "classes": "row-menu-item has-submenu outline-none"
+      },
+      {
+        "file": "src/components/ui/popover.tsx",
+        "line": 23,
+        "kind": "tailwind",
+        "classes": "z-50 rounded-2xl border border-line-strong bg-surface-raised p-4 shadow-glass outline-none"
+      },
+      {
+        "file": "src/components/ui/searchable-select.tsx",
+        "line": 71,
+        "kind": "tailwind",
+        "classes": "flex h-10 w-full items-center justify-between gap-2 rounded-lg border border-line-strong bg-surface px-3 text-[13.5px] outline-none focus:bo"
+      },
+      {
+        "file": "src/components/ui/searchable-select.tsx",
+        "line": 87,
+        "kind": "tailwind",
+        "classes": "h-10 flex-1 bg-transparent text-[13.5px] outline-none"
+      },
+      {
+        "file": "src/components/ui/select.tsx",
+        "line": 20,
+        "kind": "tailwind",
+        "classes": "flex h-10 w-full items-center justify-between rounded-lg border border-line-strong bg-surface px-3 text-[13.5px] text-ink outline-none data-"
+      },
+      {
+        "file": "src/components/ui/select.tsx",
+        "line": 64,
+        "kind": "tailwind",
+        "classes": "relative flex w-full cursor-default select-none items-center rounded-lg py-2 pl-8 pr-3 text-[13.5px] text-ink outline-none data-[highlighted"
+      },
+      {
+        "file": "src/components/ui/textarea.tsx",
+        "line": 9,
+        "kind": "tailwind",
+        "classes": "flex min-h-24 w-full rounded-lg border border-line-strong bg-surface px-3 py-2 text-[13.5px] text-ink placeholder:text-ink-faint outline-non"
+      }
+    ]
+  },
+  "G4_localStatusVariantMaps": {
+    "total": 0,
+    "byFile": {},
+    "maps": []
+  },
+  "G5_i18nDictionaryGaps": {
+    "dictionaryKeys": 1619,
+    "duplicateKeys": 0,
+    "literalTCalls": 1943,
+    "dynamicTCallsUncheckable": 181,
+    "missingCallSites": 30,
+    "distinctMissingKeys": 27,
+    "byFile": {
+      "src/app/(app)/settings/organization/reference-panels.tsx": 6,
+      "src/app/(app)/finance/_shared/refund-advance-button.tsx": 4,
+      "src/app/(app)/settings/organization/page.tsx": 4,
+      "src/app/(app)/finance/statements/statement-view.tsx": 3,
+      "src/app/(app)/documents/_workspace/list-workspace-toolbar.tsx": 2,
+      "src/app/(app)/purchasing/debit-notes/dn-list-client.tsx": 2,
+      "src/app/(app)/sales/_shared/doc-footer-contact.tsx": 2,
+      "src/app/(app)/sales/credit-notes/cn-list-client.tsx": 2,
+      "src/app/(app)/documents/_workspace/import-v2-dialog.tsx": 1,
+      "src/app/(app)/hr/departments/page.tsx": 1,
+      "src/app/(app)/settings/organization/finance-panel.tsx": 1,
+      "src/app/(app)/settings/organization/vat-settings-form.tsx": 1,
+      "src/components/upload/crop-image-upload.tsx": 1
+    },
+    "missing": [
+      {
+        "file": "src/app/(app)/documents/_workspace/import-v2-dialog.tsx",
+        "line": 425,
+        "key": "Documents with conflicting values:"
+      },
+      {
+        "file": "src/app/(app)/documents/_workspace/list-workspace-toolbar.tsx",
+        "line": 203,
+        "key": "CSV"
+      },
+      {
+        "file": "src/app/(app)/documents/_workspace/list-workspace-toolbar.tsx",
+        "line": 205,
+        "key": "PDF"
+      },
+      {
+        "file": "src/app/(app)/finance/_shared/refund-advance-button.tsx",
+        "line": 132,
+        "key": "Amount to refund"
+      },
+      {
+        "file": "src/app/(app)/finance/_shared/refund-advance-button.tsx",
+        "line": 143,
+        "key": "Available"
+      },
+      {
+        "file": "src/app/(app)/finance/_shared/refund-advance-button.tsx",
+        "line": 147,
+        "key": "More than the available balance of this advance."
+      },
+      {
+        "file": "src/app/(app)/finance/_shared/refund-advance-button.tsx",
+        "line": 155,
+        "key": "Amount paid out"
+      },
+      {
+        "file": "src/app/(app)/finance/statements/statement-view.tsx",
+        "line": 210,
+        "key": "Search"
+      },
+      {
+        "file": "src/app/(app)/finance/statements/statement-view.tsx",
+        "line": 221,
+        "key": "Document type"
+      },
+      {
+        "file": "src/app/(app)/finance/statements/statement-view.tsx",
+        "line": 302,
+        "key": "Document type"
+      },
+      {
+        "file": "src/app/(app)/hr/departments/page.tsx",
+        "line": 27,
+        "key": "Departments are the filter tabs at the top of Employees (All departments / Operations / Finance / Lo"
+      },
+      {
+        "file": "src/app/(app)/purchasing/debit-notes/dn-list-client.tsx",
+        "line": 111,
+        "key": "No debit notes yet."
+      },
+      {
+        "file": "src/app/(app)/purchasing/debit-notes/dn-list-client.tsx",
+        "line": 111,
+        "key": "Open a received purchase order to issue one against it."
+      },
+      {
+        "file": "src/app/(app)/sales/_shared/doc-footer-contact.tsx",
+        "line": 10,
+        "key": "For any enquiry, reach out via email at"
+      },
+      {
+        "file": "src/app/(app)/sales/_shared/doc-footer-contact.tsx",
+        "line": 16,
+        "key": "Call on:"
+      },
+      {
+        "file": "src/app/(app)/sales/credit-notes/cn-list-client.tsx",
+        "line": 111,
+        "key": "No credit notes yet."
+      },
+      {
+        "file": "src/app/(app)/sales/credit-notes/cn-list-client.tsx",
+        "line": 111,
+        "key": "Open a sent invoice to issue one against it."
+      },
+      {
+        "file": "src/app/(app)/settings/organization/finance-panel.tsx",
+        "line": 77,
+        "key": "Fiscal Year"
+      },
+      {
+        "file": "src/app/(app)/settings/organization/page.tsx",
+        "line": 56,
+        "key": "Fiscal Year"
+      },
+      {
+        "file": "src/app/(app)/settings/organization/page.tsx",
+        "line": 57,
+        "key": "VAT Configuration"
+      },
+      {
+        "file": "src/app/(app)/settings/organization/page.tsx",
+        "line": 60,
+        "key": "Users"
+      },
+      {
+        "file": "src/app/(app)/settings/organization/page.tsx",
+        "line": 66,
+        "key": "Integrations"
+      },
+      {
+        "file": "src/app/(app)/settings/organization/reference-panels.tsx",
+        "line": 28,
+        "key": "Access per role, as enforced by the application. Assign a member's role from Team. There are three f"
+      },
+      {
+        "file": "src/app/(app)/settings/organization/reference-panels.tsx",
+        "line": 36,
+        "key": "Module"
+      },
+      {
+        "file": "src/app/(app)/settings/organization/reference-panels.tsx",
+        "line": 59,
+        "key": "Actions restricted beyond their module"
+      },
+      {
+        "file": "src/app/(app)/settings/organization/reference-panels.tsx",
+        "line": 61,
+        "key": "These are refused by the server, not merely hidden."
+      },
+      {
+        "file": "src/app/(app)/settings/organization/reference-panels.tsx",
+        "line": 67,
+        "key": "Allowed for"
+      },
+      {
+        "file": "src/app/(app)/settings/organization/reference-panels.tsx",
+        "line": 89,
+        "key": "Staff can create, send and void invoices, issue credit and debit notes, receive purchase orders and "
+      },
+      {
+        "file": "src/app/(app)/settings/organization/vat-settings-form.tsx",
+        "line": 74,
+        "key": "VAT Configuration"
+      },
+      {
+        "file": "src/components/upload/crop-image-upload.tsx",
+        "line": 54,
+        "key": "PNG or JPG only."
+      }
+    ]
+  }
+}

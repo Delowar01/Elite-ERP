@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { StatusBadge } from "@/components/ui/status-badge";
 import Link from "next/link";
 import { toast } from "sonner";
 import { downloadDocumentPdf } from "../_shared/download-pdf-button";
@@ -15,16 +16,13 @@ import type { ImportColumn } from "@/lib/document-list-workspace";
 import { RowMenu, type RowMenuEntry } from "../_shared/row-menu";
 import { Money } from "../_shared/money";
 import { t, type Locale } from "@/lib/i18n/dict";
+import { statusStat } from "@/lib/status-registry";
 import { useDocumentRowActions } from "../../_shared/document-row-actions";
 import { useDocumentEditAction } from "../../_shared/edit-document";
 import { getConvertTargets } from "../_shared/convert-config";
 import { useConvertConfirm } from "../../_shared/confirm-actions";
 import { ListEmptyState } from "../_shared/list-empty-state";
 
-const STATUS_VARIANT: Record<string, "success" | "warning" | "danger" | "info" | "neutral"> = {
-  draft: "neutral",
-  sent: "info",
-};
 
 export type ProformaRow = {
   id: number;
@@ -84,8 +82,8 @@ export function ProformaListClient({
       <StatRow
         items={[
           { label: t(locale, "Total Proformas"), value: String(rows.length) },
-          { label: t(locale, "sent"), value: String(stats.sent ?? 0), colorClass: "text-info" },
-          { label: t(locale, "draft"), value: String(stats.draft ?? 0) },
+          statusStat(locale, "proforma_invoice", "sent", stats.sent),
+          statusStat(locale, "proforma_invoice", "draft", stats.draft),
         ]}
       />
 
@@ -161,7 +159,7 @@ export function ProformaListClient({
                 </TableCell>
                 <TableCell className="text-[12.5px] text-ink-muted">{r.creatorName}</TableCell>
                 <TableCell>
-                  <Badge variant={STATUS_VARIANT[r.status] ?? "neutral"}>{t(locale, r.status)}</Badge>
+                  <StatusBadge domain="proforma_invoice" status={r.status} locale={locale} />
                   {r.isArchived && (
                     <Badge variant="neutral" className="ms-1">
                       {t(locale, "Archived")}

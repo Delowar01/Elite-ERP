@@ -1,4 +1,5 @@
 import { Fragment } from "react";
+import { STATUS_TONE_TOKENS, resolveStatus, statusLabel, statusTextClass } from "@/lib/status-registry";
 import { ShoppingCart, FileText, Wallet, CreditCard, BookOpen, ChevronRight, FileSignature, Building2, UserPlus, Shield, Lock, TrendingUp, RefreshCw, Link2 } from "lucide-react";
 import Link from "next/link";
 import { requireSession } from "@/lib/session";
@@ -25,6 +26,12 @@ function DashWidget({ col, row, children }: { col: number; row: number; children
       {children}
     </div>
   );
+}
+
+// Invoice-status colours come from the status registry (DEV-UI-01.2) — the dashboard makes no
+// colour decision of its own for paid / partial / pending / overdue.
+function settlementColor(key: "paid" | "partial" | "pending" | "overdue"): string {
+  return STATUS_TONE_TOKENS[resolveStatus("invoice_settlement", key).tone].fg;
 }
 
 // Dashboard KPI figures are a summary context → 0 decimals (rounded), matching <Money context="summary">.
@@ -214,18 +221,18 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           <h4 style={{ alignSelf: "flex-start" }}>{t(locale, "Invoices Overview")}</h4>
           <Donut
             segments={invoicesOverview.total > 0 ? [
-              { value: invoicesOverview.paid, color: "var(--accent-green)" },
-              { value: invoicesOverview.partial, color: "var(--accent-purple)" },
-              { value: invoicesOverview.pending, color: "var(--brand-orange)" },
-              { value: invoicesOverview.overdue, color: "var(--accent-red)" },
+              { value: invoicesOverview.paid, color: settlementColor("paid") },
+              { value: invoicesOverview.partial, color: settlementColor("partial") },
+              { value: invoicesOverview.pending, color: settlementColor("pending") },
+              { value: invoicesOverview.overdue, color: settlementColor("overdue") },
             ] : [{ value: 1, color: "var(--line)" }]}
             size={110} thickness={13} centerLabel={t(locale, "Total")} centerValue={String(invoicesOverview.total)}
           />
           <div style={{ width: "100%", marginTop: 10 }}>
-            <div className="bc-stat-row"><span className="lbl"><span className="dot" style={{ background: "var(--accent-green)" }} />{t(locale, "Paid")}</span><span className="val">{invoicesOverview.paid} ({invPct(invoicesOverview.paid)}%)</span></div>
-            <div className="bc-stat-row"><span className="lbl"><span className="dot" style={{ background: "var(--accent-purple)" }} />{t(locale, "Partial")}</span><span className="val">{invoicesOverview.partial} ({invPct(invoicesOverview.partial)}%)</span></div>
-            <div className="bc-stat-row"><span className="lbl"><span className="dot" style={{ background: "var(--brand-orange)" }} />{t(locale, "Pending")}</span><span className="val">{invoicesOverview.pending} ({invPct(invoicesOverview.pending)}%)</span></div>
-            <div className="bc-stat-row"><span className="lbl"><span className="dot" style={{ background: "var(--accent-red)" }} />{t(locale, "Overdue")}</span><span className="val">{invoicesOverview.overdue} ({invPct(invoicesOverview.overdue)}%)</span></div>
+            <div className="bc-stat-row"><span className="lbl"><span className="dot" style={{ background: settlementColor("paid") }} />{statusLabel(locale, "invoice_settlement", "paid")}</span><span className="val">{invoicesOverview.paid} ({invPct(invoicesOverview.paid)}%)</span></div>
+            <div className="bc-stat-row"><span className="lbl"><span className="dot" style={{ background: settlementColor("partial") }} />{statusLabel(locale, "invoice_settlement", "partial")}</span><span className="val">{invoicesOverview.partial} ({invPct(invoicesOverview.partial)}%)</span></div>
+            <div className="bc-stat-row"><span className="lbl"><span className="dot" style={{ background: settlementColor("pending") }} />{statusLabel(locale, "invoice_settlement", "pending")}</span><span className="val">{invoicesOverview.pending} ({invPct(invoicesOverview.pending)}%)</span></div>
+            <div className="bc-stat-row"><span className="lbl"><span className="dot" style={{ background: settlementColor("overdue") }} />{statusLabel(locale, "invoice_settlement", "overdue")}</span><span className="val">{invoicesOverview.overdue} ({invPct(invoicesOverview.overdue)}%)</span></div>
           </div>
           <Link href="/sales/invoices" className="bc-link">{t(locale, "View All Invoices")} <ChevronRight className="size-3" style={{ color: "var(--brand-orange)" }} /></Link>
         </div>
@@ -237,10 +244,17 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           <h4>{t(locale, "Project Overview")}</h4>
           <div className="bc-bignum">{projectsOverview.active}</div>
           <div style={{ fontSize: 11, color: "var(--ink-faint)", marginBottom: 10 }}>{t(locale, "Active Projects")}</div>
-          <div className="bc-stat-row"><span className="lbl">{t(locale, "Completed")}</span><span className="val">{projectsOverview.completed}</span></div>
-          <div className="bc-stat-row"><span className="lbl">{t(locale, "In Progress")}</span><span className="val">{projectsOverview.active}</span></div>
-          <div className="bc-stat-row"><span className="lbl">{t(locale, "On Hold")}</span><span className="val">{projectsOverview.onHold}</span></div>
-          <div className="bc-stat-row"><span className="lbl">{t(locale, "Not Started")}</span><span className="val">{projectsOverview.planned}</span></div>
+          {([
+            ["completed", projectsOverview.completed],
+            ["active", projectsOverview.active],
+            ["on_hold", projectsOverview.onHold],
+            ["planned", projectsOverview.planned],
+          ] as const).map(([status, count]) => (
+            <div key={status} className="bc-stat-row" data-status-domain="project" data-status={status} data-tone={resolveStatus("project", status).tone}>
+              <span className="lbl"><span className={statusTextClass("project", status)}>{statusLabel(locale, "project", status)}</span></span>
+              <span className="val">{count}</span>
+            </div>
+          ))}
           <Link href="/projects" className="bc-link">{t(locale, "Go to Projects")} <ChevronRight className="size-3" style={{ color: "var(--brand-orange)" }} /></Link>
         </div>
       </DashWidget>
@@ -251,9 +265,16 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           <h4>{t(locale, "HR Snapshot")}</h4>
           <div className="bc-bignum">{hrSnapshot.total}</div>
           <div style={{ fontSize: 11, color: "var(--ink-faint)", marginBottom: 10 }}>{t(locale, "Total Employees")}</div>
-          <div className="bc-stat-row"><span className="lbl" style={{ color: "var(--accent-green)" }}>{t(locale, "Present")}</span><span className="val">{hrSnapshot.present}</span></div>
-          <div className="bc-stat-row"><span className="lbl" style={{ color: "var(--warning)" }}>{t(locale, "On Leave")}</span><span className="val">{hrSnapshot.onLeave}</span></div>
-          <div className="bc-stat-row"><span className="lbl" style={{ color: "var(--accent-red)" }}>{t(locale, "Absent")}</span><span className="val">{hrSnapshot.absent}</span></div>
+          {([
+            ["present", hrSnapshot.present],
+            ["on_leave", hrSnapshot.onLeave],
+            ["absent", hrSnapshot.absent],
+          ] as const).map(([status, count]) => (
+            <div key={status} className="bc-stat-row" data-status-domain="attendance" data-status={status} data-tone={resolveStatus("attendance", status).tone}>
+              <span className="lbl"><span className={statusTextClass("attendance", status)}>{statusLabel(locale, "attendance", status)}</span></span>
+              <span className="val">{count}</span>
+            </div>
+          ))}
           <Link href="/hr/employees" className="bc-link">{t(locale, "Go to HRM")} <ChevronRight className="size-3" style={{ color: "var(--brand-orange)" }} /></Link>
         </div>
       </DashWidget>

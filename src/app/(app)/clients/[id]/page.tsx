@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { and, eq } from "drizzle-orm";
 import { db, customersTable, salesInvoicesTable, orgsTable } from "@/db";
 import { requireSession } from "@/lib/session";
@@ -9,7 +10,6 @@ import { composeAddress, countryCodeByName } from "@/lib/geo/countries";
 import { getCountryProfile, resolveTaxLabels } from "@/lib/geo/country-profiles";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { ClientForm } from "../client-form";
 import { updateClientAction } from "../actions";
 import { ClientRecordActions } from "../client-record-actions";
@@ -56,8 +56,8 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
         description="Client profile"
         actions={
           <div className="flex items-center gap-2">
-            <Badge variant={client.isActive ? "success" : "neutral"}>{client.isActive ? "Active" : "Inactive"}</Badge>
-            {client.recordState === "archived" && <Badge variant="neutral">Archived</Badge>}
+            <StatusBadge domain="active_flag" status={client.isActive ? "active" : "inactive"} locale={locale} />
+            {client.recordState === "archived" && <StatusBadge domain="record_state" status="archived" locale={locale} />}
             <ClientRecordActions client={client} />
           </div>
         }

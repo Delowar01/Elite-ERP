@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { StatusBadge } from "@/components/ui/status-badge";
 import Link from "next/link";
 import { Eye, Download } from "lucide-react";
 import { toast } from "sonner";
@@ -15,18 +16,13 @@ import type { ImportColumn } from "@/lib/document-list-workspace";
 import { RowMenu, type RowMenuEntry } from "../../sales/_shared/row-menu";
 import { Money } from "../../sales/_shared/money";
 import { t, type Locale } from "@/lib/i18n/dict";
+import { statusStat } from "@/lib/status-registry";
 import { useDocumentRowActions } from "../../_shared/document-row-actions";
 import { useDocumentEditAction } from "../../_shared/edit-document";
 import { getConvertTargets } from "../../sales/_shared/convert-config";
 import { useConvertConfirm } from "../../_shared/confirm-actions";
 import { ListEmptyState } from "../../sales/_shared/list-empty-state";
 
-const STATUS_VARIANT: Record<string, "success" | "warning" | "danger" | "info" | "neutral"> = {
-  draft: "neutral",
-  ordered: "info",
-  received: "success",
-  cancelled: "danger",
-};
 
 export type PoRow = {
   id: number;
@@ -84,9 +80,9 @@ export function PoListClient({
       <StatRow
         items={[
           { label: t(locale, "Total POs"), value: String(rows.length) },
-          { label: t(locale, "received"), value: String(stats.received ?? 0), colorClass: "text-success" },
-          { label: t(locale, "ordered"), value: String(stats.ordered ?? 0), colorClass: "text-info" },
-          { label: t(locale, "draft"), value: String(stats.draft ?? 0) },
+          statusStat(locale, "purchase_order", "received", stats.received),
+          statusStat(locale, "purchase_order", "ordered", stats.ordered),
+          statusStat(locale, "purchase_order", "draft", stats.draft),
         ]}
       />
 
@@ -163,7 +159,7 @@ export function PoListClient({
                   </TableCell>
                   <TableCell className="text-[12.5px] text-ink-muted">{r.creatorName}</TableCell>
                   <TableCell>
-                    <Badge variant={STATUS_VARIANT[r.status] ?? "neutral"}>{t(locale, r.status)}</Badge>
+                    <StatusBadge domain="purchase_order" status={r.status} locale={locale} />
                     {r.isArchived && (
                       <Badge variant="neutral" className="ms-1">
                         {t(locale, "Archived")}

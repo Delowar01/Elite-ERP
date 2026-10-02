@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { StatusBadge } from "@/components/ui/status-badge";
 import Link from "next/link";
 import { toast } from "sonner";
 import { downloadDocumentPdf } from "../_shared/download-pdf-button";
@@ -15,18 +16,13 @@ import type { ImportColumn } from "@/lib/document-list-workspace";
 import { RowMenu, type RowMenuEntry } from "../_shared/row-menu";
 import { Money } from "../_shared/money";
 import { t, type Locale } from "@/lib/i18n/dict";
+import { statusStat } from "@/lib/status-registry";
 import { useDocumentRowActions } from "../../_shared/document-row-actions";
 import { useDocumentEditAction } from "../../_shared/edit-document";
 import { getConvertTargets } from "../_shared/convert-config";
 import { useConvertConfirm } from "../../_shared/confirm-actions";
 import { ListEmptyState } from "../_shared/list-empty-state";
 
-const STATUS_VARIANT: Record<string, "success" | "warning" | "danger" | "info" | "neutral"> = {
-  draft: "neutral",
-  confirmed: "info",
-  fulfilled: "success",
-  cancelled: "danger",
-};
 
 export type OrderRow = {
   id: number;
@@ -86,9 +82,9 @@ export function OrdersListClient({
       <StatRow
         items={[
           { label: t(locale, "Total Sales Orders"), value: String(rows.length) },
-          { label: t(locale, "confirmed"), value: String(stats.confirmed ?? 0), colorClass: "text-info" },
-          { label: t(locale, "fulfilled"), value: String(stats.fulfilled ?? 0), colorClass: "text-success" },
-          { label: t(locale, "draft"), value: String(stats.draft ?? 0) },
+          statusStat(locale, "sales_order", "confirmed", stats.confirmed),
+          statusStat(locale, "sales_order", "fulfilled", stats.fulfilled),
+          statusStat(locale, "sales_order", "draft", stats.draft),
         ]}
       />
 
@@ -165,7 +161,7 @@ export function OrdersListClient({
                 </TableCell>
                 <TableCell className="text-[12.5px] text-ink-muted">{r.creatorName}</TableCell>
                 <TableCell>
-                  <Badge variant={STATUS_VARIANT[r.status] ?? "neutral"}>{t(locale, r.status)}</Badge>
+                  <StatusBadge domain="sales_order" status={r.status} locale={locale} />
                   {r.isArchived && (
                     <Badge variant="neutral" className="ms-1">
                       {t(locale, "Archived")}

@@ -1,4 +1,5 @@
 import { Fragment } from "react";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { notFound } from "next/navigation";
 import { eq, and, inArray, isNull, sql } from "drizzle-orm";
 import { DocumentTermsView } from "../../_shared/terms-view";
@@ -10,7 +11,6 @@ import { PaymentHistory } from "../../../finance/_shared/payment-history";
 import { requireSession } from "@/lib/session";
 import { getLocale } from "@/lib/i18n/server";
 import { t } from "@/lib/i18n/dict";
-import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { PartyCardSimple } from "../../_shared/party-card";
 import { BankAccountBlocks } from "../../_shared/bank-account-blocks";
@@ -23,10 +23,6 @@ import { ProformaDetailActions } from "../proforma-detail-actions";
 import { DownloadPdfButton } from "../../_shared/download-pdf-button";
 import { EditDocumentButton } from "../../../_shared/edit-document";
 
-const STATUS_VARIANT: Record<string, "success" | "warning" | "danger" | "info" | "neutral"> = {
-  draft: "neutral",
-  sent: "info",
-};
 
 export default async function ProformaDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await requireSession();
@@ -152,9 +148,7 @@ export default async function ProformaDetailPage({ params }: { params: Promise<{
                 {t(locale, "Converted From")} {pf.sourceSoNumber}
               </>
             )}
-            <Badge className="ms-2" variant={STATUS_VARIANT[pf.status] ?? "neutral"} live>
-              {t(locale, pf.status)}
-            </Badge>
+            <StatusBadge className="ms-2" domain="proforma_invoice" status={pf.status} locale={locale} />
           </div>
         </div>
         <div className="flex items-center gap-2.5">

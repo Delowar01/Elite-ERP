@@ -1,12 +1,12 @@
 "use client";
 
 import { useTransition } from "react";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { ShieldCheck, Lock } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { t, type Locale } from "@/lib/i18n/dict";
 import type { Org } from "@/db";
 import { enableZatcaPhase1Action } from "./actions";
@@ -73,9 +73,7 @@ export function ZatcaPanel({ locale, org }: { locale: Locale; org: Org }) {
               <p className="text-[13px] font-semibold flex items-center gap-2">
                 <ShieldCheck className="size-4 text-success" /> {t(locale, "ZATCA Phase 1")}
               </p>
-              <Badge variant="success" className="flex items-center gap-1">
-                <Lock className="size-3" /> {t(locale, "Enabled — Locked")}
-              </Badge>
+              <StatusBadge domain="zatca_state" status="enabled" locale={locale} icon={<Lock className="size-3" />} />
             </div>
             <p className="text-[12.5px] text-ink-muted">
               {t(locale, "ZATCA Phase 1 is recorded for this organization and cannot be turned off from here. Only a backend administrator or the Elite Marcom Platform Owner can turn it off.")}
@@ -87,7 +85,7 @@ export function ZatcaPanel({ locale, org }: { locale: Locale; org: Org }) {
           <CardContent className="p-5 flex flex-col gap-3">
             <div className="flex items-center justify-between">
               <p className="text-[13px] font-semibold">{t(locale, "ZATCA Phase 1")}</p>
-              <Badge variant="neutral">{t(locale, "Not Enabled")}</Badge>
+              <StatusBadge domain="zatca_state" status="not_enabled" locale={locale} />
             </div>
             <p className="text-[12.5px] text-ink-muted">
               {t(locale, "Record that this organization operates under ZATCA Phase 1. Enabling is permanent for organization users — once on, it can only be turned off by a backend administrator.")}

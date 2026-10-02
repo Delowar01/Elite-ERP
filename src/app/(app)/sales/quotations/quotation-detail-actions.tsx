@@ -1,6 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
+import { statusLabel } from "@/lib/status-registry";
 import { toast } from "sonner";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { useConfirm } from "../../_shared/confirm-provider";
@@ -20,7 +21,7 @@ export function QuotationDetailActions({ locale, quotationId, quotationNumber, s
       action: "document.statusChange",
       entityType: "Quotation",
       entityNumber: quotationNumber,
-      details: [{ label: "Status", value: t(locale, value) }],
+      details: [{ label: "Status", value: statusLabel(locale, "quotation", value) }],
       onConfirm: async () => {
         const result = await updateQuotationStatusAction(quotationId, value);
         if (result?.error) return result;
@@ -38,7 +39,7 @@ export function QuotationDetailActions({ locale, quotationId, quotationNumber, s
         <SelectContent>
           {STATUSES.map((s) => (
             <SelectItem key={s} value={s}>
-              {t(locale, s)}
+              {statusLabel(locale, "quotation", s)}
             </SelectItem>
           ))}
         </SelectContent>

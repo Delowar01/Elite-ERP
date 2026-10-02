@@ -570,6 +570,9 @@ table.data-table.list-table td.mono, table.data-table.list-table td.num { white-
 
 .pill-neutral { background: var(--line); color: var(--ink-muted); }
 
+/* DEV-UI-01.2: corrective tone for the generic Badge (approved DEV-UI-01.1 tokens). */
+.pill-corrective { background: var(--corrective-bg); color: var(--corrective); }
+
 .pill.live::before { animation: pulse-ring 1.8s infinite; }
 
 .tab-row { display: inline-flex; flex-wrap: wrap; gap: 4px; padding: 4px; border-radius: 16px; border: 1px solid var(--line-strong); background: var(--surface); box-shadow: var(--shadow-sm); margin-bottom: 18px; }

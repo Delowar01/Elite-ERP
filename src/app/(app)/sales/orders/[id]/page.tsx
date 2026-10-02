@@ -1,4 +1,5 @@
 import { Fragment } from "react";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { notFound } from "next/navigation";
 import { eq, and } from "drizzle-orm";
 import { DocumentTermsView } from "../../_shared/terms-view";
@@ -8,7 +9,6 @@ import { db, salesOrdersTable, salesOrderItemsTable, customersTable, quotationsT
 import { requireSession } from "@/lib/session";
 import { getLocale } from "@/lib/i18n/server";
 import { t } from "@/lib/i18n/dict";
-import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { PartyCardSimple } from "../../_shared/party-card";
 import { BankAccountBlocks } from "../../_shared/bank-account-blocks";
@@ -20,12 +20,6 @@ import { OrderDetailActions } from "../order-detail-actions";
 import { DownloadPdfButton } from "../../_shared/download-pdf-button";
 import { EditDocumentButton } from "../../../_shared/edit-document";
 
-const STATUS_VARIANT: Record<string, "success" | "warning" | "danger" | "info" | "neutral"> = {
-  draft: "neutral",
-  confirmed: "info",
-  fulfilled: "success",
-  cancelled: "danger",
-};
 
 export default async function OrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await requireSession();
@@ -90,9 +84,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
                 {t(locale, "Converted From")} {order.sourceQuotationNumber}
               </>
             )}
-            <Badge className="ms-2" variant={STATUS_VARIANT[order.status] ?? "neutral"} live>
-              {t(locale, order.status)}
-            </Badge>
+            <StatusBadge className="ms-2" domain="sales_order" status={order.status} locale={locale} />
           </div>
         </div>
         <div className="flex items-center gap-2.5">

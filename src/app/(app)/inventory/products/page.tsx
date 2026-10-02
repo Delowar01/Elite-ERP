@@ -1,11 +1,12 @@
 import Link from "next/link";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { getLocale } from "@/lib/i18n/server";
 import { and, ilike, or, lte, sql } from "drizzle-orm";
 import { db, productsTable } from "@/db";
 import { requireSession } from "@/lib/session";
 import { tenantScope } from "@/lib/tenant";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { Card, CardContent } from "@/components/ui/card";
 import { Plus, Trash2 } from "lucide-react";
@@ -18,6 +19,7 @@ export default async function ProductsPage({
   searchParams: Promise<{ q?: string; lowStock?: string; archived?: string }>;
 }) {
   const session = await requireSession();
+  const locale = await getLocale();
   const { q, lowStock, archived } = await searchParams;
   const includeArchived = archived === "1";
 
@@ -89,11 +91,11 @@ export default async function ProductsPage({
                   <TableCell className="text-right num-tabular">{p.quantityOnHand}</TableCell>
                   <TableCell className="flex items-center gap-1.5 flex-wrap">
                     {low ? (
-                      <Badge variant="warning">Low stock</Badge>
+                      <StatusBadge domain="stock" status="low_stock" locale={locale} />
                     ) : (
-                      <Badge variant={p.isActive ? "success" : "neutral"}>{p.isActive ? "Active" : "Inactive"}</Badge>
+                      <StatusBadge domain="active_flag" status={p.isActive ? "active" : "inactive"} locale={locale} />
                     )}
-                    {p.recordState === "archived" && <Badge variant="neutral">Archived</Badge>}
+                    {p.recordState === "archived" && <StatusBadge domain="record_state" status="archived" locale={locale} />}
                   </TableCell>
                   <TableCell className="text-right">
                     <ProductRecordActions product={p} />

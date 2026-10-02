@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { toast } from "sonner";
 import { Plus } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FormField } from "@/components/ui/form-field";
@@ -23,11 +23,6 @@ export type LeaveRow = {
   status: string;
 };
 
-const STATUS_VARIANT: Record<string, "success" | "warning" | "danger" | "info" | "neutral"> = {
-  pending: "warning",
-  approved: "success",
-  rejected: "danger",
-};
 
 const TYPE_LABEL: Record<string, string> = { annual: "Annual", sick: "Sick", unpaid: "Unpaid", other: "Other" };
 
@@ -117,9 +112,7 @@ export function LeaveClient({
                   {r.reason ?? <span className="text-ink-faint">—</span>}
                 </TableCell>
                 <TableCell>
-                  <Badge variant={STATUS_VARIANT[r.status] ?? "neutral"} live={r.status === "pending"}>
-                    {t(locale, r.status)}
-                  </Badge>
+                  <StatusBadge domain="leave" status={r.status} locale={locale} />
                 </TableCell>
                 <TableCell className="text-right">
                   {canDecide && r.status === "pending" && (

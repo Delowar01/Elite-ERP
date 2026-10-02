@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { StatusBadge } from "@/components/ui/status-badge";
 import Link from "next/link";
 import { Eye, Truck as TruckIcon, Download } from "lucide-react";
 import { toast } from "sonner";
@@ -14,15 +15,11 @@ import type { SavedViewDTO } from "../../documents/_workspace/saved-view-actions
 import type { ImportColumn } from "@/lib/document-list-workspace";
 import { RowMenu, type RowMenuEntry } from "../_shared/row-menu";
 import { t, type Locale } from "@/lib/i18n/dict";
+import { statusStat } from "@/lib/status-registry";
 import { useDocumentRowActions } from "../../_shared/document-row-actions";
 import { useDocumentEditAction } from "../../_shared/edit-document";
 import { ListEmptyState } from "../_shared/list-empty-state";
 
-const STATUS_VARIANT: Record<string, "success" | "warning" | "danger" | "info" | "neutral"> = {
-  draft: "neutral",
-  dispatched: "warning",
-  delivered: "success",
-};
 
 export type DcRow = {
   id: number;
@@ -78,9 +75,9 @@ export function DcListClient({
       <StatRow
         items={[
           { label: t(locale, "Total Challans"), value: String(rows.length) },
-          { label: t(locale, "delivered"), value: String(stats.delivered ?? 0), colorClass: "text-success" },
-          { label: t(locale, "dispatched"), value: String(stats.dispatched ?? 0), colorClass: "text-warning" },
-          { label: t(locale, "draft"), value: String(stats.draft ?? 0) },
+          statusStat(locale, "delivery_challan", "delivered", stats.delivered),
+          statusStat(locale, "delivery_challan", "dispatched", stats.dispatched),
+          statusStat(locale, "delivery_challan", "draft", stats.draft),
         ]}
       />
 
@@ -140,7 +137,7 @@ export function DcListClient({
                 <TableCell className="num-tabular text-xs">{r.dispatchDate ?? "—"}</TableCell>
                 <TableCell className="text-[12.5px] text-ink-muted">{r.creatorName}</TableCell>
                 <TableCell>
-                  <Badge variant={STATUS_VARIANT[r.status] ?? "neutral"}>{t(locale, r.status)}</Badge>
+                  <StatusBadge domain="delivery_challan" status={r.status} locale={locale} />
                   {r.isArchived && (
                     <Badge variant="neutral" className="ms-1">
                       {t(locale, "Archived")}

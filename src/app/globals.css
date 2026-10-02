@@ -391,6 +391,46 @@ h1, h2, h3, h4, h5, h6 {
   font-variant-numeric: tabular-nums;
 }
 
+/* Status tag (DEV-UI-01.2, owner decision D-13) — rendered ONLY by <StatusBadge>, from the status
+   registry. A restrained 4px enterprise tag: semantic foreground on its tint, no leading dot, no
+   gradient, glow or lift. Logical padding, so it reads correctly in RTL. Generic `.pill` / <Badge>
+   (Default, document type, access level …) is deliberately NOT changed by this class. */
+.status-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding-block: 2px;
+  padding-inline: 8px;
+  border-radius: 4px;
+  font-size: var(--text-caption);
+  line-height: var(--text-caption--line-height);
+  font-weight: 500;
+  white-space: nowrap;
+  color: var(--status-fg);
+  background: var(--status-bg);
+}
+.status-tag[data-tone="neutral"] { --status-fg: var(--neutral); --status-bg: var(--neutral-bg); }
+.status-tag[data-tone="info"] { --status-fg: var(--info); --status-bg: var(--info-bg); }
+.status-tag[data-tone="success"] { --status-fg: var(--success); --status-bg: var(--success-bg); }
+.status-tag[data-tone="warning"] { --status-fg: var(--warning); --status-bg: var(--warning-bg); }
+.status-tag[data-tone="danger"] { --status-fg: var(--danger); --status-bg: var(--danger-bg); }
+.status-tag[data-tone="corrective"] { --status-fg: var(--corrective); --status-bg: var(--corrective-bg); }
+
+/* Only registry-owned "awaiting action" states (status-registry `pulse: true`) get this indicator. */
+.status-tag-pulse {
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  background: currentColor;
+  flex-shrink: 0;
+  animation: status-pulse 1.8s infinite;
+}
+@keyframes status-pulse {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, currentColor 45%, transparent); }
+  70% { box-shadow: 0 0 0 5px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;

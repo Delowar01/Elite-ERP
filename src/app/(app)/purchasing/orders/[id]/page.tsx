@@ -1,4 +1,5 @@
 import { Fragment } from "react";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { notFound } from "next/navigation";
 import { eq, and, sql } from "drizzle-orm";
 import { DocumentTermsView } from "../../../sales/_shared/terms-view";
@@ -12,7 +13,6 @@ import { PaymentHistory } from "../../../finance/_shared/payment-history";
 import { requireSession } from "@/lib/session";
 import { getLocale } from "@/lib/i18n/server";
 import { t } from "@/lib/i18n/dict";
-import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { TotalsStrip } from "../../../sales/_shared/totals-strip";
 import { DocNum } from "../../../sales/_shared/money";
@@ -20,12 +20,6 @@ import { PoDetailActions } from "../po-detail-actions";
 import { DownloadPdfButton } from "../../../sales/_shared/download-pdf-button";
 import { EditDocumentButton } from "../../../_shared/edit-document";
 
-const STATUS_VARIANT: Record<string, "success" | "warning" | "danger" | "info" | "neutral"> = {
-  draft: "neutral",
-  ordered: "info",
-  received: "success",
-  cancelled: "danger",
-};
 
 export default async function PurchaseOrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await requireSession();
@@ -100,9 +94,7 @@ export default async function PurchaseOrderDetailPage({ params }: { params: Prom
           <div className="inv-sub">
             {t(locale, "Vendor:")} {po.vendorName} · {t(locale, "Order Date")} {po.orderDate}
             {po.title ? ` · ${po.title}` : ""}
-            <Badge className="ms-2" variant={STATUS_VARIANT[po.status] ?? "neutral"} live>
-              {t(locale, po.status)}
-            </Badge>
+            <StatusBadge className="ms-2" domain="purchase_order" status={po.status} locale={locale} />
           </div>
         </div>
         <div className="flex items-center gap-2.5">

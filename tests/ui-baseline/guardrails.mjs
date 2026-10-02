@@ -195,13 +195,22 @@ function g3() {
 // An object literal (found with the TypeScript parser) with at least two property keys that are
 // known business statuses, whose values are strings or objects carrying a colour/variant token.
 const STATUSES = new Set(
-  "draft sent paid partially_paid partial unpaid void voided pending approved rejected accepted expired active inactive completed cancelled canceled on_hold planned todo in_progress done blocked ordered received confirmed fulfilled processed overdue archived deleted present absent late on_leave issued open closed posted reversed delivered converted failed success".split(" "),
+  // DEV-UI-01.2: + dispatched (missed before) and the newly registered states. Generic priority
+  // words (low / medium / high) are deliberately absent: a priority map is a categorical attribute,
+  // not a status map; a recreated severity map is still caught through `info` + `critical`.
+  ("draft sent paid partially_paid partial unpaid void voided pending approved rejected accepted expired active inactive completed cancelled canceled on_hold planned todo in_progress done blocked ordered received confirmed fulfilled processed overdue archived deleted present absent late on_leave issued open closed posted reversed delivered converted failed success " +
+    "dispatched stale granted withdrawn low_stock in_stock profitable loss no_revenue enabled not_enabled critical").split(" "),
 );
-const VARIANTISH = /\b(success|warning|danger|destructive|error|info|neutral|muted|secondary|default|outline|primary|pill|tone|variant)\b|\b(bg|text|border|ring)-[a-z]|#[0-9a-f]{3,8}\b|var\(--/i;
+const VARIANTISH = /\b(success|warning|danger|destructive|error|info|neutral|corrective|muted|secondary|default|outline|primary|pill|tone|variant)\b|\b(bg|text|border|ring)-[a-z]|#[0-9a-f]{3,8}\b|var\(--/i;
+// The ONE canonical status registry (DEV-UI-01.2). It is a status→tone map by design — the single
+// authoritative one every screen reads — so it is the only file G4 does not count. Exact path, not a
+// pattern: any other file declaring a status→tone/colour map is still a local map and is reported.
+const CANONICAL_STATUS_REGISTRY = "src/lib/status-registry.ts";
 function g4() {
   const maps = [];
   for (const f of files) {
     if (!/\.tsx?$/.test(f.rel)) continue;
+    if (f.rel === CANONICAL_STATUS_REGISTRY) continue;
     const sf = ts.createSourceFile(f.rel, f.text, ts.ScriptTarget.Latest, true, f.rel.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS);
     const visit = (node) => {
       if (ts.isObjectLiteralExpression(node)) {

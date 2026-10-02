@@ -1,4 +1,5 @@
 import { Fragment } from "react";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { notFound } from "next/navigation";
 import { eq, and } from "drizzle-orm";
 import { DocumentTermsView } from "../../_shared/terms-view";
@@ -8,7 +9,6 @@ import { db, quotationsTable, quotationItemsTable, customersTable, orgsTable } f
 import { requireSession } from "@/lib/session";
 import { getLocale } from "@/lib/i18n/server";
 import { t } from "@/lib/i18n/dict";
-import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { PartyCardSimple } from "../../_shared/party-card";
 import { BankAccountBlocks } from "../../_shared/bank-account-blocks";
@@ -20,13 +20,6 @@ import { QuotationDetailActions } from "../quotation-detail-actions";
 import { DownloadPdfButton } from "../../_shared/download-pdf-button";
 import { EditDocumentButton } from "../../../_shared/edit-document";
 
-const STATUS_VARIANT: Record<string, "success" | "warning" | "danger" | "info" | "neutral"> = {
-  draft: "neutral",
-  sent: "info",
-  accepted: "success",
-  rejected: "danger",
-  expired: "warning",
-};
 
 export default async function QuotationDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await requireSession();
@@ -77,9 +70,7 @@ export default async function QuotationDetailPage({ params }: { params: Promise<
             {t(locale, "Issue Date")} {quotation.issueDate}
             {quotation.validUntil ? ` · ${t(locale, "Valid Till")} ${quotation.validUntil}` : ""}
             {quotation.title ? ` · ${quotation.title}` : ""}
-            <Badge className="ms-2" variant={STATUS_VARIANT[quotation.status] ?? "neutral"} live>
-              {t(locale, quotation.status)}
-            </Badge>
+            <StatusBadge className="ms-2" domain="quotation" status={quotation.status} locale={locale} />
           </div>
         </div>
         <div className="flex items-center gap-2.5">

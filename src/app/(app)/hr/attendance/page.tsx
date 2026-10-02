@@ -1,9 +1,9 @@
 import { asc, and, eq } from "drizzle-orm";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { db, employeesTable, attendanceRecordsTable } from "@/db";
 import { requireSession } from "@/lib/session";
 import { getLocale } from "@/lib/i18n/server";
 import { t } from "@/lib/i18n/dict";
-import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { AttendanceRowActions } from "./attendance-row-actions";
 
@@ -16,19 +16,7 @@ function fmtTime(d: Date | null): string {
   return d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true });
 }
 
-const STATUS_VARIANT: Record<string, "success" | "warning" | "danger" | "info" | "neutral"> = {
-  present: "success",
-  late: "warning",
-  on_leave: "info",
-  absent: "neutral",
-};
 
-const STATUS_LABEL: Record<string, string> = {
-  present: "Present",
-  late: "Late",
-  on_leave: "On leave",
-  absent: "Absent",
-};
 
 export default async function AttendancePage() {
   const session = await requireSession();
@@ -86,7 +74,7 @@ export default async function AttendancePage() {
                   <TableCell className="num-tabular text-xs">{fmtTime(record?.checkOut ?? null)}</TableCell>
                   <TableCell>
                     {status ? (
-                      <Badge variant={STATUS_VARIANT[status] ?? "neutral"}>{t(locale, STATUS_LABEL[status] ?? status)}</Badge>
+                      <StatusBadge domain="attendance" status={status} locale={locale} />
                     ) : (
                       <span className="text-ink-faint">—</span>
                     )}

@@ -1,10 +1,12 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { StatusBadge } from "@/components/ui/status-badge";
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { t, type Locale } from "@/lib/i18n/dict";
+import { statusLabel, statusTextClass } from "@/lib/status-registry";
 
 export type EmployeeCardRow = {
   id: number;
@@ -35,13 +37,6 @@ function initials(name: string): string {
     .toUpperCase();
 }
 
-function todayPill(locale: Locale, todayStatus: string | null): { label: string; cls: string } | null {
-  if (todayStatus === "on_leave") return { label: t(locale, "On leave"), cls: "pill-warning" };
-  if (todayStatus === "late") return { label: t(locale, "Late"), cls: "pill-warning" };
-  if (todayStatus === "present") return { label: t(locale, "Present"), cls: "pill-success" };
-  if (todayStatus === "absent") return { label: t(locale, "Absent"), cls: "pill-neutral" };
-  return null;
-}
 
 export function EmployeesClient({
   locale,
@@ -86,13 +81,13 @@ export function EmployeesClient({
         </div>
         <div className="card" style={{ padding: "16px 18px" }}>
           <div style={{ fontSize: 11.5, color: "var(--ink-muted)" }}>{t(locale, "Present today")}</div>
-          <div style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 20, marginTop: 4, color: "var(--accent-green)" }}>
+          <div className={statusTextClass("attendance", "present")} style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 20, marginTop: 4 }}>
             {presentToday}
           </div>
         </div>
         <div className="card" style={{ padding: "16px 18px" }}>
-          <div style={{ fontSize: 11.5, color: "var(--ink-muted)" }}>{t(locale, "On leave")}</div>
-          <div style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 20, marginTop: 4, color: "var(--warning)" }}>
+          <div style={{ fontSize: 11.5, color: "var(--ink-muted)" }}>{statusLabel(locale, "attendance", "on_leave")}</div>
+          <div className={statusTextClass("attendance", "on_leave")} style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 20, marginTop: 4 }}>
             {onLeaveToday}
           </div>
         </div>
@@ -109,7 +104,6 @@ export function EmployeesClient({
       ) : (
         <div className="emp-grid">
           {filtered.map((r) => {
-            const pill = todayPill(locale, r.todayStatus);
             const roleLine = [r.designation, r.departmentName].filter(Boolean).join(" · ");
             return (
               <Link key={r.id} href={`/hr/employees/${r.id}`} className="card emp-card hover:border-brand-orange transition-colors">
@@ -121,9 +115,9 @@ export function EmployeesClient({
                   <div className="emp-role">{roleLine || r.employeeCode}</div>
                   <div className="emp-meta">
                     {r.status === "inactive" ? (
-                      <span className="pill pill-neutral">{t(locale, "inactive")}</span>
+                      <StatusBadge domain="employee" status="inactive" locale={locale} />
                     ) : (
-                      pill && <span className={cn("pill", pill.cls)}>{pill.label}</span>
+                      r.todayStatus && <StatusBadge domain="attendance" status={r.todayStatus} locale={locale} />
                     )}
                   </div>
                 </div>

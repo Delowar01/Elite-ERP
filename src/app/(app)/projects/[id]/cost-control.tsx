@@ -1,6 +1,7 @@
 import Link from "next/link";
+import { statusLabel, type StatusDomain } from "@/lib/status-registry";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
 import { t, type Locale } from "@/lib/i18n/dict";
 import type { CostDrillRow, ProjectCostControl } from "@/lib/project-costing";
 import { Money } from "../../sales/_shared/money";
@@ -73,7 +74,7 @@ function DrillTable({ locale, rows, empty }: { locale: Locale; rows: CostDrillRo
               </TableCell>
               <TableCell className="num-tabular text-xs">{r.date}</TableCell>
               <TableCell className="text-[12.5px] text-ink-muted">{r.party ?? "—"}</TableCell>
-              <TableCell className="text-[12.5px] text-ink-muted">{t(locale, r.status)}</TableCell>
+              <TableCell className="text-[12.5px] text-ink-muted">{ROW_TYPE_DOMAIN[r.type] ? statusLabel(locale, ROW_TYPE_DOMAIN[r.type], r.status) : t(locale, r.status)}</TableCell>
               <TableCell className="num" style={{ whiteSpace: "nowrap", color: r.negative ? "var(--accent-red)" : undefined }}>
                 <Money amount={r.amount} context="summary" />
               </TableCell>
@@ -85,17 +86,27 @@ function DrillTable({ locale, rows, empty }: { locale: Locale; rows: CostDrillRo
   );
 }
 
+
+// Which status domain a drill row's status belongs to, keyed by the row's existing document-type
+// label (lib/project-costing.ts). Payment and journal rows carry pseudo-states ("received", "paid",
+// "posted") that are not registry statuses, so they keep their plain translated text.
+const ROW_TYPE_DOMAIN: Record<string, StatusDomain> = {
+  Quotation: "quotation",
+  "Sales Order": "sales_order",
+  Invoice: "sales_invoice",
+  "Credit Note": "credit_note",
+  "Purchase Order": "purchase_order",
+  "Debit Note": "debit_note",
+};
 export function ProjectCostControlSection({ locale, data }: { locale: Locale; data: ProjectCostControl }) {
   const { revenue, cost, profit, marginPercent, health, rows, labourEstimate, excludedUnconverted } = data;
   const profitTone = health === "loss" ? "var(--accent-red)" : health === "profitable" ? "var(--accent-green)" : "var(--ink-muted)";
-  const healthLabel = health === "profitable" ? "Profitable" : health === "loss" ? "Loss" : "No Revenue Yet";
-  const healthVariant = health === "profitable" ? "success" : health === "loss" ? "danger" : "neutral";
 
   return (
     <section>
       <div className="main-head">
         <h3 style={{ fontSize: 15 }}>{t(locale, "Cost & Profitability")}</h3>
-        <Badge variant={healthVariant}>{t(locale, healthLabel)}</Badge>
+        <StatusBadge domain="project_health" status={health} locale={locale} />
       </div>
 
       <div className="stat-row-2" style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>

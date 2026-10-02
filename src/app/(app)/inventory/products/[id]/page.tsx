@@ -1,11 +1,12 @@
 import { notFound } from "next/navigation";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { getLocale } from "@/lib/i18n/server";
 import { and, eq } from "drizzle-orm";
 import { db, productsTable } from "@/db";
 import { requireSession } from "@/lib/session";
 import { tenantScope } from "@/lib/tenant";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { ProductForm } from "../product-form";
 import { updateProductAction } from "../actions";
 import { AdjustStockDialog } from "../adjust-stock-dialog";
@@ -13,6 +14,7 @@ import { ProductRecordActions } from "../product-record-actions";
 
 export default async function ProductDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await requireSession();
+  const locale = await getLocale();
   const { id } = await params;
   const productId = Number(id);
   if (!Number.isInteger(productId)) notFound();
@@ -34,8 +36,8 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
         description={`SKU ${product.sku}`}
         actions={
           <div className="flex items-center gap-2">
-            {low ? <Badge variant="warning">Low stock</Badge> : <Badge variant="success">In stock</Badge>}
-            {product.recordState === "archived" && <Badge variant="neutral">Archived</Badge>}
+            <StatusBadge domain="stock" status={low ? "low_stock" : "in_stock"} locale={locale} />
+            {product.recordState === "archived" && <StatusBadge domain="record_state" status="archived" locale={locale} />}
             <ProductRecordActions product={product} />
           </div>
         }

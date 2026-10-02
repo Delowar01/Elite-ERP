@@ -1,4 +1,5 @@
 import { Fragment } from "react";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { DocNum } from "../../_shared/money";
 import { notFound } from "next/navigation";
 import { eq, and } from "drizzle-orm";
@@ -8,17 +9,11 @@ import { db, deliveryChallansTable, deliveryChallanItemsTable, customersTable, s
 import { requireSession } from "@/lib/session";
 import { getLocale } from "@/lib/i18n/server";
 import { t } from "@/lib/i18n/dict";
-import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { DcDetailActions } from "../dc-detail-actions";
 import { DownloadPdfButton } from "../../_shared/download-pdf-button";
 import { EditDocumentButton } from "../../../_shared/edit-document";
 
-const STATUS_VARIANT: Record<string, "success" | "warning" | "danger" | "info" | "neutral"> = {
-  draft: "neutral",
-  dispatched: "warning",
-  delivered: "success",
-};
 
 export default async function DcDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await requireSession();
@@ -67,9 +62,7 @@ export default async function DcDetailPage({ params }: { params: Promise<{ id: s
             {(dc.sourceSoNumber || dc.sourceInvoiceNumber) && `${t(locale, "Converted From")} ${dc.sourceSoNumber ?? dc.sourceInvoiceNumber} · `}
             {org.name} → {dc.customerName}
             {dc.title ? ` · ${dc.title}` : ""}
-            <Badge className="ms-2" variant={STATUS_VARIANT[dc.status] ?? "neutral"} live>
-              {t(locale, dc.status)}
-            </Badge>
+            <StatusBadge className="ms-2" domain="delivery_challan" status={dc.status} locale={locale} />
           </div>
         </div>
         <div className="flex items-center gap-2.5">

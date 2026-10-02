@@ -1,9 +1,9 @@
 import { asc, and, desc, eq, sql } from "drizzle-orm";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { db, employeesTable, payrollRunsTable, payslipsTable } from "@/db";
 import { requireRole } from "@/lib/session";
 import { getLocale } from "@/lib/i18n/server";
 import { t } from "@/lib/i18n/dict";
-import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { latestStructures } from "./queries";
 import { PayrollClient, type PayrollLine } from "./payroll-client";
@@ -101,9 +101,7 @@ export default async function PayrollPage() {
         <h3>
           {t(locale, "Payroll")} — {monthLabel}
         </h3>
-        <Badge variant={run ? "success" : "warning"} live={!run}>
-          {t(locale, run ? "processed" : "Draft")}
-        </Badge>
+        <StatusBadge domain="payroll_period" status={run ? "processed" : "draft"} locale={locale} />
       </div>
 
       <div className="stat-row-2">
@@ -162,7 +160,7 @@ export default async function PayrollPage() {
                     {r.periodYear}-{String(r.periodMonth).padStart(2, "0")}
                   </TableCell>
                   <TableCell>
-                    <Badge variant={r.status === "processed" ? "success" : "neutral"}>{t(locale, r.status)}</Badge>
+                    <StatusBadge domain="payroll_run" status={r.status} locale={locale} />
                   </TableCell>
                   <TableCell className="text-right num-tabular"><Money amount={Number(r.netTotal)} context="summary" /></TableCell>
                 </TableRow>
