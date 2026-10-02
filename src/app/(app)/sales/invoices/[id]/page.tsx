@@ -1,4 +1,5 @@
 import { Fragment } from "react";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { notFound } from "next/navigation";
 import { eq, and, isNull, sql } from "drizzle-orm";
 import { DocumentTermsView } from "../../_shared/terms-view";
@@ -11,7 +12,6 @@ import { getProfileByCountryName, profileHasFeature } from "@/lib/geo/country-pr
 import { getLocale } from "@/lib/i18n/server";
 import { t } from "@/lib/i18n/dict";
 import { can } from "@/lib/document-lifecycle";
-import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { PartyCardSimple } from "../../_shared/party-card";
 import { BankAccountBlocks } from "../../_shared/bank-account-blocks";
@@ -28,13 +28,6 @@ import { DownloadPdfButton } from "../../_shared/download-pdf-button";
 import { EditDocumentButton } from "../../../_shared/edit-document";
 import { PaymentHistory } from "../../../finance/_shared/payment-history";
 
-const STATUS_VARIANT: Record<string, "success" | "warning" | "danger" | "info" | "neutral"> = {
-  draft: "neutral",
-  sent: "info",
-  partially_paid: "warning",
-  paid: "success",
-  void: "danger",
-};
 
 export default async function InvoiceDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await requireSession();
@@ -158,9 +151,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
                 {t(locale, "Converted From")} {invoice.sourceSoNumber}
               </>
             )}
-            <Badge className="ms-2" variant={STATUS_VARIANT[invoice.status] ?? "neutral"} live>
-              {t(locale, invoice.status)}
-            </Badge>
+            <StatusBadge className="ms-2" domain="sales_invoice" status={invoice.status} locale={locale} />
           </div>
         </div>
         <div className="flex items-center gap-2.5">

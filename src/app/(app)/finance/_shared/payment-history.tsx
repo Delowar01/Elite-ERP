@@ -1,11 +1,11 @@
 import { and, eq, or, desc, inArray, sql } from "drizzle-orm";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { db, paymentsTable, bankAccountsTable, proformaInvoicesTable } from "@/db";
 import { t, type Locale } from "@/lib/i18n/dict";
 import { DocNum } from "../../sales/_shared/money";
 import { DeletePaymentButton } from "./delete-payment-button";
 import { RefundAdvanceButton } from "./refund-advance-button";
 import { ReversePaymentButton } from "./reverse-payment-button";
-import { Badge } from "@/components/ui/badge";
 import { advancePaymentIdsForInvoice } from "@/lib/advance-payment-links";
 
 const METHOD_LABEL: Record<string, string> = {
@@ -168,7 +168,7 @@ export async function PaymentHistory({
                         but it must be obvious at a glance that it no longer counts. Badge and
                         strike-through together, because either alone reads as decoration. */}
                     {p.reversedAt && (
-                      <Badge variant="neutral" className="ms-1.5" data-testid={`reversed-badge-${p.id}`}>{t(locale, "Reversed")}</Badge>
+                      <span data-testid={`reversed-badge-${p.id}`}><StatusBadge className="ms-1.5" domain="payment" status="reversed" locale={locale} /></span>
                     )}
                   </td>
                   <td className={`px-3 py-2 text-end num-tabular${p.reversedAt ? " line-through" : ""}`}>

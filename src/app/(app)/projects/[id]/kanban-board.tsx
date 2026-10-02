@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { toast } from "sonner";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -148,7 +149,7 @@ export function KanbanBoard({
                       <div className="t">{task.title}</div>
                       <div className="meta-row">
                         {col.status === "done" ? (
-                          <span className="pill pill-success">{t(locale, "Done")}</span>
+                          <StatusBadge domain="task" status="done" locale={locale} />
                         ) : (
                           <span className="pill" style={PRIORITY_STYLE[task.priority ?? "medium"]}>
                             {t(locale, PRIORITY_LABEL[task.priority ?? "medium"])}

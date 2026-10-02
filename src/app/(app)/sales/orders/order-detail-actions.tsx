@@ -1,6 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
+import { statusLabel } from "@/lib/status-registry";
 import { toast } from "sonner";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { useConfirm } from "../../_shared/confirm-provider";
@@ -41,7 +42,7 @@ export function OrderDetailActions({ locale, orderId, orderNumber, status }: { l
         <SelectContent>
           {STATUSES.map((s) => (
             <SelectItem key={s} value={s}>
-              {t(locale, s)}
+              {statusLabel(locale, "sales_order", s)}
             </SelectItem>
           ))}
         </SelectContent>

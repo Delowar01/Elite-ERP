@@ -1,4 +1,5 @@
 import { and, eq, asc, desc } from "drizzle-orm";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { db, bankAccountsTable, accountsTable, paymentsTable, journalEntriesTable, journalLinesTable } from "@/db";
 import { requireSession } from "@/lib/session";
 import { getLocale } from "@/lib/i18n/server";
@@ -115,7 +116,7 @@ export default async function BankAccountsPage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Badge variant={ba.isActive ? "success" : "neutral"}>{ba.isActive ? t(locale, "Active") : t(locale, "Inactive")}</Badge>
+                    <StatusBadge domain="active_flag" status={ba.isActive ? "active" : "inactive"} locale={locale} />
                     <BankAccountFormDialog
                       locale={locale}
                       glAccounts={glOptionsFor(ba.glAccountId)}

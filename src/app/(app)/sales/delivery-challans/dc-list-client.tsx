@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { StatusBadge } from "@/components/ui/status-badge";
 import Link from "next/link";
 import { Eye, Truck as TruckIcon, Download } from "lucide-react";
 import { toast } from "sonner";
@@ -18,11 +19,6 @@ import { useDocumentRowActions } from "../../_shared/document-row-actions";
 import { useDocumentEditAction } from "../../_shared/edit-document";
 import { ListEmptyState } from "../_shared/list-empty-state";
 
-const STATUS_VARIANT: Record<string, "success" | "warning" | "danger" | "info" | "neutral"> = {
-  draft: "neutral",
-  dispatched: "warning",
-  delivered: "success",
-};
 
 export type DcRow = {
   id: number;
@@ -140,7 +136,7 @@ export function DcListClient({
                 <TableCell className="num-tabular text-xs">{r.dispatchDate ?? "—"}</TableCell>
                 <TableCell className="text-[12.5px] text-ink-muted">{r.creatorName}</TableCell>
                 <TableCell>
-                  <Badge variant={STATUS_VARIANT[r.status] ?? "neutral"}>{t(locale, r.status)}</Badge>
+                  <StatusBadge domain="delivery_challan" status={r.status} locale={locale} />
                   {r.isArchived && (
                     <Badge variant="neutral" className="ms-1">
                       {t(locale, "Archived")}

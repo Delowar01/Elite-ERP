@@ -1,9 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { StatusBadge } from "@/components/ui/status-badge";
 import Link from "next/link";
 import { Eye } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { StatRow } from "../sales/_shared/stat-row";
 import { ListToolbar } from "../sales/_shared/list-toolbar";
@@ -11,13 +11,6 @@ import { RowMenu, type RowMenuEntry } from "../sales/_shared/row-menu";
 import { Money } from "../sales/_shared/money";
 import { t, type Locale } from "@/lib/i18n/dict";
 
-const STATUS_VARIANT: Record<string, "success" | "warning" | "danger" | "info" | "neutral"> = {
-  planned: "neutral",
-  active: "info",
-  on_hold: "warning",
-  completed: "success",
-  cancelled: "danger",
-};
 
 export type ProjectRow = {
   id: number;
@@ -106,7 +99,7 @@ export function ProjectsListClient({ locale, rows }: { locale: Locale; rows: Pro
                   </TableCell>
                   <TableCell className="num-tabular text-xs">{r.taskCount}</TableCell>
                   <TableCell>
-                    <Badge variant={STATUS_VARIANT[r.status] ?? "neutral"}>{t(locale, r.status)}</Badge>
+                    <StatusBadge domain="project" status={r.status} locale={locale} />
                   </TableCell>
                   <TableCell>
                     <RowMenu entries={entries} />

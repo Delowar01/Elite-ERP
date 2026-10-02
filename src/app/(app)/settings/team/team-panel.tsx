@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { toast } from "sonner";
 import { Plus, MoreVertical } from "lucide-react";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
@@ -115,7 +116,7 @@ export function TeamPanel({
                 <Badge variant={member.role === "owner" ? "info" : "neutral"}>{t(locale, ROLE_LABELS[member.role as Role])}</Badge>
               </TableCell>
               <TableCell>
-                <Badge variant={member.isActive ? "success" : "neutral"}>{member.isActive ? t(locale, "Active") : t(locale, "Inactive")}</Badge>
+                <StatusBadge domain="active_flag" status={member.isActive ? "active" : "inactive"} locale={locale} />
               </TableCell>
               <TableCell className="text-right">
                 {member.id !== currentUserId && (

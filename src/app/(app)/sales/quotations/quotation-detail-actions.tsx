@@ -1,6 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
+import { statusLabel } from "@/lib/status-registry";
 import { toast } from "sonner";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { useConfirm } from "../../_shared/confirm-provider";
@@ -38,7 +39,7 @@ export function QuotationDetailActions({ locale, quotationId, quotationNumber, s
         <SelectContent>
           {STATUSES.map((s) => (
             <SelectItem key={s} value={s}>
-              {t(locale, s)}
+              {statusLabel(locale, "quotation", s)}
             </SelectItem>
           ))}
         </SelectContent>

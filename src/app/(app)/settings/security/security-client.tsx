@@ -1,12 +1,12 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { toast } from "sonner";
 import { ShieldCheck, ShieldAlert, Smartphone, Monitor, KeyRound, LogOut, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FormField } from "@/components/ui/form-field";
-import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { t, type Locale } from "@/lib/i18n/dict";
@@ -32,9 +32,6 @@ type SessionRow = {
 type EventRow = { id: number; type: string; severity: string; email: string | null; ipAddress: string | null; browser: string | null; detail: string | null; createdAt: string };
 type Alert = { kind: string; severity: string; title: string; detail: string; count: number };
 
-const SEV_VARIANT: Record<string, "success" | "warning" | "danger" | "info" | "neutral"> = {
-  info: "neutral", low: "info", medium: "warning", high: "danger", critical: "danger",
-};
 const RISK_STYLE: Record<string, { label: string; color: string; bg: string }> = {
   low: { label: "Low", color: "var(--good)", bg: "var(--good-bg)" },
   elevated: { label: "Elevated", color: "var(--warn)", bg: "var(--warn-bg)" },
@@ -302,7 +299,7 @@ export function SecurityCenterClient(props: {
                   <TableRow key={e.id}>
                     <TableCell className="font-mono text-xs">{e.type}</TableCell>
                     <TableCell>
-                      <Badge variant={SEV_VARIANT[e.severity] ?? "neutral"}>{e.severity}</Badge>
+                      <StatusBadge domain="security_severity" status={e.severity} locale={locale} />
                     </TableCell>
                     <TableCell className="text-[12.5px]">{e.email ?? "—"}</TableCell>
                     <TableCell className="font-mono text-xs">{e.ipAddress ?? "—"}</TableCell>

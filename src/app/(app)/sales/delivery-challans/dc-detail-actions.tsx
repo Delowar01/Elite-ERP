@@ -1,6 +1,7 @@
 "use client";
 
 import { toast } from "sonner";
+import { statusLabel } from "@/lib/status-registry";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { t, type Locale } from "@/lib/i18n/dict";
 import { useConfirm } from "../../_shared/confirm-provider";
@@ -37,7 +38,7 @@ export function DcDetailActions({ locale, dcId, dcNumber, status }: { locale: Lo
         <SelectContent>
           {STATUSES.map((s) => (
             <SelectItem key={s} value={s}>
-              {t(locale, s)}
+              {statusLabel(locale, "delivery_challan", s)}
             </SelectItem>
           ))}
         </SelectContent>

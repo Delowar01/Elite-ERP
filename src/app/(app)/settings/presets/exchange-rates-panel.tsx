@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { toast } from "sonner";
 import { Plus, RefreshCw, AlertTriangle } from "lucide-react";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
@@ -9,7 +10,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FormField } from "@/components/ui/form-field";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
 import { t, type Locale } from "@/lib/i18n/dict";
 import { saveManualRateAction, fetchRatesNowAction } from "./exchange-rates-actions";
 
@@ -136,9 +136,7 @@ export function ExchangeRatesPanel({
                   <TableCell>
                     {r.effectiveDate}
                     {r.stale ? (
-                      <Badge variant="warning" className="ms-2">
-                        {t(locale, "Stale")} (&gt;{staleAfterDays} {t(locale, "days")})
-                      </Badge>
+                      <StatusBadge className="ms-2" domain="exchange_rate_state" status="stale" locale={locale} detail={`(>${staleAfterDays} ${t(locale, "days")})`} />
                     ) : null}
                   </TableCell>
                   <TableCell className="text-[12px] text-ink-muted">{r.source === "manual" ? t(locale, "Manual") : r.source}</TableCell>

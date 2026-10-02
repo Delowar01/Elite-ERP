@@ -11,6 +11,9 @@ const badgeVariants = cva("pill", {
       danger: "pill-danger",
       info: "pill-info",
       neutral: "pill-neutral",
+      // DEV-UI-01.2: corrective tone from the approved --corrective tokens (generic Badge only;
+      // status presentation uses <StatusBadge>).
+      corrective: "pill-corrective",
     },
     live: {
       true: "live",

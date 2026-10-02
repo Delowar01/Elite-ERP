@@ -1,11 +1,12 @@
 import Link from "next/link";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { getLocale } from "@/lib/i18n/server";
 import { and, ilike, or } from "drizzle-orm";
 import { db, vendorsTable } from "@/db";
 import { requireSession } from "@/lib/session";
 import { tenantScope } from "@/lib/tenant";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { Card, CardContent } from "@/components/ui/card";
 import { Plus, Trash2 } from "lucide-react";
@@ -18,6 +19,7 @@ export default async function VendorsPage({
   searchParams: Promise<{ q?: string; archived?: string }>;
 }) {
   const session = await requireSession();
+  const locale = await getLocale();
   const { q, archived } = await searchParams;
   const includeArchived = archived === "1";
 
@@ -83,8 +85,8 @@ export default async function VendorsPage({
                 <TableCell className="text-ink-muted">{v.email ?? "—"}</TableCell>
                 <TableCell className="text-ink-muted font-mono text-xs">{v.phone ?? "—"}</TableCell>
                 <TableCell className="flex items-center gap-1.5 flex-wrap">
-                  <Badge variant={v.isActive ? "success" : "neutral"}>{v.isActive ? "Active" : "Inactive"}</Badge>
-                  {v.recordState === "archived" && <Badge variant="neutral">Archived</Badge>}
+                  <StatusBadge domain="active_flag" status={v.isActive ? "active" : "inactive"} locale={locale} />
+                  {v.recordState === "archived" && <StatusBadge domain="record_state" status="archived" locale={locale} />}
                 </TableCell>
                 <TableCell className="text-right">
                   <VendorRecordActions vendor={v} />

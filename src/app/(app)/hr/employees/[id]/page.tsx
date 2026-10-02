@@ -1,11 +1,11 @@
 import { notFound } from "next/navigation";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { and, asc, desc, eq } from "drizzle-orm";
 import { db, employeesTable, departmentsTable, salaryStructuresTable } from "@/db";
 import { requireSession } from "@/lib/session";
 import { getLocale } from "@/lib/i18n/server";
 import { t } from "@/lib/i18n/dict";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { EmployeeForm } from "../employee-form";
 import { updateEmployeeAction } from "../actions";
 import { SalaryForm } from "./salary-form";
@@ -43,7 +43,7 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
         <h3>
           {employee.name} <span className="font-mono text-[13px] text-ink-muted">· {employee.employeeCode}</span>
         </h3>
-        <Badge variant={employee.status === "active" ? "success" : "neutral"}>{t(locale, employee.status)}</Badge>
+        <StatusBadge domain="employee" status={employee.status} locale={locale} />
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
         <Card>

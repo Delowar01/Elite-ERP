@@ -1,10 +1,10 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
+import { StatusBadge } from "@/components/ui/status-badge";
 import Link from "next/link";
 import { toast } from "sonner";
 import { Trash2, RotateCcw, ShieldAlert } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { t, type Locale } from "@/lib/i18n/dict";
@@ -116,7 +116,7 @@ export function RecycleBinClient({ locale, rows, isOwner }: { locale: Locale; ro
                   </TableCell>
                   <TableCell>{r.partyName}</TableCell>
                   <TableCell>
-                    <Badge variant="neutral">{t(locale, r.status)}</Badge>
+                    <StatusBadge domain={r.docType} status={r.status} locale={locale} />
                   </TableCell>
                   <TableCell className="num-tabular text-xs">{r.deletedAt || "—"}</TableCell>
                   <TableCell>

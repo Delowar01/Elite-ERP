@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { toast } from "sonner";
 import { Download, UserX, FileCheck2, CheckCircle2, Circle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { t, type Locale } from "@/lib/i18n/dict";
@@ -291,7 +291,7 @@ export function ComplianceCenterClient(props: {
               {props.consents.map((c) => (
                 <TableRow key={c.id}>
                   <TableCell className="font-medium">{t(locale, c.subject)}</TableCell>
-                  <TableCell><Badge variant={c.granted ? "success" : "neutral"}>{c.granted ? t(locale, "Granted") : t(locale, "Withdrawn")}</Badge></TableCell>
+                  <TableCell><StatusBadge domain="consent" status={c.granted ? "granted" : "withdrawn"} locale={locale} /></TableCell>
                   <TableCell className="text-ink-muted">{c.version ?? "—"}</TableCell>
                   <TableCell className="text-ink-muted">{fmtDate(c.createdAt)}</TableCell>
                   <TableCell className="text-right">

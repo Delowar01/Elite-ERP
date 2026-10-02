@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { statusLabel } from "@/lib/status-registry";
 import Link from "next/link";
 import { and, desc, eq, gte } from "drizzle-orm";
 import {
@@ -119,14 +120,14 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
   if (!costControl) notFound();
 
   const linkedDocs = [
-    ...linkedQuotations.map((d) => ({ ...d, type: "Quotation", href: `/sales/quotations/${d.id}` })),
-    ...linkedOrders.map((d) => ({ ...d, type: "Sales Order", href: `/sales/orders/${d.id}` })),
-    ...linkedInvoices.map((d) => ({ ...d, type: "Invoice", href: `/sales/invoices/${d.id}` })),
-    ...linkedPos.map((d) => ({ ...d, type: "Purchase Order", href: `/purchasing/orders/${d.id}` })),
+    ...linkedQuotations.map((d) => ({ ...d, type: "Quotation", domain: "quotation" as const, href: `/sales/quotations/${d.id}` })),
+    ...linkedOrders.map((d) => ({ ...d, type: "Sales Order", domain: "sales_order" as const, href: `/sales/orders/${d.id}` })),
+    ...linkedInvoices.map((d) => ({ ...d, type: "Invoice", domain: "sales_invoice" as const, href: `/sales/invoices/${d.id}` })),
+    ...linkedPos.map((d) => ({ ...d, type: "Purchase Order", domain: "purchase_order" as const, href: `/purchasing/orders/${d.id}` })),
   ].sort((a, b) => (a.date < b.date ? 1 : -1));
 
   const currencyMark = resolveCurrencyMark(session.orgCurrency);
-  const pillParts = [t(locale, project.status)];
+  const pillParts = [statusLabel(locale, "project", project.status)];
   if (project.budget) pillParts.push(`${displayCurrency(currencyMark)} ${formatMoneyNumber(project.budget, "summary")} ${t(locale, "budget")}`);
 
   return (
@@ -251,7 +252,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                 <TableCell className="text-right num-tabular">
                   <Money amount={d.total} />
                 </TableCell>
-                <TableCell className="text-[12.5px] text-ink-muted">{t(locale, d.status)}</TableCell>
+                <TableCell className="text-[12.5px] text-ink-muted">{statusLabel(locale, d.domain, d.status)}</TableCell>
               </TableRow>
             ))}
           </TableBody>

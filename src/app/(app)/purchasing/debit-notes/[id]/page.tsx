@@ -1,4 +1,5 @@
 import { Fragment } from "react";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { notFound } from "next/navigation";
 import { eq, and } from "drizzle-orm";
 import { DocumentTermsView } from "../../../sales/_shared/terms-view";
@@ -10,17 +11,12 @@ import { docMoneyMark } from "../../../sales/_shared/doc-currency";
 import { requireSession } from "@/lib/session";
 import { getLocale } from "@/lib/i18n/server";
 import { t } from "@/lib/i18n/dict";
-import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { Money, DocNum } from "../../../sales/_shared/money";
 import { DnDetailActions } from "../dn-detail-actions";
 import { DownloadPdfButton } from "../../../sales/_shared/download-pdf-button";
 import { EditDocumentButton } from "../../../_shared/edit-document";
 
-const STATUS_VARIANT: Record<string, "success" | "warning" | "danger" | "info" | "neutral"> = {
-  draft: "neutral",
-  issued: "danger",
-};
 
 function vatPercent(subtotal: string, taxTotal: string): string {
   const sub = Number(subtotal);
@@ -78,9 +74,7 @@ export default async function DebitNoteDetailPage({ params }: { params: Promise<
           <div className="inv-sub">
             {t(locale, "Against Purchase Order")} {dn.sourcePoNumber} · {dn.vendorName}
             {dn.title ? ` · ${dn.title}` : ""}
-            <Badge className="ms-2" variant={STATUS_VARIANT[dn.status] ?? "neutral"} live>
-              {t(locale, dn.status)}
-            </Badge>
+            <StatusBadge className="ms-2" domain="debit_note" status={dn.status} locale={locale} />
           </div>
         </div>
         <div className="flex items-center gap-2.5">

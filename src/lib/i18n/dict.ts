@@ -1844,6 +1844,31 @@ const DICT: Record<string, string> = {
   "against Proforma Invoice": "مقابل الفاتورة المبدئية",
   "You have changes that have not been saved. If you leave this page, those changes will be lost.":
     "لديك تغييرات لم يتم حفظها. إذا غادرت هذه الصفحة فستفقد تلك التغييرات.",
+
+  // ---- status registry (DEV-UI-01.2) ----
+  // Dedicated, unambiguous keys owned by src/lib/status-registry.ts. Several title-case words
+  // ("Pending", "Paid", "Received", "Unpaid", "Void", "To Do") already carry other meanings in this
+  // dictionary (column headers, leave types, verbs), so status labels never reuse them.
+  "status.archived": "مؤرشف",
+  "status.deleted": "محذوف",
+  "status.overdue": "متأخر السداد",
+  "status.partial": "مدفوع جزئيًا",
+  "status.invoice_pending": "بانتظار السداد",
+  "status.todo": "للتنفيذ",
+  "status.in_progress": "قيد التنفيذ",
+  "status.blocked": "معطَّل",
+  "status.done": "تم",
+  "status.present": "حاضر",
+  "status.late": "متأخر",
+  "status.on_leave": "في إجازة",
+  "status.absent": "غائب",
+  "status.severity_info": "معلومات",
+  "status.severity_low": "منخفض",
+  "status.severity_medium": "متوسط",
+  "status.severity_high": "مرتفع",
+  "status.severity_critical": "حرج",
+  "status.low_stock": "مخزون منخفض",
+  "status.in_stock": "متوفر",
 };
 
 export function t(locale: Locale, en: string): string {

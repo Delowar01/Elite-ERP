@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { StatusBadge } from "@/components/ui/status-badge";
 import Link from "next/link";
 import { and, eq } from "drizzle-orm";
 import { db, vendorsTable, purchaseOrdersTable, orgsTable } from "@/db";
@@ -9,7 +10,6 @@ import { getProfileByCountryName, resolveTaxLabels } from "@/lib/geo/country-pro
 import { tenantScope } from "@/lib/tenant";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { VendorForm } from "../vendor-form";
 import { updateVendorAction } from "../actions";
 import { VendorRecordActions } from "../vendor-record-actions";
@@ -54,8 +54,8 @@ export default async function VendorDetailPage({ params }: { params: Promise<{ i
         description="Vendor profile"
         actions={
           <div className="flex items-center gap-2">
-            <Badge variant={vendor.isActive ? "success" : "neutral"}>{vendor.isActive ? "Active" : "Inactive"}</Badge>
-            {vendor.recordState === "archived" && <Badge variant="neutral">Archived</Badge>}
+            <StatusBadge domain="active_flag" status={vendor.isActive ? "active" : "inactive"} locale={locale} />
+            {vendor.recordState === "archived" && <StatusBadge domain="record_state" status="archived" locale={locale} />}
             <VendorRecordActions vendor={vendor} />
           </div>
         }

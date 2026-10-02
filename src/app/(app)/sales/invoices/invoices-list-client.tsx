@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { StatusBadge } from "@/components/ui/status-badge";
 import Link from "next/link";
 import { toast } from "sonner";
 import { downloadDocumentPdf } from "../_shared/download-pdf-button";
@@ -21,13 +22,6 @@ import { getConvertTargets } from "../_shared/convert-config";
 import { useConvertConfirm } from "../../_shared/confirm-actions";
 import { ListEmptyState } from "../_shared/list-empty-state";
 
-const STATUS_VARIANT: Record<string, "success" | "warning" | "danger" | "info" | "neutral"> = {
-  draft: "neutral",
-  sent: "info",
-  partially_paid: "warning",
-  paid: "success",
-  void: "danger",
-};
 
 export type InvoiceRow = {
   id: number;
@@ -165,7 +159,7 @@ export function InvoicesListClient({
                 </TableCell>
                 <TableCell className="text-[12.5px] text-ink-muted">{r.creatorName}</TableCell>
                 <TableCell>
-                  <Badge variant={STATUS_VARIANT[r.status] ?? "neutral"}>{t(locale, r.status)}</Badge>
+                  <StatusBadge domain="sales_invoice" status={r.status} locale={locale} />
                   {r.isArchived && (
                     <Badge variant="neutral" className="ms-1">
                       {t(locale, "Archived")}

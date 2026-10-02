@@ -1,4 +1,5 @@
 import { Fragment } from "react";
+import { STATUS_TONE_TOKENS, resolveStatus, statusLabel } from "@/lib/status-registry";
 import { ShoppingCart, FileText, Wallet, CreditCard, BookOpen, ChevronRight, FileSignature, Building2, UserPlus, Shield, Lock, TrendingUp, RefreshCw, Link2 } from "lucide-react";
 import Link from "next/link";
 import { requireSession } from "@/lib/session";
@@ -25,6 +26,12 @@ function DashWidget({ col, row, children }: { col: number; row: number; children
       {children}
     </div>
   );
+}
+
+// Invoice-status colours come from the status registry (DEV-UI-01.2) — the dashboard makes no
+// colour decision of its own for paid / partial / pending / overdue.
+function settlementColor(key: "paid" | "partial" | "pending" | "overdue"): string {
+  return STATUS_TONE_TOKENS[resolveStatus("invoice_settlement", key).tone].fg;
 }
 
 // Dashboard KPI figures are a summary context → 0 decimals (rounded), matching <Money context="summary">.
@@ -214,18 +221,18 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           <h4 style={{ alignSelf: "flex-start" }}>{t(locale, "Invoices Overview")}</h4>
           <Donut
             segments={invoicesOverview.total > 0 ? [
-              { value: invoicesOverview.paid, color: "var(--accent-green)" },
-              { value: invoicesOverview.partial, color: "var(--accent-purple)" },
-              { value: invoicesOverview.pending, color: "var(--brand-orange)" },
-              { value: invoicesOverview.overdue, color: "var(--accent-red)" },
+              { value: invoicesOverview.paid, color: settlementColor("paid") },
+              { value: invoicesOverview.partial, color: settlementColor("partial") },
+              { value: invoicesOverview.pending, color: settlementColor("pending") },
+              { value: invoicesOverview.overdue, color: settlementColor("overdue") },
             ] : [{ value: 1, color: "var(--line)" }]}
             size={110} thickness={13} centerLabel={t(locale, "Total")} centerValue={String(invoicesOverview.total)}
           />
           <div style={{ width: "100%", marginTop: 10 }}>
-            <div className="bc-stat-row"><span className="lbl"><span className="dot" style={{ background: "var(--accent-green)" }} />{t(locale, "Paid")}</span><span className="val">{invoicesOverview.paid} ({invPct(invoicesOverview.paid)}%)</span></div>
-            <div className="bc-stat-row"><span className="lbl"><span className="dot" style={{ background: "var(--accent-purple)" }} />{t(locale, "Partial")}</span><span className="val">{invoicesOverview.partial} ({invPct(invoicesOverview.partial)}%)</span></div>
-            <div className="bc-stat-row"><span className="lbl"><span className="dot" style={{ background: "var(--brand-orange)" }} />{t(locale, "Pending")}</span><span className="val">{invoicesOverview.pending} ({invPct(invoicesOverview.pending)}%)</span></div>
-            <div className="bc-stat-row"><span className="lbl"><span className="dot" style={{ background: "var(--accent-red)" }} />{t(locale, "Overdue")}</span><span className="val">{invoicesOverview.overdue} ({invPct(invoicesOverview.overdue)}%)</span></div>
+            <div className="bc-stat-row"><span className="lbl"><span className="dot" style={{ background: settlementColor("paid") }} />{statusLabel(locale, "invoice_settlement", "paid")}</span><span className="val">{invoicesOverview.paid} ({invPct(invoicesOverview.paid)}%)</span></div>
+            <div className="bc-stat-row"><span className="lbl"><span className="dot" style={{ background: settlementColor("partial") }} />{statusLabel(locale, "invoice_settlement", "partial")}</span><span className="val">{invoicesOverview.partial} ({invPct(invoicesOverview.partial)}%)</span></div>
+            <div className="bc-stat-row"><span className="lbl"><span className="dot" style={{ background: settlementColor("pending") }} />{statusLabel(locale, "invoice_settlement", "pending")}</span><span className="val">{invoicesOverview.pending} ({invPct(invoicesOverview.pending)}%)</span></div>
+            <div className="bc-stat-row"><span className="lbl"><span className="dot" style={{ background: settlementColor("overdue") }} />{statusLabel(locale, "invoice_settlement", "overdue")}</span><span className="val">{invoicesOverview.overdue} ({invPct(invoicesOverview.overdue)}%)</span></div>
           </div>
           <Link href="/sales/invoices" className="bc-link">{t(locale, "View All Invoices")} <ChevronRight className="size-3" style={{ color: "var(--brand-orange)" }} /></Link>
         </div>

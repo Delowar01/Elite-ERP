@@ -1,11 +1,11 @@
 import Link from "next/link";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { and, ilike, or } from "drizzle-orm";
 import { db, customersTable } from "@/db";
 import { requireSession } from "@/lib/session";
 import { tenantScope } from "@/lib/tenant";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { Card, CardContent } from "@/components/ui/card";
 import { Plus, Trash2 } from "lucide-react";
@@ -97,8 +97,8 @@ export default async function ClientsPage({
                 <TableCell className="text-ink-muted">{c.email ?? "—"}</TableCell>
                 <TableCell className="text-ink-muted font-mono text-xs">{c.phone ?? "—"}</TableCell>
                 <TableCell className="flex items-center gap-1.5 flex-wrap">
-                  <Badge variant={c.isActive ? "success" : "neutral"}>{c.isActive ? "Active" : "Inactive"}</Badge>
-                  {c.recordState === "archived" && <Badge variant="neutral">Archived</Badge>}
+                  <StatusBadge domain="active_flag" status={c.isActive ? "active" : "inactive"} locale={locale} />
+                  {c.recordState === "archived" && <StatusBadge domain="record_state" status="archived" locale={locale} />}
                 </TableCell>
                 <TableCell className="text-right">
                   <ClientRecordActions client={c} />

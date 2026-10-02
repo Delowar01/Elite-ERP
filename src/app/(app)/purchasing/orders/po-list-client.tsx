@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { StatusBadge } from "@/components/ui/status-badge";
 import Link from "next/link";
 import { Eye, Download } from "lucide-react";
 import { toast } from "sonner";
@@ -21,12 +22,6 @@ import { getConvertTargets } from "../../sales/_shared/convert-config";
 import { useConvertConfirm } from "../../_shared/confirm-actions";
 import { ListEmptyState } from "../../sales/_shared/list-empty-state";
 
-const STATUS_VARIANT: Record<string, "success" | "warning" | "danger" | "info" | "neutral"> = {
-  draft: "neutral",
-  ordered: "info",
-  received: "success",
-  cancelled: "danger",
-};
 
 export type PoRow = {
   id: number;
@@ -163,7 +158,7 @@ export function PoListClient({
                   </TableCell>
                   <TableCell className="text-[12.5px] text-ink-muted">{r.creatorName}</TableCell>
                   <TableCell>
-                    <Badge variant={STATUS_VARIANT[r.status] ?? "neutral"}>{t(locale, r.status)}</Badge>
+                    <StatusBadge domain="purchase_order" status={r.status} locale={locale} />
                     {r.isArchived && (
                       <Badge variant="neutral" className="ms-1">
                         {t(locale, "Archived")}
