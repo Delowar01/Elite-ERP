@@ -87,13 +87,13 @@ export function NoteTemplatesPanel({ locale, templates }: { locale: Locale; temp
           </CardContent>
         </Card>
       ) : (
-        <Table>
+        <Table density="compact">
           <TableHeader>
             <TableRow>
               <TableHead>{t(locale, "Name")}</TableHead>
               <TableHead>{t(locale, "Document Type")}</TableHead>
               <TableHead>{t(locale, "Preview")}</TableHead>
-              <TableHead className="w-20" />
+              <TableHead action>{t(locale, "Actions")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -111,7 +111,7 @@ export function NoteTemplatesPanel({ locale, templates }: { locale: Locale; temp
                   </div>
                 </TableCell>
                 <TableCell className="text-ink-muted text-xs max-w-xs truncate">{template.content}</TableCell>
-                <TableCell className="text-right whitespace-nowrap">
+                <TableCell action>
                   <Button variant="ghost" size="icon" disabled={pending} onClick={() => openEdit(template)} aria-label={t(locale, "Edit")}>
                     <Pencil className="size-3.5" />
                   </Button>

@@ -97,14 +97,14 @@ export function TeamPanel({
   return (
     <div className="flex flex-col gap-4">
       <h3 className="text-[17px] font-bold">{t(locale, "Team")}</h3>
-      <Table>
+      <Table density="compact">
         <TableHeader>
           <TableRow>
             <TableHead>{t(locale, "Name")}</TableHead>
             <TableHead>Email</TableHead>
             <TableHead>{t(locale, "Role")}</TableHead>
             <TableHead>{t(locale, "Status")}</TableHead>
-            <TableHead className="w-12" />
+            <TableHead action>{t(locale, "Actions")}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -118,7 +118,7 @@ export function TeamPanel({
               <TableCell>
                 <StatusBadge domain="active_flag" status={member.isActive ? "active" : "inactive"} locale={locale} />
               </TableCell>
-              <TableCell className="text-right">
+              <TableCell action>
                 {member.id !== currentUserId && (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>

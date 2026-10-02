@@ -206,6 +206,7 @@ function Menus() {
       <div className="flex items-center justify-between rounded-lg border border-line bg-surface px-4 py-3" data-gallery-row="row menu">
         <span className="text-body text-ink">{L("INV-0006 · Al Noor Contracting (Fictional)", "INV-0006 · مؤسسة النور للمقاولات (وهمية)")}</span>
         <RowMenu
+          label={L("Actions for INV-0006", "إجراءات INV-0006")}
           entries={[
             { kind: "item", icon: Eye, label: L("View", "عرض"), onSelect: noop },
             { kind: "item", icon: Copy, label: L("Duplicate", "تكرار"), onSelect: noop },

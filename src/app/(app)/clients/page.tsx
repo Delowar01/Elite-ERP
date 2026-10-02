@@ -7,6 +7,7 @@ import { tenantScope } from "@/lib/tenant";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
+import { t } from "@/lib/i18n/dict";
 import { Card, CardContent } from "@/components/ui/card";
 import { Plus, Trash2 } from "lucide-react";
 import { getLocale } from "@/lib/i18n/server";
@@ -38,9 +39,12 @@ export default async function ClientsPage({
 
   return (
     <div className="max-w-6xl mx-auto">
+      {/* flex-wrap: at 390px the three header actions move below the heading instead of pushing the page
+          wider than the viewport (PageHeader itself is frozen; it already takes a className). */}
       <PageHeader
-        title="Clients"
-        description="Customer directory used across quotations, orders, and invoices."
+        className="flex-wrap"
+        title={t(locale, "Clients")}
+        description={t(locale, "Customer directory used across quotations, orders, and invoices.")}
         actions={
           <>
             {/* Batch client upload — same Import v2 modal (template / mapping / preview / confirm)
@@ -55,35 +59,35 @@ export default async function ClientsPage({
             />
             <Button variant="outline" asChild>
               <Link href="/clients/recycle-bin">
-                <Trash2 className="size-4" /> Recycle Bin
+                <Trash2 className="size-4" /> {t(locale, "Recycle Bin")}
               </Link>
             </Button>
             <Button asChild>
               <Link href="/clients/new">
-                <Plus className="size-4" /> New Client
+                <Plus className="size-4" /> {t(locale, "New Client")}
               </Link>
             </Button>
           </>
         }
       />
 
-      <ClientsToolbar defaultQ={q} defaultArchived={includeArchived} />
+      <ClientsToolbar locale={locale} defaultQ={q} defaultArchived={includeArchived} />
 
       {clients.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center text-ink-muted text-sm">
-            {q ? `No clients match "${q}".` : "No clients yet. Add your first client to get started."}
+            {q ? `${t(locale, "No clients match")} “${q}”.` : t(locale, "No clients yet. Add your first client to get started.")}
           </CardContent>
         </Card>
       ) : (
-        <Table>
+        <Table list>
           <TableHeader>
             <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Phone</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="w-12" />
+              <TableHead>{t(locale, "Name")}</TableHead>
+              <TableHead>{t(locale, "Email")}</TableHead>
+              <TableHead>{t(locale, "Phone")}</TableHead>
+              <TableHead>{t(locale, "Status")}</TableHead>
+              <TableHead action>{t(locale, "Actions")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -96,12 +100,15 @@ export default async function ClientsPage({
                 </TableCell>
                 <TableCell className="text-ink-muted">{c.email ?? "—"}</TableCell>
                 <TableCell className="text-ink-muted font-mono text-xs">{c.phone ?? "—"}</TableCell>
-                <TableCell className="flex items-center gap-1.5 flex-wrap">
-                  <StatusBadge domain="active_flag" status={c.isActive ? "active" : "inactive"} locale={locale} />
-                  {c.recordState === "archived" && <StatusBadge domain="record_state" status="archived" locale={locale} />}
+                <TableCell>
+                  {/* The cell stays a table cell; the badges sit in an inner flex row. */}
+                  <span className="inline-flex items-center gap-1.5">
+                    <StatusBadge domain="active_flag" status={c.isActive ? "active" : "inactive"} locale={locale} />
+                    {c.recordState === "archived" && <StatusBadge domain="record_state" status="archived" locale={locale} />}
+                  </span>
                 </TableCell>
-                <TableCell className="text-right">
-                  <ClientRecordActions client={c} />
+                <TableCell action>
+                  <ClientRecordActions client={c} locale={locale} label={`${t(locale, "Actions for")} ${c.name}`} />
                 </TableCell>
               </TableRow>
             ))}

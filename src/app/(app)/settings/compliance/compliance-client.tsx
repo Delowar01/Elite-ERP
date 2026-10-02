@@ -278,14 +278,14 @@ export function ComplianceCenterClient(props: {
         </div>
 
         {props.consents.length > 0 ? (
-          <Table>
+          <Table density="compact">
             <TableHeader>
               <TableRow>
                 <TableHead>{t(locale, "Subject")}</TableHead>
                 <TableHead>{t(locale, "Status")}</TableHead>
                 <TableHead>{t(locale, "Version")}</TableHead>
                 <TableHead>{t(locale, "Date")}</TableHead>
-                <TableHead />
+                <TableHead action>{t(locale, "Actions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -295,7 +295,7 @@ export function ComplianceCenterClient(props: {
                   <TableCell><StatusBadge domain="consent" status={c.granted ? "granted" : "withdrawn"} locale={locale} /></TableCell>
                   <TableCell className="text-ink-muted">{c.version ?? "—"}</TableCell>
                   <TableCell className="text-ink-muted">{fmtDate(c.createdAt)}</TableCell>
-                  <TableCell className="text-right">
+                  <TableCell action>
                     <button className="text-[12px] text-ink-faint hover:text-danger" onClick={() => removeConsent(c.id)} disabled={pending}>{t(locale, "Remove")}</button>
                   </TableCell>
                 </TableRow>

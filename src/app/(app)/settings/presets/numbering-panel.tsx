@@ -63,14 +63,14 @@ export function NumberingPanel({ locale, sequences }: { locale: Locale; sequence
   }
 
   return (
-    <Table>
+    <Table density="compact">
       <TableHeader>
         <TableRow>
           <TableHead>{t(locale, "Document Type")}</TableHead>
           <TableHead>{t(locale, "Prefix")}</TableHead>
-          <TableHead className="text-right">{t(locale, "Next Number")}</TableHead>
-          <TableHead className="text-right">{t(locale, "Padding")}</TableHead>
-          <TableHead className="w-24" />
+          <TableHead numeric>{t(locale, "Next Number")}</TableHead>
+          <TableHead numeric>{t(locale, "Padding")}</TableHead>
+          <TableHead action>{t(locale, "Actions")}</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -89,23 +89,23 @@ export function NumberingPanel({ locale, sequences }: { locale: Locale; sequence
                       className="h-8 font-mono w-24"
                     />
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell numeric>
                     <Input
                       type="number"
                       value={draft.nextNumber}
                       onChange={(e) => setDraft((d) => ({ ...d, nextNumber: e.target.value }))}
-                      className="h-8 font-mono w-24 ml-auto text-right"
+                      className="h-8 font-mono w-24 ms-auto text-end"
                     />
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell numeric>
                     <Input
                       type="number"
                       value={draft.padding}
                       onChange={(e) => setDraft((d) => ({ ...d, padding: e.target.value }))}
-                      className="h-8 num-tabular w-16 ml-auto text-right"
+                      className="h-8 num-tabular w-16 ms-auto text-end"
                     />
                   </TableCell>
-                  <TableCell className="text-right whitespace-nowrap">
+                  <TableCell action>
                     <Button variant="ghost" size="icon" disabled={pending} onClick={() => save(seq)} aria-label={t(locale, "Save")}>
                       <Check className="size-3.5 text-success" />
                     </Button>
@@ -118,10 +118,10 @@ export function NumberingPanel({ locale, sequences }: { locale: Locale; sequence
                 <>
                   <TableCell className="font-medium">{t(locale, DOC_TYPE_LABELS[seq.documentType] ?? seq.documentType)}</TableCell>
                   <TableCell className="font-mono text-xs">{seq.prefix}</TableCell>
-                  <TableCell className="text-right font-mono text-xs">{String(seq.nextNumber).padStart(seq.padding, "0")}</TableCell>
-                  <TableCell className="text-right num-tabular text-xs">{seq.padding}</TableCell>
-                  <TableCell className="text-right whitespace-nowrap">
-                    <span className="text-ink-faint text-xs font-mono mr-2 hidden sm:inline">{preview}</span>
+                  <TableCell numeric className="font-mono text-xs">{String(seq.nextNumber).padStart(seq.padding, "0")}</TableCell>
+                  <TableCell numeric className="text-xs">{seq.padding}</TableCell>
+                  <TableCell action>
+                    <span className="text-ink-faint text-xs font-mono me-2 hidden sm:inline">{preview}</span>
                     <Button variant="ghost" size="icon" onClick={() => startEdit(seq)} aria-label={t(locale, "Edit")}>
                       <Settings className="size-3.5" />
                     </Button>

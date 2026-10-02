@@ -7,7 +7,7 @@ import { Eye, Download } from "lucide-react";
 import { toast } from "sonner";
 import { downloadDocumentPdf } from "../_shared/download-pdf-button";
 import { Badge } from "@/components/ui/badge";
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell, TableEmptyRow } from "@/components/ui/table";
 import { StatRow } from "../_shared/stat-row";
 import { ListWorkspaceToolbar } from "../../documents/_workspace/list-workspace-toolbar";
 import { useListFilters } from "../../documents/_workspace/use-list-filters";
@@ -110,7 +110,7 @@ export function CnListClient({
       {rows.length === 0 ? (
         <ListEmptyState locale={locale} message={t(locale, "No credit notes yet.")} hint={t(locale, "Open a sent invoice to issue one against it.")} createHref="/sales/credit-notes/new" createLabel={t(locale, "New Credit Note")} />
       ) : (
-        <Table>
+        <Table list>
           <TableHeader>
             <TableRow>
               <TableHead>{t(locale, "CN #")}</TableHead>
@@ -118,13 +118,16 @@ export function CnListClient({
               <TableHead>{t(locale, "Converted From")}</TableHead>
               <TableHead>{t(locale, "Client")}</TableHead>
               <TableHead>{t(locale, "Issue Date")}</TableHead>
-              <TableHead className="text-right">{t(locale, "Amount")}</TableHead>
+              <TableHead numeric>{t(locale, "Amount")}</TableHead>
               <TableHead>{t(locale, "Created By")}</TableHead>
               <TableHead>{t(locale, "Status")}</TableHead>
-              <TableHead className="w-10" />
+              <TableHead action>{t(locale, "Actions")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
+            {filtered.length === 0 && (
+              <TableEmptyRow colSpan={9}>{t(locale, "No records match the current search or filters.")}</TableEmptyRow>
+            )}
             {filtered.map((r) => {
               const entries: RowMenuEntry[] = [
                 { kind: "item", icon: Eye, label: t(locale, "View"), href: `/sales/credit-notes/${r.id}` },
@@ -150,10 +153,10 @@ export function CnListClient({
                   </TableCell>
                   <TableCell>{r.customerName}</TableCell>
                   <TableCell className="num-tabular text-xs">{r.issueDate}</TableCell>
-                  <TableCell className="text-right num-tabular">
+                  <TableCell numeric>
                     <Money amount={r.total} />
                   </TableCell>
-                  <TableCell className="text-[12.5px] text-ink-muted">{r.creatorName}</TableCell>
+                  <TableCell className="text-body-sm text-ink-muted">{r.creatorName}</TableCell>
                   <TableCell>
                     <StatusBadge domain="credit_note" status={r.status} locale={locale} />
                     {r.isArchived && (
@@ -162,8 +165,8 @@ export function CnListClient({
                       </Badge>
                     )}
                   </TableCell>
-                  <TableCell>
-                    <RowMenu entries={entries} />
+                  <TableCell action>
+                    <RowMenu entries={entries} label={`${t(locale, "Actions for")} ${r.creditNoteNumber}`} />
                   </TableCell>
                 </TableRow>
               );
@@ -172,7 +175,7 @@ export function CnListClient({
         </Table>
       )}
       {rows.length > 0 && (
-        <div className="text-[11.5px] text-ink-faint mt-2">
+        <div className="text-caption text-ink-faint mt-2" role="status" aria-live="polite">
           {t(locale, "Showing")} {filtered.length} {t(locale, "of")} {rows.length} {t(locale, "Credit Notes")}.
         </div>
       )}

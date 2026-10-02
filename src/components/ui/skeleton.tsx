@@ -87,14 +87,15 @@ export function TableSkeleton({
           </div>
         )}
 
-        {/* The table itself: real column count, real row height (52px matches .data-table rows).
+        {/* The table itself: real column count, real row height (the comfortable --table-row-height
+            density token, the same one .data-table rows use).
             data-skeleton-table marks the grid whose column count must equal the real table's —
             the stat row above is also a grid, so the verification needs to name this one exactly. */}
-        <div className="rounded-[14px] overflow-hidden" style={{ border: "1px solid var(--line)" }}>
+        <div className="rounded-xl overflow-hidden" style={{ border: "1px solid var(--line)" }}>
           <div
             data-skeleton-table={columns}
-            className="grid gap-4 px-4 py-3"
-            style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`, background: "var(--surface-raised)" }}
+            className="grid gap-4 px-4 items-center"
+            style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`, height: "var(--table-header-height)", background: "var(--surface-raised)" }}
           >
             {Array.from({ length: columns }, (_, i) => (
               <Skeleton key={i} className="h-3.5" />
@@ -104,7 +105,7 @@ export function TableSkeleton({
             <div
               key={r}
               className="grid gap-4 px-4 items-center"
-              style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`, height: 52, borderTop: "1px solid var(--line)" }}
+              style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`, height: "var(--table-row-height)", borderTop: "1px solid var(--line)" }}
             >
               {Array.from({ length: columns }, (_, c) => (
                 <Skeleton key={c} className="h-3.5" />

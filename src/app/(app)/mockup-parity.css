@@ -96,25 +96,57 @@
 
 .party-card .meta { font-size: 12px; color: var(--ink-muted); margin-top: 3px; }
 
-table.data-table { width: 100%; border-collapse: collapse; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; box-shadow: var(--shadow-card); }
+/* ---- Data table (DEV-UI-01.5). The wrapper (ui/table.tsx) is the card and the horizontal scroll
+   container; the table inside uses the separate border model so the sticky row-actions column keeps
+   its own background and separator. Row / header heights come from the --table-* density tokens
+   (globals.css): a cell's `height` is a minimum, so content up to the row height never grows it.
+   All alignment and spacing is logical. ---- */
+.data-table-wrap { width: 100%; overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; }
 
-table.data-table thead th { text-align: left; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-faint); padding: 13px 16px; border-bottom: 1px solid var(--line); background: var(--surface-raised); }
+table.data-table { width: 100%; border-collapse: separate; border-spacing: 0; background: var(--surface); }
 
-table.data-table td { padding: 13px 16px; font-size: 13.5px; border-bottom: 1px solid var(--line); }
+table.data-table thead th { height: var(--table-header-height); padding-block: 4px; padding-inline: 16px; text-align: start; vertical-align: middle; font-size: var(--text-caption); line-height: var(--text-caption--line-height); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-faint); border-bottom: 1px solid var(--line); background: var(--surface-raised); }
+
+table.data-table td { height: var(--table-row-height); padding-block: 4px; padding-inline: 16px; vertical-align: middle; font-size: var(--text-body); line-height: var(--text-body--line-height); border-bottom: 1px solid var(--line); }
+
+table.data-table[data-density="compact"] thead th { height: var(--table-header-height-compact); padding-inline: 12px; }
+
+table.data-table[data-density="compact"] td { height: var(--table-row-height-compact); padding-inline: 12px; }
 
 table.data-table tbody tr:last-child td { border-bottom: none; }
 
-table.data-table td.num { font-family: var(--font-numeric); font-variant-numeric: tabular-nums; text-align: right; }
+/* Numbers: tabular figures at the logical inline END, in English and Arabic alike. The primitive's
+   numeric cell and the legacy `.num` class keep separate rules (verify-typography pins `td.num`). */
+table.data-table td[data-cell="numeric"] { font-family: var(--font-numeric); font-variant-numeric: tabular-nums; text-align: end; white-space: nowrap; }
+table.data-table td.num { font-family: var(--font-numeric); font-variant-numeric: tabular-nums; text-align: end; white-space: nowrap; }
 
-table.data-table th.num { text-align: right; }
+table.data-table th.num, table.data-table th[data-cell="numeric"] { text-align: end; }
 
 table.data-table tbody tr { cursor: default; }
 
-table.data-table tbody tr:hover { background: var(--canvas); }
-
-table.data-table td, table.data-table thead th { padding-left: 20px; padding-right: 20px; }
+table.data-table tbody tr:hover > td { background: var(--canvas); }
 
 table.data-table tbody tr.row-clickable { cursor: pointer; }
+
+/* A selectable row (payroll): the selected state is a tint, not only a heavier weight. */
+table.data-table tbody tr[aria-selected="true"] > td { background: var(--accent-tint); }
+
+/* List tables: one line per row — headers, codes, dates, numbers, status and actions never wrap; a cell
+   that has to wrap opts out with <TableCell wrap>. */
+table.data-table[data-list] thead th, table.data-table[data-list] td:not([data-wrap]) { white-space: nowrap; }
+
+/* Row actions: sticky at the logical end of the scroll container, with a solid background and a quiet
+   inline-start separator, so the actions stay reachable when a wide table scrolls at 390px. */
+table.data-table th[data-cell="action"], table.data-table td[data-cell="action"] { position: sticky; inset-inline-end: 0; z-index: 1; width: 1%; padding-inline: 8px; text-align: end; white-space: nowrap; border-inline-start: 1px solid var(--line); }
+
+table.data-table td[data-cell="action"] { background: var(--surface); }
+
+table.data-table th[data-cell="action"] { background: var(--surface-raised); }
+
+/* "Records exist, but nothing matches the current search / filters." */
+table.data-table tr[data-empty-row] > td { height: auto; padding-block: 40px; text-align: center; color: var(--ink-muted); white-space: normal; }
+
+table.data-table tbody tr[data-empty-row]:hover > td { background: var(--surface); }
 
 .totals-strip { padding: 16px 20px; margin-top: 12px; }
 
@@ -259,7 +291,7 @@ table.doc-items-table tbody tr.item-row td { padding: 13px 14px; border-bottom: 
 
 table.doc-items-table td.num { min-width: 92px; }
 
-[dir="rtl"] table.data-table thead th, [dir="rtl"] table.doc-items-table thead th { text-align: right; }
+[dir="rtl"] table.doc-items-table thead th { text-align: right; }
 
 .item-desc-cell { display: flex; gap: 11px; align-items: flex-start; min-width: 220px; }
 
@@ -368,13 +400,9 @@ table.doc-items-table td.num { min-width: 92px; }
 
 .list-toolbar { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
 
-.list-toolbar .topbar-search { flex: 1; min-width: 220px; max-width: 340px; }
-
-.toolbar-actions-right { display: flex; align-items: center; gap: 8px; margin-left: auto; flex-wrap: wrap; }
+.toolbar-actions-right { display: flex; align-items: center; gap: 8px; margin-inline-start: auto; flex-wrap: wrap; }
 
 .toolbar-actions-right .btn { width: auto; padding: 0 14px; }
-
-[dir="rtl"] .toolbar-actions-right { margin-left: 0; margin-right: auto; }
 
 .doc-crumb.back-link { cursor: pointer; display: inline-flex; align-items: center; gap: 6px; color: var(--ink-muted); font-weight: 500; }
 
@@ -384,18 +412,16 @@ table.doc-items-table td.num { min-width: 92px; }
 
 .cell-title { display: inline-block; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; }
 
-table.data-table.list-table td, table.data-table.list-table thead th { padding-left: 12px; padding-right: 12px; }
-
-table.data-table.list-table td.mono, table.data-table.list-table td.num { white-space: nowrap; }
-
 .row-menu-cell { text-align: center; }
 
-.row-menu-btn { width: 30px; height: 30px; border-radius: 8px; border: none; background: transparent; color: var(--ink-faint); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
+/* Legacy kebab trigger. DEV-UI-01.5: the shared RowMenu now renders the 36px ghost icon Button (it keeps
+   this class as a hook), so the 30px recipe applies only to triggers that are not the Button primitive. */
+.row-menu-btn:not([data-slot="button"]) { width: 30px; height: 30px; border-radius: 8px; border: none; background: transparent; color: var(--ink-faint); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
 
-.row-menu-btn:hover { background: var(--canvas); color: var(--ink); }
+.row-menu-btn:not([data-slot="button"]):hover { background: var(--canvas); color: var(--ink); }
 
 /* Kebab / menu trigger keeps a visible fill while its menu is open (data-state=open). */
-.row-menu-btn[data-state="open"] { background: var(--canvas); color: var(--ink); }
+.row-menu-btn:not([data-slot="button"])[data-state="open"] { background: var(--canvas); color: var(--ink); }
 
 /* DEV-UI-01.4 (R5): the row actions button had no visible keyboard focus at all. */
 .row-menu-btn:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; color: var(--ink); }
@@ -421,6 +447,12 @@ table.data-table.list-table td.mono, table.data-table.list-table td.num { white-
 
 .row-menu-item.danger:hover,
 .row-menu-item.danger[data-highlighted] { background: var(--danger-bg); }
+
+/* DEV-UI-01.5: an unavailable action is a real disabled item (Radix sets data-disabled + aria-disabled
+   and the keyboard skips it); it reads as unavailable, never as a hover target. */
+.row-menu-item[data-disabled] { opacity: 0.45; cursor: not-allowed; }
+
+.row-menu-item[data-disabled]:hover { background: transparent; }
 
 .row-menu-divider { height: 1px; background: var(--line); margin: 5px 2px; }
 

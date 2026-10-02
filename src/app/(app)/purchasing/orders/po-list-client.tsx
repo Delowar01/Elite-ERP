@@ -7,7 +7,7 @@ import { Eye, Download } from "lucide-react";
 import { toast } from "sonner";
 import { downloadDocumentPdf } from "../../sales/_shared/download-pdf-button";
 import { Badge } from "@/components/ui/badge";
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell, TableEmptyRow } from "@/components/ui/table";
 import { StatRow } from "../../sales/_shared/stat-row";
 import { ListWorkspaceToolbar } from "../../documents/_workspace/list-workspace-toolbar";
 import { useListFilters } from "../../documents/_workspace/use-list-filters";
@@ -104,7 +104,7 @@ export function PoListClient({
       {rows.length === 0 ? (
         <ListEmptyState locale={locale} message={t(locale, "No purchase orders yet.")} createHref="/purchasing/orders/new" createLabel={t(locale, "New Purchase Order")} />
       ) : (
-        <Table>
+        <Table list>
           <TableHeader>
             <TableRow>
               <TableHead>{t(locale, "PO #")}</TableHead>
@@ -113,13 +113,16 @@ export function PoListClient({
               <TableHead>{t(locale, "Vendor")}</TableHead>
               <TableHead>{t(locale, "Order Date")}</TableHead>
               <TableHead>{t(locale, "Expected Delivery")}</TableHead>
-              <TableHead className="text-right">{t(locale, "Amount")}</TableHead>
+              <TableHead numeric>{t(locale, "Amount")}</TableHead>
               <TableHead>{t(locale, "Created By")}</TableHead>
               <TableHead>{t(locale, "Status")}</TableHead>
-              <TableHead className="w-10" />
+              <TableHead action>{t(locale, "Actions")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
+            {filtered.length === 0 && (
+              <TableEmptyRow colSpan={10}>{t(locale, "No records match the current search or filters.")}</TableEmptyRow>
+            )}
             {filtered.map((r) => {
               const convertTargets = getConvertTargets("purchase_order", { status: r.status });
               const entries: RowMenuEntry[] = [
@@ -154,10 +157,10 @@ export function PoListClient({
                   <TableCell>{r.vendorName}</TableCell>
                   <TableCell className="num-tabular text-xs">{r.orderDate}</TableCell>
                   <TableCell className="num-tabular text-xs">{r.expectedDate ?? <span className="text-ink-faint">—</span>}</TableCell>
-                  <TableCell className="text-right num-tabular">
+                  <TableCell numeric>
                     <Money amount={r.total} />
                   </TableCell>
-                  <TableCell className="text-[12.5px] text-ink-muted">{r.creatorName}</TableCell>
+                  <TableCell className="text-body-sm text-ink-muted">{r.creatorName}</TableCell>
                   <TableCell>
                     <StatusBadge domain="purchase_order" status={r.status} locale={locale} />
                     {r.isArchived && (
@@ -166,8 +169,8 @@ export function PoListClient({
                       </Badge>
                     )}
                   </TableCell>
-                  <TableCell>
-                    <RowMenu entries={entries} />
+                  <TableCell action>
+                    <RowMenu entries={entries} label={`${t(locale, "Actions for")} ${r.poNumber}`} />
                   </TableCell>
                 </TableRow>
               );
@@ -176,7 +179,7 @@ export function PoListClient({
         </Table>
       )}
       {rows.length > 0 && (
-        <div className="text-[11.5px] text-ink-faint mt-2">
+        <div className="text-caption text-ink-faint mt-2" role="status" aria-live="polite">
           {t(locale, "Showing")} {filtered.length} {t(locale, "of")} {rows.length} {t(locale, "Purchase Orders")}.
         </div>
       )}

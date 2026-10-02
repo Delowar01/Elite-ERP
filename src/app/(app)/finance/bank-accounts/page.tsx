@@ -156,7 +156,7 @@ export default async function BankAccountsPage() {
       {recentPayments.length === 0 ? (
         <p className="text-ink-muted text-sm">{t(locale, "No payment records yet.")}</p>
       ) : (
-        <Table>
+        <Table density="compact">
           <TableHeader>
             <TableRow>
               <TableHead>{t(locale, "Date")}</TableHead>

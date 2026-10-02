@@ -6,7 +6,8 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { Trash2, RotateCcw, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell, TableEmptyRow } from "@/components/ui/table";
+import { ListSearch } from "@/components/ui/list-search";
 import { t, type Locale } from "@/lib/i18n/dict";
 import type { DocumentType } from "@/lib/document-lifecycle";
 import { restoreDocumentAction, permanentDeleteDocumentAction } from "../_shared/lifecycle-actions";
@@ -73,26 +74,28 @@ export function RecycleBinClient({ locale, rows, isOwner }: { locale: Locale; ro
         </h3>
       </div>
 
-      <p className="text-[12.5px] text-ink-muted mb-4 flex items-center gap-1.5">
+      <p className="text-body-sm text-ink-muted mb-4 flex items-center gap-1.5">
         <ShieldAlert className="size-3.5 shrink-0" />
         {t(locale, "Deleted documents are kept here. Restore returns them to their list. Permanent delete is owner-only and irreversible; the document number is retained in the audit log and never reissued.")}
       </p>
 
-      <div className="topbar-search max-w-sm mb-4">
-        <input
+      <div className="mb-4">
+        <ListSearch
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={setSearch}
           placeholder={t(locale, "Search number, party, type…")}
-          className="flex-1 min-w-0 bg-transparent outline-none placeholder:text-ink-faint"
+          label={t(locale, "Search number, party, type…")}
+          clearLabel={t(locale, "Clear search")}
         />
       </div>
 
-      {filtered.length === 0 ? (
-        <div className="rounded-2xl border border-line bg-surface shadow-elevated py-12 text-center text-ink-muted text-sm">
+      {/* An empty bin and "nothing matches the search" are different states (DEV-UI-01.5). */}
+      {rows.length === 0 ? (
+        <div className="rounded-xl border border-line bg-surface py-12 text-center text-body text-ink-muted" data-list-empty="">
           {t(locale, "The Recycle Bin is empty.")}
         </div>
       ) : (
-        <Table>
+        <Table list>
           <TableHeader>
             <TableRow>
               <TableHead>{t(locale, "Type")}</TableHead>
@@ -100,15 +103,18 @@ export function RecycleBinClient({ locale, rows, isOwner }: { locale: Locale; ro
               <TableHead>{t(locale, "Party")}</TableHead>
               <TableHead>{t(locale, "Status")}</TableHead>
               <TableHead>{t(locale, "Deleted")}</TableHead>
-              <TableHead className="text-right">{t(locale, "Actions")}</TableHead>
+              <TableHead action>{t(locale, "Actions")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
+            {filtered.length === 0 && (
+              <TableEmptyRow colSpan={6}>{t(locale, "No records match the current search or filters.")}</TableEmptyRow>
+            )}
             {filtered.map((r) => {
               const key = `${r.docType}:${r.id}`;
               return (
                 <TableRow key={key}>
-                  <TableCell className="text-[12.5px] text-ink-muted">{t(locale, r.typeLabel)}</TableCell>
+                  <TableCell className="text-body-sm text-ink-muted">{t(locale, r.typeLabel)}</TableCell>
                   <TableCell className="font-semibold">
                     <Link href={r.detailHref} className="hover:text-brand-orange font-mono">
                       {r.number}
@@ -119,7 +125,7 @@ export function RecycleBinClient({ locale, rows, isOwner }: { locale: Locale; ro
                     <StatusBadge domain={r.docType} status={r.status} locale={locale} />
                   </TableCell>
                   <TableCell className="num-tabular text-xs">{r.deletedAt || "—"}</TableCell>
-                  <TableCell>
+                  <TableCell action>
                     <div className="flex items-center justify-end gap-2">
                       <Button variant="glass" disabled={pending} onClick={() => restore(r)}>
                         <RotateCcw className="size-3.5" /> {t(locale, "Restore")}

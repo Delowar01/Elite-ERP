@@ -60,9 +60,11 @@ function quarterRange(ref: Date): DateRange {
   return { from: ymd(from), to: ymd(to) };
 }
 
-// Signed amount cell — negatives in danger red, drill affordance when an accountId is given.
+// Signed amount cell, drill affordance when an accountId is given. DEV-UI-01.5 (AA-6): a negative
+// number is not automatically "danger" — the value and its minus sign carry the meaning; semantic red
+// stays on real warnings and on the trend / delta indicators.
 function Num({ v, onDrill, strong }: { v: number; onDrill?: () => void; strong?: boolean }) {
-  const cls = `num-tabular ${v < 0 ? "text-danger" : ""} ${strong ? "font-semibold" : ""}`;
+  const cls = `num-tabular ${strong ? "font-semibold" : ""}`;
   const body = <Money amount={v} context="document" className={cls} />;
   return onDrill ? (
     <button type="button" className="hover:text-brand-orange cursor-pointer" onClick={onDrill}>{body}</button>
@@ -344,7 +346,7 @@ function TbView({ locale, d, search, onDrill }: { locale: Locale; d: TrialBalanc
         { label: t(locale, "Balance check"), value: d.totals.closingDr, badge: d.balanced ? `✓ ${t(locale, "Balanced")}` : t(locale, "Not balanced"), ok: d.balanced },
       ]} />
       <div className="table-scroll">
-        <Table>
+        <Table density="compact">
           <TableHeader>
             <TableRow>
               <TableHead>{t(locale, "Code")}</TableHead><TableHead>{t(locale, "Account")}</TableHead>
@@ -389,7 +391,7 @@ function GlView({ locale, blocks, search }: { locale: Locale; blocks: GlAccountB
             <div className="text-[12px] text-ink-muted">{t(locale, "Opening")}: <span className="num-tabular"><Money amount={b.opening} context="document" /></span></div>
           </div>
           <div className="table-scroll">
-            <Table>
+            <Table density="compact">
               <TableHeader>
                 <TableRow>
                   <TableHead>{t(locale, "Date")}</TableHead><TableHead>{t(locale, "Memo")}</TableHead><TableHead>{t(locale, "Source")}</TableHead>
@@ -458,7 +460,7 @@ function AgingView({ locale, d, search, kind }: { locale: Locale; d: Aging; sear
         </div>
       </div>
       <div className="table-scroll">
-        <Table>
+        <Table density="compact">
           <TableHeader>
             <TableRow>
               <TableHead>{t(locale, "Number")}</TableHead><TableHead>{t(locale, kind === "ar" ? "Customer" : "Vendor")}</TableHead>
@@ -529,7 +531,7 @@ function DrillDrawer({ locale, drill, block, loading, onClose }: { locale: Local
           <div className="py-8 text-center text-ink-faint text-sm">{t(locale, "No transactions in this period.")}</div>
         ) : (
           <div className="table-scroll max-h-[60vh] overflow-auto">
-            <Table>
+            <Table density="compact">
               <TableHeader>
                 <TableRow>
                   <TableHead>{t(locale, "Date")}</TableHead><TableHead>{t(locale, "Memo")}</TableHead>

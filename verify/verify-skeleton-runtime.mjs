@@ -119,7 +119,8 @@ await page.unroute("**/purchasing/orders**");
 await page.goto(`${BASE}/sales/quotations`, { waitUntil: "networkidle" });
 await page.evaluate(() => document.documentElement.setAttribute("data-theme", "dark"));
 await page.waitForTimeout(400);
-const darkBg = await page.locator(".rounded-2xl.border").first().evaluate((el) => getComputedStyle(el).backgroundColor).catch(() => "");
+// DEV-UI-01.5: the empty state is a 12px card now (was `.rounded-2xl`); located by its data hook — selector only.
+const darkBg = await page.locator("[data-list-empty]").first().evaluate((el) => getComputedStyle(el).backgroundColor).catch(() => "");
 check("the empty state has a solid background in dark mode", !!darkBg && !/, 0\)$/.test(darkBg), darkBg);
 
 await ctx.addCookies([{ name: "locale", value: "ar", domain: "localhost", path: "/" }]);

@@ -110,20 +110,20 @@ export function BundlesPanel({
           <CardContent className="py-10 text-center text-ink-muted text-sm">{t(locale, "No bundles yet.")}</CardContent>
         </Card>
       ) : (
-        <Table>
+        <Table density="compact">
           <TableHeader>
             <TableRow>
               <TableHead>{t(locale, "Bundle Name")}</TableHead>
-              <TableHead className="text-right">{t(locale, "Items")}</TableHead>
-              <TableHead className="w-32" />
+              <TableHead numeric>{t(locale, "Items")}</TableHead>
+              <TableHead action>{t(locale, "Actions")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {bundles.map((bundle) => (
               <TableRow key={bundle.id}>
                 <TableCell className="font-medium">{bundle.name}</TableCell>
-                <TableCell className="text-right num-tabular text-xs">{bundle.items.length}</TableCell>
-                <TableCell className="text-right whitespace-nowrap">
+                <TableCell numeric className="text-xs">{bundle.items.length}</TableCell>
+                <TableCell action>
                   <Button variant="outline" size="sm" disabled={pending} onClick={() => setManaging(bundle)}>
                     <Package className="size-3.5" /> {t(locale, "Manage")}
                   </Button>

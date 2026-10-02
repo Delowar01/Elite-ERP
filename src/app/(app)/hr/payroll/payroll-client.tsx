@@ -57,23 +57,34 @@ export function PayrollClient({
           <TableHeader>
             <TableRow>
               <TableHead>{t(locale, "Employee")}</TableHead>
-              <TableHead className="text-right">{t(locale, "Basic")}</TableHead>
-              <TableHead className="text-right">{t(locale, "Allowances")}</TableHead>
-              <TableHead className="text-right">{t(locale, "Net pay")}</TableHead>
+              <TableHead numeric>{t(locale, "Basic")}</TableHead>
+              <TableHead numeric>{t(locale, "Allowances")}</TableHead>
+              <TableHead numeric>{t(locale, "Net pay")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {lines.map((l) => (
+              // Selecting a row shows that employee's payslip. DEV-UI-01.5: keyboard-operable (Tab to a row,
+              // Enter / Space selects), the state exposed as aria-selected and shown as a tint, not weight alone.
               <TableRow
                 key={l.employeeId}
                 onClick={() => setSelectedId(l.employeeId)}
-                className="cursor-pointer"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    setSelectedId(l.employeeId);
+                  }
+                }}
+                tabIndex={0}
+                aria-selected={l.employeeId === selected?.employeeId}
+                className="cursor-pointer focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus"
                 data-selected={l.employeeId === selected?.employeeId || undefined}
+                data-payroll-row=""
               >
                 <TableCell className={l.employeeId === selected?.employeeId ? "font-semibold" : undefined}>{l.employeeName}</TableCell>
-                <TableCell className="text-right num-tabular">{fmt(l.basic)}</TableCell>
-                <TableCell className="text-right num-tabular">{fmt(l.allowances)}</TableCell>
-                <TableCell className="text-right num-tabular">{fmt(l.net)}</TableCell>
+                <TableCell numeric>{fmt(l.basic)}</TableCell>
+                <TableCell numeric>{fmt(l.allowances)}</TableCell>
+                <TableCell numeric>{fmt(l.net)}</TableCell>
               </TableRow>
             ))}
           </TableBody>

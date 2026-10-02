@@ -96,7 +96,7 @@ export function AccountLedgerView({
             {ledgerRows.length === 0 ? (
               <p className="text-ink-muted text-sm py-6 text-center">{t(locale, "No transactions yet.")}</p>
             ) : (
-              <Table>
+              <Table density="compact">
                 <TableHeader>
                   <TableRow>
                     <TableHead>{t(locale, "Date")}</TableHead>

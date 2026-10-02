@@ -46,7 +46,7 @@ export default async function JournalPage() {
       {recentEntries.length === 0 ? (
         <p className="text-ink-muted text-sm">{t(locale, "No journal entries yet.")}</p>
       ) : (
-        <Table>
+        <Table density="compact">
           <TableHeader>
             <TableRow>
               <TableHead>{t(locale, "Date")}</TableHead>

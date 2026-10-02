@@ -239,14 +239,14 @@ export function SecurityCenterClient(props: {
           </Button>
         )}
       </div>
-      <Table>
+      <Table density="compact">
         <TableHeader>
           <TableRow>
             <TableHead>{t(locale, "Device")}</TableHead>
             <TableHead>{t(locale, "IP address")}</TableHead>
             <TableHead>{t(locale, "Signed in")}</TableHead>
             <TableHead>{t(locale, "Last active")}</TableHead>
-            <TableHead />
+            <TableHead action>{t(locale, "Actions")}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -264,7 +264,7 @@ export function SecurityCenterClient(props: {
                 <TableCell className="font-mono text-xs">{s.ipAddress ?? "—"}</TableCell>
                 <TableCell className="num-tabular text-xs">{fmtDateTime(s.createdAt)}</TableCell>
                 <TableCell className="num-tabular text-xs">{fmtDateTime(s.lastActivityAt)}</TableCell>
-                <TableCell className="text-right">
+                <TableCell action>
                   <Button variant="secondary" size="sm" disabled={pending} onClick={() => terminate(s.id)}>
                     {t(locale, "End")}
                   </Button>
@@ -284,7 +284,7 @@ export function SecurityCenterClient(props: {
           {props.events.length === 0 ? (
             <div className="rounded-2xl border border-line bg-surface shadow-elevated py-8 text-center text-ink-muted text-sm">{t(locale, "No security events yet.")}</div>
           ) : (
-            <Table>
+            <Table density="compact">
               <TableHeader>
                 <TableRow>
                   <TableHead>{t(locale, "Event")}</TableHead>
