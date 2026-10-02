@@ -8,6 +8,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import { RecordImageUpload } from "@/components/upload/record-image-upload";
 import { CROP_EMPLOYEE_PHOTO } from "@/components/upload/crop-configs";
 import { t, type Locale } from "@/lib/i18n/dict";
+import { statusLabel } from "@/lib/status-registry";
 import type { Employee } from "@/db";
 import { type ActionState, uploadEmployeePhotoAction } from "./actions";
 
@@ -111,8 +112,8 @@ export function EmployeeForm({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="active">{t(locale, "active")}</SelectItem>
-                <SelectItem value="inactive">{t(locale, "inactive")}</SelectItem>
+                <SelectItem value="active">{statusLabel(locale, "employee", "active")}</SelectItem>
+                <SelectItem value="inactive">{statusLabel(locale, "employee", "inactive")}</SelectItem>
               </SelectContent>
             </Select>
           </FormField>

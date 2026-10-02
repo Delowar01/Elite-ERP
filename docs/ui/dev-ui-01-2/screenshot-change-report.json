@@ -1,5 +1,6 @@
 {
-  "compared": "tests/ui-baseline/candidates/dev-ui-01-1 (merged DEV-UI-01.1 state) -> tests/ui-baseline/candidates/dev-ui-01-2",
+  "compared": "tests/ui-baseline/candidates/dev-ui-01-1 (merged DEV-UI-01.1 state) -> tests/ui-baseline/candidates/dev-ui-01-2 (DEV-UI-01.2 + C1)",
+  "c1Compared": "c1VsDd728ee: the dd728ee candidate -> the C1 candidate, per state",
   "pixelRule": "a pixel counts as changed when any channel moves by more than 8/255",
   "states": [
     {
@@ -14,7 +15,13 @@
       "statusAfter": 200,
       "hydration418Before": 1,
       "hydration418After": 1,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "client-detail__ar__dark__1440",
@@ -28,7 +35,13 @@
       "statusAfter": 200,
       "hydration418Before": 1,
       "hydration418After": 1,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "client-detail__ar__dark__390",
@@ -42,7 +55,13 @@
       "statusAfter": 200,
       "hydration418Before": 1,
       "hydration418After": 1,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "client-detail__ar__dark__768",
@@ -56,7 +75,13 @@
       "statusAfter": 200,
       "hydration418Before": 1,
       "hydration418After": 1,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "client-detail__ar__light__1024",
@@ -70,7 +95,13 @@
       "statusAfter": 200,
       "hydration418Before": 1,
       "hydration418After": 1,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "client-detail__ar__light__1440",
@@ -84,7 +115,13 @@
       "statusAfter": 200,
       "hydration418Before": 1,
       "hydration418After": 1,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "client-detail__ar__light__390",
@@ -98,7 +135,13 @@
       "statusAfter": 200,
       "hydration418Before": 1,
       "hydration418After": 1,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "client-detail__ar__light__768",
@@ -112,7 +155,13 @@
       "statusAfter": 200,
       "hydration418Before": 1,
       "hydration418After": 1,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "client-detail__en__dark__1024",
@@ -126,7 +175,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "client-detail__en__dark__1440",
@@ -140,7 +195,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "client-detail__en__dark__390",
@@ -154,7 +215,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "client-detail__en__dark__768",
@@ -168,7 +235,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "client-detail__en__light__1024",
@@ -182,7 +255,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "client-detail__en__light__1440",
@@ -196,7 +275,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "client-detail__en__light__390",
@@ -210,7 +295,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "client-detail__en__light__768",
@@ -224,7 +315,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "clients-list__ar__dark__1024",
@@ -238,7 +335,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "clients-list__ar__dark__1440",
@@ -252,7 +355,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "clients-list__ar__dark__390",
@@ -266,7 +375,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "clients-list__ar__dark__768",
@@ -280,7 +395,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "clients-list__ar__light__1024",
@@ -294,7 +415,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "clients-list__ar__light__1440",
@@ -308,7 +435,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "clients-list__ar__light__390",
@@ -322,7 +455,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "clients-list__ar__light__768",
@@ -336,7 +475,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "clients-list__en__dark__1024",
@@ -350,7 +495,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "clients-list__en__dark__1440",
@@ -364,7 +515,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "clients-list__en__dark__390",
@@ -378,7 +535,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "clients-list__en__dark__768",
@@ -392,7 +555,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "clients-list__en__light__1024",
@@ -406,7 +575,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "clients-list__en__light__1440",
@@ -420,7 +595,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "clients-list__en__light__390",
@@ -434,7 +615,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "clients-list__en__light__768",
@@ -448,12 +635,18 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "dashboard__ar__dark__1024",
       "result": "DIFFERENT",
-      "changedPct": 0.16,
+      "changedPct": 0.21,
       "heightBefore": 1902,
       "heightAfter": 1902,
       "heightDelta": 0,
@@ -462,12 +655,18 @@
       "statusAfter": 200,
       "hydration418Before": 1,
       "hydration418After": 1,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "DIFFERENT",
+        "changedPct": 0.05,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "dashboard__ar__dark__1440",
       "result": "DIFFERENT",
-      "changedPct": 0.13,
+      "changedPct": 0.16,
       "heightBefore": 1756,
       "heightAfter": 1756,
       "heightDelta": 0,
@@ -476,12 +675,18 @@
       "statusAfter": 200,
       "hydration418Before": 1,
       "hydration418After": 1,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "DIFFERENT",
+        "changedPct": 0.04,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "dashboard__ar__dark__390",
       "result": "DIFFERENT",
-      "changedPct": 0.02,
+      "changedPct": 0.07,
       "heightBefore": 2304,
       "heightAfter": 2304,
       "heightDelta": 0,
@@ -490,12 +695,18 @@
       "statusAfter": 200,
       "hydration418Before": 1,
       "hydration418After": 1,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "DIFFERENT",
+        "changedPct": 0.04,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "dashboard__ar__dark__768",
       "result": "DIFFERENT",
-      "changedPct": 0.14,
+      "changedPct": 0.19,
       "heightBefore": 1946,
       "heightAfter": 1946,
       "heightDelta": 0,
@@ -504,12 +715,18 @@
       "statusAfter": 200,
       "hydration418Before": 1,
       "hydration418After": 1,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "DIFFERENT",
+        "changedPct": 0.04,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "dashboard__ar__light__1024",
       "result": "DIFFERENT",
-      "changedPct": 0.16,
+      "changedPct": 0.21,
       "heightBefore": 1902,
       "heightAfter": 1902,
       "heightDelta": 0,
@@ -518,12 +735,18 @@
       "statusAfter": 200,
       "hydration418Before": 1,
       "hydration418After": 1,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "DIFFERENT",
+        "changedPct": 0.05,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "dashboard__ar__light__1440",
       "result": "DIFFERENT",
-      "changedPct": 0.13,
+      "changedPct": 0.16,
       "heightBefore": 1756,
       "heightAfter": 1756,
       "heightDelta": 0,
@@ -532,12 +755,18 @@
       "statusAfter": 200,
       "hydration418Before": 1,
       "hydration418After": 1,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "DIFFERENT",
+        "changedPct": 0.04,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "dashboard__ar__light__390",
       "result": "DIFFERENT",
-      "changedPct": 0.02,
+      "changedPct": 0.07,
       "heightBefore": 2304,
       "heightAfter": 2304,
       "heightDelta": 0,
@@ -546,12 +775,18 @@
       "statusAfter": 200,
       "hydration418Before": 1,
       "hydration418After": 1,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "DIFFERENT",
+        "changedPct": 0.04,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "dashboard__ar__light__768",
       "result": "DIFFERENT",
-      "changedPct": 0.14,
+      "changedPct": 0.19,
       "heightBefore": 1946,
       "heightAfter": 1946,
       "heightDelta": 0,
@@ -560,12 +795,18 @@
       "statusAfter": 200,
       "hydration418Before": 1,
       "hydration418After": 1,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "DIFFERENT",
+        "changedPct": 0.05,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "dashboard__en__dark__1024",
       "result": "DIFFERENT",
-      "changedPct": 0.11,
+      "changedPct": 0.19,
       "heightBefore": 1870,
       "heightAfter": 1870,
       "heightDelta": 0,
@@ -574,12 +815,18 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "DIFFERENT",
+        "changedPct": 0.07,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "dashboard__en__dark__1440",
       "result": "DIFFERENT",
-      "changedPct": 0.09,
+      "changedPct": 0.15,
       "heightBefore": 1736,
       "heightAfter": 1736,
       "heightDelta": 0,
@@ -588,12 +835,18 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "DIFFERENT",
+        "changedPct": 0.06,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "dashboard__en__dark__390",
       "result": "DIFFERENT",
-      "changedPct": 0.01,
+      "changedPct": 0.08,
       "heightBefore": 2096,
       "heightAfter": 2096,
       "heightDelta": 0,
@@ -602,12 +855,18 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "DIFFERENT",
+        "changedPct": 0.07,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "dashboard__en__dark__768",
       "result": "DIFFERENT",
-      "changedPct": 0.01,
+      "changedPct": 0.14,
       "heightBefore": 1930,
       "heightAfter": 1930,
       "heightDelta": 0,
@@ -616,12 +875,18 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "DIFFERENT",
+        "changedPct": 0.13,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "dashboard__en__light__1024",
       "result": "DIFFERENT",
-      "changedPct": 0.11,
+      "changedPct": 0.19,
       "heightBefore": 1870,
       "heightAfter": 1870,
       "heightDelta": 0,
@@ -630,12 +895,18 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "DIFFERENT",
+        "changedPct": 0.07,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "dashboard__en__light__1440",
       "result": "DIFFERENT",
-      "changedPct": 0.09,
+      "changedPct": 0.15,
       "heightBefore": 1736,
       "heightAfter": 1736,
       "heightDelta": 0,
@@ -644,12 +915,18 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "DIFFERENT",
+        "changedPct": 0.06,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "dashboard__en__light__390",
       "result": "DIFFERENT",
-      "changedPct": 0.01,
+      "changedPct": 0.08,
       "heightBefore": 2096,
       "heightAfter": 2096,
       "heightDelta": 0,
@@ -658,12 +935,18 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "DIFFERENT",
+        "changedPct": 0.07,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "dashboard__en__light__768",
       "result": "DIFFERENT",
-      "changedPct": 0.01,
+      "changedPct": 0.14,
       "heightBefore": 1930,
       "heightAfter": 1930,
       "heightDelta": 0,
@@ -672,7 +955,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "DIFFERENT",
+        "changedPct": 0.13,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "finance-reports__ar__dark__1024",
@@ -686,7 +975,13 @@
       "statusAfter": 200,
       "hydration418Before": 1,
       "hydration418After": 1,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "finance-reports__ar__dark__1440",
@@ -700,7 +995,13 @@
       "statusAfter": 200,
       "hydration418Before": 1,
       "hydration418After": 1,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "finance-reports__ar__dark__390",
@@ -714,7 +1015,13 @@
       "statusAfter": 200,
       "hydration418Before": 1,
       "hydration418After": 1,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "finance-reports__ar__dark__768",
@@ -728,7 +1035,13 @@
       "statusAfter": 200,
       "hydration418Before": 1,
       "hydration418After": 1,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "finance-reports__ar__light__1024",
@@ -742,7 +1055,13 @@
       "statusAfter": 200,
       "hydration418Before": 1,
       "hydration418After": 1,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "finance-reports__ar__light__1440",
@@ -756,7 +1075,13 @@
       "statusAfter": 200,
       "hydration418Before": 1,
       "hydration418After": 1,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "finance-reports__ar__light__390",
@@ -770,7 +1095,13 @@
       "statusAfter": 200,
       "hydration418Before": 1,
       "hydration418After": 1,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "finance-reports__ar__light__768",
@@ -784,7 +1115,13 @@
       "statusAfter": 200,
       "hydration418Before": 1,
       "hydration418After": 1,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "finance-reports__en__dark__1024",
@@ -798,7 +1135,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "finance-reports__en__dark__1440",
@@ -812,7 +1155,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "finance-reports__en__dark__390",
@@ -826,7 +1175,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "finance-reports__en__dark__768",
@@ -840,7 +1195,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "finance-reports__en__light__1024",
@@ -854,7 +1215,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "finance-reports__en__light__1440",
@@ -868,7 +1235,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "finance-reports__en__light__390",
@@ -882,7 +1255,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "finance-reports__en__light__768",
@@ -896,7 +1275,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "finance-statements__ar__dark__1024",
@@ -910,7 +1295,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "finance-statements__ar__dark__1440",
@@ -924,7 +1315,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "finance-statements__ar__dark__390",
@@ -938,7 +1335,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "finance-statements__ar__dark__768",
@@ -952,7 +1355,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "finance-statements__ar__light__1024",
@@ -966,7 +1375,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "finance-statements__ar__light__1440",
@@ -980,7 +1395,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "finance-statements__ar__light__390",
@@ -994,7 +1415,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "finance-statements__ar__light__768",
@@ -1008,7 +1435,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "finance-statements__en__dark__1024",
@@ -1022,7 +1455,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "finance-statements__en__dark__1440",
@@ -1036,7 +1475,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "finance-statements__en__dark__390",
@@ -1050,7 +1495,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "finance-statements__en__dark__768",
@@ -1064,7 +1515,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "finance-statements__en__light__1024",
@@ -1078,7 +1535,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "finance-statements__en__light__1440",
@@ -1092,7 +1555,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "finance-statements__en__light__390",
@@ -1106,7 +1575,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "finance-statements__en__light__768",
@@ -1120,12 +1595,18 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "hr-employees__ar__dark__1024",
-      "result": "IDENTICAL",
-      "changedPct": 0,
+      "result": "DIFFERENT",
+      "changedPct": 0.01,
       "heightBefore": 768,
       "heightAfter": 768,
       "heightDelta": 0,
@@ -1134,12 +1615,18 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "DIFFERENT",
+        "changedPct": 0.01,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "hr-employees__ar__dark__1440",
-      "result": "IDENTICAL",
-      "changedPct": 0,
+      "result": "DIFFERENT",
+      "changedPct": 0.01,
       "heightBefore": 900,
       "heightAfter": 900,
       "heightDelta": 0,
@@ -1148,12 +1635,18 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "DIFFERENT",
+        "changedPct": 0.01,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "hr-employees__ar__dark__390",
-      "result": "IDENTICAL",
-      "changedPct": 0,
+      "result": "DIFFERENT",
+      "changedPct": 0.01,
       "heightBefore": 1699,
       "heightAfter": 1699,
       "heightDelta": 0,
@@ -1162,12 +1655,18 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "DIFFERENT",
+        "changedPct": 0.01,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "hr-employees__ar__dark__768",
-      "result": "IDENTICAL",
-      "changedPct": 0,
+      "result": "DIFFERENT",
+      "changedPct": 0.01,
       "heightBefore": 1024,
       "heightAfter": 1024,
       "heightDelta": 0,
@@ -1176,12 +1675,18 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "DIFFERENT",
+        "changedPct": 0.01,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "hr-employees__ar__light__1024",
-      "result": "IDENTICAL",
-      "changedPct": 0,
+      "result": "DIFFERENT",
+      "changedPct": 0.01,
       "heightBefore": 768,
       "heightAfter": 768,
       "heightDelta": 0,
@@ -1190,12 +1695,18 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "DIFFERENT",
+        "changedPct": 0.01,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "hr-employees__ar__light__1440",
-      "result": "IDENTICAL",
-      "changedPct": 0,
+      "result": "DIFFERENT",
+      "changedPct": 0.01,
       "heightBefore": 900,
       "heightAfter": 900,
       "heightDelta": 0,
@@ -1204,12 +1715,18 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "DIFFERENT",
+        "changedPct": 0.01,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "hr-employees__ar__light__390",
-      "result": "IDENTICAL",
-      "changedPct": 0,
+      "result": "DIFFERENT",
+      "changedPct": 0.01,
       "heightBefore": 1699,
       "heightAfter": 1699,
       "heightDelta": 0,
@@ -1218,12 +1735,18 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "DIFFERENT",
+        "changedPct": 0.01,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "hr-employees__ar__light__768",
-      "result": "IDENTICAL",
-      "changedPct": 0,
+      "result": "DIFFERENT",
+      "changedPct": 0.01,
       "heightBefore": 1024,
       "heightAfter": 1024,
       "heightDelta": 0,
@@ -1232,12 +1755,18 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "DIFFERENT",
+        "changedPct": 0.01,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "hr-employees__en__dark__1024",
-      "result": "IDENTICAL",
-      "changedPct": 0,
+      "result": "DIFFERENT",
+      "changedPct": 0.01,
       "heightBefore": 768,
       "heightAfter": 768,
       "heightDelta": 0,
@@ -1246,12 +1775,18 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "DIFFERENT",
+        "changedPct": 0.01,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "hr-employees__en__dark__1440",
-      "result": "IDENTICAL",
-      "changedPct": 0,
+      "result": "DIFFERENT",
+      "changedPct": 0.01,
       "heightBefore": 900,
       "heightAfter": 900,
       "heightDelta": 0,
@@ -1260,12 +1795,18 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "DIFFERENT",
+        "changedPct": 0.01,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "hr-employees__en__dark__390",
-      "result": "IDENTICAL",
-      "changedPct": 0,
+      "result": "DIFFERENT",
+      "changedPct": 0.01,
       "heightBefore": 1519,
       "heightAfter": 1519,
       "heightDelta": 0,
@@ -1274,12 +1815,18 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "DIFFERENT",
+        "changedPct": 0.01,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "hr-employees__en__dark__768",
-      "result": "IDENTICAL",
-      "changedPct": 0,
+      "result": "DIFFERENT",
+      "changedPct": 0.01,
       "heightBefore": 1024,
       "heightAfter": 1024,
       "heightDelta": 0,
@@ -1288,12 +1835,18 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "DIFFERENT",
+        "changedPct": 0.01,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "hr-employees__en__light__1024",
-      "result": "IDENTICAL",
-      "changedPct": 0,
+      "result": "DIFFERENT",
+      "changedPct": 0.01,
       "heightBefore": 768,
       "heightAfter": 768,
       "heightDelta": 0,
@@ -1302,12 +1855,18 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "DIFFERENT",
+        "changedPct": 0.01,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "hr-employees__en__light__1440",
-      "result": "IDENTICAL",
-      "changedPct": 0,
+      "result": "DIFFERENT",
+      "changedPct": 0.01,
       "heightBefore": 900,
       "heightAfter": 900,
       "heightDelta": 0,
@@ -1316,12 +1875,18 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "DIFFERENT",
+        "changedPct": 0.01,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "hr-employees__en__light__390",
-      "result": "IDENTICAL",
-      "changedPct": 0,
+      "result": "DIFFERENT",
+      "changedPct": 0.01,
       "heightBefore": 1519,
       "heightAfter": 1519,
       "heightDelta": 0,
@@ -1330,12 +1895,18 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "DIFFERENT",
+        "changedPct": 0.01,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "hr-employees__en__light__768",
-      "result": "IDENTICAL",
-      "changedPct": 0,
+      "result": "DIFFERENT",
+      "changedPct": 0.01,
       "heightBefore": 1024,
       "heightAfter": 1024,
       "heightDelta": 0,
@@ -1344,7 +1915,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "DIFFERENT",
+        "changedPct": 0.01,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "inventory-products__ar__dark__1024",
@@ -1358,7 +1935,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "inventory-products__ar__dark__1440",
@@ -1372,7 +1955,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "inventory-products__ar__dark__390",
@@ -1386,7 +1975,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "inventory-products__ar__dark__768",
@@ -1400,7 +1995,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "inventory-products__ar__light__1024",
@@ -1414,7 +2015,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "inventory-products__ar__light__1440",
@@ -1428,7 +2035,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "inventory-products__ar__light__390",
@@ -1442,7 +2055,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "inventory-products__ar__light__768",
@@ -1456,7 +2075,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "inventory-products__en__dark__1024",
@@ -1470,7 +2095,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "inventory-products__en__dark__1440",
@@ -1484,7 +2115,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "inventory-products__en__dark__390",
@@ -1498,7 +2135,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "inventory-products__en__dark__768",
@@ -1512,7 +2155,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "inventory-products__en__light__1024",
@@ -1526,7 +2175,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "inventory-products__en__light__1440",
@@ -1540,7 +2195,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "inventory-products__en__light__390",
@@ -1554,7 +2215,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "inventory-products__en__light__768",
@@ -1568,7 +2235,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "login__ar__dark__1024",
@@ -1582,7 +2255,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "login__ar__dark__1440",
@@ -1596,7 +2275,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "login__ar__dark__390",
@@ -1610,7 +2295,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "login__ar__dark__768",
@@ -1624,7 +2315,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "login__ar__light__1024",
@@ -1638,7 +2335,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "login__ar__light__1440",
@@ -1652,7 +2355,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "login__ar__light__390",
@@ -1666,7 +2375,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "login__ar__light__768",
@@ -1680,7 +2395,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "login__en__dark__1024",
@@ -1694,7 +2415,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "login__en__dark__1440",
@@ -1708,7 +2435,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "login__en__dark__390",
@@ -1722,7 +2455,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "login__en__dark__768",
@@ -1736,7 +2475,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "login__en__light__1024",
@@ -1750,7 +2495,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "login__en__light__1440",
@@ -1764,7 +2515,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "login__en__light__390",
@@ -1778,7 +2535,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "login__en__light__768",
@@ -1792,12 +2555,18 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "project-detail__ar__dark__1024",
       "result": "DIFFERENT",
-      "changedPct": 13.27,
+      "changedPct": 13.26,
       "heightBefore": 2190,
       "heightAfter": 2162,
       "heightDelta": -28,
@@ -1806,7 +2575,13 @@
       "statusAfter": 200,
       "hydration418Before": 1,
       "hydration418After": 1,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "DIFFERENT",
+        "changedPct": 0.01,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "project-detail__ar__dark__1440",
@@ -1820,12 +2595,18 @@
       "statusAfter": 200,
       "hydration418Before": 1,
       "hydration418After": 1,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "DIFFERENT",
+        "changedPct": 0.01,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "project-detail__ar__dark__390",
       "result": "DIFFERENT",
-      "changedPct": 0.85,
+      "changedPct": 0.86,
       "heightBefore": 3868,
       "heightAfter": 3848,
       "heightDelta": -20,
@@ -1834,7 +2615,13 @@
       "statusAfter": 200,
       "hydration418Before": 1,
       "hydration418After": 1,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "DIFFERENT",
+        "changedPct": 0.01,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "project-detail__ar__dark__768",
@@ -1848,7 +2635,13 @@
       "statusAfter": 200,
       "hydration418Before": 1,
       "hydration418After": 1,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "DIFFERENT",
+        "changedPct": 0.01,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "project-detail__ar__light__1024",
@@ -1862,7 +2655,13 @@
       "statusAfter": 200,
       "hydration418Before": 1,
       "hydration418After": 1,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "DIFFERENT",
+        "changedPct": 0.01,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "project-detail__ar__light__1440",
@@ -1876,12 +2675,18 @@
       "statusAfter": 200,
       "hydration418Before": 1,
       "hydration418After": 1,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "DIFFERENT",
+        "changedPct": 0.01,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "project-detail__ar__light__390",
       "result": "DIFFERENT",
-      "changedPct": 0.79,
+      "changedPct": 0.8,
       "heightBefore": 3868,
       "heightAfter": 3848,
       "heightDelta": -20,
@@ -1890,12 +2695,18 @@
       "statusAfter": 200,
       "hydration418Before": 1,
       "hydration418After": 1,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "DIFFERENT",
+        "changedPct": 0.01,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "project-detail__ar__light__768",
       "result": "DIFFERENT",
-      "changedPct": 8.43,
+      "changedPct": 8.42,
       "heightBefore": 2428,
       "heightAfter": 2400,
       "heightDelta": -28,
@@ -1904,12 +2715,18 @@
       "statusAfter": 200,
       "hydration418Before": 1,
       "hydration418After": 1,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "DIFFERENT",
+        "changedPct": 0.01,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "project-detail__en__dark__1024",
       "result": "DIFFERENT",
-      "changedPct": 13.95,
+      "changedPct": 13.96,
       "heightBefore": 2046,
       "heightAfter": 2022,
       "heightDelta": -24,
@@ -1918,12 +2735,18 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "DIFFERENT",
+        "changedPct": 0.01,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "project-detail__en__dark__1440",
       "result": "DIFFERENT",
-      "changedPct": 10.77,
+      "changedPct": 10.78,
       "heightBefore": 1742,
       "heightAfter": 1734,
       "heightDelta": -8,
@@ -1932,12 +2755,18 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "DIFFERENT",
+        "changedPct": 0.01,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "project-detail__en__dark__390",
       "result": "DIFFERENT",
-      "changedPct": 0.9,
+      "changedPct": 0.91,
       "heightBefore": 3344,
       "heightAfter": 3328,
       "heightDelta": -16,
@@ -1946,12 +2775,18 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "DIFFERENT",
+        "changedPct": 0.01,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "project-detail__en__dark__768",
       "result": "DIFFERENT",
-      "changedPct": 9.74,
+      "changedPct": 9.75,
       "heightBefore": 2220,
       "heightAfter": 2196,
       "heightDelta": -24,
@@ -1960,12 +2795,18 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "DIFFERENT",
+        "changedPct": 0.01,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "project-detail__en__light__1024",
       "result": "DIFFERENT",
-      "changedPct": 13.26,
+      "changedPct": 13.28,
       "heightBefore": 2046,
       "heightAfter": 2022,
       "heightDelta": -24,
@@ -1974,12 +2815,18 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "DIFFERENT",
+        "changedPct": 0.01,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "project-detail__en__light__1440",
       "result": "DIFFERENT",
-      "changedPct": 10.48,
+      "changedPct": 10.49,
       "heightBefore": 1742,
       "heightAfter": 1734,
       "heightDelta": -8,
@@ -1988,7 +2835,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "DIFFERENT",
+        "changedPct": 0.01,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "project-detail__en__light__390",
@@ -2002,12 +2855,18 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "DIFFERENT",
+        "changedPct": 0.01,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "project-detail__en__light__768",
       "result": "DIFFERENT",
-      "changedPct": 9.32,
+      "changedPct": 9.33,
       "heightBefore": 2220,
       "heightAfter": 2196,
       "heightDelta": -24,
@@ -2016,12 +2875,18 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "DIFFERENT",
+        "changedPct": 0.01,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "projects-list__ar__dark__1024",
       "result": "DIFFERENT",
-      "changedPct": 1.76,
+      "changedPct": 1.77,
       "heightBefore": 802,
       "heightAfter": 802,
       "heightDelta": 0,
@@ -2030,7 +2895,13 @@
       "statusAfter": 200,
       "hydration418Before": 1,
       "hydration418After": 1,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "DIFFERENT",
+        "changedPct": 0.01,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "projects-list__ar__dark__1440",
@@ -2044,12 +2915,18 @@
       "statusAfter": 200,
       "hydration418Before": 1,
       "hydration418After": 1,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "DIFFERENT",
+        "changedPct": 0.01,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "projects-list__ar__dark__390",
-      "result": "IDENTICAL",
-      "changedPct": 0,
+      "result": "DIFFERENT",
+      "changedPct": 0.01,
       "heightBefore": 1168,
       "heightAfter": 1168,
       "heightDelta": 0,
@@ -2058,12 +2935,18 @@
       "statusAfter": 200,
       "hydration418Before": 1,
       "hydration418After": 1,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "DIFFERENT",
+        "changedPct": 0.01,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "projects-list__ar__dark__768",
-      "result": "IDENTICAL",
-      "changedPct": 0,
+      "result": "DIFFERENT",
+      "changedPct": 0.01,
       "heightBefore": 1024,
       "heightAfter": 1024,
       "heightDelta": 0,
@@ -2072,12 +2955,18 @@
       "statusAfter": 200,
       "hydration418Before": 1,
       "hydration418After": 1,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "DIFFERENT",
+        "changedPct": 0.01,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "projects-list__ar__light__1024",
       "result": "DIFFERENT",
-      "changedPct": 1.76,
+      "changedPct": 1.77,
       "heightBefore": 802,
       "heightAfter": 802,
       "heightDelta": 0,
@@ -2086,12 +2975,18 @@
       "statusAfter": 200,
       "hydration418Before": 1,
       "hydration418After": 1,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "DIFFERENT",
+        "changedPct": 0.01,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "projects-list__ar__light__1440",
       "result": "DIFFERENT",
-      "changedPct": 2.25,
+      "changedPct": 2.26,
       "heightBefore": 900,
       "heightAfter": 900,
       "heightDelta": 0,
@@ -2100,12 +2995,18 @@
       "statusAfter": 200,
       "hydration418Before": 1,
       "hydration418After": 1,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "DIFFERENT",
+        "changedPct": 0.01,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "projects-list__ar__light__390",
-      "result": "IDENTICAL",
-      "changedPct": 0,
+      "result": "DIFFERENT",
+      "changedPct": 0.01,
       "heightBefore": 1168,
       "heightAfter": 1168,
       "heightDelta": 0,
@@ -2114,12 +3015,18 @@
       "statusAfter": 200,
       "hydration418Before": 1,
       "hydration418After": 1,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "DIFFERENT",
+        "changedPct": 0.01,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "projects-list__ar__light__768",
-      "result": "IDENTICAL",
-      "changedPct": 0,
+      "result": "DIFFERENT",
+      "changedPct": 0.01,
       "heightBefore": 1024,
       "heightAfter": 1024,
       "heightDelta": 0,
@@ -2128,12 +3035,18 @@
       "statusAfter": 200,
       "hydration418Before": 1,
       "hydration418After": 1,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "DIFFERENT",
+        "changedPct": 0.01,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "projects-list__en__dark__1024",
       "result": "DIFFERENT",
-      "changedPct": 1.57,
+      "changedPct": 1.66,
       "heightBefore": 794,
       "heightAfter": 794,
       "heightDelta": 0,
@@ -2142,12 +3055,18 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "DIFFERENT",
+        "changedPct": 0.09,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "projects-list__en__dark__1440",
       "result": "DIFFERENT",
-      "changedPct": 1.09,
+      "changedPct": 1.15,
       "heightBefore": 900,
       "heightAfter": 900,
       "heightDelta": 0,
@@ -2156,12 +3075,18 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "DIFFERENT",
+        "changedPct": 0.06,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "projects-list__en__dark__390",
-      "result": "IDENTICAL",
-      "changedPct": 0,
+      "result": "DIFFERENT",
+      "changedPct": 0.25,
       "heightBefore": 1080,
       "heightAfter": 1080,
       "heightDelta": 0,
@@ -2170,12 +3095,18 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "DIFFERENT",
+        "changedPct": 0.25,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "projects-list__en__dark__768",
-      "result": "IDENTICAL",
-      "changedPct": 0,
+      "result": "DIFFERENT",
+      "changedPct": 0.07,
       "heightBefore": 1024,
       "heightAfter": 1024,
       "heightDelta": 0,
@@ -2184,12 +3115,18 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "DIFFERENT",
+        "changedPct": 0.07,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "projects-list__en__light__1024",
       "result": "DIFFERENT",
-      "changedPct": 1.57,
+      "changedPct": 1.66,
       "heightBefore": 794,
       "heightAfter": 794,
       "heightDelta": 0,
@@ -2198,12 +3135,18 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "DIFFERENT",
+        "changedPct": 0.09,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "projects-list__en__light__1440",
       "result": "DIFFERENT",
-      "changedPct": 1.09,
+      "changedPct": 1.15,
       "heightBefore": 900,
       "heightAfter": 900,
       "heightDelta": 0,
@@ -2212,12 +3155,18 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "DIFFERENT",
+        "changedPct": 0.06,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "projects-list__en__light__390",
-      "result": "IDENTICAL",
-      "changedPct": 0,
+      "result": "DIFFERENT",
+      "changedPct": 0.24,
       "heightBefore": 1080,
       "heightAfter": 1080,
       "heightDelta": 0,
@@ -2226,12 +3175,18 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "DIFFERENT",
+        "changedPct": 0.24,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "projects-list__en__light__768",
-      "result": "IDENTICAL",
-      "changedPct": 0,
+      "result": "DIFFERENT",
+      "changedPct": 0.07,
       "heightBefore": 1024,
       "heightAfter": 1024,
       "heightDelta": 0,
@@ -2240,7 +3195,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "DIFFERENT",
+        "changedPct": 0.07,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "sales-invoice-detail__ar__dark__1024",
@@ -2254,7 +3215,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "sales-invoice-detail__ar__dark__1440",
@@ -2268,7 +3235,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "sales-invoice-detail__ar__dark__390",
@@ -2282,7 +3255,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "sales-invoice-detail__ar__dark__768",
@@ -2296,7 +3275,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "sales-invoice-detail__ar__light__1024",
@@ -2310,7 +3295,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "sales-invoice-detail__ar__light__1440",
@@ -2324,7 +3315,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "sales-invoice-detail__ar__light__390",
@@ -2338,7 +3335,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "sales-invoice-detail__ar__light__768",
@@ -2352,7 +3355,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "sales-invoice-detail__en__dark__1024",
@@ -2366,7 +3375,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "sales-invoice-detail__en__dark__1440",
@@ -2380,7 +3395,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "sales-invoice-detail__en__dark__390",
@@ -2394,7 +3415,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "sales-invoice-detail__en__dark__768",
@@ -2408,7 +3435,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "sales-invoice-detail__en__light__1024",
@@ -2422,7 +3455,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "sales-invoice-detail__en__light__1440",
@@ -2436,7 +3475,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "sales-invoice-detail__en__light__390",
@@ -2450,7 +3495,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "sales-invoice-detail__en__light__768",
@@ -2464,7 +3515,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "sales-invoice-edit__ar__dark__1024",
@@ -2478,7 +3535,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "sales-invoice-edit__ar__dark__1440",
@@ -2492,7 +3555,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "sales-invoice-edit__ar__dark__390",
@@ -2506,7 +3575,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "sales-invoice-edit__ar__dark__768",
@@ -2520,7 +3595,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "sales-invoice-edit__ar__light__1024",
@@ -2534,7 +3615,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "sales-invoice-edit__ar__light__1440",
@@ -2548,7 +3635,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "sales-invoice-edit__ar__light__390",
@@ -2562,7 +3655,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "sales-invoice-edit__ar__light__768",
@@ -2576,7 +3675,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "sales-invoice-edit__en__dark__1024",
@@ -2590,7 +3695,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "sales-invoice-edit__en__dark__1440",
@@ -2604,7 +3715,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "sales-invoice-edit__en__dark__390",
@@ -2618,7 +3735,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "sales-invoice-edit__en__dark__768",
@@ -2632,7 +3755,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "sales-invoice-edit__en__light__1024",
@@ -2646,7 +3775,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "sales-invoice-edit__en__light__1440",
@@ -2660,7 +3795,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "sales-invoice-edit__en__light__390",
@@ -2674,7 +3815,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "sales-invoice-edit__en__light__768",
@@ -2688,7 +3835,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "sales-invoice-new__ar__dark__1024",
@@ -2702,7 +3855,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "sales-invoice-new__ar__dark__1440",
@@ -2716,7 +3875,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "sales-invoice-new__ar__dark__390",
@@ -2730,7 +3895,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "sales-invoice-new__ar__dark__768",
@@ -2744,7 +3915,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "sales-invoice-new__ar__light__1024",
@@ -2758,7 +3935,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "sales-invoice-new__ar__light__1440",
@@ -2772,7 +3955,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "sales-invoice-new__ar__light__390",
@@ -2786,7 +3975,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "sales-invoice-new__ar__light__768",
@@ -2800,7 +3995,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "sales-invoice-new__en__dark__1024",
@@ -2814,7 +4015,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "sales-invoice-new__en__dark__1440",
@@ -2828,7 +4035,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "sales-invoice-new__en__dark__390",
@@ -2842,7 +4055,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "sales-invoice-new__en__dark__768",
@@ -2856,7 +4075,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "sales-invoice-new__en__light__1024",
@@ -2870,7 +4095,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "sales-invoice-new__en__light__1440",
@@ -2884,7 +4115,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "sales-invoice-new__en__light__390",
@@ -2898,7 +4135,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "sales-invoice-new__en__light__768",
@@ -2912,12 +4155,18 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "sales-invoices-list__ar__dark__1024",
       "result": "DIFFERENT",
-      "changedPct": 0.67,
+      "changedPct": 0.68,
       "heightBefore": 1345,
       "heightAfter": 1345,
       "heightDelta": 0,
@@ -2926,12 +4175,18 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "DIFFERENT",
+        "changedPct": 0.01,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "sales-invoices-list__ar__dark__1440",
       "result": "DIFFERENT",
-      "changedPct": 6.4,
+      "changedPct": 6.41,
       "heightBefore": 903,
       "heightAfter": 900,
       "heightDelta": -3,
@@ -2940,12 +4195,18 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "DIFFERENT",
+        "changedPct": 0.01,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "sales-invoices-list__ar__dark__390",
-      "result": "AA-NOISE",
-      "changedPct": 0,
+      "result": "DIFFERENT",
+      "changedPct": 0.01,
       "heightBefore": 1615,
       "heightAfter": 1615,
       "heightDelta": 0,
@@ -2954,12 +4215,18 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "DIFFERENT",
+        "changedPct": 0.01,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "sales-invoices-list__ar__dark__768",
-      "result": "AA-NOISE",
-      "changedPct": 0,
+      "result": "DIFFERENT",
+      "changedPct": 0.01,
       "heightBefore": 1345,
       "heightAfter": 1345,
       "heightDelta": 0,
@@ -2968,12 +4235,18 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "DIFFERENT",
+        "changedPct": 0.01,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "sales-invoices-list__ar__light__1024",
       "result": "DIFFERENT",
-      "changedPct": 0.67,
+      "changedPct": 0.68,
       "heightBefore": 1345,
       "heightAfter": 1345,
       "heightDelta": 0,
@@ -2982,12 +4255,18 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "DIFFERENT",
+        "changedPct": 0.01,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "sales-invoices-list__ar__light__1440",
       "result": "DIFFERENT",
-      "changedPct": 6.38,
+      "changedPct": 6.39,
       "heightBefore": 903,
       "heightAfter": 900,
       "heightDelta": -3,
@@ -2996,12 +4275,18 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "DIFFERENT",
+        "changedPct": 0.01,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "sales-invoices-list__ar__light__390",
-      "result": "AA-NOISE",
-      "changedPct": 0,
+      "result": "DIFFERENT",
+      "changedPct": 0.01,
       "heightBefore": 1615,
       "heightAfter": 1615,
       "heightDelta": 0,
@@ -3010,12 +4295,18 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "DIFFERENT",
+        "changedPct": 0.01,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "sales-invoices-list__ar__light__768",
-      "result": "AA-NOISE",
-      "changedPct": 0,
+      "result": "DIFFERENT",
+      "changedPct": 0.01,
       "heightBefore": 1345,
       "heightAfter": 1345,
       "heightDelta": 0,
@@ -3024,12 +4315,18 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "DIFFERENT",
+        "changedPct": 0.01,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "sales-invoices-list__en__dark__1024",
       "result": "DIFFERENT",
-      "changedPct": 0.51,
+      "changedPct": 0.54,
       "heightBefore": 1209,
       "heightAfter": 1209,
       "heightDelta": 0,
@@ -3038,12 +4335,18 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "DIFFERENT",
+        "changedPct": 0.03,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "sales-invoices-list__en__dark__1440",
       "result": "DIFFERENT",
-      "changedPct": 15.52,
+      "changedPct": 15.55,
       "heightBefore": 959,
       "heightAfter": 900,
       "heightDelta": -59,
@@ -3052,12 +4355,18 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "DIFFERENT",
+        "changedPct": 0.03,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "sales-invoices-list__en__dark__390",
-      "result": "IDENTICAL",
-      "changedPct": 0,
+      "result": "DIFFERENT",
+      "changedPct": 0.1,
       "heightBefore": 1495,
       "heightAfter": 1495,
       "heightDelta": 0,
@@ -3066,12 +4375,18 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "DIFFERENT",
+        "changedPct": 0.1,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "sales-invoices-list__en__dark__768",
-      "result": "IDENTICAL",
-      "changedPct": 0,
+      "result": "DIFFERENT",
+      "changedPct": 0.03,
       "heightBefore": 1229,
       "heightAfter": 1229,
       "heightDelta": 0,
@@ -3080,12 +4395,18 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "DIFFERENT",
+        "changedPct": 0.03,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "sales-invoices-list__en__light__1024",
       "result": "DIFFERENT",
-      "changedPct": 0.52,
+      "changedPct": 0.55,
       "heightBefore": 1209,
       "heightAfter": 1209,
       "heightDelta": 0,
@@ -3094,12 +4415,18 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "DIFFERENT",
+        "changedPct": 0.03,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "sales-invoices-list__en__light__1440",
       "result": "DIFFERENT",
-      "changedPct": 13.8,
+      "changedPct": 13.83,
       "heightBefore": 959,
       "heightAfter": 900,
       "heightDelta": -59,
@@ -3108,12 +4435,18 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "DIFFERENT",
+        "changedPct": 0.03,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "sales-invoices-list__en__light__390",
-      "result": "IDENTICAL",
-      "changedPct": 0,
+      "result": "DIFFERENT",
+      "changedPct": 0.1,
       "heightBefore": 1495,
       "heightAfter": 1495,
       "heightDelta": 0,
@@ -3122,12 +4455,18 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "DIFFERENT",
+        "changedPct": 0.1,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "sales-invoices-list__en__light__768",
-      "result": "IDENTICAL",
-      "changedPct": 0,
+      "result": "DIFFERENT",
+      "changedPct": 0.03,
       "heightBefore": 1229,
       "heightAfter": 1229,
       "heightDelta": 0,
@@ -3136,12 +4475,18 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "DIFFERENT",
+        "changedPct": 0.03,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "sales-quotations-list__ar__dark__1024",
       "result": "DIFFERENT",
-      "changedPct": 0.34,
+      "changedPct": 0.35,
       "heightBefore": 1072,
       "heightAfter": 1072,
       "heightDelta": 0,
@@ -3150,12 +4495,18 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "DIFFERENT",
+        "changedPct": 0.01,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "sales-quotations-list__ar__dark__1440",
       "result": "DIFFERENT",
-      "changedPct": 4.29,
+      "changedPct": 4.3,
       "heightBefore": 900,
       "heightAfter": 900,
       "heightDelta": 0,
@@ -3164,12 +4515,18 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "DIFFERENT",
+        "changedPct": 0.01,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "sales-quotations-list__ar__dark__390",
-      "result": "IDENTICAL",
-      "changedPct": 0,
+      "result": "DIFFERENT",
+      "changedPct": 0.01,
       "heightBefore": 1414,
       "heightAfter": 1414,
       "heightDelta": 0,
@@ -3178,12 +4535,18 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "DIFFERENT",
+        "changedPct": 0.01,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "sales-quotations-list__ar__dark__768",
-      "result": "IDENTICAL",
-      "changedPct": 0,
+      "result": "DIFFERENT",
+      "changedPct": 0.01,
       "heightBefore": 1096,
       "heightAfter": 1096,
       "heightDelta": 0,
@@ -3192,12 +4555,18 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "DIFFERENT",
+        "changedPct": 0.01,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "sales-quotations-list__ar__light__1024",
       "result": "DIFFERENT",
-      "changedPct": 0.34,
+      "changedPct": 0.35,
       "heightBefore": 1072,
       "heightAfter": 1072,
       "heightDelta": 0,
@@ -3206,12 +4575,18 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "DIFFERENT",
+        "changedPct": 0.01,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "sales-quotations-list__ar__light__1440",
       "result": "DIFFERENT",
-      "changedPct": 4.27,
+      "changedPct": 4.28,
       "heightBefore": 900,
       "heightAfter": 900,
       "heightDelta": 0,
@@ -3220,12 +4595,18 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "DIFFERENT",
+        "changedPct": 0.01,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "sales-quotations-list__ar__light__390",
-      "result": "IDENTICAL",
-      "changedPct": 0,
+      "result": "DIFFERENT",
+      "changedPct": 0.01,
       "heightBefore": 1414,
       "heightAfter": 1414,
       "heightDelta": 0,
@@ -3234,12 +4615,18 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "DIFFERENT",
+        "changedPct": 0.01,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "sales-quotations-list__ar__light__768",
-      "result": "IDENTICAL",
-      "changedPct": 0,
+      "result": "DIFFERENT",
+      "changedPct": 0.01,
       "heightBefore": 1096,
       "heightAfter": 1096,
       "heightDelta": 0,
@@ -3248,12 +4635,18 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "DIFFERENT",
+        "changedPct": 0.01,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "sales-quotations-list__en__dark__1024",
-      "result": "IDENTICAL",
-      "changedPct": 0,
+      "result": "DIFFERENT",
+      "changedPct": 0.06,
       "heightBefore": 948,
       "heightAfter": 948,
       "heightDelta": 0,
@@ -3262,12 +4655,18 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "DIFFERENT",
+        "changedPct": 0.06,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "sales-quotations-list__en__dark__1440",
       "result": "DIFFERENT",
-      "changedPct": 1.95,
+      "changedPct": 2,
       "heightBefore": 900,
       "heightAfter": 900,
       "heightDelta": 0,
@@ -3276,12 +4675,18 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "DIFFERENT",
+        "changedPct": 0.05,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "sales-quotations-list__en__dark__390",
-      "result": "IDENTICAL",
-      "changedPct": 0,
+      "result": "DIFFERENT",
+      "changedPct": 0.19,
       "heightBefore": 1234,
       "heightAfter": 1234,
       "heightDelta": 0,
@@ -3290,12 +4695,18 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "DIFFERENT",
+        "changedPct": 0.19,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "sales-quotations-list__en__dark__768",
-      "result": "IDENTICAL",
-      "changedPct": 0,
+      "result": "DIFFERENT",
+      "changedPct": 0.06,
       "heightBefore": 1024,
       "heightAfter": 1024,
       "heightDelta": 0,
@@ -3304,12 +4715,18 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "DIFFERENT",
+        "changedPct": 0.06,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "sales-quotations-list__en__light__1024",
-      "result": "IDENTICAL",
-      "changedPct": 0,
+      "result": "DIFFERENT",
+      "changedPct": 0.06,
       "heightBefore": 948,
       "heightAfter": 948,
       "heightDelta": 0,
@@ -3318,12 +4735,18 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "DIFFERENT",
+        "changedPct": 0.06,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "sales-quotations-list__en__light__1440",
       "result": "DIFFERENT",
-      "changedPct": 1.95,
+      "changedPct": 1.99,
       "heightBefore": 900,
       "heightAfter": 900,
       "heightDelta": 0,
@@ -3332,12 +4755,18 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "DIFFERENT",
+        "changedPct": 0.05,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "sales-quotations-list__en__light__390",
-      "result": "IDENTICAL",
-      "changedPct": 0,
+      "result": "DIFFERENT",
+      "changedPct": 0.19,
       "heightBefore": 1234,
       "heightAfter": 1234,
       "heightDelta": 0,
@@ -3346,12 +4775,18 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "DIFFERENT",
+        "changedPct": 0.19,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "sales-quotations-list__en__light__768",
-      "result": "IDENTICAL",
-      "changedPct": 0,
+      "result": "DIFFERENT",
+      "changedPct": 0.06,
       "heightBefore": 1024,
       "heightAfter": 1024,
       "heightDelta": 0,
@@ -3360,7 +4795,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "DIFFERENT",
+        "changedPct": 0.06,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "settings-organization__ar__dark__1024",
@@ -3374,7 +4815,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "settings-organization__ar__dark__1440",
@@ -3388,7 +4835,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "settings-organization__ar__dark__390",
@@ -3402,7 +4855,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "settings-organization__ar__dark__768",
@@ -3416,7 +4875,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "settings-organization__ar__light__1024",
@@ -3430,7 +4895,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "settings-organization__ar__light__1440",
@@ -3444,7 +4915,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "settings-organization__ar__light__390",
@@ -3458,7 +4935,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "settings-organization__ar__light__768",
@@ -3472,7 +4955,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "settings-organization__en__dark__1024",
@@ -3486,7 +4975,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "settings-organization__en__dark__1440",
@@ -3500,7 +4995,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "settings-organization__en__dark__390",
@@ -3514,7 +5015,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "settings-organization__en__dark__768",
@@ -3528,7 +5035,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "settings-organization__en__light__1024",
@@ -3542,7 +5055,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "settings-organization__en__light__1440",
@@ -3556,7 +5075,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "settings-organization__en__light__390",
@@ -3570,7 +5095,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     },
     {
       "id": "settings-organization__en__light__768",
@@ -3584,7 +5115,13 @@
       "statusAfter": 200,
       "hydration418Before": 0,
       "hydration418After": 0,
-      "otherConsoleErrorsAfter": 0
+      "otherConsoleErrorsAfter": 0,
+      "c1VsDd728ee": {
+        "result": "IDENTICAL",
+        "changedPct": 0,
+        "heightDelta": 0,
+        "overflowDelta": 0
+      }
     }
   ]
 }

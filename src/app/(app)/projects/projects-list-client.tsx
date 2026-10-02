@@ -10,6 +10,7 @@ import { ListToolbar } from "../sales/_shared/list-toolbar";
 import { RowMenu, type RowMenuEntry } from "../sales/_shared/row-menu";
 import { Money } from "../sales/_shared/money";
 import { t, type Locale } from "@/lib/i18n/dict";
+import { statusStat } from "@/lib/status-registry";
 
 
 export type ProjectRow = {
@@ -47,9 +48,9 @@ export function ProjectsListClient({ locale, rows }: { locale: Locale; rows: Pro
       <StatRow
         items={[
           { label: t(locale, "Total Projects"), value: String(rows.length) },
-          { label: t(locale, "active"), value: String(stats.active ?? 0), colorClass: "text-info" },
-          { label: t(locale, "completed"), value: String(stats.completed ?? 0), colorClass: "text-success" },
-          { label: t(locale, "planned"), value: String(stats.planned ?? 0) },
+          statusStat(locale, "project", "active", stats.active),
+          statusStat(locale, "project", "completed", stats.completed),
+          statusStat(locale, "project", "planned", stats.planned),
         ]}
       />
 

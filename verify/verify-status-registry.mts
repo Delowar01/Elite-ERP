@@ -12,6 +12,10 @@
 //   6. tag shape      — 4px status tag, no default dot, pulse only where the registry says so,
 //                       and the generic .pill / <Badge> left as it was
 //   7. contrast       — all six tones, light and dark, on the approved DEV-UI-01.1 tokens
+//   8. labels + tones outside tags (DEV-UI-01.2-C1) — AST rules: no status option list rendered
+//                       through raw t(), no raw status t("<value>") label, no hand-coloured status
+//                       stat; one tone→text-class map; explicit coverage of every status selector,
+//                       form, filter, stat row and task label
 
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
@@ -19,10 +23,11 @@ import ts from "typescript";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import {
-  STATUS_REGISTRY, STATUS_DOMAINS, STATUS_TONE_TOKENS, resolveStatus, statusLabel, humanizeStatus,
-  type StatusDomain, type StatusTone,
+  STATUS_REGISTRY, STATUS_DOMAINS, STATUS_TONE_TOKENS, STATUS_TONE_TEXT_CLASS, resolveStatus, statusLabel, statusStat,
+  statusTextClass, humanizeStatus, type StatusDomain, type StatusTone,
 } from "../src/lib/status-registry";
 import { StatusBadge } from "../src/components/ui/status-badge";
+import { StatRow } from "../src/app/(app)/sales/_shared/stat-row";
 import { DOCUMENT_TYPES, documentStatuses } from "../src/lib/document-lifecycle";
 import { TOKENS } from "../src/lib/design-tokens";
 import { contrast } from "../src/lib/contrast";
@@ -209,6 +214,219 @@ for (const ap of ["light", "dark"] as const) {
     const r = contrast(TOKENS[ap][fg], TOKENS[ap][bg]);
     check(`${ap}: ${tone} tag text on its tint ≥ 4.5:1`, r >= 4.5, r.toFixed(2));
   }
+}
+
+// ---------- 8. labels and tones outside tags (DEV-UI-01.2-C1) ----------
+// Reusable AST rules over every .tsx file except the registry. They look at the shape of the code,
+// not at file names, so a new page that reintroduces the pattern fails too.
+const TONES: StatusTone[] = ["neutral", "info", "success", "warning", "danger", "corrective"];
+check("tone → text-class map is static and covers all six tones",
+  TONES.every((tone) => STATUS_TONE_TEXT_CLASS[tone] === `text-${tone}`) && Object.keys(STATUS_TONE_TEXT_CLASS).length === 6,
+  JSON.stringify(STATUS_TONE_TEXT_CLASS));
+const theme = globals.match(/@theme inline \{([\s\S]*?)\n\}/)?.[1] ?? "";
+check("every tone text class has a Tailwind colour (--color-<tone> in @theme inline)",
+  TONES.every((tone) => new RegExp(`--color-${tone}:\\s*var\\(--${tone}\\)`).test(theme)));
+const regSrc = read("src/lib/status-registry.ts");
+check("the tone → text-class map holds literal class strings (no constructed classes)",
+  !/`text-\$\{/.test(regSrc) && !/"text-"\s*\+/.test(regSrc));
+
+/** Every raw value of every domain, minus the generic priority words. */
+const ALL_RAW = new Set(entries().map((e) => e.raw).filter((r) => !PRIORITY_ONLY.has(r)));
+/** `t(<locale>, <arg>)` → arg, else undefined. */
+const tArg = (n: ts.Node): ts.Expression | undefined =>
+  ts.isCallExpression(n) && ts.isIdentifier(n.expression) && n.expression.text === "t" && n.arguments.length === 2 ? n.arguments[1] : undefined;
+const strLit = (n: ts.Node | undefined): string | undefined =>
+  n && (ts.isStringLiteral(n) || ts.isNoSubstitutionTemplateLiteral(n)) ? n.text : undefined;
+/** "On Leave" / "on_leave" / "dispatched" → the registry raw form, if it is one. */
+const asRaw = (label: string) => label.trim().toLowerCase().replace(/[\s-]+/g, "_");
+const SEMANTIC_COLOUR = /\b(text|bg)-(success|warning|danger|info|neutral|corrective)\b|var\(--(success|warning|danger|info|neutral|corrective|accent-green|accent-red|accent-purple|accent-orange)\)/;
+/** String values held by an array literal: plain strings, or the string properties of object elements. */
+function arrayStrings(arr: ts.ArrayLiteralExpression): string[] {
+  return arr.elements.flatMap((el) => {
+    const v = strLit(el);
+    if (v !== undefined) return [v];
+    if (ts.isObjectLiteralExpression(el))
+      return el.properties.filter(ts.isPropertyAssignment).map((p) => strLit(p.initializer)).filter((x): x is string => x !== undefined);
+    return [];
+  });
+}
+const unwrap = (e: ts.Expression): ts.Expression =>
+  ts.isAsExpression(e) || ts.isParenthesizedExpression(e) || ts.isSatisfiesExpression(e) ? unwrap(e.expression) : e;
+/** The registry domain an option list belongs to (≥ 2 of its values are that domain's raw values). */
+function statusDomainOf(values: string[]): StatusDomain | undefined {
+  return STATUS_DOMAINS.find((d) => values.filter((v) => !PRIORITY_ONLY.has(v) && v in STATUS_REGISTRY[d]).length >= 2);
+}
+const refersTo = (n: ts.Node, names: Set<string>): boolean =>
+  (ts.isIdentifier(n) && names.has(n.text)) || (ts.forEachChild(n, (c) => (refersTo(c, names) ? true : undefined)) ?? false);
+const bindingNames = (b: ts.BindingName): string[] =>
+  ts.isIdentifier(b) ? [b.text] : b.elements.flatMap((e) => (ts.isOmittedExpression(e) ? [] : bindingNames(e.name)));
+
+const arrayViaT: string[] = [];      // R1: STATUSES.map((s) => t(locale, s)) — any status option list via raw t()
+const rawStatusT: string[] = [];     // R2: t(locale, "dispatched") — a raw stored value used as a dictionary key
+const colouredStats: string[] = [];  // R3: a status label paired with a hand-picked semantic colour
+const statRowColours: string[] = []; // R4: a StatRow item coloured by hand instead of statusStat()
+for (const file of walk(SRC)) {
+  if (file === REGISTRY || !file.endsWith(".tsx")) continue;
+  const rel = file.slice(ROOT.length);
+  const sf = ts.createSourceFile(file, readFileSync(file, "utf8"), ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  const at = (n: ts.Node) => `${rel}:${sf.getLineAndCharacterOfPosition(n.getStart(sf)).line + 1}`;
+  // file-level const arrays: name → string values
+  const constArrays = new Map<string, string[]>();
+  const collect = (n: ts.Node) => {
+    if (ts.isVariableDeclaration(n) && ts.isIdentifier(n.name) && n.initializer) {
+      const init = unwrap(n.initializer);
+      if (ts.isArrayLiteralExpression(init)) constArrays.set(n.name.text, arrayStrings(init));
+    }
+    ts.forEachChild(n, collect);
+  };
+  collect(sf);
+  const visit = (n: ts.Node) => {
+    // R1 — <statusArray>.map((x) => … t(locale, x / x.prop) …)
+    if (ts.isCallExpression(n) && ts.isPropertyAccessExpression(n.expression) && n.expression.name.text === "map") {
+      const target = unwrap(n.expression.expression);
+      const values = ts.isArrayLiteralExpression(target) ? arrayStrings(target) : ts.isIdentifier(target) ? constArrays.get(target.text) : undefined;
+      const fn = n.arguments[0];
+      const domain = values && statusDomainOf(values);
+      if (domain && fn && (ts.isArrowFunction(fn) || ts.isFunctionExpression(fn)) && fn.parameters[0]) {
+        const params = new Set(bindingNames(fn.parameters[0].name));
+        const scan = (m: ts.Node) => {
+          const a = tArg(m);
+          if (a && refersTo(a, params)) arrayViaT.push(`${at(m)} [${domain}] t(locale, ${a.getText(sf)})`);
+          ts.forEachChild(m, scan);
+        };
+        scan(fn.body);
+      }
+    }
+    // R2 — t(locale, "<raw stored value>")
+    const a = tArg(n);
+    const lit = strLit(a);
+    if (lit !== undefined && /^[a-z]+(_[a-z]+)*$/.test(lit) && ALL_RAW.has(lit)) rawStatusT.push(`${at(n)} t(locale, "${lit}")`);
+    // R3a — { label: t(locale, "<status>"), colorClass|color: <semantic colour> }
+    if (ts.isObjectLiteralExpression(n)) {
+      const prop = (k: string) => n.properties.find((p): p is ts.PropertyAssignment => ts.isPropertyAssignment(p) && ts.isIdentifier(p.name) && p.name.text === k);
+      const label = prop("label");
+      const colour = prop("colorClass") ?? prop("color");
+      const labelLit = label && (strLit(tArg(label.initializer)) ?? undefined);
+      if (labelLit && colour && ALL_RAW.has(asRaw(labelLit)) && SEMANTIC_COLOUR.test(colour.initializer.getText(sf)))
+        colouredStats.push(`${at(n)} "${labelLit}" ${colour.initializer.getText(sf)}`);
+    }
+    // R3b — <el style={{ color: <semantic> }}>{t(locale, "<status>")}</el>
+    if (ts.isJsxElement(n)) {
+      const style = n.openingElement.attributes.properties.find((p): p is ts.JsxAttribute => ts.isJsxAttribute(p) && p.name.getText(sf) === "style");
+      const styleText = style?.initializer?.getText(sf) ?? "";
+      if (/\bcolor:/.test(styleText) && SEMANTIC_COLOUR.test(styleText)) {
+        for (const c of n.children) {
+          const lbl = ts.isJsxExpression(c) && c.expression ? strLit(tArg(c.expression)) : undefined;
+          if (lbl && ALL_RAW.has(asRaw(lbl))) colouredStats.push(`${at(n)} "${lbl}" ${styleText}`);
+        }
+      }
+    }
+    // R4 — <StatRow items={[{ …, colorClass: "…" }]} />: colour on a stat comes only from statusStat()
+    if ((ts.isJsxSelfClosingElement(n) || ts.isJsxOpeningElement(n)) && n.tagName.getText(sf) === "StatRow") {
+      for (const p of n.attributes.properties) {
+        if (!ts.isJsxAttribute(p) || p.name.getText(sf) !== "items") continue;
+        const scan = (m: ts.Node) => {
+          if (ts.isPropertyAssignment(m) && ts.isIdentifier(m.name) && m.name.text === "colorClass") statRowColours.push(`${at(m)} ${m.getText(sf)}`);
+          ts.forEachChild(m, scan);
+        };
+        scan(p);
+      }
+    }
+    ts.forEachChild(n, visit);
+  };
+  visit(sf);
+}
+check("R1: no status option list (array of registry values) is labelled through raw t()", arrayViaT.length === 0, arrayViaT.slice(0, 6).join(" | "));
+check("R2: no raw stored status value is used as a t() key (labels come from statusLabel)", rawStatusT.length === 0, rawStatusT.slice(0, 6).join(" | "));
+check("R3: no status label is paired with a hand-picked semantic colour", colouredStats.length === 0, colouredStats.slice(0, 6).join(" | "));
+check("R4: no StatRow item carries a hand-written colorClass (status stats use statusStat())", statRowColours.length === 0, statRowColours.slice(0, 6).join(" | "));
+// no second tone → text-class map anywhere: an object literal keyed by ≥ 3 tone names whose values are text-* classes
+const toneMaps: string[] = [];
+for (const file of walk(SRC)) {
+  if (file === REGISTRY) continue;
+  const text = readFileSync(file, "utf8");
+  for (const m of text.matchAll(/\{[^{}]*\}/g)) {
+    const keys = [...m[0].matchAll(/\b(neutral|info|success|warning|danger|corrective)\s*:\s*["'`]text-/g)];
+    if (keys.length >= 3) toneMaps.push(file.slice(ROOT.length));
+  }
+}
+check("STATUS_TONE_TEXT_CLASS is the only tone → text-class map", toneMaps.length === 0, toneMaps.join(" "));
+
+// statusStat / StatRow behaviour, rendered
+const dcDispatched = statusStat("en", "delivery_challan", "dispatched", 3);
+const cnIssued = statusStat("en", "credit_note", "issued", 2);
+check("statusStat: dispatched → info / text-info, label 'Dispatched'",
+  dcDispatched.tone === "info" && dcDispatched.colorClass === "text-info" && dcDispatched.label === "Dispatched" && dcDispatched.value === "3", JSON.stringify(dcDispatched));
+check("statusStat: credit note issued → corrective / text-corrective",
+  cnIssued.tone === "corrective" && cnIssued.colorClass === "text-corrective", JSON.stringify(cnIssued));
+check("statusStat: Arabic label from the registry key, missing count → 0",
+  statusStat("ar", "sales_invoice", "partially_paid", undefined).label === "مدفوع جزئيًا" && statusStat("en", "quotation", "draft", null).value === "0");
+check("statusTextClass follows the registry tone (quotation.expired → text-warning, attendance.on_leave → text-info)",
+  statusTextClass("quotation", "expired") === "text-warning" && statusTextClass("attendance", "on_leave") === "text-info");
+const statHtml = renderToStaticMarkup(createElement(StatRow, { items: [{ label: "Total", value: "9" }, dcDispatched] }));
+check("StatRow renders the registry tone class and data-status / data-tone on a status stat",
+  /data-status-domain="delivery_challan" data-status="dispatched" data-tone="info"/.test(statHtml) && /class="kpi-value text-info"/.test(statHtml) && />Dispatched</.test(statHtml), statHtml);
+check("StatRow leaves a non-status stat uncoloured and unattributed",
+  /<div class="card" style="padding:16px 18px"><div class="kpi-label"[^>]*>Total<\/div><div class="kpi-value "/.test(statHtml), statHtml);
+
+// explicit coverage — every known status selector / form / filter / stat row / task label
+const APP = "src/app/(app)/";
+const COVER: [string, string, RegExp[], RegExp[]][] = [
+  // [label, file, must contain, must not contain]
+  ["project status select", "projects/[id]/project-status-select.tsx", [/STATUSES\.map\(\(s\) =>[\s\S]{0,120}statusLabel\(locale, "project", s\)/], [/t\(locale, s\)/]],
+  ["project form status", "projects/project-form.tsx", [/STATUSES\.map\(\(s\) =>[\s\S]{0,120}statusLabel\(locale, "project", s\)/], [/t\(locale, s\)/]],
+  ["employee form status", "hr/employees/employee-form.tsx",
+    [/<SelectItem value="active">\{statusLabel\(locale, "employee", "active"\)\}/, /<SelectItem value="inactive">\{statusLabel\(locale, "employee", "inactive"\)\}/], [/t\(locale, "(active|inactive)"\)/]],
+  ["proforma detail status select + confirmation", "sales/proforma/proforma-detail-actions.tsx",
+    [/statusLabel\(locale, "proforma_invoice", s\)/, /value: statusLabel\(locale, "proforma_invoice", value\)/], [/t\(locale, (s|value)\)/]],
+  ["quotation detail status select + confirmation", "sales/quotations/quotation-detail-actions.tsx",
+    [/statusLabel\(locale, "quotation", s\)/, /value: statusLabel\(locale, "quotation", value\)/], [/t\(locale, (s|value)\)/]],
+  ["sales-order detail status select + confirmation", "sales/orders/order-detail-actions.tsx",
+    [/statusLabel\(locale, "sales_order", s\)/, /value: statusLabel\(locale, "sales_order", value\)/], [/t\(locale, (s|value)\)/]],
+  ["delivery-challan detail status select + confirmation", "sales/delivery-challans/dc-detail-actions.tsx",
+    [/statusLabel\(locale, "delivery_challan", s\)/, /value: statusLabel\(locale, "delivery_challan", value\)/], [/t\(locale, (s|value)\)/]],
+  ["list workspace status filter", "documents/_workspace/list-workspace-toolbar.tsx",
+    [/module: DocumentType;/, /statusOptions\.map\(\(s\) =>[\s\S]{0,120}\{statusLabel\(locale, module, s\)\}/], [/t\(locale, s\)/, /isStatusDomain/]],
+  ["task kanban column labels + status select", "projects/[id]/kanban-board.tsx",
+    [/const COLUMNS: \{ status: string \}\[\] = \[\{ status: "todo" \}, \{ status: "in_progress" \}, \{ status: "blocked" \}, \{ status: "done" \}\];/,
+     /<span>\{statusLabel\(locale, "task", col\.status\)\}<\/span>/, /COLUMNS\.map\(\(c\) =>[\s\S]{0,140}\{statusLabel\(locale, "task", c\.status\)\}/],
+    [/label: "(To Do|In Progress|Blocked|Done)"/, /t\(locale, (col|c)\.label\)/]],
+  ["dashboard HR snapshot (attendance)", "dashboard/page.tsx",
+    [/\["present", hrSnapshot\.present\],\s*\["on_leave", hrSnapshot\.onLeave\],\s*\["absent", hrSnapshot\.absent\],/, /statusTextClass\("attendance", status\)\}>\{statusLabel\(locale, "attendance", status\)\}/],
+    [/t\(locale, "(Present|On Leave|Absent)"\)/]],
+  ["dashboard project overview (project)", "dashboard/page.tsx",
+    [/\["completed", projectsOverview\.completed\],\s*\["active", projectsOverview\.active\],\s*\["on_hold", projectsOverview\.onHold\],\s*\["planned", projectsOverview\.planned\],/,
+     /statusTextClass\("project", status\)\}>\{statusLabel\(locale, "project", status\)\}/],
+    [/t\(locale, "(In Progress|On Hold|Not Started)"\)/]],
+  ["employee cards present / on-leave KPIs", "hr/employees/employees-client.tsx",
+    [/className=\{statusTextClass\("attendance", "present"\)\}/, /statusLabel\(locale, "attendance", "on_leave"\)/, /className=\{statusTextClass\("attendance", "on_leave"\)\}/],
+    [/color: "var\(--(accent-green|warning)\)"/]],
+];
+for (const [label, file, must, mustNot] of COVER) {
+  const src = read(APP + file);
+  const missing = must.filter((re) => !re.test(src)).map(String);
+  const present = mustNot.filter((re) => re.test(src)).map(String);
+  check(`coverage: ${label}`, missing.length === 0 && present.length === 0, `missing ${missing.join(" ")} | forbidden ${present.join(" ")}`);
+}
+// the nine list pages: every status stat via statusStat() in its own domain, nothing else coloured
+const STAT_ROWS: [string, StatusDomain, string[]][] = [
+  ["sales/quotations/quotations-list-client.tsx", "quotation", ["accepted", "sent", "draft"]],
+  ["sales/orders/orders-list-client.tsx", "sales_order", ["confirmed", "fulfilled", "draft"]],
+  ["sales/proforma/proforma-list-client.tsx", "proforma_invoice", ["sent", "draft"]],
+  ["sales/invoices/invoices-list-client.tsx", "sales_invoice", ["paid", "sent", "draft"]],
+  ["sales/delivery-challans/dc-list-client.tsx", "delivery_challan", ["delivered", "dispatched", "draft"]],
+  ["purchasing/orders/po-list-client.tsx", "purchase_order", ["received", "ordered", "draft"]],
+  ["sales/credit-notes/cn-list-client.tsx", "credit_note", ["issued", "draft"]],
+  ["purchasing/debit-notes/dn-list-client.tsx", "debit_note", ["issued", "draft"]],
+  ["projects/projects-list-client.tsx", "project", ["active", "completed", "planned"]],
+];
+for (const [file, domain, statuses] of STAT_ROWS) {
+  const src = read(APP + file);
+  const row = src.match(/<StatRow\s+items=\{\[([\s\S]*?)\]\}\s*\/>/)?.[1] ?? "";
+  const calls = [...row.matchAll(/statusStat\(locale, "(\w+)", "(\w+)", stats\.(\w+)\)/g)];
+  const ok = calls.length === statuses.length &&
+    calls.every((c, i) => c[1] === domain && c[2] === statuses[i] && c[3] === statuses[i]) && !/colorClass/.test(row);
+  check(`coverage: ${domain} list stat row — ${statuses.join(" / ")} via statusStat`, ok, row.trim().replace(/\s+/g, " ").slice(0, 200));
 }
 
 let ok = true;

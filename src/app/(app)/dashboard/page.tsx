@@ -1,5 +1,5 @@
 import { Fragment } from "react";
-import { STATUS_TONE_TOKENS, resolveStatus, statusLabel } from "@/lib/status-registry";
+import { STATUS_TONE_TOKENS, resolveStatus, statusLabel, statusTextClass } from "@/lib/status-registry";
 import { ShoppingCart, FileText, Wallet, CreditCard, BookOpen, ChevronRight, FileSignature, Building2, UserPlus, Shield, Lock, TrendingUp, RefreshCw, Link2 } from "lucide-react";
 import Link from "next/link";
 import { requireSession } from "@/lib/session";
@@ -244,10 +244,17 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           <h4>{t(locale, "Project Overview")}</h4>
           <div className="bc-bignum">{projectsOverview.active}</div>
           <div style={{ fontSize: 11, color: "var(--ink-faint)", marginBottom: 10 }}>{t(locale, "Active Projects")}</div>
-          <div className="bc-stat-row"><span className="lbl">{t(locale, "Completed")}</span><span className="val">{projectsOverview.completed}</span></div>
-          <div className="bc-stat-row"><span className="lbl">{t(locale, "In Progress")}</span><span className="val">{projectsOverview.active}</span></div>
-          <div className="bc-stat-row"><span className="lbl">{t(locale, "On Hold")}</span><span className="val">{projectsOverview.onHold}</span></div>
-          <div className="bc-stat-row"><span className="lbl">{t(locale, "Not Started")}</span><span className="val">{projectsOverview.planned}</span></div>
+          {([
+            ["completed", projectsOverview.completed],
+            ["active", projectsOverview.active],
+            ["on_hold", projectsOverview.onHold],
+            ["planned", projectsOverview.planned],
+          ] as const).map(([status, count]) => (
+            <div key={status} className="bc-stat-row" data-status-domain="project" data-status={status} data-tone={resolveStatus("project", status).tone}>
+              <span className="lbl"><span className={statusTextClass("project", status)}>{statusLabel(locale, "project", status)}</span></span>
+              <span className="val">{count}</span>
+            </div>
+          ))}
           <Link href="/projects" className="bc-link">{t(locale, "Go to Projects")} <ChevronRight className="size-3" style={{ color: "var(--brand-orange)" }} /></Link>
         </div>
       </DashWidget>
@@ -258,9 +265,16 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           <h4>{t(locale, "HR Snapshot")}</h4>
           <div className="bc-bignum">{hrSnapshot.total}</div>
           <div style={{ fontSize: 11, color: "var(--ink-faint)", marginBottom: 10 }}>{t(locale, "Total Employees")}</div>
-          <div className="bc-stat-row"><span className="lbl" style={{ color: "var(--accent-green)" }}>{t(locale, "Present")}</span><span className="val">{hrSnapshot.present}</span></div>
-          <div className="bc-stat-row"><span className="lbl" style={{ color: "var(--warning)" }}>{t(locale, "On Leave")}</span><span className="val">{hrSnapshot.onLeave}</span></div>
-          <div className="bc-stat-row"><span className="lbl" style={{ color: "var(--accent-red)" }}>{t(locale, "Absent")}</span><span className="val">{hrSnapshot.absent}</span></div>
+          {([
+            ["present", hrSnapshot.present],
+            ["on_leave", hrSnapshot.onLeave],
+            ["absent", hrSnapshot.absent],
+          ] as const).map(([status, count]) => (
+            <div key={status} className="bc-stat-row" data-status-domain="attendance" data-status={status} data-tone={resolveStatus("attendance", status).tone}>
+              <span className="lbl"><span className={statusTextClass("attendance", status)}>{statusLabel(locale, "attendance", status)}</span></span>
+              <span className="val">{count}</span>
+            </div>
+          ))}
           <Link href="/hr/employees" className="bc-link">{t(locale, "Go to HRM")} <ChevronRight className="size-3" style={{ color: "var(--brand-orange)" }} /></Link>
         </div>
       </DashWidget>

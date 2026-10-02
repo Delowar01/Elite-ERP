@@ -16,6 +16,7 @@ import type { ImportColumn } from "@/lib/document-list-workspace";
 import { RowMenu, type RowMenuEntry } from "../_shared/row-menu";
 import { Money } from "../_shared/money";
 import { t, type Locale } from "@/lib/i18n/dict";
+import { statusStat } from "@/lib/status-registry";
 import { useDocumentRowActions } from "../../_shared/document-row-actions";
 import { useDocumentEditAction } from "../../_shared/edit-document";
 import { getConvertTargets } from "../_shared/convert-config";
@@ -81,8 +82,8 @@ export function ProformaListClient({
       <StatRow
         items={[
           { label: t(locale, "Total Proformas"), value: String(rows.length) },
-          { label: t(locale, "sent"), value: String(stats.sent ?? 0), colorClass: "text-info" },
-          { label: t(locale, "draft"), value: String(stats.draft ?? 0) },
+          statusStat(locale, "proforma_invoice", "sent", stats.sent),
+          statusStat(locale, "proforma_invoice", "draft", stats.draft),
         ]}
       />
 

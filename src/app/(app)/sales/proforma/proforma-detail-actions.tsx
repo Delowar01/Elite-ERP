@@ -8,6 +8,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import { RecordPaymentDialog, type BankAccountOption } from "../../finance/_shared/record-payment-dialog";
 import { useConfirm } from "../../_shared/confirm-provider";
 import { t, type Locale } from "@/lib/i18n/dict";
+import { statusLabel } from "@/lib/status-registry";
 import { updateProformaStatusAction } from "./actions";
 import { ConvertMenu } from "../_shared/convert-menu";
 
@@ -47,7 +48,7 @@ export function ProformaDetailActions({
       entityType: "Proforma Invoice",
       entityNumber: proformaNumber,
       description: "Changing the status moves this proforma forward. Proformas never post to the ledger.",
-      details: [{ label: "Status", value: t(locale, value) }],
+      details: [{ label: "Status", value: statusLabel(locale, "proforma_invoice", value) }],
       onConfirm: async () => {
         const result = await updateProformaStatusAction(proformaId, value);
         if (result?.error) return result;
@@ -76,7 +77,7 @@ export function ProformaDetailActions({
         <SelectContent>
           {STATUSES.map((s) => (
             <SelectItem key={s} value={s}>
-              {t(locale, s)}
+              {statusLabel(locale, "proforma_invoice", s)}
             </SelectItem>
           ))}
         </SelectContent>

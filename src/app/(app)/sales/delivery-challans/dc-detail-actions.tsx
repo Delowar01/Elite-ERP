@@ -20,7 +20,7 @@ export function DcDetailActions({ locale, dcId, dcNumber, status }: { locale: Lo
       entityType: "Delivery Challan",
       entityNumber: dcNumber,
       description: "Changing the status moves this delivery challan forward in its workflow.",
-      details: [{ label: "Status", value: t(locale, value) }],
+      details: [{ label: "Status", value: statusLabel(locale, "delivery_challan", value) }],
       onConfirm: async () => {
         const result = await updateDeliveryChallanStatusAction(dcId, value);
         if (result?.error) return result;

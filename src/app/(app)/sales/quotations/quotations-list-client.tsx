@@ -12,6 +12,7 @@ import { StatRow } from "../_shared/stat-row";
 import { RowMenu, type RowMenuEntry } from "../_shared/row-menu";
 import { Money } from "../_shared/money";
 import { t, type Locale } from "@/lib/i18n/dict";
+import { statusStat } from "@/lib/status-registry";
 import { useDocumentRowActions } from "../../_shared/document-row-actions";
 import { useDocumentEditAction } from "../../_shared/edit-document";
 import { ListWorkspaceToolbar } from "../../documents/_workspace/list-workspace-toolbar";
@@ -87,9 +88,9 @@ export function QuotationsListClient({
       <StatRow
         items={[
           { label: t(locale, "Total Quotations"), value: String(rows.length) },
-          { label: t(locale, "accepted"), value: String(stats.accepted ?? 0), colorClass: "text-success" },
-          { label: t(locale, "sent"), value: String(stats.sent ?? 0), colorClass: "text-info" },
-          { label: t(locale, "draft"), value: String(stats.draft ?? 0) },
+          statusStat(locale, "quotation", "accepted", stats.accepted),
+          statusStat(locale, "quotation", "sent", stats.sent),
+          statusStat(locale, "quotation", "draft", stats.draft),
         ]}
       />
 

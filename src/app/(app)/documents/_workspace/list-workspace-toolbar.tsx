@@ -1,7 +1,8 @@
 "use client";
 
 import { useTransition } from "react";
-import { isStatusDomain, statusLabel } from "@/lib/status-registry";
+import { statusLabel } from "@/lib/status-registry";
+import type { DocumentType } from "@/lib/document-lifecycle";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -33,7 +34,8 @@ export function ListWorkspaceToolbar({
   importColumns,
 }: {
   locale: Locale;
-  module: string;
+  // Every workspace module is a document type, and every document type is a status-registry domain.
+  module: DocumentType;
   searchPlaceholder: string;
   createHref: string;
   createLabel: string;
@@ -123,7 +125,7 @@ export function ListWorkspaceToolbar({
             <select value={filters.status} onChange={(e) => set({ status: e.target.value })} className="input plain w-full h-9 outline-none">
               <option value="">{t(locale, "All")}</option>
               {statusOptions.map((s) => (
-                <option key={s} value={s}>{isStatusDomain(module) ? statusLabel(locale, module, s) : t(locale, s)}</option>
+                <option key={s} value={s}>{statusLabel(locale, module, s)}</option>
               ))}
             </select>
           </div>

@@ -21,7 +21,7 @@ export function QuotationDetailActions({ locale, quotationId, quotationNumber, s
       action: "document.statusChange",
       entityType: "Quotation",
       entityNumber: quotationNumber,
-      details: [{ label: "Status", value: t(locale, value) }],
+      details: [{ label: "Status", value: statusLabel(locale, "quotation", value) }],
       onConfirm: async () => {
         const result = await updateQuotationStatusAction(quotationId, value);
         if (result?.error) return result;

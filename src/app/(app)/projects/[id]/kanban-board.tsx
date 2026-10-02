@@ -10,6 +10,7 @@ import { FormField } from "@/components/ui/form-field";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { t, type Locale } from "@/lib/i18n/dict";
+import { statusLabel } from "@/lib/status-registry";
 import { createTaskAction, updateTaskAction } from "../actions";
 
 export type TaskRow = {
@@ -25,12 +26,8 @@ export type TaskRow = {
 
 export type EmployeeOption = { id: number; name: string };
 
-const COLUMNS: { status: string; label: string }[] = [
-  { status: "todo", label: "To Do" },
-  { status: "in_progress", label: "In Progress" },
-  { status: "blocked", label: "Blocked" },
-  { status: "done", label: "Done" },
-];
+// Column order is the workflow order; labels come from the `task` status registry domain.
+const COLUMNS: { status: string }[] = [{ status: "todo" }, { status: "in_progress" }, { status: "blocked" }, { status: "done" }];
 
 const PRIORITY_LABEL: Record<string, string> = { low: "Low", medium: "Medium", high: "High" };
 const PRIORITY_STYLE: Record<string, React.CSSProperties> = {
@@ -139,7 +136,7 @@ export function KanbanBoard({
             return (
               <div key={col.status} className="kanban-col">
                 <div className="kanban-col-head">
-                  <span>{t(locale, col.label)}</span>
+                  <span>{statusLabel(locale, "task", col.status)}</span>
                   <span>{colTasks.length}</span>
                 </div>
                 {colTasks.map((task) => {
@@ -193,7 +190,7 @@ export function KanbanBoard({
                   <SelectContent>
                     {COLUMNS.map((c) => (
                       <SelectItem key={c.status} value={c.status}>
-                        {t(locale, c.label)}
+                        {statusLabel(locale, "task", c.status)}
                       </SelectItem>
                     ))}
                   </SelectContent>

@@ -16,6 +16,7 @@ import type { ImportColumn } from "@/lib/document-list-workspace";
 import { RowMenu, type RowMenuEntry } from "../../sales/_shared/row-menu";
 import { Money } from "../../sales/_shared/money";
 import { t, type Locale } from "@/lib/i18n/dict";
+import { statusStat } from "@/lib/status-registry";
 import { useDocumentRowActions } from "../../_shared/document-row-actions";
 import { useDocumentEditAction } from "../../_shared/edit-document";
 import { ListEmptyState } from "../../sales/_shared/list-empty-state";
@@ -85,8 +86,8 @@ export function DnListClient({
       <StatRow
         items={[
           { label: t(locale, "Total Debit Notes"), value: String(rows.length) },
-          { label: t(locale, "issued"), value: String(stats.issued ?? 0), colorClass: "text-success" },
-          { label: t(locale, "draft"), value: String(stats.draft ?? 0) },
+          statusStat(locale, "debit_note", "issued", stats.issued),
+          statusStat(locale, "debit_note", "draft", stats.draft),
           { label: t(locale, "This Month"), value: String(thisMonthCount) },
         ]}
       />

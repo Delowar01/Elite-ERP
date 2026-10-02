@@ -22,7 +22,7 @@ export function OrderDetailActions({ locale, orderId, orderNumber, status }: { l
       action: cancelling ? "document.cancel" : "document.statusChange",
       entityType: "Sales Order",
       entityNumber: orderNumber,
-      details: cancelling ? undefined : [{ label: "Status", value: t(locale, value) }],
+      details: cancelling ? undefined : [{ label: "Status", value: statusLabel(locale, "sales_order", value) }],
       onConfirm: async () => {
         // Cancel is a lifecycle-gated transition (a fulfilled order cannot be cancelled), so route
         // it through the dedicated, audited action rather than the free-form status setter.

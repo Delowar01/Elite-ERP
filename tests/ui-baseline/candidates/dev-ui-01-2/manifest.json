@@ -1,6 +1,6 @@
 {
   "frozenNow": "2026-06-15T09:00:00.000Z",
-  "buildId": "XBLuoG0_CoMYLEFT9VBvZ",
+  "buildId": "fNTPQAe_F8A-MRBE9p6JI",
   "chromium": "141.0.7390.37",
   "playwright": "1.61.1",
   "node": "v22.22.2",
@@ -22,7 +22,8 @@
       "clientWidth": 1440,
       "scrollHeight": 900,
       "fontsLoaded": [
-        "IBM Plex Sans"
+        "IBM Plex Sans",
+        "IBM Plex Sans Arabic"
       ],
       "title": "Elite ERP",
       "consoleErrors": [],
@@ -70,8 +71,7 @@
       "clientWidth": 768,
       "scrollHeight": 1024,
       "fontsLoaded": [
-        "IBM Plex Sans",
-        "IBM Plex Sans Arabic"
+        "IBM Plex Sans"
       ],
       "title": "Elite ERP",
       "consoleErrors": [],
@@ -420,8 +420,8 @@
       ],
       "title": "Elite ERP",
       "consoleErrors": [],
-      "sha256": "6dd191f8714f02f5faa95fb9b7ac7456c3b08aa68a74292849c62b02502440ae",
-      "bytes": 227371
+      "sha256": "89cad33ecddf37db9f4d3e7796eeee8d4695c0e4caab7e7f1e8e971150c95af1",
+      "bytes": 226790
     },
     "dashboard__en__light__1024": {
       "route": "/dashboard",
@@ -445,8 +445,8 @@
       ],
       "title": "Elite ERP",
       "consoleErrors": [],
-      "sha256": "d8ddf9e458a9df912b5fcd7d689263b96bc37b7d8a0dcd8c1b935467bb78e2b5",
-      "bytes": 210449
+      "sha256": "cf9c2d253f8b6824f47843415836bd5c88912a7d42758d06107b8181a5f55111",
+      "bytes": 209895
     },
     "dashboard__en__light__768": {
       "route": "/dashboard",
@@ -470,8 +470,8 @@
       ],
       "title": "Elite ERP",
       "consoleErrors": [],
-      "sha256": "0f5cb45f9be9bb31b063ffe3f33603dac98ed606665c87151eef6a192652ad6e",
-      "bytes": 193472
+      "sha256": "bcec040353cbf788b11957e547031a7a3cc0a95d9f7d7b9cdc0e5e8df815a153",
+      "bytes": 192846
     },
     "dashboard__en__light__390": {
       "route": "/dashboard",
@@ -495,8 +495,8 @@
       ],
       "title": "Elite ERP",
       "consoleErrors": [],
-      "sha256": "b9edb37bfb0d72ad77434e67cc8c03429ab7b4a28f1a30eaa7b44dd58b6b0c9c",
-      "bytes": 120301
+      "sha256": "f0d89905c044927bdff2422756c27bb8a7184421c71275722e1a23e52fc2a232",
+      "bytes": 119839
     },
     "dashboard__en__dark__1440": {
       "route": "/dashboard",
@@ -520,8 +520,8 @@
       ],
       "title": "Elite ERP",
       "consoleErrors": [],
-      "sha256": "05b39ab56d62e3bec8e6df16c30d669f87cc3c08d9e08cb7e4ee43a51950949a",
-      "bytes": 233190
+      "sha256": "cdb04a343274b310c35bffed65cdbc8a06b8d69259e8a6d956b54e4c0d5735d0",
+      "bytes": 232563
     },
     "dashboard__en__dark__1024": {
       "route": "/dashboard",
@@ -545,8 +545,8 @@
       ],
       "title": "Elite ERP",
       "consoleErrors": [],
-      "sha256": "28b257b91dc8291ce6d851e884222bba0b8be18094a7f0dd819f3bab3f5d7872",
-      "bytes": 216102
+      "sha256": "7e97eb22260e6b3f5fe3d60ce365845fef02c328361417ba5804af35737689d3",
+      "bytes": 215479
     },
     "dashboard__en__dark__768": {
       "route": "/dashboard",
@@ -570,8 +570,8 @@
       ],
       "title": "Elite ERP",
       "consoleErrors": [],
-      "sha256": "57f0ca4c2815905916f3c96280edb6df5ef882f7d58c9639e856768e9955fd5a",
-      "bytes": 198165
+      "sha256": "505388fb21db3fd06a88b060d23f6318f929942902022662a79d009232ccad6c",
+      "bytes": 197492
     },
     "dashboard__en__dark__390": {
       "route": "/dashboard",
@@ -595,8 +595,8 @@
       ],
       "title": "Elite ERP",
       "consoleErrors": [],
-      "sha256": "58aa9c516da2d7854efea78ea07e31ce83f284642478b1f278184ca292819f6b",
-      "bytes": 123182
+      "sha256": "6b72728f2e9d9c61361f726e515ea6c35f90b202b5f4d712e8ca7370ffc0043d",
+      "bytes": 122741
     },
     "dashboard__ar__light__1440": {
       "route": "/dashboard",
@@ -623,8 +623,8 @@
       "consoleErrors": [
         "pageerror: Minified React error #418; visit https://react.dev/errors/418?args[]=text&args[]= for the full message or use the non-minified dev environment for full errors and additional helpful warnings."
       ],
-      "sha256": "d2de81814a6af0f0910d1066ac8aeb08a91a969563ef759f8dae5c1b5e00db4e",
-      "bytes": 215455
+      "sha256": "5a2ef180c005d2e50139b055fac3fd28ffd234f5e1d8b9796b4614b8e2fd1620",
+      "bytes": 215063
     },
     "dashboard__ar__light__1024": {
       "route": "/dashboard",
@@ -651,8 +651,8 @@
       "consoleErrors": [
         "pageerror: Minified React error #418; visit https://react.dev/errors/418?args[]=text&args[]= for the full message or use the non-minified dev environment for full errors and additional helpful warnings."
       ],
-      "sha256": "6e9a695511c814978f17b99c9c57a494ca49d8433bdfd0db1de14739557283d0",
-      "bytes": 197101
+      "sha256": "71ac8321ed65cb121a41779c3ed62460e7311ed137fefd18b464fec19d8a0a62",
+      "bytes": 196741
     },
     "dashboard__ar__light__768": {
       "route": "/dashboard",
@@ -679,8 +679,8 @@
       "consoleErrors": [
         "pageerror: Minified React error #418; visit https://react.dev/errors/418?args[]=text&args[]= for the full message or use the non-minified dev environment for full errors and additional helpful warnings."
       ],
-      "sha256": "dbc1ce243b3d31790bd62d851f6226c0691d82f6d73d9f8775b912b34dbb459b",
-      "bytes": 177942
+      "sha256": "ec870527e51f25306bb3bcabf0a4825ea73a0430fd96d6700e2ce965076f2b4e",
+      "bytes": 177552
     },
     "dashboard__ar__light__390": {
       "route": "/dashboard",
@@ -707,8 +707,8 @@
       "consoleErrors": [
         "pageerror: Minified React error #418; visit https://react.dev/errors/418?args[]=text&args[]= for the full message or use the non-minified dev environment for full errors and additional helpful warnings."
       ],
-      "sha256": "0073050ed91275bc84569f8c36028af5f1be858306affcf0ca2456a4d949599f",
-      "bytes": 111943
+      "sha256": "a7cfa5f658568cddac5717cafb991a354b8756703157e9e94a4e6179b14e50dc",
+      "bytes": 111802
     },
     "dashboard__ar__dark__1440": {
       "route": "/dashboard",
@@ -735,8 +735,8 @@
       "consoleErrors": [
         "pageerror: Minified React error #418; visit https://react.dev/errors/418?args[]=text&args[]= for the full message or use the non-minified dev environment for full errors and additional helpful warnings."
       ],
-      "sha256": "fd525868335db7cb3d1b6f530daf168a0e1b84d9bd47214702d2a0b12014acaf",
-      "bytes": 219925
+      "sha256": "a48e1a1d85fcd8684b1390fa1d714f8728141b7864b6ddf07e18b8091a80f430",
+      "bytes": 219536
     },
     "dashboard__ar__dark__1024": {
       "route": "/dashboard",
@@ -763,8 +763,8 @@
       "consoleErrors": [
         "pageerror: Minified React error #418; visit https://react.dev/errors/418?args[]=text&args[]= for the full message or use the non-minified dev environment for full errors and additional helpful warnings."
       ],
-      "sha256": "dd4f0c0c9cd45b2a09a3a89936f8c10fc698e5a7f8581dac894a06ac11728342",
-      "bytes": 202531
+      "sha256": "2ee1ececba724e0e8ab83c3810c6708ca01812e5cc5d386460846d623dc4636f",
+      "bytes": 202079
     },
     "dashboard__ar__dark__768": {
       "route": "/dashboard",
@@ -791,8 +791,8 @@
       "consoleErrors": [
         "pageerror: Minified React error #418; visit https://react.dev/errors/418?args[]=text&args[]= for the full message or use the non-minified dev environment for full errors and additional helpful warnings."
       ],
-      "sha256": "a6dc771f5d6a22f4449a62af2d3b850d13eac3793c0b9e675632d57aa16db44c",
-      "bytes": 182093
+      "sha256": "3983631cbc5f33f6be4fd4e4e544de255b5e097bd47248ce8fec5a961009f182",
+      "bytes": 181655
     },
     "dashboard__ar__dark__390": {
       "route": "/dashboard",
@@ -819,8 +819,8 @@
       "consoleErrors": [
         "pageerror: Minified React error #418; visit https://react.dev/errors/418?args[]=text&args[]= for the full message or use the non-minified dev environment for full errors and additional helpful warnings."
       ],
-      "sha256": "1424901264b39056e544161fdd83bfd750d37d3dcf80709996fcb8d597ba70d3",
-      "bytes": 114102
+      "sha256": "5ef38fcf0bc68f92a1c15e9a89dc7ce40114b428b9b039c373c0529767895982",
+      "bytes": 113960
     },
     "sales-invoices-list__en__light__1440": {
       "route": "/sales/invoices",
@@ -844,8 +844,8 @@
       ],
       "title": "Elite ERP",
       "consoleErrors": [],
-      "sha256": "2cbd8ba6d486521fed1eb2d87ac921c3f1489483057cee2723dea52718354f2f",
-      "bytes": 136243
+      "sha256": "26505bf7a69b0c01a72b3d3adc520ad900dd809519600b92ba866093e992ba92",
+      "bytes": 136342
     },
     "sales-invoices-list__en__light__1024": {
       "route": "/sales/invoices",
@@ -869,8 +869,8 @@
       ],
       "title": "Elite ERP",
       "consoleErrors": [],
-      "sha256": "2b4b112d354b5b534776675598e95e7dfcea7548d5fe06b124c992eb965d08f7",
-      "bytes": 136104
+      "sha256": "271c87b73cbdc9843470c08cdd616db36d607f775dd13aa58bc6e9fb8bcc4a2e",
+      "bytes": 136200
     },
     "sales-invoices-list__en__light__768": {
       "route": "/sales/invoices",
@@ -894,8 +894,8 @@
       ],
       "title": "Elite ERP",
       "consoleErrors": [],
-      "sha256": "282b93824e56ce57eb5fe24a34ba6546ce70d67c6d4af5e009bfbc9b0621948e",
-      "bytes": 120177
+      "sha256": "16144d3919ea28b18efb0495d815e8eb2dfe567290e31a0f3d2a86ff4019735a",
+      "bytes": 120285
     },
     "sales-invoices-list__en__light__390": {
       "route": "/sales/invoices",
@@ -919,8 +919,8 @@
       ],
       "title": "Elite ERP",
       "consoleErrors": [],
-      "sha256": "c971c49bfbe93e5680f66dd5036439004f7a64640c1d9891dd10df3d26e93ddb",
-      "bytes": 78845
+      "sha256": "63e2210ec1590fe73828b179736ccd965d3ac2202b6fd37b6ed415dc4a8015b8",
+      "bytes": 79032
     },
     "sales-invoices-list__en__dark__1440": {
       "route": "/sales/invoices",
@@ -944,8 +944,8 @@
       ],
       "title": "Elite ERP",
       "consoleErrors": [],
-      "sha256": "4a041b2acd83b3d670bea22a8d6f26e540e693a3597f6ac1699ce921088b1358",
-      "bytes": 141437
+      "sha256": "c893d7a7fb40bc659e26d9b20a37776bae4b252d7b58815c6d262afaa9f5fc41",
+      "bytes": 141536
     },
     "sales-invoices-list__en__dark__1024": {
       "route": "/sales/invoices",
@@ -969,8 +969,8 @@
       ],
       "title": "Elite ERP",
       "consoleErrors": [],
-      "sha256": "ef83edcb4b6fb514d4e5a5eb2def498d5f5d2e2d4972a90e051a78b594e564d4",
-      "bytes": 139731
+      "sha256": "5143ceb8269dcfd5c879538cce47f87ca83e8af9cc12f25bf8c88d0f97d25775",
+      "bytes": 139838
     },
     "sales-invoices-list__en__dark__768": {
       "route": "/sales/invoices",
@@ -994,8 +994,8 @@
       ],
       "title": "Elite ERP",
       "consoleErrors": [],
-      "sha256": "a1e496685e2d27791d7a134922c4450063f92799ec851edf2659bed30394c3e4",
-      "bytes": 123128
+      "sha256": "12aacab38feeec881438877ca9de47c4dc32d1812107291bc98017bb08c10431",
+      "bytes": 123237
     },
     "sales-invoices-list__en__dark__390": {
       "route": "/sales/invoices",
@@ -1019,8 +1019,8 @@
       ],
       "title": "Elite ERP",
       "consoleErrors": [],
-      "sha256": "ffe15179e5be9d47bdc9c5d7df9f500982033b21e2d2f162262ee921f213ae53",
-      "bytes": 80455
+      "sha256": "866f9298cff9744cf639f5ada11a3bc900d4b971faa58b51fa57d0bb70f03553",
+      "bytes": 80637
     },
     "sales-invoices-list__ar__light__1440": {
       "route": "/sales/invoices",
@@ -1045,8 +1045,8 @@
       ],
       "title": "Elite ERP",
       "consoleErrors": [],
-      "sha256": "99723fc6a676985e41bab39fbb3f577dd8250f29925ff717c8a8c6c7879109f6",
-      "bytes": 132019
+      "sha256": "d439f8306d2073eba08334767f588828a0ae54fb312df6d40912890426fff1b1",
+      "bytes": 132018
     },
     "sales-invoices-list__ar__light__1024": {
       "route": "/sales/invoices",
@@ -1071,8 +1071,8 @@
       ],
       "title": "Elite ERP",
       "consoleErrors": [],
-      "sha256": "2270dac68247051b651db7fbdcc6b74a163c1900e2f5316575342a11023b9c4a",
-      "bytes": 133625
+      "sha256": "1c747c3c3ad0e995dae70da593d92d0affb80d89330facfb4582e897ce04c4cf",
+      "bytes": 133617
     },
     "sales-invoices-list__ar__light__768": {
       "route": "/sales/invoices",
@@ -1097,8 +1097,8 @@
       ],
       "title": "Elite ERP",
       "consoleErrors": [],
-      "sha256": "f9b36696976bc496e4ea0751460eaa51cfa487ccb3fac82d1b66b3f0e296b78f",
-      "bytes": 120932
+      "sha256": "9d45a888c710ab7bd54f929d17130e51d6b3d103c380cc3e99816f67a7dde2b6",
+      "bytes": 120926
     },
     "sales-invoices-list__ar__light__390": {
       "route": "/sales/invoices",
@@ -1123,8 +1123,8 @@
       ],
       "title": "Elite ERP",
       "consoleErrors": [],
-      "sha256": "ad179a85f458ae1f28a7b027ce264e5bf70559ddf342f5322bcc94da4d4930f4",
-      "bytes": 74571
+      "sha256": "141ea39c2eedd98497a1dd9888cdcd2cb33f79f61097c58e0005d81db9e06952",
+      "bytes": 74563
     },
     "sales-invoices-list__ar__dark__1440": {
       "route": "/sales/invoices",
@@ -1149,8 +1149,8 @@
       ],
       "title": "Elite ERP",
       "consoleErrors": [],
-      "sha256": "62f4d1b9191796e99488fc9149205caf1d6e8a5eee76911c3474b75f92d1b70b",
-      "bytes": 136658
+      "sha256": "861829363727ddf9cadace62e7209083613cd4dabadde16dd8f61fe4cdc8e5bf",
+      "bytes": 136654
     },
     "sales-invoices-list__ar__dark__1024": {
       "route": "/sales/invoices",
@@ -1175,8 +1175,8 @@
       ],
       "title": "Elite ERP",
       "consoleErrors": [],
-      "sha256": "a4d78fc7bf1f778e10aa6931c71f74f686f46ba7d7b5e7d7f79a48a0a91bb6c0",
-      "bytes": 136591
+      "sha256": "1ea0b04d86395fb4708d847a525f2f43c6aba60bbb9fae77ab733b28955da27b",
+      "bytes": 136586
     },
     "sales-invoices-list__ar__dark__768": {
       "route": "/sales/invoices",
@@ -1201,8 +1201,8 @@
       ],
       "title": "Elite ERP",
       "consoleErrors": [],
-      "sha256": "c5e96b15df096c1e9a2fa54ca6bdb390cef4a62e70610e9493e864be8c615636",
-      "bytes": 123887
+      "sha256": "acdda2aa717c390a6aa76b6d3531a2980a7c4c5edf9f016991183afbf02c6bc2",
+      "bytes": 123882
     },
     "sales-invoices-list__ar__dark__390": {
       "route": "/sales/invoices",
@@ -1227,8 +1227,8 @@
       ],
       "title": "Elite ERP",
       "consoleErrors": [],
-      "sha256": "bfdbb073d66336dbf543129943b7ddc370999ec4472b873769f7b6b9367f3620",
-      "bytes": 75940
+      "sha256": "46e5ecb0d48aead1134beba70d4d7c68a6fdf6cee50f060baacd8fea4667e449",
+      "bytes": 75941
     },
     "sales-quotations-list__en__light__1440": {
       "route": "/sales/quotations",
@@ -1252,8 +1252,8 @@
       ],
       "title": "Elite ERP",
       "consoleErrors": [],
-      "sha256": "abfaa9c070659983e445e907533839e3e4d721879e80325063d92679b65a1c9c",
-      "bytes": 124400
+      "sha256": "f4ef5b8b65df5e5785cd434ca300c888aad81240205691e96ea52414bf4fc1b8",
+      "bytes": 124504
     },
     "sales-quotations-list__en__light__1024": {
       "route": "/sales/quotations",
@@ -1277,8 +1277,8 @@
       ],
       "title": "Elite ERP",
       "consoleErrors": [],
-      "sha256": "6cfe2876e7bdbbc3b9f8dd65acc37ce830424e7d47f7650a92220daf70bcddab",
-      "bytes": 111862
+      "sha256": "75a1e67d762f35a62f7c8618c03dd42ebbc643c37314a27f76e9953df9ac9d57",
+      "bytes": 111965
     },
     "sales-quotations-list__en__light__768": {
       "route": "/sales/quotations",
@@ -1302,8 +1302,8 @@
       ],
       "title": "Elite ERP",
       "consoleErrors": [],
-      "sha256": "5ffc0ee39cda6d7a29f71b6f2aee0b30674f320f7bdf028212391968edcd7d27",
-      "bytes": 102903
+      "sha256": "dcc83833a91ab30d68df22333e395afe938395abd6708c44aad8273d58f76706",
+      "bytes": 103022
     },
     "sales-quotations-list__en__light__390": {
       "route": "/sales/quotations",
@@ -1327,8 +1327,8 @@
       ],
       "title": "Elite ERP",
       "consoleErrors": [],
-      "sha256": "4387ce10fabea0092c8530cb5f9d34f43145775c6b6783165d33835c6b3eca38",
-      "bytes": 73636
+      "sha256": "2e036fcc2ca295844016439c7876e32d22c983de3bba35cfd37a7e20b886cc24",
+      "bytes": 73791
     },
     "sales-quotations-list__en__dark__1440": {
       "route": "/sales/quotations",
@@ -1352,8 +1352,8 @@
       ],
       "title": "Elite ERP",
       "consoleErrors": [],
-      "sha256": "7723bab8ce2ee9d6ba0591a51fefd359c64939f8ad40c978bb357ddadb8c9d45",
-      "bytes": 127793
+      "sha256": "7bc63f14f55ca6e3409af99bd3fb1dd2531bbd21c9773141218fecd8304d7b35",
+      "bytes": 127798
     },
     "sales-quotations-list__en__dark__1024": {
       "route": "/sales/quotations",
@@ -1377,8 +1377,8 @@
       ],
       "title": "Elite ERP",
       "consoleErrors": [],
-      "sha256": "1c92c481784fa24422534c8186d98be78c9bca837a60e2f2ab6e16e31a50145e",
-      "bytes": 114874
+      "sha256": "f07e88ef3a3953127d3675e6e4dee21669053ee844fd27abb1603b837d92d6d6",
+      "bytes": 114883
     },
     "sales-quotations-list__en__dark__768": {
       "route": "/sales/quotations",
@@ -1402,8 +1402,8 @@
       ],
       "title": "Elite ERP",
       "consoleErrors": [],
-      "sha256": "b2013e062d9495159ec0ab7274bc6fa31c3f1ae79b754bf5b8b237e0e2cf14c0",
-      "bytes": 105081
+      "sha256": "c13d76a2a555e1bb673028e4d79315bfd93745cb05fb2fa528e7382fac0da8d8",
+      "bytes": 105208
     },
     "sales-quotations-list__en__dark__390": {
       "route": "/sales/quotations",
@@ -1427,8 +1427,8 @@
       ],
       "title": "Elite ERP",
       "consoleErrors": [],
-      "sha256": "1c755f24adaccef39741a48d74e9917e826ff9723ec6693369ec07fce7b0982b",
-      "bytes": 74761
+      "sha256": "d16cb6cab73872982b66acd099ff85447080eca3d336ff390cd9bc2ace9aaa88",
+      "bytes": 74950
     },
     "sales-quotations-list__ar__light__1440": {
       "route": "/sales/quotations",
@@ -1453,8 +1453,8 @@
       ],
       "title": "Elite ERP",
       "consoleErrors": [],
-      "sha256": "cd32411ae9aefd713ffb7846aef65e1f327c25a3947d81c52e4466a8dbf5a38e",
-      "bytes": 121215
+      "sha256": "d8242ed00212e0f8272e661c94553c2875682b3c5090d7f4dfd467a9eb6f0c9f",
+      "bytes": 121214
     },
     "sales-quotations-list__ar__light__1024": {
       "route": "/sales/quotations",
@@ -1479,8 +1479,8 @@
       ],
       "title": "Elite ERP",
       "consoleErrors": [],
-      "sha256": "96daff28cf3748ffaa6ce209cf1db235436d94d7ab6efaedec398a594fd6d4e6",
-      "bytes": 110792
+      "sha256": "080e970e6df1b496127b67b0c694d7aa1b8e554b78b32cf50cf67bdd8dbebb1a",
+      "bytes": 110788
     },
     "sales-quotations-list__ar__light__768": {
       "route": "/sales/quotations",
@@ -1505,8 +1505,8 @@
       ],
       "title": "Elite ERP",
       "consoleErrors": [],
-      "sha256": "40bd982ea4d5958c8b5ce8ccce1d625fd141078248680b389319d43a051f4950",
-      "bytes": 101716
+      "sha256": "6aa5fadd5c58118b97973334360bff3345326f9e097ce8000e63ab8565a1a562",
+      "bytes": 101713
     },
     "sales-quotations-list__ar__light__390": {
       "route": "/sales/quotations",
@@ -1531,8 +1531,8 @@
       ],
       "title": "Elite ERP",
       "consoleErrors": [],
-      "sha256": "cfd5ebb08350e5cabc11cd890896f036099d1ade6f5948f6cd84c4b62f19f6ed",
-      "bytes": 71068
+      "sha256": "9bef3a7bdac88e580f11a6996bbb5b87fca0f24ec83d8c67b25cbe0200c98e77",
+      "bytes": 71063
     },
     "sales-quotations-list__ar__dark__1440": {
       "route": "/sales/quotations",
@@ -1557,8 +1557,8 @@
       ],
       "title": "Elite ERP",
       "consoleErrors": [],
-      "sha256": "2447a6ec64200ba63570929ae270ca116e18b880a8fede540957d577ec842cc1",
-      "bytes": 124314
+      "sha256": "33d97372d0d37452e2d541f6f9b04cd0c8df21022596742440d6baaf724f27bc",
+      "bytes": 124307
     },
     "sales-quotations-list__ar__dark__1024": {
       "route": "/sales/quotations",
@@ -1583,8 +1583,8 @@
       ],
       "title": "Elite ERP",
       "consoleErrors": [],
-      "sha256": "2c2caa2a33a6989129d722d60f3278fa9124456ae2521ef812e767288ef697d7",
-      "bytes": 113111
+      "sha256": "ffbf448d96d1a4469fe9f76b2a6662bab0e38357c6cd2d46d1e72fa404c91afe",
+      "bytes": 113101
     },
     "sales-quotations-list__ar__dark__768": {
       "route": "/sales/quotations",
@@ -1609,8 +1609,8 @@
       ],
       "title": "Elite ERP",
       "consoleErrors": [],
-      "sha256": "1fe8ed2a65333e663958cccbae6c3ad6f8adb085346bff444f69d266d10d0b97",
-      "bytes": 104204
+      "sha256": "4cb38b560c73e81b139f42e6682ab09a2ee090afdc4a6db303b0720a1fa960c4",
+      "bytes": 104196
     },
     "sales-quotations-list__ar__dark__390": {
       "route": "/sales/quotations",
@@ -1635,8 +1635,8 @@
       ],
       "title": "Elite ERP",
       "consoleErrors": [],
-      "sha256": "9c014ca1085b114c05c24cc16adc8552c6003e057bd190a73e6bb6e45b583063",
-      "bytes": 72311
+      "sha256": "d6fd2993859675d3d84bfaa32de0cfc17f8641829bb06cf4f20caba4358ab919",
+      "bytes": 72314
     },
     "sales-invoice-new__en__light__1440": {
       "route": "/sales/invoices/new",
@@ -4124,8 +4124,8 @@
       ],
       "title": "Elite ERP",
       "consoleErrors": [],
-      "sha256": "d5061ff5559c983165c07c241edbc3f203fa294a901b2b00270d3d689a81869a",
-      "bytes": 98043
+      "sha256": "af1913806dc64fab8e25151bfe6327e2cc8f6403391b8b76f432260a57635edf",
+      "bytes": 98134
     },
     "projects-list__en__light__1024": {
       "route": "/projects",
@@ -4149,8 +4149,8 @@
       ],
       "title": "Elite ERP",
       "consoleErrors": [],
-      "sha256": "d60520f80c1ff65c49e2851465c161118b67703be3155eb42c42e01b0dd32cbf",
-      "bytes": 91554
+      "sha256": "1d9bb75979a90e32d9280c327e7476c47d808c22cfc9b70fe003c3eb8a7f9230",
+      "bytes": 91637
     },
     "projects-list__en__light__768": {
       "route": "/projects",
@@ -4174,8 +4174,8 @@
       ],
       "title": "Elite ERP",
       "consoleErrors": [],
-      "sha256": "1f6a60e145f67f38771560aca859d74377c217aacfa87b7964ba6a8885e47574",
-      "bytes": 100037
+      "sha256": "1631aed5e3ff9168a7e93379682fe27f43958319670f8f4b90ef30dbff71cde7",
+      "bytes": 100127
     },
     "projects-list__en__light__390": {
       "route": "/projects",
@@ -4199,8 +4199,8 @@
       ],
       "title": "Elite ERP",
       "consoleErrors": [],
-      "sha256": "3c8b354f5ab33aadb99ebf55ad5c6d7c1f7aeda43fbf11636f4eeb83e3118af5",
-      "bytes": 72705
+      "sha256": "f8c0cb4bbd4d110f562e1a8e7289f7337237cb36bc644c64832c49466acdf8d7",
+      "bytes": 72899
     },
     "projects-list__en__dark__1440": {
       "route": "/projects",
@@ -4220,13 +4220,12 @@
       "scrollHeight": 900,
       "fontsLoaded": [
         "IBM Plex Mono",
-        "IBM Plex Sans",
-        "IBM Plex Sans Arabic"
+        "IBM Plex Sans"
       ],
       "title": "Elite ERP",
       "consoleErrors": [],
-      "sha256": "f3a1bb8c18ce34c6cafa6afd356539321ca792ef005300d6c732357add444214",
-      "bytes": 101602
+      "sha256": "5006506cee15b581457fdd309be64730c9c6596a274684c1d9be92bb52b9c87c",
+      "bytes": 101666
     },
     "projects-list__en__dark__1024": {
       "route": "/projects",
@@ -4246,13 +4245,12 @@
       "scrollHeight": 794,
       "fontsLoaded": [
         "IBM Plex Mono",
-        "IBM Plex Sans",
-        "IBM Plex Sans Arabic"
+        "IBM Plex Sans"
       ],
       "title": "Elite ERP",
       "consoleErrors": [],
-      "sha256": "c9771b1c91806e0797244938cbbdfaa0c4cf0ed7b996d74c918b642aad2b97e4",
-      "bytes": 94022
+      "sha256": "c547723d0083e48b4399e22ff2fab867c9a0b245b153410d96bb3c05480cfc20",
+      "bytes": 94066
     },
     "projects-list__en__dark__768": {
       "route": "/projects",
@@ -4276,8 +4274,8 @@
       ],
       "title": "Elite ERP",
       "consoleErrors": [],
-      "sha256": "86aa1da389712a9f0e9c9846d5bf410e55950a885cadbcb7717316adb0e457e6",
-      "bytes": 102363
+      "sha256": "249c1f036aa400fd346c79839d67fce9d12638b885799720b81c39e2d77a38ef",
+      "bytes": 102421
     },
     "projects-list__en__dark__390": {
       "route": "/projects",
@@ -4301,8 +4299,8 @@
       ],
       "title": "Elite ERP",
       "consoleErrors": [],
-      "sha256": "2123597b57452234ecc914c5977b27beb33dcd8f47d0981613094539e787ef2d",
-      "bytes": 74051
+      "sha256": "2d52f0d245ea9cd55bab62d19c81a32dce6b03611fa5598c94aeea0174ad7e80",
+      "bytes": 74261
     },
     "projects-list__ar__light__1440": {
       "route": "/projects",
@@ -4329,8 +4327,8 @@
       "consoleErrors": [
         "pageerror: Minified React error #418; visit https://react.dev/errors/418?args[]=text&args[]= for the full message or use the non-minified dev environment for full errors and additional helpful warnings."
       ],
-      "sha256": "43e83c712614eb84b48fed517bf34c0bd1d4532e96591ae1e0efc21ce0cde249",
-      "bytes": 91255
+      "sha256": "0bce78fba9c913511e6e5eccd034df652bcddbdbc9ca964fbc7aa2a281392860",
+      "bytes": 91256
     },
     "projects-list__ar__light__1024": {
       "route": "/projects",
@@ -4357,8 +4355,8 @@
       "consoleErrors": [
         "pageerror: Minified React error #418; visit https://react.dev/errors/418?args[]=text&args[]= for the full message or use the non-minified dev environment for full errors and additional helpful warnings."
       ],
-      "sha256": "d2cd22da4889e71d8a0c18e289b9dd59daa90b6d80cce7d7c19e80405c5115f4",
-      "bytes": 84022
+      "sha256": "e46c11519366c0e0e7dff94304453fa6c422f51fe9fbd77b3a17bb9e60bed556",
+      "bytes": 84027
     },
     "projects-list__ar__light__768": {
       "route": "/projects",
@@ -4385,8 +4383,8 @@
       "consoleErrors": [
         "pageerror: Minified React error #418; visit https://react.dev/errors/418?args[]=text&args[]= for the full message or use the non-minified dev environment for full errors and additional helpful warnings."
       ],
-      "sha256": "894fa1429144a1f54d3506e47a8806661a055446068af3ab15a78d8e4f819357",
-      "bytes": 91036
+      "sha256": "d011f76ef0020f8ce491366aa5612e45358ba3141267b621ecd749230b9f6ef8",
+      "bytes": 91038
     },
     "projects-list__ar__light__390": {
       "route": "/projects",
@@ -4413,8 +4411,8 @@
       "consoleErrors": [
         "pageerror: Minified React error #418; visit https://react.dev/errors/418?args[]=text&args[]= for the full message or use the non-minified dev environment for full errors and additional helpful warnings."
       ],
-      "sha256": "2580731d38fdef2412b1e1ab6e39759bed1325a28b0a81347739ba9dae99fc6c",
-      "bytes": 66897
+      "sha256": "74ce1c0d15c5412a6dfe11f8bc02a150b1926882197642525d6f748dff2192d3",
+      "bytes": 66868
     },
     "projects-list__ar__dark__1440": {
       "route": "/projects",
@@ -4441,8 +4439,8 @@
       "consoleErrors": [
         "pageerror: Minified React error #418; visit https://react.dev/errors/418?args[]=text&args[]= for the full message or use the non-minified dev environment for full errors and additional helpful warnings."
       ],
-      "sha256": "5870d5736ec3c18d4b68688da43d01f41e916f21c0370ca0c1e99be657966cf8",
-      "bytes": 94307
+      "sha256": "caf3875b8e6ee1ee9b42b9fed62a78d8c684c67630a9c549c6d137e967d17d78",
+      "bytes": 94301
     },
     "projects-list__ar__dark__1024": {
       "route": "/projects",
@@ -4469,8 +4467,8 @@
       "consoleErrors": [
         "pageerror: Minified React error #418; visit https://react.dev/errors/418?args[]=text&args[]= for the full message or use the non-minified dev environment for full errors and additional helpful warnings."
       ],
-      "sha256": "60674359ac548cac0e1864273ce723df1928f2d12e9200e8537fbc3420461da0",
-      "bytes": 86513
+      "sha256": "2362ad733a09229fa207cc95b4f7ce5b12fa6468832927162c8140e2e523d408",
+      "bytes": 86507
     },
     "projects-list__ar__dark__768": {
       "route": "/projects",
@@ -4497,8 +4495,8 @@
       "consoleErrors": [
         "pageerror: Minified React error #418; visit https://react.dev/errors/418?args[]=text&args[]= for the full message or use the non-minified dev environment for full errors and additional helpful warnings."
       ],
-      "sha256": "cec6e6847e1faf52953f73727d5d6cf33f1bee50a43bd035f5be1cc3c400a659",
-      "bytes": 93536
+      "sha256": "f84e15db25c55e19e30b146bb7583dce7ad0fd7c2f53a7b578299c5220f6c96a",
+      "bytes": 93531
     },
     "projects-list__ar__dark__390": {
       "route": "/projects",
@@ -4525,8 +4523,8 @@
       "consoleErrors": [
         "pageerror: Minified React error #418; visit https://react.dev/errors/418?args[]=text&args[]= for the full message or use the non-minified dev environment for full errors and additional helpful warnings."
       ],
-      "sha256": "085b8c8daf0d21d9c3d679b82e3c4b70628f607151d442da32e8618be4d1a7bf",
-      "bytes": 68188
+      "sha256": "de8baf4e777d99cda26377f2784e983dbbcd3b1f92490f67b2fe9037b0527fed",
+      "bytes": 68180
     },
     "project-detail__en__light__1440": {
       "route": "/projects/1",
@@ -4550,8 +4548,8 @@
       ],
       "title": "Elite ERP",
       "consoleErrors": [],
-      "sha256": "14ea3afcc8d772a0efecebcc8e6d159a5d542747cae56dec25c4a6f0998bbdfa",
-      "bytes": 213014
+      "sha256": "616347bf3c23a13de4e61c1a64f275b0a943d4865eb95583eef65fbed6b339fa",
+      "bytes": 213025
     },
     "project-detail__en__light__1024": {
       "route": "/projects/1",
@@ -4575,8 +4573,8 @@
       ],
       "title": "Elite ERP",
       "consoleErrors": [],
-      "sha256": "8ac81db35ef492287690809c4ed6446feae10bc359ef879d4c1ba16324240ab1",
-      "bytes": 209086
+      "sha256": "67febb919b669cbc9614933babba368c3afb6bdba1dc14ecae7cdc55465168f0",
+      "bytes": 209107
     },
     "project-detail__en__light__768": {
       "route": "/projects/1",
@@ -4600,8 +4598,8 @@
       ],
       "title": "Elite ERP",
       "consoleErrors": [],
-      "sha256": "7c082f372c7614a1994ebb37ede0e3ad81ecc8cc8034dca48e4937c499d72333",
-      "bytes": 227701
+      "sha256": "d3f50838d384b15c9fd2f81a09637b03ca451677feb30042849fb287e8f35aaf",
+      "bytes": 227760
     },
     "project-detail__en__light__390": {
       "route": "/projects/1",
@@ -4625,8 +4623,8 @@
       ],
       "title": "Elite ERP",
       "consoleErrors": [],
-      "sha256": "e4ee21aa5b355c2dacf7bbaf40bd0d7f50a9bcfa84b4fbd4a971ab61175af8db",
-      "bytes": 223700
+      "sha256": "e88c975e3614ece052ec052a8b1937161f4c76f0752161b6f8dd0288d6f52b6f",
+      "bytes": 223715
     },
     "project-detail__en__dark__1440": {
       "route": "/projects/1",
@@ -4650,8 +4648,8 @@
       ],
       "title": "Elite ERP",
       "consoleErrors": [],
-      "sha256": "2e1331b109eca02ff5067738bc0638995e005ba46309e68cda289e406a03d582",
-      "bytes": 218783
+      "sha256": "5edb551c6a34d2eed0c53452c6a5fa22f6b35da0d5397ed944f76319dce8c7a9",
+      "bytes": 218787
     },
     "project-detail__en__dark__1024": {
       "route": "/projects/1",
@@ -4675,8 +4673,8 @@
       ],
       "title": "Elite ERP",
       "consoleErrors": [],
-      "sha256": "2309f7953c6314873ea3f86c6cb5aeb005e837b2091ba6cdd02e21463dab29b7",
-      "bytes": 215110
+      "sha256": "e0efe2d34d169a303660bf3e81493861d19d627b69c71b3632e3f00f5b47030d",
+      "bytes": 215113
     },
     "project-detail__en__dark__768": {
       "route": "/projects/1",
@@ -4700,8 +4698,8 @@
       ],
       "title": "Elite ERP",
       "consoleErrors": [],
-      "sha256": "286ad46cfc28ed24fe4c98353811bb545d2647cebb112636f1102bc9a1ac9279",
-      "bytes": 233491
+      "sha256": "730bdfa01ab27c04e99a55f2e0e507876ede87527908c6064eb0c948438ba722",
+      "bytes": 233537
     },
     "project-detail__en__dark__390": {
       "route": "/projects/1",
@@ -4725,8 +4723,8 @@
       ],
       "title": "Elite ERP",
       "consoleErrors": [],
-      "sha256": "49008e1bc8b5125f03830e4c124fe7cc7d6aa9995476918ac10c5f89b555518d",
-      "bytes": 227597
+      "sha256": "5edda2ca7dd842cce647e150e6ff38d4dacb883ac80e5d013d45b112eb4f4136",
+      "bytes": 227613
     },
     "project-detail__ar__light__1440": {
       "route": "/projects/1",
@@ -4753,8 +4751,8 @@
       "consoleErrors": [
         "pageerror: Minified React error #418; visit https://react.dev/errors/418?args[]=text&args[]= for the full message or use the non-minified dev environment for full errors and additional helpful warnings."
       ],
-      "sha256": "06ed47add196dcded58f50d1ca304492c153d54da981800a7310e8940e1f3ea6",
-      "bytes": 205337
+      "sha256": "0009017c62ded9307cb52e5e3cf65db425d4c604da3c8ba7438466f4cf8600f5",
+      "bytes": 204876
     },
     "project-detail__ar__light__1024": {
       "route": "/projects/1",
@@ -4781,8 +4779,8 @@
       "consoleErrors": [
         "pageerror: Minified React error #418; visit https://react.dev/errors/418?args[]=text&args[]= for the full message or use the non-minified dev environment for full errors and additional helpful warnings."
       ],
-      "sha256": "b0968a66ed4483811288724fd36865c1d9361c93f50c9a491dbb535ca5729d37",
-      "bytes": 199001
+      "sha256": "88d8519c20697770dbfc8dd55c1f37cd9c799564c651039eb0d371cf993e740b",
+      "bytes": 199019
     },
     "project-detail__ar__light__768": {
       "route": "/projects/1",
@@ -4809,8 +4807,8 @@
       "consoleErrors": [
         "pageerror: Minified React error #418; visit https://react.dev/errors/418?args[]=text&args[]= for the full message or use the non-minified dev environment for full errors and additional helpful warnings."
       ],
-      "sha256": "8f539854d81893402d52e212256f060bc6032ecda9cadb7299cf06e091a88830",
-      "bytes": 214176
+      "sha256": "cfc0d66177f8e802d13f7768a3b5563df93b107c88e413148f2e0c588d892b8b",
+      "bytes": 214187
     },
     "project-detail__ar__light__390": {
       "route": "/projects/1",
@@ -4837,8 +4835,8 @@
       "consoleErrors": [
         "pageerror: Minified React error #418; visit https://react.dev/errors/418?args[]=text&args[]= for the full message or use the non-minified dev environment for full errors and additional helpful warnings."
       ],
-      "sha256": "b30f1eb28e44383b875ce83ce763f69b5fe32ed4fb9b0f31df3146beb1bd0e1b",
-      "bytes": 211208
+      "sha256": "4cf23f63207a9036e6a9a722ed94032832cdd1c2cc587dbfcbc4037d6e77fa42",
+      "bytes": 211157
     },
     "project-detail__ar__dark__1440": {
       "route": "/projects/1",
@@ -4865,8 +4863,8 @@
       "consoleErrors": [
         "pageerror: Minified React error #418; visit https://react.dev/errors/418?args[]=text&args[]= for the full message or use the non-minified dev environment for full errors and additional helpful warnings."
       ],
-      "sha256": "60f3caffa29b3dca3a685a5ea9ae96029529ed4096864659efa1fef4708f5c10",
-      "bytes": 210433
+      "sha256": "85e526b1461c5d689ff72679f90023749121147c24be651a59020aa04cb906da",
+      "bytes": 210023
     },
     "project-detail__ar__dark__1024": {
       "route": "/projects/1",
@@ -4893,8 +4891,8 @@
       "consoleErrors": [
         "pageerror: Minified React error #418; visit https://react.dev/errors/418?args[]=text&args[]= for the full message or use the non-minified dev environment for full errors and additional helpful warnings."
       ],
-      "sha256": "912a4693d2440650c5c3567397782795107b98b71f97ff35349e52deb2b9195b",
-      "bytes": 204976
+      "sha256": "2bfb72759ba581f72d80f62d6a06eab76969d86e3da06bb2072239416e513ec7",
+      "bytes": 204995
     },
     "project-detail__ar__dark__768": {
       "route": "/projects/1",
@@ -4921,8 +4919,8 @@
       "consoleErrors": [
         "pageerror: Minified React error #418; visit https://react.dev/errors/418?args[]=text&args[]= for the full message or use the non-minified dev environment for full errors and additional helpful warnings."
       ],
-      "sha256": "ecae127bff9b14d7a2cf19cb7fb2108e86d74b26e68b228a069152ee80abbc1c",
-      "bytes": 219440
+      "sha256": "ceb6d5dc267b55497423e779b37710700dd874a6a5168731cda8816c90c78ce1",
+      "bytes": 219454
     },
     "project-detail__ar__dark__390": {
       "route": "/projects/1",
@@ -4949,8 +4947,8 @@
       "consoleErrors": [
         "pageerror: Minified React error #418; visit https://react.dev/errors/418?args[]=text&args[]= for the full message or use the non-minified dev environment for full errors and additional helpful warnings."
       ],
-      "sha256": "cf13ff33008444fae9d21af8c9bda184e7ffd0d41581144f2b2357fe5f05ae31",
-      "bytes": 214882
+      "sha256": "c2e2293f75d9973d66195e06d9d1f5a8cff17e4797b44e6685279ab24b1e29de",
+      "bytes": 214830
     },
     "finance-reports__en__light__1440": {
       "route": "/finance/reports",
@@ -5402,8 +5400,7 @@
       "scrollHeight": 900,
       "fontsLoaded": [
         "IBM Plex Mono",
-        "IBM Plex Sans",
-        "IBM Plex Sans Arabic"
+        "IBM Plex Sans"
       ],
       "title": "Elite ERP",
       "consoleErrors": [],
@@ -5428,7 +5425,8 @@
       "scrollHeight": 768,
       "fontsLoaded": [
         "IBM Plex Mono",
-        "IBM Plex Sans"
+        "IBM Plex Sans",
+        "IBM Plex Sans Arabic"
       ],
       "title": "Elite ERP",
       "consoleErrors": [],
@@ -5815,7 +5813,7 @@
       ],
       "title": "Elite ERP",
       "consoleErrors": [],
-      "sha256": "98ad610950514b11b9086a71d0d2d1fbc52b274de4eb85f2113f15fe727b5a19",
+      "sha256": "3840b7677b1299f490c4ee8f04b0de47fb6742faf315e0127510d6fa36d258b7",
       "bytes": 99305
     },
     "hr-employees__en__light__1024": {
@@ -5840,8 +5838,8 @@
       ],
       "title": "Elite ERP",
       "consoleErrors": [],
-      "sha256": "62d4196480fbaa137dadb4d866f64c5082111216fe97392578995f08052ccadc",
-      "bytes": 87978
+      "sha256": "aa373942a12c3e48d5918e04ebda33dfdd89c0873e00a9fab85ebe2feba3eb9e",
+      "bytes": 87976
     },
     "hr-employees__en__light__768": {
       "route": "/hr/employees",
@@ -5865,8 +5863,8 @@
       ],
       "title": "Elite ERP",
       "consoleErrors": [],
-      "sha256": "c7f23e086d3560457045763b56bc80ec89bf174370127635340c6b5adc9013a8",
-      "bytes": 102786
+      "sha256": "bb14d73d67405c240d1aa0319934f2b0b3f3c6253dcdb044ed10ff688214a088",
+      "bytes": 102791
     },
     "hr-employees__en__light__390": {
       "route": "/hr/employees",
@@ -5890,7 +5888,7 @@
       ],
       "title": "Elite ERP",
       "consoleErrors": [],
-      "sha256": "307e14f06fa2586b4f83ff97fa631fd38faed08ac75269be4faa5bb6007df821",
+      "sha256": "dcb3b7a1f7f9a4b8a2b48ed46c14cfeb1585dd8797b02195158c383d83371cfa",
       "bytes": 100272
     },
     "hr-employees__en__dark__1440": {
@@ -5915,7 +5913,7 @@
       ],
       "title": "Elite ERP",
       "consoleErrors": [],
-      "sha256": "51c2b57165f8c54da3ab7c17bce155fde16c40abe813962e50030390fbb05b3e",
+      "sha256": "5390bffcf0a62f5bfc8e685d468da71ad3f6c7af40e30b74a92d4657b60f6881",
       "bytes": 100728
     },
     "hr-employees__en__dark__1024": {
@@ -5940,8 +5938,8 @@
       ],
       "title": "Elite ERP",
       "consoleErrors": [],
-      "sha256": "40ceb7f21ca8269bb1017c81375f443724905eafc2e9acda3f022bc4082e720d",
-      "bytes": 89664
+      "sha256": "b120117885f85879ec7836e04b0fcbb6199ec45799eac0f435b215cec0e1ea04",
+      "bytes": 89667
     },
     "hr-employees__en__dark__768": {
       "route": "/hr/employees",
@@ -5965,8 +5963,8 @@
       ],
       "title": "Elite ERP",
       "consoleErrors": [],
-      "sha256": "2ce2f4ad432cbc4e36f8d80778901565d19b3ed5f3bcba105b9edce3393ec8ab",
-      "bytes": 104473
+      "sha256": "0b0b4aa1dd32d44a1986453e67b6c0fb74f4cfcdea6de214ee7373c8b77f454f",
+      "bytes": 104481
     },
     "hr-employees__en__dark__390": {
       "route": "/hr/employees",
@@ -5990,8 +5988,8 @@
       ],
       "title": "Elite ERP",
       "consoleErrors": [],
-      "sha256": "843bbf080aadc3e1af63dfa750bb7819315ee76e20fe18d3b732229ccbcc4bae",
-      "bytes": 101541
+      "sha256": "d89336b73dcdf3fce745b10e0832c7f78881859a0ea9e30fe25d954aa8867d92",
+      "bytes": 101542
     },
     "hr-employees__ar__light__1440": {
       "route": "/hr/employees",
@@ -6016,8 +6014,8 @@
       ],
       "title": "Elite ERP",
       "consoleErrors": [],
-      "sha256": "8b325a2e49395daa888d397bd729a71dd3149202731972f606b2aea9afe6aa1a",
-      "bytes": 89757
+      "sha256": "325673c134b1e5a476e1dfbe5b15532d473976f2f27576738931c9fa97670ea2",
+      "bytes": 89749
     },
     "hr-employees__ar__light__1024": {
       "route": "/hr/employees",
@@ -6042,8 +6040,8 @@
       ],
       "title": "Elite ERP",
       "consoleErrors": [],
-      "sha256": "c0aba5013ea6a9a4543846b433dc8a26dcf5b998db08a8b078d8de976bbc2a46",
-      "bytes": 78998
+      "sha256": "3f9d1099cb0114f267841a21985110180604d68c255355bca76f13e5603422dd",
+      "bytes": 78992
     },
     "hr-employees__ar__light__768": {
       "route": "/hr/employees",
@@ -6068,8 +6066,8 @@
       ],
       "title": "Elite ERP",
       "consoleErrors": [],
-      "sha256": "109843288f7acb6b689f222bace7a0168e30ea8d3f7c0141fb30e3f0f82a9084",
-      "bytes": 93383
+      "sha256": "7bec5122aacdd9559ce442aadbb298e2d29401f75bb2a75d430210e93209bac2",
+      "bytes": 93377
     },
     "hr-employees__ar__light__390": {
       "route": "/hr/employees",
@@ -6094,8 +6092,8 @@
       ],
       "title": "Elite ERP",
       "consoleErrors": [],
-      "sha256": "051e9baedf0a91588b14657b230cff44ea6fd226d58054bbef4f6edc94cb2b26",
-      "bytes": 96117
+      "sha256": "db11da0ce54125b413849aaad066e775feaeee9d81371b4ac5c9a70975603977",
+      "bytes": 96114
     },
     "hr-employees__ar__dark__1440": {
       "route": "/hr/employees",
@@ -6120,8 +6118,8 @@
       ],
       "title": "Elite ERP",
       "consoleErrors": [],
-      "sha256": "451b6e8cc7e582add1c52d005e6ecce4316c9a0573ed7a9056d99308380ff5c3",
-      "bytes": 90869
+      "sha256": "577ff7a9b63b783e9d715af8e9a48991dc72493ec280977b83c475676b031fd8",
+      "bytes": 90882
     },
     "hr-employees__ar__dark__1024": {
       "route": "/hr/employees",
@@ -6146,8 +6144,8 @@
       ],
       "title": "Elite ERP",
       "consoleErrors": [],
-      "sha256": "4e879895d5018a52c27fa18053f631dcc59f485b8b2c6275946e31495dfa388f",
-      "bytes": 80147
+      "sha256": "d48855b5274bc6fdaac97ca18b50ab900f9bd15a27afab8dbf45437d9ad87cd5",
+      "bytes": 80156
     },
     "hr-employees__ar__dark__768": {
       "route": "/hr/employees",
@@ -6172,8 +6170,8 @@
       ],
       "title": "Elite ERP",
       "consoleErrors": [],
-      "sha256": "81b450b0c8bd4e618127f5b828204804905f23bbc05f25dd1067bb5264d1dca9",
-      "bytes": 94466
+      "sha256": "52c9c107827e9c2f525791620b27b2dd32ee30311c0e6f7503ef2c13533f881b",
+      "bytes": 94473
     },
     "hr-employees__ar__dark__390": {
       "route": "/hr/employees",
@@ -6198,8 +6196,8 @@
       ],
       "title": "Elite ERP",
       "consoleErrors": [],
-      "sha256": "418f1dd30a6e5e7b065bbb459ec2d432b2f97150268ff03497c0c144e54a06b4",
-      "bytes": 97067
+      "sha256": "eb8c52872bf9ea9a20717517f1ff6def4824187be2e6ba8ba70d89d4a836f456",
+      "bytes": 97070
     },
     "settings-organization__en__light__1440": {
       "route": "/settings/organization",
@@ -6269,7 +6267,8 @@
       "scrollHeight": 1849,
       "fontsLoaded": [
         "IBM Plex Mono",
-        "IBM Plex Sans"
+        "IBM Plex Sans",
+        "IBM Plex Sans Arabic"
       ],
       "title": "Elite ERP",
       "consoleErrors": [],

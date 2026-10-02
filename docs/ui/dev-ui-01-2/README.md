@@ -115,3 +115,104 @@ fails on any local status map, status-driven `<Badge>` variant, raw `pill-<tone>
   identical navigation-to-render time on both builds (median ≈ 390 ms) and found the content absent at
   that instant in 14–15 of 15 navigations on BOTH. Pre-existing timing race in the suite, not a
   DEV-UI-01.2 change; the suite was not modified.
+
+---
+
+## DEV-UI-01.2-C1 — complete status label and tone centralization (correction)
+
+Review of `dd728ee` found status labels and tones still decided outside the registry: list-page KPI
+stat rows (`t(locale, "draft")` labels showing the raw English value, `dispatched` hand-coloured
+warning, credit/debit `issued` hand-coloured success), status selectors / forms using
+`t(locale, s)`, and the task kanban labels. C1 closes all of them. **Registry semantics are
+unchanged** (same 25 domains / 74 entries / tones / pulse / keys; `status-matrix.md` is unchanged).
+
+### One tone → text-class map
+
+`STATUS_TONE_TEXT_CLASS` in `status-registry.ts` — the only tone → text-class mapping, static class
+names (`text-neutral` … `text-corrective`, all existing `@theme inline` colours). Helpers:
+`statusTextClass(domain, raw)` and `statusStat(locale, domain, raw, count)` (registry label + tone +
+class, plus `data-status-domain` / `data-status` / `data-tone` on the rendered `StatRow` card).
+Neutral renders as `text-neutral` (a stat no longer silently inherits ink while its tag is neutral).
+
+### Corrected stat rows (label via `statusLabel`, tone via the registry)
+
+| Page | Stats | Visible change |
+|---|---|---|
+| Quotations | accepted · sent · draft | EN `accepted/sent/draft` → `Accepted/Sent/Draft`; draft count neutral |
+| Sales orders | confirmed · fulfilled · draft | EN capitalised; draft neutral |
+| Proforma | sent · draft | EN capitalised; draft neutral |
+| Sales invoices | paid · sent · draft | EN capitalised; draft neutral |
+| Delivery challans | delivered · dispatched · draft | `dispatched` warning → **info**; EN capitalised; draft neutral |
+| Purchase orders | received · ordered · draft | EN capitalised; draft neutral |
+| Credit notes | issued · draft | `issued` success → **corrective**; EN capitalised; draft neutral |
+| Debit notes | issued · draft | `issued` success → **corrective**; EN capitalised; draft neutral |
+| Projects | active · completed · planned | EN capitalised; planned neutral |
+| Dashboard · HR snapshot | present · on_leave · absent | On leave warning → **info**; Absent danger → **neutral** (registry); EN "On Leave" → "On leave" |
+| Dashboard · project overview | completed · active · on_hold · planned | now registry labels + tones: "In Progress" → "Active" (قيد التنفيذ → نشط), "On Hold" → "On hold", "Not Started" → "Planned" (لم يبدأ → مخطط); previously uncoloured |
+| Employees · KPI cards | present today · on leave | On leave warning → **info**; colours via the map (Present unchanged: `--accent-green` = `--success`) |
+
+Non-status stats (Total …, This Month, Headcount, Departments, payroll totals) are unchanged.
+
+### Corrected selectors, forms, filters and labels
+
+* Project status select (`projects/[id]/project-status-select.tsx`) and project form — `statusLabel(locale, "project", s)` (EN was raw `on_hold`).
+* Employee form Active / Inactive — `statusLabel(locale, "employee", …)` (EN was raw `active` / `inactive`). Option values unchanged.
+* Proforma detail status select **and** its confirmation detail — `statusLabel(locale, "proforma_invoice", …)`.
+* Quotation, sales-order and delivery-challan status-change confirmation details (the selects were done in `dd728ee`; the confirmation dialog still printed the raw value).
+* List-workspace status filter — the `t(locale, s)` fallback is gone; `module` is typed `DocumentType`, every one of which is a registry domain.
+* Task kanban column headers and the task status select — `statusLabel(locale, "task", …)` ("To Do" → "To do", "In Progress" → "In progress"; Arabic "To Do" قيد الانتظار → للتنفيذ, the registry's unambiguous key). Column order, drag/drop, workflow and priority presentation unchanged.
+
+### Exhaustive sweep (every `.tsx`)
+
+An AST pass listed every `t()` call whose key is not a literal (146 before C1, 136 after) plus literal
+raw-status keys, status arrays, KPI rows, Select / `<option>` lists, legends and hard-coded English.
+Every status bypass is fixed above. Remaining dynamic keys were reviewed and are outside the
+registry by design: priority, role, access level, payment method / direction, document / source
+type, journal source badge, leave type, Default, billable, report / range / bucket names, form field
+labels, compliance control *implementation* notes (`STATE_LABEL`: implemented / verified — not a
+record status), the list "Archived" filter phrases ("Active only" / "Archived only" — filter modes,
+not status labels), the totals-strip "Paid" amount rows (money, not a status), security risk pill
+(`RISK_STYLE`, excluded earlier), and the cost-control pseudo-state fallback documented above.
+
+### `verify:status-registry` hardening (53 → 88 checks)
+
+Reusable AST rules over every `.tsx`:
+**R1** an array of registry values (strings or objects carrying them) mapped through raw `t()` on the
+callback parameter; **R2** a raw stored value used as a `t()` key (`t(locale, "dispatched")`);
+**R3** a status label paired with a hand-picked semantic colour (object `label`+`colorClass/color`,
+or a JSX element with a semantic `style.color` around a status label); **R4** any `StatRow` item with
+a hand-written `colorClass`; plus "no second tone → text-class map". Explicit coverage: project
+status select, project form, employee form, proforma / quotation / sales-order / DC detail selects
+and confirmations, list workspace filter, task kanban labels + select + column order, dashboard HR
+and project rows, employee KPI cards, and all nine list stat rows (domain, statuses, order).
+Mutation-tested: reverting each of the 11 corrected files to `dd728ee` fails the suite, as do 7
+synthetic mutations (new status array via `t()`, object option list, coloured status stat, second
+tone map, coloured `StatRow` item, tone-map edit, `dispatched` tone edit).
+
+### C1 verification
+
+* TypeScript 0 errors; ESLint clean on `src/` and every changed file (the repo-wide 11 errors /
+  22 warnings are in untouched legacy test / verify scripts).
+* `verify:static` 13/13 suites on a disposable TEST-ONLY database (status registry 88/88, contrast
+  159/159, typography 43/43). `npm run build` passes with TEST-ONLY environment values (11
+  pre-existing Turbopack tracing warnings, all in untouched `src/lib/storage/*` code).
+* Guardrails: G1 204, G2 358, G3 56, **G4 0**, G5 30 — unchanged (`guardrails-after.json`).
+* Screenshots: two fresh captures 256/256 byte-identical. vs `dd728ee`: 96 changed (dashboard,
+  employees, project detail, projects list, invoices list, quotations list — 16 states each), 160
+  identical; 0 height or overflow changes, 0 non-200, 0 other console errors, React #418 40 → 40.
+  `screenshot-change-report.json` now carries a per-state `c1VsDd728ee` block. The kanban column
+  headers are CSS-uppercased, so the English case change ("To Do" → "To do") is not visible; the
+  Arabic header change is.
+* Browser tier (isolated worktree, TEST-ONLY database, Chromium path set): 42/42 suites passed in
+  one full run, `verify-proforma-payments` included (a single run; it remains a known pre-existing
+  timing race and was not modified).
+
+### Vercel preview failure (read-only investigation)
+
+No authenticated Vercel CLI or token is available, so deployment logs could not be read. Commit
+statuses (public GitHub API) show every preview-branch commit failing and every `main` commit
+succeeding — including commits whose trees are byte-identical: `7954f75` (preview, failed) and
+`f785c13` (main, succeeded) share tree `6085f3b`; `192c6b5` (preview, failed) and `a9d6b60` (main,
+succeeded) share tree `46aae63`. Identical code fails only as a preview, so the cause is the Vercel
+preview environment / configuration (most likely preview-scoped environment variables), not
+DEV-UI-01.2 code; the local production build passes. Nothing was deployed or changed in Vercel.

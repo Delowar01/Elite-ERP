@@ -251,3 +251,44 @@ export const STATUS_TONE_TOKENS: Readonly<Record<StatusTone, { fg: string; bg: s
   danger: { fg: "var(--danger)", bg: "var(--danger-bg)" },
   corrective: { fg: "var(--corrective)", bg: "var(--corrective-bg)" },
 };
+
+/**
+ * Text colour per tone, for a status-toned count or label that is not a tag (list KPI stat rows,
+ * dashboard snapshot rows). Static class names only — Tailwind must see them literally; never build
+ * a class from a tone string. This is the only tone → text-class mapping in the app.
+ */
+export const STATUS_TONE_TEXT_CLASS: Readonly<Record<StatusTone, string>> = {
+  neutral: "text-neutral",
+  info: "text-info",
+  success: "text-success",
+  warning: "text-warning",
+  danger: "text-danger",
+  corrective: "text-corrective",
+};
+
+/** The text class for `raw` in `domain` — the registry's tone, through STATUS_TONE_TEXT_CLASS. */
+export function statusTextClass(domain: StatusDomain, raw: string | null | undefined): string {
+  return STATUS_TONE_TEXT_CLASS[resolveStatus(domain, raw).tone];
+}
+
+export type StatusStat = {
+  readonly label: string;
+  readonly value: string;
+  readonly colorClass: string;
+  readonly tone: StatusTone;
+  readonly status: string;
+  readonly statusDomain: StatusDomain;
+};
+
+/** A KPI stat for the count of one status: label and tone both from the registry. */
+export function statusStat(locale: Locale, domain: StatusDomain, raw: string, count: number | null | undefined): StatusStat {
+  const s = resolveStatus(domain, raw);
+  return {
+    label: statusLabel(locale, domain, raw),
+    value: String(count ?? 0),
+    colorClass: STATUS_TONE_TEXT_CLASS[s.tone],
+    tone: s.tone,
+    status: s.raw,
+    statusDomain: domain,
+  };
+}

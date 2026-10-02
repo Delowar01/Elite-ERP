@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { t, type Locale } from "@/lib/i18n/dict";
+import { statusLabel, statusTextClass } from "@/lib/status-registry";
 
 export type EmployeeCardRow = {
   id: number;
@@ -80,13 +81,13 @@ export function EmployeesClient({
         </div>
         <div className="card" style={{ padding: "16px 18px" }}>
           <div style={{ fontSize: 11.5, color: "var(--ink-muted)" }}>{t(locale, "Present today")}</div>
-          <div style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 20, marginTop: 4, color: "var(--accent-green)" }}>
+          <div className={statusTextClass("attendance", "present")} style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 20, marginTop: 4 }}>
             {presentToday}
           </div>
         </div>
         <div className="card" style={{ padding: "16px 18px" }}>
-          <div style={{ fontSize: 11.5, color: "var(--ink-muted)" }}>{t(locale, "On leave")}</div>
-          <div style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 20, marginTop: 4, color: "var(--warning)" }}>
+          <div style={{ fontSize: 11.5, color: "var(--ink-muted)" }}>{statusLabel(locale, "attendance", "on_leave")}</div>
+          <div className={statusTextClass("attendance", "on_leave")} style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 20, marginTop: 4 }}>
             {onLeaveToday}
           </div>
         </div>

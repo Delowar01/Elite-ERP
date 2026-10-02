@@ -539,13 +539,13 @@
       },
       {
         "file": "src/app/(app)/projects/projects-list-client.tsx",
-        "line": 78,
+        "line": 79,
         "kind": "tailwind",
         "token": "text-right"
       },
       {
         "file": "src/app/(app)/projects/projects-list-client.tsx",
-        "line": 97,
+        "line": 98,
         "kind": "tailwind",
         "token": "text-right"
       },
@@ -587,13 +587,13 @@
       },
       {
         "file": "src/app/(app)/purchasing/debit-notes/dn-list-client.tsx",
-        "line": 120,
+        "line": 121,
         "kind": "tailwind",
         "token": "text-right"
       },
       {
         "file": "src/app/(app)/purchasing/debit-notes/dn-list-client.tsx",
-        "line": 152,
+        "line": 153,
         "kind": "tailwind",
         "token": "text-right"
       },
@@ -647,13 +647,13 @@
       },
       {
         "file": "src/app/(app)/purchasing/orders/po-list-client.tsx",
-        "line": 115,
+        "line": 116,
         "kind": "tailwind",
         "token": "text-right"
       },
       {
         "file": "src/app/(app)/purchasing/orders/po-list-client.tsx",
-        "line": 156,
+        "line": 157,
         "kind": "tailwind",
         "token": "text-right"
       },
@@ -803,13 +803,13 @@
       },
       {
         "file": "src/app/(app)/sales/credit-notes/cn-list-client.tsx",
-        "line": 120,
+        "line": 121,
         "kind": "tailwind",
         "token": "text-right"
       },
       {
         "file": "src/app/(app)/sales/credit-notes/cn-list-client.tsx",
-        "line": 152,
+        "line": 153,
         "kind": "tailwind",
         "token": "text-right"
       },
@@ -875,13 +875,13 @@
       },
       {
         "file": "src/app/(app)/sales/invoices/invoices-list-client.tsx",
-        "line": 115,
+        "line": 116,
         "kind": "tailwind",
         "token": "text-right"
       },
       {
         "file": "src/app/(app)/sales/invoices/invoices-list-client.tsx",
-        "line": 157,
+        "line": 158,
         "kind": "tailwind",
         "token": "text-right"
       },
@@ -935,13 +935,13 @@
       },
       {
         "file": "src/app/(app)/sales/orders/orders-list-client.tsx",
-        "line": 117,
+        "line": 118,
         "kind": "tailwind",
         "token": "text-right"
       },
       {
         "file": "src/app/(app)/sales/orders/orders-list-client.tsx",
-        "line": 158,
+        "line": 159,
         "kind": "tailwind",
         "token": "text-right"
       },
@@ -995,13 +995,13 @@
       },
       {
         "file": "src/app/(app)/sales/proforma/proforma-list-client.tsx",
-        "line": 115,
+        "line": 116,
         "kind": "tailwind",
         "token": "text-right"
       },
       {
         "file": "src/app/(app)/sales/proforma/proforma-list-client.tsx",
-        "line": 156,
+        "line": 157,
         "kind": "tailwind",
         "token": "text-right"
       },
@@ -1055,13 +1055,13 @@
       },
       {
         "file": "src/app/(app)/sales/quotations/quotations-list-client.tsx",
-        "line": 123,
+        "line": 124,
         "kind": "tailwind",
         "token": "text-right"
       },
       {
         "file": "src/app/(app)/sales/quotations/quotations-list-client.tsx",
-        "line": 165,
+        "line": 166,
         "kind": "tailwind",
         "token": "text-right"
       },
@@ -1519,7 +1519,7 @@
       },
       {
         "file": "src/app/(app)/dashboard/page.tsx",
-        "line": 286,
+        "line": 300,
         "scope": "screen",
         "value": "text-[12.5px]",
         "px": 12.5
@@ -1624,7 +1624,7 @@
       },
       {
         "file": "src/app/(app)/documents/_workspace/list-workspace-toolbar.tsx",
-        "line": 188,
+        "line": 190,
         "scope": "screen",
         "value": "text-[11.5px]",
         "px": 11.5
@@ -1855,35 +1855,35 @@
       },
       {
         "file": "src/app/(app)/hr/employees/employee-form.tsx",
-        "line": 121,
+        "line": 122,
         "scope": "screen",
         "value": "text-[12.5px]",
         "px": 12.5
       },
       {
         "file": "src/app/(app)/hr/employees/employees-client.tsx",
-        "line": 78,
+        "line": 79,
         "scope": "screen",
         "value": "fontSize: 11.5",
         "px": 11.5
       },
       {
         "file": "src/app/(app)/hr/employees/employees-client.tsx",
-        "line": 82,
+        "line": 83,
         "scope": "screen",
         "value": "fontSize: 11.5",
         "px": 11.5
       },
       {
         "file": "src/app/(app)/hr/employees/employees-client.tsx",
-        "line": 88,
+        "line": 89,
         "scope": "screen",
         "value": "fontSize: 11.5",
         "px": 11.5
       },
       {
         "file": "src/app/(app)/hr/employees/employees-client.tsx",
-        "line": 94,
+        "line": 95,
         "scope": "screen",
         "value": "fontSize: 11.5",
         "px": 11.5
@@ -2541,21 +2541,21 @@
       },
       {
         "file": "src/app/(app)/projects/project-form.tsx",
-        "line": 76,
+        "line": 77,
         "scope": "screen",
         "value": "text-[12.5px]",
         "px": 12.5
       },
       {
         "file": "src/app/(app)/projects/projects-list-client.tsx",
-        "line": 44,
+        "line": 45,
         "scope": "screen",
         "value": "text-[19px]",
         "px": 19
       },
       {
         "file": "src/app/(app)/projects/projects-list-client.tsx",
-        "line": 114,
+        "line": 115,
         "scope": "screen",
         "value": "text-[11.5px]",
         "px": 11.5
@@ -2569,42 +2569,42 @@
       },
       {
         "file": "src/app/(app)/purchasing/debit-notes/dn-list-client.tsx",
-        "line": 82,
+        "line": 83,
         "scope": "screen",
         "value": "text-[19px]",
         "px": 19
       },
       {
         "file": "src/app/(app)/purchasing/debit-notes/dn-list-client.tsx",
-        "line": 155,
+        "line": 156,
         "scope": "screen",
         "value": "text-[12.5px]",
         "px": 12.5
       },
       {
         "file": "src/app/(app)/purchasing/debit-notes/dn-list-client.tsx",
-        "line": 174,
+        "line": 175,
         "scope": "screen",
         "value": "text-[11.5px]",
         "px": 11.5
       },
       {
         "file": "src/app/(app)/purchasing/orders/po-list-client.tsx",
-        "line": 76,
+        "line": 77,
         "scope": "screen",
         "value": "text-[19px]",
         "px": 19
       },
       {
         "file": "src/app/(app)/purchasing/orders/po-list-client.tsx",
-        "line": 159,
+        "line": 160,
         "scope": "screen",
         "value": "text-[12.5px]",
         "px": 12.5
       },
       {
         "file": "src/app/(app)/purchasing/orders/po-list-client.tsx",
-        "line": 178,
+        "line": 179,
         "scope": "screen",
         "value": "text-[11.5px]",
         "px": 11.5
@@ -2793,7 +2793,7 @@
       },
       {
         "file": "src/app/(app)/sales/_shared/stat-row.tsx",
-        "line": 8,
+        "line": 27,
         "scope": "screen",
         "value": "fontSize: 11.5",
         "px": 11.5
@@ -2905,42 +2905,42 @@
       },
       {
         "file": "src/app/(app)/sales/credit-notes/cn-list-client.tsx",
-        "line": 82,
+        "line": 83,
         "scope": "screen",
         "value": "text-[19px]",
         "px": 19
       },
       {
         "file": "src/app/(app)/sales/credit-notes/cn-list-client.tsx",
-        "line": 155,
+        "line": 156,
         "scope": "screen",
         "value": "text-[12.5px]",
         "px": 12.5
       },
       {
         "file": "src/app/(app)/sales/credit-notes/cn-list-client.tsx",
-        "line": 174,
+        "line": 175,
         "scope": "screen",
         "value": "text-[11.5px]",
         "px": 11.5
       },
       {
         "file": "src/app/(app)/sales/delivery-challans/dc-list-client.tsx",
-        "line": 71,
+        "line": 72,
         "scope": "screen",
         "value": "text-[19px]",
         "px": 19
       },
       {
         "file": "src/app/(app)/sales/delivery-challans/dc-list-client.tsx",
-        "line": 137,
+        "line": 138,
         "scope": "screen",
         "value": "text-[12.5px]",
         "px": 12.5
       },
       {
         "file": "src/app/(app)/sales/delivery-challans/dc-list-client.tsx",
-        "line": 155,
+        "line": 156,
         "scope": "screen",
         "value": "text-[11.5px]",
         "px": 11.5
@@ -2961,42 +2961,42 @@
       },
       {
         "file": "src/app/(app)/sales/invoices/invoices-list-client.tsx",
-        "line": 77,
-        "scope": "screen",
-        "value": "text-[19px]",
-        "px": 19
-      },
-      {
-        "file": "src/app/(app)/sales/invoices/invoices-list-client.tsx",
-        "line": 160,
-        "scope": "screen",
-        "value": "text-[12.5px]",
-        "px": 12.5
-      },
-      {
-        "file": "src/app/(app)/sales/invoices/invoices-list-client.tsx",
-        "line": 178,
-        "scope": "screen",
-        "value": "text-[11.5px]",
-        "px": 11.5
-      },
-      {
-        "file": "src/app/(app)/sales/orders/orders-list-client.tsx",
         "line": 78,
         "scope": "screen",
         "value": "text-[19px]",
         "px": 19
       },
       {
-        "file": "src/app/(app)/sales/orders/orders-list-client.tsx",
+        "file": "src/app/(app)/sales/invoices/invoices-list-client.tsx",
         "line": 161,
         "scope": "screen",
         "value": "text-[12.5px]",
         "px": 12.5
       },
       {
-        "file": "src/app/(app)/sales/orders/orders-list-client.tsx",
+        "file": "src/app/(app)/sales/invoices/invoices-list-client.tsx",
         "line": 179,
+        "scope": "screen",
+        "value": "text-[11.5px]",
+        "px": 11.5
+      },
+      {
+        "file": "src/app/(app)/sales/orders/orders-list-client.tsx",
+        "line": 79,
+        "scope": "screen",
+        "value": "text-[19px]",
+        "px": 19
+      },
+      {
+        "file": "src/app/(app)/sales/orders/orders-list-client.tsx",
+        "line": 162,
+        "scope": "screen",
+        "value": "text-[12.5px]",
+        "px": 12.5
+      },
+      {
+        "file": "src/app/(app)/sales/orders/orders-list-client.tsx",
+        "line": 180,
         "scope": "screen",
         "value": "text-[11.5px]",
         "px": 11.5
@@ -3010,42 +3010,42 @@
       },
       {
         "file": "src/app/(app)/sales/proforma/proforma-list-client.tsx",
-        "line": 78,
+        "line": 79,
         "scope": "screen",
         "value": "text-[19px]",
         "px": 19
       },
       {
         "file": "src/app/(app)/sales/proforma/proforma-list-client.tsx",
-        "line": 159,
+        "line": 160,
         "scope": "screen",
         "value": "text-[12.5px]",
         "px": 12.5
       },
       {
         "file": "src/app/(app)/sales/proforma/proforma-list-client.tsx",
-        "line": 177,
+        "line": 178,
         "scope": "screen",
         "value": "text-[11.5px]",
         "px": 11.5
       },
       {
         "file": "src/app/(app)/sales/quotations/quotations-list-client.tsx",
-        "line": 84,
+        "line": 85,
         "scope": "screen",
         "value": "text-[19px]",
         "px": 19
       },
       {
         "file": "src/app/(app)/sales/quotations/quotations-list-client.tsx",
-        "line": 168,
+        "line": 169,
         "scope": "screen",
         "value": "text-[12.5px]",
         "px": 12.5
       },
       {
         "file": "src/app/(app)/sales/quotations/quotations-list-client.tsx",
-        "line": 186,
+        "line": 187,
         "scope": "screen",
         "value": "text-[11.5px]",
         "px": 11.5
@@ -4029,37 +4029,37 @@
       },
       {
         "file": "src/app/(app)/documents/_workspace/list-workspace-toolbar.tsx",
-        "line": 107,
+        "line": 109,
         "kind": "tailwind",
         "classes": "flex-1 min-w-0 bg-transparent outline-none placeholder:text-ink-faint"
       },
       {
         "file": "src/app/(app)/documents/_workspace/list-workspace-toolbar.tsx",
-        "line": 123,
+        "line": 125,
         "kind": "tailwind",
         "classes": "input plain w-full h-9 outline-none"
       },
       {
         "file": "src/app/(app)/documents/_workspace/list-workspace-toolbar.tsx",
-        "line": 133,
+        "line": 135,
         "kind": "tailwind",
         "classes": "input plain w-full h-9 outline-none"
       },
       {
         "file": "src/app/(app)/documents/_workspace/list-workspace-toolbar.tsx",
-        "line": 137,
+        "line": 139,
         "kind": "tailwind",
         "classes": "input plain w-full h-9 outline-none"
       },
       {
         "file": "src/app/(app)/documents/_workspace/list-workspace-toolbar.tsx",
-        "line": 142,
+        "line": 144,
         "kind": "tailwind",
         "classes": "input plain w-full h-9 outline-none"
       },
       {
         "file": "src/app/(app)/documents/_workspace/list-workspace-toolbar.tsx",
-        "line": 151,
+        "line": 153,
         "kind": "tailwind",
         "classes": "input plain w-full h-9 outline-none"
       },
@@ -4367,8 +4367,8 @@
   "G5_i18nDictionaryGaps": {
     "dictionaryKeys": 1619,
     "duplicateKeys": 0,
-    "literalTCalls": 1977,
-    "dynamicTCallsUncheckable": 191,
+    "literalTCalls": 1943,
+    "dynamicTCallsUncheckable": 181,
     "missingCallSites": 30,
     "distinctMissingKeys": 27,
     "byFile": {
@@ -4394,12 +4394,12 @@
       },
       {
         "file": "src/app/(app)/documents/_workspace/list-workspace-toolbar.tsx",
-        "line": 201,
+        "line": 203,
         "key": "CSV"
       },
       {
         "file": "src/app/(app)/documents/_workspace/list-workspace-toolbar.tsx",
-        "line": 203,
+        "line": 205,
         "key": "PDF"
       },
       {
@@ -4444,12 +4444,12 @@
       },
       {
         "file": "src/app/(app)/purchasing/debit-notes/dn-list-client.tsx",
-        "line": 110,
+        "line": 111,
         "key": "No debit notes yet."
       },
       {
         "file": "src/app/(app)/purchasing/debit-notes/dn-list-client.tsx",
-        "line": 110,
+        "line": 111,
         "key": "Open a received purchase order to issue one against it."
       },
       {
@@ -4464,12 +4464,12 @@
       },
       {
         "file": "src/app/(app)/sales/credit-notes/cn-list-client.tsx",
-        "line": 110,
+        "line": 111,
         "key": "No credit notes yet."
       },
       {
         "file": "src/app/(app)/sales/credit-notes/cn-list-client.tsx",
-        "line": 110,
+        "line": 111,
         "key": "Open a sent invoice to issue one against it."
       },
       {

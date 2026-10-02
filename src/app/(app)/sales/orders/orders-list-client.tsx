@@ -16,6 +16,7 @@ import type { ImportColumn } from "@/lib/document-list-workspace";
 import { RowMenu, type RowMenuEntry } from "../_shared/row-menu";
 import { Money } from "../_shared/money";
 import { t, type Locale } from "@/lib/i18n/dict";
+import { statusStat } from "@/lib/status-registry";
 import { useDocumentRowActions } from "../../_shared/document-row-actions";
 import { useDocumentEditAction } from "../../_shared/edit-document";
 import { getConvertTargets } from "../_shared/convert-config";
@@ -81,9 +82,9 @@ export function OrdersListClient({
       <StatRow
         items={[
           { label: t(locale, "Total Sales Orders"), value: String(rows.length) },
-          { label: t(locale, "confirmed"), value: String(stats.confirmed ?? 0), colorClass: "text-info" },
-          { label: t(locale, "fulfilled"), value: String(stats.fulfilled ?? 0), colorClass: "text-success" },
-          { label: t(locale, "draft"), value: String(stats.draft ?? 0) },
+          statusStat(locale, "sales_order", "confirmed", stats.confirmed),
+          statusStat(locale, "sales_order", "fulfilled", stats.fulfilled),
+          statusStat(locale, "sales_order", "draft", stats.draft),
         ]}
       />
 
