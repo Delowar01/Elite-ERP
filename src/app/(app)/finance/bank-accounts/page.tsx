@@ -168,7 +168,7 @@ export default async function BankAccountsPage() {
           <TableBody>
             {recentPayments.map((p) => (
               <TableRow key={p.id}>
-                <TableCell className="mono">{p.paymentDate}</TableCell>
+                <TableCell className="num-tabular">{p.paymentDate}</TableCell>
                 <TableCell>
                   <Badge variant={p.direction === "in" ? "success" : "danger"}>{p.direction === "in" ? t(locale, "In") : t(locale, "Out")}</Badge>
                 </TableCell>

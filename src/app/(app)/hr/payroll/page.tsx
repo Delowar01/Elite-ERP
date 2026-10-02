@@ -158,13 +158,13 @@ export default async function PayrollPage() {
             <TableBody>
               {pastRuns.map((r) => (
                 <TableRow key={r.id}>
-                  <TableCell className="font-mono text-xs">
+                  <TableCell className="num-tabular text-xs">
                     {r.periodYear}-{String(r.periodMonth).padStart(2, "0")}
                   </TableCell>
                   <TableCell>
                     <Badge variant={r.status === "processed" ? "success" : "neutral"}>{t(locale, r.status)}</Badge>
                   </TableCell>
-                  <TableCell className="text-right font-mono"><Money amount={Number(r.netTotal)} context="summary" /></TableCell>
+                  <TableCell className="text-right num-tabular"><Money amount={Number(r.netTotal)} context="summary" /></TableCell>
                 </TableRow>
               ))}
             </TableBody>

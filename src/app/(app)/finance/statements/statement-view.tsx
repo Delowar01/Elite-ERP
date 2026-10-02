@@ -315,7 +315,7 @@ export function StatementView({
                   </tr>
                   {statement.lines.map((l, i) => (
                     <tr key={i} className="border-t border-line">
-                      <td className="p-2.5 font-mono whitespace-nowrap">{l.date}</td>
+                      <td className="p-2.5 num-tabular whitespace-nowrap">{l.date}</td>
                       <td className="p-2.5">{t(locale, l.docTypeLabel)}</td>
                       <td className="p-2.5 font-mono">
                         {l.href && l.number

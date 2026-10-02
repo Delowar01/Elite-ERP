@@ -137,10 +137,10 @@ export default async function PurchaseOrderDetailPage({ params }: { params: Prom
             <Fragment key={it.id}>
             <TableRow>
               <TableCell><LineItemCell description={it.description} /></TableCell>
-              <TableCell className="text-right font-mono"><DocNum value={it.quantity} kind="quantity" /></TableCell>
-              <TableCell className="text-right font-mono"><DocNum value={it.unitCost} kind="rate" /></TableCell>
-              <TableCell className="text-right font-mono">{it.taxRatePercent}%</TableCell>
-              <TableCell className="text-right font-mono"><DocNum value={it.lineTotal} kind="amount" /></TableCell>
+              <TableCell className="text-right num-tabular"><DocNum value={it.quantity} kind="quantity" /></TableCell>
+              <TableCell className="text-right num-tabular"><DocNum value={it.unitCost} kind="rate" /></TableCell>
+              <TableCell className="text-right num-tabular">{it.taxRatePercent}%</TableCell>
+              <TableCell className="text-right num-tabular"><DocNum value={it.lineTotal} kind="amount" /></TableCell>
             </TableRow>
               <LineDescRow customFields={it.customFields} />
             </Fragment>

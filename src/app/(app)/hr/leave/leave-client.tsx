@@ -109,7 +109,7 @@ export function LeaveClient({
               <TableRow key={r.id}>
                 <TableCell>{r.employeeName}</TableCell>
                 <TableCell>{t(locale, TYPE_LABEL[r.type] ?? r.type)}</TableCell>
-                <TableCell className="font-mono text-xs">
+                <TableCell className="num-tabular text-xs">
                   {r.startDate}
                   {r.endDate !== r.startDate ? ` – ${r.endDate}` : ""}
                 </TableCell>

@@ -5,7 +5,12 @@ import {
 import {
   auditTheme, componentContrast, auditedPair, AUDITED_COMPONENTS, THEME_COMPONENTS,
   contrastRatio, isReadable, NEUTRALS, resolveComponentColors, type ThemeInput,
+  buildThemeOverrideCss, isDefaultTheme, generateComponentColors, DEFAULT_PRIMARY, DEFAULT_ACCENT,
 } from "../src/lib/brand-theme";
+import { TOKENS, TOKEN_CSS_NAME, type CoreTokens, type Appearance } from "../src/lib/design-tokens";
+import { readFileSync } from "node:fs";
+import { buttonVariants } from "../src/components/ui/button";
+import { cn } from "../src/lib/utils";
 
 const results: [boolean, string, string][] = [];
 const check = (name: string, cond: boolean, extra = "") => results.push([cond, name, extra]);
@@ -101,8 +106,11 @@ const lightPrimary = componentContrast(base, "light", "primaryButton");
 const darkPrimary = componentContrast(base, "dark", "primaryButton");
 check("the same component can differ between modes", !near(lightPrimary.ratio, darkPrimary.ratio, 0.001) || lightPrimary.bg !== darkPrimary.bg,
   `${lightPrimary.ratio.toFixed(2)} vs ${darkPrimary.ratio.toFixed(2)}`);
-check("primary button gradient is sampled, not reduced to one stop",
-  lightPrimary.gradient && lightPrimary.samples.length >= 3, `${lightPrimary.samples.length} samples`);
+// DEV-UI-01.1 / owner decision D-04 (SOLID-ONLY): this check used to assert that the primary button
+// WAS a gradient and was sampled across it. The design now forbids a gradient primary in every mode,
+// so the assertion is inverted rather than dropped. Gradient sampling itself stays covered by §6.
+check("primary button is SOLID even in legacy gradient mode (D-04), measured as one sample",
+  !lightPrimary.gradient && !darkPrimary.gradient && lightPrimary.samples.length === 1, `${lightPrimary.bg} / ${darkPrimary.bg}`);
 check("every report states its own required minimum", audit.every((a) => a.required === CONTRAST_NORMAL_TEXT));
 check("boundary check uses the 3:1 UI threshold", audit.every((a) => a.boundaryRequired === CONTRAST_LARGE_TEXT));
 check("sidebar active mirrors the Selected item pair",
@@ -135,6 +143,127 @@ check("isReadable accepts rgb()/hsl() inputs", isReadable("rgb(255,255,255)", "r
 check("ratioOf on identical colors is exactly 1", ratioOf(parseColor("#abcdef")!, parseColor("#abcdef")!) === 1);
 check("NEUTRALS surfaces differ per appearance", NEUTRALS.light.surface !== NEUTRALS.dark.surface);
 check("THEME_COMPONENTS remains the overridable set of 5", THEME_COMPONENTS.length === 5 && AUDITED_COMPONENTS.length === 6);
+
+// ---------- 11. Navy Command token layer (DEV-UI-01.1) ----------
+const css = readFileSync(new URL("../src/app/globals.css", import.meta.url), "utf8");
+const keys = Object.keys(TOKEN_CSS_NAME) as (keyof CoreTokens)[];
+let drift = 0;
+for (const k of keys) {
+  const name = TOKEN_CSS_NAME[k];
+  const decl = [...css.matchAll(new RegExp(`^\\s*${name}:\\s*([^;]+);`, "gm"))];
+  const want = `light-dark(${TOKENS.light[k]}, ${TOKENS.dark[k]})`;
+  if (decl.length !== 1 || decl[0][1].trim() !== want) { drift++; check(`globals.css ${name} matches design-tokens.ts`, false, decl.map((d) => d[1]).join(" | ") || "missing"); }
+}
+check(`all ${keys.length} canonical tokens are declared exactly once, as light-dark(), matching design-tokens.ts`, drift === 0, `${drift} drifted`);
+check("ONE dark definition: no prefers-color-scheme token block in globals.css", !/prefers-color-scheme/.test(css));
+const darkBlock = css.match(/:root\[data-theme="dark"\]\s*\{([^}]*)\}/);
+check("the dark selector only switches color-scheme — it redefines no token",
+  !!darkBlock && !/--[a-z]/.test(darkBlock[1]) && /color-scheme:\s*dark/.test(darkBlock[1]), darkBlock?.[1].trim() ?? "missing");
+check("core tokens contain no gradient", !/--(primary|accent|surface|canvas|brand-gradient)[a-z-]*:\s*[^;]*gradient\(/.test(css));
+
+type Pair = [string, keyof CoreTokens, keyof CoreTokens, number];
+const PAIRS: Pair[] = [
+  ["text on canvas", "text", "canvas", 4.5],
+  ["text on surface", "text", "surface", 4.5],
+  ["text on surface-subtle", "text", "surfaceSubtle", 4.5],
+  ["muted text on canvas", "textMuted", "canvas", 4.5],
+  ["muted text on surface", "textMuted", "surface", 4.5],
+  ["faint text on surface", "textFaint", "surface", 4.5],
+  ["primary-foreground on primary", "primaryForeground", "primary", 4.5],
+  ["primary-foreground on primary-hover", "primaryForeground", "primaryHover", 4.5],
+  ["primary boundary vs surface (UI 3:1)", "primary", "surface", 3],
+  ["accent-foreground on accent", "accentForeground", "accent", 4.5],
+  ["accent-ink text on surface", "accentInk", "surface", 4.5],
+  ["accent-ink text on canvas", "accentInk", "canvas", 4.5],
+  ["link on surface", "link", "surface", 4.5],
+  ["focus indicator vs surface (3:1)", "focus", "surface", 3],
+  ["focus indicator vs canvas (3:1)", "focus", "canvas", 3],
+  ["control border vs surface (3:1)", "borderControl", "surface", 3],
+  ["success text on its tint", "success", "successTint", 4.5],
+  ["success text on surface", "success", "surface", 4.5],
+  ["warning text on its tint", "warning", "warningTint", 4.5],
+  ["warning text on surface", "warning", "surface", 4.5],
+  ["danger text on its tint", "danger", "dangerTint", 4.5],
+  ["danger text on surface", "danger", "surface", 4.5],
+  ["danger-foreground on danger", "dangerForeground", "danger", 4.5],
+  ["info text on its tint", "info", "infoTint", 4.5],
+  ["info text on surface", "info", "surface", 4.5],
+  ["corrective text on its tint", "corrective", "correctiveTint", 4.5],
+  ["corrective text on surface", "corrective", "surface", 4.5],
+  ["neutral text on its tint", "neutral", "neutralTint", 4.5],
+  ["neutral text on surface", "neutral", "surface", 4.5],
+];
+for (const ap of ["light", "dark"] as Appearance[]) {
+  for (const [label, fg, bg, min] of PAIRS) {
+    const r = contrastRatio(TOKENS[ap][fg], TOKENS[ap][bg]);
+    check(`${ap}: ${label} ≥ ${min}:1`, meets(r, min), formatRatio(r));
+  }
+}
+check("light: primary is Elite navy with white text (D-03)", TOKENS.light.primary === "#1b1b4e" && TOKENS.light.primaryForeground === "#ffffff");
+check("light: orange is the accent, not the primary fill", TOKENS.light.accent === "#e87722" && TOKENS.light.primary !== TOKENS.light.accent);
+check("dark: canvas and surface are distinguishable (≥ 1.15:1)", contrastRatio(TOKENS.dark.canvas, TOKENS.dark.surface) >= 1.15, contrastRatio(TOKENS.dark.canvas, TOKENS.dark.surface).toFixed(3));
+check("brand-theme NEUTRALS mirror the token source", NEUTRALS.light.surface === TOKENS.light.surface && NEUTRALS.dark.background === TOKENS.dark.canvas);
+
+// ---------- 12. organization overrides stay contrast-safe and solid ----------
+const stock: ThemeInput = { mode: "gradient", primaryColor: DEFAULT_PRIMARY, accentColor: DEFAULT_ACCENT, gradientFrom: "#F5A25C", gradientTo: "#E87722" };
+check("the stock org (gradient mode, default stops) is the default theme — nothing injected", isDefaultTheme(stock) && buildThemeOverrideCss(stock) === "");
+check("generated stock primary is navy with white text", generateComponentColors(stock, "light").primaryButton.bg.toLowerCase() === "#1b1b4e" && generateComponentColors(stock, "light").primaryButton.fg === "#ffffff");
+// A deliberately awkward brand: pale yellow primary, teal accent.
+const yellow: ThemeInput = { mode: "single", primaryColor: "#F7D44A", accentColor: "#14B8A6", gradientFrom: "#F5A25C", gradientTo: "#E87722" };
+for (const ap of ["light", "dark"] as Appearance[]) {
+  for (const comp of AUDITED_COMPONENTS) {
+    const c = componentContrast(yellow, ap, comp);
+    check(`org override (pale-yellow primary) ${ap} ${comp}: generated text passes AA`, c.passes, formatRatio(c.ratio));
+  }
+}
+const yellowCss = buildThemeOverrideCss(yellow);
+check("org override CSS is emitted as ONE :root block", (yellowCss.match(/:root\{/g) ?? []).length === 1, String((yellowCss.match(/:root\{/g) ?? []).length));
+check("org override CSS has no second dark block (light-dark() inside the one block)",
+  !/prefers-color-scheme|data-theme/.test(yellowCss) && /light-dark\(/.test(yellowCss));
+check("org override CSS paints no gradient anywhere (D-04)", !/gradient\(/.test(yellowCss));
+const customGradient: ThemeInput = { ...stock, gradientFrom: "#22C55E", gradientTo: "#15803D" };
+const cg = generateComponentColors(customGradient, "light");
+check("a customised legacy gradient is NOT painted — its end stop becomes the solid accent",
+  !/gradient\(/.test(buildThemeOverrideCss(customGradient)) && cg.accentButton.bg.toLowerCase() === "#15803d" && cg.primaryButton.bg.toLowerCase() === "#1b1b4e",
+  `${cg.accentButton.bg} / ${cg.primaryButton.bg}`);
+for (const ap of ["light", "dark"] as Appearance[]) {
+  for (const comp of AUDITED_COMPONENTS) {
+    const c = componentContrast(customGradient, ap, comp);
+    check(`org override (custom green gradient) ${ap} ${comp}: passes AA`, c.passes, formatRatio(c.ratio));
+  }
+}
+
+// ---------- 12b. every light-dark() colour token is a registered <color> ----------
+// An unregistered custom property holding light-dark() computes to the unresolved string in BOTH
+// appearances, so anything reading tokens from script (verify-dark-theme does) sees no difference
+// between light and dark. Registration makes it compute to the real per-mode colour.
+const registered = new Set([...css.matchAll(/@property\s+(--[a-z0-9-]+)\s*\{\s*syntax:\s*"<color>"/g)].map((m) => m[1]));
+const ldInCss = [...css.matchAll(/^\s*(--[a-z0-9-]+):\s*light-dark\(/gm)].map((m) => m[1]);
+const ldInjected = [yellowCss, buildThemeOverrideCss(customGradient)].flatMap((c) => [...c.matchAll(/(--[a-z0-9-]+):light-dark\(/g)].map((m) => m[1]));
+const unregistered = [...new Set([...ldInCss, ...ldInjected])].filter((n) => !registered.has(n));
+check("every light-dark() colour token (globals.css + org theme CSS) is registered as @property <color>", unregistered.length === 0, unregistered.join(" ") || `${registered.size} registered`);
+
+// ---------- 13. the button's foreground colour survives class merging ----------
+// Found by the DEV-UI-01.1 screenshot comparison: tailwind-merge took the new `text-body-sm` size for
+// a colour and dropped the primary label colour, leaving navy text on a navy button. Every variant ×
+// size must keep exactly the foreground colour class its variant declares.
+const FG: Record<string, RegExp> = {
+  primary: /(^| )text-\[color:var\(--primary-foreground\)\]( |$)/,
+  secondary: /(^| )text-ink( |$)/,
+  glass: /(^| )text-ink( |$)/,
+  ghost: /(^| )text-ink-muted( |$)/,
+  destructive: /(^| )text-danger-foreground( |$)/,
+  link: /(^| )text-link( |$)/,
+};
+let lostFg = 0;
+for (const v of Object.keys(FG) as (keyof typeof FG)[]) {
+  for (const size of ["default", "sm", "lg", "icon"] as const) {
+    const c = cn(buttonVariants({ variant: v as "primary", size })); // exactly what <Button> renders
+    if (!FG[v].test(c)) { lostFg++; check(`button ${v}/${size} keeps its foreground colour`, false, c); }
+  }
+}
+check("every button variant × size keeps its foreground colour after merging", lostFg === 0, `${lostFg} lost`);
+check("type-scale sizes and text colours are not merged into each other", cn("text-ink text-body-sm") === "text-ink text-body-sm" && cn("text-body text-title") === "text-title");
 
 let ok = true;
 for (const [cond, name, extra] of results) { if (!cond) ok = false; console.log(`${cond ? "PASS" : "FAIL"}  ${name}${extra ? "  << " + extra : ""}`); }

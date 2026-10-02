@@ -66,10 +66,10 @@ export function Donut({
       {arcs}
       {centerLabel && (
         <>
-          <text x={cx} y={cy - 4} textAnchor="middle" fontFamily="IBM Plex Sans" fontSize="10.5" fill="var(--ink-faint)">
+          <text x={cx} y={cy - 4} textAnchor="middle" style={{ fontFamily: "var(--font-ui)" }} fontSize="11" fill="var(--ink-faint)">
             {centerLabel}
           </text>
-          <text x={cx} y={cy + 16} textAnchor="middle" fontFamily="Plus Jakarta Sans" fontWeight="800" fontSize="18" fill="var(--ink)">
+          <text x={cx} y={cy + 16} textAnchor="middle" style={{ fontFamily: "var(--font-ui)" }} fontWeight="600" fontSize="18" fill="var(--ink)">
             {centerValue}
           </text>
         </>
@@ -131,7 +131,7 @@ export function ComboChart({
         <circle key={`r${i}`} cx={x} cy={yy} r={3.2} fill="var(--brand-orange)" />
       ))}
       {labels.map((lbl, i) => (
-        <text key={i} x={padL + i * step} y={h - 6} fontFamily="IBM Plex Mono" fontSize={10} fill="var(--ink-faint)" textAnchor="middle">
+        <text key={i} x={padL + i * step} y={h - 6} style={{ fontFamily: "var(--font-numeric)", fontVariantNumeric: "tabular-nums" }} fontSize={10} fill="var(--ink-faint)" textAnchor="middle">
           {lbl}
         </text>
       ))}

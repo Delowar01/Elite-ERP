@@ -71,9 +71,9 @@ export function PayrollClient({
                 data-selected={l.employeeId === selected?.employeeId || undefined}
               >
                 <TableCell className={l.employeeId === selected?.employeeId ? "font-semibold" : undefined}>{l.employeeName}</TableCell>
-                <TableCell className="text-right font-mono">{fmt(l.basic)}</TableCell>
-                <TableCell className="text-right font-mono">{fmt(l.allowances)}</TableCell>
-                <TableCell className="text-right font-mono">{fmt(l.net)}</TableCell>
+                <TableCell className="text-right num-tabular">{fmt(l.basic)}</TableCell>
+                <TableCell className="text-right num-tabular">{fmt(l.allowances)}</TableCell>
+                <TableCell className="text-right num-tabular">{fmt(l.net)}</TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -86,19 +86,19 @@ export function PayrollClient({
             </div>
             <div className="payslip-line">
               <span>{t(locale, "Basic salary")}</span>
-              <span className="mono"><Money amount={selected.basic} context="summary" /></span>
+              <span className="num-tabular"><Money amount={selected.basic} context="summary" /></span>
             </div>
             <div className="payslip-line">
               <span>{t(locale, "Allowances")}</span>
-              <span className="mono"><Money amount={selected.allowances} context="summary" /></span>
+              <span className="num-tabular"><Money amount={selected.allowances} context="summary" /></span>
             </div>
             <div className="payslip-line">
               <span>{t(locale, "Deductions")}</span>
-              <span className="mono">− <Money amount={selected.deductions} context="summary" /></span>
+              <span className="num-tabular">− <Money amount={selected.deductions} context="summary" /></span>
             </div>
             <div className="payslip-line final">
               <span>{t(locale, "Net pay")}</span>
-              <span className="mono"><Money amount={selected.net} context="summary" /></span>
+              <span className="num-tabular"><Money amount={selected.net} context="summary" /></span>
             </div>
           </div>
         )}

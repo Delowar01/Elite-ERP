@@ -3,8 +3,13 @@
 // appearance, so a brand color that reads well on white is never painted raw onto a dark surface
 // (and vice versa).
 //
-//   - "gradient" mode: an editable two-stop brand gradient (start + end).
-//   - "single" mode: an editable solid Primary color plus an Accent color.
+// Navy Command (DEV-UI-01.1, owner decisions D-03 / D-04) — the core UI is SOLID-ONLY:
+//   - the primary action is always the org's solid Primary colour (Elite navy by default) with a
+//     contrast-checked foreground — never a gradient, in either mode;
+//   - "single" mode: Accent is the org's Accent colour;
+//   - "gradient" mode (legacy): the two stops are still stored and still editable, but no core
+//     control paints a gradient any more. The gradient's END stop is used as the solid Accent, so an
+//     org that customised its gradient keeps its brand hue (the default end stop is Elite orange).
 //
 // Brand colors are never applied directly to every component. For each appearance we:
 //   1. adapt the brand color so it stays recognizable but has enough contrast against that mode's
@@ -28,6 +33,7 @@ export const DEFAULT_GRADIENT_FROM = "#F5A25C"; // Elite gradient start (light o
 export const DEFAULT_GRADIENT_TO = "#E87722"; // Elite gradient end (orange)
 export const HEX_COLOR = /^#([0-9a-fA-F]{6})$/;
 export const INK = "#17173f";
+import { TOKENS } from "./design-tokens";
 import {
   contrast, contrastOverGradient, parseColor, relativeLuminance, meets, isGradient,
   CONTRAST_NORMAL_TEXT, CONTRAST_LARGE_TEXT, formatRatio,
@@ -107,24 +113,23 @@ function rgba(hex: string, alpha: number): string {
 }
 
 // ---- surfaces per appearance ----------------------------------------------
-// Base neutrals, mirroring globals.css so calculations here match what is actually painted.
+// Base neutrals, read from the single token source (design-tokens.ts, mirrored by globals.css and
+// checked by verify-contrast) so calculations here match what is actually painted.
 type Neutrals = {
   background: string; surface: string; surfaceElevated: string;
   textPrimary: string; textSecondary: string; textMuted: string;
   border: string; inputBackground: string; disabledBackground: string; disabledText: string;
 };
-export const NEUTRALS: Record<Appearance, Neutrals> = {
-  light: {
-    background: "#f3f1ec", surface: "#ffffff", surfaceElevated: "#ffffff",
-    textPrimary: "#17173f", textSecondary: "#5c5d82", textMuted: "#6f7093",
-    border: "#e5e2d9", inputBackground: "#ffffff", disabledBackground: "#eceade", disabledText: "#6b6c8d",
-  },
-  dark: {
-    background: "#0c0b22", surface: "#16152f", surfaceElevated: "#1b1a38",
-    textPrimary: "#eeeef7", textSecondary: "#b9b9db", textMuted: "#9a9ac2",
-    border: "#2a2952", inputBackground: "#1b1a38", disabledBackground: "#232247", disabledText: "#9a9ac2",
-  },
-};
+function neutralsFor(a: Appearance): Neutrals {
+  const t = TOKENS[a];
+  return {
+    background: t.canvas, surface: t.surface, surfaceElevated: t.surfaceRaised,
+    textPrimary: t.text, textSecondary: t.textMuted, textMuted: t.textMuted,
+    border: t.border, inputBackground: a === "dark" ? t.surfaceSubtle : t.surface,
+    disabledBackground: t.disabledBackground, disabledText: t.disabledText,
+  };
+}
+export const NEUTRALS: Record<Appearance, Neutrals> = { light: neutralsFor("light"), dark: neutralsFor("dark") };
 
 /**
  * Adapt a brand color for an appearance: keep the hue (so branding stays recognizable) but move its
@@ -169,34 +174,35 @@ export function isReadable(fg: string, bg: string, target = CONTRAST_AA): boolea
 }
 
 // ---- generation -----------------------------------------------------------
-function gradientCss(from: string, to: string): string {
-  return `linear-gradient(135deg, ${from}, ${to})`;
-}
-
-/** The brand colors adapted to one appearance (still recognizably the org's colors). */
+/**
+ * The brand colors adapted to one appearance (still recognizably the org's colors). SOLID-ONLY:
+ * `gradient` is kept as a field for compatibility but is always a solid colour now (D-04).
+ */
 export function brandForAppearance(input: ThemeInput, appearance: Appearance) {
   const single = input.mode === "single";
   const primary = adaptBrand(safe(input.primaryColor, DEFAULT_PRIMARY), appearance);
-  const accent = adaptBrand(safe(input.accentColor, DEFAULT_ACCENT), appearance);
+  // Gradient mode keeps the org's brand hue by using the gradient's end stop as the solid accent.
+  const accentSource = single ? safe(input.accentColor, DEFAULT_ACCENT) : safe(input.gradientTo, DEFAULT_GRADIENT_TO);
+  const accent = adaptBrand(accentSource, appearance);
   const from = adaptBrand(safe(input.gradientFrom, DEFAULT_GRADIENT_FROM), appearance);
   const to = adaptBrand(safe(input.gradientTo, DEFAULT_GRADIENT_TO), appearance);
   return {
     single,
     primary,
     accent,
+    /** Legacy gradient stops — stored and adapted, but not painted on any core control. */
     from,
     to,
-    /** Representative solid for the primary surface (the gradient's end stop in gradient mode). */
-    primarySolid: single ? primary : to,
-    /** Representative solid for accents (the gradient's start stop in gradient mode). */
-    accentSolid: single ? accent : from,
-    gradient: single ? primary : gradientCss(from, to),
+    primarySolid: primary,
+    accentSolid: accent,
+    gradient: primary,
   };
 }
 
 /**
  * Auto-generate each component's background + a readable font color, for ONE appearance. Component
  * text is UI text on a solid fill, so it targets AA (4.5:1) — comfortably above the 3:1 UI floor.
+ * Primary action = primary colour (navy); active tab / selected item = accent (orange marker).
  */
 export function generateComponentColors(input: ThemeInput, appearance: Appearance = "light"): Record<ThemeComponent, ComponentColor> {
   const b = brandForAppearance(input, appearance);
@@ -204,11 +210,13 @@ export function generateComponentColors(input: ThemeInput, appearance: Appearanc
   // Badge is a soft tint: toward white on light, toward the elevated dark surface on dark — mixing
   // toward white in dark mode is exactly what made badges glare/wash out before.
   const badgeBg = appearance === "dark" ? mixHex(b.accentSolid, n.surfaceElevated, 0.74) : mixHex(b.accentSolid, "#ffffff", 0.86);
+  const onPrimary = suggestReadableFg(b.primarySolid, readableForeground(b.primarySolid));
+  const onAccent = suggestReadableFg(b.accentSolid, readableForeground(b.accentSolid));
   return {
-    primaryButton: { bg: b.single ? b.primary : b.gradient, fg: suggestReadableFg(b.primarySolid, readableForeground(b.primarySolid)) },
-    accentButton: { bg: b.accentSolid, fg: suggestReadableFg(b.accentSolid, readableForeground(b.accentSolid)) },
-    activeTab: { bg: b.primarySolid, fg: suggestReadableFg(b.primarySolid, readableForeground(b.primarySolid)) },
-    selectedItem: { bg: b.primarySolid, fg: suggestReadableFg(b.primarySolid, readableForeground(b.primarySolid)) },
+    primaryButton: { bg: b.primarySolid, fg: onPrimary },
+    accentButton: { bg: b.accentSolid, fg: onAccent },
+    activeTab: { bg: b.accentSolid, fg: onAccent },
+    selectedItem: { bg: b.accentSolid, fg: onAccent },
     badge: { bg: badgeBg, fg: suggestReadableFg(badgeBg, b.accentSolid) },
   };
 }
@@ -265,6 +273,8 @@ export function buildSemanticTokens(input: ThemeInput, appearance: Appearance): 
   const hover = (hex: string) => (dark ? lighten(hex, 0.14) : darken(hex, 0.12));
   const primaryBg = HEX_COLOR.test(comp.primaryButton.bg) ? comp.primaryButton.bg : b.primarySolid;
 
+  const accentBg = HEX_COLOR.test(comp.accentButton.bg) ? comp.accentButton.bg : b.accentSolid;
+
   return {
     "--background": n.background,
     "--surface": n.surface,
@@ -275,12 +285,19 @@ export function buildSemanticTokens(input: ThemeInput, appearance: Appearance): 
     "--border": n.border,
     "--input-background": n.inputBackground,
 
+    // Canonical Navy Command names; the legacy names below are kept for existing consumers.
+    "--primary": primaryBg,
+    "--primary-foreground": comp.primaryButton.fg,
+    "--accent": accentBg,
+    "--accent-foreground": comp.accentButton.fg,
+    "--focus": dark ? lighten(b.accentSolid, 0.1) : darken(b.accentSolid, 0.15),
+
     "--primary-background": comp.primaryButton.bg,
     "--primary-text": comp.primaryButton.fg,
     "--primary-hover": hover(primaryBg),
     "--accent-background": comp.accentButton.bg,
     "--accent-text": comp.accentButton.fg,
-    "--accent-hover": hover(comp.accentButton.bg),
+    "--accent-hover": hover(accentBg),
 
     "--active-tab-background": comp.activeTab.bg,
     "--active-tab-text": comp.activeTab.fg,
@@ -289,22 +306,24 @@ export function buildSemanticTokens(input: ThemeInput, appearance: Appearance): 
     "--badge-background": comp.badge.bg,
     "--badge-text": comp.badge.fg,
 
-    "--focus-ring": rgba(b.primarySolid, dark ? 0.55 : 0.4),
+    "--focus-ring": rgba(b.accentSolid, dark ? 0.5 : 0.35),
     "--disabled-background": n.disabledBackground,
     "--disabled-text": n.disabledText,
   };
 }
 
-/** Is this the untouched default theme? (then we inject nothing and keep the stock look exactly.) */
+/**
+ * Is this the untouched default theme? (then we inject nothing and globals.css paints the stock Navy
+ * Command palette exactly.) Judged on the EFFECTIVE solid colours, so a gradient-mode org with the
+ * default stops and a single-mode org on Elite navy/orange are both default.
+ */
 export function isDefaultTheme(input: ThemeInput): boolean {
   const ov = normalizeOverrides(input.overrides);
   const noOverrides = !Object.keys(ov.light ?? {}).length && !Object.keys(ov.dark ?? {}).length;
-  return (
-    input.mode === "gradient" &&
-    safe(input.gradientFrom, DEFAULT_GRADIENT_FROM).toLowerCase() === DEFAULT_GRADIENT_FROM.toLowerCase() &&
-    safe(input.gradientTo, DEFAULT_GRADIENT_TO).toLowerCase() === DEFAULT_GRADIENT_TO.toLowerCase() &&
-    noOverrides
-  );
+  const single = input.mode === "single";
+  const primary = safe(input.primaryColor, DEFAULT_PRIMARY).toLowerCase();
+  const accent = (single ? safe(input.accentColor, DEFAULT_ACCENT) : safe(input.gradientTo, DEFAULT_GRADIENT_TO)).toLowerCase();
+  return noOverrides && primary === DEFAULT_PRIMARY.toLowerCase() && accent === DEFAULT_ACCENT.toLowerCase();
 }
 
 // Selector each component maps to in the real app (drives the whole app from the one stylesheet).
@@ -316,66 +335,46 @@ const COMPONENT_SELECTORS: Record<ThemeComponent, string> = {
   badge: ".badge-accent, .pill-accent",
 };
 
-/** The variables emitted for one appearance: brand remap + the full semantic token set. */
-function varsFor(input: ThemeInput, appearance: Appearance): string {
+/** The brand + semantic variables for one appearance, as a name → value map. */
+function varMap(input: ThemeInput, appearance: Appearance): Record<string, string> {
   const b = brandForAppearance(input, appearance);
   const tokens = buildSemanticTokens(input, appearance);
-  const brandVars = `
-    --brand-orange: ${b.primarySolid};
-    --brand-orange-light: ${b.accentSolid};
-    --brand-gradient: ${b.gradient};
-    --brand-primary: ${b.primarySolid};
-    --brand-primary-foreground: ${tokens["--primary-text"]};
-    --brand-accent: ${b.accentSolid};
-    --brand-accent-foreground: ${tokens["--accent-text"]};
-    --sidebar-active-bg: ${tokens["--selected-item-background"]};
-    --accent-orange-bg: ${rgba(b.accentSolid, appearance === "dark" ? 0.22 : 0.14)};
-    --chart-navy: ${b.accentSolid};
-    --ring-orange: 0 0 0 3px ${tokens["--focus-ring"]};
-  `;
-  const tokenVars = Object.entries(tokens).map(([k, v]) => `${k}: ${v};`).join("");
-  return `${brandVars}${tokenVars}`;
+  return {
+    "--brand-orange": b.accentSolid,
+    "--brand-orange-light": lighten(b.accentSolid, 0.25),
+    "--brand-gradient": b.accentSolid, // legacy token, solid (D-04)
+    "--brand-primary": b.primarySolid,
+    "--brand-primary-foreground": tokens["--primary-text"],
+    "--brand-accent": b.accentSolid,
+    "--brand-accent-foreground": tokens["--accent-text"],
+    "--sidebar-active-bg": tokens["--selected-item-background"],
+    "--accent-orange-bg": rgba(b.accentSolid, appearance === "dark" ? 0.22 : 0.14),
+    "--accent-tint": rgba(b.accentSolid, appearance === "dark" ? 0.22 : 0.14),
+    "--chart-navy": appearance === "dark" ? b.accentSolid : b.primarySolid,
+    ...tokens,
+  };
 }
 
 /**
- * Per-appearance component rules. `scope` prefixes each selector so the dark values only apply
- * inside the dark root (each themed selector may be a comma-separated list, so every part is
- * prefixed individually).
- */
-function componentRules(input: ThemeInput, appearance: Appearance, scope = ""): string {
-  const resolved = resolveComponentColors(input, appearance);
-  return THEME_COMPONENTS.map((c) => {
-    const { bg, fg } = resolved[c];
-    const selector = COMPONENT_SELECTORS[c]
-      .split(",")
-      .map((s) => (scope ? `${scope} ${s.trim()}` : s.trim()))
-      .join(",");
-    return `${selector}{background:${bg} !important;color:${fg} !important;}`;
-  }).join("");
-}
-
-/**
- * Build the injected stylesheet. Light and dark get SEPARATE calculated blocks — the same brand
- * colors, adapted per mode — so nothing is painted with the other mode's values.
+ * Build the injected stylesheet: ONE :root block in which every variable is `light-dark(light,
+ * dark)`, exactly like globals.css, so the org theme follows the same color-scheme switch and there
+ * is no second (or third) dark block to drift. Light and dark values are still calculated
+ * separately. Component rules use the same form; every value is a solid colour (D-04).
  */
 export function buildThemeOverrideCss(input: ThemeInput): string {
   if (isDefaultTheme(input)) return "";
-  const light = varsFor(input, "light");
-  const dark = varsFor(input, "dark");
+  const light = varMap(input, "light");
+  const dark = varMap(input, "dark");
+  const vars = Object.keys(light).map((k) => (light[k] === dark[k] ? `${k}:${light[k]};` : `${k}:light-dark(${light[k]}, ${dark[k]});`)).join("");
 
-  return [
-    // Light (default) — also applies when the user explicitly forces light.
-    `:root{${light}}`,
-    componentRules(input, "light"),
-    // Dark — explicit toggle.
-    `:root[data-theme="dark"]{${dark}}`,
-    componentRules(input, "dark", ':root[data-theme="dark"]'),
-    // Dark — system preference, unless the user forced light.
-    `@media (prefers-color-scheme: dark){`,
-    `:root:not([data-theme="light"]){${dark}}`,
-    componentRules(input, "dark", ':root:not([data-theme="light"])'),
-    `}`,
-  ].join("\n");
+  const rl = resolveComponentColors(input, "light");
+  const rd = resolveComponentColors(input, "dark");
+  const pair = (l: string, d: string) => (l === d ? l : `light-dark(${l}, ${d})`);
+  const rules = THEME_COMPONENTS.map(
+    (c) => `${COMPONENT_SELECTORS[c]}{background:${pair(rl[c].bg, rd[c].bg)} !important;color:${pair(rl[c].fg, rd[c].fg)} !important;}`,
+  ).join("");
+
+  return `:root{${vars}}\n${rules}`;
 }
 
 // ---- contrast audit -------------------------------------------------------

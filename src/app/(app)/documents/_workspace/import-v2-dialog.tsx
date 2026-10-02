@@ -364,7 +364,7 @@ export function ImportV2Dialog({ locale, module, moduleLabel, fields, entity = "
                   {clientPreview.rows.map((r) => (
                     <tr key={r.row} className="border-t border-line align-top">
                       <td className="p-2">{r.ok ? <CheckCircle2 className="size-4 text-success" /> : <XCircle className="size-4 text-danger" />}</td>
-                      <td className="p-2 text-ink-faint font-mono">{r.row}</td>
+                      <td className="p-2 text-ink-faint num-tabular">{r.row}</td>
                       <td className="p-2 font-semibold">{r.name || "—"}</td>
                       <td className="p-2">{r.email || "—"}</td>
                       <td className="p-2 font-mono">{r.phone || "—"}</td>
@@ -448,10 +448,10 @@ export function ImportV2Dialog({ locale, module, moduleLabel, fields, entity = "
                       <td className="p-2 font-mono">{d.number}</td>
                       <td className="p-2">{d.client || "—"}</td>
                       <td className="p-2">{d.lineCount}</td>
-                      <td className="p-2 font-mono">{d.issueDate || "—"}</td>
-                      <td className="p-2 font-mono">{d.validUntil || "—"}</td>
+                      <td className="p-2 num-tabular">{d.issueDate || "—"}</td>
+                      <td className="p-2 num-tabular">{d.validUntil || "—"}</td>
                       <td className="p-2">{d.termCount}</td>
-                      <td className="p-2 text-ink-faint font-mono">{d.rows.join(", ")}</td>
+                      <td className="p-2 text-ink-faint num-tabular">{d.rows.join(", ")}</td>
                       <td className="p-2 text-danger">{d.errors.join(" ")}</td>
                     </tr>
                   ))}

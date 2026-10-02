@@ -146,12 +146,12 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
             </span>
           )}
           {project.startDate && (
-            <span className="font-mono text-xs">
+            <span className="num-tabular text-xs">
               {t(locale, "Start Date")} {project.startDate}
             </span>
           )}
           {project.endDate && (
-            <span className="font-mono text-xs">
+            <span className="num-tabular text-xs">
               {t(locale, "End Date")} {project.endDate}
             </span>
           )}
@@ -207,13 +207,13 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
           <TableBody>
             {timeLogs.map((log) => (
               <TableRow key={log.id}>
-                <TableCell className="font-mono text-xs">{log.date}</TableCell>
+                <TableCell className="num-tabular text-xs">{log.date}</TableCell>
                 <TableCell>{log.taskTitle}</TableCell>
                 <TableCell>{log.employeeName}</TableCell>
                 <TableCell>
                   <Badge variant={log.billable ? "success" : "neutral"}>{t(locale, log.billable ? "Yes" : "No")}</Badge>
                 </TableCell>
-                <TableCell className="text-right font-mono">{Number(log.hours).toFixed(1)}</TableCell>
+                <TableCell className="text-right num-tabular">{Number(log.hours).toFixed(1)}</TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -247,8 +247,8 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                     {d.number}
                   </Link>
                 </TableCell>
-                <TableCell className="font-mono text-xs">{d.date}</TableCell>
-                <TableCell className="text-right font-mono">
+                <TableCell className="num-tabular text-xs">{d.date}</TableCell>
+                <TableCell className="text-right num-tabular">
                   <Money amount={d.total} />
                 </TableCell>
                 <TableCell className="text-[12.5px] text-ink-muted">{t(locale, d.status)}</TableCell>

@@ -153,7 +153,7 @@ export async function PaymentHistory({
             <tbody>
               {rows.map((p) => (
                 <tr key={p.id} className={`border-t border-line${p.reversedAt ? " text-ink-faint" : ""}`} data-reversed={p.reversedAt ? "1" : undefined}>
-                  <td className="px-3 py-2 font-mono text-xs">{p.paymentDate}</td>
+                  <td className="px-3 py-2 num-tabular text-xs">{p.paymentDate}</td>
                   <td className="px-3 py-2">{p.method ? t(locale, METHOD_LABEL[p.method] ?? p.method) : "—"}</td>
                   <td className="px-3 py-2">{p.bankName ?? "—"}</td>
                   <td className="px-3 py-2">
@@ -171,11 +171,11 @@ export async function PaymentHistory({
                       <Badge variant="neutral" className="ms-1.5" data-testid={`reversed-badge-${p.id}`}>{t(locale, "Reversed")}</Badge>
                     )}
                   </td>
-                  <td className={`px-3 py-2 text-end font-mono${p.reversedAt ? " line-through" : ""}`}>
+                  <td className={`px-3 py-2 text-end num-tabular${p.reversedAt ? " line-through" : ""}`}>
                     <DocNum value={p.amount} kind="amount" />
                   </td>
                   {showBase && (
-                    <td className={`px-3 py-2 text-end font-mono${p.reversedAt ? " line-through" : ""}`}>
+                    <td className={`px-3 py-2 text-end num-tabular${p.reversedAt ? " line-through" : ""}`}>
                       {p.baseAmount === null ? "—" : <DocNum value={p.baseAmount} kind="amount" />}
                     </td>
                   )}

@@ -57,7 +57,7 @@ export default async function JournalPage() {
           <TableBody>
             {recentEntries.map((e) => (
               <TableRow key={e.id} id={`je-${e.id}`} className="scroll-mt-24 target:bg-canvas">
-                <TableCell className="mono">{e.entryDate}</TableCell>
+                <TableCell className="num-tabular">{e.entryDate}</TableCell>
                 <TableCell>{e.memo}</TableCell>
                 <TableCell className="num">
                   <Money amount={e.total} context="summary" />

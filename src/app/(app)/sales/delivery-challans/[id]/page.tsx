@@ -106,7 +106,7 @@ export default async function DcDetailPage({ params }: { params: Promise<{ id: s
             <Fragment key={it.id}>
             <TableRow>
               <TableCell><LineItemCell description={it.description} /></TableCell>
-              <TableCell className="text-right font-mono"><DocNum value={it.quantity} kind="quantity" /></TableCell>
+              <TableCell className="text-right num-tabular"><DocNum value={it.quantity} kind="quantity" /></TableCell>
             </TableRow>
               <LineDescRow customFields={it.customFields} />
             </Fragment>

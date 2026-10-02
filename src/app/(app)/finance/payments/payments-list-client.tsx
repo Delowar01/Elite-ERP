@@ -120,7 +120,7 @@ export function PaymentsListClient({
           <TableBody>
             {rows.map((p) => (
               <TableRow key={p.id}>
-                <TableCell className="font-mono text-xs">{p.paymentDate}</TableCell>
+                <TableCell className="num-tabular text-xs">{p.paymentDate}</TableCell>
                 <TableCell>
                   <Badge variant={p.direction === "in" ? "success" : "danger"}>{p.direction === "in" ? t(locale, "In") : t(locale, "Out")}</Badge>
                 </TableCell>
@@ -141,7 +141,7 @@ export function PaymentsListClient({
                 <TableCell>{p.customerName ?? p.vendorName}</TableCell>
                 <TableCell>{p.bankAccountName}</TableCell>
                 <TableCell className="text-[12.5px] text-ink-muted">{p.method ? t(locale, METHOD_LABELS[p.method] ?? p.method) : "—"}</TableCell>
-                <TableCell className="text-right font-mono">
+                <TableCell className="text-right num-tabular">
                   <Money amount={p.amount} />
                 </TableCell>
                 <TableCell>

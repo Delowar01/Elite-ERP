@@ -60,7 +60,7 @@ export function ValidityDaysDialog({
             <Input id="vd-days" type="number" min={0} value={days} onChange={(e) => setDays(e.target.value)} autoFocus />
           </div>
           <p className="text-[11.5px] text-ink-faint">
-            {baseLabel}: <span className="font-mono text-ink">{base}</span> → <span className="font-mono text-ink">{preview}</span>
+            {baseLabel}: <span className="num-tabular text-ink">{base}</span> → <span className="num-tabular text-ink">{preview}</span>
           </p>
           <p className="text-[11px] text-ink-faint">{t(locale, "Remembered for future documents and recalculated when the Issue Date changes.")}</p>
         </div>

@@ -82,8 +82,8 @@ export default async function AttendancePage() {
               return (
                 <TableRow key={e.id}>
                   <TableCell>{e.name}</TableCell>
-                  <TableCell className="font-mono text-xs">{fmtTime(record?.checkIn ?? null)}</TableCell>
-                  <TableCell className="font-mono text-xs">{fmtTime(record?.checkOut ?? null)}</TableCell>
+                  <TableCell className="num-tabular text-xs">{fmtTime(record?.checkIn ?? null)}</TableCell>
+                  <TableCell className="num-tabular text-xs">{fmtTime(record?.checkOut ?? null)}</TableCell>
                   <TableCell>
                     {status ? (
                       <Badge variant={STATUS_VARIANT[status] ?? "neutral"}>{t(locale, STATUS_LABEL[status] ?? status)}</Badge>

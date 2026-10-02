@@ -61,7 +61,7 @@ function quarterRange(ref: Date): DateRange {
 
 // Signed amount cell — negatives in danger red, drill affordance when an accountId is given.
 function Num({ v, onDrill, strong }: { v: number; onDrill?: () => void; strong?: boolean }) {
-  const cls = `mono ${v < 0 ? "text-danger" : ""} ${strong ? "font-semibold" : ""}`;
+  const cls = `num-tabular ${v < 0 ? "text-danger" : ""} ${strong ? "font-semibold" : ""}`;
   const body = <Money amount={v} context="document" className={cls} />;
   return onDrill ? (
     <button type="button" className="hover:text-brand-orange cursor-pointer" onClick={onDrill}>{body}</button>
@@ -228,7 +228,7 @@ function Cards({ items }: { items: { label: string; value: number; badge?: strin
       {items.map((it) => (
         <div key={it.label} className="card" style={{ padding: "12px 14px" }}>
           <div className="text-[11px] uppercase tracking-wide text-ink-faint">{it.label}</div>
-          <div className="text-[19px] font-bold mono mt-0.5"><Money amount={it.value} context="summary" /></div>
+          <div className="text-[19px] font-bold num-tabular mt-0.5"><Money amount={it.value} context="summary" /></div>
           {it.badge && <div className={`text-[11px] mt-1 ${it.ok ? "text-success" : "text-danger"}`}>{it.badge}</div>}
           {it.delta != null && <div className={`text-[11px] mt-1 ${it.delta >= 0 ? "text-success" : "text-danger"}`}>{it.delta >= 0 ? "▲" : "▼"} <Money amount={Math.abs(it.delta)} context="summary" /></div>}
         </div>
@@ -356,16 +356,16 @@ function TbView({ locale, d, search, onDrill }: { locale: Locale; d: TrialBalanc
             {rows.map((r) => (
               <TableRow key={r.id} className="cursor-pointer" onClick={() => onDrill({ id: r.id, name: r.name })}>
                 <TableCell className="mono">{r.code}</TableCell><TableCell>{accountName(locale, r)}</TableCell>
-                <TableCell className="num mono">{cell(r.openingDr)}</TableCell><TableCell className="num mono">{cell(r.openingCr)}</TableCell>
-                <TableCell className="num mono">{cell(r.periodDebit)}</TableCell><TableCell className="num mono">{cell(r.periodCredit)}</TableCell>
-                <TableCell className="num mono">{cell(r.closingDr)}</TableCell><TableCell className="num mono">{cell(r.closingCr)}</TableCell>
+                <TableCell className="num num-tabular">{cell(r.openingDr)}</TableCell><TableCell className="num num-tabular">{cell(r.openingCr)}</TableCell>
+                <TableCell className="num num-tabular">{cell(r.periodDebit)}</TableCell><TableCell className="num num-tabular">{cell(r.periodCredit)}</TableCell>
+                <TableCell className="num num-tabular">{cell(r.closingDr)}</TableCell><TableCell className="num num-tabular">{cell(r.closingCr)}</TableCell>
               </TableRow>
             ))}
             <TableRow className="font-semibold">
               <TableCell /><TableCell>{t(locale, "TOTAL")}</TableCell>
-              <TableCell className="num mono">{cell(d.totals.openingDr)}</TableCell><TableCell className="num mono">{cell(d.totals.openingCr)}</TableCell>
-              <TableCell className="num mono">{cell(d.totals.periodDr)}</TableCell><TableCell className="num mono">{cell(d.totals.periodCr)}</TableCell>
-              <TableCell className="num mono">{cell(d.totals.closingDr)}</TableCell><TableCell className="num mono">{cell(d.totals.closingCr)}</TableCell>
+              <TableCell className="num num-tabular">{cell(d.totals.openingDr)}</TableCell><TableCell className="num num-tabular">{cell(d.totals.openingCr)}</TableCell>
+              <TableCell className="num num-tabular">{cell(d.totals.periodDr)}</TableCell><TableCell className="num num-tabular">{cell(d.totals.periodCr)}</TableCell>
+              <TableCell className="num num-tabular">{cell(d.totals.closingDr)}</TableCell><TableCell className="num num-tabular">{cell(d.totals.closingCr)}</TableCell>
             </TableRow>
           </TableBody>
         </Table>
@@ -385,7 +385,7 @@ function GlView({ locale, blocks, search }: { locale: Locale; blocks: GlAccountB
         <div key={b.accountId}>
           <div className="flex items-center justify-between mb-1.5">
             <div className="font-semibold text-[13px]"><span className="mono text-ink-faint">{b.code}</span> {accountName(locale, b)}</div>
-            <div className="text-[12px] text-ink-muted">{t(locale, "Opening")}: <span className="mono"><Money amount={b.opening} context="document" /></span></div>
+            <div className="text-[12px] text-ink-muted">{t(locale, "Opening")}: <span className="num-tabular"><Money amount={b.opening} context="document" /></span></div>
           </div>
           <div className="table-scroll">
             <Table>
@@ -398,17 +398,17 @@ function GlView({ locale, blocks, search }: { locale: Locale; blocks: GlAccountB
               <TableBody>
                 {b.rows.map((r, i) => (
                   <TableRow key={i}>
-                    <TableCell className="mono text-xs">{r.date}</TableCell>
+                    <TableCell className="num-tabular text-xs">{r.date}</TableCell>
                     <TableCell>{r.memo}</TableCell>
                     <TableCell className="text-ink-faint text-xs">{t(locale, sourceLabel(r.sourceType))}</TableCell>
-                    <TableCell className="num mono">{cell(r.debit)}</TableCell><TableCell className="num mono">{cell(r.credit)}</TableCell>
-                    <TableCell className="num mono"><Money amount={r.running} context="document" /></TableCell>
+                    <TableCell className="num num-tabular">{cell(r.debit)}</TableCell><TableCell className="num num-tabular">{cell(r.credit)}</TableCell>
+                    <TableCell className="num num-tabular"><Money amount={r.running} context="document" /></TableCell>
                   </TableRow>
                 ))}
                 <TableRow className="font-semibold">
                   <TableCell colSpan={3}>{t(locale, "Closing")}</TableCell>
-                  <TableCell className="num mono">{cell(b.totalDebit)}</TableCell><TableCell className="num mono">{cell(b.totalCredit)}</TableCell>
-                  <TableCell className="num mono"><Money amount={b.closing} context="document" /></TableCell>
+                  <TableCell className="num num-tabular">{cell(b.totalDebit)}</TableCell><TableCell className="num num-tabular">{cell(b.totalCredit)}</TableCell>
+                  <TableCell className="num num-tabular"><Money amount={b.closing} context="document" /></TableCell>
                 </TableRow>
               </TableBody>
             </Table>
@@ -448,12 +448,12 @@ function AgingView({ locale, d, search, kind }: { locale: Locale; d: Aging; sear
         {buckets.map((b) => (
           <div key={b} className="card" style={{ padding: "10px 12px" }}>
             <div className="text-[11px] uppercase tracking-wide text-ink-faint">{t(locale, BUCKET_LABELS[b])}</div>
-            <div className="text-[16px] font-bold mono mt-0.5"><Money amount={d.buckets[b]} context="summary" /></div>
+            <div className="text-[16px] font-bold num-tabular mt-0.5"><Money amount={d.buckets[b]} context="summary" /></div>
           </div>
         ))}
         <div className="card" style={{ padding: "10px 12px", borderColor: "var(--brand-orange)" }}>
           <div className="text-[11px] uppercase tracking-wide text-ink-faint">{t(locale, "Total Outstanding")}</div>
-          <div className="text-[16px] font-bold mono mt-0.5"><Money amount={d.totalOutstanding} context="summary" /></div>
+          <div className="text-[16px] font-bold num-tabular mt-0.5"><Money amount={d.totalOutstanding} context="summary" /></div>
         </div>
       </div>
       <div className="table-scroll">
@@ -474,11 +474,11 @@ function AgingView({ locale, d, search, kind }: { locale: Locale; d: Aging; sear
               <TableRow key={r.id}>
                 <TableCell><Link href={hrefFor(r.id)} className="hover:text-brand-orange font-medium">{r.number}</Link></TableCell>
                 <TableCell>{r.party}</TableCell>
-                <TableCell className="mono text-xs">{r.date}</TableCell><TableCell className="mono text-xs">{r.dueDate}</TableCell>
-                <TableCell className="num mono">{r.overdueDays}</TableCell>
-                <TableCell className="num mono"><Money amount={r.total} context="document" /></TableCell>
-                <TableCell className="num mono"><Money amount={r.paid} context="document" /></TableCell>
-                <TableCell className="num mono font-semibold"><Money amount={r.outstanding} context="document" /></TableCell>
+                <TableCell className="num-tabular text-xs">{r.date}</TableCell><TableCell className="num-tabular text-xs">{r.dueDate}</TableCell>
+                <TableCell className="num num-tabular">{r.overdueDays}</TableCell>
+                <TableCell className="num num-tabular"><Money amount={r.total} context="document" /></TableCell>
+                <TableCell className="num num-tabular"><Money amount={r.paid} context="document" /></TableCell>
+                <TableCell className="num num-tabular font-semibold"><Money amount={r.outstanding} context="document" /></TableCell>
                 <TableCell className="text-xs">{t(locale, BUCKET_LABELS[r.bucket])}</TableCell>
               </TableRow>
             ))}
@@ -538,10 +538,10 @@ function DrillDrawer({ locale, drill, block, loading, onClose }: { locale: Local
               <TableBody>
                 {rows.map((r, i) => (
                   <TableRow key={i}>
-                    <TableCell className="mono text-xs">{r.date}</TableCell>
+                    <TableCell className="num-tabular text-xs">{r.date}</TableCell>
                     <TableCell className="text-xs">{r.memo}</TableCell>
-                    <TableCell className="num mono">{cell(r.debit)}</TableCell><TableCell className="num mono">{cell(r.credit)}</TableCell>
-                    <TableCell className="num mono"><Money amount={r.running} context="document" /></TableCell>
+                    <TableCell className="num num-tabular">{cell(r.debit)}</TableCell><TableCell className="num num-tabular">{cell(r.credit)}</TableCell>
+                    <TableCell className="num num-tabular"><Money amount={r.running} context="document" /></TableCell>
                   </TableRow>
                 ))}
               </TableBody>

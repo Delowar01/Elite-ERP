@@ -13,37 +13,52 @@
  * --brand-orange, --ink*, --line*, --surface*, --shadow-*, --font-*, --accent-purple*,
  * --info, --success, --warning, --danger pairs) — those already match the mockup's
  * :root values byte-for-byte (case/whitespace differences only), confirmed by diff.
+ *
+ * SUPERSEDED (owner decision D-01, DEV-UI-01.1). The Mockup V12 contract above is historical
+ * reference only; the Navy Command tokens in globals.css are the design authority, and the legacy
+ * token names this file uses now resolve to them. DEV-UI-01.1 edited only the rules that ARE the
+ * shared foundation primitives, each marked "DEV-UI-01.1" below:
+ *   .card                          8px radius, border-led, no default shadow, no hover lift
+ *   .btn / .btn-primary            flat solid fill, 6px radius, no glow, no hover lift (height unchanged)
+ *   .btn-accent                    6px radius
+ *   .hash-strip .cmdk-kbd .acct-row .code .badge-zatca
+ *                                  IBM Plex Mono via --font-code-family (codes, keys, hashes only)
+ * DEV-UI-01.1-C1 — typography semantics. `.mono` and var(--font-mono) are IBM Plex Mono and stay on
+ * codes and identifiers. Rules that hold NUMERIC data (amounts, balances, totals, line-item inputs)
+ * use var(--font-numeric) + tabular figures instead: td.num, .totals-strip .v, .item-cell-input,
+ * the discount input, .cellval, .acct-row .bal, .tb-tile .v, .donut-legend-row .val,
+ * .bc-stat-row .val; and dates typed into document header fields (.doc-field input[type="date"]).
+ * Everything else is untouched and is restyled by its own later DEV-UI stage.
  */
 
 .mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
 
-.card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow-card); transition: transform .2s, box-shadow .2s; }
+/* DEV-UI-01.1 — card foundation: solid surface, semantic border, 8px radius, no shadow, no lift. */
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; box-shadow: none; transition: border-color .2s ease; }
 
-.card, .swatch, .logo-card, .type-row {
+.swatch, .logo-card, .type-row {
   box-shadow: 0 1px 0 rgba(17,17,40,0.02), 0 1px 2px rgba(17,17,40,0.04), 0 8px 24px -12px rgba(17,17,40,0.08);
   transition: transform .35s cubic-bezier(.2,.7,.2,1), box-shadow .35s cubic-bezier(.2,.7,.2,1), border-color .3s ease;
 }
 
-.card:hover, .swatch:hover, .logo-card:hover {
+.swatch:hover, .logo-card:hover {
   transform: translateY(-1px);
   box-shadow: 0 2px 4px rgba(17,17,40,0.04), 0 20px 40px -18px rgba(17,17,40,0.18);
 }
 
-.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 42px; border-radius: 10px; font-family: var(--font-body); font-weight: 600; font-size: 13.5px; border: none; cursor: pointer; position: relative; }
+/* DEV-UI-01.1 — legacy button classes follow the button foundation: flat, solid, 6px radius, no glow,
+   no lift. Heights are left as they are; control sizing belongs to DEV-UI-01.4. */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 42px; border-radius: 6px; font-family: var(--font-body); font-weight: 600; font-size: 13px; border: none; cursor: pointer; position: relative; }
 
-.btn-primary { background: var(--primary-background); color: var(--primary-text); width: 100%; box-shadow: 0 6px 18px -4px var(--focus-ring); }
+.btn-primary { background: var(--primary-background); color: var(--primary-text); width: 100%; box-shadow: none; }
 
 .btn-glass { background: var(--surface); color: var(--ink); border: 1px solid var(--line-strong); }
 
-.btn { transition: transform .18s cubic-bezier(.2,.7,.2,1), box-shadow .25s ease, background .2s ease, color .2s ease !important; }
+.btn { transition: background-color .15s ease, border-color .15s ease, color .15s ease !important; }
 
-.btn:hover { transform: translateY(-1px); }
+.btn-primary:hover { background: var(--primary-hover); }
 
-.btn-primary { box-shadow: 0 1px 0 rgba(255,255,255,.18) inset, 0 8px 20px -8px color-mix(in oklab, var(--brand-orange, #E87722) 65%, transparent) !important; }
-
-.btn-primary:hover { filter: brightness(1.06); box-shadow: 0 1px 0 rgba(255,255,255,.22) inset, 0 14px 28px -10px color-mix(in oklab, var(--brand-orange, #E87722) 70%, transparent) !important; }
-
-.btn-primary:active { transform: translateY(0); filter: brightness(0.97); }
+.btn:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 
 .btn-glass:hover { background: var(--canvas); border-color: var(--ink-faint); }
 
@@ -88,7 +103,7 @@ table.data-table td { padding: 13px 16px; font-size: 13.5px; border-bottom: 1px 
 
 table.data-table tbody tr:last-child td { border-bottom: none; }
 
-table.data-table td.num { font-family: var(--font-mono); text-align: right; }
+table.data-table td.num { font-family: var(--font-numeric); font-variant-numeric: tabular-nums; text-align: right; }
 
 table.data-table th.num { text-align: right; }
 
@@ -106,7 +121,7 @@ table.data-table tbody tr.row-clickable { cursor: pointer; }
 
 .totals-strip .t-row.final { color: var(--ink); font-weight: 700; font-size: 16px; padding-top: 10px; margin-top: 6px; border-top: 1px solid var(--line); font-family: var(--font-display); }
 
-.totals-strip .t-row .v { font-family: var(--font-mono); }
+.totals-strip .t-row .v { font-family: var(--font-numeric); font-variant-numeric: tabular-nums; }
 
 .einvoice-panel { padding: 20px; position: sticky; top: 16px; }
 
@@ -114,7 +129,7 @@ table.data-table tbody tr.row-clickable { cursor: pointer; }
 
 .einvoice-panel h4 { font-size: 13.5px; font-weight: 700; }
 
-.einvoice-panel .badge-zatca { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.04em; background: var(--info-bg); color: var(--info); padding: 3px 8px; border-radius: 6px; }
+.einvoice-panel .badge-zatca { font-family: var(--font-code-family); font-size: 10px; letter-spacing: 0.04em; background: var(--info-bg); color: var(--info); padding: 3px 8px; border-radius: 6px; }
 
 .einvoice-panel .desc { font-size: 12px; color: var(--ink-muted); margin: 8px 0 16px; line-height: 1.6; }
 
@@ -132,7 +147,7 @@ table.data-table tbody tr.row-clickable { cursor: pointer; }
 
 .zatca-fields .zf .v { font-family: var(--font-mono); font-weight: 500; }
 
-.hash-strip { font-family: var(--font-mono); font-size: 10px; color: var(--ink-faint); word-break: break-all; background: var(--canvas); border-radius: 8px; padding: 10px 12px; margin-top: 14px; line-height: 1.6; }
+.hash-strip { font-family: var(--font-code-family); font-size: 10px; color: var(--ink-faint); word-break: break-all; background: var(--canvas); border-radius: 8px; padding: 10px 12px; margin-top: 14px; line-height: 1.6; }
 
 .hash-strip .hl { color: var(--ink-muted); text-transform: uppercase; letter-spacing: .05em; font-size: 9px; display: block; margin-bottom: 3px; }
 
@@ -183,6 +198,9 @@ table.data-table tbody tr.row-clickable { cursor: pointer; }
 .doc-field .input { flex: 1; height: 38px; border-radius: 9px; border: 1px solid var(--line-strong); background: var(--surface); display: flex; align-items: center; padding: 0 12px; font-size: 12.5px; color: var(--ink); font-family: var(--font-mono); }
 
 .doc-field .input.plain { font-family: var(--font-body); }
+
+/* DEV-UI-01.1-C1: dates are numeric data, not identifiers — the number box beside them stays mono. */
+.doc-field .input input[type="date"] { font-family: var(--font-numeric); font-variant-numeric: tabular-nums; }
 
 .doc-gear-btn { width: 38px; height: 38px; border-radius: 9px; border: 1px solid var(--line-strong); background: var(--surface); display: flex; align-items: center; justify-content: center; color: var(--ink-muted); flex-shrink: 0; cursor: pointer; }
 
@@ -251,7 +269,7 @@ table.doc-items-table td.num { min-width: 92px; }
 
 .item-quicklinks span { font-size: 11px; font-weight: 600; color: var(--brand-orange); cursor: pointer; }
 
-.item-cell-input { height: 32px; width: 100%; min-width: 84px; box-sizing: border-box; border-radius: 7px; border: 1px solid var(--line-strong); background: var(--surface); padding: 0 8px; font-family: var(--font-mono); font-size: 12px; text-align: right; color: var(--ink); }
+.item-cell-input { height: 32px; width: 100%; min-width: 84px; box-sizing: border-box; border-radius: 7px; border: 1px solid var(--line-strong); background: var(--surface); padding: 0 8px; font-family: var(--font-numeric); font-variant-numeric: tabular-nums; font-size: 12px; text-align: right; color: var(--ink); }
 
 .item-cell-select { height: 32px; border-radius: 7px; border: 1px solid var(--line-strong); background: var(--surface); padding: 0 8px; font-size: 12px; display: flex; align-items: center; gap: 4px; justify-content: flex-end; color: var(--ink); }
 
@@ -301,7 +319,7 @@ table.doc-items-table td.num { min-width: 92px; }
 
 .doc-totals-card { padding: 20px 22px; }
 
-.doc-totals-card .t-row.discount .v input { width: 96px; height: 28px; border-radius: 7px; border: 1px solid var(--line-strong); background: var(--surface); text-align: right; font-family: var(--font-mono); font-size: 12.5px; padding: 0 8px; color: var(--ink); }
+.doc-totals-card .t-row.discount .v input { width: 96px; height: 28px; border-radius: 7px; border: 1px solid var(--line-strong); background: var(--surface); text-align: right; font-family: var(--font-numeric); font-variant-numeric: tabular-nums; font-size: 12.5px; padding: 0 8px; color: var(--ink); }
 
 .doc-totals-card .t-row.grand { padding: 14px 0 4px; border-top: 1px solid var(--line); margin-top: 8px; }
 
@@ -439,7 +457,7 @@ table.doc-items-table td.num { min-width: 92px; }
 
 .cmdk-trigger-pill { display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 12px; border-radius: 9px; border: 1px solid var(--line-strong); background: var(--surface); font-size: 11.5px; color: var(--ink-muted); cursor: pointer; }
 
-.cmdk-kbd { font-family: var(--font-mono); font-size: 10.5px; color: var(--ink-faint); border: 1px solid var(--line-strong); border-radius: 5px; padding: 1px 6px; }
+.cmdk-kbd { font-family: var(--font-code-family); font-size: 10.5px; color: var(--ink-faint); border: 1px solid var(--line-strong); border-radius: 5px; padding: 1px 6px; }
 
 [dir="rtl"] .nav-divider, [dir="rtl"] .topbar-profile { direction: rtl; }
 
@@ -587,7 +605,7 @@ table.data-table.list-table td.mono, table.data-table.list-table td.num { white-
 
 .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 
-table.data-table.line-table .cellval { font-family: var(--font-mono); font-size: 12.5px; }
+table.data-table.line-table .cellval { font-family: var(--font-numeric); font-variant-numeric: tabular-nums; font-size: 12.5px; }
 
 table.data-table.line-table td { padding: 9px 14px; }
 
@@ -603,11 +621,11 @@ table.data-table.line-table td { padding: 9px 14px; }
 
 .acct-row:not(.selected):hover { background: var(--canvas); }
 
-.acct-row .code { font-family: var(--font-mono); font-size: 11px; color: var(--ink-faint); width: 42px; flex-shrink: 0; }
+.acct-row .code { font-family: var(--font-code-family); font-size: 11px; color: var(--ink-faint); width: 42px; flex-shrink: 0; }
 
 .acct-row .nm { flex: 1; font-weight: 500; }
 
-.acct-row .bal { font-family: var(--font-mono); font-size: 12px; color: var(--ink-muted); }
+.acct-row .bal { font-family: var(--font-numeric); font-variant-numeric: tabular-nums; font-size: 12px; color: var(--ink-muted); }
 
 .tb-strip { display: flex; gap: 12px; margin-top: 16px; }
 
@@ -615,7 +633,7 @@ table.data-table.line-table td { padding: 9px 14px; }
 
 .tb-tile .l { font-size: 10.5px; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-faint); }
 
-.tb-tile .v { font-family: var(--font-mono); font-weight: 600; font-size: 15px; margin-top: 5px; }
+.tb-tile .v { font-family: var(--font-numeric); font-variant-numeric: tabular-nums; font-weight: 600; font-size: 15px; margin-top: 5px; }
 
 .tb-tile.balanced .v { color: var(--success); }
 
@@ -687,7 +705,7 @@ table.data-table.line-table td { padding: 9px 14px; }
 
 .donut-legend-row .lbl { color: var(--ink-muted); }
 
-.donut-legend-row .val { font-family: var(--font-mono); font-weight: 600; color: var(--ink); }
+.donut-legend-row .val { font-family: var(--font-numeric); font-variant-numeric: tabular-nums; font-weight: 600; color: var(--ink); }
 
 .quick-actions-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
 
@@ -731,7 +749,7 @@ table.data-table.line-table td { padding: 9px 14px; }
 
 .bc-stat-row .lbl .dot { width: 7px; height: 7px; border-radius: 999px; }
 
-.bc-stat-row .val { font-family: var(--font-mono); font-weight: 600; }
+.bc-stat-row .val { font-family: var(--font-numeric); font-variant-numeric: tabular-nums; font-weight: 600; }
 
 .bc-link { display: flex; align-items: center; gap: 4px; font-size: 11.5px; font-weight: 600; color: var(--brand-orange); margin-top: 12px; cursor: pointer; }
 
@@ -897,7 +915,7 @@ table.data-table.line-table td { padding: 9px 14px; }
    Color Theme <style> (buildThemeOverrideCss) recolors these selectors when customized. */
 .btn-accent {
   display: inline-flex; align-items: center; justify-content: center; gap: 7px;
-  height: 40px; padding: 0 18px; border-radius: 11px; font-size: 13px; font-weight: 600;
+  height: 40px; padding: 0 18px; border-radius: 6px; font-size: 13px; font-weight: 600; /* DEV-UI-01.1: 6px */
   border: none; cursor: pointer; background: var(--accent-background); color: var(--accent-text);
   transition: filter .15s ease;
 }

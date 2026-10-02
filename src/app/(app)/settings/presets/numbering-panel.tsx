@@ -102,7 +102,7 @@ export function NumberingPanel({ locale, sequences }: { locale: Locale; sequence
                       type="number"
                       value={draft.padding}
                       onChange={(e) => setDraft((d) => ({ ...d, padding: e.target.value }))}
-                      className="h-8 font-mono w-16 ml-auto text-right"
+                      className="h-8 num-tabular w-16 ml-auto text-right"
                     />
                   </TableCell>
                   <TableCell className="text-right whitespace-nowrap">
@@ -119,7 +119,7 @@ export function NumberingPanel({ locale, sequences }: { locale: Locale; sequence
                   <TableCell className="font-medium">{t(locale, DOC_TYPE_LABELS[seq.documentType] ?? seq.documentType)}</TableCell>
                   <TableCell className="font-mono text-xs">{seq.prefix}</TableCell>
                   <TableCell className="text-right font-mono text-xs">{String(seq.nextNumber).padStart(seq.padding, "0")}</TableCell>
-                  <TableCell className="text-right font-mono text-xs">{seq.padding}</TableCell>
+                  <TableCell className="text-right num-tabular text-xs">{seq.padding}</TableCell>
                   <TableCell className="text-right whitespace-nowrap">
                     <span className="text-ink-faint text-xs font-mono mr-2 hidden sm:inline">{preview}</span>
                     <Button variant="ghost" size="icon" onClick={() => startEdit(seq)} aria-label={t(locale, "Edit")}>
