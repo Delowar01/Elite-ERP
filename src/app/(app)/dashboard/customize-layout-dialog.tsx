@@ -15,6 +15,7 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Button } from "@/components/ui/button";
 import { t, type Locale } from "@/lib/i18n/dict";
 import { DEFAULT_DASHBOARD_LAYOUT, labelFor, type DashboardLayoutItem } from "@/lib/dashboard-layout";
 import { saveDashboardLayoutAction } from "./dashboard-prefs-actions";
@@ -74,12 +75,12 @@ export function CustomizeLayoutDialog({ locale, layout }: { locale: Locale; layo
                 {t(locale, labelFor(it.key))}
               </label>
               <div className="flex items-center gap-1">
-                <button type="button" onClick={() => move(idx, -1)} disabled={idx === 0} className="p-1 text-ink-faint hover:text-ink disabled:opacity-30" aria-label={t(locale, "Move up")}>
+                <Button type="button" variant="ghost" size="icon-sm" onClick={() => move(idx, -1)} disabled={idx === 0} aria-label={t(locale, "Move up")}>
                   <ChevronUp className="size-4" />
-                </button>
-                <button type="button" onClick={() => move(idx, 1)} disabled={idx === items.length - 1} className="p-1 text-ink-faint hover:text-ink disabled:opacity-30" aria-label={t(locale, "Move down")}>
+                </Button>
+                <Button type="button" variant="ghost" size="icon-sm" onClick={() => move(idx, 1)} disabled={idx === items.length - 1} aria-label={t(locale, "Move down")}>
                   <ChevronDown className="size-4" />
-                </button>
+                </Button>
               </div>
             </div>
           ))}

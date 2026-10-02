@@ -207,13 +207,13 @@ await page.waitForTimeout(400);
 
 // A successful save must not ask to discard afterwards.
 // Pick the client through the party card's own SearchableSelect. That control is a Radix
-// Popover: the trigger is the card's only aria-expanded button, and each option is a plain
-// button inside the popper — so this stays language-independent.
+// Popover: the trigger is the card's only aria-expanded button, and each option is a
+// role="option" row inside the popper (DEV-UI-01.4; a plain button before) — language-independent.
 // `.w-full` is what separates the select's trigger from the card's pencil button (which is a
 // Dialog trigger and also carries aria-expanded).
 await page.locator('.party-card-v2 button[aria-expanded].w-full').first().click();
 await page.waitForTimeout(500);
-await page.locator('[data-radix-popper-content-wrapper] button').first().click();
+await page.locator('[data-radix-popper-content-wrapper] [role="option"]').first().click();
 await page.waitForTimeout(500);
 await page.locator('.doc-items-table input[type="text"], .doc-items-table input:not([type])').first().fill("Booth package");
 await page.locator('.doc-items-table input[type="number"]').last().fill("1000").catch(() => {});

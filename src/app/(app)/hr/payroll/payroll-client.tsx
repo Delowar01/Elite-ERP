@@ -106,7 +106,7 @@ export function PayrollClient({
 
       {!processed && (
         <div style={{ marginTop: 18 }}>
-          <Button onClick={process} disabled={pending || lines.length === 0} style={{ width: "auto", padding: "0 18px" }}>
+          <Button onClick={process} disabled={pending || lines.length === 0} style={{ padding: "0 18px" }}>
             {pending ? t(locale, "Saving…") : t(locale, "Process payroll run")}
           </Button>
         </div>

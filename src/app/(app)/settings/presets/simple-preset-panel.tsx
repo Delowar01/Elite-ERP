@@ -90,12 +90,11 @@ export function SimplePresetPanel({
                     <Pencil className="size-3.5" />
                   </Button>
                   <Button
-                    variant="ghost"
+                    variant="destructive-ghost"
                     size="icon"
                     disabled={pending}
                     onClick={() => onDelete(item.id)}
                     aria-label={t(locale, "Delete")}
-                    className="text-danger hover:text-danger"
                   >
                     <Trash2 className="size-3.5" />
                   </Button>

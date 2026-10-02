@@ -121,11 +121,11 @@ export function RecycleBinClient({ locale, rows, isOwner }: { locale: Locale; ro
                   <TableCell className="num-tabular text-xs">{r.deletedAt || "—"}</TableCell>
                   <TableCell>
                     <div className="flex items-center justify-end gap-2">
-                      <Button variant="glass" style={{ width: "auto" }} disabled={pending} onClick={() => restore(r)}>
+                      <Button variant="glass" disabled={pending} onClick={() => restore(r)}>
                         <RotateCcw className="size-3.5" /> {t(locale, "Restore")}
                       </Button>
                       {isOwner && r.canPermanentDelete && (
-                        <Button variant="ghost" style={{ width: "auto" }} disabled={pending} onClick={() => permanentDelete(r)} className="text-danger">
+                        <Button variant="destructive-ghost" disabled={pending} onClick={() => permanentDelete(r)}>
                           <Trash2 className="size-3.5" /> {t(locale, "Permanent Delete")}
                         </Button>
                       )}

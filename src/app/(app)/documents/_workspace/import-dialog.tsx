@@ -134,7 +134,7 @@ export function ImportDialog({ locale, module, importColumns }: { locale: Locale
             {t(locale, "Import creates draft records only — nothing is posted to the ledger or stock. Download the template, fill it in, then upload to preview.")}
           </p>
           <div className="flex items-center gap-2">
-            <Button variant="glass" style={{ width: "auto" }} onClick={downloadTemplate}>
+            <Button variant="glass" onClick={downloadTemplate}>
               <Download className="size-3.5" /> {t(locale, "Download Template")}
             </Button>
             <label className="btn btn-glass cursor-pointer" style={{ width: "auto" }}>
@@ -170,10 +170,10 @@ export function ImportDialog({ locale, module, importColumns }: { locale: Locale
                 </table>
               </div>
               <div className="flex items-center justify-end gap-2">
-                <Button variant="ghost" style={{ width: "auto" }} onClick={() => { setOpen(false); reset(); }}>
+                <Button variant="outline" onClick={() => { setOpen(false); reset(); }}>
                   {t(locale, "Cancel")}
                 </Button>
-                <Button style={{ width: "auto" }} disabled={pending || validCount === 0} onClick={commit}>
+                <Button disabled={pending || validCount === 0} onClick={commit}>
                   {t(locale, "Import {n} valid record(s)").replace("{n}", String(validCount))}
                 </Button>
               </div>

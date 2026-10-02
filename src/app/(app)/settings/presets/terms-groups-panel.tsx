@@ -114,7 +114,7 @@ export function TermsGroupsPanel({ locale, groups }: { locale: Locale; groups: T
                   <Button variant="ghost" size="icon" disabled={pending} onClick={() => openEdit(group)} aria-label={t(locale, "Edit")}>
                     <Pencil className="size-3.5" />
                   </Button>
-                  <Button variant="ghost" size="icon" disabled={pending} onClick={() => onDelete(group.id, group.name)} aria-label={t(locale, "Delete")} className="text-danger hover:text-danger">
+                  <Button variant="destructive-ghost" size="icon" disabled={pending} onClick={() => onDelete(group.id, group.name)} aria-label={t(locale, "Delete")}>
                     <Trash2 className="size-3.5" />
                   </Button>
                 </TableCell>

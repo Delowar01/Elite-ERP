@@ -78,7 +78,7 @@ export function LeaveClient({
     <div className="max-w-6xl mx-auto">
       <div className="main-head">
         <h3>{t(locale, "Leave Requests")}</h3>
-        <Button onClick={() => setOpen(true)} disabled={employees.length === 0} style={{ width: "auto", padding: "0 18px" }}>
+        <Button onClick={() => setOpen(true)} disabled={employees.length === 0} style={{ padding: "0 18px" }}>
           <Plus className="size-3.5" /> {t(locale, "Request Leave")}
         </Button>
       </div>

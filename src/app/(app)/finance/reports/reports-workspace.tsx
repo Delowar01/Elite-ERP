@@ -6,6 +6,7 @@ import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { Download, Search, Loader2, ChevronRight } from "lucide-react";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { t, type Locale } from "@/lib/i18n/dict";
 import { Money } from "../../sales/_shared/money";
@@ -167,7 +168,7 @@ export function ReportsWorkspace({
           </label>
           {report !== "ar" && report !== "ap" && (
             <label className="flex items-center gap-1.5 text-[12px] text-ink-muted cursor-pointer">
-              <input type="checkbox" checked={compare} onChange={(e) => setParams({ compare: e.target.checked ? "1" : undefined })} />
+              <Checkbox checked={compare} onCheckedChange={(v) => setParams({ compare: v === true ? "1" : undefined })} />
               {t(locale, "Compare with previous period")}
             </label>
           )}

@@ -24,7 +24,7 @@ export default async function ClientRecycleBinPage() {
         title="Clients — Recycle Bin"
         description="Deleted clients live here until restored or permanently deleted."
         actions={
-          <Button variant="ghost" asChild>
+          <Button variant="outline" asChild>
             <Link href="/clients">
               <ArrowLeft className="size-4" /> Back to Clients
             </Link>

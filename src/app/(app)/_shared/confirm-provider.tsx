@@ -201,7 +201,7 @@ export function ConfirmProvider({ locale, children }: { locale: Locale; children
 
           <DialogFooter>
             {/* Cancel is first and takes initial focus: the safe option, never the destructive one. */}
-            <Button variant="ghost" onClick={close} disabled={busy} autoFocus>
+            <Button variant="outline" onClick={close} disabled={busy} autoFocus>
               {content?.cancelLabel ?? t(locale, "Cancel")}
             </Button>
             {error && recovery && (

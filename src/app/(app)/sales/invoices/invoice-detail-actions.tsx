@@ -73,7 +73,7 @@ export function InvoiceDetailActions({
   if (status === "draft") {
     return (
       <div className="flex items-center gap-2.5">
-        <Button style={{ width: "auto" }} disabled={pending} onClick={send}>
+        <Button disabled={pending} onClick={send}>
           {t(locale, "Send Invoice")}
         </Button>
       </div>
@@ -87,7 +87,7 @@ export function InvoiceDetailActions({
   return (
     <div className="flex items-center gap-2.5">
       {canVoid && (
-        <Button variant="ghost" style={{ width: "auto" }} disabled={pending} onClick={voidInvoice} className="text-danger">
+        <Button variant="destructive-ghost" disabled={pending} onClick={voidInvoice}>
           {t(locale, "Void")}
         </Button>
       )}
@@ -102,7 +102,7 @@ export function InvoiceDetailActions({
           lockedDirection="in"
           lockedSourceId={invoiceId}
           trigger={
-            <Button style={{ width: "auto" }}>{t(locale, "Record Payment")}</Button>
+            <Button>{t(locale, "Record Payment")}</Button>
           }
         />
       )}

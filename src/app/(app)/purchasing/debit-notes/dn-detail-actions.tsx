@@ -45,7 +45,7 @@ export function DnDetailActions({ locale, debitNoteId, debitNoteNumber, status }
   if (status === "draft") {
     return (
       <div className="flex items-center gap-2.5">
-        <Button style={{ width: "auto" }} disabled={pending} onClick={issue}>
+        <Button disabled={pending} onClick={issue}>
           {t(locale, "Issue Debit Note")}
         </Button>
       </div>
@@ -54,7 +54,7 @@ export function DnDetailActions({ locale, debitNoteId, debitNoteNumber, status }
 
   if (status === "issued") {
     return (
-      <Button variant="ghost" style={{ width: "auto" }} disabled={pending} onClick={reverse} className="text-danger">
+      <Button variant="destructive-ghost" disabled={pending} onClick={reverse}>
         {t(locale, "Reverse Debit Note")}
       </Button>
     );

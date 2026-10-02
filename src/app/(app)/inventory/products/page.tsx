@@ -42,7 +42,7 @@ export default async function ProductsPage({
         description="Inventory catalog used across quotations, orders, and invoices."
         actions={
           <>
-            <Button variant="ghost" asChild>
+            <Button variant="outline" asChild>
               <Link href="/inventory/products/recycle-bin">
                 <Trash2 className="size-4" /> Recycle Bin
               </Link>

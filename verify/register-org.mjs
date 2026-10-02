@@ -3,8 +3,8 @@
  *
  * Registration asks for both as of FX-1a, and refuses to create an org without them. Every browser
  * suite that registers a fixture org therefore has to answer, and this is the one place the fiddly
- * widget interaction lives — a `SearchableSelect` whose options are plain <button> rows rendering
- * "{name} · {code}", not role="option".
+ * widget interaction lives — a `SearchableSelect` whose options are role="option" rows rendering
+ * "{name} · {code}" (DEV-UI-01.4 listbox semantics; they were plain <button> rows before).
  *
  * Suites call it between filling the text fields and clicking Create:
  *
@@ -21,6 +21,6 @@ export async function pickCountry(page, countryName = "Saudi Arabia") {
   await page.waitForTimeout(300);
   await page.keyboard.type(countryName.slice(0, 12));
   await page.waitForTimeout(500);
-  await page.getByRole("button", { name: new RegExp(`^${countryName} ·`) }).first().click();
+  await page.getByRole("option", { name: new RegExp(`^${countryName} ·`) }).first().click();
   await page.waitForTimeout(400);
 }

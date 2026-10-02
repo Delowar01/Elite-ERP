@@ -24,7 +24,7 @@ export default async function ProductRecycleBinPage() {
         title="Products — Recycle Bin"
         description="Deleted products live here until restored or permanently deleted."
         actions={
-          <Button variant="ghost" asChild>
+          <Button variant="outline" asChild>
             <Link href="/inventory/products">
               <ArrowLeft className="size-4" /> Back to Products
             </Link>

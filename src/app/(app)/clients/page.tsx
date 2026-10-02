@@ -53,7 +53,7 @@ export default async function ClientsPage({
               entity={CLIENT_IMPORT_SPEC.entity}
               duplicateHandling={CLIENT_IMPORT_SPEC.duplicateHandling}
             />
-            <Button variant="ghost" asChild>
+            <Button variant="outline" asChild>
               <Link href="/clients/recycle-bin">
                 <Trash2 className="size-4" /> Recycle Bin
               </Link>

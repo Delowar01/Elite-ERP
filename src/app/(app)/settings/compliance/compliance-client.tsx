@@ -5,6 +5,7 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { toast } from "sonner";
 import { Download, UserX, FileCheck2, CheckCircle2, Circle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { t, type Locale } from "@/lib/i18n/dict";
@@ -234,18 +235,18 @@ export function ComplianceCenterClient(props: {
           <div className="flex-1" />
           <div className="flex items-end gap-2">
             <div className="flex flex-col gap-1.5">
-              <label className="text-[12px] font-medium text-ink-muted">{t(locale, "Erase customer data")}</label>
-              <select
-                id="erase-customer"
-                className="h-[42px] rounded-[10px] border border-line bg-surface px-3 text-[13px] min-w-[220px]"
-                value={eraseId}
-                onChange={(e) => setEraseId(e.target.value)}
-              >
-                <option value="">{t(locale, "Select a customer")}</option>
-                {props.customers.map((c) => (
-                  <option key={c.id} value={c.id}>{c.name}{c.email ? ` · ${c.email}` : ""}</option>
-                ))}
-              </select>
+              <label htmlFor="erase-customer" className="text-[12px] font-medium text-ink-muted">{t(locale, "Erase customer data")}</label>
+              {/* Shared Select primitive (DEV-UI-01.4); "" = nothing chosen, shown as the placeholder. */}
+              <Select value={eraseId} onValueChange={setEraseId}>
+                <SelectTrigger id="erase-customer" className="min-w-[220px]">
+                  <SelectValue placeholder={t(locale, "Select a customer")} />
+                </SelectTrigger>
+                <SelectContent>
+                  {props.customers.map((c) => (
+                    <SelectItem key={c.id} value={String(c.id)}>{c.name}{c.email ? ` · ${c.email}` : ""}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <Button variant="destructive" onClick={anonymize} disabled={pending}>
               <UserX className="size-4" /> {t(locale, "Erase")}
@@ -260,20 +261,20 @@ export function ComplianceCenterClient(props: {
         <p className="text-[12.5px] text-ink-muted mb-4">{t(locale, "Record and track data-processing consent for this account.")}</p>
         <div className="flex items-end gap-2 mb-4">
           <div className="flex flex-col gap-1.5">
-            <label className="text-[12px] font-medium text-ink-muted">{t(locale, "Subject")}</label>
-            <select
-              id="consent-subject"
-              className="h-[42px] rounded-[10px] border border-line bg-surface px-3 text-[13px] min-w-[220px]"
-              value={consentSubject}
-              onChange={(e) => setConsentSubject(e.target.value)}
-            >
-              {CONSENT_SUBJECTS.map((s) => (
-                <option key={s} value={s}>{t(locale, s)}</option>
-              ))}
-            </select>
+            <label htmlFor="consent-subject" className="text-[12px] font-medium text-ink-muted">{t(locale, "Subject")}</label>
+            <Select value={consentSubject} onValueChange={setConsentSubject}>
+              <SelectTrigger id="consent-subject" className="min-w-[220px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {CONSENT_SUBJECTS.map((s) => (
+                  <SelectItem key={s} value={s}>{t(locale, s)}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <Button variant="secondary" onClick={() => recordConsent(true)} disabled={pending}>{t(locale, "Grant")}</Button>
-          <Button variant="ghost" onClick={() => recordConsent(false)} disabled={pending}>{t(locale, "Withdraw")}</Button>
+          <Button variant="outline" onClick={() => recordConsent(false)} disabled={pending}>{t(locale, "Withdraw")}</Button>
         </div>
 
         {props.consents.length > 0 ? (
@@ -317,7 +318,7 @@ export function ComplianceCenterClient(props: {
           </p>
           {eraseTarget && <p className="text-[13px] font-semibold mt-2">{eraseTarget.name}</p>}
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setConfirmErase(false)} disabled={pending}>{t(locale, "Cancel")}</Button>
+            <Button variant="outline" onClick={() => setConfirmErase(false)} disabled={pending}>{t(locale, "Cancel")}</Button>
             <Button variant="destructive" onClick={anonymize} disabled={pending}>{t(locale, "Erase")}</Button>
           </DialogFooter>
         </DialogContent>

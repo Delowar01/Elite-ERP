@@ -1,0 +1,1691 @@
+{
+  "captured": "tests/ui-baseline/candidates/dev-ui-01-4/controls (run.mjs capture-controls; gallery tests/ui-baseline/controls-gallery.tsx, definitions tests/ui-baseline/controls-states.mjs)",
+  "how": "real src/components/ui primitives bundled with esbuild, served by Playwright request interception on the baseline server origin inside a page linking the app's compiled stylesheets; no application route; full-page screenshots",
+  "summary": {
+    "states": 100,
+    "non200": 0,
+    "consoleErrors": 0,
+    "overflowStates": 0,
+    "byteIdenticalAcrossTwoRuns": 100
+  },
+  "states": [
+    {
+      "id": "controls-buttons__ar__dark__1440",
+      "group": "buttons",
+      "action": null,
+      "locale": "ar",
+      "theme": "dark",
+      "viewport": "1440x900",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans",
+        "IBM Plex Sans Arabic"
+      ],
+      "reproducible": true,
+      "sha256": "7dbbd356dbd6270790fdde27273dd11fca4edb5fe9836e06e2124d1a129749a6"
+    },
+    {
+      "id": "controls-buttons__ar__dark__390",
+      "group": "buttons",
+      "action": null,
+      "locale": "ar",
+      "theme": "dark",
+      "viewport": "390x844",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans",
+        "IBM Plex Sans Arabic"
+      ],
+      "reproducible": true,
+      "sha256": "e2e9f21d419ee7bf3214e30ac31f063da3ed16b047590052db94fa3c442abccd"
+    },
+    {
+      "id": "controls-buttons__ar__light__1440",
+      "group": "buttons",
+      "action": null,
+      "locale": "ar",
+      "theme": "light",
+      "viewport": "1440x900",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans",
+        "IBM Plex Sans Arabic"
+      ],
+      "reproducible": true,
+      "sha256": "4943159825c46c6a2524950762288be0e08c6f0e593f9afc49499c83a1751bad"
+    },
+    {
+      "id": "controls-buttons__ar__light__390",
+      "group": "buttons",
+      "action": null,
+      "locale": "ar",
+      "theme": "light",
+      "viewport": "390x844",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans",
+        "IBM Plex Sans Arabic"
+      ],
+      "reproducible": true,
+      "sha256": "ad17e3da9a320b2d6e689cec33b296afd25dd5ccc20d0a2d29c6cd25b4b55af8"
+    },
+    {
+      "id": "controls-buttons__en__dark__1440",
+      "group": "buttons",
+      "action": null,
+      "locale": "en",
+      "theme": "dark",
+      "viewport": "1440x900",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans"
+      ],
+      "reproducible": true,
+      "sha256": "73cba82e9f115e6d32b789fd5899e9c9bfd43c01666f0629b3b41b71d78a0b49"
+    },
+    {
+      "id": "controls-buttons__en__dark__390",
+      "group": "buttons",
+      "action": null,
+      "locale": "en",
+      "theme": "dark",
+      "viewport": "390x844",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans"
+      ],
+      "reproducible": true,
+      "sha256": "ce5f137322f45d90d511f5608a006ccb0d804555b93f58ef3d8bfab9857219e8"
+    },
+    {
+      "id": "controls-buttons__en__light__1440",
+      "group": "buttons",
+      "action": null,
+      "locale": "en",
+      "theme": "light",
+      "viewport": "1440x900",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans"
+      ],
+      "reproducible": true,
+      "sha256": "4621af1f90b6437ec95a801f3011ca5c9bdb322fc8298794419ef3fb34457761"
+    },
+    {
+      "id": "controls-buttons__en__light__390",
+      "group": "buttons",
+      "action": null,
+      "locale": "en",
+      "theme": "light",
+      "viewport": "390x844",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans"
+      ],
+      "reproducible": true,
+      "sha256": "afe7bdb651ff5c99a310a0d62e337f88458df15e6f89269be2af0c35d1672bcc"
+    },
+    {
+      "id": "controls-checks__ar__dark__1440",
+      "group": "checks",
+      "action": null,
+      "locale": "ar",
+      "theme": "dark",
+      "viewport": "1440x900",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans",
+        "IBM Plex Sans Arabic"
+      ],
+      "reproducible": true,
+      "sha256": "aaf47badc0deb6671f3056ac870bb3626d6bd11599c24617ce361144defbbac7"
+    },
+    {
+      "id": "controls-checks__ar__dark__390",
+      "group": "checks",
+      "action": null,
+      "locale": "ar",
+      "theme": "dark",
+      "viewport": "390x844",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans",
+        "IBM Plex Sans Arabic"
+      ],
+      "reproducible": true,
+      "sha256": "9b3b8b423764cf3b1143656f9bfe5110a5e708c5f5a2181997f8a86550a0f1f1"
+    },
+    {
+      "id": "controls-checks__ar__light__1440",
+      "group": "checks",
+      "action": null,
+      "locale": "ar",
+      "theme": "light",
+      "viewport": "1440x900",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans",
+        "IBM Plex Sans Arabic"
+      ],
+      "reproducible": true,
+      "sha256": "3bc3940172a24c273b99d047f4f4048e72ebc7a8d1c78b772a82d46da1cf1ef6"
+    },
+    {
+      "id": "controls-checks__ar__light__390",
+      "group": "checks",
+      "action": null,
+      "locale": "ar",
+      "theme": "light",
+      "viewport": "390x844",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans",
+        "IBM Plex Sans Arabic"
+      ],
+      "reproducible": true,
+      "sha256": "a4b1798124f4aac5e3e7c727d19b25b3c9407d9a7a89b098a481a37c79b48235"
+    },
+    {
+      "id": "controls-checks__en__dark__1440",
+      "group": "checks",
+      "action": null,
+      "locale": "en",
+      "theme": "dark",
+      "viewport": "1440x900",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans"
+      ],
+      "reproducible": true,
+      "sha256": "004eb2322a16a0098eb94dd0583deabac0a88a595c5a91cb74409a5bedc8804a"
+    },
+    {
+      "id": "controls-checks__en__dark__390",
+      "group": "checks",
+      "action": null,
+      "locale": "en",
+      "theme": "dark",
+      "viewport": "390x844",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans"
+      ],
+      "reproducible": true,
+      "sha256": "9b617faa0f1dd1d1b2805a19897d55c15d8a783187bcb1ed041902635c49cfb0"
+    },
+    {
+      "id": "controls-checks__en__light__1440",
+      "group": "checks",
+      "action": null,
+      "locale": "en",
+      "theme": "light",
+      "viewport": "1440x900",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans"
+      ],
+      "reproducible": true,
+      "sha256": "c45f13dc373294256c62b8373d19db99db4b0ba0b7c41ac20bb83f2e8caef803"
+    },
+    {
+      "id": "controls-checks__en__light__390",
+      "group": "checks",
+      "action": null,
+      "locale": "en",
+      "theme": "light",
+      "viewport": "390x844",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans"
+      ],
+      "reproducible": true,
+      "sha256": "71976834dd716cd503f87e85073bd1ca16cf2ba3e9a27b11ccc617d386f0a1ce"
+    },
+    {
+      "id": "controls-fields__ar__dark__1440",
+      "group": "fields",
+      "action": null,
+      "locale": "ar",
+      "theme": "dark",
+      "viewport": "1440x900",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans",
+        "IBM Plex Sans Arabic"
+      ],
+      "reproducible": true,
+      "sha256": "c47a98b6eaa645dd74dff605b34c6b46e8cdbb9e27f856cbff96356da51f61f8"
+    },
+    {
+      "id": "controls-fields__ar__dark__390",
+      "group": "fields",
+      "action": null,
+      "locale": "ar",
+      "theme": "dark",
+      "viewport": "390x844",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans",
+        "IBM Plex Sans Arabic"
+      ],
+      "reproducible": true,
+      "sha256": "73413e66709c2e1eeb022be954cc7ebd53170243d30147a74378e2e39c3ff4a9"
+    },
+    {
+      "id": "controls-fields__ar__light__1440",
+      "group": "fields",
+      "action": null,
+      "locale": "ar",
+      "theme": "light",
+      "viewport": "1440x900",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans",
+        "IBM Plex Sans Arabic"
+      ],
+      "reproducible": true,
+      "sha256": "8fafc81fec198f3181a2ccd916a7350f5235831432be1e7a724b4a148ac7324e"
+    },
+    {
+      "id": "controls-fields__ar__light__390",
+      "group": "fields",
+      "action": null,
+      "locale": "ar",
+      "theme": "light",
+      "viewport": "390x844",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans",
+        "IBM Plex Sans Arabic"
+      ],
+      "reproducible": true,
+      "sha256": "020c4098a366151b0275c133d089f5dad29e0ddc202f49456735027a2b2ef23a"
+    },
+    {
+      "id": "controls-fields__en__dark__1440",
+      "group": "fields",
+      "action": null,
+      "locale": "en",
+      "theme": "dark",
+      "viewport": "1440x900",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans"
+      ],
+      "reproducible": true,
+      "sha256": "c51e5372656b9af41c6883d88c17bd647bf79eb033b00926b0d1759f61a27a67"
+    },
+    {
+      "id": "controls-fields__en__dark__390",
+      "group": "fields",
+      "action": null,
+      "locale": "en",
+      "theme": "dark",
+      "viewport": "390x844",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans"
+      ],
+      "reproducible": true,
+      "sha256": "09dc019e4d93873d8e3da162b45ea7ba3f04bf0e125074034b6f9e2c53c5727a"
+    },
+    {
+      "id": "controls-fields__en__light__1440",
+      "group": "fields",
+      "action": null,
+      "locale": "en",
+      "theme": "light",
+      "viewport": "1440x900",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans"
+      ],
+      "reproducible": true,
+      "sha256": "e9e0c4a58b74aa7f2e6fc8a863d1928c183d966d8231ce0b28c06d9fd9de45bc"
+    },
+    {
+      "id": "controls-fields__en__light__390",
+      "group": "fields",
+      "action": null,
+      "locale": "en",
+      "theme": "light",
+      "viewport": "390x844",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans"
+      ],
+      "reproducible": true,
+      "sha256": "21e0e7a88d06d2cc222ce9fd367db3131d04fb82bf3ebecba41afb824fcee409"
+    },
+    {
+      "id": "controls-focus-button__ar__dark__1440",
+      "group": "buttons",
+      "action": "focus:[data-slot=button]",
+      "locale": "ar",
+      "theme": "dark",
+      "viewport": "1440x900",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "focused": "button",
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans",
+        "IBM Plex Sans Arabic"
+      ],
+      "reproducible": true,
+      "sha256": "db20b2abb602ca52c3f1c1b8fb9a3c89b178d12cc4387f730a155e86208b683c"
+    },
+    {
+      "id": "controls-focus-button__ar__light__1440",
+      "group": "buttons",
+      "action": "focus:[data-slot=button]",
+      "locale": "ar",
+      "theme": "light",
+      "viewport": "1440x900",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "focused": "button",
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans",
+        "IBM Plex Sans Arabic"
+      ],
+      "reproducible": true,
+      "sha256": "7457e268505388e8843533d46db06704ad9acfe99b886266a7e8c783135f57a3"
+    },
+    {
+      "id": "controls-focus-button__en__dark__1440",
+      "group": "buttons",
+      "action": "focus:[data-slot=button]",
+      "locale": "en",
+      "theme": "dark",
+      "viewport": "1440x900",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "focused": "button",
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans"
+      ],
+      "reproducible": true,
+      "sha256": "a7eeaf938a8878b16e04db7c2ff83db90cd345b7d9240c8f0ec681ed31e10167"
+    },
+    {
+      "id": "controls-focus-button__en__light__1440",
+      "group": "buttons",
+      "action": "focus:[data-slot=button]",
+      "locale": "en",
+      "theme": "light",
+      "viewport": "1440x900",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "focused": "button",
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans"
+      ],
+      "reproducible": true,
+      "sha256": "a340b7aa36363b79f299abf83d8f6c9fd69cfef8ecba37c84a6ca9782a042bec"
+    },
+    {
+      "id": "controls-focus-checkbox__ar__dark__1440",
+      "group": "checks",
+      "action": "focus:[data-slot=checkbox]",
+      "locale": "ar",
+      "theme": "dark",
+      "viewport": "1440x900",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "focused": "checkbox",
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans",
+        "IBM Plex Sans Arabic"
+      ],
+      "reproducible": true,
+      "sha256": "c8e6c43cdada0ec492ce6b7ca2f9e5d0363f24da26a8cbcce57c9f5c46ae3b38"
+    },
+    {
+      "id": "controls-focus-checkbox__ar__light__1440",
+      "group": "checks",
+      "action": "focus:[data-slot=checkbox]",
+      "locale": "ar",
+      "theme": "light",
+      "viewport": "1440x900",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "focused": "checkbox",
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans",
+        "IBM Plex Sans Arabic"
+      ],
+      "reproducible": true,
+      "sha256": "352bf07980c8eff6d82e421f8e8c71fdd5295f6b7cb5ee547c878ec77532e476"
+    },
+    {
+      "id": "controls-focus-checkbox__en__dark__1440",
+      "group": "checks",
+      "action": "focus:[data-slot=checkbox]",
+      "locale": "en",
+      "theme": "dark",
+      "viewport": "1440x900",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "focused": "checkbox",
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans"
+      ],
+      "reproducible": true,
+      "sha256": "1c6557c8c29e7c64b6e0608b63eb920b7a720f55b8d6e6638ee312d585d884f6"
+    },
+    {
+      "id": "controls-focus-checkbox__en__light__1440",
+      "group": "checks",
+      "action": "focus:[data-slot=checkbox]",
+      "locale": "en",
+      "theme": "light",
+      "viewport": "1440x900",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "focused": "checkbox",
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans"
+      ],
+      "reproducible": true,
+      "sha256": "aa51a24292913d6bae80b4f90ff0e8916617dc5e0fc61bb3b01e2cc111815c18"
+    },
+    {
+      "id": "controls-focus-input__ar__dark__1440",
+      "group": "fields",
+      "action": "focus:[data-slot=input]",
+      "locale": "ar",
+      "theme": "dark",
+      "viewport": "1440x900",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "focused": "input",
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans",
+        "IBM Plex Sans Arabic"
+      ],
+      "reproducible": true,
+      "sha256": "bfa164232a9d5869ec3c8b2719db063d638790839dc41f1efbeb232612ef17de"
+    },
+    {
+      "id": "controls-focus-input__ar__light__1440",
+      "group": "fields",
+      "action": "focus:[data-slot=input]",
+      "locale": "ar",
+      "theme": "light",
+      "viewport": "1440x900",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "focused": "input",
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans",
+        "IBM Plex Sans Arabic"
+      ],
+      "reproducible": true,
+      "sha256": "ec93953d66734b7016f348943c560f4af0d8c9f3406f4a22224a8391fa084104"
+    },
+    {
+      "id": "controls-focus-input__en__dark__1440",
+      "group": "fields",
+      "action": "focus:[data-slot=input]",
+      "locale": "en",
+      "theme": "dark",
+      "viewport": "1440x900",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "focused": "input",
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans"
+      ],
+      "reproducible": true,
+      "sha256": "20e7f4904366ee30acf6bca38b31b171174e03458bb07b64d16cd31b289e4df4"
+    },
+    {
+      "id": "controls-focus-input__en__light__1440",
+      "group": "fields",
+      "action": "focus:[data-slot=input]",
+      "locale": "en",
+      "theme": "light",
+      "viewport": "1440x900",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "focused": "input",
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans"
+      ],
+      "reproducible": true,
+      "sha256": "550dba30d029c0938511af9c7780817ab1949b9c78eeccc2a50929810fa54ee2"
+    },
+    {
+      "id": "controls-focus-radio__ar__dark__1440",
+      "group": "checks",
+      "action": "focus-radio",
+      "locale": "ar",
+      "theme": "dark",
+      "viewport": "1440x900",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "focused": "radio",
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans",
+        "IBM Plex Sans Arabic"
+      ],
+      "reproducible": true,
+      "sha256": "822a649874926dbe7cbc821d517436221b148612a02b375dacbf2701788118de"
+    },
+    {
+      "id": "controls-focus-radio__ar__light__1440",
+      "group": "checks",
+      "action": "focus-radio",
+      "locale": "ar",
+      "theme": "light",
+      "viewport": "1440x900",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "focused": "radio",
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans",
+        "IBM Plex Sans Arabic"
+      ],
+      "reproducible": true,
+      "sha256": "6422c0ba08b4f672105b7b9db422068ba7eb88bdaef463cec73e8f46b67b5ec1"
+    },
+    {
+      "id": "controls-focus-radio__en__dark__1440",
+      "group": "checks",
+      "action": "focus-radio",
+      "locale": "en",
+      "theme": "dark",
+      "viewport": "1440x900",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "focused": "radio",
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans"
+      ],
+      "reproducible": true,
+      "sha256": "cb268f43bc2e65ced1294bf2e0c2594ca5bb89775373229cb5c893a5b4d84d41"
+    },
+    {
+      "id": "controls-focus-radio__en__light__1440",
+      "group": "checks",
+      "action": "focus-radio",
+      "locale": "en",
+      "theme": "light",
+      "viewport": "1440x900",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "focused": "radio",
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans"
+      ],
+      "reproducible": true,
+      "sha256": "f86cdffb40e3f6bcac631c8eec2fe139cc6fe4f044ca052ca57bdba024f8f97d"
+    },
+    {
+      "id": "controls-focus-row-menu__ar__dark__1440",
+      "group": "tabs",
+      "action": "focus:.row-menu-btn",
+      "locale": "ar",
+      "theme": "dark",
+      "viewport": "1440x900",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "focused": "BUTTON",
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans",
+        "IBM Plex Sans Arabic"
+      ],
+      "reproducible": true,
+      "sha256": "54a21868a341fe99b358ade63315a76e18d1be4e24f39b71f2a4045aca75756d"
+    },
+    {
+      "id": "controls-focus-row-menu__ar__light__1440",
+      "group": "tabs",
+      "action": "focus:.row-menu-btn",
+      "locale": "ar",
+      "theme": "light",
+      "viewport": "1440x900",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "focused": "BUTTON",
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans",
+        "IBM Plex Sans Arabic"
+      ],
+      "reproducible": true,
+      "sha256": "edf368cf0d0388b3a56a6b1cc7b156fc0ef3b4faff8b58602a927bf348e92e54"
+    },
+    {
+      "id": "controls-focus-row-menu__en__dark__1440",
+      "group": "tabs",
+      "action": "focus:.row-menu-btn",
+      "locale": "en",
+      "theme": "dark",
+      "viewport": "1440x900",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "focused": "BUTTON",
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans"
+      ],
+      "reproducible": true,
+      "sha256": "63b5f81d8a40ac7f047f4c206355be794b249abb4eb40affab7e3429296f48a4"
+    },
+    {
+      "id": "controls-focus-row-menu__en__light__1440",
+      "group": "tabs",
+      "action": "focus:.row-menu-btn",
+      "locale": "en",
+      "theme": "light",
+      "viewport": "1440x900",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "focused": "BUTTON",
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans"
+      ],
+      "reproducible": true,
+      "sha256": "1481e4e05c6c5fa7b5d77586c94a586779bef34b1cffffa0a2c2f1763b51796a"
+    },
+    {
+      "id": "controls-focus-select__ar__dark__1440",
+      "group": "selects",
+      "action": "focus:[data-gallery=select-main]",
+      "locale": "ar",
+      "theme": "dark",
+      "viewport": "1440x900",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "focused": "combobox",
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans",
+        "IBM Plex Sans Arabic"
+      ],
+      "reproducible": true,
+      "sha256": "14fdded20ef88545531f331aa2d1db353da794b8a31e7ae675552bf4d8aa9336"
+    },
+    {
+      "id": "controls-focus-select__ar__light__1440",
+      "group": "selects",
+      "action": "focus:[data-gallery=select-main]",
+      "locale": "ar",
+      "theme": "light",
+      "viewport": "1440x900",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "focused": "combobox",
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans",
+        "IBM Plex Sans Arabic"
+      ],
+      "reproducible": true,
+      "sha256": "c91cbf11497cd762d8a1604c852edafbb7421b53891c3fe4829effff8568b8df"
+    },
+    {
+      "id": "controls-focus-select__en__dark__1440",
+      "group": "selects",
+      "action": "focus:[data-gallery=select-main]",
+      "locale": "en",
+      "theme": "dark",
+      "viewport": "1440x900",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "focused": "combobox",
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans"
+      ],
+      "reproducible": true,
+      "sha256": "d9e4c31b9e387660058bbd16c96c688fb1d2ff29d3519619ce7f966c1c7638a8"
+    },
+    {
+      "id": "controls-focus-select__en__light__1440",
+      "group": "selects",
+      "action": "focus:[data-gallery=select-main]",
+      "locale": "en",
+      "theme": "light",
+      "viewport": "1440x900",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "focused": "combobox",
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans"
+      ],
+      "reproducible": true,
+      "sha256": "2ceeaeae21b5f54d81fe35c748222406696a63b6a096317de7f89cb4107cec3c"
+    },
+    {
+      "id": "controls-focus-tab__ar__dark__1440",
+      "group": "tabs",
+      "action": "focus-tab",
+      "locale": "ar",
+      "theme": "dark",
+      "viewport": "1440x900",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "focused": "tab",
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans",
+        "IBM Plex Sans Arabic"
+      ],
+      "reproducible": true,
+      "sha256": "2893968e9ae43f14dcc32a5d018c6a294c737ea9831f42f981f82c422c2a60bd"
+    },
+    {
+      "id": "controls-focus-tab__ar__light__1440",
+      "group": "tabs",
+      "action": "focus-tab",
+      "locale": "ar",
+      "theme": "light",
+      "viewport": "1440x900",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "focused": "tab",
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans",
+        "IBM Plex Sans Arabic"
+      ],
+      "reproducible": true,
+      "sha256": "fc578e595237ed5fc91f460f0fd420453cf03030e1e65703675c436415f2aff4"
+    },
+    {
+      "id": "controls-focus-tab__en__dark__1440",
+      "group": "tabs",
+      "action": "focus-tab",
+      "locale": "en",
+      "theme": "dark",
+      "viewport": "1440x900",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "focused": "tab",
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans"
+      ],
+      "reproducible": true,
+      "sha256": "6895189b37b7512c4e43b8f7318fcb0cf1c577c50aeeefaa6d72f1df7aaf8cc8"
+    },
+    {
+      "id": "controls-focus-tab__en__light__1440",
+      "group": "tabs",
+      "action": "focus-tab",
+      "locale": "en",
+      "theme": "light",
+      "viewport": "1440x900",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "focused": "tab",
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans"
+      ],
+      "reproducible": true,
+      "sha256": "8c6090988ff0eb5b6777b90333628e54e0639fa367eb40a7f3af6b756d68eb9b"
+    },
+    {
+      "id": "controls-searchable-active__ar__light__1440",
+      "group": "searchables",
+      "action": "searchable-active",
+      "locale": "ar",
+      "theme": "light",
+      "viewport": "1440x900",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans",
+        "IBM Plex Sans Arabic"
+      ],
+      "reproducible": true,
+      "sha256": "d59f3e38abb8e2684dfd33969cbce6e20885687631acaf5ad014dd5abc025231"
+    },
+    {
+      "id": "controls-searchable-active__ar__light__390",
+      "group": "searchables",
+      "action": "searchable-active",
+      "locale": "ar",
+      "theme": "light",
+      "viewport": "390x844",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans",
+        "IBM Plex Sans Arabic"
+      ],
+      "reproducible": true,
+      "sha256": "80d9f7ff680d8063962210e7b2defd1efb7086ec477142c608c39f38599a186d"
+    },
+    {
+      "id": "controls-searchable-active__en__light__1440",
+      "group": "searchables",
+      "action": "searchable-active",
+      "locale": "en",
+      "theme": "light",
+      "viewport": "1440x900",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans"
+      ],
+      "reproducible": true,
+      "sha256": "fda6326d602b7fab0961550797dcf56c8785d5bdbbf09d3785ec2ba252efa582"
+    },
+    {
+      "id": "controls-searchable-active__en__light__390",
+      "group": "searchables",
+      "action": "searchable-active",
+      "locale": "en",
+      "theme": "light",
+      "viewport": "390x844",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans"
+      ],
+      "reproducible": true,
+      "sha256": "cad92c165382ef461ba6fe3099063809b6953cc0b084734ebbf68802eb1a85cb"
+    },
+    {
+      "id": "controls-searchable-filtered__ar__light__1440",
+      "group": "searchables",
+      "action": "searchable-filter",
+      "locale": "ar",
+      "theme": "light",
+      "viewport": "1440x900",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans",
+        "IBM Plex Sans Arabic"
+      ],
+      "reproducible": true,
+      "sha256": "5eb692df765b3eca9215b072949a01063bef452df52c9a0a9076eb16b9587b61"
+    },
+    {
+      "id": "controls-searchable-filtered__ar__light__390",
+      "group": "searchables",
+      "action": "searchable-filter",
+      "locale": "ar",
+      "theme": "light",
+      "viewport": "390x844",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans",
+        "IBM Plex Sans Arabic"
+      ],
+      "reproducible": true,
+      "sha256": "69c478624281fbbe9cdf2c24a002333a6676c5025bbcf7d62aac30f021380f31"
+    },
+    {
+      "id": "controls-searchable-filtered__en__light__1440",
+      "group": "searchables",
+      "action": "searchable-filter",
+      "locale": "en",
+      "theme": "light",
+      "viewport": "1440x900",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans"
+      ],
+      "reproducible": true,
+      "sha256": "b0e24507c318370933b0a71968060cc6f3ea361153b6c4378eedc1970b239cd4"
+    },
+    {
+      "id": "controls-searchable-filtered__en__light__390",
+      "group": "searchables",
+      "action": "searchable-filter",
+      "locale": "en",
+      "theme": "light",
+      "viewport": "390x844",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans"
+      ],
+      "reproducible": true,
+      "sha256": "25a5b5ea8992b93a93aa41495656f12df20c2bf15a395b7d03ca7aeb6492d78d"
+    },
+    {
+      "id": "controls-searchable-open__ar__dark__1440",
+      "group": "searchables",
+      "action": "searchable-open",
+      "locale": "ar",
+      "theme": "dark",
+      "viewport": "1440x900",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans",
+        "IBM Plex Sans Arabic"
+      ],
+      "reproducible": true,
+      "sha256": "08e6aadbcc88a735c16903a2191eb8be3710d385c7cc03a12aa90a13cd5fa8fb"
+    },
+    {
+      "id": "controls-searchable-open__ar__dark__390",
+      "group": "searchables",
+      "action": "searchable-open",
+      "locale": "ar",
+      "theme": "dark",
+      "viewport": "390x844",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans",
+        "IBM Plex Sans Arabic"
+      ],
+      "reproducible": true,
+      "sha256": "0a51ef2e7de533bb7c5141313797868d9c4d015237605d58eece414d22e56a61"
+    },
+    {
+      "id": "controls-searchable-open__ar__light__1440",
+      "group": "searchables",
+      "action": "searchable-open",
+      "locale": "ar",
+      "theme": "light",
+      "viewport": "1440x900",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans",
+        "IBM Plex Sans Arabic"
+      ],
+      "reproducible": true,
+      "sha256": "1cdc5d10ac2a0614c5601f3db9c4d92c178a0341ca7637a692d498ef28b12eec"
+    },
+    {
+      "id": "controls-searchable-open__ar__light__390",
+      "group": "searchables",
+      "action": "searchable-open",
+      "locale": "ar",
+      "theme": "light",
+      "viewport": "390x844",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans",
+        "IBM Plex Sans Arabic"
+      ],
+      "reproducible": true,
+      "sha256": "a7ecbb2fddd08b9d64768027abc20ebab395c9dd6e6ddd40d60bb08f0e02932c"
+    },
+    {
+      "id": "controls-searchable-open__en__dark__1440",
+      "group": "searchables",
+      "action": "searchable-open",
+      "locale": "en",
+      "theme": "dark",
+      "viewport": "1440x900",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans"
+      ],
+      "reproducible": true,
+      "sha256": "6b24e7d1acf9e0787afd1181333d1e8d7e6dd549734520fde301a213054f4174"
+    },
+    {
+      "id": "controls-searchable-open__en__dark__390",
+      "group": "searchables",
+      "action": "searchable-open",
+      "locale": "en",
+      "theme": "dark",
+      "viewport": "390x844",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans"
+      ],
+      "reproducible": true,
+      "sha256": "d6d06bbd398dac1eee4002af7bdf9bdfdbcd960525d3ea5ebea0448c68400bd3"
+    },
+    {
+      "id": "controls-searchable-open__en__light__1440",
+      "group": "searchables",
+      "action": "searchable-open",
+      "locale": "en",
+      "theme": "light",
+      "viewport": "1440x900",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans"
+      ],
+      "reproducible": true,
+      "sha256": "85bc73aa0b5e1951ce866247a97b0814a85ed73620945a82b7446b8a18e450e7"
+    },
+    {
+      "id": "controls-searchable-open__en__light__390",
+      "group": "searchables",
+      "action": "searchable-open",
+      "locale": "en",
+      "theme": "light",
+      "viewport": "390x844",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans"
+      ],
+      "reproducible": true,
+      "sha256": "2413d6104a102906b47996d377473ed4479ffb8b2042c2f9552dd055116aa134"
+    },
+    {
+      "id": "controls-searchables__ar__dark__1440",
+      "group": "searchables",
+      "action": null,
+      "locale": "ar",
+      "theme": "dark",
+      "viewport": "1440x900",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans",
+        "IBM Plex Sans Arabic"
+      ],
+      "reproducible": true,
+      "sha256": "50741fe1fe45ad0f97dfbe32714ae0429c15415cede5000010e3737acf34b2aa"
+    },
+    {
+      "id": "controls-searchables__ar__dark__390",
+      "group": "searchables",
+      "action": null,
+      "locale": "ar",
+      "theme": "dark",
+      "viewport": "390x844",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans",
+        "IBM Plex Sans Arabic"
+      ],
+      "reproducible": true,
+      "sha256": "1fc374e583ed1f43cee4f7b436d289be914e8fc3fda306e1352c8ce3875c0acc"
+    },
+    {
+      "id": "controls-searchables__ar__light__1440",
+      "group": "searchables",
+      "action": null,
+      "locale": "ar",
+      "theme": "light",
+      "viewport": "1440x900",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans",
+        "IBM Plex Sans Arabic"
+      ],
+      "reproducible": true,
+      "sha256": "c07d12a570d731c8ca5246098463f672b41eedfe7b09ef5b856b85f484e56cc1"
+    },
+    {
+      "id": "controls-searchables__ar__light__390",
+      "group": "searchables",
+      "action": null,
+      "locale": "ar",
+      "theme": "light",
+      "viewport": "390x844",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans",
+        "IBM Plex Sans Arabic"
+      ],
+      "reproducible": true,
+      "sha256": "253ee478ddfe1939322519725116d502d43afaa0951a375bae95bc92a88f675b"
+    },
+    {
+      "id": "controls-searchables__en__dark__1440",
+      "group": "searchables",
+      "action": null,
+      "locale": "en",
+      "theme": "dark",
+      "viewport": "1440x900",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans"
+      ],
+      "reproducible": true,
+      "sha256": "078a967c98bd9c53d9e65a8a1a1c346de047bc5b968fc44e8a2d041cb9ea468f"
+    },
+    {
+      "id": "controls-searchables__en__dark__390",
+      "group": "searchables",
+      "action": null,
+      "locale": "en",
+      "theme": "dark",
+      "viewport": "390x844",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans"
+      ],
+      "reproducible": true,
+      "sha256": "bb22bd1f4073bedc7e08b8cc27a18c761913d6019f3cac99f0643960638cbcb3"
+    },
+    {
+      "id": "controls-searchables__en__light__1440",
+      "group": "searchables",
+      "action": null,
+      "locale": "en",
+      "theme": "light",
+      "viewport": "1440x900",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans"
+      ],
+      "reproducible": true,
+      "sha256": "9ed86b8b1403cf0bd91b4e2954fc8576b63225e2cc1bf4e5488a4b9246732a5f"
+    },
+    {
+      "id": "controls-searchables__en__light__390",
+      "group": "searchables",
+      "action": null,
+      "locale": "en",
+      "theme": "light",
+      "viewport": "390x844",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans"
+      ],
+      "reproducible": true,
+      "sha256": "0cccf58657acf3bf7de93fd78f46b2222af0237ced8494e0467b673a9002115a"
+    },
+    {
+      "id": "controls-select-open__ar__dark__1440",
+      "group": "selects",
+      "action": "select-open",
+      "locale": "ar",
+      "theme": "dark",
+      "viewport": "1440x900",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans",
+        "IBM Plex Sans Arabic"
+      ],
+      "reproducible": true,
+      "sha256": "2f69d0788346e2c7fa178c76ad03e07b419a994de28605358edc0e4c032aaf6e"
+    },
+    {
+      "id": "controls-select-open__ar__dark__390",
+      "group": "selects",
+      "action": "select-open",
+      "locale": "ar",
+      "theme": "dark",
+      "viewport": "390x844",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans",
+        "IBM Plex Sans Arabic"
+      ],
+      "reproducible": true,
+      "sha256": "e62771aac49c584dfd5fbcb9baaef3f8ff4e1d4a895ee196af5bebd743cd3a84"
+    },
+    {
+      "id": "controls-select-open__ar__light__1440",
+      "group": "selects",
+      "action": "select-open",
+      "locale": "ar",
+      "theme": "light",
+      "viewport": "1440x900",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans",
+        "IBM Plex Sans Arabic"
+      ],
+      "reproducible": true,
+      "sha256": "1ff1490ccaf12fc480b1aedf68d82f0976022000ffc15ed08ae9d8ebfff65935"
+    },
+    {
+      "id": "controls-select-open__ar__light__390",
+      "group": "selects",
+      "action": "select-open",
+      "locale": "ar",
+      "theme": "light",
+      "viewport": "390x844",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans",
+        "IBM Plex Sans Arabic"
+      ],
+      "reproducible": true,
+      "sha256": "f7acf9309afadf560cce49f8031ed67227cf5a74b2844ad95c60790949f70301"
+    },
+    {
+      "id": "controls-select-open__en__dark__1440",
+      "group": "selects",
+      "action": "select-open",
+      "locale": "en",
+      "theme": "dark",
+      "viewport": "1440x900",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans"
+      ],
+      "reproducible": true,
+      "sha256": "e7cc12e7c349116a88c0053b3b38ba257126a54cceb2dc61a791524636f83da2"
+    },
+    {
+      "id": "controls-select-open__en__dark__390",
+      "group": "selects",
+      "action": "select-open",
+      "locale": "en",
+      "theme": "dark",
+      "viewport": "390x844",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans"
+      ],
+      "reproducible": true,
+      "sha256": "8e9cc86fb1e236808b01a2cf3cafb539d966c0df8b24725a5fa7b72f4521fa40"
+    },
+    {
+      "id": "controls-select-open__en__light__1440",
+      "group": "selects",
+      "action": "select-open",
+      "locale": "en",
+      "theme": "light",
+      "viewport": "1440x900",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans"
+      ],
+      "reproducible": true,
+      "sha256": "05fd31e26d85d4d507dff3d14692bebafa3f6783fdec46b7ae211c67e3d1bf53"
+    },
+    {
+      "id": "controls-select-open__en__light__390",
+      "group": "selects",
+      "action": "select-open",
+      "locale": "en",
+      "theme": "light",
+      "viewport": "390x844",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans"
+      ],
+      "reproducible": true,
+      "sha256": "4c92ba99b68e37a20e4328ac4eea734b4caf1c5336dd83f29490a71b1026118f"
+    },
+    {
+      "id": "controls-selects__ar__dark__1440",
+      "group": "selects",
+      "action": null,
+      "locale": "ar",
+      "theme": "dark",
+      "viewport": "1440x900",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans",
+        "IBM Plex Sans Arabic"
+      ],
+      "reproducible": true,
+      "sha256": "c039e9ffb0e3880c0e1a078d6d6f6a8bc9afbbb49c672b6a1d312281c47166b0"
+    },
+    {
+      "id": "controls-selects__ar__dark__390",
+      "group": "selects",
+      "action": null,
+      "locale": "ar",
+      "theme": "dark",
+      "viewport": "390x844",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans",
+        "IBM Plex Sans Arabic"
+      ],
+      "reproducible": true,
+      "sha256": "ec8e3edc906236927d2f5cf4bee46d75ad514acd1abd769621aec6194917c003"
+    },
+    {
+      "id": "controls-selects__ar__light__1440",
+      "group": "selects",
+      "action": null,
+      "locale": "ar",
+      "theme": "light",
+      "viewport": "1440x900",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans",
+        "IBM Plex Sans Arabic"
+      ],
+      "reproducible": true,
+      "sha256": "e5a79e90c219fc9e4a355b077fe407dc9c2be229f5624bb7c291be29e1c459fd"
+    },
+    {
+      "id": "controls-selects__ar__light__390",
+      "group": "selects",
+      "action": null,
+      "locale": "ar",
+      "theme": "light",
+      "viewport": "390x844",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans",
+        "IBM Plex Sans Arabic"
+      ],
+      "reproducible": true,
+      "sha256": "07743cf7f3377d65487048eaaccd0c37df1a15d3b24995762710761397b42c38"
+    },
+    {
+      "id": "controls-selects__en__dark__1440",
+      "group": "selects",
+      "action": null,
+      "locale": "en",
+      "theme": "dark",
+      "viewport": "1440x900",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans"
+      ],
+      "reproducible": true,
+      "sha256": "467fede188c47e909d2128a33207632221700ea01b081b726ee9219143cf7f95"
+    },
+    {
+      "id": "controls-selects__en__dark__390",
+      "group": "selects",
+      "action": null,
+      "locale": "en",
+      "theme": "dark",
+      "viewport": "390x844",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans"
+      ],
+      "reproducible": true,
+      "sha256": "0060ad9949a9f5f205f6979b8b8a520a761921017240b1d57968036ea63bac7d"
+    },
+    {
+      "id": "controls-selects__en__light__1440",
+      "group": "selects",
+      "action": null,
+      "locale": "en",
+      "theme": "light",
+      "viewport": "1440x900",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans"
+      ],
+      "reproducible": true,
+      "sha256": "0fb3092924656880cc0bf40b5ef0560f1a95040b8363006c58584521b5ef9db5"
+    },
+    {
+      "id": "controls-selects__en__light__390",
+      "group": "selects",
+      "action": null,
+      "locale": "en",
+      "theme": "light",
+      "viewport": "390x844",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans"
+      ],
+      "reproducible": true,
+      "sha256": "01d12cad996485db76a07914ae0101d4619e53b8d83a4404964777ec89df45cc"
+    },
+    {
+      "id": "controls-tabs-menu__ar__dark__1440",
+      "group": "tabs",
+      "action": null,
+      "locale": "ar",
+      "theme": "dark",
+      "viewport": "1440x900",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans",
+        "IBM Plex Sans Arabic"
+      ],
+      "reproducible": true,
+      "sha256": "5a73648622052dfb94e1327899f9cac2642d7216da0e91ff4429d2534639f763"
+    },
+    {
+      "id": "controls-tabs-menu__ar__dark__390",
+      "group": "tabs",
+      "action": null,
+      "locale": "ar",
+      "theme": "dark",
+      "viewport": "390x844",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans",
+        "IBM Plex Sans Arabic"
+      ],
+      "reproducible": true,
+      "sha256": "f9365b7b7bc77704fbfe89490ed152a344b5ff53237aaa6ef42b4c8891ba61c8"
+    },
+    {
+      "id": "controls-tabs-menu__ar__light__1440",
+      "group": "tabs",
+      "action": null,
+      "locale": "ar",
+      "theme": "light",
+      "viewport": "1440x900",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans",
+        "IBM Plex Sans Arabic"
+      ],
+      "reproducible": true,
+      "sha256": "10234496fa496dc63c5f91ba95a30e04708c0ebfdf4353ca135aaf22aaf58586"
+    },
+    {
+      "id": "controls-tabs-menu__ar__light__390",
+      "group": "tabs",
+      "action": null,
+      "locale": "ar",
+      "theme": "light",
+      "viewport": "390x844",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans",
+        "IBM Plex Sans Arabic"
+      ],
+      "reproducible": true,
+      "sha256": "ce2c635bef55c1e57a1ec036dcedcdce4e85069b205bf6142664528b23dac3f7"
+    },
+    {
+      "id": "controls-tabs-menu__en__dark__1440",
+      "group": "tabs",
+      "action": null,
+      "locale": "en",
+      "theme": "dark",
+      "viewport": "1440x900",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans"
+      ],
+      "reproducible": true,
+      "sha256": "79ebaa1e898ece1f7335e80e6f09b110589e787114f73499a2057dc788e9c88d"
+    },
+    {
+      "id": "controls-tabs-menu__en__dark__390",
+      "group": "tabs",
+      "action": null,
+      "locale": "en",
+      "theme": "dark",
+      "viewport": "390x844",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans"
+      ],
+      "reproducible": true,
+      "sha256": "790f49f071f20441b1754d1d89b8f57f2377ff1dd105f31e19dd269c7df27370"
+    },
+    {
+      "id": "controls-tabs-menu__en__light__1440",
+      "group": "tabs",
+      "action": null,
+      "locale": "en",
+      "theme": "light",
+      "viewport": "1440x900",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans"
+      ],
+      "reproducible": true,
+      "sha256": "75c88bd23b10c73589479698a063c6e5b25622834e6b650279d0817578c002cb"
+    },
+    {
+      "id": "controls-tabs-menu__en__light__390",
+      "group": "tabs",
+      "action": null,
+      "locale": "en",
+      "theme": "light",
+      "viewport": "390x844",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "consoleErrors": 0,
+      "fonts": [
+        "IBM Plex Sans"
+      ],
+      "reproducible": true,
+      "sha256": "7525b18eefeefbba89628e7220988f00031844bbc4c4cb00019a76ef287c4b1b"
+    }
+  ]
+}

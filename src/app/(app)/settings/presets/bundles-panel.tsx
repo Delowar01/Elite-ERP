@@ -124,19 +124,18 @@ export function BundlesPanel({
                 <TableCell className="font-medium">{bundle.name}</TableCell>
                 <TableCell className="text-right num-tabular text-xs">{bundle.items.length}</TableCell>
                 <TableCell className="text-right whitespace-nowrap">
-                  <Button variant="ghost" size="sm" disabled={pending} onClick={() => setManaging(bundle)}>
+                  <Button variant="outline" size="sm" disabled={pending} onClick={() => setManaging(bundle)}>
                     <Package className="size-3.5" /> {t(locale, "Manage")}
                   </Button>
                   <Button variant="ghost" size="icon" disabled={pending} onClick={() => setRenaming(bundle)} aria-label={t(locale, "Rename")}>
                     <Pencil className="size-3.5" />
                   </Button>
                   <Button
-                    variant="ghost"
+                    variant="destructive-ghost"
                     size="icon"
                     disabled={pending}
                     onClick={() => deleteBundle(bundle.id, bundle.name)}
                     aria-label={t(locale, "Delete")}
-                    className="text-danger hover:text-danger"
                   >
                     <Trash2 className="size-3.5" />
                   </Button>

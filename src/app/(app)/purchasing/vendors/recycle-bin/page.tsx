@@ -24,7 +24,7 @@ export default async function VendorRecycleBinPage() {
         title="Vendors — Recycle Bin"
         description="Deleted vendors live here until restored or permanently deleted."
         actions={
-          <Button variant="ghost" asChild>
+          <Button variant="outline" asChild>
             <Link href="/purchasing/vendors">
               <ArrowLeft className="size-4" /> Back to Vendors
             </Link>

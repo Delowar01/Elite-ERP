@@ -93,7 +93,7 @@ export function PaymentsListClient({
           invoices={outstandingInvoices}
           purchaseOrders={outstandingPos}
           trigger={
-            <Button style={{ width: "auto" }}>
+            <Button>
               <Plus className="size-4" /> {t(locale, "Record Payment")}
             </Button>
           }

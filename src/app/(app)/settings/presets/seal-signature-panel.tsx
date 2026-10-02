@@ -21,9 +21,9 @@ function AssetCard({ locale, asset, onDelete }: { locale: Locale; asset: SealSig
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={asset.url} alt={asset.name} className="h-12 w-full object-contain" />
       <span className="text-[11px] font-medium truncate max-w-full" title={asset.name}>{asset.name}</span>
-      <button type="button" onClick={() => onDelete(asset.id)} className="text-ink-faint hover:text-danger" aria-label={t(locale, "Delete")}>
+      <Button type="button" variant="destructive-ghost" size="icon-sm" onClick={() => onDelete(asset.id)} aria-label={t(locale, "Delete")}>
         <Trash2 className="size-3.5" />
-      </button>
+      </Button>
     </div>
   );
 }

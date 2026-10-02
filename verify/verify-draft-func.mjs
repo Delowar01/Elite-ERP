@@ -31,7 +31,7 @@ await p.keyboard.press("Escape"); await p.waitForTimeout(300);
 
 // Fill a minimal quotation and Save as Draft
 await p.locator(".party-card-v2").getByRole("button",{name:"To Client"}).click();
-await p.getByRole("button",{name:/Acme Co/}).click();
+await p.getByRole("option",{name:/Acme Co/}).click();
 const row=p.locator(".doc-items-table .item-row").first();
 await row.getByPlaceholder("Item name").fill("Widget");
 const nums=row.locator("input[type=number]");
