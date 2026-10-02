@@ -1,8 +1,8 @@
 {
   "frozenNow": "2026-06-15T09:00:00.000Z",
-  "buildId": "8sYftSbxhTD1oV_YJWrzd",
+  "buildId": "rIp6xk7AVx91-fH0ELtaW",
   "chromium": "141.0.7390.37",
-  "galleryBytes": 362589,
+  "galleryBytes": 368210,
   "states": {
     "controls-buttons__en__light__1440": {
       "route": "/__ui-baseline/controls/buttons",
@@ -2153,6 +2153,264 @@
       "consoleErrors": [],
       "sha256": "54a21868a341fe99b358ade63315a76e18d1be4e24f39b71f2a4045aca75756d",
       "bytes": 15943
+    },
+    "controls-menu-row-open__en__light__1440": {
+      "route": "/__ui-baseline/controls/menus",
+      "area": "Controls (DEV-UI-01.4)",
+      "group": "menus",
+      "action": "menu-row-open",
+      "locale": "en",
+      "theme": "light",
+      "viewport": "1440x900",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "scrollWidth": 1440,
+      "clientWidth": 1440,
+      "scrollHeight": 900,
+      "fontsLoaded": [
+        "IBM Plex Sans"
+      ],
+      "active": "menuitem",
+      "consoleErrors": [],
+      "sha256": "10a5b8d67040eb134616570616c9ca0bc86a094779da64fd977375142c9b6a52",
+      "bytes": 24999
+    },
+    "controls-menu-row-open__en__light__390": {
+      "route": "/__ui-baseline/controls/menus",
+      "area": "Controls (DEV-UI-01.4)",
+      "group": "menus",
+      "action": "menu-row-open",
+      "locale": "en",
+      "theme": "light",
+      "viewport": "390x844",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "scrollWidth": 390,
+      "clientWidth": 390,
+      "scrollHeight": 844,
+      "fontsLoaded": [
+        "IBM Plex Sans"
+      ],
+      "active": "menuitem",
+      "consoleErrors": [],
+      "sha256": "6612d4d1a6f7e7c9a78d32d990d658281380e954dcf3582797e096a15039e396",
+      "bytes": 20481
+    },
+    "controls-menu-row-open__en__dark__1440": {
+      "route": "/__ui-baseline/controls/menus",
+      "area": "Controls (DEV-UI-01.4)",
+      "group": "menus",
+      "action": "menu-row-open",
+      "locale": "en",
+      "theme": "dark",
+      "viewport": "1440x900",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "scrollWidth": 1440,
+      "clientWidth": 1440,
+      "scrollHeight": 900,
+      "fontsLoaded": [
+        "IBM Plex Sans"
+      ],
+      "active": "menuitem",
+      "consoleErrors": [],
+      "sha256": "8e611aae78c4049fc8755a7501003072c14a012a6d84c8ead90f6130d498666e",
+      "bytes": 25537
+    },
+    "controls-menu-row-open__en__dark__390": {
+      "route": "/__ui-baseline/controls/menus",
+      "area": "Controls (DEV-UI-01.4)",
+      "group": "menus",
+      "action": "menu-row-open",
+      "locale": "en",
+      "theme": "dark",
+      "viewport": "390x844",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "scrollWidth": 390,
+      "clientWidth": 390,
+      "scrollHeight": 844,
+      "fontsLoaded": [
+        "IBM Plex Sans"
+      ],
+      "active": "menuitem",
+      "consoleErrors": [],
+      "sha256": "f925a8fbf059c84a73f756f78cb141f5f6d4883df4ea9cc0e68818e21a219b6f",
+      "bytes": 21198
+    },
+    "controls-menu-row-open__ar__light__1440": {
+      "route": "/__ui-baseline/controls/menus",
+      "area": "Controls (DEV-UI-01.4)",
+      "group": "menus",
+      "action": "menu-row-open",
+      "locale": "ar",
+      "theme": "light",
+      "viewport": "1440x900",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "scrollWidth": 1440,
+      "clientWidth": 1440,
+      "scrollHeight": 900,
+      "fontsLoaded": [
+        "IBM Plex Sans",
+        "IBM Plex Sans Arabic"
+      ],
+      "active": "menuitem",
+      "consoleErrors": [],
+      "sha256": "9a9a91dc7d25a3bc073c20958a521a71285429f3d0db2ac3ccf483d6a01c9d83",
+      "bytes": 23223
+    },
+    "controls-menu-row-open__ar__light__390": {
+      "route": "/__ui-baseline/controls/menus",
+      "area": "Controls (DEV-UI-01.4)",
+      "group": "menus",
+      "action": "menu-row-open",
+      "locale": "ar",
+      "theme": "light",
+      "viewport": "390x844",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "scrollWidth": 390,
+      "clientWidth": 390,
+      "scrollHeight": 844,
+      "fontsLoaded": [
+        "IBM Plex Sans",
+        "IBM Plex Sans Arabic"
+      ],
+      "active": "menuitem",
+      "consoleErrors": [],
+      "sha256": "c75644dfd9391d7c1799f8ea7a398069317b4bcbda02c96e4b140ddc174d7ac9",
+      "bytes": 18973
+    },
+    "controls-menu-row-open__ar__dark__1440": {
+      "route": "/__ui-baseline/controls/menus",
+      "area": "Controls (DEV-UI-01.4)",
+      "group": "menus",
+      "action": "menu-row-open",
+      "locale": "ar",
+      "theme": "dark",
+      "viewport": "1440x900",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "scrollWidth": 1440,
+      "clientWidth": 1440,
+      "scrollHeight": 900,
+      "fontsLoaded": [
+        "IBM Plex Sans",
+        "IBM Plex Sans Arabic"
+      ],
+      "active": "menuitem",
+      "consoleErrors": [],
+      "sha256": "b1ca695cb87186c9eaf71c29ca2ab8d79921fd5535d892f618d29c08c951cdf9",
+      "bytes": 23677
+    },
+    "controls-menu-row-open__ar__dark__390": {
+      "route": "/__ui-baseline/controls/menus",
+      "area": "Controls (DEV-UI-01.4)",
+      "group": "menus",
+      "action": "menu-row-open",
+      "locale": "ar",
+      "theme": "dark",
+      "viewport": "390x844",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "scrollWidth": 390,
+      "clientWidth": 390,
+      "scrollHeight": 844,
+      "fontsLoaded": [
+        "IBM Plex Sans",
+        "IBM Plex Sans Arabic"
+      ],
+      "active": "menuitem",
+      "consoleErrors": [],
+      "sha256": "79b24d853266d27f28d68e6de75839df202c6808f50022c48e632f7295bf012e",
+      "bytes": 19574
+    },
+    "controls-menu-sub-open__en__light__1440": {
+      "route": "/__ui-baseline/controls/menus",
+      "area": "Controls (DEV-UI-01.4)",
+      "group": "menus",
+      "action": "menu-sub-open",
+      "locale": "en",
+      "theme": "light",
+      "viewport": "1440x900",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "scrollWidth": 1440,
+      "clientWidth": 1440,
+      "scrollHeight": 900,
+      "fontsLoaded": [
+        "IBM Plex Sans"
+      ],
+      "active": "menuitem",
+      "consoleErrors": [],
+      "sha256": "63b28f1212fcd7c8f79e7f279c21c8c4b6d0ecb8dce821da1784c06905fe1f82",
+      "bytes": 19989
+    },
+    "controls-menu-sub-open__en__dark__1440": {
+      "route": "/__ui-baseline/controls/menus",
+      "area": "Controls (DEV-UI-01.4)",
+      "group": "menus",
+      "action": "menu-sub-open",
+      "locale": "en",
+      "theme": "dark",
+      "viewport": "1440x900",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "scrollWidth": 1440,
+      "clientWidth": 1440,
+      "scrollHeight": 900,
+      "fontsLoaded": [
+        "IBM Plex Sans"
+      ],
+      "active": "menuitem",
+      "consoleErrors": [],
+      "sha256": "283c58b3eaf54f7688306d48976d2e18b332ebbf5263652284a917578ecbd55b",
+      "bytes": 20450
+    },
+    "controls-menu-sub-open__ar__light__1440": {
+      "route": "/__ui-baseline/controls/menus",
+      "area": "Controls (DEV-UI-01.4)",
+      "group": "menus",
+      "action": "menu-sub-open",
+      "locale": "ar",
+      "theme": "light",
+      "viewport": "1440x900",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "scrollWidth": 1440,
+      "clientWidth": 1440,
+      "scrollHeight": 900,
+      "fontsLoaded": [
+        "IBM Plex Sans",
+        "IBM Plex Sans Arabic"
+      ],
+      "active": "menuitem",
+      "consoleErrors": [],
+      "sha256": "0ef13f30188f3c0ef811c84d5cb51a47a90bb60aad31f9a0add778ab610e8391",
+      "bytes": 18788
+    },
+    "controls-menu-sub-open__ar__dark__1440": {
+      "route": "/__ui-baseline/controls/menus",
+      "area": "Controls (DEV-UI-01.4)",
+      "group": "menus",
+      "action": "menu-sub-open",
+      "locale": "ar",
+      "theme": "dark",
+      "viewport": "1440x900",
+      "status": 200,
+      "horizontalOverflowPx": 0,
+      "scrollWidth": 1440,
+      "clientWidth": 1440,
+      "scrollHeight": 900,
+      "fontsLoaded": [
+        "IBM Plex Sans",
+        "IBM Plex Sans Arabic"
+      ],
+      "active": "menuitem",
+      "consoleErrors": [],
+      "sha256": "95fec0db8a7f8e2e048538f19c430cf0e06c133657d02612fca8f7c9f9a14c8d",
+      "bytes": 19211
     }
   }
 }

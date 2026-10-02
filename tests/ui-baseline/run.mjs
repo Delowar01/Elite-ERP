@@ -386,6 +386,23 @@ const CONTROL_ACTIONS = {
   "focus-radio": async (page) => {
     await tabTo(page, "[data-slot=radio]:checked");
   },
+  "menu-row-open": async (page) => {
+    await page.click(".row-menu-btn");
+    await page.locator('[role="menu"]').waitFor();
+    await page.locator('[role="menu"] .row-menu-item.has-submenu').click();
+    await page.locator(".row-menu-submenu.open").waitFor();
+  },
+  "menu-sub-open": async (page) => {
+    await tabTo(page, "[data-gallery=sub-trigger]");
+    await page.keyboard.press("Enter");
+    await page.locator('[role="menu"]').waitFor();
+    // Radix moves focus into the menu asynchronously; key presses before that are lost.
+    await page.waitForFunction(() => document.activeElement?.getAttribute("role") === "menuitem");
+    await page.keyboard.press("ArrowDown"); // Duplicate → Export (the sub trigger)
+    await page.waitForFunction(() => document.activeElement?.getAttribute("data-gallery") === "sub");
+    await page.keyboard.press(page.__dir === "rtl" ? "ArrowLeft" : "ArrowRight");
+    await page.locator('[role="menu"]').nth(1).waitFor();
+  },
   "focus-tab": async (page) => {
     await tabTo(page, '[role="tab"]');
     await page.keyboard.press(page.__dir === "rtl" ? "ArrowLeft" : "ArrowRight");
@@ -423,7 +440,7 @@ async function captureControls(outDir) {
   const bundle = await build({
     entryPoints: [join(ROOT, "tests/ui-baseline/controls-gallery.tsx")],
     bundle: true, write: false, format: "iife", platform: "browser", jsx: "automatic", target: "es2022",
-    tsconfig: join(ROOT, "tsconfig.json"), define: { "process.env.NODE_ENV": '"production"' }, logLevel: "error", minify: true,
+    tsconfig: join(ROOT, "tsconfig.json"), define: { "process.env.NODE_ENV": '"production"' }, logLevel: "error", minify: true, alias: { "next/link": join(ROOT, "tests/ui-baseline/gallery-link-stub.tsx") },
   });
   const galleryJs = bundle.outputFiles[0].text;
   const buildId = readFileSync(".next/BUILD_ID", "utf8").trim();

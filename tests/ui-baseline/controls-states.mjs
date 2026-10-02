@@ -31,6 +31,10 @@ const STATES = [
   ["focus-radio", "checks", "focus-radio", FOCUS],
   ["focus-tab", "tabs", "focus-tab", FOCUS],
   ["focus-row-menu", "tabs", "focus:.row-menu-btn", FOCUS],
+  // DEV-UI-01.4-C1: open DropdownMenu surfaces (the real RowMenu with its convert submenu expanded; a Radix
+  // Sub opened with the direction's own arrow key).
+  ["menu-row-open", "menus", "menu-row-open", ALL],
+  ["menu-sub-open", "menus", "menu-sub-open", FOCUS],
 ];
 
 export function controlsMatrix() {

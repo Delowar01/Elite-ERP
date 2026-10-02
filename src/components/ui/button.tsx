@@ -31,7 +31,8 @@ const buttonVariants = cva(
         // True ghost: no border, no fill until hover — icon and tertiary actions.
         ghost: "bg-transparent text-ink-muted border-transparent! hover:bg-surface-subtle hover:text-ink",
         // Destructive stays semantically distinct from primary: danger red, never navy.
-        destructive: "bg-danger text-danger-foreground hover:brightness-95",
+        // Semantic hover fill (--danger-hover, DEV-UI-01.4-C1) — no filter / brightness, no glow, no lift.
+        destructive: "bg-danger text-danger-foreground hover:bg-danger-hover",
         // Borderless destructive (remove / delete inside a row or panel).
         "destructive-ghost": "bg-transparent text-danger border-transparent! hover:bg-danger-bg hover:text-danger",
         link: "border-0 text-link underline-offset-4 hover:underline p-0 h-auto",

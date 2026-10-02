@@ -9,13 +9,14 @@ registry, permission, DB, accounting, inventory, payroll, lifecycle or org-theme
 
 | File | Content |
 |---|---|
+| `c1-correction.md` | **C1** — DropdownMenu document direction + semantic destructive hover (`--danger-hover`), with verification and screenshot evidence. |
 | `controls-audit.md` | The read-only audit (before state) + what implementation found beyond it. |
 | `consumer-migrations.md` | Exact consumer lists: ghost classification, danger ghosts, icon buttons, dead widths, native → primitive, excluded structures. |
 | `screenshot-change-report.json` | All 256 matrix states vs DEV-UI-01.3, with status, console, #418 and overflow before/after. |
-| `controls-states-report.json` | The 100 control-gallery states (definitions: `tests/ui-baseline/controls-states.mjs`). |
-| `shell-regression-report.json` | The 44 DEV-UI-01.3 shell states recaptured on this code vs the 01.3 candidates. |
+| `controls-states-report.json` | The 112 control-gallery states (100 + 12 open-menu states added in C1) (definitions: `tests/ui-baseline/controls-states.mjs`). |
+| `shell-regression-report.json` | The 44 DEV-UI-01.3 shell states recaptured on this code vs the 01.3 candidates (`c1`: C1 vs C0 — only the 4 Arabic open-menu states changed). |
 | `guardrails-after.json` | Report-only guardrails after this batch. |
-| `../../../tests/ui-baseline/candidates/dev-ui-01-4/` | Candidate screenshots (256 + `controls/` 100). Approved `baseline/` and the 01.1 / 01.2 / 01.3 candidates untouched. |
+| `../../../tests/ui-baseline/candidates/dev-ui-01-4/` | Candidate screenshots (256 + `controls/` 112). Approved `baseline/` and the 01.1 / 01.2 / 01.3 candidates untouched. |
 
 ## Locked decisions, as implemented
 
@@ -66,7 +67,11 @@ registry, permission, DB, accounting, inventory, payroll, lifecycle or org-theme
   `.doc-pill-btn` (control height, `--text-body-sm`, r8, focus-visible, value 600), `.row-menu-btn`,
   `.row-menu-item`, `.tab-row`, `.tab`, `.field label` (`--text-body-sm`).
 * **New** `use-document-dir.ts` — the `<html dir>` read on the client (hydration-safe
-  `useSyncExternalStore`), passed to the Radix Select and Tabs roots.
+  `useSyncExternalStore`), passed to the Radix Select, Tabs and (C1) DropdownMenu roots.
+* **C1** — `DropdownMenu` root wrapper (`dir={dir ?? docDir}`; Arabic menus now RTL, `align="end"`
+  logical, Radix submenus open and key by direction; row-menu chevron mirrored in RTL); solid
+  `destructive` hover `hover:brightness-95` → `hover:bg-danger-hover` (new semantic token
+  `--danger-hover`). See `c1-correction.md`.
 
 ## Verification
 
@@ -157,10 +162,9 @@ selector would now hit "Add New"), `verify-draft-func.mjs`, `verify-edit.mjs`,
    border-colour utility app-wide (`border-line-strong`, `border-danger`… on non-primitive markup
    silently render `--border`). The control primitives work around it with `!`; the global rule
    should move into `@layer base` in a dedicated batch (it changes every bordered element).
-2. **No Radix `DirectionProvider`.** Select and Tabs now pass the document direction; DropdownMenu
-   (incl. the frozen shell's account / favorites / notifications menus and the row menu, whose
-   submenu geometry is now logical) still renders `dir="ltr"` content in Arabic. Fix with a
-   provider in the root layout in a batch allowed to change the shell's menus.
+2. **No Radix `DirectionProvider`.** Select, Tabs and — since C1 — DropdownMenu pass the document
+   direction explicitly; an app-wide provider remains a later option. `DropdownMenuSubContent` (no
+   consumer) has no panel styling (see `c1-correction.md`).
 3. `.row-menu-btn` stays 30px (row action inside tables — DEV-UI-01.5 owns its size).
 4. Dark `--disabled-background` (#1f2338) is almost the dark `--input-background` (#1e2239);
    disabled fields rely on the disabled text colour in dark mode.

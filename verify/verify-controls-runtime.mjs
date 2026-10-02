@@ -43,7 +43,7 @@ await assertFreshBuild(BASE);
 const gallery = (await build({
   entryPoints: [join(process.cwd(), "tests/ui-baseline/controls-gallery.tsx")],
   bundle: true, write: false, format: "iife", platform: "browser", jsx: "automatic", target: "es2022",
-  tsconfig: join(process.cwd(), "tsconfig.json"), define: { "process.env.NODE_ENV": '"production"' }, logLevel: "error", minify: true,
+  tsconfig: join(process.cwd(), "tsconfig.json"), define: { "process.env.NODE_ENV": '"production"' }, logLevel: "error", minify: true, alias: { "next/link": join(process.cwd(), "tests/ui-baseline/gallery-link-stub.tsx") },
 })).outputFiles[0].text;
 
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || "/opt/pw-browsers/chromium" });
@@ -74,6 +74,8 @@ const app = await page.evaluate(() => ({
 }));
 check("the app's compiled stylesheets were found for the gallery", app.sheets.length > 0);
 
+const lum = (c) => { const [r, g, bl] = c.match(/[\d.]+/g).slice(0, 3).map(Number).map((v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }); return 0.2126 * r + 0.7152 * g + 0.0722 * bl; };
+const ratio = (a, c) => { const [x, y] = [lum(a), lum(c)].sort((m, n) => n - m); return (x + 0.05) / (y + 0.05); };
 const settle = (ms = 320) => page.waitForTimeout(ms); // > the 150ms colour / outline transition
 const setPrefs = (prefs) => ctx.addCookies(Object.entries(prefs).map(([name, value]) => ({ name, value, url: BASE })));
 
@@ -144,6 +146,20 @@ for (const locale of ["en", "ar"]) {
     check(`${T}: loading → disabled + aria-busy + spinner (all variants)`, badLoading.length === 0, badLoading.join(","));
     check(`${T}: loading keeps the label; icon-only keeps its accessible name`, Object.values(b).every((r) => r.loading[0].text.length > 0 && !!r.loading[1].label));
     check(`${T}: disabled buttons at 50% opacity`, Object.values(b).every((r) => r.disabledOpacity === "0.5"));
+    // C1: the solid destructive button hovers to the semantic --danger-hover fill — no filter, no geometry change.
+    {
+      const del = page.locator("[data-gallery-row='variant=destructive'] button").nth(1);
+      const look = () => del.evaluate((el) => { const c = getComputedStyle(el); const r = el.getBoundingClientRect(); return { bg: c.backgroundColor, fg: c.color, filter: c.filter, shadow: c.boxShadow, transform: c.transform, box: [r.x, r.y, r.width, r.height].join(",") }; });
+      const before = await look();
+      await del.hover();
+      await settle();
+      const after = await look();
+      await page.mouse.move(0, 0);
+      const [danger, dangerHover] = [await resolve("var(--danger)"), await resolve("var(--danger-hover)")];
+      check(`${T}: destructive rest = --danger, hover = --danger-hover (a real colour change)`, before.bg === danger && after.bg === dangerHover && danger !== dangerHover, `${before.bg} → ${after.bg} (want ${danger} → ${dangerHover})`);
+      check(`${T}: destructive hover — no filter, no shadow, no transform, same geometry`, before.filter === "none" && after.filter === "none" && after.shadow === "none" && after.transform === "none" && before.box === after.box, JSON.stringify({ before, after }));
+      check(`${T}: destructive label contrast ≥ 4.5 at rest and on hover`, ratio(before.bg, before.fg) >= 4.5 && ratio(after.bg, after.fg) >= 4.5, `${ratio(before.bg, before.fg).toFixed(2)} / ${ratio(after.bg, after.fg).toFixed(2)}`);
+    }
     if (theme === "light") {
       await expectFocus(`${T} Button`, "[data-slot=button]");
       await expectFocus(`${T} legacy .btn`, "button.btn");
@@ -198,8 +214,12 @@ for (const locale of ["en", "ar"]) {
         check(`${T}: Select list laid out in the document direction (${locale === "ar" ? "rtl" : "ltr"})`, geo.direction === (locale === "ar" ? "rtl" : "ltr"), geo.direction);
         check(`${T}: Select tick at the inline START (${locale === "ar" ? "right" : "left"} of the label)`, locale === "ar" ? geo.tickX > geo.textX : geo.tickX < geo.textX, `${geo.tickX} vs ${geo.textX}`);
         check(`${T}: Select selected item = accent tint, 600`, geo.bg === (await resolve("var(--accent-tint)")) && geo.weight === "600", `${geo.bg} ${geo.weight}`);
-        // keyboard: next option + Enter selects it, Escape-free close
+        // keyboard: next option + Enter selects it, Escape-free close. Wait until Radix has put focus on
+        // the selected option (it does so asynchronously after opening), then until ArrowDown has moved
+        // it — pressing earlier was a rare race, not a behaviour difference.
+        await page.locator('[role="option"][data-state="checked"][data-highlighted]').waitFor({ timeout: 5000 }).catch(() => {});
         await page.keyboard.press("ArrowDown");
+        await page.locator('[role="option"][data-state="unchecked"][data-highlighted]').waitFor({ timeout: 5000 }).catch(() => {});
         await page.keyboard.press("Enter");
         await settle();
         const val = await page.locator("[data-gallery=select-main]").innerText();
@@ -252,8 +272,6 @@ for (const locale of ["en", "ar"]) {
     await settle();
     check(`${T}: Checkbox toggles with Space`, (await cb.getAttribute("data-state")) === "checked");
     const cc = await cb.evaluate((el) => ({ bg: getComputedStyle(el).backgroundColor, tick: getComputedStyle(el.querySelector("svg")).color }));
-    const lum = (c) => { const [r, g, bl] = c.match(/[\d.]+/g).slice(0, 3).map(Number).map((v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }); return 0.2126 * r + 0.7152 * g + 0.0722 * bl; };
-    const ratio = (a, c) => { const [x, y] = [lum(a), lum(c)].sort((m, n) => n - m); return (x + 0.05) / (y + 0.05); };
     check(`${T}: checked tick vs fill ≥ 4.5`, ratio(cc.bg, cc.tick) >= 4.5, `${cc.bg} / ${cc.tick} = ${ratio(cc.bg, cc.tick).toFixed(2)}`);
     check(`${T}: checked fill = --primary`, cc.bg === (await resolve("var(--primary)")), cc.bg);
     await expectFocus(`${T} Radio`, "[data-slot=radio]:checked");
@@ -278,6 +296,74 @@ for (const locale of ["en", "ar"]) {
     await page.keyboard.press("Escape");
     await settle();
     check(`${T}: row menu opens from the keyboard, items 13px, Escape returns focus`, mi === "13px" && (await page.evaluate(() => document.activeElement?.classList.contains("row-menu-btn"))), mi);
+
+    // ---- C1: DropdownMenu direction (the real shared RowMenu + a Radix Sub) ----
+    await openGallery("menus", locale, theme);
+    const want = locale === "ar" ? "rtl" : "ltr";
+    await tabTo(".row-menu-btn");
+    await page.keyboard.press("Enter");
+    await page.locator('[role="menu"]').waitFor();
+    await page.waitForFunction(() => document.activeElement?.getAttribute("role") === "menuitem", null, { timeout: 5000 }).catch(() => {});
+    await settle();
+    const rm = await page.evaluate(() => {
+      const m = document.querySelector('[role="menu"]');
+      const t = document.querySelector(".row-menu-btn").getBoundingClientRect();
+      const b = m.getBoundingClientRect();
+      const it = m.querySelector('[role="menuitem"]');
+      const ir = it.getBoundingClientRect();
+      const ic = it.querySelector("svg").getBoundingClientRect();
+      return { attr: m.getAttribute("dir"), dir: getComputedStyle(m).direction, itemDir: getComputedStyle(it).direction, mLeft: b.left, mRight: b.right, tLeft: t.left, tRight: t.right,
+        iconCenter: ic.left + ic.width / 2, itemCenter: ir.left + ir.width / 2, vw: document.documentElement.clientWidth, focused: document.activeElement === it };
+    });
+    check(`${T}: row menu content + first item direction = ${want}`, rm.attr === want && rm.dir === want && rm.itemDir === want, JSON.stringify(rm));
+    check(`${T}: row menu align="end" is logical (${want === "rtl" ? "left" : "right"} edges aligned with the trigger), inside the viewport`,
+      (want === "rtl" ? Math.abs(rm.mLeft - rm.tLeft) <= 1.5 : Math.abs(rm.mRight - rm.tRight) <= 1.5) && rm.mLeft >= -0.5 && rm.mRight <= rm.vw + 0.5, JSON.stringify(rm));
+    check(`${T}: row menu item icon at the inline start; keyboard open focuses the first item`, (want === "rtl" ? rm.iconCenter > rm.itemCenter : rm.iconCenter < rm.itemCenter) && rm.focused, JSON.stringify(rm));
+    await page.keyboard.press("ArrowDown");
+    await page.keyboard.press("ArrowDown"); // View → Duplicate → Convert to
+    const chev = () => page.evaluate(() => { const a = document.activeElement; return { sub: a?.classList.contains("has-submenu"), t: a ? getComputedStyle(a.querySelector("svg:last-child")).transform : null }; });
+    const c0 = await chev();
+    check(`${T}: convert entry reached by keyboard; collapsed chevron ${want === "rtl" ? "mirrored (points to the inline end)" : "unmirrored"}`, c0.sub && (want === "rtl" ? c0.t === "matrix(-1, 0, 0, 1, 0, 0)" : c0.t === "none"), JSON.stringify(c0));
+    await page.keyboard.press("Enter");
+    await page.locator(".row-menu-submenu.open").waitFor();
+    await settle();
+    const sm = await page.evaluate(() => { const el = document.querySelector(".row-menu-submenu.open"); const c = getComputedStyle(el); const t = getComputedStyle(document.querySelector(".row-menu-item.has-submenu.expanded svg:last-child")).transform; return { dir: c.direction, bl: c.borderLeftWidth, br: c.borderRightWidth, ml: c.marginLeft, mr: c.marginRight, t }; });
+    check(`${T}: row-menu submenu opens in ${want}: rule + indent on the inline start, chevron rotated down`,
+      sm.dir === want && (want === "rtl" ? sm.br === "2px" && sm.bl === "0px" && sm.mr === "12px" : sm.bl === "2px" && sm.br === "0px" && sm.ml === "12px") && /^matrix\(0, 1, -1, 0/.test(sm.t ?? ""), JSON.stringify(sm));
+    await page.keyboard.press("ArrowDown");
+    const intoSub = await page.evaluate(() => !!document.activeElement?.closest(".row-menu-submenu"));
+    await page.keyboard.press("Escape");
+    await settle();
+    check(`${T}: ArrowDown enters the submenu targets; Escape closes and returns focus to the row-menu button`, intoSub && (await page.locator('[role="menu"]').count()) === 0 &&
+      (await page.evaluate(() => document.activeElement?.classList.contains("row-menu-btn"))));
+    // Radix Sub: opens with the direction's own key, on the logical side; the other key closes it.
+    await tabTo("[data-gallery=sub-trigger]");
+    await page.keyboard.press("Enter");
+    await page.locator('[role="menu"]').waitFor();
+    // Radix moves focus into the menu asynchronously; key presses before that are lost.
+    await page.waitForFunction(() => document.activeElement?.getAttribute("role") === "menuitem");
+    await page.keyboard.press("ArrowDown");
+    await page.waitForFunction(() => document.activeElement?.getAttribute("data-gallery") === "sub", null, { timeout: 5000 }).catch(() => {});
+    const [openKey, closeKey] = want === "rtl" ? ["ArrowLeft", "ArrowRight"] : ["ArrowRight", "ArrowLeft"];
+    await page.keyboard.press(closeKey);
+    await settle();
+    const wrongKeyMenus = await page.locator('[role="menu"]').count();
+    await page.keyboard.press(openKey);
+    await page.locator('[role="menu"]').nth(1).waitFor({ timeout: 5000 }).catch(() => {});
+    await settle();
+    const sub = await page.evaluate(() => {
+      const ms = [...document.querySelectorAll('[role="menu"]')];
+      const trig = document.querySelector("[data-gallery=sub]").getBoundingClientRect();
+      const s = ms[1]?.getBoundingClientRect();
+      return { n: ms.length, dir: ms[1] ? getComputedStyle(ms[1]).direction : null, attr: ms[1]?.getAttribute("dir"), sLeft: s?.left, sRight: s?.right, tLeft: trig.left, tRight: trig.right, inSub: !!ms[1]?.contains(document.activeElement), vw: document.documentElement.clientWidth };
+    });
+    check(`${T}: Radix Sub: ${closeKey} does not open it; ${openKey} opens it, focus inside`, wrongKeyMenus === 1 && sub.n === 2 && sub.inSub, JSON.stringify({ wrongKeyMenus, sub }));
+    check(`${T}: Radix SubContent direction ${want}, opens to the inline end (${want === "rtl" ? "left" : "right"} of its trigger), inside the viewport`,
+      sub.dir === want && sub.attr === want && (want === "rtl" ? sub.sRight <= sub.tLeft + 8 : sub.sLeft >= sub.tRight - 8) && sub.sLeft >= -0.5 && sub.sRight <= sub.vw + 0.5, JSON.stringify(sub));
+    await page.keyboard.press(closeKey);
+    await settle();
+    check(`${T}: Radix Sub: ${closeKey} closes it and returns focus to the sub trigger`, (await page.locator('[role="menu"]').count()) === 1 && (await page.evaluate(() => document.activeElement?.getAttribute("data-gallery") === "sub")));
+    await page.keyboard.press("Escape");
   }
 }
 await page.unrouteAll({ behavior: "ignoreErrors" });
@@ -341,13 +427,43 @@ for (const locale of ["en", "ar"]) {
       await trig.click();
       const menu = page.locator('[role="menu"]');
       const opened = await menu.first().waitFor({ timeout: 5000 }).then(() => true).catch(() => false);
-      const m = opened ? await menu.first().evaluate((el) => { const b = el.getBoundingClientRect(); const it = el.querySelector('[role="menuitem"]'); return { left: b.left, right: b.right, vw: document.documentElement.clientWidth, item: it ? getComputedStyle(it).fontSize : null }; }) : null;
+      const tb = await trig.boundingBox();
+      const m = opened ? await menu.first().evaluate((el) => { const b = el.getBoundingClientRect(); const it = el.querySelector('[role="menuitem"]'); return { left: b.left, right: b.right, vw: document.documentElement.clientWidth, dir: getComputedStyle(el).direction, attr: el.getAttribute("dir"), item: it ? getComputedStyle(it).fontSize : null }; }) : null;
       await page.keyboard.press("Escape");
       await settle();
       const closed = (await page.locator('[role="menu"]').count()) === 0;
       const back = await trig.evaluate((el) => document.activeElement === el);
       check(`${T}: "${name}" menu opens inside the viewport, Escape closes and returns focus`, opened && m.left >= -0.5 && m.right <= m.vw + 0.5 && closed && back, JSON.stringify({ opened, m, closed, back }));
+      const want = locale === "ar" ? "rtl" : "ltr";
+      check(`${T}: "${name}" menu direction = ${want}; align="end" logical (${want === "rtl" ? "left" : "right"} edges aligned with the trigger)`,
+        opened && m.dir === want && m.attr === want && (want === "rtl" ? Math.abs(m.left - tb.x) <= 1.5 : Math.abs(m.right - (tb.x + tb.width)) <= 1.5), JSON.stringify({ m, trigger: tb }));
     }
+    // 390: the account / favorites / notifications menus live in the navigation drawer.
+    await page.setViewportSize({ width: 390, height: 844 });
+    await settle();
+    await page.click(".topbar-menu-btn");
+    await page.locator(".mobile-nav").waitFor();
+    await settle();
+    const dTriggers = page.locator('.mobile-nav [aria-haspopup="menu"]');
+    const dn = await dTriggers.count();
+    check(`${T}@390: the drawer carries the account + favorites + notifications menu triggers`, dn >= 3, String(dn));
+    for (let i = 0; i < dn; i++) {
+      const trig = dTriggers.nth(i);
+      const name = (await trig.getAttribute("aria-label")) ?? `trigger ${i}`;
+      await trig.click();
+      const menu = page.locator('[role="menu"]');
+      const opened = await menu.first().waitFor({ timeout: 5000 }).then(() => true).catch(() => false);
+      const m = opened ? await menu.first().evaluate((el) => { const b = el.getBoundingClientRect(); return { left: b.left, right: b.right, vw: document.documentElement.clientWidth, dir: getComputedStyle(el).direction }; }) : null;
+      await page.keyboard.press("Escape");
+      await settle();
+      const closed = (await page.locator('[role="menu"]').count()) === 0;
+      const back = await trig.evaluate((el) => document.activeElement === el);
+      check(`${T}@390: "${name}" drawer menu: direction ${locale === "ar" ? "rtl" : "ltr"}, inside the viewport, Escape closes it (drawer stays) and returns focus`,
+        opened && m.dir === (locale === "ar" ? "rtl" : "ltr") && m.left >= -0.5 && m.right <= m.vw + 0.5 && closed && back && (await page.locator(".mobile-nav").count()) === 1, JSON.stringify({ opened, m, closed, back }));
+    }
+    await page.keyboard.press("Escape");
+    await settle();
+    await page.setViewportSize({ width: 1440, height: 900 });
     for (const w of [1440, 390]) {
       await page.setViewportSize({ width: w, height: 900 });
       await settle();

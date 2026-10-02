@@ -426,6 +426,12 @@ table.data-table.list-table td.mono, table.data-table.list-table td.num { white-
 
 .row-menu-item.has-submenu svg:last-child { margin-inline-start: auto; transition: transform .15s ease; }
 
+/* DEV-UI-01.4-C1: the collapsed "forward" chevron points to the inline end, so it is mirrored when the
+   Radix menu content carries dir="rtl" (since C1 it does in Arabic). A glyph mirror, not geometry; the
+   expanded state still rotates it down in both directions. (`:dir()` is not used: the CSS pipeline
+   rewrites it to a :lang() list.) */
+[data-radix-menu-content][dir="rtl"] .row-menu-item.has-submenu:not(.expanded) svg:last-child { transform: scaleX(-1); }
+
 .row-menu-item.has-submenu.expanded svg:last-child { transform: rotate(90deg); }
 
 .row-menu-item.has-submenu.expanded { background: var(--canvas); }

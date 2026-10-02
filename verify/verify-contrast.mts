@@ -186,6 +186,7 @@ const PAIRS: Pair[] = [
   ["danger text on its tint", "danger", "dangerTint", 4.5],
   ["danger text on surface", "danger", "surface", 4.5],
   ["danger-foreground on danger", "dangerForeground", "danger", 4.5],
+  ["danger-foreground on danger-hover", "dangerForeground", "dangerHover", 4.5],
   ["info text on its tint", "info", "infoTint", 4.5],
   ["info text on surface", "info", "surface", 4.5],
   ["corrective text on its tint", "corrective", "correctiveTint", 4.5],

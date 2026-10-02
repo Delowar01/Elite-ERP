@@ -3,8 +3,16 @@
 import * as React from "react";
 import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu";
 import { cn } from "@/lib/utils";
+import { useDocumentDir } from "./use-document-dir";
 
-const DropdownMenu = DropdownMenuPrimitive.Root;
+// Radix menus need the direction passed in (the app mounts no DirectionProvider): without it the
+// content carried dir="ltr" in Arabic — LTR layout, `align="end"` resolved physically, submenus
+// opening to the right and ArrowRight/ArrowLeft not mirrored (DEV-UI-01.4-C1). Sub, SubTrigger and
+// SubContent read the direction from this root. A caller may still pass `dir` explicitly.
+function DropdownMenu({ dir, ...props }: React.ComponentProps<typeof DropdownMenuPrimitive.Root>) {
+  const docDir = useDocumentDir();
+  return <DropdownMenuPrimitive.Root dir={dir ?? docDir} {...props} />;
+}
 const DropdownMenuTrigger = DropdownMenuPrimitive.Trigger;
 
 // Matches the mockup's .row-menu/.row-menu-item/.row-menu-divider exactly (literal

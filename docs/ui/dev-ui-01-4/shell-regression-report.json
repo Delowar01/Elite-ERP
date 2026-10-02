@@ -1,7 +1,7 @@
 {
   "compared": "tests/ui-baseline/candidates/dev-ui-01-3/shell -> the same 44 states recaptured on the DEV-UI-01.4 code (evidence only; not committed as candidates)",
   "regionCheck": "topbarChangedPx / sidebarChangedPx = changed pixels inside the top-bar strip (y<66) and the sidebar column (240px, 66px collapsed; inline-start side; >=1024 only)",
-  "openOverlays": "inspected diff images: account menu \u2014 only the 'Log out' item differs (.row-menu-item 12.5px -> 13px, the documented menu typography change); notifications menu, drawer (390 / 768), command palette and record search panels unchanged; every other changed pixel is page content behind / through the overlays (the dashboard's .btn rows 42 -> 36px). No shell state opens the favorites menu.",
+  "openOverlays": "inspected diff images: account menu — only the 'Log out' item differs (.row-menu-item 12.5px -> 13px, the documented menu typography change); notifications menu, drawer (390 / 768), command palette and record search panels unchanged; every other changed pixel is page content behind / through the overlays (the dashboard's .btn rows 42 -> 36px). No shell state opens the favorites menu.",
   "summary": {
     "states": 44,
     "identical": 4,
@@ -541,5 +541,465 @@
       "otherConsoleErrors": 0,
       "reproducible": true
     }
-  ]
+  ],
+  "c1": {
+    "compared": "the 44 shell states on DEV-UI-01.4 C0 (a610cd7) -> recaptured on C1 (evidence only)",
+    "summary": {
+      "states": 44,
+      "identical": 40,
+      "different": [
+        "shell-s5-account-menu__ar__light__1440",
+        "shell-s5-account-menu__ar__light__390",
+        "shell-s7-notifications__ar__dark__1440",
+        "shell-s7-notifications__ar__light__1440"
+      ],
+      "non200": 0,
+      "overflowIncreased": 0,
+      "otherConsoleErrors": 0,
+      "reproducible": 44
+    },
+    "note": "Only the Arabic open-menu states changed: the account and notifications menus now lay out right-to-left and align='end' resolves to the trigger's logical end (its left edge in RTL). Every other state, all English states and every closed state are byte-identical to C0.",
+    "states": [
+      {
+        "id": "shell-s1-collapsed-rail__ar__dark__1440",
+        "vsC0": "IDENTICAL",
+        "status": 200,
+        "horizontalOverflowPxC0": 0,
+        "horizontalOverflowPxC1": 0,
+        "hydration418": 1,
+        "otherConsoleErrors": 0,
+        "reproducible": true
+      },
+      {
+        "id": "shell-s1-collapsed-rail__ar__light__1440",
+        "vsC0": "IDENTICAL",
+        "status": 200,
+        "horizontalOverflowPxC0": 0,
+        "horizontalOverflowPxC1": 0,
+        "hydration418": 1,
+        "otherConsoleErrors": 0,
+        "reproducible": true
+      },
+      {
+        "id": "shell-s1-collapsed-rail__en__dark__1440",
+        "vsC0": "IDENTICAL",
+        "status": 200,
+        "horizontalOverflowPxC0": 0,
+        "horizontalOverflowPxC1": 0,
+        "hydration418": 0,
+        "otherConsoleErrors": 0,
+        "reproducible": true
+      },
+      {
+        "id": "shell-s1-collapsed-rail__en__light__1440",
+        "vsC0": "IDENTICAL",
+        "status": 200,
+        "horizontalOverflowPxC0": 0,
+        "horizontalOverflowPxC1": 0,
+        "hydration418": 0,
+        "otherConsoleErrors": 0,
+        "reproducible": true
+      },
+      {
+        "id": "shell-s10-recycle-bin-title__ar__light__1440",
+        "vsC0": "IDENTICAL",
+        "status": 200,
+        "horizontalOverflowPxC0": 0,
+        "horizontalOverflowPxC1": 0,
+        "hydration418": 0,
+        "otherConsoleErrors": 0,
+        "reproducible": true
+      },
+      {
+        "id": "shell-s10-recycle-bin-title__ar__light__390",
+        "vsC0": "IDENTICAL",
+        "status": 200,
+        "horizontalOverflowPxC0": 0,
+        "horizontalOverflowPxC1": 0,
+        "hydration418": 0,
+        "otherConsoleErrors": 0,
+        "reproducible": true
+      },
+      {
+        "id": "shell-s10-recycle-bin-title__en__light__1440",
+        "vsC0": "IDENTICAL",
+        "status": 200,
+        "horizontalOverflowPxC0": 0,
+        "horizontalOverflowPxC1": 0,
+        "hydration418": 0,
+        "otherConsoleErrors": 0,
+        "reproducible": true
+      },
+      {
+        "id": "shell-s10-recycle-bin-title__en__light__390",
+        "vsC0": "IDENTICAL",
+        "status": 200,
+        "horizontalOverflowPxC0": 0,
+        "horizontalOverflowPxC1": 0,
+        "hydration418": 0,
+        "otherConsoleErrors": 0,
+        "reproducible": true
+      },
+      {
+        "id": "shell-s2-drawer-open__ar__dark__390",
+        "vsC0": "IDENTICAL",
+        "status": 200,
+        "horizontalOverflowPxC0": 0,
+        "horizontalOverflowPxC1": 0,
+        "hydration418": 1,
+        "otherConsoleErrors": 0,
+        "reproducible": true
+      },
+      {
+        "id": "shell-s2-drawer-open__ar__dark__768",
+        "vsC0": "IDENTICAL",
+        "status": 200,
+        "horizontalOverflowPxC0": 0,
+        "horizontalOverflowPxC1": 0,
+        "hydration418": 1,
+        "otherConsoleErrors": 0,
+        "reproducible": true
+      },
+      {
+        "id": "shell-s2-drawer-open__ar__light__390",
+        "vsC0": "IDENTICAL",
+        "status": 200,
+        "horizontalOverflowPxC0": 0,
+        "horizontalOverflowPxC1": 0,
+        "hydration418": 1,
+        "otherConsoleErrors": 0,
+        "reproducible": true
+      },
+      {
+        "id": "shell-s2-drawer-open__ar__light__768",
+        "vsC0": "IDENTICAL",
+        "status": 200,
+        "horizontalOverflowPxC0": 0,
+        "horizontalOverflowPxC1": 0,
+        "hydration418": 1,
+        "otherConsoleErrors": 0,
+        "reproducible": true
+      },
+      {
+        "id": "shell-s2-drawer-open__en__dark__390",
+        "vsC0": "IDENTICAL",
+        "status": 200,
+        "horizontalOverflowPxC0": 0,
+        "horizontalOverflowPxC1": 0,
+        "hydration418": 0,
+        "otherConsoleErrors": 0,
+        "reproducible": true
+      },
+      {
+        "id": "shell-s2-drawer-open__en__dark__768",
+        "vsC0": "IDENTICAL",
+        "status": 200,
+        "horizontalOverflowPxC0": 0,
+        "horizontalOverflowPxC1": 0,
+        "hydration418": 0,
+        "otherConsoleErrors": 0,
+        "reproducible": true
+      },
+      {
+        "id": "shell-s2-drawer-open__en__light__390",
+        "vsC0": "IDENTICAL",
+        "status": 200,
+        "horizontalOverflowPxC0": 0,
+        "horizontalOverflowPxC1": 0,
+        "hydration418": 0,
+        "otherConsoleErrors": 0,
+        "reproducible": true
+      },
+      {
+        "id": "shell-s2-drawer-open__en__light__768",
+        "vsC0": "IDENTICAL",
+        "status": 200,
+        "horizontalOverflowPxC0": 0,
+        "horizontalOverflowPxC1": 0,
+        "hydration418": 0,
+        "otherConsoleErrors": 0,
+        "reproducible": true
+      },
+      {
+        "id": "shell-s3-command-palette__ar__light__1440",
+        "vsC0": "IDENTICAL",
+        "status": 200,
+        "horizontalOverflowPxC0": 0,
+        "horizontalOverflowPxC1": 0,
+        "hydration418": 1,
+        "otherConsoleErrors": 0,
+        "reproducible": true
+      },
+      {
+        "id": "shell-s3-command-palette__ar__light__390",
+        "vsC0": "IDENTICAL",
+        "status": 200,
+        "horizontalOverflowPxC0": 0,
+        "horizontalOverflowPxC1": 0,
+        "hydration418": 1,
+        "otherConsoleErrors": 0,
+        "reproducible": true
+      },
+      {
+        "id": "shell-s3-command-palette__en__light__1440",
+        "vsC0": "IDENTICAL",
+        "status": 200,
+        "horizontalOverflowPxC0": 0,
+        "horizontalOverflowPxC1": 0,
+        "hydration418": 0,
+        "otherConsoleErrors": 0,
+        "reproducible": true
+      },
+      {
+        "id": "shell-s3-command-palette__en__light__390",
+        "vsC0": "IDENTICAL",
+        "status": 200,
+        "horizontalOverflowPxC0": 0,
+        "horizontalOverflowPxC1": 0,
+        "hydration418": 0,
+        "otherConsoleErrors": 0,
+        "reproducible": true
+      },
+      {
+        "id": "shell-s4-record-search__ar__light__1440",
+        "vsC0": "IDENTICAL",
+        "status": 200,
+        "horizontalOverflowPxC0": 0,
+        "horizontalOverflowPxC1": 0,
+        "hydration418": 1,
+        "otherConsoleErrors": 0,
+        "reproducible": true
+      },
+      {
+        "id": "shell-s4-record-search__ar__light__390",
+        "vsC0": "IDENTICAL",
+        "status": 200,
+        "horizontalOverflowPxC0": 0,
+        "horizontalOverflowPxC1": 0,
+        "hydration418": 1,
+        "otherConsoleErrors": 0,
+        "reproducible": true
+      },
+      {
+        "id": "shell-s4-record-search__en__light__1440",
+        "vsC0": "IDENTICAL",
+        "status": 200,
+        "horizontalOverflowPxC0": 0,
+        "horizontalOverflowPxC1": 0,
+        "hydration418": 0,
+        "otherConsoleErrors": 0,
+        "reproducible": true
+      },
+      {
+        "id": "shell-s4-record-search__en__light__390",
+        "vsC0": "IDENTICAL",
+        "status": 200,
+        "horizontalOverflowPxC0": 0,
+        "horizontalOverflowPxC1": 0,
+        "hydration418": 0,
+        "otherConsoleErrors": 0,
+        "reproducible": true
+      },
+      {
+        "id": "shell-s5-account-menu__ar__light__1440",
+        "vsC0": "DIFFERENT",
+        "status": 200,
+        "horizontalOverflowPxC0": 0,
+        "horizontalOverflowPxC1": 0,
+        "hydration418": 1,
+        "otherConsoleErrors": 0,
+        "reproducible": true
+      },
+      {
+        "id": "shell-s5-account-menu__ar__light__390",
+        "vsC0": "DIFFERENT",
+        "status": 200,
+        "horizontalOverflowPxC0": 0,
+        "horizontalOverflowPxC1": 0,
+        "hydration418": 1,
+        "otherConsoleErrors": 0,
+        "reproducible": true
+      },
+      {
+        "id": "shell-s5-account-menu__en__light__1440",
+        "vsC0": "IDENTICAL",
+        "status": 200,
+        "horizontalOverflowPxC0": 0,
+        "horizontalOverflowPxC1": 0,
+        "hydration418": 0,
+        "otherConsoleErrors": 0,
+        "reproducible": true
+      },
+      {
+        "id": "shell-s5-account-menu__en__light__390",
+        "vsC0": "IDENTICAL",
+        "status": 200,
+        "horizontalOverflowPxC0": 0,
+        "horizontalOverflowPxC1": 0,
+        "hydration418": 0,
+        "otherConsoleErrors": 0,
+        "reproducible": true
+      },
+      {
+        "id": "shell-s6-language-focus__ar__light__1440",
+        "vsC0": "IDENTICAL",
+        "status": 200,
+        "horizontalOverflowPxC0": 0,
+        "horizontalOverflowPxC1": 0,
+        "hydration418": 1,
+        "otherConsoleErrors": 0,
+        "reproducible": true
+      },
+      {
+        "id": "shell-s6-language-focus__ar__light__390",
+        "vsC0": "IDENTICAL",
+        "status": 200,
+        "horizontalOverflowPxC0": 0,
+        "horizontalOverflowPxC1": 0,
+        "hydration418": 1,
+        "otherConsoleErrors": 0,
+        "reproducible": true
+      },
+      {
+        "id": "shell-s6-language-focus__en__light__1440",
+        "vsC0": "IDENTICAL",
+        "status": 200,
+        "horizontalOverflowPxC0": 0,
+        "horizontalOverflowPxC1": 0,
+        "hydration418": 0,
+        "otherConsoleErrors": 0,
+        "reproducible": true
+      },
+      {
+        "id": "shell-s6-language-focus__en__light__390",
+        "vsC0": "IDENTICAL",
+        "status": 200,
+        "horizontalOverflowPxC0": 0,
+        "horizontalOverflowPxC1": 0,
+        "hydration418": 0,
+        "otherConsoleErrors": 0,
+        "reproducible": true
+      },
+      {
+        "id": "shell-s7-notifications__ar__dark__1440",
+        "vsC0": "DIFFERENT",
+        "status": 200,
+        "horizontalOverflowPxC0": 0,
+        "horizontalOverflowPxC1": 0,
+        "hydration418": 1,
+        "otherConsoleErrors": 0,
+        "reproducible": true
+      },
+      {
+        "id": "shell-s7-notifications__ar__light__1440",
+        "vsC0": "DIFFERENT",
+        "status": 200,
+        "horizontalOverflowPxC0": 0,
+        "horizontalOverflowPxC1": 0,
+        "hydration418": 1,
+        "otherConsoleErrors": 0,
+        "reproducible": true
+      },
+      {
+        "id": "shell-s7-notifications__en__dark__1440",
+        "vsC0": "IDENTICAL",
+        "status": 200,
+        "horizontalOverflowPxC0": 0,
+        "horizontalOverflowPxC1": 0,
+        "hydration418": 0,
+        "otherConsoleErrors": 0,
+        "reproducible": true
+      },
+      {
+        "id": "shell-s7-notifications__en__light__1440",
+        "vsC0": "IDENTICAL",
+        "status": 200,
+        "horizontalOverflowPxC0": 0,
+        "horizontalOverflowPxC1": 0,
+        "hydration418": 0,
+        "otherConsoleErrors": 0,
+        "reproducible": true
+      },
+      {
+        "id": "shell-s8-staff-drawer__ar__light__390",
+        "vsC0": "IDENTICAL",
+        "status": 200,
+        "horizontalOverflowPxC0": 0,
+        "horizontalOverflowPxC1": 0,
+        "hydration418": 1,
+        "otherConsoleErrors": 0,
+        "reproducible": true
+      },
+      {
+        "id": "shell-s8-staff-drawer__en__light__390",
+        "vsC0": "IDENTICAL",
+        "status": 200,
+        "horizontalOverflowPxC0": 0,
+        "horizontalOverflowPxC1": 0,
+        "hydration418": 0,
+        "otherConsoleErrors": 0,
+        "reproducible": true
+      },
+      {
+        "id": "shell-s8-staff-shell__ar__light__1440",
+        "vsC0": "IDENTICAL",
+        "status": 200,
+        "horizontalOverflowPxC0": 0,
+        "horizontalOverflowPxC1": 0,
+        "hydration418": 1,
+        "otherConsoleErrors": 0,
+        "reproducible": true
+      },
+      {
+        "id": "shell-s8-staff-shell__en__light__1440",
+        "vsC0": "IDENTICAL",
+        "status": 200,
+        "horizontalOverflowPxC0": 0,
+        "horizontalOverflowPxC1": 0,
+        "hydration418": 0,
+        "otherConsoleErrors": 0,
+        "reproducible": true
+      },
+      {
+        "id": "shell-s9-focus-nav-item__en__dark__1440",
+        "vsC0": "IDENTICAL",
+        "status": 200,
+        "horizontalOverflowPxC0": 0,
+        "horizontalOverflowPxC1": 0,
+        "hydration418": 0,
+        "otherConsoleErrors": 0,
+        "reproducible": true
+      },
+      {
+        "id": "shell-s9-focus-nav-item__en__light__1440",
+        "vsC0": "IDENTICAL",
+        "status": 200,
+        "horizontalOverflowPxC0": 0,
+        "horizontalOverflowPxC1": 0,
+        "hydration418": 0,
+        "otherConsoleErrors": 0,
+        "reproducible": true
+      },
+      {
+        "id": "shell-s9-focus-topbar__en__dark__1440",
+        "vsC0": "IDENTICAL",
+        "status": 200,
+        "horizontalOverflowPxC0": 0,
+        "horizontalOverflowPxC1": 0,
+        "hydration418": 0,
+        "otherConsoleErrors": 0,
+        "reproducible": true
+      },
+      {
+        "id": "shell-s9-focus-topbar__en__light__1440",
+        "vsC0": "IDENTICAL",
+        "status": 200,
+        "horizontalOverflowPxC0": 0,
+        "horizontalOverflowPxC1": 0,
+        "hydration418": 0,
+        "otherConsoleErrors": 0,
+        "reproducible": true
+      }
+    ]
+  }
 }

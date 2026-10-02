@@ -44,6 +44,7 @@
 @property --danger { syntax: "<color>"; inherits: true; initial-value: transparent; }
 @property --danger-bg { syntax: "<color>"; inherits: true; initial-value: transparent; }
 @property --danger-foreground { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --danger-hover { syntax: "<color>"; inherits: true; initial-value: transparent; }
 @property --info { syntax: "<color>"; inherits: true; initial-value: transparent; }
 @property --info-bg { syntax: "<color>"; inherits: true; initial-value: transparent; }
 @property --corrective { syntax: "<color>"; inherits: true; initial-value: transparent; }
@@ -120,6 +121,7 @@
   --danger: light-dark(#b4322d, #f08a83);
   --danger-bg: light-dark(#fbe6e4, #3a1716);
   --danger-foreground: light-dark(#ffffff, #17173f);
+  --danger-hover: light-dark(#992b26, #f29c96);
   --info: light-dark(#2f4fb8, #93a6f0);
   --info-bg: light-dark(#e7ecfa, #19203f);
   --corrective: light-dark(#5b3fb8, #b3a3f5);
@@ -335,6 +337,7 @@
   --color-danger: var(--danger);
   --color-danger-bg: var(--danger-bg);
   --color-danger-foreground: var(--danger-foreground);
+  --color-danger-hover: var(--danger-hover);
   --color-info: var(--info);
   --color-info-bg: var(--info-bg);
   --color-corrective: var(--corrective);

@@ -10,7 +10,7 @@
  */
 import { useState } from "react";
 import { createRoot } from "react-dom/client";
-import { Plus, Trash2, Pencil, MoreVertical } from "lucide-react";
+import { Plus, Trash2, Pencil, MoreVertical, Eye, Copy, FileText, Truck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -20,7 +20,8 @@ import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent } from "@/components/ui/dropdown-menu";
+import { RowMenu } from "@/app/(app)/sales/_shared/row-menu";
 
 type Cfg = { group: string; locale: "en" | "ar" };
 const cfg: Cfg = (window as unknown as { __GALLERY__: Cfg }).__GALLERY__;
@@ -196,7 +197,47 @@ function TabsAndMenu() {
   );
 }
 
-const GROUPS: Record<string, () => React.ReactElement> = { buttons: Buttons, fields: Fields, selects: Selects, searchables: Searchables, checks: Checks, tabs: TabsAndMenu };
+// DEV-UI-01.4-C1: open menus in both directions. The REAL shared RowMenu (sales/_shared/row-menu.tsx,
+// entries without href) at the inline end of a table-like row, and a DropdownMenu with a Radix Sub.
+function Menus() {
+  const noop = () => {};
+  return (
+    <div className="flex max-w-[720px] flex-col gap-6">
+      <div className="flex items-center justify-between rounded-lg border border-line bg-surface px-4 py-3" data-gallery-row="row menu">
+        <span className="text-body text-ink">{L("INV-0006 · Al Noor Contracting (Fictional)", "INV-0006 · مؤسسة النور للمقاولات (وهمية)")}</span>
+        <RowMenu
+          entries={[
+            { kind: "item", icon: Eye, label: L("View", "عرض"), onSelect: noop },
+            { kind: "item", icon: Copy, label: L("Duplicate", "تكرار"), onSelect: noop },
+            { kind: "convert", label: L("Convert to", "تحويل إلى"), targets: [{ label: L("Invoice", "فاتورة"), icon: FileText, onSelect: noop }, { label: L("Delivery Challan", "إذن تسليم"), icon: Truck, onSelect: noop }] },
+            { kind: "separator" },
+            { kind: "item", icon: Trash2, label: L("Delete", "حذف"), onSelect: noop, danger: true },
+          ]}
+        />
+      </div>
+      <div className="flex items-center justify-between" data-gallery-row="submenu">
+        <span className="text-body text-ink-muted">{L("Radix submenu", "قائمة فرعية")}</span>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" data-gallery="sub-trigger">{L("More", "المزيد")}</Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem>{L("Duplicate", "تكرار")}</DropdownMenuItem>
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger data-gallery="sub">{L("Export", "تصدير")}</DropdownMenuSubTrigger>
+              <DropdownMenuSubContent>
+                <DropdownMenuItem>PDF</DropdownMenuItem>
+                <DropdownMenuItem>Excel</DropdownMenuItem>
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    </div>
+  );
+}
+
+const GROUPS: Record<string, () => React.ReactElement> = { buttons: Buttons, fields: Fields, selects: Selects, searchables: Searchables, checks: Checks, tabs: TabsAndMenu, menus: Menus };
 
 function Gallery() {
   const G = GROUPS[cfg.group];

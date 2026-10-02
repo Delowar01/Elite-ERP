@@ -382,19 +382,19 @@
       },
       {
         "file": "src/app/(app)/mockup-parity.css",
-        "line": 597,
+        "line": 603,
         "kind": "css",
         "token": "margin-left"
       },
       {
         "file": "src/app/(app)/mockup-parity.css",
-        "line": 607,
+        "line": 613,
         "kind": "css",
         "token": "margin-right"
       },
       {
         "file": "src/app/(app)/mockup-parity.css",
-        "line": 617,
+        "line": 623,
         "kind": "css",
         "token": "margin-right"
       },
@@ -1300,17 +1300,17 @@
       },
       {
         "file": "src/app/(app)/mockup-parity.css",
-        "line": 437,
+        "line": 443,
         "value": "var(--text-body-sm)"
       },
       {
         "file": "src/app/(app)/mockup-parity.css",
-        "line": 488,
+        "line": 494,
         "value": "var(--text-body-sm)"
       },
       {
         "file": "src/app/(app)/mockup-parity.css",
-        "line": 831,
+        "line": 837,
         "value": "var(--text-body)"
       },
       {
@@ -1410,12 +1410,12 @@
       },
       {
         "file": "src/app/globals.css",
-        "line": 361,
+        "line": 364,
         "value": "var(--text-body-lg)"
       },
       {
         "file": "src/app/globals.css",
-        "line": 415,
+        "line": 418,
         "value": "var(--text-caption)"
       }
     ],
@@ -2094,73 +2094,66 @@
       },
       {
         "file": "src/app/(app)/mockup-parity.css",
-        "line": 445,
+        "line": 451,
         "scope": "screen",
         "value": "9.5px",
         "px": 9.5
       },
       {
         "file": "src/app/(app)/mockup-parity.css",
-        "line": 449,
+        "line": 455,
         "scope": "screen",
         "value": "11.5px",
         "px": 11.5
       },
       {
         "file": "src/app/(app)/mockup-parity.css",
-        "line": 463,
+        "line": 469,
         "scope": "screen",
         "value": "15px",
         "px": 15
       },
       {
         "file": "src/app/(app)/mockup-parity.css",
-        "line": 499,
+        "line": 505,
         "scope": "screen",
         "value": "12.5px",
         "px": 12.5
       },
       {
         "file": "src/app/(app)/mockup-parity.css",
-        "line": 503,
+        "line": 509,
         "scope": "screen",
         "value": "10.5px",
         "px": 10.5
       },
       {
         "file": "src/app/(app)/mockup-parity.css",
-        "line": 517,
+        "line": 523,
         "scope": "screen",
         "value": "11.5px",
         "px": 11.5
       },
       {
         "file": "src/app/(app)/mockup-parity.css",
-        "line": 521,
+        "line": 527,
         "scope": "screen",
         "value": "12.5px",
         "px": 12.5
       },
       {
         "file": "src/app/(app)/mockup-parity.css",
-        "line": 529,
+        "line": 535,
         "scope": "screen",
         "value": "10.5px",
         "px": 10.5
       },
       {
         "file": "src/app/(app)/mockup-parity.css",
-        "line": 547,
+        "line": 553,
         "scope": "screen",
         "value": "10.5px",
         "px": 10.5
-      },
-      {
-        "file": "src/app/(app)/mockup-parity.css",
-        "line": 549,
-        "scope": "screen",
-        "value": "15px",
-        "px": 15
       },
       {
         "file": "src/app/(app)/mockup-parity.css",
@@ -2171,119 +2164,126 @@
       },
       {
         "file": "src/app/(app)/mockup-parity.css",
-        "line": 583,
+        "line": 561,
+        "scope": "screen",
+        "value": "15px",
+        "px": 15
+      },
+      {
+        "file": "src/app/(app)/mockup-parity.css",
+        "line": 589,
         "scope": "screen",
         "value": "21px",
         "px": 21
       },
       {
         "file": "src/app/(app)/mockup-parity.css",
-        "line": 589,
+        "line": 595,
         "scope": "screen",
         "value": "11.5px",
         "px": 11.5
       },
       {
         "file": "src/app/(app)/mockup-parity.css",
-        "line": 611,
+        "line": 617,
         "scope": "screen",
         "value": "12.5px",
         "px": 12.5
       },
       {
         "file": "src/app/(app)/mockup-parity.css",
-        "line": 613,
+        "line": 619,
         "scope": "screen",
         "value": "25px",
         "px": 25
       },
       {
         "file": "src/app/(app)/mockup-parity.css",
-        "line": 615,
+        "line": 621,
         "scope": "screen",
         "value": "12.5px",
         "px": 12.5
       },
       {
         "file": "src/app/(app)/mockup-parity.css",
-        "line": 643,
+        "line": 649,
         "scope": "screen",
         "value": "12.5px",
         "px": 12.5
       },
       {
         "file": "src/app/(app)/mockup-parity.css",
-        "line": 645,
+        "line": 651,
         "scope": "screen",
         "value": "10.5px",
         "px": 10.5
       },
       {
         "file": "src/app/(app)/mockup-parity.css",
-        "line": 653,
+        "line": 659,
         "scope": "screen",
         "value": "11.5px",
         "px": 11.5
       },
       {
         "file": "src/app/(app)/mockup-parity.css",
-        "line": 657,
+        "line": 663,
         "scope": "screen",
         "value": "12.5px",
         "px": 12.5
       },
       {
         "file": "src/app/(app)/mockup-parity.css",
-        "line": 667,
+        "line": 673,
         "scope": "screen",
         "value": "11.5px",
         "px": 11.5
       },
       {
         "file": "src/app/(app)/mockup-parity.css",
-        "line": 683,
+        "line": 689,
         "scope": "screen",
         "value": "10.5px",
         "px": 10.5
       },
       {
         "file": "src/app/(app)/mockup-parity.css",
-        "line": 685,
+        "line": 691,
         "scope": "screen",
         "value": "8.5px",
         "px": 8.5
       },
       {
         "file": "src/app/(app)/mockup-parity.css",
-        "line": 694,
+        "line": 700,
         "scope": "screen",
         "value": "11.5px",
         "px": 11.5
       },
       {
         "file": "src/app/(app)/mockup-parity.css",
-        "line": 696,
+        "line": 702,
         "scope": "screen",
         "value": "12.5px",
         "px": 12.5
       },
       {
         "file": "src/app/(app)/mockup-parity.css",
-        "line": 698,
+        "line": 704,
         "scope": "screen",
         "value": "9px",
         "px": 9
       },
       {
         "file": "src/app/(app)/mockup-parity.css",
-        "line": 709,
+        "line": 715,
         "scope": "screen",
         "value": "13.5px",
         "px": 13.5
       },
       {
         "file": "src/app/(app)/mockup-parity.css",
-        "line": 710,
+        "line": 716,
         "scope": "screen",
         "value": "11.5px",
         "px": 11.5
@@ -3683,7 +3683,7 @@
       },
       {
         "file": "src/components/ui/dropdown-menu.tsx",
-        "line": 43,
+        "line": 51,
         "scope": "screen",
         "value": "text-[10.5px]",
         "px": 10.5
@@ -3970,13 +3970,13 @@
       },
       {
         "file": "src/components/ui/dropdown-menu.tsx",
-        "line": 30,
+        "line": 38,
         "kind": "tailwind",
         "classes": "row-menu-item outline-none"
       },
       {
         "file": "src/components/ui/dropdown-menu.tsx",
-        "line": 57,
+        "line": 65,
         "kind": "tailwind",
         "classes": "row-menu-item has-submenu outline-none"
       },

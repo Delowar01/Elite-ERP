@@ -33,6 +33,7 @@ const radio = read(UI + "radio-group.tsx");
 const label = read(UI + "label.tsx");
 const dialog = read(UI + "dialog.tsx");
 const tabs = read(UI + "tabs.tsx");
+const dropdown = read(UI + "dropdown-menu.tsx");
 const globals = read("src/app/globals.css");
 const legacyCss = read("src/app/(app)/mockup-parity.css").replace(/\/\*[\s\S]*?\*\//g, "");
 const pkg = JSON.parse(read("package.json"));
@@ -159,7 +160,11 @@ check("Select: no physical pl/pr/left/right (items ps-8 pe-3, tick at start-2.5)
 check("SearchableSelect: no physical geometry", physical(cls.SearchableSelect).length === 0, physical(cls.SearchableSelect).join(" "));
 const dialogPhysical = physical(classText(dialog)).filter((c) => c !== "left-1/2");
 check("Dialog: close at end-4; only the centring left-1/2 is physical (allow-listed)", /absolute end-4 top-4/.test(dialog) && dialogPhysical.length === 0, dialogPhysical.join(" "));
-check("row menu: logical submenu (no [dir=rtl] overrides, margin-inline-start: auto)", !/\[dir="rtl"\]\s*\.row-menu/.test(legacyCss) && /\.row-menu-item\.has-submenu svg:last-child\s*\{[^}]*margin-inline-start:\s*auto/.test(legacyCss) &&
+// The one allowed [dir] rule: the C1 chevron glyph mirror, scoped to the Radix menu content's own dir.
+const CHEVRON_MIRROR = '[data-radix-menu-content][dir="rtl"] .row-menu-item.has-submenu:not(.expanded) svg:last-child { transform: scaleX(-1); }';
+check("row menu: RTL chevron mirrored via the menu content's dir (collapsed only; not :dir(), which compiles to :lang())",
+  legacyCss.includes(CHEVRON_MIRROR) && !/:dir\(/.test(legacyCss));
+check("row menu: logical submenu (no [dir=rtl] geometry overrides, margin-inline-start: auto)", !/\[dir="rtl"\]\s*\.row-menu/.test(legacyCss.replace(CHEVRON_MIRROR, "")) && /\.row-menu-item\.has-submenu svg:last-child\s*\{[^}]*margin-inline-start:\s*auto/.test(legacyCss) &&
   !/\.row-menu-submenu[^{]*\{[^}]*(?:padding|margin|border)-(?:left|right)/.test(legacyCss));
 
 // ---------- 5. variants ----------
@@ -172,6 +177,10 @@ check("glass is an alias of secondary", vClass("glass") === vClass("secondary") 
 check("outline is bordered, ghost is borderless", /border-border-strong!/.test(vClass("outline")) && /border-transparent!/.test(vClass("ghost")) && !/border-border/.test(vClass("ghost")));
 check("destructive-ghost: danger text, no border, danger-bg hover", /\btext-danger\b/.test(vClass("destructive-ghost")) && /border-transparent!/.test(vClass("destructive-ghost")) && /hover:bg-danger-bg/.test(vClass("destructive-ghost")));
 check("destructive is danger, never navy", /\bbg-danger\b/.test(vClass("destructive")) && !/primary/.test(vClass("destructive")));
+check("destructive hover = the semantic --danger-hover fill (C1)", /\bhover:bg-danger-hover\b/.test(vClass("destructive")));
+check("destructive: no brightness / filter / arbitrary hex / gradient / glow / lift", !/brightness|filter|#[0-9a-f]{3,8}|\[(?:#|rgb|hsl)|gradient|shadow|translate|scale/i.test(vClass("destructive")), vClass("destructive"));
+check("--danger-hover token: light-dark() beside --danger, registered <color>, Tailwind alias",
+  /--danger-hover:\s*light-dark\(#[0-9a-f]{6}, #[0-9a-f]{6}\);/.test(globals) && /@property --danger-hover \{ syntax: "<color>"/.test(globals) && /--color-danger-hover:\s*var\(--danger-hover\);/.test(globals));
 
 function walk(dir: string, out: string[] = []) {
   for (const f of readdirSync(join(ROOT, dir))) {
@@ -257,8 +266,18 @@ check("excluded 01.5 / 01.6 structures not migrated to the 01.4 API", newApi.len
 check("card radios (company panels) and document-workspace radios left as they are", /type="radio"|role="radio"/.test(sources["src/app/(app)/settings/organization/company-panels.tsx"] ?? "") &&
   /type="radio"/.test(sources["src/app/(app)/documents/_workspace/import-v2-dialog.tsx"] ?? ""));
 check("Tabs primitive still maps to .tab-row / .tab (org theme selectors unchanged)", /cn\("tab-row"/.test(tabs) && /cn\("tab"/.test(tabs));
-check("Tabs and Select follow the document direction (Radix has no DirectionProvider here)", /<TabsPrimitive\.Root dir=\{dir \?\? docDir\}/.test(tabs) &&
-  /<SelectPrimitive\.Root dir=\{dir \?\? docDir\}/.test(select) && /document\.documentElement\.dir === "rtl"/.test(read(UI + "use-document-dir.ts")));
+// One direction invariant for every Radix root that lays out or navigates by direction (no DirectionProvider here).
+const DIR_ROOTS: [string, string, string, string][] = [["Select", select, "SelectPrimitive", "select.tsx"], ["Tabs", tabs, "TabsPrimitive", "tabs.tsx"], ["DropdownMenu", dropdown, "DropdownMenuPrimitive", "dropdown-menu.tsx"]];
+check("useDocumentDir reads <html dir>", /document\.documentElement\.dir === "rtl"/.test(read(UI + "use-document-dir.ts")));
+for (const [name, src, prim, file] of DIR_ROOTS) {
+  check(`${name} root follows the document direction: wrapper, shared useDocumentDir, dir={dir ?? docDir}, no raw Root alias`,
+    /import \{ useDocumentDir \} from "\.\/use-document-dir";/.test(src) &&
+    new RegExp(`function ${name}\\(\\{ dir, \\.\\.\\.props \\}`).test(src) &&
+    new RegExp(`const docDir = useDocumentDir\\(\\);\\s*return <${prim}\\.Root dir=\\{dir \\?\\? docDir\\} \\{\\.\\.\\.props\\} />`).test(src) &&
+    !new RegExp(`const ${name} = ${prim}\\.Root\\b`).test(src) && !new RegExp(`${prim}\\.Root as ${name}`).test(src), file);
+}
+const ownDirHooks = Object.keys(sources).filter((f) => !f.endsWith("use-document-dir.ts") && /documentElement\.dir\b/.test(sources[f]) && f.startsWith("src/components/ui/"));
+check("no second direction hook in the primitives", ownDirHooks.length === 0, ownDirHooks.join(" "));
 
 let ok = true;
 for (const [cond, name, extra] of results) {
