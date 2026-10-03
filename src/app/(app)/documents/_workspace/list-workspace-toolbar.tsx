@@ -295,7 +295,9 @@ export function ListWorkspaceToolbar({
             </DialogHeader>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor={fid("view-name")}>{t(locale, "Name this view")}</Label>
-              <Input id={fid("view-name")} value={nameDraft} maxLength={60} autoFocus onChange={(e) => setNameDraft(e.target.value)} />
+              {/* Save keeps saveViewAction's 60-character limit; rename stays unlimited, as renameViewAction is
+                  (and as the window.prompt it replaces was). */}
+              <Input id={fid("view-name")} value={nameDraft} maxLength={naming === "new" ? 60 : undefined} autoFocus onChange={(e) => setNameDraft(e.target.value)} />
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setNaming(null)}>{t(locale, "Cancel")}</Button>

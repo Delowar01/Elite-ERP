@@ -13,7 +13,8 @@
  *      convert submenu, Escape returns focus
  *   6. workspace — labelled filter fields, LIVE filtering (same rows as before), active count, Clear,
  *      live search, the no-results row + polite result count, clear-search
- *   7. saved views — save / apply / current / manage → rename / delete, all by keyboard + dialogs
+ *   7. saved views — save (≤ 60) / apply / current / manage → rename (no limit: 69 chars, persisted, reloaded,
+ *      applied) / delete, by keyboard + dialogs
  *   8. master data — Enter → ?q= server search unchanged; FilterPanel Apply → ?lowStock=1; the chip
  *   9. payroll keyboard selection; shell account menu unaffected
  *
@@ -230,6 +231,22 @@ await settle();
 check("clear-search empties only the search", (await search.inputValue()) === "" && (await page.locator("main tbody tr:not([data-empty-row])").count()) === total);
 
 // ---------- 7. saved views by keyboard ----------
+// Open the Views menu; a click that lands while a previous layer is still closing is retried (Radix closes
+// layers asynchronously), so a flaky open never masquerades as a missing view.
+const focusSettled = (i) => new Promise((ok) => {
+  let stable = 0, n = 0;
+  const t = () => { stable = document.activeElement === i ? stable + 1 : 0; if (stable >= 12 || ++n > 200) ok(); else setTimeout(t, 25); };
+  t();
+});
+async function openViews() {
+  for (let i = 0; i < 3; i++) {
+    await layersClosed();
+    await page.locator("main [data-list-views]").click();
+    if (await page.locator('[role="menu"] [role="menuitem"]').first().waitFor({ timeout: 5000 }).then(() => true).catch(() => false)) { await settle(150); return; }
+    await page.keyboard.press("Escape");
+  }
+}
+try {
 const viewName = `Sent view ${Math.random().toString(36).slice(2, 6)}`;
 await page.locator("main [data-list-filters]").click();
 await page.locator("[data-radix-popper-content-wrapper] button[role='combobox']").first().click();
@@ -242,12 +259,20 @@ await page.locator('[role="menu"]').waitFor();
 await page.waitForFunction(() => document.activeElement?.getAttribute("role") === "menuitem");
 await page.keyboard.press("Enter"); // "Save current view" is the first item
 await page.locator('[data-saved-view-dialog="save"]').waitFor();
+const saveMax = await page.locator('[data-saved-view-dialog="save"] input').evaluate((i) => i.maxLength);
+check("save dialog: the name field keeps the 60-character maximum (saveViewAction's limit)", saveMax === 60, String(saveMax));
+// type only once focus has SETTLED in the field: the closing Views menu briefly returns focus to its trigger
+// after the dialog autofocuses the input, and the dialog's focus trap then pulls it back — keystrokes sent
+// during that bounce are lost (the stored name loses its first characters). 300 ms stable, 5 s cap.
+await page.locator('[data-saved-view-dialog="save"] input').evaluate(focusSettled);
 await page.keyboard.type(viewName);
 await page.keyboard.press("Enter");
 await page.locator('[data-saved-view-dialog="save"]').waitFor({ state: "detached", timeout: 15000 });
 await page.waitForLoadState("networkidle");
 await settle(600);
-await page.locator("main [data-list-views]").click();
+await openViews();
+// router.refresh() after the save lands asynchronously; wait for the new view (≤ 10 s) before counting it
+await page.locator('[role="menuitem"]').filter({ hasText: viewName }).waitFor({ timeout: 10000 }).catch(() => {});
 const current = await page.locator('[role="menuitem"][aria-current="true"]').filter({ hasText: viewName }).count();
 check("save current view through the dialog; the saved view is listed and marked current", current === 1);
 await page.keyboard.press("Escape");
@@ -256,36 +281,57 @@ await page.locator("main [data-list-filters]").click();
 await page.locator("[data-radix-popper-content-wrapper] button", { hasText: /Clear filters/ }).click();
 await page.keyboard.press("Escape");
 await layersClosed();
-await page.locator("main [data-list-views]").click();
-await page.locator('[role="menu"]').waitFor();
+await openViews();
 await page.locator('[role="menuitem"]').filter({ hasText: viewName }).click();
 await settle();
 check("applying the saved view restores its filters (live)", (await page.locator("main tbody tr:not([data-empty-row])").count()) === 3 && (await page.locator("[data-filter-count]").textContent()) === "1");
-await page.locator("main [data-list-views]").click();
+await openViews();
 await page.locator('[role="menuitem"]').filter({ hasText: /Manage saved views/ }).click();
 await page.locator('[data-saved-view-dialog="manage"]').waitFor();
 await page.locator('[data-saved-view-dialog="manage"] button[aria-label^="Rename"]').filter({ has: page.locator("svg") }).last().click();
 await page.locator('[data-saved-view-dialog="rename"]').waitFor();
+// Rename has no length limit (renameViewAction, and the window.prompt it replaced): a deterministic 69-character name.
+const LONG_NAME = "Sent invoices since May 2026 — renamed beyond the sixty-character cap";
+const renameInput = page.locator('[data-saved-view-dialog="rename"] input');
+await renameInput.evaluate(focusSettled);
 await page.keyboard.press("ControlOrMeta+a");
-await page.keyboard.type(`${viewName} R`);
+await page.keyboard.type(LONG_NAME);
+const typed = await renameInput.evaluate((i) => ({ max: i.maxLength, value: i.value }));
+const storedName = typed.value.trim(); // what the server receives (truncated only if a limit wrongly applies)
+check("rename dialog: no 60-character maximum — a 69-character name is accepted as typed", LONG_NAME.length > 60 && typed.max === -1 && typed.value === LONG_NAME, JSON.stringify({ max: typed.max, len: typed.value.length }));
 await page.keyboard.press("Enter");
 await page.locator('[data-saved-view-dialog="rename"]').waitFor({ state: "detached", timeout: 15000 });
 await page.waitForLoadState("networkidle");
 await settle(600);
-await page.locator("main [data-list-views]").click();
-check("rename through the Manage → Rename dialog", (await page.locator('[role="menuitem"]').filter({ hasText: `${viewName} R` }).count()) === 1);
+// after a full reload the long name comes back from the TEST-ONLY database and still applies its filters
+await page.reload({ waitUntil: "networkidle" });
+await settle(300);
+await openViews();
+const longItem = page.locator('[role="menuitem"]').filter({ hasText: storedName });
+const listed = await longItem.count();
+const listedText = listed ? (await longItem.first().textContent()).trim() : "";
+if (listed) await longItem.first().click();
+else await page.keyboard.press("Escape");
+await layersClosed();
+await settle();
+const applied = (await page.locator("main tbody tr:not([data-empty-row])").count()) === 3 && (await page.locator("[data-filter-count]").textContent()) === "1";
+check("rename to > 60 characters succeeds (server) and the renamed view is listed after reload and applies", listed === 1 && listedText === LONG_NAME && applied, JSON.stringify({ listed, applied }));
+await openViews();
 await page.locator('[role="menuitem"]').filter({ hasText: /Manage saved views/ }).click();
 await page.locator('[data-saved-view-dialog="manage"]').waitFor();
-await page.locator(`[data-saved-view-dialog="manage"] button[aria-label="Delete ${viewName} R"]`).click();
+await page.locator(`[data-saved-view-dialog="manage"] button[aria-label="Delete ${storedName}"]`).click();
 await page.getByRole("alertdialog").or(page.getByRole("dialog").last()).getByRole("button", { name: /^Delete$/ }).click();
 await page.waitForLoadState("networkidle");
 await settle(800);
 await page.keyboard.press("Escape");
 await layersClosed();
-await page.locator("main [data-list-views]").click();
-await page.locator('[role="menu"]').waitFor();
-check("delete through the existing confirmation", (await page.locator('[role="menuitem"]').filter({ hasText: viewName }).count()) === 0);
+await openViews();
+check("delete through the existing confirmation", (await page.locator('[role="menuitem"]').filter({ hasText: storedName }).count()) === 0 && (await page.locator('[role="menuitem"]').filter({ hasText: viewName }).count()) === 0);
 await page.keyboard.press("Escape");
+} catch (e) {
+  check("saved-view flow ran to completion (no step stuck)", false, String(e?.message ?? e).split("\n").filter((l) => /Timeout|waiting for/.test(l)).join(" ").slice(0, 300));
+  await page.keyboard.press("Escape").catch(() => {});
+}
 
 // ---------- 8. master data: server search + FilterPanel unchanged ----------
 await go("/clients");

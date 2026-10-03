@@ -174,6 +174,15 @@ check("saved views: save + rename through a Dialog form, delete through the exis
 const viewsMenu = ws.slice(ws.indexOf("data-list-views"), ws.indexOf('<div className="toolbar-actions-right">'));
 check("saved views menu: only menu items (no plain buttons inside), apply + manage keyboard-reachable", !/<button\b|<Button\b/.test(viewsMenu.slice(viewsMenu.indexOf("<DropdownMenuContent"))) &&
   /onSelect=\{\(\) => setFilters\(v\.config\)\}/.test(viewsMenu) && /onSelect=\{\(\) => setManaging\(true\)\}/.test(viewsMenu));
+// The naming contract is the server's (saved-view-actions.ts, byte-pinned below): Save → ≤ 60 characters,
+// Rename → no length limit. The shared naming Input must not add a 60-character limit to Rename.
+const nameInputs = [...code(ws).matchAll(/<Input id=\{fid\("view-name"\)\}[^>]*>/g)].map((m) => m[0]);
+const svActions = code(read(A + "documents/_workspace/saved-view-actions.ts"));
+const renameBody = svActions.slice(svActions.indexOf("export async function renameViewAction"), svActions.indexOf("export async function deleteViewAction"));
+check("saved views: Save keeps the 60-character UI maximum, Rename has none (same contract as the server actions)",
+  nameInputs.length === 1 && /maxLength=\{naming === "new" \? 60 : undefined\}/.test(nameInputs[0]) && !/maxLength=\{60\}/.test(code(ws)) &&
+  /trimmed\.length > 60/.test(svActions.slice(0, svActions.indexOf("export async function renameViewAction"))) && !/(trimmed|name)\.length|\b60\b/.test(renameBody),
+  nameInputs.join(" | "));
 check("saved views: the matching view is marked current; no default-view concept", /aria-current=\{current \|\| undefined\}/.test(ws) && !/default view|isDefault/i.test(ws));
 
 // ---------- 7. states ----------
