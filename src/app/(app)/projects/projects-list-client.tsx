@@ -4,10 +4,11 @@ import { useMemo, useState } from "react";
 import { StatusBadge } from "@/components/ui/status-badge";
 import Link from "next/link";
 import { Eye } from "lucide-react";
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell, TableEmptyRow } from "@/components/ui/table";
 import { StatRow } from "../sales/_shared/stat-row";
 import { ListToolbar } from "../sales/_shared/list-toolbar";
 import { RowMenu, type RowMenuEntry } from "../sales/_shared/row-menu";
+import { ListEmptyState } from "../sales/_shared/list-empty-state";
 import { Money } from "../sales/_shared/money";
 import { t, type Locale } from "@/lib/i18n/dict";
 import { statusStat } from "@/lib/status-registry";
@@ -65,24 +66,25 @@ export function ProjectsListClient({ locale, rows }: { locale: Locale; rows: Pro
       />
 
       {rows.length === 0 ? (
-        <div className="rounded-2xl border border-line bg-surface shadow-elevated py-12 text-center text-ink-muted text-sm">
-          {t(locale, "No projects yet. Create your first project to start planning tasks.")}
-        </div>
+        <ListEmptyState locale={locale} message={t(locale, "No projects yet. Create your first project to start planning tasks.")} createHref="/projects/new" createLabel={t(locale, "New Project")} />
       ) : (
-        <Table>
+        <Table list>
           <TableHeader>
             <TableRow>
               <TableHead>{t(locale, "Name")}</TableHead>
               <TableHead>{t(locale, "Client")}</TableHead>
               <TableHead>{t(locale, "Start Date")}</TableHead>
               <TableHead>{t(locale, "End Date")}</TableHead>
-              <TableHead className="text-right">{t(locale, "Budget")}</TableHead>
-              <TableHead>{t(locale, "Tasks")}</TableHead>
+              <TableHead numeric>{t(locale, "Budget")}</TableHead>
+              <TableHead numeric>{t(locale, "Tasks")}</TableHead>
               <TableHead>{t(locale, "Status")}</TableHead>
-              <TableHead className="w-10" />
+              <TableHead action>{t(locale, "Actions")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
+            {filtered.length === 0 && (
+              <TableEmptyRow colSpan={8}>{t(locale, "No records match the current search or filters.")}</TableEmptyRow>
+            )}
             {filtered.map((r) => {
               const entries: RowMenuEntry[] = [{ kind: "item", icon: Eye, label: t(locale, "View"), href: `/projects/${r.id}` }];
               return (
@@ -95,15 +97,15 @@ export function ProjectsListClient({ locale, rows }: { locale: Locale; rows: Pro
                   <TableCell>{r.clientName ?? <span className="text-ink-faint">—</span>}</TableCell>
                   <TableCell className="num-tabular text-xs">{r.startDate ?? "—"}</TableCell>
                   <TableCell className="num-tabular text-xs">{r.endDate ?? "—"}</TableCell>
-                  <TableCell className="text-right num-tabular">
+                  <TableCell numeric>
                     {r.budget ? <Money amount={r.budget} context="summary" /> : <span className="text-ink-faint">—</span>}
                   </TableCell>
-                  <TableCell className="num-tabular text-xs">{r.taskCount}</TableCell>
+                  <TableCell numeric>{r.taskCount}</TableCell>
                   <TableCell>
                     <StatusBadge domain="project" status={r.status} locale={locale} />
                   </TableCell>
-                  <TableCell>
-                    <RowMenu entries={entries} />
+                  <TableCell action>
+                    <RowMenu entries={entries} label={`${t(locale, "Actions for")} ${r.name}`} />
                   </TableCell>
                 </TableRow>
               );
@@ -112,7 +114,7 @@ export function ProjectsListClient({ locale, rows }: { locale: Locale; rows: Pro
         </Table>
       )}
       {rows.length > 0 && (
-        <div className="text-[11.5px] text-ink-faint mt-2">
+        <div className="text-caption text-ink-faint mt-2" role="status" aria-live="polite">
           {t(locale, "Showing")} {filtered.length} {t(locale, "of")} {rows.length} {t(locale, "Projects")}.
         </div>
       )}

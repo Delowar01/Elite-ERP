@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Plus, Download, Loader2 } from "lucide-react";
+import { Plus, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
@@ -28,18 +28,12 @@ function ReceiptDownload({ locale, paymentId }: { locale: Locale; paymentId: num
       setBusy(false);
     }
   }
+  // DEV-UI-01.5: the row action is the approved 36px ghost icon Button (was a bare 16px icon); the
+  // Button's own loading state shows the spinner, keeps the name and disables it while busy.
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={busy}
-      aria-busy={busy}
-      title={t(locale, "Download PDF")}
-      aria-label={t(locale, "Download PDF")}
-      className="text-ink-faint hover:text-brand-orange inline-flex disabled:opacity-50"
-    >
-      {busy ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
-    </button>
+    <Button type="button" variant="ghost" size="icon" onClick={onClick} loading={busy} title={t(locale, "Download PDF")} aria-label={t(locale, "Download PDF")}>
+      <Download />
+    </Button>
   );
 }
 
@@ -103,7 +97,7 @@ export function PaymentsListClient({
       {rows.length === 0 ? (
         <p className="text-ink-muted text-sm">{t(locale, "No payment records yet.")}</p>
       ) : (
-        <Table>
+        <Table list>
           <TableHeader>
             <TableRow>
               <TableHead>{t(locale, "Date")}</TableHead>
@@ -113,8 +107,8 @@ export function PaymentsListClient({
               <TableHead>{t(locale, "Party")}</TableHead>
               <TableHead>{t(locale, "Bank Account")}</TableHead>
               <TableHead>{t(locale, "Method")}</TableHead>
-              <TableHead className="text-right">{t(locale, "Amount")}</TableHead>
-              <TableHead className="w-10" />
+              <TableHead numeric>{t(locale, "Amount")}</TableHead>
+              <TableHead action>{t(locale, "Actions")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -140,11 +134,11 @@ export function PaymentsListClient({
                 </TableCell>
                 <TableCell>{p.customerName ?? p.vendorName}</TableCell>
                 <TableCell>{p.bankAccountName}</TableCell>
-                <TableCell className="text-[12.5px] text-ink-muted">{p.method ? t(locale, METHOD_LABELS[p.method] ?? p.method) : "—"}</TableCell>
-                <TableCell className="text-right num-tabular">
+                <TableCell className="text-body-sm text-ink-muted">{p.method ? t(locale, METHOD_LABELS[p.method] ?? p.method) : "—"}</TableCell>
+                <TableCell numeric>
                   <Money amount={p.amount} />
                 </TableCell>
-                <TableCell>
+                <TableCell action>
                   <ReceiptDownload locale={locale} paymentId={p.id} />
                 </TableCell>
               </TableRow>

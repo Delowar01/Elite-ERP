@@ -150,7 +150,7 @@ export default async function PayrollPage() {
               <TableRow>
                 <TableHead>{t(locale, "Period")}</TableHead>
                 <TableHead>{t(locale, "Status")}</TableHead>
-                <TableHead className="text-right">{t(locale, "Net pay")}</TableHead>
+                <TableHead numeric>{t(locale, "Net pay")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -162,7 +162,7 @@ export default async function PayrollPage() {
                   <TableCell>
                     <StatusBadge domain="payroll_run" status={r.status} locale={locale} />
                   </TableCell>
-                  <TableCell className="text-right num-tabular"><Money amount={Number(r.netTotal)} context="summary" /></TableCell>
+                  <TableCell numeric><Money amount={Number(r.netTotal)} context="summary" /></TableCell>
                 </TableRow>
               ))}
             </TableBody>

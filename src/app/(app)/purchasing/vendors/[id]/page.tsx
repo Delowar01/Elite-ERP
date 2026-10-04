@@ -56,7 +56,7 @@ export default async function VendorDetailPage({ params }: { params: Promise<{ i
           <div className="flex items-center gap-2">
             <StatusBadge domain="active_flag" status={vendor.isActive ? "active" : "inactive"} locale={locale} />
             {vendor.recordState === "archived" && <StatusBadge domain="record_state" status="archived" locale={locale} />}
-            <VendorRecordActions vendor={vendor} />
+            <VendorRecordActions vendor={vendor} locale={locale} />
           </div>
         }
       />

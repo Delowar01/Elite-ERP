@@ -125,7 +125,7 @@ export function ExchangeRatesPanel({
                 <TableHead className="num">{t(locale, "Rate")}</TableHead>
                 <TableHead>{t(locale, "As Of")}</TableHead>
                 <TableHead>{t(locale, "Source")}</TableHead>
-                <TableHead />
+                <TableHead action>{t(locale, "Actions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -140,7 +140,7 @@ export function ExchangeRatesPanel({
                     ) : null}
                   </TableCell>
                   <TableCell className="text-[12px] text-ink-muted">{r.source === "manual" ? t(locale, "Manual") : r.source}</TableCell>
-                  <TableCell className="text-end">
+                  <TableCell action>
                     <div className="flex justify-end gap-1.5">
                       <Button size="sm" variant="glass" disabled={pending} onClick={() => fetchNow([r.fromCurrency])}>
                         {t(locale, "Fetch")}

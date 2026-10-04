@@ -38,7 +38,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
           <div className="flex items-center gap-2">
             <StatusBadge domain="stock" status={low ? "low_stock" : "in_stock"} locale={locale} />
             {product.recordState === "archived" && <StatusBadge domain="record_state" status="archived" locale={locale} />}
-            <ProductRecordActions product={product} />
+            <ProductRecordActions product={product} locale={locale} />
           </div>
         }
       />

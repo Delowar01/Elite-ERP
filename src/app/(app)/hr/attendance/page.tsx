@@ -52,14 +52,14 @@ export default async function AttendancePage() {
           {t(locale, "No active employees yet — add employees to start tracking attendance.")}
         </div>
       ) : (
-        <Table>
+        <Table list>
           <TableHeader>
             <TableRow>
               <TableHead>{t(locale, "Employee")}</TableHead>
               <TableHead>{t(locale, "Check-in")}</TableHead>
               <TableHead>{t(locale, "Check-out")}</TableHead>
               <TableHead>{t(locale, "Status")}</TableHead>
-              <TableHead />
+              <TableHead action>{t(locale, "Actions")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -79,7 +79,7 @@ export default async function AttendancePage() {
                       <span className="text-ink-faint">—</span>
                     )}
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell action>
                     <AttendanceRowActions
                       locale={locale}
                       employeeId={e.id}

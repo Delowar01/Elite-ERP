@@ -8,6 +8,7 @@ import { tenantScope } from "@/lib/tenant";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
+import { t } from "@/lib/i18n/dict";
 import { Card, CardContent } from "@/components/ui/card";
 import { Plus, Trash2 } from "lucide-react";
 import { ProductsToolbar } from "./products-toolbar";
@@ -38,42 +39,42 @@ export default async function ProductsPage({
   return (
     <div className="max-w-6xl mx-auto">
       <PageHeader
-        title="Products"
-        description="Inventory catalog used across quotations, orders, and invoices."
+        title={t(locale, "Products")}
+        description={t(locale, "Inventory catalog used across quotations, orders, and invoices.")}
         actions={
           <>
             <Button variant="outline" asChild>
               <Link href="/inventory/products/recycle-bin">
-                <Trash2 className="size-4" /> Recycle Bin
+                <Trash2 className="size-4" /> {t(locale, "Recycle Bin")}
               </Link>
             </Button>
             <Button asChild>
               <Link href="/inventory/products/new">
-                <Plus className="size-4" /> New Product
+                <Plus className="size-4" /> {t(locale, "New Product")}
               </Link>
             </Button>
           </>
         }
       />
 
-      <ProductsToolbar defaultQ={q} defaultLowStock={lowStock === "1"} defaultArchived={includeArchived} />
+      <ProductsToolbar locale={locale} defaultQ={q} defaultLowStock={lowStock === "1"} defaultArchived={includeArchived} />
 
       {products.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center text-ink-muted text-sm">
-            {q || lowStock ? "No products match your filters." : "No products yet. Add your first product."}
+            {q || lowStock ? t(locale, "No products match your filters.") : t(locale, "No products yet. Add your first product.")}
           </CardContent>
         </Card>
       ) : (
-        <Table>
+        <Table list>
           <TableHeader>
             <TableRow>
-              <TableHead>SKU</TableHead>
-              <TableHead>Name</TableHead>
-              <TableHead className="text-right">Unit price</TableHead>
-              <TableHead className="text-right">Qty on hand</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="w-12" />
+              <TableHead>{t(locale, "SKU")}</TableHead>
+              <TableHead>{t(locale, "Name")}</TableHead>
+              <TableHead numeric>{t(locale, "Unit price")}</TableHead>
+              <TableHead numeric>{t(locale, "Qty on hand")}</TableHead>
+              <TableHead>{t(locale, "Status")}</TableHead>
+              <TableHead action>{t(locale, "Actions")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -87,18 +88,21 @@ export default async function ProductsPage({
                       {p.name}
                     </Link>
                   </TableCell>
-                  <TableCell className="text-right num-tabular">{p.unitPrice}</TableCell>
-                  <TableCell className="text-right num-tabular">{p.quantityOnHand}</TableCell>
-                  <TableCell className="flex items-center gap-1.5 flex-wrap">
-                    {low ? (
-                      <StatusBadge domain="stock" status="low_stock" locale={locale} />
-                    ) : (
-                      <StatusBadge domain="active_flag" status={p.isActive ? "active" : "inactive"} locale={locale} />
-                    )}
-                    {p.recordState === "archived" && <StatusBadge domain="record_state" status="archived" locale={locale} />}
+                  <TableCell numeric>{p.unitPrice}</TableCell>
+                  <TableCell numeric>{p.quantityOnHand}</TableCell>
+                  <TableCell>
+                    {/* The cell stays a table cell; the badges sit in an inner flex row. */}
+                    <span className="inline-flex items-center gap-1.5">
+                      {low ? (
+                        <StatusBadge domain="stock" status="low_stock" locale={locale} />
+                      ) : (
+                        <StatusBadge domain="active_flag" status={p.isActive ? "active" : "inactive"} locale={locale} />
+                      )}
+                      {p.recordState === "archived" && <StatusBadge domain="record_state" status="archived" locale={locale} />}
+                    </span>
                   </TableCell>
-                  <TableCell className="text-right">
-                    <ProductRecordActions product={p} />
+                  <TableCell action>
+                    <ProductRecordActions product={p} locale={locale} label={`${t(locale, "Actions for")} ${p.name}`} />
                   </TableCell>
                 </TableRow>
               );

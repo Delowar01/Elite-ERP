@@ -7,7 +7,7 @@ import { Eye, Truck as TruckIcon, Download } from "lucide-react";
 import { toast } from "sonner";
 import { downloadDocumentPdf } from "../_shared/download-pdf-button";
 import { Badge } from "@/components/ui/badge";
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell, TableEmptyRow } from "@/components/ui/table";
 import { StatRow } from "../_shared/stat-row";
 import { ListWorkspaceToolbar } from "../../documents/_workspace/list-workspace-toolbar";
 import { useListFilters } from "../../documents/_workspace/use-list-filters";
@@ -99,7 +99,7 @@ export function DcListClient({
       {rows.length === 0 ? (
         <ListEmptyState locale={locale} message={t(locale, "No delivery challans yet.")} createHref="/sales/delivery-challans/new" createLabel={t(locale, "New Delivery Challan")} />
       ) : (
-        <Table>
+        <Table list>
         <TableHeader>
           <TableRow>
             <TableHead>{t(locale, "DC #")}</TableHead>
@@ -109,10 +109,13 @@ export function DcListClient({
             <TableHead>{t(locale, "Dispatch Date")}</TableHead>
             <TableHead>{t(locale, "Created By")}</TableHead>
             <TableHead>{t(locale, "Status")}</TableHead>
-            <TableHead className="w-10" />
+            <TableHead action>{t(locale, "Actions")}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
+          {filtered.length === 0 && (
+            <TableEmptyRow colSpan={8}>{t(locale, "No records match the current search or filters.")}</TableEmptyRow>
+          )}
           {filtered.map((r) => {
             const entries: RowMenuEntry[] = [
               { kind: "item", icon: Eye, label: t(locale, "View"), href: `/sales/delivery-challans/${r.id}` },
@@ -135,7 +138,7 @@ export function DcListClient({
                 <TableCell className="text-ink-muted font-mono text-xs">{r.sourceLabel ?? "—"}</TableCell>
                 <TableCell>{r.customerName}</TableCell>
                 <TableCell className="num-tabular text-xs">{r.dispatchDate ?? "—"}</TableCell>
-                <TableCell className="text-[12.5px] text-ink-muted">{r.creatorName}</TableCell>
+                <TableCell className="text-body-sm text-ink-muted">{r.creatorName}</TableCell>
                 <TableCell>
                   <StatusBadge domain="delivery_challan" status={r.status} locale={locale} />
                   {r.isArchived && (
@@ -144,8 +147,8 @@ export function DcListClient({
                     </Badge>
                   )}
                 </TableCell>
-                <TableCell>
-                  <RowMenu entries={entries} />
+                <TableCell action>
+                  <RowMenu entries={entries} label={`${t(locale, "Actions for")} ${r.dcNumber}`} />
                 </TableCell>
               </TableRow>
             );
@@ -153,7 +156,7 @@ export function DcListClient({
         </TableBody>
       </Table>
       )}
-      <div className="text-[11.5px] text-ink-faint mt-2">
+      <div className="text-caption text-ink-faint mt-2" role="status" aria-live="polite">
         {t(locale, "Showing")} {filtered.length} {t(locale, "of")} {rows.length} {t(locale, "Delivery Challans")}.
       </div>
     </div>

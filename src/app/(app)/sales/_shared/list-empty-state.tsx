@@ -27,9 +27,10 @@ export function ListEmptyState({
   createLabel: string;
 }) {
   return (
-    <div className="rounded-2xl border border-line bg-surface shadow-elevated py-12 px-6 text-center">
-      <p className="text-ink-muted text-sm">{message}</p>
-      {hint && <p className="mt-1.5 text-[12.5px] text-ink-faint">{hint}</p>}
+    // DEV-UI-01.5: the list card family (12px radius, line border, no shadow) and the type scale.
+    <div className="rounded-xl border border-line bg-surface py-12 px-6 text-center" data-list-empty="">
+      <p className="text-body text-ink-muted">{message}</p>
+      {hint && <p className="mt-1.5 text-body-sm text-ink-faint">{hint}</p>}
       <Link href={createHref} className="btn btn-primary mt-5 inline-flex" style={{ width: "auto", padding: "0 18px" }}>
         <Plus className="size-4" /> {createLabel}
       </Link>

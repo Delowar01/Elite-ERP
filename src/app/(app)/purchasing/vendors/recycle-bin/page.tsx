@@ -4,6 +4,8 @@ import { db, vendorsTable } from "@/db";
 import { requireSession } from "@/lib/session";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
+import { t } from "@/lib/i18n/dict";
+import { getLocale } from "@/lib/i18n/server";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { Card, CardContent } from "@/components/ui/card";
 import { ArrowLeft } from "lucide-react";
@@ -11,6 +13,7 @@ import { VendorRecycleBinActions } from "../recycle-bin-actions";
 
 export default async function VendorRecycleBinPage() {
   const session = await requireSession();
+  const locale = await getLocale();
 
   const deleted = await db
     .select()
@@ -34,15 +37,15 @@ export default async function VendorRecycleBinPage() {
 
       {deleted.length === 0 ? (
         <Card>
-          <CardContent className="py-12 text-center text-ink-muted text-sm">Recycle Bin is empty.</CardContent>
+          <CardContent className="py-12 text-center text-ink-muted text-sm">{t(locale, "Recycle Bin is empty.")}</CardContent>
         </Card>
       ) : (
-        <Table>
+        <Table list>
           <TableHeader>
             <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+              <TableHead>{t(locale, "Name")}</TableHead>
+              <TableHead>{t(locale, "Email")}</TableHead>
+              <TableHead action>{t(locale, "Actions")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -50,7 +53,7 @@ export default async function VendorRecycleBinPage() {
               <TableRow key={v.id}>
                 <TableCell className="font-semibold">{v.name}</TableCell>
                 <TableCell className="text-ink-muted">{v.email ?? "—"}</TableCell>
-                <TableCell className="text-right">
+                <TableCell action>
                   <VendorRecycleBinActions id={v.id} name={v.name} isOwner={session.role === "owner"} />
                 </TableCell>
               </TableRow>

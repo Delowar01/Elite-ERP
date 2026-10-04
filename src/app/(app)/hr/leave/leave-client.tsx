@@ -88,7 +88,7 @@ export function LeaveClient({
           {t(locale, "No leave requests yet.")}
         </div>
       ) : (
-        <Table>
+        <Table list>
           <TableHeader>
             <TableRow>
               <TableHead>{t(locale, "Employee")}</TableHead>
@@ -96,7 +96,7 @@ export function LeaveClient({
               <TableHead>{t(locale, "Dates")}</TableHead>
               <TableHead>{t(locale, "Reason")}</TableHead>
               <TableHead>{t(locale, "Status")}</TableHead>
-              <TableHead />
+              <TableHead action>{t(locale, "Actions")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -114,7 +114,7 @@ export function LeaveClient({
                 <TableCell>
                   <StatusBadge domain="leave" status={r.status} locale={locale} />
                 </TableCell>
-                <TableCell className="text-right">
+                <TableCell action>
                   {canDecide && r.status === "pending" && (
                     <div className="flex justify-end gap-2">
                       <Button variant="secondary" size="sm" disabled={pending} onClick={() => decide(r.id, "reject")}>

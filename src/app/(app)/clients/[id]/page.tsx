@@ -58,7 +58,7 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
           <div className="flex items-center gap-2">
             <StatusBadge domain="active_flag" status={client.isActive ? "active" : "inactive"} locale={locale} />
             {client.recordState === "archived" && <StatusBadge domain="record_state" status="archived" locale={locale} />}
-            <ClientRecordActions client={client} />
+            <ClientRecordActions client={client} locale={locale} />
           </div>
         }
       />

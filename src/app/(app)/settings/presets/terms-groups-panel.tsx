@@ -88,13 +88,13 @@ export function TermsGroupsPanel({ locale, groups }: { locale: Locale; groups: T
           <CardContent className="py-10 text-center text-ink-muted text-sm">{t(locale, "No terms & conditions groups yet.")}</CardContent>
         </Card>
       ) : (
-        <Table>
+        <Table density="compact">
           <TableHeader>
             <TableRow>
               <TableHead>{t(locale, "Name")}</TableHead>
               <TableHead>{t(locale, "Document Type")}</TableHead>
               <TableHead>{t(locale, "Preview")}</TableHead>
-              <TableHead className="w-20" />
+              <TableHead action>{t(locale, "Actions")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -110,7 +110,7 @@ export function TermsGroupsPanel({ locale, groups }: { locale: Locale; groups: T
                   </div>
                 </TableCell>
                 <TableCell className="text-ink-muted text-xs max-w-xs truncate">{group.terms.join(" · ")}</TableCell>
-                <TableCell className="text-right whitespace-nowrap">
+                <TableCell action>
                   <Button variant="ghost" size="icon" disabled={pending} onClick={() => openEdit(group)} aria-label={t(locale, "Edit")}>
                     <Pencil className="size-3.5" />
                   </Button>

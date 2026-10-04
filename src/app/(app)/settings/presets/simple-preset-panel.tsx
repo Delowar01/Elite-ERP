@@ -72,20 +72,20 @@ export function SimplePresetPanel({
           <CardContent className="py-10 text-center text-ink-muted text-sm">{emptyLabel}</CardContent>
         </Card>
       ) : (
-        <Table>
+        <Table density="compact">
           <TableHeader>
             <TableRow>
               <TableHead>{t(locale, "Name")}</TableHead>
-              {extraLabel && <TableHead className="text-right">{extraLabel}</TableHead>}
-              <TableHead className="w-20" />
+              {extraLabel && <TableHead numeric>{extraLabel}</TableHead>}
+              <TableHead action>{t(locale, "Actions")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {items.map((item) => (
               <TableRow key={item.id}>
                 <TableCell className="font-medium">{item.name}</TableCell>
-                {extraLabel && <TableCell className="text-right font-mono text-xs">{item.extra ?? "—"}</TableCell>}
-                <TableCell className="text-right whitespace-nowrap">
+                {extraLabel && <TableCell numeric className="font-mono text-xs">{item.extra ?? "—"}</TableCell>}
+                <TableCell action>
                   <Button variant="ghost" size="icon" disabled={pending} onClick={() => setEditing(item)} aria-label={t(locale, "Edit")}>
                     <Pencil className="size-3.5" />
                   </Button>

@@ -7,6 +7,7 @@
  *   node tests/ui-baseline/run.mjs check              capture, then compare against the committed baseline
  *   node tests/ui-baseline/run.mjs capture-shell [--out=D]  the DEV-UI-01.3 app-shell states (shell-states.mjs)
  *   node tests/ui-baseline/run.mjs capture-controls [--out=D]  the DEV-UI-01.4 control gallery (controls-states.mjs)
+ *   node tests/ui-baseline/run.mjs capture-lists [--out=D]  the DEV-UI-01.5 list / data-table states (list-states.mjs)
  *
  * Flags: --skip-build (reuse .next — only when it was built from the current tree), --only=<substr>.
  *
@@ -28,6 +29,7 @@ import { chromium } from "playwright";
 import { BASE, FROZEN_NOW, OWNER_EMAIL, PORT, matrix } from "./config.mjs";
 import { STAFF_EMAIL, shellMatrix } from "./shell-states.mjs";
 import { controlsMatrix } from "./controls-states.mjs";
+import { listMatrix, SAVED_VIEW_FIXTURE } from "./list-states.mjs";
 import { IsolationError, RUN_DB, TEMPLATE_DB, adminUrl, dbUrl, describe, serverEnv } from "./isolation.mjs";
 
 const ROOT = resolve(new URL("../..", import.meta.url).pathname);
@@ -149,6 +151,66 @@ async function startServer(env) {
 
 // ------------------------------------------------------------------------------------- shell
 /** Steps for shell states (DEV-UI-01.3). Keyboard focus is reached with Tab, so :focus-visible shows. */
+/** DEV-UI-01.5 list states (list-states.mjs): one deterministic step each, after the page settled. */
+const listWrap = (page) => page.locator("main .data-table-wrap").first();
+const LIST_ACTIONS = {
+  search: async (page) => {
+    await page.locator('main [data-slot="list-search"] input').fill("Cedar");
+  },
+  "no-results": async (page) => {
+    await page.locator('main [data-slot="list-search"] input').fill("zzzz-no-match");
+  },
+  "filters-open": async (page) => {
+    await page.locator("main [data-list-filters]").click();
+    await page.locator("[data-radix-popper-content-wrapper]").waitFor();
+  },
+  "filters-active": async (page) => {
+    // Status = the "Sent" stat card's own (localized) label, and a from-date: two active filters.
+    const sent = (await page.locator('main [data-status="sent"] .kpi-label').first().textContent()).trim();
+    await LIST_ACTIONS["filters-open"](page);
+    await page.locator("[data-radix-popper-content-wrapper] button[role='combobox']").first().click();
+    await page.locator('[role="option"]').filter({ hasText: new RegExp(`^${sent}$`) }).click();
+    await page.locator("[data-radix-popper-content-wrapper] input[type='date']").first().fill("2026-05-01");
+    await page.keyboard.press("Escape");
+    await page.locator("[data-filter-count]").waitFor();
+  },
+  "views-menu": async (page) => {
+    await page.locator("main [data-list-views]").click();
+    await page.locator('[role="menu"]').waitFor();
+  },
+  "views-manage": async (page) => {
+    await LIST_ACTIONS["views-menu"](page);
+    await page.locator('[role="menu"] [role="menuitem"]').last().click();
+    await page.locator('[data-saved-view-dialog="manage"]').waitFor();
+  },
+  "row-menu": async (page) => {
+    await page.locator("main tbody tr:nth-child(2) .row-menu-btn").click();
+    await page.locator('[role="menu"]').waitFor();
+  },
+  convert: async (page) => {
+    await LIST_ACTIONS["row-menu"](page);
+    await page.locator('[role="menu"] .row-menu-item.has-submenu').click();
+    await page.locator(".row-menu-submenu.open").waitFor();
+  },
+  "scroll-end": async (page) => {
+    await listWrap(page).evaluate((w) => {
+      const max = w.scrollWidth - w.clientWidth;
+      w.scrollLeft = getComputedStyle(w).direction === "rtl" ? -max : max;
+    });
+  },
+  "filter-panel": async (page) => {
+    await page.locator("main [data-list-filters]").click();
+    await page.locator("[data-radix-popper-content-wrapper]").waitFor();
+  },
+  "record-menu": async (page) => {
+    await page.locator('main tbody tr:first-child td[data-cell="action"] button').click();
+    await page.locator('[role="menu"]').waitFor();
+  },
+  "scroll-table": async (page) => {
+    await page.locator('main table.data-table[data-density="compact"]').evaluate((t) => t.scrollIntoView({ block: "center" }));
+  },
+};
+
 const SHELL_ACTIONS = {
   drawer: async (page) => {
     await page.click(".topbar-menu-btn");
@@ -188,7 +250,7 @@ const SHELL_ACTIONS = {
 };
 
 // ------------------------------------------------------------------------------------- capture
-async function capture(outDir, shell = false) {
+async function capture(outDir, shell = false, lists = false) {
   if (!existsSync(PASSWORD_FILE)) {
     console.error("✗ no seeded template — run `prepare` first");
     process.exit(2);
@@ -272,8 +334,20 @@ async function capture(outDir, shell = false) {
       await sc.close();
     }
 
+    // List states need one saved view so the Views menu / manage dialog have content (run copy only).
+    if (lists) {
+      const c = new pg.Client({ connectionString: env.DATABASE_URL });
+      await c.connect();
+      await c.query(
+        `insert into saved_views (org_id, user_id, module, name, config, created_at, updated_at)
+         select org_id, id, $1, $2, $3, $4, $4 from users where email = $5`,
+        [SAVED_VIEW_FIXTURE.module, SAVED_VIEW_FIXTURE.name, JSON.stringify(SAVED_VIEW_FIXTURE.config), new Date(FROZEN_NOW), OWNER_EMAIL],
+      );
+      await c.end();
+    }
+
     const only = value("only");
-    const states = (shell ? shellMatrix() : matrix()).filter((s) => !only || s.id.includes(only));
+    const states = (lists ? listMatrix() : shell ? shellMatrix() : matrix()).filter((s) => !only || s.id.includes(only));
     let n = 0;
     for (const s of states) {
       n++;
@@ -312,16 +386,17 @@ async function capture(outDir, shell = false) {
         };
       });
       if (s.action) {
-        await SHELL_ACTIONS[s.action](page, s);
+        await (lists ? LIST_ACTIONS : SHELL_ACTIONS)[s.action](page, s);
+        if (lists) await page.waitForTimeout(250); // let Radix settle (transitions are reduced)
         await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
       }
       const file = join(outDir, `${s.id}.png`);
-      await page.screenshot({ path: file, fullPage: !shell, animations: "disabled", caret: "hide", scale: "css" });
+      await page.screenshot({ path: file, fullPage: !shell && !lists, animations: "disabled", caret: "hide", scale: "css" });
       const png = readFileSync(file);
       manifest.states[s.id] = {
         route: s.route.path,
         area: s.route.area,
-        ...(shell ? { action: s.action, role: s.role, cookies: s.cookies } : {}),
+        ...(shell || lists ? { action: s.action, role: s.role, cookies: s.cookies } : {}),
         locale: s.locale,
         theme: s.theme,
         viewport: `${s.viewport.width}x${s.viewport.height}`,
@@ -574,6 +649,7 @@ try {
   if (cmd === "prepare") await prepare();
   else if (cmd === "capture") await capture(resolve(value("out") ?? join(WORK, "captures/latest")));
   else if (cmd === "capture-shell") await capture(resolve(value("out") ?? join(WORK, "captures/shell-latest")), true);
+  else if (cmd === "capture-lists") await capture(resolve(value("out") ?? join(WORK, "captures/lists-latest")), false, true);
   else if (cmd === "capture-controls") await captureControls(resolve(value("out") ?? join(WORK, "captures/controls-latest")));
   else if (cmd === "compare") process.exit((await compare(resolve(positional[0]), resolve(positional[1]))) === 0 ? 0 : 1);
   else if (cmd === "check") {
@@ -581,7 +657,7 @@ try {
     await capture(out);
     process.exit((await compare(BASELINE_DIR, out)) === 0 ? 0 : 1);
   } else {
-    console.error("usage: run.mjs prepare | capture [--out=DIR] | capture-shell [--out=DIR] | capture-controls [--out=DIR] | compare A B | check   [--skip-build] [--only=substr]");
+    console.error("usage: run.mjs prepare | capture [--out=DIR] | capture-shell [--out=DIR] | capture-controls [--out=DIR] | capture-lists [--out=DIR] | compare A B | check   [--skip-build] [--only=substr]");
     process.exit(2);
   }
 } catch (e) {

@@ -30,7 +30,7 @@ export function RolesPermissionsPanel({ locale }: { locale: Locale }) {
       </p>
 
       <div>
-        <Table>
+        <Table density="compact">
           <TableHeader>
             <TableRow>
               <TableHead>{t(locale, "Module")}</TableHead>
@@ -60,7 +60,7 @@ export function RolesPermissionsPanel({ locale }: { locale: Locale }) {
         <p className="text-[11.5px] text-ink-muted mb-2">
           {t(locale, "These are refused by the server, not merely hidden.")}
         </p>
-        <Table>
+        <Table density="compact">
           <TableHeader>
             <TableRow>
               <TableHead>{t(locale, "Action")}</TableHead>
