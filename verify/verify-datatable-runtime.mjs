@@ -13,8 +13,9 @@
  *      convert submenu, Escape returns focus
  *   6. workspace — labelled filter fields, LIVE filtering (same rows as before), active count, Clear,
  *      live search, the no-results row + polite result count, clear-search
- *   7. saved views — save (≤ 60) / apply / current / manage → rename (no limit: 69 chars, persisted, reloaded,
- *      applied) / delete, by keyboard + dialogs
+ *   7. saved views — Escape / outside / apply keep the menu's focus return; Save + Manage hand focus into their
+ *      Dialog (focusin log: the trigger never retakes it; immediate typing keeps the full name); save (≤ 60) /
+ *      current / manage → rename (no limit: 69 chars, persisted, reloaded, applied) / delete
  *   8. master data — Enter → ?q= server search unchanged; FilterPanel Apply → ?lowStock=1; the chip
  *   9. payroll keyboard selection; shell account menu unaffected
  *
@@ -233,11 +234,6 @@ check("clear-search empties only the search", (await search.inputValue()) === ""
 // ---------- 7. saved views by keyboard ----------
 // Open the Views menu; a click that lands while a previous layer is still closing is retried (Radix closes
 // layers asynchronously), so a flaky open never masquerades as a missing view.
-const focusSettled = (i) => new Promise((ok) => {
-  let stable = 0, n = 0;
-  const t = () => { stable = document.activeElement === i ? stable + 1 : 0; if (stable >= 12 || ++n > 200) ok(); else setTimeout(t, 25); };
-  t();
-});
 async function openViews() {
   for (let i = 0; i < 3; i++) {
     await layersClosed();
@@ -246,26 +242,69 @@ async function openViews() {
     await page.keyboard.press("Escape");
   }
 }
+// Focus recorder for the menu → Dialog handoff. focusin is logged as trigger / menu / dialog:<kind> / tag, and
+// focusout as "out:<from>><to>" with its relatedTarget. The regression (measured): ~100 ms after the Dialog
+// focuses its control, the closing menu moves focus to the Views trigger — the control blurs with
+// relatedTarget = trigger and the Dialog's focus trap pulls focus straight back, so the trigger never even
+// logs a focusin. Keystrokes in that gap are lost. Hence focusout is what must be watched.
+const startFocusLog = () => page.evaluate(() => {
+  window.__focusLog = [];
+  if (!window.__focusLogOn) {
+    window.__focusLogOn = true;
+    const name = (t) => {
+      if (!t) return "null";
+      const d = t.closest?.("[data-saved-view-dialog]");
+      return t.closest?.("[data-list-views]") ? "trigger" : d ? `dialog:${d.dataset.savedViewDialog}` : t.closest?.('[role="menu"]') ? "menu" : String(t.tagName).toLowerCase();
+    };
+    document.addEventListener("focusin", (e) => window.__focusLog.push(name(e.target)), true);
+    document.addEventListener("focusout", (e) => window.__focusLog.push(`out:${name(e.target)}>${name(e.relatedTarget)}`), true);
+  }
+});
+const focusLog = () => page.evaluate(() => window.__focusLog ?? []);
+// the regression: once a Dialog holds focus, focus is sent to the Views trigger (focusin on it, or a blur
+// whose relatedTarget is the trigger) or the Dialog loses focus at all before the user is done
+const triggerStoleFocus = (log) => {
+  const i = log.findIndex((x) => x.startsWith("dialog:"));
+  return i >= 0 && log.slice(i).some((x) => x === "trigger" || x.endsWith(">trigger") || (x.startsWith("out:dialog:") && !x.split(">")[1].startsWith("dialog:")));
+};
+const observe = () => settle(400); // an observation window AFTER the interaction (no delay before typing)
+const triggerFocused = () => page.waitForFunction(() => document.activeElement?.matches?.("[data-list-views]"), null, { timeout: 3000 }).then(() => true).catch(() => false);
+// Ordinary close: open by keyboard, Escape → focus back on the Views trigger (Radix default, not suppressed).
+async function escapeRestoresTrigger() {
+  await layersClosed();
+  await page.locator("main [data-list-views]").focus();
+  await page.keyboard.press("Enter");
+  await page.locator('[role="menu"]').waitFor();
+  await page.waitForFunction(() => document.activeElement?.getAttribute("role") === "menuitem");
+  await page.keyboard.press("Escape");
+  await layersClosed();
+  return triggerFocused();
+}
 try {
+check("views menu: Escape closes it and returns focus to the Views trigger (before any dialog handoff)", await escapeRestoresTrigger());
 const viewName = `Sent view ${Math.random().toString(36).slice(2, 6)}`;
 await page.locator("main [data-list-filters]").click();
 await page.locator("[data-radix-popper-content-wrapper] button[role='combobox']").first().click();
 await page.locator('[role="option"]').filter({ hasText: /^Sent$/ }).click();
 await page.keyboard.press("Escape");
 await layersClosed();
+// Save current view: menu → Dialog handoff, then IMMEDIATE typing (no settling wait)
 await page.locator("main [data-list-views]").focus();
 await page.keyboard.press("Enter");
 await page.locator('[role="menu"]').waitFor();
 await page.waitForFunction(() => document.activeElement?.getAttribute("role") === "menuitem");
+await startFocusLog();
 await page.keyboard.press("Enter"); // "Save current view" is the first item
-await page.locator('[data-saved-view-dialog="save"]').waitFor();
-const saveMax = await page.locator('[data-saved-view-dialog="save"] input').evaluate((i) => i.maxLength);
-check("save dialog: the name field keeps the 60-character maximum (saveViewAction's limit)", saveMax === 60, String(saveMax));
-// type only once focus has SETTLED in the field: the closing Views menu briefly returns focus to its trigger
-// after the dialog autofocuses the input, and the dialog's focus trap then pulls it back — keystrokes sent
-// during that bounce are lost (the stored name loses its first characters). 300 ms stable, 5 s cap.
-await page.locator('[data-saved-view-dialog="save"] input').evaluate(focusSettled);
+const saveInput = page.locator('[data-saved-view-dialog="save"] input');
+await saveInput.waitFor();
+await page.waitForFunction(() => document.activeElement?.matches?.('[data-saved-view-dialog="save"] input'), null, { timeout: 5000 });
 await page.keyboard.type(viewName);
+await observe();
+const saveState = await saveInput.evaluate((i) => ({ max: i.maxLength, value: i.value, focused: document.activeElement === i }));
+const saveLog = await focusLog();
+check("save dialog: the name field keeps the 60-character maximum (saveViewAction's limit)", saveState.max === 60, String(saveState.max));
+check("save handoff: the Dialog input takes focus, the Views trigger never regains it, and immediate typing keeps the full name",
+  saveState.value === viewName && saveState.focused && !triggerStoleFocus(saveLog), JSON.stringify({ value: saveState.value, focused: saveState.focused, log: saveLog }));
 await page.keyboard.press("Enter");
 await page.locator('[data-saved-view-dialog="save"]').waitFor({ state: "detached", timeout: 15000 });
 await page.waitForLoadState("networkidle");
@@ -274,26 +313,48 @@ await openViews();
 // router.refresh() after the save lands asynchronously; wait for the new view (≤ 10 s) before counting it
 await page.locator('[role="menuitem"]').filter({ hasText: viewName }).waitFor({ timeout: 10000 }).catch(() => {});
 const current = await page.locator('[role="menuitem"][aria-current="true"]').filter({ hasText: viewName }).count();
-check("save current view through the dialog; the saved view is listed and marked current", current === 1);
+const exact = (await page.locator('[role="menuitem"]').allTextContents()).map((x) => x.trim()).includes(viewName);
+check("save succeeds: the view is stored under its full name, listed and marked current", current === 1 && exact);
 await page.keyboard.press("Escape");
 await layersClosed();
+check("no handoff leak: after the Save handoff, Escape on the Views menu again returns focus to the trigger", await escapeRestoresTrigger());
+// outside close: the menu closes, nothing opens, and the next ordinary close still restores focus
+await openViews();
+{ // a raw pointer click on a blank spot of the page (a modal menu blocks pointer events, so no locator click)
+  const box = await page.locator("main").boundingBox();
+  await page.mouse.click(box.x + box.width - 8, box.y + 8);
+}
+await layersClosed();
+const outsideClosed = (await page.locator('[role="menu"], [role="dialog"]').count()) === 0;
+check("outside click closes the Views menu (no dialog); the next Escape close still restores focus to the trigger", outsideClosed && (await escapeRestoresTrigger()));
 await page.locator("main [data-list-filters]").click();
 await page.locator("[data-radix-popper-content-wrapper] button", { hasText: /Clear filters/ }).click();
 await page.keyboard.press("Escape");
 await layersClosed();
+// apply an existing view: filters apply, the menu closes with Radix's normal focus return (no suppression)
 await openViews();
 await page.locator('[role="menuitem"]').filter({ hasText: viewName }).click();
+await layersClosed();
+const applyFocus = await triggerFocused();
 await settle();
-check("applying the saved view restores its filters (live)", (await page.locator("main tbody tr:not([data-empty-row])").count()) === 3 && (await page.locator("[data-filter-count]").textContent()) === "1");
+check("applying the saved view restores its filters (live) and returns focus to the Views trigger (no handoff suppression)",
+  (await page.locator("main tbody tr:not([data-empty-row])").count()) === 3 && (await page.locator("[data-filter-count]").textContent()) === "1" && applyFocus);
+// Manage saved views: menu → Dialog handoff
 await openViews();
+await startFocusLog();
 await page.locator('[role="menuitem"]').filter({ hasText: /Manage saved views/ }).click();
 await page.locator('[data-saved-view-dialog="manage"]').waitFor();
+await page.waitForFunction(() => !!document.activeElement?.closest?.('[data-saved-view-dialog="manage"]'), null, { timeout: 5000 });
+await observe();
+const manageLog = await focusLog();
+const manageInside = await page.evaluate(() => !!document.activeElement?.closest?.('[data-saved-view-dialog="manage"]'));
+check("manage handoff: focus moves into the Manage dialog and the Views trigger does not take it back", manageInside && !triggerStoleFocus(manageLog), JSON.stringify({ manageInside, log: manageLog }));
 await page.locator('[data-saved-view-dialog="manage"] button[aria-label^="Rename"]').filter({ has: page.locator("svg") }).last().click();
 await page.locator('[data-saved-view-dialog="rename"]').waitFor();
 // Rename has no length limit (renameViewAction, and the window.prompt it replaced): a deterministic 69-character name.
 const LONG_NAME = "Sent invoices since May 2026 — renamed beyond the sixty-character cap";
 const renameInput = page.locator('[data-saved-view-dialog="rename"] input');
-await renameInput.evaluate(focusSettled);
+await page.waitForFunction(() => document.activeElement?.matches?.('[data-saved-view-dialog="rename"] input'), null, { timeout: 5000 });
 await page.keyboard.press("ControlOrMeta+a");
 await page.keyboard.type(LONG_NAME);
 const typed = await renameInput.evaluate((i) => ({ max: i.maxLength, value: i.value }));

@@ -173,7 +173,7 @@ check("saved views: save + rename through a Dialog form, delete through the exis
   /renameViewAction\(target\.id, name\)/.test(ws) && /action: "view\.delete"/.test(ws) && /deleteViewAction\(v\.id\)/.test(ws));
 const viewsMenu = ws.slice(ws.indexOf("data-list-views"), ws.indexOf('<div className="toolbar-actions-right">'));
 check("saved views menu: only menu items (no plain buttons inside), apply + manage keyboard-reachable", !/<button\b|<Button\b/.test(viewsMenu.slice(viewsMenu.indexOf("<DropdownMenuContent"))) &&
-  /onSelect=\{\(\) => setFilters\(v\.config\)\}/.test(viewsMenu) && /onSelect=\{\(\) => setManaging\(true\)\}/.test(viewsMenu));
+  /onSelect=\{\(\) => setFilters\(v\.config\)\}/.test(viewsMenu) && /onSelect=\{\(\) => \{ viewsDialogHandoff\.current = true; setManaging\(true\); \}\}/.test(viewsMenu));
 // The naming contract is the server's (saved-view-actions.ts, byte-pinned below): Save → ≤ 60 characters,
 // Rename → no length limit. The shared naming Input must not add a 60-character limit to Rename.
 const nameInputs = [...code(ws).matchAll(/<Input id=\{fid\("view-name"\)\}[^>]*>/g)].map((m) => m[0]);
@@ -183,6 +183,18 @@ check("saved views: Save keeps the 60-character UI maximum, Rename has none (sam
   nameInputs.length === 1 && /maxLength=\{naming === "new" \? 60 : undefined\}/.test(nameInputs[0]) && !/maxLength=\{60\}/.test(code(ws)) &&
   /trimmed\.length > 60/.test(svActions.slice(0, svActions.indexOf("export async function renameViewAction"))) && !/(trimmed|name)\.length|\b60\b/.test(renameBody),
   nameInputs.join(" | "));
+// C2 — Views menu → Dialog focus handoff: close-autofocus is suppressed ONLY when an item hands off to a
+// Dialog (Save current view, Manage saved views); the flag is consumed on close and reset on open, so
+// Escape / outside / applying a view keep Radix's normal focus return to the trigger.
+const wsc = code(ws).replace(/\s+/g, " ");
+const handoffSets = [...wsc.matchAll(/onSelect=\{\(\) => \{ viewsDialogHandoff\.current = true; (openNaming\("new"\)|setManaging\(true\)); \}\}/g)].map((m) => m[1]);
+check("views menu: conditional close-autofocus — prevented only during a menu → Dialog handoff, flag consumed",
+  /onCloseAutoFocus=\{\(event\) => \{ if \(viewsDialogHandoff\.current\) \{ event\.preventDefault\(\); viewsDialogHandoff\.current = false; \} \}\}/.test(wsc) &&
+  (wsc.match(/onCloseAutoFocus=/g) ?? []).length === 1 && !/onCloseAutoFocus=\{\(\w*\) => \w+\.preventDefault\(\)\}/.test(wsc));
+check("views menu: only Save current view and Manage saved views set the handoff; applying a view does not; the flag resets on open",
+  handoffSets.length === 2 && handoffSets.includes('openNaming("new")') && handoffSets.includes("setManaging(true)") &&
+  (wsc.match(/viewsDialogHandoff\.current = true/g) ?? []).length === 2 && /onSelect=\{\(\) => setFilters\(v\.config\)\}/.test(wsc) &&
+  /<DropdownMenu onOpenChange=\{\(open\) => \{ if \(open\) viewsDialogHandoff\.current = false; \}\}>/.test(wsc), handoffSets.join(", "));
 check("saved views: the matching view is marked current; no default-view concept", /aria-current=\{current \|\| undefined\}/.test(ws) && !/default view|isDefault/i.test(ws));
 
 // ---------- 7. states ----------
@@ -212,6 +224,9 @@ const PINNED: Record<string, string> = {
   [A + "documents/_workspace/filter-types.ts"]: "2c4d735888a21013",
   [A + "documents/_workspace/saved-view-actions.ts"]: "4e2a260f754684b0",
   "src/lib/document-list-workspace.ts": "d6c6927c0def33fe",
+  // C2: the menu → Dialog focus handoff is local to the Views menu; the shared primitive (01.4 focus
+  // behaviour for every other menu) stays byte-identical.
+  "src/components/ui/dropdown-menu.tsx": "f9f94b05c82b1ba2",
   [A + "sales/_shared/configure-columns-dialog.tsx"]: "387e780f58ae6f30",
   [A + "sales/_shared/column-config-actions.ts"]: "6290d21894f90070",
   "src/lib/column-config.ts": "8904cbc74ccd23a5",

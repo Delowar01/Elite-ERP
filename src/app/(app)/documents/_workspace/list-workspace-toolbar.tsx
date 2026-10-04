@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState, useTransition } from "react";
+import { useId, useRef, useState, useTransition } from "react";
 import { statusLabel } from "@/lib/status-registry";
 import type { DocumentType } from "@/lib/document-lifecycle";
 import Link from "next/link";
@@ -79,6 +79,12 @@ export function ListWorkspaceToolbar({
   const active = filtersActive(filters);
   const count = activeFilterCount(filters);
   const set = (patch: Partial<ListFilterState>) => setFilters({ ...filters, ...patch });
+  // Views menu → Dialog handoff. When a menu item opens a Dialog (Save current view, Manage saved views),
+  // the closing menu must NOT return focus to the Views trigger: the Dialog has already focused its
+  // content, and the trigger refocus followed by the Dialog's focus trap pulling it back drops keystrokes.
+  // The flag is set only by those two items and consumed by the next close; every other close (Escape,
+  // outside click, applying a view) keeps Radix's normal focus return to the trigger.
+  const viewsDialogHandoff = useRef(false);
   // Save / rename dialog: `naming` is the view being renamed, or "new" for "Save current view".
   const [naming, setNaming] = useState<SavedViewDTO | "new" | null>(null);
   const [nameDraft, setNameDraft] = useState("");
@@ -212,14 +218,23 @@ export function ListWorkspaceToolbar({
 
       {/* Saved Views — every entry is a real menu item (keyboard-reachable); rename / delete live in
           the Manage dialog, not as stray buttons inside the menu. */}
-      <DropdownMenu>
+      <DropdownMenu onOpenChange={(open) => { if (open) viewsDialogHandoff.current = false; }}>
         <DropdownMenuTrigger asChild>
           <button type="button" className="doc-pill-btn" data-list-views="">
             <Bookmark className="size-3.5" aria-hidden /> <span>{t(locale, "Views")}</span> <ChevronDown className="size-3 text-ink-faint" aria-hidden />
           </button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="min-w-56">
-          <DropdownMenuItem className="cursor-pointer" onSelect={() => openNaming("new")} disabled={pending}>
+        <DropdownMenuContent
+          align="start"
+          className="min-w-56"
+          onCloseAutoFocus={(event) => {
+            if (viewsDialogHandoff.current) {
+              event.preventDefault();
+              viewsDialogHandoff.current = false;
+            }
+          }}
+        >
+          <DropdownMenuItem className="cursor-pointer" onSelect={() => { viewsDialogHandoff.current = true; openNaming("new"); }} disabled={pending}>
             <Plus className="size-3.5" aria-hidden /> {t(locale, "Save current view")}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
@@ -233,7 +248,7 @@ export function ListWorkspaceToolbar({
           })}
           {savedViews.length === 0 && <div className="px-2.5 py-1.5 text-caption text-ink-faint">{t(locale, "No saved views yet.")}</div>}
           <DropdownMenuSeparator />
-          <DropdownMenuItem className="cursor-pointer" onSelect={() => setManaging(true)} disabled={savedViews.length === 0}>
+          <DropdownMenuItem className="cursor-pointer" onSelect={() => { viewsDialogHandoff.current = true; setManaging(true); }} disabled={savedViews.length === 0}>
             <Settings2 className="size-3.5" aria-hidden /> {t(locale, "Manage saved views")}
           </DropdownMenuItem>
         </DropdownMenuContent>

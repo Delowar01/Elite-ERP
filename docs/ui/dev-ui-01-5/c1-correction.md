@@ -114,4 +114,4 @@ The guardrail counts are unchanged.
 
 ## Known debt (added by C1)
 
-- **Dropdown → Dialog focus bounce** in the saved-views menu. The Radix DropdownMenu returns focus to its trigger on close, after the naming Dialog has already focused its Input. A typical fix is `onCloseAutoFocus={(e) => e.preventDefault()}` on the Views menu content. That is a behaviour change for a later batch; C1 only restores the length contract.
+- **Dropdown → Dialog focus bounce** in the saved-views menu. The Radix DropdownMenu returns focus to its trigger on close, after the naming Dialog has already focused its Input. A typical fix is `onCloseAutoFocus={(e) => e.preventDefault()}` on the Views menu content. That is a behaviour change for a later batch; C1 only restores the length contract. **Resolved in C2** (`c2-correction.md`) with a conditional suppression — an unconditional `preventDefault` would also break the menu's ordinary focus return.
