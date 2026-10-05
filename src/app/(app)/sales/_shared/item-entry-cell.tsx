@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useId } from "react";
 import { createPortal } from "react-dom";
 import { PlusCircle, FileText, Loader2, Check } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -23,6 +23,7 @@ import type { LineItemDraft, ProductLite } from "./line-items-editor";
 //    for an existing item it stays document-local until "Save to Item". Nothing leaves the page.
 export function ItemEntryCell({
   locale,
+  nameLabel,
   products,
   item,
   showThumb,
@@ -35,6 +36,8 @@ export function ItemEntryCell({
   onSaveToMaster,
 }: {
   locale: Locale;
+  /** Accessible name of the item field ("Item — line 2"); DEV-UI-01.6. */
+  nameLabel?: string;
   products: ProductLite[];
   item: LineItemDraft;
   showThumb: boolean;
@@ -50,7 +53,12 @@ export function ItemEntryCell({
   const desc = item.customFields?.[LINE_DESC_KEY] ?? "";
   const [query, setQuery] = useState(displayName);
   const [open, setOpen] = useState(false);
-  const [rect, setRect] = useState<{ top: number; left: number; width: number } | null>(null);
+  // `start` is the inline-start offset of the fixed popup: from the left edge in LTR, from the right
+  // edge in RTL (innerWidth - rect.right) — the list opens under the field's start edge either way.
+  const [rect, setRect] = useState<{ top: number; start: number; width: number } | null>(null);
+  // DEV-UI-01.6: combobox state — the keyboard-active option (index into `options`), the popup ids.
+  const [active, setActive] = useState(-1);
+  const listId = useId();
   const [descOpen, setDescOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const dropRef = useRef<HTMLDivElement>(null);
@@ -61,10 +69,18 @@ export function ItemEntryCell({
     if (document.activeElement !== inputRef.current) setQuery(displayName);
   }, [displayName]);
 
-  function openList() {
+  function placeOf(el: HTMLElement) {
+    const r = el.getBoundingClientRect();
+    const rtl = document.documentElement.dir === "rtl";
+    return { top: r.bottom + 4, start: rtl ? window.innerWidth - r.right : r.left, width: r.width };
+  }
+
+  /** Open (or re-place) the list; `activeAt` is the option made active — none unless opened by arrow key. */
+  function openList(activeAt = -1) {
     const el = inputRef.current;
-    if (el) { const r = el.getBoundingClientRect(); setRect({ top: r.bottom + 4, left: r.left, width: r.width }); }
+    if (el) setRect(placeOf(el));
     setOpen(true);
+    setActive(activeAt);
   }
 
   // While open, keep the portal aligned to the input (scroll/resize) and close on an outside press.
@@ -72,7 +88,7 @@ export function ItemEntryCell({
     if (!open) return;
     const reposition = () => {
       const el = inputRef.current;
-      if (el) { const r = el.getBoundingClientRect(); setRect({ top: r.bottom + 4, left: r.left, width: r.width }); }
+      if (el) setRect(placeOf(el));
     };
     const onDown = (e: PointerEvent) => {
       const target = e.target as Node;
@@ -112,6 +128,39 @@ export function ItemEntryCell({
     onCreateNew(query.trim());
     setOpen(false);
   }
+
+  // Everything the listbox offers, in order: the matching items, then "Create New Item" when offered.
+  const options: ({ kind: "item"; product: ProductLite } | { kind: "create" })[] = [
+    ...matches.map((product) => ({ kind: "item" as const, product })),
+    ...(canCreate ? [{ kind: "create" as const }] : []),
+  ];
+  const optionId = (i: number) => `${listId}-option-${i}`;
+  const activeIndex = open && active < options.length ? active : -1;
+
+  // Keep the keyboard-active option visible inside the scrolling list.
+  useEffect(() => {
+    if (activeIndex >= 0) document.getElementById(optionId(activeIndex))?.scrollIntoView({ block: "nearest" });
+    // optionId is derived from the stable listId
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeIndex]);
+
+  function onKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault();
+      if (!open) { openList(e.key === "ArrowDown" ? 0 : options.length - 1); return; }
+      if (options.length === 0) return;
+      setActive((cur) => (e.key === "ArrowDown" ? (cur + 1) % options.length : cur <= 0 ? options.length - 1 : cur - 1));
+    } else if (e.key === "Enter") {
+      // Enter never submits anything: it chooses the active option, or does nothing.
+      if (!open || activeIndex < 0) return;
+      e.preventDefault();
+      const o = options[activeIndex];
+      if (o.kind === "item") pick(o.product);
+      else createNew();
+    } else if (e.key === "Escape") {
+      if (open) { e.preventDefault(); setOpen(false); }
+    }
+  }
   // Closing the description popup saves it onto a just-created item (its own new item); existing
   // items are only updated via the explicit "Save to Item" button.
   function closeDesc() {
@@ -130,10 +179,18 @@ export function ItemEntryCell({
           <input
             ref={inputRef}
             value={query}
-            onChange={(e) => { setQuery(e.target.value); onPatch({ description: e.target.value, productId: "" }); openList(); }}
-            onFocus={openList}
+            onChange={(e) => { setQuery(e.target.value); onPatch({ description: e.target.value, productId: "" }); openList(); /* a new query: no active option */ }}
+            onFocus={() => openList()}
+            onKeyDown={onKeyDown}
             placeholder={t(locale, "Item name")}
-            className="flex-1 h-8 rounded-[8px] border border-line px-2 text-xs outline-none focus:border-brand-orange bg-surface"
+            role="combobox"
+            aria-label={nameLabel ?? t(locale, "Item name")}
+            aria-autocomplete="list"
+            aria-expanded={open}
+            aria-controls={listId}
+            aria-activedescendant={activeIndex >= 0 ? optionId(activeIndex) : undefined}
+            data-line-item-name=""
+            className="item-name-input flex-1"
           />
           {pending && <Loader2 className="size-3.5 animate-spin text-brand-orange shrink-0" />}
         </div>
@@ -141,10 +198,10 @@ export function ItemEntryCell({
         {/* Description: shown on the line; opened on demand in a large responsive popup. */}
         {hasItem && (
           <div className="flex items-center gap-2">
-            <button type="button" className="text-[11px] text-ink-faint hover:text-brand-orange inline-flex items-center gap-1 shrink-0" onClick={() => setDescOpen(true)}>
+            <button type="button" className="item-desc-btn text-caption text-ink-faint hover:text-brand-orange inline-flex items-center gap-1 shrink-0" onClick={() => setDescOpen(true)}>
               <FileText className="size-3" /> {desc.trim() ? t(locale, "Edit description") : t(locale, "Add Description")}
             </button>
-            {desc.trim() && <span className="text-[11px] text-ink-muted truncate">{richTextToPlain(desc)}</span>}
+            {desc.trim() && <span className="text-caption text-ink-muted truncate">{richTextToPlain(desc)}</span>}
           </div>
         )}
       </div>
@@ -153,25 +210,45 @@ export function ItemEntryCell({
       {open && rect && typeof document !== "undefined" && createPortal(
         <div
           ref={dropRef}
-          style={{ position: "fixed", top: rect.top, left: rect.left, width: Math.max(rect.width, 180), zIndex: 120 }}
-          className="max-h-64 overflow-auto rounded-[10px] border border-line bg-surface-raised shadow-lg text-xs"
+          id={listId}
+          role="listbox"
+          aria-label={t(locale, "Saved items")}
+          style={{ position: "fixed", top: rect.top, insetInlineStart: rect.start, width: Math.max(rect.width, 180), zIndex: 120 }}
+          className="item-picker-list max-h-64 overflow-auto rounded-[10px] border border-line bg-surface-raised shadow-lg text-body-sm"
+          data-item-picker=""
         >
-          <div className="px-2 py-1 text-[10px] uppercase tracking-wide text-ink-faint">{t(locale, "Saved items")}</div>
-          {matches.length === 0 ? (
-            <div className="px-2 py-1.5 text-ink-faint">{t(locale, "No matching items")}</div>
-          ) : (
-            matches.map((p) => (
-              <button key={p.id} type="button" className="w-full text-start px-2 py-1.5 hover:bg-canvas flex items-center gap-1.5" onClick={() => pick(p)}>
-                <span className="text-ink-faint">{p.sku}</span>
-                <span className="truncate">{p.name}</span>
-              </button>
-            ))
-          )}
+          <div className="px-2 py-1 text-caption uppercase tracking-wide text-ink-faint" aria-hidden>{t(locale, "Saved items")}</div>
+          {matches.length === 0 && <div className="px-2 py-1.5 text-ink-faint">{t(locale, "No matching items")}</div>}
+          {matches.map((p, i) => (
+            <button
+              key={p.id}
+              id={optionId(i)}
+              type="button"
+              role="option"
+              aria-selected={activeIndex === i}
+              tabIndex={-1}
+              className="w-full text-start px-2 py-1.5 hover:bg-canvas aria-selected:bg-accent-tint flex items-center gap-1.5"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => pick(p)}
+            >
+              <span className="text-ink-faint">{p.sku}</span>
+              <span className="truncate">{p.name}</span>
+            </button>
+          ))}
           {canCreate && (
             <>
-              <div className="border-t border-line" />
-              <button type="button" className="w-full text-start px-2 py-1.5 hover:bg-canvas flex items-center gap-1.5 text-brand-orange font-semibold" onClick={createNew}>
-                <PlusCircle className="size-3.5" /> {t(locale, "Create New Item")}: “{query.trim()}”
+              <div className="border-t border-line" aria-hidden />
+              <button
+                id={optionId(matches.length)}
+                type="button"
+                role="option"
+                aria-selected={activeIndex === matches.length}
+                tabIndex={-1}
+                className="w-full text-start px-2 py-1.5 hover:bg-canvas aria-selected:bg-accent-tint flex items-center gap-1.5 text-brand-orange font-semibold"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={createNew}
+              >
+                <PlusCircle className="size-3.5" aria-hidden /> {t(locale, "Create New Item")}: “{query.trim()}”
               </button>
             </>
           )}
@@ -187,6 +264,7 @@ export function ItemEntryCell({
           </DialogHeader>
           <RichTextField
             locale={locale}
+            label={`${t(locale, "Description")} — ${displayName.trim() || t(locale, "Item")}`}
             value={desc}
             onChange={onSetDesc}
             placeholder={t(locale, "Write a full description…")}
@@ -195,7 +273,7 @@ export function ItemEntryCell({
           />
           <DialogFooter>
             {item.productId && justCreated && (
-              <span className="text-[11px] text-success inline-flex items-center gap-1 me-auto"><Check className="size-3" /> {t(locale, "Saved with the new item")}</span>
+              <span className="text-caption text-success inline-flex items-center gap-1 me-auto"><Check className="size-3" /> {t(locale, "Saved with the new item")}</span>
             )}
             {item.productId && !justCreated && (
               <Button type="button" variant="glass" onClick={() => onSaveToMaster(desc)}>

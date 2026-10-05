@@ -4,6 +4,7 @@ import { useState, useRef, useTransition } from "react";
 import { toast } from "sonner";
 import { FileSignature, FileText, Paperclip, Check, Upload, Trash2, FileIcon, Plus } from "lucide-react";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { t, type Locale } from "@/lib/i18n/dict";
 import { RichTextField } from "./rich-text-field";
 import { uploadDocumentAttachmentAction } from "./creation-popup-actions";
@@ -87,33 +88,35 @@ export function TermsBlock({
   }
 
   return (
-    <div>
-      <div className="doc-tabbar">
-        <button type="button" className={tab === "terms" ? "active" : "cursor-pointer"} onClick={() => setTab("terms")}>
-          <FileSignature className="size-3.5" /> {t(locale, "Terms & Conditions")}
-        </button>
-        <button type="button" className={tab === "note" ? "active" : "cursor-pointer"} onClick={() => setTab("note")}>
-          <FileText className="size-3.5" /> {t(locale, "Add Note")}
-        </button>
-        <button type="button" className={tab === "attachments" ? "active" : "cursor-pointer"} onClick={() => setTab("attachments")}>
-          <Paperclip className="size-3.5" /> {t(locale, "Add Attachment")}
+    // DEV-UI-01.6: the approved Tabs primitive (tablist / tab / tabpanel, arrow keys, document direction).
+    // Inactive panels unmount, exactly as the conditional rendering did; the selected tab is the same state.
+    <Tabs value={tab} onValueChange={(v) => setTab(v as Tab)} className="doc-tabs">
+      <TabsList className="doc-tabs-list" aria-label={t(locale, "Terms, notes and attachments")}>
+        <TabsTrigger value="terms">
+          <FileSignature className="size-3.5" aria-hidden /> {t(locale, "Terms & Conditions")}
+        </TabsTrigger>
+        <TabsTrigger value="note">
+          <FileText className="size-3.5" aria-hidden /> {t(locale, "Add Note")}
+        </TabsTrigger>
+        <TabsTrigger value="attachments">
+          <Paperclip className="size-3.5" aria-hidden /> {t(locale, "Add Attachment")}
           {attachments.length > 0 ? ` (${attachments.length})` : ""}
-        </button>
-      </div>
+        </TabsTrigger>
+      </TabsList>
 
-      {tab === "terms" && (
+      <TabsContent value="terms" className="mt-3">
         <div className="flex flex-col gap-2 mb-3">
           <DocumentTermsEditor locale={locale} terms={terms} onChange={onTermsChange} groups={termsGroups} />
         </div>
-      )}
+      </TabsContent>
 
-      {tab === "note" && (
+      <TabsContent value="note" className="mt-3">
         <div className="flex flex-col gap-2">
           {noteOpen && noteTemplates.length > 0 && (
             <div className="flex items-center gap-2 flex-wrap">
-              <div className="text-[12.5px] font-bold text-ink">{t(locale, "Note Template")}</div>
+              <div className="text-body-sm font-semibold text-ink" aria-hidden>{t(locale, "Note Template")}</div>
               <Select value={noteId} onValueChange={setNoteId}>
-                <SelectTrigger className="h-8 w-56 text-[12.5px]">
+                <SelectTrigger className="h-(--control-height-compact) w-56" aria-label={t(locale, "Note Template")}>
                   <SelectValue placeholder={t(locale, "Select a template")} />
                 </SelectTrigger>
                 <SelectContent>
@@ -125,39 +128,39 @@ export function TermsBlock({
                   ))}
                 </SelectContent>
               </Select>
-              <button type="button" className="doc-pill-btn" style={{ height: 30, fontSize: 11.5 }} onClick={applyNote} disabled={!selectedNote}>
+              <button type="button" className="doc-pill-btn compact" onClick={applyNote} disabled={!selectedNote}>
                 <Check className="size-3" /> {t(locale, "Apply to notes")}
               </button>
             </div>
           )}
           {noteOpen ? (
-            <RichTextField locale={locale} value={notes} onChange={onNotesChange} placeholder={t(locale, "Write a note…")} rows={5} onRemove={removeNote} />
+            <RichTextField locale={locale} label={t(locale, "Note")} value={notes} onChange={onNotesChange} placeholder={t(locale, "Write a note…")} rows={5} onRemove={removeNote} />
           ) : (
-            <button type="button" className="doc-pill-btn self-start" style={{ height: 32 }} onClick={() => setNoteOpen(true)}>
+            <button type="button" className="doc-pill-btn compact self-start" onClick={() => setNoteOpen(true)}>
               <Plus className="size-3.5" /> {t(locale, "Add Note")}
             </button>
           )}
         </div>
-      )}
+      </TabsContent>
 
-      {tab === "attachments" && (
+      <TabsContent value="attachments" className="mt-3">
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-2 flex-wrap">
-            <input ref={fileRef} type="file" accept="image/png,image/jpeg,application/pdf" className="text-[12px]" />
-            <button type="button" className="doc-pill-btn" style={{ height: 30, fontSize: 11.5 }} onClick={uploadAttachment} disabled={pending}>
+            <input ref={fileRef} type="file" accept="image/png,image/jpeg,application/pdf" className="text-body-sm" aria-label={t(locale, "Attachment file")} />
+            <button type="button" className="doc-pill-btn compact" onClick={uploadAttachment} disabled={pending}>
               <Upload className="size-3" /> {pending ? t(locale, "Saving…") : t(locale, "Upload")}
             </button>
           </div>
-          <p className="text-[11px] text-ink-faint">{t(locale, "PDF, PNG or JPG, up to 8 MB.")}</p>
+          <p className="text-caption text-ink-faint">{t(locale, "PDF, PNG or JPG, up to 8 MB.")}</p>
           {attachments.length > 0 && (
             <div className="flex flex-col gap-1">
               {attachments.map((a, i) => (
-                <div key={i} className="flex items-center gap-2 rounded-[8px] border border-line px-2 py-1 text-[12px]">
+                <div key={i} className="flex items-center gap-2 rounded-[8px] border border-line px-2 py-1 text-body-sm">
                   <FileIcon className="size-3.5 text-ink-faint" />
                   <a href={a.fileUrl} target="_blank" rel="noreferrer" className="flex-1 truncate hover:text-brand-orange" title={a.fileName}>
                     {a.fileName}
                   </a>
-                  <button type="button" className="item-del-btn" onClick={() => removeAttachment(i)} aria-label={t(locale, "Remove")} title={t(locale, "Remove")}>
+                  <button type="button" className="item-del-btn" onClick={() => removeAttachment(i)} aria-label={`${t(locale, "Remove")} ${a.fileName}`} title={t(locale, "Remove")}>
                     <Trash2 className="size-3.5" />
                   </button>
                 </div>
@@ -165,7 +168,7 @@ export function TermsBlock({
             </div>
           )}
         </div>
-      )}
-    </div>
+      </TabsContent>
+    </Tabs>
   );
 }

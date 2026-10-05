@@ -32,7 +32,7 @@ export function DcDetailActions({ locale, dcId, dcNumber, status }: { locale: Lo
   return (
     <div className="flex items-center gap-2.5">
       <Select value={status} onValueChange={changeStatus}>
-        <SelectTrigger className="w-40">
+        <SelectTrigger className="w-40" aria-label={t(locale, "Change delivery challan status")}>
           <SelectValue />
         </SelectTrigger>
         <SelectContent>

@@ -1,11 +1,13 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useId, useState, useTransition } from "react";
 import { getLineDesc } from "../_shared/line-item-desc";
 import { toast } from "sonner";
 import { Truck } from "lucide-react";
 import { PartyCardStatic, PartyCardSelect } from "../_shared/party-card";
 import { DocFieldBox } from "../_shared/doc-field-box";
+import { DocFormError } from "../_shared/doc-form-error";
+import { Input } from "@/components/ui/input";
 import { LineItemsEditor, emptyLineItem, type LineItemDraft } from "../_shared/line-items-editor";
 import { DocPillsRow } from "../_shared/doc-pills-row";
 import { DocFooterContact } from "../_shared/doc-footer-contact";
@@ -63,6 +65,9 @@ export function DcForm({
   const [previewOpen, setPreviewOpen] = useState(false);
   const [pendingDraft, startDraftTransition] = useTransition();
   const [pendingPrimary, startPrimaryTransition] = useTransition();
+  // DEV-UI-01.6: ids for the header controls, and the last save failure shown in the error region.
+  const fid = useId();
+  const [formError, setFormError] = useState<string | null>(null);
 
   const selectedCustomer = customers.find((c) => String(c.id) === customerId);
   const previewData: PreviewData = {
@@ -90,6 +95,7 @@ export function DcForm({
 
   function submit(andDispatch: boolean) {
     const start = andDispatch ? startPrimaryTransition : startDraftTransition;
+    setFormError(null);
     start(async () => {
       // Clean BEFORE the call: a successful save redirects from the server and never returns,
       // so marking clean afterwards would be too late and the user would be asked to discard
@@ -102,6 +108,7 @@ export function DcForm({
       if (result?.error) {
         dirtyForm.restoreDirty();
         toast.error(result.error);
+        setFormError(result.error);
       }
     });
   }
@@ -115,27 +122,27 @@ export function DcForm({
           </h3>
           <div className="sub">{t(locale, isEdit ? "Edit this draft document." : "Dispatch stock to a client — logistics only, no pricing or ledger impact.")}</div>
         </div>
-        <DocTopActions locale={locale} busy={pendingDraft || pendingPrimary} onSaveDraft={() => submit(false)} onPreview={() => setPreviewOpen(true)} />
+        <DocTopActions locale={locale} busy={pendingDraft || pendingPrimary} onSaveDraft={() => submit(false)} onPreview={() => setPreviewOpen(true)} dirty={dirtyForm.dirty} />
       </div>
 
-      <div className="doc-header-grid" style={{ gridTemplateColumns: "1fr 1fr" }}>
-        <DocFieldBox label={t(locale, "DC Number")} required gear gearDocType="delivery_challan" locale={locale}>
+      <div className="doc-header-grid">
+        <DocFieldBox label={t(locale, "DC Number")} required mono gear gearDocType="delivery_challan" locale={locale}>
           {numberPreview}
         </DocFieldBox>
-        <DocFieldBox label={t(locale, "Dispatch Date")} required>
-          <input type="date" value={dispatchDate} onChange={(e) => setDispatchDate(e.target.value)} className="w-full bg-transparent outline-none" />
-        </DocFieldBox>
+        <DocFieldBox label={t(locale, "Dispatch Date")} required htmlFor={`${fid}-dispatch-date`}>
+              <Input id={`${fid}-dispatch-date`} type="date" aria-required value={dispatchDate} onChange={(e) => setDispatchDate(e.target.value)} />
+            </DocFieldBox>
       </div>
-      <div className="doc-header-grid" style={{ gridTemplateColumns: "1fr 1fr" }}>
-        <DocFieldBox label={t(locale, "Carrier")} plain>
-          <input value={carrier} onChange={(e) => setCarrier(e.target.value)} className="w-full bg-transparent outline-none" />
+      <div className="doc-header-grid">
+        <DocFieldBox label={t(locale, "Carrier")} htmlFor={`${fid}-carrier`}>
+          <Input id={`${fid}-carrier`} value={carrier} onChange={(e) => setCarrier(e.target.value)} />
         </DocFieldBox>
-        <DocFieldBox label={t(locale, "Vehicle No.")} plain>
-          <input value={vehicleNo} onChange={(e) => setVehicleNo(e.target.value)} className="w-full bg-transparent outline-none" />
+        <DocFieldBox label={t(locale, "Vehicle No.")} htmlFor={`${fid}-vehicle`}>
+          <Input id={`${fid}-vehicle`} value={vehicleNo} onChange={(e) => setVehicleNo(e.target.value)} />
         </DocFieldBox>
       </div>
 
-      <div className="doc-meta-row" style={{ gridTemplateColumns: "1fr 1fr" }}>
+      <div className="doc-meta-row">
         <PartyCardStatic locale={locale} label={t(locale, "From")} name={org.name} address={org.address} email={org.email} phone={org.phone} />
         <PartyCardSelect locale={locale} label={t(locale, "To Client")} customers={customers} value={customerId} onChange={setCustomerId} taxOverrides={org} defaultCountryCode={countryProfile.countryCode} />
       </div>
@@ -149,6 +156,8 @@ export function DcForm({
       </div>
 
       <DocFooterContact locale={locale} email={org.email} phone={org.phone} />
+
+      <DocFormError locale={locale} error={formError} />
 
       <DocActionBar
         locale={locale}

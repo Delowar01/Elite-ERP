@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useId, useState, useTransition } from "react";
 import { getLineDesc } from "../_shared/line-item-desc";
 import { toast } from "sonner";
 import { FileText } from "lucide-react";
@@ -8,6 +8,10 @@ import { CurrencyProvider } from "@/components/ui/currency-mark";
 import { docMoneyMark } from "../_shared/doc-currency";
 import { PartyCardStatic, PartyCardSelect } from "../_shared/party-card";
 import { DocFieldBox } from "../_shared/doc-field-box";
+import { DocFormError } from "../_shared/doc-form-error";
+import { Input } from "@/components/ui/input";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { FormField } from "@/components/ui/form-field";
 import { ValidityDaysDialog, addDays } from "../_shared/validity-days-dialog";
 import { DocBrandPanel } from "../_shared/doc-brand-panel";
 import { DocPillsRow } from "../_shared/doc-pills-row";
@@ -34,6 +38,9 @@ import type { Customer, Product, Org } from "@/db";
 import type { ContentPreset } from "@/lib/document-presets";
 import { createQuotationAction, updateQuotationAction } from "./actions";
 
+
+// Radix Select items cannot carry "", so the "—" (none) option uses this sentinel in the UI only.
+const NONE = "__none";
 export type QuotationFormInitial = {
   title: string;
   customerId: string;
@@ -112,6 +119,9 @@ export function QuotationForm({
   const [previewOpen, setPreviewOpen] = useState(false);
   const [pendingDraft, startDraftTransition] = useTransition();
   const [pendingPrimary, startPrimaryTransition] = useTransition();
+  // DEV-UI-01.6: ids for the header controls, and the last save failure shown in the error region.
+  const fid = useId();
+  const [formError, setFormError] = useState<string | null>(null);
 
   const totals = computeTotals(items, discount, currency);
   const selectedCustomer = customers.find((c) => String(c.id) === customerId);
@@ -128,6 +138,7 @@ export function QuotationForm({
 
   function submit(andSend: boolean) {
     const start = andSend ? startPrimaryTransition : startDraftTransition;
+    setFormError(null);
     start(async () => {
       // Clean BEFORE the call: a successful save redirects from the server and never returns,
       // so marking clean afterwards would be too late and the user would be asked to discard
@@ -138,6 +149,7 @@ export function QuotationForm({
       if (result?.error) {
         dirtyForm.restoreDirty();
         toast.error(result.error);
+        setFormError(result.error);
       }
     });
   }
@@ -173,23 +185,24 @@ export function QuotationForm({
           </h3>
           <div className="sub">{t(locale, isEdit ? "Edit this draft quotation." : "Create and send professional quotations to your clients.")}</div>
         </div>
-        <DocTopActions locale={locale} busy={pendingDraft || pendingPrimary} onSaveDraft={() => submit(false)} onPreview={() => setPreviewOpen(true)} />
+        <DocTopActions locale={locale} busy={pendingDraft || pendingPrimary} onSaveDraft={() => submit(false)} onPreview={() => setPreviewOpen(true)} dirty={dirtyForm.dirty} />
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1.7fr 1fr", gap: 20, marginBottom: 18, alignItems: "start" }}>
+      <div className="doc-head-grid">
         <div>
-          <div className="doc-header-grid" style={{ gridTemplateColumns: "1fr 1fr" }}>
-            <DocFieldBox label={t(locale, "Quotation Number")} required gear gearDocType="quotation" locale={locale}>
+          <div className="doc-header-grid">
+            <DocFieldBox label={t(locale, "Quotation Number")} required mono gear gearDocType="quotation" locale={locale}>
               {numberPreview}
             </DocFieldBox>
-            <DocFieldBox label={t(locale, "Quotation Date")} required>
-              <input type="date" value={issueDate} onChange={(e) => setIssueDate(e.target.value)} className="w-full bg-transparent outline-none" />
+            <DocFieldBox label={t(locale, "Quotation Date")} required htmlFor={`${fid}-quotation-date`}>
+              <Input id={`${fid}-quotation-date`} type="date" aria-required value={issueDate} onChange={(e) => setIssueDate(e.target.value)} />
             </DocFieldBox>
           </div>
-          <div className="doc-header-grid" style={{ gridTemplateColumns: "1fr 1fr" }}>
+          <div className="doc-header-grid">
             <DocFieldBox
               label={t(locale, "Valid Till Date")}
               required
+              htmlFor={`${fid}-valid-till`}
               gearDialog={
                 <ValidityDaysDialog
                   locale={locale}
@@ -209,41 +222,44 @@ export function QuotationForm({
                 />
               }
             >
-              <input
+              <Input
+                id={`${fid}-valid-till`}
                 type="date"
+                aria-required
                 value={effectiveValidUntil}
                 onChange={(e) => {
                   setValidUntil(e.target.value);
                   setAutoValidity(false);
                 }}
-                className="w-full bg-transparent outline-none"
               />
             </DocFieldBox>
-            <DocFieldBox label={t(locale, "Project")}>
-              <select value={projectId} onChange={(e) => setProjectId(e.target.value)} className="w-full bg-transparent outline-none">
-                <option value="">—</option>
-                {projects.map((p) => (
-                  <option key={p.id} value={String(p.id)}>
-                    {p.name}
-                  </option>
-                ))}
-              </select>
+            <DocFieldBox label={t(locale, "Project")} htmlFor={`${fid}-project`}>
+              {/* Radix items cannot carry "": NONE stands for the "—" option and maps back to "". */}
+              <Select value={projectId || NONE} onValueChange={(v) => setProjectId(v === NONE ? "" : v)}>
+                <SelectTrigger id={`${fid}-project`} className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NONE}>—</SelectItem>
+                  {projects.map((p) => (
+                    <SelectItem key={p.id} value={String(p.id)}>
+                      {p.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </DocFieldBox>
           </div>
-          <div className="field">
-            <label>{t(locale, "Quotation Title")}</label>
-            <input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder={t(locale, "Write quotation title here…")}
-              className="input plain w-full outline-none"
-            />
-          </div>
+          <FormField label={t(locale, "Quotation Title")} htmlFor={`${fid}-title`}>
+            {(field) => (
+              <Input id={field.id} aria-describedby={field.describedBy} value={title} onChange={(e) => setTitle(e.target.value)} placeholder={t(locale, "Write quotation title here…")} />
+            )}
+          </FormField>
         </div>
         <DocBrandPanel org={org} />
       </div>
 
-      <div className="doc-meta-row" style={{ gridTemplateColumns: "1fr 1fr" }}>
+      <div className="doc-meta-row">
         <PartyCardStatic locale={locale} label={t(locale, "From")} name={org.name} address={org.address} email={org.email} phone={org.phone} />
         <PartyCardSelect locale={locale} label={t(locale, "To Client")} customers={customers} value={customerId} onChange={setCustomerId} taxOverrides={org} defaultCountryCode={countryProfile.countryCode} />
       </div>
@@ -289,6 +305,8 @@ export function QuotationForm({
       <SealSignaturePreview locale={locale} sealUrl={org.sealUrl} signatureUrl={org.signatureUrl} sealAssets={sealAssets} sealOverride={sealOverride} signatureOverride={signatureOverride} onSealOverride={setSealOverride} onSignatureOverride={setSignatureOverride} />
 
       <DocFooterContact locale={locale} email={org.email} phone={org.phone} />
+
+      <DocFormError locale={locale} error={formError} />
 
       <DocActionBar
         locale={locale}

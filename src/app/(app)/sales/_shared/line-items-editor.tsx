@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Plus, X } from "lucide-react";
 import { t, type Locale } from "@/lib/i18n/dict";
@@ -10,6 +10,7 @@ import { ItemEntryCell } from "./item-entry-cell";
 import { LINE_DESC_KEY } from "./line-item-desc";
 import { saveLineItemAsProductAction, updateProductDescriptionAction } from "./creation-popup-actions";
 import { ACTIONS_KEY, evalFormula, lineVars, type ColumnDef } from "@/lib/column-config";
+import { columnDisplayLabel } from "./column-label";
 import type { Product } from "@/db";
 
 export type LineItemDraft = {
@@ -94,6 +95,7 @@ function itemCell(locale: Locale, item: LineItemDraft, i: number, showThumb: boo
   return (
     <ItemEntryCell
       locale={locale}
+      nameLabel={lineCellName(locale, t(locale, "Item"), i)}
       products={h.products}
       item={item}
       showThumb={showThumb}
@@ -105,6 +107,52 @@ function itemCell(locale: Locale, item: LineItemDraft, i: number, showThumb: boo
       onCreateNew={(name) => h.createNew(i, name)}
       onSaveToMaster={(html) => { if (linkedId) h.saveToMaster(linkedId, html); }}
     />
+  );
+}
+
+// DEV-UI-01.6 — keyboard + screen-reader support for the line table. None of this enters the document:
+// LineItemDraft and the payload are unchanged, rows stay index-keyed, and focus is moved with DOM
+// lookups on data attributes after React commits the change.
+/** Accessible name of an editable line cell: "<column> — line <n>". */
+export function lineCellName(locale: Locale, column: string, index: number): string {
+  return `${column} — ${t(locale, "Line")} ${index + 1}`;
+}
+
+/**
+ * After Add / Remove, move focus to the row the user is now working on: the new row's item field after
+ * Add; after Remove the row now at that position, else the previous one, else the Add button.
+ */
+function useLineFocus(items: LineItemDraft[], root: React.RefObject<HTMLDivElement | null>) {
+  const pending = useRef<number | null>(null);
+  useEffect(() => {
+    const target = pending.current;
+    if (target === null || !root.current) return;
+    pending.current = null;
+    const rows = root.current.querySelectorAll<HTMLTableRowElement>("tr[data-line-index]");
+    const row = rows[Math.min(target, rows.length - 1)];
+    const field = row?.querySelector<HTMLInputElement>("[data-line-item-name]");
+    (field ?? root.current.querySelector<HTMLButtonElement>("[data-line-add]"))?.focus();
+  }, [items, root]);
+  return {
+    afterAdd: () => { pending.current = items.length; },
+    afterRemove: (index: number) => { pending.current = index; },
+  };
+}
+
+function AddLineButton({ locale, onAdd }: { locale: Locale; onAdd: () => void }) {
+  return (
+    <button type="button" className="doc-add-item-btn" data-line-add="" onClick={onAdd}>
+      <Plus className="size-3.5" aria-hidden /> {t(locale, "Add New Item")}
+    </button>
+  );
+}
+
+function RemoveLineButton({ locale, index, onRemove }: { locale: Locale; index: number; onRemove: () => void }) {
+  const name = `${t(locale, "Remove line item")} ${index + 1}`;
+  return (
+    <button type="button" className="item-del-btn" onClick={onRemove} aria-label={name} title={name}>
+      <X className="size-4" aria-hidden />
+    </button>
   );
 }
 
@@ -166,11 +214,14 @@ function ColumnDrivenEditor({
   const h = useItemActions(locale, items, onChange, "full", products);
   const updateLine = h.updateLine;
   const cfg = markFormat(useCurrency());
+  const lineRoot = useRef<HTMLDivElement>(null);
+  const focus = useLineFocus(items, lineRoot);
 
   function setCustom(index: number, key: string, value: string) {
     onChange(items.map((it, i) => (i === index ? { ...it, customFields: { ...it.customFields, [key]: value } } : it)));
   }
   function removeLine(index: number) {
+    focus.afterRemove(index);
     onChange(items.filter((_, i) => i !== index));
   }
 
@@ -188,23 +239,24 @@ function ColumnDrivenEditor({
 
   function cell(item: LineItemDraft, i: number, c: ColumnDef) {
     const cmp = computed(item);
+    const name = lineCellName(locale, columnDisplayLabel(locale, c), i);
     switch (c.key) {
       case "description":
         return itemCell(locale, item, i, true, h);
       case "taxRatePercent":
-        return <input type="number" step="1" value={item.taxRatePercent} onChange={(e) => updateLine(i, { taxRatePercent: e.target.value })} className="item-cell-input" />;
+        return <input type="number" step="1" value={item.taxRatePercent} onChange={(e) => updateLine(i, { taxRatePercent: e.target.value })} className="item-cell-input" aria-label={name} />;
       case "quantity":
-        return <input type="number" step="0.01" value={item.quantity} onChange={(e) => updateLine(i, { quantity: e.target.value })} className="item-cell-input" />;
+        return <input type="number" step="0.01" value={item.quantity} onChange={(e) => updateLine(i, { quantity: e.target.value })} className="item-cell-input" aria-label={name} />;
       case "unit":
-        return <input list="lie-units" value={item.unit} onChange={(e) => updateLine(i, { unit: e.target.value })} placeholder={t(locale, "Unit")} className="item-cell-input" style={{ minWidth: 56 }} />;
+        return <input list="lie-units" value={item.unit} onChange={(e) => updateLine(i, { unit: e.target.value })} placeholder={t(locale, "Unit")} className="item-cell-input" style={{ minWidth: 56 }} aria-label={name} />;
       case "unitPrice":
-        return <input type="number" step="0.01" value={item.unitPrice} onChange={(e) => updateLine(i, { unitPrice: e.target.value })} className="item-cell-input" />;
+        return <input type="number" step="0.01" value={item.unitPrice} onChange={(e) => updateLine(i, { unitPrice: e.target.value })} className="item-cell-input" aria-label={name} />;
       case "amount":
         return <span className="cellval">{formatAmount(cmp.amount, cfg)}</span>;
       case "vatAmount":
         return <span className="cellval">{formatAmount(cmp.vatAmount, cfg)}</span>;
       case "discPercent":
-        return <input type="number" step="0.01" value={item.customFields?.discPercent ?? ""} onChange={(e) => setCustom(i, "discPercent", e.target.value)} className="item-cell-input" />;
+        return <input type="number" step="0.01" value={item.customFields?.discPercent ?? ""} onChange={(e) => setCustom(i, "discPercent", e.target.value)} className="item-cell-input" aria-label={name} />;
       case "discAmount":
         return <span className="cellval">{formatAmount(cmp.discAmount, cfg)}</span>;
       case "total":
@@ -222,6 +274,7 @@ function ColumnDrivenEditor({
               value={item.customFields?.[c.key] ?? ""}
               onChange={(e) => setCustom(i, c.key, e.target.value)}
               className="item-cell-input"
+              aria-label={name}
             />
           );
         }
@@ -234,9 +287,9 @@ function ColumnDrivenEditor({
     (c.custom && (c.fieldType === "number" || c.fieldType === "formula"));
 
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex flex-col gap-1" ref={lineRoot}>
       <datalist id="lie-units">{unitOptions.map((u) => <option key={u} value={u} />)}</datalist>
-      <div className="table-scroll">
+      <div className="table-scroll doc-items-scroll">
         <table className="doc-items-table" style={{ tableLayout: "fixed", width: "100%" }}>
           <colgroup>
             {visible.map((c) => <col key={c.key} style={{ width: `${c.widthPct}%` }} />)}
@@ -245,20 +298,18 @@ function ColumnDrivenEditor({
             <tr>
               {visible.map((c) => (
                 <th key={c.key} className={isNum(c) ? "num" : undefined}>
-                  {c.key === ACTIONS_KEY ? "" : c.label}
+                  {c.key === ACTIONS_KEY ? <span className="sr-only">{t(locale, "Actions")}</span> : columnDisplayLabel(locale, c)}
                 </th>
               ))}
             </tr>
           </thead>
           <tbody>
             {items.map((item, i) => (
-              <tr className="item-row" key={i}>
+              <tr className="item-row" key={i} data-line-index={i}>
                 {visible.map((c) => (
                   <td key={c.key} className={isNum(c) ? "num" : undefined} style={c.key === "total" || c.key === "amount" ? { whiteSpace: "nowrap" } : undefined}>
                     {c.key === ACTIONS_KEY ? (
-                      items.length > 1 ? (
-                        <div className="item-del-btn" onClick={() => removeLine(i)} role="button" aria-label={t(locale, "Remove")}><X className="size-4" /></div>
-                      ) : null
+                      items.length > 1 ? <RemoveLineButton locale={locale} index={i} onRemove={() => removeLine(i)} /> : null
                     ) : (
                       cell(item, i, c)
                     )}
@@ -269,9 +320,7 @@ function ColumnDrivenEditor({
           </tbody>
         </table>
       </div>
-      <div className="doc-add-item-btn" onClick={() => onChange([...items, emptyLineItem(defaultTaxRate)])} role="button">
-        <Plus className="size-3.5" /> {t(locale, "Add New Item")}
-      </div>
+      <AddLineButton locale={locale} onAdd={() => { focus.afterAdd(); onChange([...items, emptyLineItem(defaultTaxRate)]); }} />
     </div>
   );
 }
@@ -298,8 +347,11 @@ function FixedEditor({
   const h = useItemActions(locale, items, onChange, resolvedVariant, products);
   const updateLine = h.updateLine;
   const cfg = markFormat(useCurrency());
+  const lineRoot = useRef<HTMLDivElement>(null);
+  const focus = useLineFocus(items, lineRoot);
 
   function removeLine(index: number) {
+    focus.afterRemove(index);
     onChange(items.filter((_, i) => i !== index));
   }
   const lineTotal = (it: LineItemDraft) => (Number(it.quantity) || 0) * (Number(it.unitPrice) || 0);
@@ -307,9 +359,9 @@ function FixedEditor({
   const showPricing = resolvedVariant === "full";
 
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex flex-col gap-1" ref={lineRoot}>
       <datalist id="lie-units">{unitOptions.map((u) => <option key={u} value={u} />)}</datalist>
-      <div className="table-scroll">
+      <div className="table-scroll doc-items-scroll">
         <table className="doc-items-table">
           <thead>
             <tr>
@@ -319,37 +371,37 @@ function FixedEditor({
               {showPricing && <th>{t(locale, "Unit")}</th>}
               {showPricing && (<><th className="num">{t(locale, "Unit Price")}</th><th className="num">{t(locale, "Amount")}</th></>)}
               {resolvedVariant === "simple" && (<><th className="num">{t(locale, "Unit Price")}</th><th className="num">{t(locale, "Line Total")}</th></>)}
-              <th style={{ width: 40 }} />
+              <th style={{ width: 40 }}>
+                <span className="sr-only">{t(locale, "Actions")}</span>
+              </th>
             </tr>
           </thead>
           <tbody>
             {items.map((item, i) => (
-              <tr className="item-row" key={i}>
+              <tr className="item-row" key={i} data-line-index={i}>
                 <td>
                   {itemCell(locale, item, i, showThumb, h)}
                 </td>
                 {showPricing && (
-                  <td className="num"><input type="number" step="1" value={item.taxRatePercent} onChange={(e) => updateLine(i, { taxRatePercent: e.target.value })} className="item-cell-input" /></td>
+                  <td className="num"><input type="number" step="1" value={item.taxRatePercent} onChange={(e) => updateLine(i, { taxRatePercent: e.target.value })} className="item-cell-input" aria-label={lineCellName(locale, t(locale, "VAT %"), i)} /></td>
                 )}
-                <td className="num"><input type="number" step="0.01" value={item.quantity} onChange={(e) => updateLine(i, { quantity: e.target.value })} className="item-cell-input" /></td>
+                <td className="num"><input type="number" step="0.01" value={item.quantity} onChange={(e) => updateLine(i, { quantity: e.target.value })} className="item-cell-input" aria-label={lineCellName(locale, t(locale, "Qty"), i)} /></td>
                 {showPricing && (
-                  <td><input list="lie-units" value={item.unit} onChange={(e) => updateLine(i, { unit: e.target.value })} placeholder={t(locale, "Unit")} className="item-cell-input" style={{ minWidth: 64 }} /></td>
+                  <td><input list="lie-units" value={item.unit} onChange={(e) => updateLine(i, { unit: e.target.value })} placeholder={t(locale, "Unit")} className="item-cell-input" style={{ minWidth: 64 }} aria-label={lineCellName(locale, t(locale, "Unit"), i)} /></td>
                 )}
                 {(showPricing || resolvedVariant === "simple") && (
                   <>
-                    <td className="num"><input type="number" step="0.01" value={item.unitPrice} onChange={(e) => updateLine(i, { unitPrice: e.target.value })} className="item-cell-input" /></td>
+                    <td className="num"><input type="number" step="0.01" value={item.unitPrice} onChange={(e) => updateLine(i, { unitPrice: e.target.value })} className="item-cell-input" aria-label={lineCellName(locale, t(locale, "Unit Price"), i)} /></td>
                     <td className="num cellval" style={{ fontWeight: 600, whiteSpace: "nowrap" }}>{formatAmount(lineTotal(item), cfg)}</td>
                   </>
                 )}
-                <td>{items.length > 1 && (<div className="item-del-btn" onClick={() => removeLine(i)} role="button" aria-label={t(locale, "Remove")}><X className="size-4" /></div>)}</td>
+                <td>{items.length > 1 && <RemoveLineButton locale={locale} index={i} onRemove={() => removeLine(i)} />}</td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-      <div className="doc-add-item-btn" onClick={() => onChange([...items, emptyLineItem(defaultTaxRate)])} role="button">
-        <Plus className="size-3.5" /> {t(locale, "Add New Item")}
-      </div>
+      <AddLineButton locale={locale} onAdd={() => { focus.afterAdd(); onChange([...items, emptyLineItem(defaultTaxRate)]); }} />
     </div>
   );
 }

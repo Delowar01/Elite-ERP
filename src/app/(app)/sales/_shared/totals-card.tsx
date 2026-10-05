@@ -44,7 +44,7 @@ export function TotalsCard({
         <span>{t(locale, "Discount")}</span>
         <span className="v">
           {onDiscountChange ? (
-            <input type="number" step="0.01" min="0" value={discount} onChange={(e) => onDiscountChange(e.target.value)} />
+            <input type="number" step="0.01" min="0" value={discount} onChange={(e) => onDiscountChange(e.target.value)} aria-label={t(locale, "Discount")} />
           ) : (
             formatAmount(discount, markFormat(currency))
           )}

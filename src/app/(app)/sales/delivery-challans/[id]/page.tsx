@@ -65,7 +65,7 @@ export default async function DcDetailPage({ params }: { params: Promise<{ id: s
             <StatusBadge className="ms-2" domain="delivery_challan" status={dc.status} locale={locale} />
           </div>
         </div>
-        <div className="flex items-center gap-2.5">
+        <div className="inv-head-actions">
           <EditDocumentButton locale={locale} docType="delivery_challan" id={dc.id} number={dc.dcNumber} status={dc.status} recordState={dc.deletedAt ? "deleted" : dc.archivedAt ? "archived" : "active"} />
           <DownloadPdfButton locale={locale} type="delivery-challan" docId={dc.id} number={dc.dcNumber} />
           <DcDetailActions locale={locale} dcId={dc.id} dcNumber={dc.dcNumber} status={dc.status} />
@@ -91,7 +91,7 @@ export default async function DcDetailPage({ params }: { params: Promise<{ id: s
         <TableHeader>
           <TableRow>
             <TableHead>{t(locale, "Item")}</TableHead>
-            <TableHead className="text-right">{t(locale, "Quantity")}</TableHead>
+            <TableHead numeric>{t(locale, "Quantity")}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -99,7 +99,7 @@ export default async function DcDetailPage({ params }: { params: Promise<{ id: s
             <Fragment key={it.id}>
             <TableRow>
               <TableCell><LineItemCell description={it.description} /></TableCell>
-              <TableCell className="text-right num-tabular"><DocNum value={it.quantity} kind="quantity" /></TableCell>
+              <TableCell numeric className="num-tabular"><DocNum value={it.quantity} kind="quantity" /></TableCell>
             </TableRow>
               <LineDescRow customFields={it.customFields} />
             </Fragment>

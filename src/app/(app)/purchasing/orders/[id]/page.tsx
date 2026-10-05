@@ -97,7 +97,7 @@ export default async function PurchaseOrderDetailPage({ params }: { params: Prom
             <StatusBadge className="ms-2" domain="purchase_order" status={po.status} locale={locale} />
           </div>
         </div>
-        <div className="flex items-center gap-2.5">
+        <div className="inv-head-actions">
           <EditDocumentButton locale={locale} docType="purchase_order" id={po.id} number={po.poNumber} status={po.status} recordState={po.deletedAt ? "deleted" : po.archivedAt ? "archived" : "active"} />
           <DownloadPdfButton locale={locale} type="purchase-order" docId={po.id} number={po.poNumber} />
           <PoDetailActions
@@ -118,10 +118,10 @@ export default async function PurchaseOrderDetailPage({ params }: { params: Prom
         <TableHeader>
           <TableRow>
             <TableHead>{t(locale, "Item")}</TableHead>
-            <TableHead className="text-right">{t(locale, "Qty")}</TableHead>
-            <TableHead className="text-right">{t(locale, "Unit cost")}</TableHead>
-            <TableHead className="text-right">{t(locale, "VAT")}</TableHead>
-            <TableHead className="text-right">{t(locale, "Line Total")}</TableHead>
+            <TableHead numeric>{t(locale, "Qty")}</TableHead>
+            <TableHead numeric>{t(locale, "Unit cost")}</TableHead>
+            <TableHead numeric>{t(locale, "VAT")}</TableHead>
+            <TableHead numeric>{t(locale, "Line Total")}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -129,10 +129,10 @@ export default async function PurchaseOrderDetailPage({ params }: { params: Prom
             <Fragment key={it.id}>
             <TableRow>
               <TableCell><LineItemCell description={it.description} /></TableCell>
-              <TableCell className="text-right num-tabular"><DocNum value={it.quantity} kind="quantity" /></TableCell>
-              <TableCell className="text-right num-tabular"><DocNum value={it.unitCost} kind="rate" /></TableCell>
-              <TableCell className="text-right num-tabular">{it.taxRatePercent}%</TableCell>
-              <TableCell className="text-right num-tabular"><DocNum value={it.lineTotal} kind="amount" /></TableCell>
+              <TableCell numeric className="num-tabular"><DocNum value={it.quantity} kind="quantity" /></TableCell>
+              <TableCell numeric className="num-tabular"><DocNum value={it.unitCost} kind="rate" /></TableCell>
+              <TableCell numeric className="num-tabular">{it.taxRatePercent}%</TableCell>
+              <TableCell numeric className="num-tabular"><DocNum value={it.lineTotal} kind="amount" /></TableCell>
             </TableRow>
               <LineDescRow customFields={it.customFields} />
             </Fragment>
@@ -173,8 +173,8 @@ export default async function PurchaseOrderDetailPage({ params }: { params: Prom
       <DocumentTermsView locale={locale} terms={po.terms} className="mt-5" />
       {po.notes && (
         <div className="mt-5">
-          <div className="text-[11px] uppercase tracking-wide text-ink-faint mb-1.5">{t(locale, "Notes")}</div>
-          <div className="text-[13px] text-ink-muted"><SafeRichText value={po.notes} /></div>
+          <div className="text-caption uppercase tracking-wide text-ink-faint mb-1.5">{t(locale, "Notes")}</div>
+          <div className="text-body text-ink-muted"><SafeRichText value={po.notes} /></div>
         </div>
       )}
     </div>

@@ -154,7 +154,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
             <StatusBadge className="ms-2" domain="sales_invoice" status={invoice.status} locale={locale} />
           </div>
         </div>
-        <div className="flex items-center gap-2.5">
+        <div className="inv-head-actions">
           <EditDocumentButton locale={locale} docType="sales_invoice" id={invoice.id} number={invoice.invoiceNumber} status={invoice.status} recordState={invoice.deletedAt ? "deleted" : invoice.archivedAt ? "archived" : "active"} />
           <DownloadPdfButton locale={locale} type="invoice" docId={invoice.id} number={invoice.invoiceNumber} />
           {availableAdvances.length > 0 && (
@@ -196,10 +196,10 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
             <TableHeader>
               <TableRow>
                 <TableHead>{t(locale, "Item")}</TableHead>
-                <TableHead className="text-right">{t(locale, "Qty")}</TableHead>
-                <TableHead className="text-right">{t(locale, "Unit Price")}</TableHead>
-                <TableHead className="text-right">{t(locale, "VAT %")}</TableHead>
-                <TableHead className="text-right">{t(locale, "Line Total")}</TableHead>
+                <TableHead numeric>{t(locale, "Qty")}</TableHead>
+                <TableHead numeric>{t(locale, "Unit Price")}</TableHead>
+                <TableHead numeric>{t(locale, "VAT %")}</TableHead>
+                <TableHead numeric>{t(locale, "Line Total")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -207,10 +207,10 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
                 <Fragment key={it.id}>
             <TableRow>
                   <TableCell><LineItemCell description={it.description} /></TableCell>
-                  <TableCell className="text-right num-tabular"><DocNum value={it.quantity} kind="quantity" /></TableCell>
-                  <TableCell className="text-right num-tabular"><DocNum value={it.unitPrice} kind="rate" /></TableCell>
-                  <TableCell className="text-right num-tabular">{it.taxRatePercent}%</TableCell>
-                  <TableCell className="text-right num-tabular"><DocNum value={it.lineTotal} kind="amount" /></TableCell>
+                  <TableCell numeric className="num-tabular"><DocNum value={it.quantity} kind="quantity" /></TableCell>
+                  <TableCell numeric className="num-tabular"><DocNum value={it.unitPrice} kind="rate" /></TableCell>
+                  <TableCell numeric className="num-tabular">{it.taxRatePercent}%</TableCell>
+                  <TableCell numeric className="num-tabular"><DocNum value={it.lineTotal} kind="amount" /></TableCell>
                 </TableRow>
               <LineDescRow customFields={it.customFields} />
             </Fragment>
@@ -246,8 +246,8 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
           <DocumentTermsView locale={locale} terms={invoice.terms} className="mt-5" />
       {invoice.notes && (
             <div className="mt-5">
-              <div className="text-[11px] uppercase tracking-wide text-ink-faint mb-1.5">{t(locale, "Notes")}</div>
-              <div className="text-[13px] text-ink-muted"><SafeRichText value={invoice.notes} /></div>
+              <div className="text-caption uppercase tracking-wide text-ink-faint mb-1.5">{t(locale, "Notes")}</div>
+              <div className="text-body text-ink-muted"><SafeRichText value={invoice.notes} /></div>
             </div>
           )}
         </div>

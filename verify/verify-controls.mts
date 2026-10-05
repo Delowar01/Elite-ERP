@@ -254,13 +254,12 @@ check("reports: compare toggle is <Checkbox>, no native checkbox", !reports.some
 const deadWidth = buttons.filter((e) => /width:\s*"auto"/.test(e.attrs.style ?? ""));
 check("no dead style width:auto on the modern <Button>", deadWidth.length === 0, deadWidth.map(at).join(" "));
 check("legacy .btn width overrides untouched (still present on legacy buttons)", els.some((e) => /\bbtn\b/.test(e.attrs.className ?? "") && /width/.test(e.attrs.style ?? "")));
-// DEV-UI-01.6 structures stay on the old API until their own batch. (The DEV-UI-01.5 list structures —
-// list-toolbar, row-menu, list-workspace-toolbar, table — left this list when DEV-UI-01.5 migrated them;
-// verify-datatable now pins their state.)
-const EXCLUDED = ["sales/_shared/line-items-editor.tsx", "sales/_shared/line-item-cell.tsx", "sales/_shared/item-entry-cell.tsx", "sales/_shared/rich-text-field.tsx",
-  "sales/_shared/terms-editor.tsx", "sales/_shared/terms-block.tsx", "sales/_shared/party-card.tsx", "sales/_shared/totals-card.tsx", "sales/_shared/doc-field-box.tsx",
-  "sales/_shared/doc-pills-row.tsx", "sales/_shared/configure-columns-dialog.tsx",
-  "sales/_shared/bank-accounts-field.tsx", "components/ui/form-field.tsx"];
+// Structures not yet on the 01.4 API. The DEV-UI-01.5 list structures (list-toolbar, row-menu,
+// list-workspace-toolbar, table) left this list when 01.5 migrated them (verify-datatable pins their
+// state); the DEV-UI-01.6 document-editor structures (line-items-editor, item-entry-cell, rich-text-field,
+// terms-editor, terms-block, party-card, totals-card, doc-field-box, configure-columns-dialog, form-field)
+// left it when 01.6 migrated them (verify-document-form checks them). These three are still untouched.
+const EXCLUDED = ["sales/_shared/line-item-cell.tsx", "sales/_shared/doc-pills-row.tsx", "sales/_shared/bank-accounts-field.tsx"];
 const excludedFiles = Object.keys(sources).filter((f) => EXCLUDED.some((x) => f.endsWith(x)));
 check("every excluded structure exists", excludedFiles.length === EXCLUDED.length, `${excludedFiles.length}/${EXCLUDED.length}`);
 const newApi = excludedFiles.filter((f) => /variant="(outline|destructive-ghost)"|size="icon-sm"|\bloading=\{|<RadioGroup\b/.test(sources[f]));

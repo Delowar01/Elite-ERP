@@ -36,7 +36,7 @@ export function OrderDetailActions({ locale, orderId, orderNumber, status }: { l
   return (
     <div className="flex items-center gap-2.5">
       <Select value={status} onValueChange={changeStatus}>
-        <SelectTrigger className="w-40">
+        <SelectTrigger className="w-40" aria-label={t(locale, "Change sales order status")}>
           <SelectValue />
         </SelectTrigger>
         <SelectContent>

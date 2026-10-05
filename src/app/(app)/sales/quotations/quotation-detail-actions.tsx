@@ -33,7 +33,7 @@ export function QuotationDetailActions({ locale, quotationId, quotationNumber, s
   return (
     <div className="flex items-center gap-2.5">
       <Select value={status} onValueChange={changeStatus}>
-        <SelectTrigger className="w-40">
+        <SelectTrigger className="w-40" aria-label={t(locale, "Change quotation status")}>
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
