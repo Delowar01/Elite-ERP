@@ -2,7 +2,7 @@
 
 Each mutant is applied to a disposable copy, the verifier is run, and the mutant is reverted; the clean tree passes afterwards.
 
-## Static (`verify:document-form`): 81/81 caught
+## Static (`verify:document-form`): 83/83 caught (C1 added #3 and #4: the FormField error loses `role="alert"`; the description gains one)
 
 ```
 CAUGHT #1 form-field.tsx: FormField: render-function contract hands {id, describedBy, invalid, required}; plai

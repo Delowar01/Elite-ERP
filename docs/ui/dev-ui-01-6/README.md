@@ -61,7 +61,7 @@ region; Configure Columns row layout. The `@media print` block is byte-identical
 ### `verify:static` (isolated worktree, TEST-only verify DB): all suites pass, exit 0
 role matrix 32/32 · confirm policy 62/62 · dirty form 66/66 · skeletons 89/89 · contrast 161/161 ·
 typography 43/43 · status registry 88/88 · shell 75/75 · controls 110/110 · datatable 69/69 ·
-**document form 75/75** · edit action 59/59 · store model, provider harness, backup claims, money
+**document form 76/76** (C1; 75/75 at C0) · edit action 59/59 · store model, provider harness, backup claims, money
 precision, ledger-only balances: pass. TypeScript (`tsc --noEmit`): clean. ESLint (changed files): clean.
 
 ### `verify:document-form` (new, `verify/verify-document-form.mts`, wired into `verify:static`)
@@ -80,7 +80,7 @@ edit-document, confirm-provider, lifecycle-actions, list logic, dropdown-menu, p
 money, `shell.css`, `package-lock.json`) and directory pins (`lib/currency`, `lib/pdf`, `app/print`,
 `components/layout`, `db`, `drizzle`) in `verify/document-form-pins.json`; submit bodies and
 `useDirtyForm` snapshots of all 8 forms hash-identical to main; `LineItemDraft` / `emptyLineItem`
-unchanged. **Static mutations: 81/81 caught.**
+unchanged. **Static mutations: 83/83 caught** (C1; 81/81 at C0).
 
 ### `verify-document-form-runtime` (new, browser tier, refuses a non-test database)
 188 checks. Containment of 8 create + 3 edit forms at 1440 / 1024 / 768 / 390 EN + AR (page overflow 0, the

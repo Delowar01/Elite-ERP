@@ -66,7 +66,7 @@ export function FormField({
       )}
       {typeof children === "function" ? children(field) : children}
       {error && (
-        <p id={ids.error} className="text-caption text-danger" data-field-error="">
+        <p id={ids.error} className="text-caption text-danger" role="alert" data-field-error="">
           {error}
         </p>
       )}

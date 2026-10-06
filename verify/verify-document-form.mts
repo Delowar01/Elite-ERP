@@ -99,6 +99,12 @@ check("FormField: optional description / required / error, `htmlFor` stays the c
 check("FormField: description / error text carry ids derived from htmlFor (caption token; the error is marked)",
   /description: `\$\{htmlFor\}-description`, error: `\$\{htmlFor\}-error`/.test(ffCode) && /<p id=\{ids\.description\} className="text-caption/.test(ffCode) &&
   /<p id=\{ids\.error\} className="text-caption text-danger"/.test(ffCode) && !/text-\[12px\]/.test(ffCode));
+// DEV-UI-01.6-C1: the rendered error is announced (role=alert); the description is help text, never an alert.
+const ffError = ffCode.match(/<p id=\{ids\.error\}[^>]*>/)?.[0] ?? "";
+const ffDescription = ffCode.match(/<p id=\{ids\.description\}[^>]*>/)?.[0] ?? "";
+check("FormField: the error is an alert (id from htmlFor, caption + danger tokens, role=alert, data-field-error); the description is not",
+  /\bid=\{ids\.error\}/.test(ffError) && /className="text-caption text-danger"/.test(ffError) && /\brole="alert"/.test(ffError) && /\bdata-field-error=""/.test(ffError) &&
+  ffDescription !== "" && !/role=|aria-live/.test(ffDescription), ffError);
 check("FormField: render-function contract hands {id, describedBy, invalid, required}; plain children still render",
   /children: React\.ReactNode \| \(\(field: FieldProps\) => React\.ReactNode\)/.test(ffCode) && /typeof children === "function" \? children\(field\) : children/.test(ffCode) &&
   /const field: FieldProps = \{ id: htmlFor, describedBy, invalid: error \? true : undefined, required: required \? true : undefined \}/.test(ffCode));
