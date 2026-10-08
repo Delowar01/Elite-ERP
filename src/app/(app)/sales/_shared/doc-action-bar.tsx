@@ -1,6 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import { FileText } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { t, type Locale } from "@/lib/i18n/dict";
 
 // The document action bar: Save as Draft / Preview / primary submit — three separate,
@@ -13,6 +15,10 @@ import { t, type Locale } from "@/lib/i18n/dict";
 //   action on the document's detail page (Issue #10).
 // - Primary: performs the document's real final action (send/confirm/issue/dispatch). `busy`
 //   disables every button while a save is in flight, preventing duplicate submission.
+//
+// DEV-UI-01.6: approved Buttons (Save as Draft = outline, Preview = secondary, final / Save Changes =
+// primary — no hand-coloured "success" draft button). The button that was actually pressed shows the
+// Button `loading` state (spinner + aria-busy); the others are disabled while busy. The bar wraps.
 export function DocActionBar({
   locale,
   pendingDraft,
@@ -35,42 +41,69 @@ export function DocActionBar({
   onPreview?: () => void;
 }) {
   const busy = pendingDraft || pendingPrimary;
+  const [pressed, setPressed] = useState<"draft" | "primary" | null>(null);
+  // A finished (or failed) save clears which button was pressed (state adjusted while rendering when
+  // `busy` changes — React's pattern for state derived from a prop change).
+  const [prevBusy, setPrevBusy] = useState(busy);
+  if (busy !== prevBusy) {
+    setPrevBusy(busy);
+    if (!busy) setPressed(null);
+  }
 
   const previewButton = onPreview ? (
-    <button type="button" className="btn btn-glass" onClick={onPreview}>
-      <FileText className="size-3.5" /> {t(locale, "Preview")}
-    </button>
+    <Button type="button" variant="secondary" onClick={onPreview}>
+      <FileText className="size-3.5" aria-hidden /> {t(locale, "Preview")}
+    </Button>
   ) : (
-    <button type="button" className="btn btn-glass cursor-not-allowed" disabled title={t(locale, "Save the document first to preview.")}>
-      <FileText className="size-3.5" /> {t(locale, "Preview")}
-    </button>
+    <Button type="button" variant="secondary" disabled title={t(locale, "Save the document first to preview.")}>
+      <FileText className="size-3.5" aria-hidden /> {t(locale, "Preview")}
+    </Button>
   );
 
   if (editMode) {
     return (
       <div className="doc-action-bar">
         {previewButton}
-        <button type="button" className="btn btn-primary" disabled={busy} onClick={onPrimary}>
-          {pendingPrimary ? t(locale, "Saving…") : t(locale, "Save Changes")}
-        </button>
+        <Button
+          type="button"
+          disabled={busy}
+          loading={busy && pressed === "primary"}
+          onClick={() => {
+            setPressed("primary");
+            onPrimary();
+          }}
+        >
+          {t(locale, "Save Changes")}
+        </Button>
       </div>
     );
   }
   return (
     <div className="doc-action-bar">
-      <button
+      <Button
         type="button"
-        className="btn btn-glass"
-        style={{ borderColor: "var(--success)", color: "var(--success)" }}
+        variant="outline"
         disabled={busy}
-        onClick={onSaveDraft}
+        loading={busy && pressed === "draft"}
+        onClick={() => {
+          setPressed("draft");
+          onSaveDraft();
+        }}
       >
-        {pendingDraft ? t(locale, "Saving…") : t(locale, "Save as Draft")}
-      </button>
+        {t(locale, "Save as Draft")}
+      </Button>
       {previewButton}
-      <button type="button" className="btn btn-primary" disabled={busy} onClick={onPrimary}>
-        {pendingPrimary ? t(locale, "Saving…") : t(locale, primaryLabel)}
-      </button>
+      <Button
+        type="button"
+        disabled={busy}
+        loading={busy && pressed === "primary"}
+        onClick={() => {
+          setPressed("primary");
+          onPrimary();
+        }}
+      >
+        {t(locale, primaryLabel)}
+      </Button>
     </div>
   );
 }

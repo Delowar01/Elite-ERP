@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { MapPin, Mail, Phone, Globe, Pencil, UserPlus } from "lucide-react";
 import { SearchableSelect } from "@/components/ui/searchable-select";
+import { Button } from "@/components/ui/button";
 import { composeAddress } from "@/lib/geo/countries";
 import { getCountryProfile, resolveTaxLabels } from "@/lib/geo/country-profiles";
 import { t, type Locale } from "@/lib/i18n/dict";
@@ -70,7 +71,8 @@ export function PartyCardStatic({
    *  source document) to hide the pencil. */
   editable?: boolean;
 }) {
-  const editLabel = locale ? t(locale, "Edit business details") : "Edit business details";
+  // DEV-UI-01.6: the pencil names whose details it edits.
+  const editLabel = `${locale ? t(locale, "Edit business details") : "Edit business details"}: ${name}`;
   return (
     <div className="card party-card-v2">
       <div className="pc-label">{label}</div>
@@ -132,7 +134,7 @@ export function PartyCardSelect({
 
   const allCustomers = [...created, ...customers];
   const selected = allCustomers.find((c) => String(c.id) === value);
-  const openLabel = t(locale, "Edit");
+  const openLabel = selected ? `${t(locale, "Edit")} ${selected.name}` : t(locale, "Edit");
   const options = allCustomers.map((c) => ({
     value: String(c.id),
     label: c.name,
@@ -200,11 +202,11 @@ export function PartyCardSelect({
       ) : (
         // Empty state: a bordered card prompting selection, with the in-page create action.
         <div className="mt-2 rounded-xl border border-dashed border-line-strong px-4 py-6 text-center">
-          <p className="text-[12.5px] text-ink-muted">{t(locale, isClient ? "Select Client/Business from the list" : "Select a vendor from the list")}</p>
-          <p className="text-[11.5px] text-ink-faint my-2">{t(locale, "OR")}</p>
-          <button type="button" className="btn btn-primary" style={{ width: "auto", padding: "0 18px" }} onClick={() => setCreateOpen(true)}>
-            <UserPlus className="size-4" /> {t(locale, isClient ? "Add New Client" : "Add New Vendor")}
-          </button>
+          <p className="text-body-sm text-ink-muted">{t(locale, isClient ? "Select Client/Business from the list" : "Select a vendor from the list")}</p>
+          <p className="text-caption text-ink-faint my-2">{t(locale, "OR")}</p>
+          <Button type="button" onClick={() => setCreateOpen(true)}>
+            <UserPlus className="size-4" aria-hidden /> {t(locale, isClient ? "Add New Client" : "Add New Vendor")}
+          </Button>
         </div>
       )}
 

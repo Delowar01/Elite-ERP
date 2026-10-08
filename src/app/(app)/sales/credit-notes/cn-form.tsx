@@ -1,12 +1,14 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useId, useState, useTransition } from "react";
 import { getLineDesc } from "../_shared/line-item-desc";
 import { toast } from "sonner";
 import { FileMinus2 } from "lucide-react";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { PartyCardStatic } from "../_shared/party-card";
 import { DocFieldBox } from "../_shared/doc-field-box";
+import { DocFormError } from "../_shared/doc-form-error";
+import { Input } from "@/components/ui/input";
 import { LineItemsEditor, emptyLineItem, type LineItemDraft } from "../_shared/line-items-editor";
 import { DocPillsRow } from "../_shared/doc-pills-row";
 import { DocFooterContact } from "../_shared/doc-footer-contact";
@@ -79,6 +81,9 @@ export function CnForm({
   const [previewOpen, setPreviewOpen] = useState(false);
   const [pendingDraft, startDraftTransition] = useTransition();
   const [pendingPrimary, startPrimaryTransition] = useTransition();
+  // DEV-UI-01.6: ids for the header controls, and the last save failure shown in the error region.
+  const fid = useId();
+  const [formError, setFormError] = useState<string | null>(null);
 
   const selectedInvoice = invoices.find((inv) => String(inv.id) === sourceInvoiceId);
   // The note is denominated in its source invoice's currency (the action enforces the same rule
@@ -110,6 +115,7 @@ export function CnForm({
 
   function submit(andIssue: boolean) {
     const start = andIssue ? startPrimaryTransition : startDraftTransition;
+    setFormError(null);
     start(async () => {
       // Clean BEFORE the call: a successful save redirects from the server and never returns,
       // so marking clean afterwards would be too late and the user would be asked to discard
@@ -121,6 +127,7 @@ export function CnForm({
       if (result?.error) {
         dirtyForm.restoreDirty();
         toast.error(result.error);
+        setFormError(result.error);
       }
     });
   }
@@ -134,26 +141,22 @@ export function CnForm({
           </h3>
           <div className="sub">{t(locale, isEdit ? "Edit this draft document." : "Issue a credit against a sent invoice — posts Dr Sales Revenue + Dr VAT Payable, Cr Accounts Receivable.")}</div>
         </div>
-        <DocTopActions locale={locale} busy={pendingDraft || pendingPrimary} onSaveDraft={() => submit(false)} onPreview={() => setPreviewOpen(true)} />
+        <DocTopActions locale={locale} busy={pendingDraft || pendingPrimary} onSaveDraft={() => submit(false)} onPreview={() => setPreviewOpen(true)} dirty={dirtyForm.dirty} />
       </div>
 
-      <div className="doc-header-grid" style={{ gridTemplateColumns: "1fr 1fr" }}>
-        <DocFieldBox label={t(locale, "CN Number")} required gear gearDocType="credit_note" locale={locale}>
+      <div className="doc-header-grid">
+        <DocFieldBox label={t(locale, "CN Number")} required mono gear gearDocType="credit_note" locale={locale}>
           {numberPreview}
         </DocFieldBox>
-        <DocFieldBox label={t(locale, "Issue Date")} required>
-          <input type="date" value={issueDate} onChange={(e) => setIssueDate(e.target.value)} className="w-full bg-transparent outline-none" />
-        </DocFieldBox>
+        <DocFieldBox label={t(locale, "Issue Date")} required htmlFor={`${fid}-issue-date`}>
+              <Input id={`${fid}-issue-date`} type="date" aria-required value={issueDate} onChange={(e) => setIssueDate(e.target.value)} />
+            </DocFieldBox>
       </div>
 
-      <div className="doc-header-grid" style={{ gridTemplateColumns: "1fr 1fr" }}>
-        <div className="doc-field">
-          <label>
-            {t(locale, "Against Invoice")} <span className="req">*</span>
-          </label>
-          <div className="doc-field-input-row">
-            <Select value={sourceInvoiceId} onValueChange={setSourceInvoiceId} disabled={isEdit}>
-              <SelectTrigger className="input plain h-[38px] w-full border-0 shadow-none justify-between">
+      <div className="doc-header-grid">
+        <DocFieldBox label={t(locale, "Against Invoice")} required htmlFor={`${fid}-source-invoice`}>
+          <Select value={sourceInvoiceId} onValueChange={setSourceInvoiceId} disabled={isEdit}>
+            <SelectTrigger id={`${fid}-source-invoice`} aria-required className="w-full">
                 <SelectValue placeholder={t(locale, "Select an invoice")} />
               </SelectTrigger>
               <SelectContent>
@@ -164,14 +167,13 @@ export function CnForm({
                 ))}
               </SelectContent>
             </Select>
-          </div>
-        </div>
-        <DocFieldBox label={t(locale, "Reason")} plain>
-          <input value={reason} onChange={(e) => setReason(e.target.value)} className="w-full bg-transparent outline-none" />
+        </DocFieldBox>
+        <DocFieldBox label={t(locale, "Reason")} htmlFor={`${fid}-reason`}>
+          <Input id={`${fid}-reason`} value={reason} onChange={(e) => setReason(e.target.value)} />
         </DocFieldBox>
       </div>
 
-      <div className="doc-meta-row" style={{ gridTemplateColumns: "1fr 1fr" }}>
+      <div className="doc-meta-row">
         <PartyCardStatic locale={locale} label={t(locale, "From")} name={org.name} address={org.address} email={org.email} phone={org.phone} />
         {selectedInvoice ? (
           <PartyCardStatic
@@ -192,9 +194,9 @@ export function CnForm({
 
       <LineItemsEditor locale={locale} products={products} items={items} onChange={setItems} defaultTaxRate={defaultTaxRate} variant="simple" />
 
-      <div className="card totals-strip" style={{ maxWidth: 340, marginInlineStart: "auto", marginTop: 16 }}>
+      <div className="card totals-strip doc-totals-inline">
         <div className="t-row">
-          <span>{t(locale, "VAT")} (15%)</span>
+          <span>{t(locale, "Total VAT")}</span>
           <span className="v">
             <Money amount={totals.taxTotal} />
           </span>
@@ -216,6 +218,8 @@ export function CnForm({
       </div>
 
       <DocFooterContact locale={locale} email={org.email} phone={org.phone} />
+
+      <DocFormError locale={locale} error={formError} />
 
       <DocActionBar
         locale={locale}

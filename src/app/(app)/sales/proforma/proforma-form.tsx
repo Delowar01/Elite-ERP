@@ -1,11 +1,14 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useId, useState, useTransition } from "react";
 import { getLineDesc } from "../_shared/line-item-desc";
 import { toast } from "sonner";
 import { FileCheck2, Info, Columns3 } from "lucide-react";
 import { PartyCardStatic, PartyCardSelect } from "../_shared/party-card";
 import { DocFieldBox } from "../_shared/doc-field-box";
+import { DocFormError } from "../_shared/doc-form-error";
+import { Input } from "@/components/ui/input";
+import { FormField } from "@/components/ui/form-field";
 import { DocBrandPanel } from "../_shared/doc-brand-panel";
 import { DocPillsRow } from "../_shared/doc-pills-row";
 import { LineItemsEditor, emptyLineItem, type LineItemDraft } from "../_shared/line-items-editor";
@@ -98,6 +101,9 @@ export function ProformaForm({
   const [previewOpen, setPreviewOpen] = useState(false);
   const [pendingDraft, startDraftTransition] = useTransition();
   const [pendingPrimary, startPrimaryTransition] = useTransition();
+  // DEV-UI-01.6: ids for the header controls, and the last save failure shown in the error region.
+  const fid = useId();
+  const [formError, setFormError] = useState<string | null>(null);
 
   const totals = computeTotals(items, discount, currency);
   const selectedCustomer = customers.find((c) => String(c.id) === customerId);
@@ -109,6 +115,7 @@ export function ProformaForm({
 
   function submit(andSend: boolean) {
     const start = andSend ? startPrimaryTransition : startDraftTransition;
+    setFormError(null);
     start(async () => {
       // Clean BEFORE the call: a successful save redirects from the server and never returns,
       // so marking clean afterwards would be too late and the user would be asked to discard
@@ -119,6 +126,7 @@ export function ProformaForm({
       if (result?.error) {
         dirtyForm.restoreDirty();
         toast.error(result.error);
+        setFormError(result.error);
       }
     });
   }
@@ -149,7 +157,7 @@ export function ProformaForm({
           </h3>
           <div className="sub">{t(locale, isEdit ? "Edit this draft document." : "A preview invoice for client reference — never posts revenue or affects stock.")}</div>
         </div>
-        <DocTopActions locale={locale} busy={pendingDraft || pendingPrimary} onSaveDraft={() => submit(false)} onPreview={() => setPreviewOpen(true)} />
+        <DocTopActions locale={locale} busy={pendingDraft || pendingPrimary} onSaveDraft={() => submit(false)} onPreview={() => setPreviewOpen(true)} dirty={dirtyForm.dirty} />
       </div>
 
       <span className="doc-badge-noninvoicing">
@@ -157,30 +165,26 @@ export function ProformaForm({
         {t(locale, "Non-posting — for client reference only. Never affects revenue or stock.")}
       </span>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1.7fr 1fr", gap: 20, marginBottom: 18, alignItems: "start" }}>
+      <div className="doc-head-grid">
         <div>
-          <div className="doc-header-grid" style={{ gridTemplateColumns: "1fr 1fr" }}>
-            <DocFieldBox label={t(locale, "Proforma Number")} required gear gearDocType="proforma_invoice" locale={locale}>
+          <div className="doc-header-grid">
+            <DocFieldBox label={t(locale, "Proforma Number")} required mono gear gearDocType="proforma_invoice" locale={locale}>
               {numberPreview}
             </DocFieldBox>
-            <DocFieldBox label={t(locale, "Issue Date")} required>
-              <input type="date" value={issueDate} onChange={(e) => setIssueDate(e.target.value)} className="w-full bg-transparent outline-none" />
+            <DocFieldBox label={t(locale, "Issue Date")} required htmlFor={`${fid}-issue-date`}>
+              <Input id={`${fid}-issue-date`} type="date" aria-required value={issueDate} onChange={(e) => setIssueDate(e.target.value)} />
             </DocFieldBox>
           </div>
-          <div className="field">
-            <label>{t(locale, "Proforma Title")}</label>
-            <input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder={t(locale, "Write proforma title here…")}
-              className="input plain w-full outline-none"
-            />
-          </div>
+          <FormField label={t(locale, "Proforma Title")} htmlFor={`${fid}-title`}>
+            {(field) => (
+              <Input id={field.id} aria-describedby={field.describedBy} value={title} onChange={(e) => setTitle(e.target.value)} placeholder={t(locale, "Write proforma title here…")} />
+            )}
+          </FormField>
         </div>
         <DocBrandPanel org={org} />
       </div>
 
-      <div className="doc-meta-row" style={{ gridTemplateColumns: "1fr 1fr" }}>
+      <div className="doc-meta-row">
         <PartyCardStatic locale={locale} label={t(locale, "From")} name={org.name} address={org.address} email={org.email} phone={org.phone} />
         <PartyCardSelect locale={locale} label={t(locale, "To Client")} customers={customers} value={customerId} onChange={setCustomerId} taxOverrides={org} defaultCountryCode={countryProfile.countryCode} />
       </div>
@@ -226,6 +230,8 @@ export function ProformaForm({
       <SealSignaturePreview locale={locale} sealUrl={org.sealUrl} signatureUrl={org.signatureUrl} sealAssets={sealAssets} sealOverride={sealOverride} signatureOverride={signatureOverride} onSealOverride={setSealOverride} onSignatureOverride={setSignatureOverride} />
 
       <DocFooterContact locale={locale} email={org.email} phone={org.phone} />
+
+      <DocFormError locale={locale} error={formError} />
 
       <DocActionBar
         locale={locale}

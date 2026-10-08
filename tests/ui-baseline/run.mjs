@@ -8,6 +8,7 @@
  *   node tests/ui-baseline/run.mjs capture-shell [--out=D]  the DEV-UI-01.3 app-shell states (shell-states.mjs)
  *   node tests/ui-baseline/run.mjs capture-controls [--out=D]  the DEV-UI-01.4 control gallery (controls-states.mjs)
  *   node tests/ui-baseline/run.mjs capture-lists [--out=D]  the DEV-UI-01.5 list / data-table states (list-states.mjs)
+ *   node tests/ui-baseline/run.mjs capture-documents [--out=D]  the DEV-UI-01.6 document editor / detail states (document-states.mjs)
  *
  * Flags: --skip-build (reuse .next — only when it was built from the current tree), --only=<substr>.
  *
@@ -30,6 +31,7 @@ import { BASE, FROZEN_NOW, OWNER_EMAIL, PORT, matrix } from "./config.mjs";
 import { STAFF_EMAIL, shellMatrix } from "./shell-states.mjs";
 import { controlsMatrix } from "./controls-states.mjs";
 import { listMatrix, SAVED_VIEW_FIXTURE } from "./list-states.mjs";
+import { documentMatrix, DOC_ACTIONS } from "./document-states.mjs";
 import { IsolationError, RUN_DB, TEMPLATE_DB, adminUrl, dbUrl, describe, serverEnv } from "./isolation.mjs";
 
 const ROOT = resolve(new URL("../..", import.meta.url).pathname);
@@ -250,7 +252,7 @@ const SHELL_ACTIONS = {
 };
 
 // ------------------------------------------------------------------------------------- capture
-async function capture(outDir, shell = false, lists = false) {
+async function capture(outDir, shell = false, lists = false, docs = false) {
   if (!existsSync(PASSWORD_FILE)) {
     console.error("✗ no seeded template — run `prepare` first");
     process.exit(2);
@@ -347,7 +349,7 @@ async function capture(outDir, shell = false, lists = false) {
     }
 
     const only = value("only");
-    const states = (lists ? listMatrix() : shell ? shellMatrix() : matrix()).filter((s) => !only || s.id.includes(only));
+    const states = (docs ? documentMatrix() : lists ? listMatrix() : shell ? shellMatrix() : matrix()).filter((s) => !only || s.id.includes(only));
     let n = 0;
     for (const s of states) {
       n++;
@@ -386,17 +388,18 @@ async function capture(outDir, shell = false, lists = false) {
         };
       });
       if (s.action) {
-        await (lists ? LIST_ACTIONS : SHELL_ACTIONS)[s.action](page, s);
-        if (lists) await page.waitForTimeout(250); // let Radix settle (transitions are reduced)
+        await (docs ? DOC_ACTIONS : lists ? LIST_ACTIONS : SHELL_ACTIONS)[s.action](page, s);
+        if (lists || docs) await page.waitForTimeout(250); // let Radix settle (transitions are reduced)
         await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
       }
       const file = join(outDir, `${s.id}.png`);
-      await page.screenshot({ path: file, fullPage: !shell && !lists, animations: "disabled", caret: "hide", scale: "css" });
+      await page.screenshot({ path: file, fullPage: docs ? s.full : !shell && !lists, animations: "disabled", caret: "hide", scale: "css" });
       const png = readFileSync(file);
       manifest.states[s.id] = {
         route: s.route.path,
         area: s.route.area,
-        ...(shell || lists ? { action: s.action, role: s.role, cookies: s.cookies } : {}),
+        ...(shell || lists || docs ? { action: s.action, role: s.role, cookies: s.cookies } : {}),
+        ...(docs ? { fullPage: s.full } : {}),
         locale: s.locale,
         theme: s.theme,
         viewport: `${s.viewport.width}x${s.viewport.height}`,
@@ -650,6 +653,7 @@ try {
   else if (cmd === "capture") await capture(resolve(value("out") ?? join(WORK, "captures/latest")));
   else if (cmd === "capture-shell") await capture(resolve(value("out") ?? join(WORK, "captures/shell-latest")), true);
   else if (cmd === "capture-lists") await capture(resolve(value("out") ?? join(WORK, "captures/lists-latest")), false, true);
+  else if (cmd === "capture-documents") await capture(resolve(value("out") ?? join(WORK, "captures/documents-latest")), false, false, true);
   else if (cmd === "capture-controls") await captureControls(resolve(value("out") ?? join(WORK, "captures/controls-latest")));
   else if (cmd === "compare") process.exit((await compare(resolve(positional[0]), resolve(positional[1]))) === 0 ? 0 : 1);
   else if (cmd === "check") {
@@ -657,7 +661,7 @@ try {
     await capture(out);
     process.exit((await compare(BASELINE_DIR, out)) === 0 ? 0 : 1);
   } else {
-    console.error("usage: run.mjs prepare | capture [--out=DIR] | capture-shell [--out=DIR] | capture-controls [--out=DIR] | capture-lists [--out=DIR] | compare A B | check   [--skip-build] [--only=substr]");
+    console.error("usage: run.mjs prepare | capture [--out=DIR] | capture-shell [--out=DIR] | capture-controls [--out=DIR] | capture-lists [--out=DIR] | capture-documents [--out=DIR] | compare A B | check   [--skip-build] [--only=substr]");
     process.exit(2);
   }
 } catch (e) {

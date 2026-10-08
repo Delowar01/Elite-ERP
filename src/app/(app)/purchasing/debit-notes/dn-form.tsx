@@ -1,12 +1,14 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useId, useState, useTransition } from "react";
 import { getLineDesc } from "../../sales/_shared/line-item-desc";
 import { toast } from "sonner";
 import { FileMinus2 } from "lucide-react";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { PartyCardStatic } from "../../sales/_shared/party-card";
 import { DocFieldBox } from "../../sales/_shared/doc-field-box";
+import { DocFormError } from "../../sales/_shared/doc-form-error";
+import { Input } from "@/components/ui/input";
 import { LineItemsEditor, emptyLineItem, type LineItemDraft } from "../../sales/_shared/line-items-editor";
 import { DocPillsRow } from "../../sales/_shared/doc-pills-row";
 import { DocFooterContact } from "../../sales/_shared/doc-footer-contact";
@@ -79,6 +81,9 @@ export function DnForm({
   const [previewOpen, setPreviewOpen] = useState(false);
   const [pendingDraft, startDraftTransition] = useTransition();
   const [pendingPrimary, startPrimaryTransition] = useTransition();
+  // DEV-UI-01.6: ids for the header controls, and the last save failure shown in the error region.
+  const fid = useId();
+  const [formError, setFormError] = useState<string | null>(null);
 
   const selectedPo = purchaseOrders.find((po) => String(po.id) === sourcePurchaseOrderId);
   // Denominated in the source PO's currency — same rule as the credit note, enforced server-side.
@@ -109,6 +114,7 @@ export function DnForm({
 
   function submit(andIssue: boolean) {
     const start = andIssue ? startPrimaryTransition : startDraftTransition;
+    setFormError(null);
     start(async () => {
       // Clean BEFORE the call: a successful save redirects from the server and never returns,
       // so marking clean afterwards would be too late and the user would be asked to discard
@@ -120,6 +126,7 @@ export function DnForm({
       if (result?.error) {
         dirtyForm.restoreDirty();
         toast.error(result.error);
+        setFormError(result.error);
       }
     });
   }
@@ -133,26 +140,22 @@ export function DnForm({
           </h3>
           <div className="sub">{t(locale, isEdit ? "Edit this draft document." : "Issue a debit against a received purchase order — posts Dr Accounts Payable, Cr Inventory.")}</div>
         </div>
-        <DocTopActions locale={locale} busy={pendingDraft || pendingPrimary} onSaveDraft={() => submit(false)} onPreview={() => setPreviewOpen(true)} />
+        <DocTopActions locale={locale} busy={pendingDraft || pendingPrimary} onSaveDraft={() => submit(false)} onPreview={() => setPreviewOpen(true)} dirty={dirtyForm.dirty} />
       </div>
 
-      <div className="doc-header-grid" style={{ gridTemplateColumns: "1fr 1fr" }}>
-        <DocFieldBox label={t(locale, "DN Number")} required gear gearDocType="debit_note" locale={locale}>
+      <div className="doc-header-grid">
+        <DocFieldBox label={t(locale, "DN Number")} required mono gear gearDocType="debit_note" locale={locale}>
           {numberPreview}
         </DocFieldBox>
-        <DocFieldBox label={t(locale, "Issue Date")} required>
-          <input type="date" value={issueDate} onChange={(e) => setIssueDate(e.target.value)} className="w-full bg-transparent outline-none" />
-        </DocFieldBox>
+        <DocFieldBox label={t(locale, "Issue Date")} required htmlFor={`${fid}-issue-date`}>
+              <Input id={`${fid}-issue-date`} type="date" aria-required value={issueDate} onChange={(e) => setIssueDate(e.target.value)} />
+            </DocFieldBox>
       </div>
 
-      <div className="doc-header-grid" style={{ gridTemplateColumns: "1fr 1fr" }}>
-        <div className="doc-field">
-          <label>
-            {t(locale, "Against PO")} <span className="req">*</span>
-          </label>
-          <div className="doc-field-input-row">
-            <Select value={sourcePurchaseOrderId} onValueChange={setSourcePurchaseOrderId} disabled={isEdit}>
-              <SelectTrigger className="input plain h-[38px] w-full border-0 shadow-none justify-between">
+      <div className="doc-header-grid">
+        <DocFieldBox label={t(locale, "Against PO")} required htmlFor={`${fid}-source-po`}>
+          <Select value={sourcePurchaseOrderId} onValueChange={setSourcePurchaseOrderId} disabled={isEdit}>
+            <SelectTrigger id={`${fid}-source-po`} aria-required className="w-full">
                 <SelectValue placeholder={t(locale, "Select a purchase order")} />
               </SelectTrigger>
               <SelectContent>
@@ -163,14 +166,13 @@ export function DnForm({
                 ))}
               </SelectContent>
             </Select>
-          </div>
-        </div>
-        <DocFieldBox label={t(locale, "Reason")} plain>
-          <input value={reason} onChange={(e) => setReason(e.target.value)} className="w-full bg-transparent outline-none" />
+        </DocFieldBox>
+        <DocFieldBox label={t(locale, "Reason")} htmlFor={`${fid}-reason`}>
+          <Input id={`${fid}-reason`} value={reason} onChange={(e) => setReason(e.target.value)} />
         </DocFieldBox>
       </div>
 
-      <div className="doc-meta-row" style={{ gridTemplateColumns: "1fr 1fr" }}>
+      <div className="doc-meta-row">
         <PartyCardStatic locale={locale} label={t(locale, "From")} name={org.name} address={org.address} email={org.email} phone={org.phone} />
         {selectedPo ? (
           <PartyCardStatic
@@ -191,9 +193,9 @@ export function DnForm({
 
       <LineItemsEditor locale={locale} products={products} items={items} onChange={setItems} defaultTaxRate={defaultTaxRate} variant="simple" />
 
-      <div className="card totals-strip" style={{ maxWidth: 340, marginInlineStart: "auto", marginTop: 16 }}>
+      <div className="card totals-strip doc-totals-inline">
         <div className="t-row">
-          <span>{t(locale, "VAT")} (15%)</span>
+          <span>{t(locale, "Total VAT")}</span>
           <span className="v">
             <Money amount={totals.taxTotal} />
           </span>
@@ -215,6 +217,8 @@ export function DnForm({
       </div>
 
       <DocFooterContact locale={locale} email={org.email} phone={org.phone} />
+
+      <DocFormError locale={locale} error={formError} />
 
       <DocActionBar
         locale={locale}

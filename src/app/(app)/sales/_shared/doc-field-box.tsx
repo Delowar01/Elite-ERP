@@ -1,15 +1,22 @@
 import { Settings } from "lucide-react";
+import { Label } from "@/components/ui/label";
 import { t, type Locale } from "@/lib/i18n/dict";
 import { NumberSettingsDialog } from "./number-settings-dialog";
 
-// Matches the mockup's doc_field() helper. The gear was decorative in the mockup port; it now
-// opens an in-page popup (no redirect): the Number gear opens the numbering-settings dialog for
-// this document type. A gear without a documentType (e.g. a date field) stays a clearly-disabled
-// icon with a reason.
+// A document header field (the mockup's doc_field()). DEV-UI-01.6:
+//  • An EDITABLE field passes `htmlFor` = its control's id. The caption becomes a real <label> bound to
+//    that control, and the control (an approved <Input> / <SelectTrigger>) renders as-is, carrying its
+//    own chrome and focus treatment.
+//  • A DISPLAY field (the document number preview) has no control: no `htmlFor`, so the caption is plain
+//    text — no label pretending to name something that cannot be focused. Its value sits in the boxed,
+//    read-only presentation; `mono` keeps codes in the code face (everything else uses the UI font).
+// The gear opens the numbering-settings popup for `gearDocType` (unchanged); a gear without one stays a
+// clearly-disabled icon with a reason.
 export function DocFieldBox({
   label,
+  htmlFor,
   required,
-  plain = false,
+  mono = false,
   gear = false,
   gearDocType,
   gearDialog,
@@ -17,8 +24,11 @@ export function DocFieldBox({
   children,
 }: {
   label: string;
+  /** Id of the editable control inside; omit for a display-only value. */
+  htmlFor?: string;
   required?: boolean;
-  plain?: boolean;
+  /** Code face for identifiers (the document number). */
+  mono?: boolean;
   gear?: boolean;
   /** When set, the gear opens the numbering-settings popup for this document type. */
   gearDocType?: string;
@@ -27,13 +37,27 @@ export function DocFieldBox({
   locale?: Locale;
   children: React.ReactNode;
 }) {
+  const caption = (
+    <>
+      {label}
+      {required && (
+        <span className="req" aria-hidden>
+          {" "}*
+        </span>
+      )}
+    </>
+  );
   return (
-    <div className="doc-field">
-      <label>
-        {label} {required && <span className="req">*</span>}
-      </label>
+    <div className="doc-field" data-doc-field={htmlFor ? "control" : "display"}>
+      {htmlFor ? (
+        <Label htmlFor={htmlFor} className="doc-field-label">
+          {caption}
+        </Label>
+      ) : (
+        <div className="doc-field-label">{caption}</div>
+      )}
       <div className="doc-field-input-row">
-        <div className={plain ? "input plain" : "input"}>{children}</div>
+        {htmlFor ? <div className="doc-field-control">{children}</div> : <div className={mono ? "input mono" : "input"}>{children}</div>}
         {gearDialog ? (
           gearDialog
         ) : gear && gearDocType && locale ? (

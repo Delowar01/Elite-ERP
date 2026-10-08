@@ -77,7 +77,7 @@ export default async function CreditNoteDetailPage({ params }: { params: Promise
             <StatusBadge className="ms-2" domain="credit_note" status={cn.status} locale={locale} />
           </div>
         </div>
-        <div className="flex items-center gap-2.5">
+        <div className="inv-head-actions">
           <EditDocumentButton locale={locale} docType="credit_note" id={cn.id} number={cn.creditNoteNumber} status={cn.status} recordState={cn.deletedAt ? "deleted" : cn.archivedAt ? "archived" : "active"} />
           <DownloadPdfButton locale={locale} type="credit-note" docId={cn.id} number={cn.creditNoteNumber} />
           <CnDetailActions locale={locale} creditNoteId={cn.id} creditNoteNumber={cn.creditNoteNumber} status={cn.status} />
@@ -99,9 +99,9 @@ export default async function CreditNoteDetailPage({ params }: { params: Promise
         <TableHeader>
           <TableRow>
             <TableHead>{t(locale, "Item")}</TableHead>
-            <TableHead className="text-right">{t(locale, "Qty")}</TableHead>
-            <TableHead className="text-right">{t(locale, "Unit Price")}</TableHead>
-            <TableHead className="text-right">{t(locale, "Line Total")}</TableHead>
+            <TableHead numeric>{t(locale, "Qty")}</TableHead>
+            <TableHead numeric>{t(locale, "Unit Price")}</TableHead>
+            <TableHead numeric>{t(locale, "Line Total")}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -109,9 +109,9 @@ export default async function CreditNoteDetailPage({ params }: { params: Promise
             <Fragment key={it.id}>
             <TableRow>
               <TableCell><LineItemCell description={it.description} /></TableCell>
-              <TableCell className="text-right num-tabular"><DocNum value={it.quantity} kind="quantity" /></TableCell>
-              <TableCell className="text-right num-tabular"><DocNum value={it.unitPrice} kind="rate" /></TableCell>
-              <TableCell className="text-right num-tabular"><DocNum value={it.lineTotal} kind="amount" /></TableCell>
+              <TableCell numeric className="num-tabular"><DocNum value={it.quantity} kind="quantity" /></TableCell>
+              <TableCell numeric className="num-tabular"><DocNum value={it.unitPrice} kind="rate" /></TableCell>
+              <TableCell numeric className="num-tabular"><DocNum value={it.lineTotal} kind="amount" /></TableCell>
             </TableRow>
               <LineDescRow customFields={it.customFields} />
             </Fragment>

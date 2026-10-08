@@ -227,25 +227,20 @@ const PINNED: Record<string, string> = {
   // C2: the menu → Dialog focus handoff is local to the Views menu; the shared primitive (01.4 focus
   // behaviour for every other menu) stays byte-identical.
   "src/components/ui/dropdown-menu.tsx": "f9f94b05c82b1ba2",
-  [A + "sales/_shared/configure-columns-dialog.tsx"]: "387e780f58ae6f30",
   [A + "sales/_shared/column-config-actions.ts"]: "6290d21894f90070",
   "src/lib/column-config.ts": "8904cbc74ccd23a5",
-  [A + "sales/_shared/line-items-editor.tsx"]: "d2e378bf317cc6c0",
-  [A + "sales/_shared/item-entry-cell.tsx"]: "3f29090dcf859ab3",
+  // DEV-UI-01.6 retired the editor-file pins this batch held for it (configure-columns-dialog, line-items-
+  // editor, item-entry-cell, rich-text-field, terms-editor, terms-block, party-card, totals-card,
+  // doc-field-box, doc-action-bar): 01.6 owns those files and verify-document-form now checks them. The
+  // two editor files 01.6 did not touch stay pinned.
   [A + "sales/_shared/line-item-cell.tsx"]: "4b0f7da4f95cb73f",
-  [A + "sales/_shared/rich-text-field.tsx"]: "6c6de59a1848f151",
-  [A + "sales/_shared/terms-editor.tsx"]: "2a7d84e11544ab59",
-  [A + "sales/_shared/terms-block.tsx"]: "a3f9f0360dcbe945",
-  [A + "sales/_shared/party-card.tsx"]: "dc358be468dea57a",
-  [A + "sales/_shared/totals-card.tsx"]: "4fb81ad13819c57d",
-  [A + "sales/_shared/doc-field-box.tsx"]: "3c70ae313d86320e",
   [A + "sales/_shared/doc-pills-row.tsx"]: "77929c9bf72b7dfc",
-  [A + "sales/_shared/doc-action-bar.tsx"]: "608a4506169e0b6a",
 };
 const drifted = Object.entries(PINNED).filter(([f, h]) => sha(f) !== h).map(([f]) => f.replace(A, ""));
-check("business logic (filters, saved-view actions, export registry) and frozen DEV-UI-01.6 files are byte-identical", drifted.length === 0, drifted.join(" "));
-const docCss = [...read(A + "mockup-parity.css").matchAll(/([^{}]+)\{([^{}]*)\}/g)].filter((m) => /line-table|doc-items-table/.test(m[1])).map((m) => m[0].trim()).join("\n");
-check("document-editor table CSS (.line-table / .doc-items-table) unchanged", createHash("sha256").update(docCss).digest("hex").slice(0, 16) === "93f29b299f31d7f9");
+check("business logic (filters, saved-view actions, export registry, column config) and untouched editor files are byte-identical", drifted.length === 0, drifted.join(" "));
+// The .doc-items-table rules are DEV-UI-01.6's (logical numeric alignment); the .line-table rules stay pinned.
+const docCss = [...read(A + "mockup-parity.css").matchAll(/([^{}]+)\{([^{}]*)\}/g)].filter((m) => /line-table/.test(m[1]) && !/doc-items-table/.test(m[1])).map((m) => m[0].trim()).join("\n");
+check("document line-table CSS (.line-table) unchanged", createHash("sha256").update(docCss).digest("hex").slice(0, 16) === "5c1a34146f7f6ee1");
 // The exact URL contract: q = the text, flags = "1".
 const PARAM = { q: 'params.set("q", nextQ)', archived: 'params.set("archived", "1")', lowStock: 'params.set("lowStock", "1")' } as const;
 const navigates = [["clients/clients-toolbar.tsx", "/clients", ["q", "archived"]], ["purchasing/vendors/vendors-toolbar.tsx", "/purchasing/vendors", ["q", "archived"]], ["inventory/products/products-toolbar.tsx", "/inventory/products", ["q", "lowStock", "archived"]]] as const;

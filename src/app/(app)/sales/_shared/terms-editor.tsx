@@ -1,27 +1,41 @@
 "use client";
 
-import { useState } from "react";
-import { GripVertical, X, Plus, Layers } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { GripVertical, X, Plus, Layers, ArrowUp, ArrowDown } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { t, type Locale } from "@/lib/i18n/dict";
 import type { ContentPreset } from "@/lib/document-presets";
 import { type DocumentTerm, splitGroupTerms } from "./document-terms";
 
+// DEV-UI-01.6 — what the DOCUMENT terms editor adds to a row. The master group editor (Preset
+// Management, outside the document flow) passes nothing and renders exactly as before.
+type DocRowControls = {
+  /** Accessible name of the term field ("Term 2"). */
+  name: string;
+  /** Keyboard alternative to drag reorder; undefined at the list edges (the button is disabled). */
+  onMoveUp?: () => void;
+  onMoveDown?: () => void;
+};
+
 // A single editable, reorderable term row. Shared by the document editor and the master group editor.
-// Reordering is drag-only, via the six-dot grip handle on the left; numbering is derived from the
-// row's position so it stays correct automatically after any drag or delete.
+// Reordering is by drag, via the six-dot grip handle on the left (the document editor also offers Move
+// Up / Move Down buttons); numbering is derived from the row's position so it stays correct
+// automatically after any drag, move or delete.
 function TermRow({
-  locale, index, text, badge, onText, onDelete, onDragStart, onDragOver, onDrop, onDragEnd,
+  locale, index, text, badge, onText, onDelete, onDragStart, onDragOver, onDrop, onDragEnd, doc,
 }: {
   locale: Locale; index: number; text: string; badge?: string;
   onText: (v: string) => void; onDelete: () => void;
   onDragStart: () => void; onDragOver: (e: React.DragEvent) => void; onDrop: () => void; onDragEnd: () => void;
+  doc?: DocRowControls;
 }) {
   const [draggable, setDraggable] = useState(false);
   return (
     <div
       className="flex items-start gap-1.5 group"
+      data-term-index={doc ? index : undefined}
       draggable={draggable}
       onDragStart={onDragStart}
       onDragOver={onDragOver}
@@ -38,16 +52,32 @@ function TermRow({
       >
         <GripVertical className="size-3.5" />
       </button>
-      <span className="text-[11.5px] text-ink-faint w-6 text-right shrink-0 mt-1.5">{index + 1}.</span>
+      <span className={doc ? "text-caption text-ink-faint w-6 text-end shrink-0 mt-1.5" : "text-[11.5px] text-ink-faint w-6 text-right shrink-0 mt-1.5"}>{index + 1}.</span>
       <textarea
         value={text}
         onChange={(e) => onText(e.target.value)}
         rows={1}
         placeholder={t(locale, "Term text…")}
+        aria-label={doc?.name}
+        dir={doc ? "auto" : undefined}
         // A term may hold multiple lines of text; auto-grow so the whole term stays visible.
         ref={(el) => { if (el) { el.style.height = "auto"; el.style.height = `${el.scrollHeight}px`; } }}
-        className="flex-1 min-h-8 py-1.5 rounded-[8px] border border-line px-2 text-[12px] leading-snug outline-none focus:border-brand-orange bg-surface resize-none overflow-hidden"
+        className={
+          doc
+            ? "doc-term-input flex-1 min-h-8 py-1.5 rounded-[8px] border border-line px-2 text-body-sm leading-snug bg-surface resize-none overflow-hidden"
+            : "flex-1 min-h-8 py-1.5 rounded-[8px] border border-line px-2 text-[12px] leading-snug outline-none focus:border-brand-orange bg-surface resize-none overflow-hidden"
+        }
       />
+      {doc && (
+        <>
+          <Button type="button" variant="ghost" size="icon-sm" className="shrink-0" disabled={!doc.onMoveUp} onClick={doc.onMoveUp} aria-label={`${t(locale, "Move up")}: ${doc.name}`} title={t(locale, "Move up")} data-term-move="up">
+            <ArrowUp className="size-3.5" aria-hidden />
+          </Button>
+          <Button type="button" variant="ghost" size="icon-sm" className="shrink-0" disabled={!doc.onMoveDown} onClick={doc.onMoveDown} aria-label={`${t(locale, "Move down")}: ${doc.name}`} title={t(locale, "Move down")} data-term-move="down">
+            <ArrowDown className="size-3.5" aria-hidden />
+          </Button>
+        </>
+      )}
       {badge && <span className="pill shrink-0 mt-1" style={{ fontSize: 10 }}>{badge}</span>}
       {/* Red delete: uses the theme-aware destructive token (light + dark) with a clear red hover
           (from .item-del-btn:hover) and a red focus ring. */}
@@ -86,6 +116,21 @@ export function DocumentTermsEditor({
   const [addGroupId, setAddGroupId] = useState("");
   const [dragIdx, setDragIdx] = useState<number | null>(null);
   const [removeGroup, setRemoveGroup] = useState<{ id: number; name: string } | null>(null);
+  // Keyboard move: after the list re-renders, keep focus on the same button of the moved term.
+  const listRef = useRef<HTMLDivElement>(null);
+  const pendingFocus = useRef<{ index: number; dir: "up" | "down" } | null>(null);
+  useEffect(() => {
+    const p = pendingFocus.current;
+    if (!p || !listRef.current) return;
+    pendingFocus.current = null;
+    const row = listRef.current.querySelector<HTMLElement>(`[data-term-index="${p.index}"]`);
+    const btn = row?.querySelector<HTMLButtonElement>(`[data-term-move="${p.dir}"]`);
+    (btn && !btn.disabled ? btn : row?.querySelector<HTMLButtonElement>("[data-term-move]:not(:disabled)"))?.focus();
+  }, [terms]);
+  function move(from: number, to: number, dir: "up" | "down") {
+    pendingFocus.current = { index: to, dir };
+    onChange(reorder(terms, from, to));
+  }
 
   // Distinct groups currently present in the document, in first-appearance order.
   const presentGroups: { id: number; name: string }[] = [];
@@ -116,18 +161,18 @@ export function DocumentTermsEditor({
     <div className="flex flex-col gap-2.5">
       {/* Append a group's terms (does not replace the existing list). */}
       <div className="flex items-center gap-2 flex-wrap">
-        <div className="text-[12.5px] font-bold text-ink">{t(locale, "Terms & Conditions")}</div>
+        <div className="text-body-sm font-semibold text-ink">{t(locale, "Terms & Conditions")}</div>
         {groups.length > 0 && (
           <>
             <Select value={addGroupId} onValueChange={appendGroup}>
-              <SelectTrigger className="h-8 w-56 text-[12.5px]"><SelectValue placeholder={t(locale, "Add a group…")} /></SelectTrigger>
+              <SelectTrigger className="h-(--control-height-compact) w-56" aria-label={t(locale, "Add a group…")}><SelectValue placeholder={t(locale, "Add a group…")} /></SelectTrigger>
               <SelectContent>
                 {groups.map((g) => (
                   <SelectItem key={g.id} value={String(g.id)}>{g.name}{g.isDefault ? ` · ${t(locale, "Default")}` : ""}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            <span className="text-[11px] text-ink-faint">{t(locale, "Adds the group's terms to the list.")}</span>
+            <span className="text-caption text-ink-faint">{t(locale, "Adds the group's terms to the list.")}</span>
           </>
         )}
       </div>
@@ -135,9 +180,9 @@ export function DocumentTermsEditor({
       {/* Groups present in this document, each removable with the three required options. */}
       {presentGroups.length > 0 && (
         <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="text-[11px] text-ink-faint inline-flex items-center gap-1"><Layers className="size-3" /> {t(locale, "Groups in this document")}:</span>
+          <span className="text-caption text-ink-faint inline-flex items-center gap-1"><Layers className="size-3" aria-hidden /> {t(locale, "Groups in this document")}:</span>
           {presentGroups.map((g) => (
-            <button key={g.id} type="button" className="pill inline-flex items-center gap-1 hover:opacity-80" style={{ fontSize: 11 }} onClick={() => setRemoveGroup(g)} title={t(locale, "Remove group")}>
+            <button key={g.id} type="button" className="pill text-caption inline-flex items-center gap-1 hover:opacity-80" onClick={() => setRemoveGroup(g)} title={t(locale, "Remove group")} aria-label={`${t(locale, "Remove group")}: ${g.name || t(locale, "Group")}`}>
               {g.name || t(locale, "Group")} <X className="size-3" />
             </button>
           ))}
@@ -145,8 +190,8 @@ export function DocumentTermsEditor({
       )}
 
       {/* The continuous numbered list. */}
-      <div className="flex flex-col gap-1.5">
-        {terms.length === 0 && <p className="text-[11.5px] text-ink-faint">{t(locale, "No terms yet — add a group or an individual term.")}</p>}
+      <div className="flex flex-col gap-1.5" ref={listRef}>
+        {terms.length === 0 && <p className="text-caption text-ink-faint">{t(locale, "No terms yet — add a group or an individual term.")}</p>}
         {terms.map((tm, i) => (
           <TermRow
             key={i}
@@ -160,12 +205,17 @@ export function DocumentTermsEditor({
             onDragOver={(e) => e.preventDefault()}
             onDrop={() => { if (dragIdx !== null) onChange(reorder(terms, dragIdx, i)); setDragIdx(null); }}
             onDragEnd={() => setDragIdx(null)}
+            doc={{
+              name: `${t(locale, "Term")} ${i + 1}`,
+              onMoveUp: i > 0 ? () => move(i, i - 1, "up") : undefined,
+              onMoveDown: i < terms.length - 1 ? () => move(i, i + 1, "down") : undefined,
+            }}
           />
         ))}
       </div>
 
       <div>
-        <button type="button" className="doc-pill-btn" style={{ height: 30, fontSize: 11.5 }} onClick={() => onChange([...terms, { text: "", groupId: null, groupName: null }])}>
+        <button type="button" className="doc-pill-btn compact" onClick={() => onChange([...terms, { text: "", groupId: null, groupName: null }])}>
           <Plus className="size-3" /> {t(locale, "Add Individual Term")}
         </button>
       </div>
@@ -178,9 +228,9 @@ export function DocumentTermsEditor({
             <DialogDescription>{t(locale, "Choose what to do with this group's terms in this document.")}</DialogDescription>
           </DialogHeader>
           <div className="flex flex-col gap-2">
-            <button type="button" className="btn btn-primary" onClick={() => confirmRemoveGroup("all")}>{t(locale, "Remove group and its terms")}</button>
-            <button type="button" className="btn btn-glass" onClick={() => confirmRemoveGroup("keep")}>{t(locale, "Remove group reference but keep the terms")}</button>
-            <button type="button" className="btn btn-glass" onClick={() => setRemoveGroup(null)}>{t(locale, "Cancel")}</button>
+            <Button type="button" variant="destructive" onClick={() => confirmRemoveGroup("all")}>{t(locale, "Remove group and its terms")}</Button>
+            <Button type="button" variant="secondary" onClick={() => confirmRemoveGroup("keep")}>{t(locale, "Remove group reference but keep the terms")}</Button>
+            <Button type="button" variant="outline" onClick={() => setRemoveGroup(null)}>{t(locale, "Cancel")}</Button>
           </div>
         </DialogContent>
       </Dialog>

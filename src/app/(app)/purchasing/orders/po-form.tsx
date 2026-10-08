@@ -1,11 +1,15 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useId, useState, useTransition } from "react";
 import { getLineDesc } from "../../sales/_shared/line-item-desc";
 import { toast } from "sonner";
 import { ShoppingCart, Settings, Columns3 } from "lucide-react";
 import { PartyCardStatic, PartyCardSelect } from "../../sales/_shared/party-card";
 import { DocFieldBox } from "../../sales/_shared/doc-field-box";
+import { DocFormError } from "../../sales/_shared/doc-form-error";
+import { Input } from "@/components/ui/input";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { FormField } from "@/components/ui/form-field";
 import { DateSettingsDialog } from "../../sales/_shared/date-settings-dialog";
 import { DocBrandPanel } from "../../sales/_shared/doc-brand-panel";
 import { DocPillsRow } from "../../sales/_shared/doc-pills-row";
@@ -33,6 +37,9 @@ import type { ContentPreset } from "@/lib/document-presets";
 import type { Vendor, Product, Org } from "@/db";
 import { createPurchaseOrderAction, updatePurchaseOrderAction } from "./actions";
 
+
+// Radix Select items cannot carry "", so the "—" (none) option uses this sentinel in the UI only.
+const NONE = "__none";
 export type PoFormInitial = {
   title: string;
   vendorId: string;
@@ -122,6 +129,9 @@ export function PoForm({
   const [previewOpen, setPreviewOpen] = useState(false);
   const [pendingDraft, startDraftTransition] = useTransition();
   const [pendingPrimary, startPrimaryTransition] = useTransition();
+  // DEV-UI-01.6: ids for the header controls, and the last save failure shown in the error region.
+  const fid = useId();
+  const [formError, setFormError] = useState<string | null>(null);
 
   const totals = computeTotals(items, discount, currency);
   const selectedVendor = vendors.find((v) => String(v.id) === vendorId);
@@ -133,6 +143,7 @@ export function PoForm({
 
   function submit(andSend: boolean) {
     const start = andSend ? startPrimaryTransition : startDraftTransition;
+    setFormError(null);
     start(async () => {
       // Clean BEFORE the call: a successful save redirects from the server and never returns,
       // so marking clean afterwards would be too late and the user would be asked to discard
@@ -147,6 +158,7 @@ export function PoForm({
       if (result?.error) {
         dirtyForm.restoreDirty();
         toast.error(result.error);
+        setFormError(result.error);
       }
     });
   }
@@ -180,23 +192,24 @@ export function PoForm({
           </h3>
           <div className="sub">{t(locale, isEdit ? "Edit this draft document." : "Order stock from a vendor — receiving posts to inventory and accounts payable.")}</div>
         </div>
-        <DocTopActions locale={locale} busy={pendingDraft || pendingPrimary} onSaveDraft={() => submit(false)} onPreview={() => setPreviewOpen(true)} />
+        <DocTopActions locale={locale} busy={pendingDraft || pendingPrimary} onSaveDraft={() => submit(false)} onPreview={() => setPreviewOpen(true)} dirty={dirtyForm.dirty} />
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1.7fr 1fr", gap: 20, marginBottom: 18, alignItems: "start" }}>
+      <div className="doc-head-grid">
         <div>
-          <div className="doc-header-grid" style={{ gridTemplateColumns: "1fr 1fr" }}>
-            <DocFieldBox label={t(locale, "PO Number")} required gear gearDocType="purchase_order" locale={locale}>
+          <div className="doc-header-grid">
+            <DocFieldBox label={t(locale, "PO Number")} required mono gear gearDocType="purchase_order" locale={locale}>
               {numberPreview}
             </DocFieldBox>
-            <DocFieldBox label={t(locale, "Order Date")} required>
-              <input type="date" value={orderDate} onChange={(e) => setOrderDate(e.target.value)} className="w-full bg-transparent outline-none" />
+            <DocFieldBox label={t(locale, "Order Date")} required htmlFor={`${fid}-order-date`}>
+              <Input id={`${fid}-order-date`} type="date" aria-required value={orderDate} onChange={(e) => setOrderDate(e.target.value)} />
             </DocFieldBox>
           </div>
-          <div className="doc-header-grid" style={{ gridTemplateColumns: "1fr 1fr" }}>
+          <div className="doc-header-grid">
             <DocFieldBox
               label={t(locale, "Expected Delivery")}
               required
+              htmlFor={`${fid}-expected-delivery`}
               gearDialog={
                 <DateSettingsDialog
                   locale={locale}
@@ -212,35 +225,37 @@ export function PoForm({
                 />
               }
             >
-              <input type="date" value={expectedDate} onChange={(e) => setExpectedDate(e.target.value)} className="w-full bg-transparent outline-none" />
+              <Input id={`${fid}-expected-delivery`} type="date" aria-required value={expectedDate} onChange={(e) => setExpectedDate(e.target.value)} />
             </DocFieldBox>
             {/* Optional project tag — same field the sales-side builders already offer. It is what
                 attributes this order's cost to a project in Project Cost Control. */}
-            <DocFieldBox label={t(locale, "Project")}>
-              <select value={projectId} onChange={(e) => setProjectId(e.target.value)} className="w-full bg-transparent outline-none">
-                <option value="">—</option>
-                {projects.map((p) => (
-                  <option key={p.id} value={String(p.id)}>
-                    {p.name}
-                  </option>
-                ))}
-              </select>
+            <DocFieldBox label={t(locale, "Project")} htmlFor={`${fid}-project`}>
+              {/* Radix items cannot carry "": NONE stands for the "—" option and maps back to "". */}
+              <Select value={projectId || NONE} onValueChange={(v) => setProjectId(v === NONE ? "" : v)}>
+                <SelectTrigger id={`${fid}-project`} className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NONE}>—</SelectItem>
+                  {projects.map((p) => (
+                    <SelectItem key={p.id} value={String(p.id)}>
+                      {p.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </DocFieldBox>
           </div>
-          <div className="field">
-            <label>{t(locale, "Purchase Order Title")}</label>
-            <input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder={t(locale, "Write purchase order title here…")}
-              className="input plain w-full outline-none"
-            />
-          </div>
+          <FormField label={t(locale, "Purchase Order Title")} htmlFor={`${fid}-title`}>
+            {(field) => (
+              <Input id={field.id} aria-describedby={field.describedBy} value={title} onChange={(e) => setTitle(e.target.value)} placeholder={t(locale, "Write purchase order title here…")} />
+            )}
+          </FormField>
         </div>
         <DocBrandPanel org={org} />
       </div>
 
-      <div className="doc-meta-row" style={{ gridTemplateColumns: "1fr 1fr" }}>
+      <div className="doc-meta-row">
         <PartyCardStatic locale={locale} label={t(locale, "From")} name={org.name} address={org.address} email={org.email} phone={org.phone} />
         <PartyCardSelect locale={locale} label={t(locale, "To Vendor")} customers={vendors} value={vendorId} onChange={setVendorId} placeholder="Select a vendor" partyKind="vendor" />
       </div>
@@ -294,6 +309,8 @@ export function PoForm({
       <SealSignaturePreview locale={locale} sealUrl={org.sealUrl} signatureUrl={org.signatureUrl} sealAssets={sealAssets} sealOverride={sealOverride} signatureOverride={signatureOverride} onSealOverride={setSealOverride} onSignatureOverride={setSignatureOverride} />
 
       <DocFooterContact locale={locale} email={org.email} phone={org.phone} />
+
+      <DocFormError locale={locale} error={formError} />
 
       <DocActionBar
         locale={locale}

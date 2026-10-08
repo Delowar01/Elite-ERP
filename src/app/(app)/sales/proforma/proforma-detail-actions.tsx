@@ -71,7 +71,7 @@ export function ProformaDetailActions({
   return (
     <div className="flex items-center gap-2.5">
       <Select value={status} onValueChange={changeStatus}>
-        <SelectTrigger className="w-32">
+        <SelectTrigger className="w-32" aria-label={t(locale, "Change proforma status")}>
           <SelectValue />
         </SelectTrigger>
         <SelectContent>

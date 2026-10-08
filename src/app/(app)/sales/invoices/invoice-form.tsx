@@ -1,11 +1,15 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useId, useState, useTransition } from "react";
 import { getLineDesc } from "../_shared/line-item-desc";
 import { toast } from "sonner";
 import { Receipt, Columns3 } from "lucide-react";
 import { PartyCardStatic, PartyCardSelect } from "../_shared/party-card";
 import { DocFieldBox } from "../_shared/doc-field-box";
+import { DocFormError } from "../_shared/doc-form-error";
+import { Input } from "@/components/ui/input";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { FormField } from "@/components/ui/form-field";
 import { DocBrandPanel } from "../_shared/doc-brand-panel";
 import { DocPillsRow } from "../_shared/doc-pills-row";
 import { LineItemsEditor, emptyLineItem, type LineItemDraft } from "../_shared/line-items-editor";
@@ -47,6 +51,9 @@ export type InvoiceFormInitial = {
   bankAccountIds?: number[];
   currency?: string;
 };
+
+// Radix Select items cannot carry "", so the "—" (none) option uses this sentinel in the UI only.
+const NONE = "__none";
 
 /** A Payment Terms preset, used to derive the due date (Net 30 → issue date + 30 days). */
 export type PaymentTermOption = { id: number; name: string; netDays: number };
@@ -147,6 +154,9 @@ export function InvoiceForm({
   const [previewOpen, setPreviewOpen] = useState(false);
   const [pendingDraft, startDraftTransition] = useTransition();
   const [pendingPrimary, startPrimaryTransition] = useTransition();
+  // DEV-UI-01.6: ids for the header controls, and the last save failure shown in the error region.
+  const fid = useId();
+  const [formError, setFormError] = useState<string | null>(null);
 
   const totals = computeTotals(items, discount, currency);
   const selectedCustomer = customers.find((c) => String(c.id) === customerId);
@@ -158,6 +168,7 @@ export function InvoiceForm({
 
   function submit(andSend: boolean) {
     const start = andSend ? startPrimaryTransition : startDraftTransition;
+    setFormError(null);
     start(async () => {
       // Clean BEFORE the call: a successful save redirects from the server and never returns,
       // so marking clean afterwards would be too late and the user would be asked to discard
@@ -168,6 +179,7 @@ export function InvoiceForm({
       if (result?.error) {
         dirtyForm.restoreDirty();
         toast.error(result.error);
+        setFormError(result.error);
       }
     });
   }
@@ -201,63 +213,71 @@ export function InvoiceForm({
           </h3>
           <div className="sub">{t(locale, isEdit ? "Edit this draft document." : "Issue a tax invoice — posts to the ledger and decrements stock on send.")}</div>
         </div>
-        <DocTopActions locale={locale} busy={pendingDraft || pendingPrimary} onSaveDraft={() => submit(false)} onPreview={() => setPreviewOpen(true)} />
+        <DocTopActions locale={locale} busy={pendingDraft || pendingPrimary} onSaveDraft={() => submit(false)} onPreview={() => setPreviewOpen(true)} dirty={dirtyForm.dirty} />
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1.7fr 1fr", gap: 20, marginBottom: 18, alignItems: "start" }}>
+      <div className="doc-head-grid">
         <div>
-          <div className="doc-header-grid" style={{ gridTemplateColumns: "1fr 1fr" }}>
-            <DocFieldBox label={t(locale, "Invoice Number")} required gear gearDocType="sales_invoice" locale={locale}>
+          <div className="doc-header-grid">
+            <DocFieldBox label={t(locale, "Invoice Number")} required mono gear gearDocType="sales_invoice" locale={locale}>
               {numberPreview}
             </DocFieldBox>
-            <DocFieldBox label={t(locale, "Issue Date")} required>
-              <input type="date" value={issueDate} onChange={(e) => setIssueDate(e.target.value)} className="w-full bg-transparent outline-none" />
+            <DocFieldBox label={t(locale, "Issue Date")} required htmlFor={`${fid}-issue-date`}>
+              <Input id={`${fid}-issue-date`} type="date" aria-required value={issueDate} onChange={(e) => setIssueDate(e.target.value)} />
             </DocFieldBox>
           </div>
           {/* Payment Terms drives the Due Date (Net 30 → issue date + 30 days); the date itself
               stays editable, and a hand-typed date is never overwritten by moving the issue date. */}
-          <div className="doc-header-grid" style={{ gridTemplateColumns: "1fr 1fr" }}>
-            <DocFieldBox label={t(locale, "Payment Terms")}>
-              <select value={paymentTermId} onChange={(e) => choosePaymentTerm(e.target.value)} className="w-full bg-transparent outline-none">
-                <option value="">—</option>
-                {paymentTerms.map((p) => (
-                  <option key={p.id} value={String(p.id)}>
-                    {p.name}
-                  </option>
-                ))}
-              </select>
+          <div className="doc-header-grid">
+            <DocFieldBox label={t(locale, "Payment Terms")} htmlFor={`${fid}-payment-terms`}>
+              {/* Radix items cannot carry an empty value: NONE stands for the "—" option and maps back
+                  to "" before the unchanged handler runs. */}
+              <Select value={paymentTermId || NONE} onValueChange={(v) => choosePaymentTerm(v === NONE ? "" : v)}>
+                <SelectTrigger id={`${fid}-payment-terms`} className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NONE}>—</SelectItem>
+                  {paymentTerms.map((p) => (
+                    <SelectItem key={p.id} value={String(p.id)}>
+                      {p.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </DocFieldBox>
-            <DocFieldBox label={t(locale, "Due Date")}>
-              <input type="date" value={dueDate} min={issueDate || undefined} onChange={(e) => setDueDate(e.target.value)} className="w-full bg-transparent outline-none" />
+            <DocFieldBox label={t(locale, "Due Date")} htmlFor={`${fid}-due-date`}>
+              <Input id={`${fid}-due-date`} type="date" value={dueDate} min={issueDate || undefined} onChange={(e) => setDueDate(e.target.value)} />
             </DocFieldBox>
           </div>
-          <div className="doc-header-grid" style={{ gridTemplateColumns: "1fr 1fr" }}>
-            <DocFieldBox label={t(locale, "Project")}>
-              <select value={projectId} onChange={(e) => setProjectId(e.target.value)} className="w-full bg-transparent outline-none">
-                <option value="">—</option>
-                {projects.map((p) => (
-                  <option key={p.id} value={String(p.id)}>
-                    {p.name}
-                  </option>
-                ))}
-              </select>
+          <div className="doc-header-grid">
+            <DocFieldBox label={t(locale, "Project")} htmlFor={`${fid}-project`}>
+              <Select value={projectId || NONE} onValueChange={(v) => setProjectId(v === NONE ? "" : v)}>
+                <SelectTrigger id={`${fid}-project`} className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NONE}>—</SelectItem>
+                  {projects.map((p) => (
+                    <SelectItem key={p.id} value={String(p.id)}>
+                      {p.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </DocFieldBox>
             <div />
           </div>
-          <div className="field">
-            <label>{t(locale, "Invoice Title")}</label>
-            <input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder={t(locale, "Write invoice title here…")}
-              className="input plain w-full outline-none"
-            />
-          </div>
+          <FormField label={t(locale, "Invoice Title")} htmlFor={`${fid}-title`}>
+            {(field) => (
+              <Input id={field.id} aria-describedby={field.describedBy} value={title} onChange={(e) => setTitle(e.target.value)} placeholder={t(locale, "Write invoice title here…")} />
+            )}
+          </FormField>
         </div>
         <DocBrandPanel org={org} />
       </div>
 
-      <div className="doc-meta-row" style={{ gridTemplateColumns: "1fr 1fr" }}>
+      <div className="doc-meta-row">
         <PartyCardStatic locale={locale} label={t(locale, "From")} name={org.name} address={org.address} email={org.email} phone={org.phone} />
         <PartyCardSelect locale={locale} label={t(locale, "To Client")} customers={customers} value={customerId} onChange={setCustomerId} taxOverrides={org} defaultCountryCode={countryProfile.countryCode} />
       </div>
@@ -308,6 +328,8 @@ export function InvoiceForm({
       <SealSignaturePreview locale={locale} sealUrl={org.sealUrl} signatureUrl={org.signatureUrl} sealAssets={sealAssets} sealOverride={sealOverride} signatureOverride={signatureOverride} onSealOverride={setSealOverride} onSignatureOverride={setSignatureOverride} />
 
       <DocFooterContact locale={locale} email={org.email} phone={org.phone} />
+
+      <DocFormError locale={locale} error={formError} />
 
       <DocActionBar
         locale={locale}
