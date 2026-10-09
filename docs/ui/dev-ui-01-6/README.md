@@ -3,6 +3,7 @@
 Baseline: main `ccd7e39` (tree `3311b2d`). Branch `claude/dev-ui-01-6-document-form-shell`.
 Audit: [`document-form-audit.md`](document-form-audit.md) (sections A–AA, read-only, before any change).
 Exact file lists: [`consumer-migrations.md`](consumer-migrations.md). Mutations: [`mutations.md`](mutations.md).
+Post-merge correction C2 (Edit confirmation stuck after client-side navigation): [`c2-edit-confirm-correction.md`](c2-edit-confirm-correction.md).
 
 All browser and database work ran in isolated worktrees, against `devui010_test_only_*` databases
 on localhost, with no repository `.env`. Nothing touched production; nothing was deployed.

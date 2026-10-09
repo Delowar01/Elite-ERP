@@ -28,7 +28,7 @@
   "src/app/(app)/sales/_shared/column-config-actions.ts": "6290d21894f90070",
   "src/app/(app)/documents/_workspace/saved-view-actions.ts": "4e2a260f754684b0",
   "src/app/(app)/_shared/dirty-form.tsx": "b1e8c067de60d2ed",
-  "src/app/(app)/_shared/edit-document.tsx": "2ff456ea85b2a63c",
+  "src/app/(app)/_shared/edit-document.tsx": "761cf03ae256b8ef",
   "src/app/(app)/_shared/confirm-provider.tsx": "e9a1f39974078cdc",
   "src/app/(app)/_shared/lifecycle-actions.ts": "eac381e96b17b0f6",
   "src/app/(app)/documents/_workspace/use-list-filters.ts": "e9bc8477a32c2877",
