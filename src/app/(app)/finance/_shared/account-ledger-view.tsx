@@ -6,7 +6,7 @@ import type { LedgerRow } from "@/lib/accounting";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Money } from "../../sales/_shared/money";
-import { formatMoneyNumber } from "@/lib/currency/currencies";
+import { DISPLAY_NUMBER_LOCALE, formatMoneyNumber } from "@/lib/currency/currencies";
 import { AddAccountDialog } from "./add-account-dialog";
 import { accountName } from "@/lib/account-names";
 
@@ -67,7 +67,7 @@ export function AccountLedgerView({
               <Link key={a.id} href={`${basePath}?account=${a.id}`} className={cn("acct-row", selectedAccount?.id === a.id && "selected")}>
                 <span className="code">{a.code}</span>
                 <span className="nm truncate">{accountName(locale, a)}</span>
-                <span className="bal">{(balances.get(a.id) ?? 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+                <span className="bal">{(balances.get(a.id) ?? 0).toLocaleString(DISPLAY_NUMBER_LOCALE, { maximumFractionDigits: 0 })}</span>
               </Link>
             ))}
           </div>
