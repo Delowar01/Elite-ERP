@@ -447,6 +447,22 @@ export function moneyEpsilon(currencyCode?: string | null): number {
   return 0.5 / 10 ** (getCurrency(currencyCode)?.decimalPlaces ?? 2);
 }
 
+/**
+ * The locale every money and number string is formatted in — never the browser's or the server
+ * host's own locale.
+ *
+ * `toLocaleString(undefined, …)` lets the runtime choose: Node takes the host's LANG / LC_ALL and a
+ * browser takes its UI language. A client component therefore rendered "13,272" on the server and
+ * "١٣٬٢٧٢" in an Arabic (ar-SA) browser; React rejected the mismatch (error #418) and re-rendered
+ * the page in the browser's Arabic-Indic digits. A German browser got "13.272": the same failure
+ * with other separators.
+ *
+ * en-US is what an unconfigured server already produced, so every EN and AR screen keeps the exact
+ * characters it showed before: Western digits, "," grouping, "." decimal, "-" minus. International
+ * grouping below is this same locale. verify/verify-number-locale.mts holds the contract.
+ */
+export const DISPLAY_NUMBER_LOCALE = "en-US";
+
 // The single shared number formatter for SUMMARY-context money (dashboards / reports / overview
 // cards — always 0 decimals) and any legacy caller. Documents use the Number-Format-aware helpers
 // below (formatAmount / formatRate / formatQuantity) so the org's grouping + decimals + rounding
@@ -454,7 +470,7 @@ export function moneyEpsilon(currencyCode?: string | null): number {
 export function formatMoneyNumber(amount: string | number, context: MoneyDisplayContext = "document"): string {
   const n = Number(amount) || 0;
   const d = moneyDecimals(context);
-  return n.toLocaleString(undefined, { minimumFractionDigits: d, maximumFractionDigits: d });
+  return n.toLocaleString(DISPLAY_NUMBER_LOCALE, { minimumFractionDigits: d, maximumFractionDigits: d });
 }
 
 // ---- Number Format helpers (document display only; the shared formatting utility) ----
@@ -469,7 +485,7 @@ export function clampDecimals(d: number | null | undefined): number {
 // International grouping renders 12,345,679; Indian grouping renders 1,23,45,679. Achieved via the
 // locale's own grouping rules (en-US vs en-IN) rather than hand-rolled digit chunking.
 function groupingLocale(g: DigitGrouping): string {
-  return g === "indian" ? "en-IN" : "en-US";
+  return g === "indian" ? "en-IN" : DISPLAY_NUMBER_LOCALE;
 }
 
 export function markFormat(mark?: CurrencyMark | null): NumberFormatConfig {

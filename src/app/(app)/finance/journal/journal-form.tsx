@@ -15,7 +15,7 @@ import { postJournalEntryAction } from "./actions";
 import { useConfirm } from "../../_shared/confirm-provider";
 import { useDirtyForm } from "../../_shared/dirty-form";
 import { accountName } from "@/lib/account-names";
-import { moneyDecimals, roundMoney } from "@/lib/currency/currencies";
+import { DISPLAY_NUMBER_LOCALE, moneyDecimals, roundMoney } from "@/lib/currency/currencies";
 
 type Line = { accountId: string; memo: string; debit: string; credit: string };
 
@@ -191,11 +191,11 @@ export function JournalForm({ locale, accounts, currency, projects = [] }: { loc
       <div className="tb-strip">
         <div className="card tb-tile">
           <div className="l">{t(locale, "Total debits")}</div>
-          <div className="v">{totalDebit.toLocaleString(undefined, { minimumFractionDigits: moneyDp, maximumFractionDigits: moneyDp })}</div>
+          <div className="v">{totalDebit.toLocaleString(DISPLAY_NUMBER_LOCALE, { minimumFractionDigits: moneyDp, maximumFractionDigits: moneyDp })}</div>
         </div>
         <div className="card tb-tile">
           <div className="l">{t(locale, "Total credits")}</div>
-          <div className="v">{totalCredit.toLocaleString(undefined, { minimumFractionDigits: moneyDp, maximumFractionDigits: moneyDp })}</div>
+          <div className="v">{totalCredit.toLocaleString(DISPLAY_NUMBER_LOCALE, { minimumFractionDigits: moneyDp, maximumFractionDigits: moneyDp })}</div>
         </div>
         <div className={cn("card tb-tile", balanced && "balanced")}>
           <div className="l">{t(locale, "Balance check")}</div>

@@ -1,5 +1,5 @@
 import { amountInWordsAr, amountInWordsEn } from "@/lib/currency/amount-words";
-import { moneyDecimals, roundMoney } from "@/lib/currency/currencies";
+import { DISPLAY_NUMBER_LOCALE, moneyDecimals, roundMoney } from "@/lib/currency/currencies";
 export type LineItemInput = {
   quantity: string;
   unitPrice: string;
@@ -48,10 +48,14 @@ export function computeTotals(
  * `currencyCode` is required rather than defaulted for the same reason `computeTotals`' is: a
  * default would silently print a Kuwaiti balance of 1,250.075 as 1,250.08 at the one call site
  * that forgot to pass it, which is exactly the truncation this helper exists to prevent.
+ *
+ * Formatted in DISPLAY_NUMBER_LOCALE, never the browser's own locale: the Record Payment and Apply
+ * Advance dialogs render this in the browser, where an Arabic browser would otherwise write the
+ * balance in Arabic-Indic digits.
  */
 export function fmt(n: string | number, currencyCode: string) {
   const dp = moneyDecimals("document", currencyCode);
-  return Number(n).toLocaleString(undefined, { minimumFractionDigits: dp, maximumFractionDigits: dp });
+  return Number(n).toLocaleString(DISPLAY_NUMBER_LOCALE, { minimumFractionDigits: dp, maximumFractionDigits: dp });
 }
 
 
