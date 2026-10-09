@@ -39,8 +39,10 @@ const RISK_STYLE: Record<string, { label: string; color: string; bg: string }> =
   critical: { label: "Critical", color: "var(--crit)", bg: "var(--crit-bg)" },
 };
 
+// UTC, named explicitly: this renders on the server and again in the browser, and each would
+// otherwise use its own zone and disagree (React #418). docs/ui/pre-dev-ui-01-7/timezone-determinism.md
 function fmtDateTime(iso: string): string {
-  return new Date(iso).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+  return new Date(iso).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "UTC" });
 }
 
 export function SecurityCenterClient(props: {

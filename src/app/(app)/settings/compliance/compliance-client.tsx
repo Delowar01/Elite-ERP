@@ -96,8 +96,10 @@ const STATE_LABEL: Record<ControlState, string> = {
 
 const CONSENT_SUBJECTS = ["privacy_policy", "data_processing", "marketing_communications"];
 
+// UTC, named explicitly: this renders on the server and again in the browser, and each would
+// otherwise use its own zone and disagree (React #418). docs/ui/pre-dev-ui-01-7/timezone-determinism.md
 function fmtDate(iso: string): string {
-  return new Date(iso).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  return new Date(iso).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
 }
 
 export function ComplianceCenterClient(props: {
