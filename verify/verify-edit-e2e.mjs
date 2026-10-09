@@ -111,6 +111,43 @@ async function openRowMenu(number) {
 const menu = () => page.locator('[role="menu"]');
 const dialog = () => page.locator('[role="dialog"]');
 
+// DEV-UI-01.6-C2: after Continue to Edit has navigated, the confirmation must be gone. The ConfirmProvider
+// lives in the persistent app layout, so router.push() does NOT unmount it: a request that kept the dialog
+// in its working state stayed open over the edit page with a disabled "Working…" button until a reload
+// (found on live staging at 390px). Waiting for the /edit URL alone passed with that bug, so this reports
+// what is still on screen and whether the edit page takes input.
+async function afterContinueToEdit({ working = "Working…", save = "Save Changes" } = {}) {
+  await dialog().waitFor({ state: "detached", timeout: 5000 }).catch(() => {});
+  const state = await page.evaluate((workingLabel) => {
+    const shown = (el) => {
+      const r = el.getBoundingClientRect();
+      const cs = getComputedStyle(el);
+      return r.width > 0 && r.height > 0 && cs.visibility !== "hidden" && cs.display !== "none";
+    };
+    return {
+      dialogs: document.querySelectorAll('[role="dialog"], [role="alertdialog"]').length,
+      // the Radix overlay of the shared Dialog primitive (fixed, inset-0, data-state)
+      overlays: [...document.querySelectorAll("div.fixed.inset-0[data-state]")].filter(shown).length,
+      working: [...document.querySelectorAll("button")].filter((b) => shown(b) && b.textContent.trim() === workingLabel).length,
+      // an open modal dialog disables pointer events on <body> and hides the page from assistive tech
+      bodyBlocked: getComputedStyle(document.body).pointerEvents === "none",
+      pageHidden: Boolean(document.querySelector("main")?.closest('[aria-hidden="true"]')),
+    };
+  }, working);
+  // Usable: the edit page's Save Changes button passes Playwright's actionability checks (visible,
+  // enabled, stable, not covered by anything). A trial click, so nothing is submitted.
+  let usable = true;
+  try {
+    const btn = page.getByRole("button", { name: save }).first();
+    await btn.scrollIntoViewIfNeeded({ timeout: 5000 });
+    await btn.click({ trial: true, timeout: 5000 });
+  } catch {
+    usable = false;
+  }
+  return { ...state, usable };
+}
+const confirmationGone = (s) => s.dialogs === 0 && s.overlays === 0 && s.working === 0 && !s.bodyBlocked && !s.pageHidden;
+
 // ---- 1..6, 10: the flow, per document type, from the LIST menu ----
 for (const t of TYPES) {
   await page.goto(`${BASE}${t.list}`, { waitUntil: "networkidle" });
@@ -142,6 +179,7 @@ for (const t of TYPES) {
   await page.keyboard.press("Escape");
   await page.waitForTimeout(250);
   check(`${t.key}: Escape closes the dialog`, (await dialog().count()) === 0);
+  check(`${t.key}: Escape stays on the list (no navigation)`, page.url().includes(t.list) && !page.url().includes("/edit"), page.url());
 
   // Continue to Edit opens the existing edit page, in the same tab.
   const tabsBefore = page.context().pages().length;
@@ -152,6 +190,13 @@ for (const t of TYPES) {
   await page.waitForURL(new RegExp(`${t.list.replace(/\//g, "\\/")}\\/${t.draftId}\\/edit`), { timeout: 15000 });
   check(`${t.key}: Continue to Edit opens the existing edit page`, page.url().endsWith(`${t.list}/${t.draftId}/edit`), page.url());
   check(`${t.key}: navigation stays in the same tab`, page.context().pages().length === tabsBefore);
+  const listAfter = await afterContinueToEdit();
+  check(`${t.key}: after Continue to Edit no confirmation dialog remains`, listAfter.dialogs === 0, JSON.stringify(listAfter));
+  check(`${t.key}: after Continue to Edit no confirmation overlay remains (page not blocked)`,
+    listAfter.overlays === 0 && !listAfter.bodyBlocked && !listAfter.pageHidden, JSON.stringify(listAfter));
+  check(`${t.key}: after Continue to Edit no "Working…" button remains`, listAfter.working === 0, JSON.stringify(listAfter));
+  check(`${t.key}: the edit page is usable in the same tab after Continue to Edit`,
+    listAfter.usable && page.url().endsWith(`${t.list}/${t.draftId}/edit`) && page.context().pages().length === tabsBefore, JSON.stringify(listAfter));
 
   // 7/8: a locked (non-draft) document offers no Edit anywhere.
   await page.goto(`${BASE}${t.list}`, { waitUntil: "networkidle" });
@@ -176,11 +221,27 @@ for (const t of TYPES) {
   check(`${t.key}: Preview Cancel stays on the Preview`,
     page.url().endsWith(`${t.detail}/${t.draftId}`) && (await dialog().count()) === 0, page.url());
 
+  // Escape closes it and stays on the Preview too.
+  await page.getByRole("button", { name: "Edit", exact: true }).first().click();
+  await page.waitForTimeout(300);
+  await page.keyboard.press("Escape");
+  await page.waitForTimeout(250);
+  check(`${t.key}: Preview Escape closes the dialog and stays on the Preview`,
+    (await dialog().count()) === 0 && page.url().endsWith(`${t.detail}/${t.draftId}`), page.url());
+
+  const previewTabs = page.context().pages().length;
   await page.getByRole("button", { name: "Edit", exact: true }).first().click();
   await page.waitForTimeout(300);
   await dialog().getByRole("button", { name: "Continue to Edit" }).click();
   await page.waitForURL(new RegExp(`${t.detail.replace(/\//g, "\\/")}\\/${t.draftId}\\/edit`), { timeout: 15000 });
   check(`${t.key}: Preview Continue to Edit opens the existing edit page`, page.url().endsWith(`${t.detail}/${t.draftId}/edit`));
+  const previewAfter = await afterContinueToEdit();
+  check(`${t.key}: after Preview Continue to Edit no confirmation dialog remains`, previewAfter.dialogs === 0, JSON.stringify(previewAfter));
+  check(`${t.key}: after Preview Continue to Edit no confirmation overlay remains (page not blocked)`,
+    previewAfter.overlays === 0 && !previewAfter.bodyBlocked && !previewAfter.pageHidden, JSON.stringify(previewAfter));
+  check(`${t.key}: after Preview Continue to Edit no "Working…" button remains`, previewAfter.working === 0, JSON.stringify(previewAfter));
+  check(`${t.key}: the edit page is usable in the same tab after Preview Continue to Edit`,
+    previewAfter.usable && page.url().endsWith(`${t.detail}/${t.draftId}/edit`) && page.context().pages().length === previewTabs, JSON.stringify(previewAfter));
 
   // locked document Preview offers no Edit — same rule as the menu
   await page.goto(`${BASE}${t.detail}/${t.lockedId}`, { waitUntil: "networkidle" });
@@ -262,13 +323,61 @@ await page.keyboard.press("Escape");
 await page.waitForTimeout(300);
 const ar = await shotDialog("edit-03-arabic-rtl");
 check("dialog works in Arabic with RTL layout", ar.ok && dir === "rtl", `dir=${dir}`);
+// DEV-UI-01.6-C2, Arabic: Continue to Edit (المتابعة إلى التعديل) also closes the confirmation.
+await page.goto(`${BASE}/sales/quotations`, { waitUntil: "networkidle" });
+await openRowMenu(TYPES[0].draftNumber);
+await menu().getByRole("menuitem", { name: "تعديل", exact: true }).first().click();
+await page.waitForTimeout(300);
+await dialog().getByRole("button", { name: "المتابعة إلى التعديل" }).click();
+await page.waitForURL(new RegExp(`\\/sales\\/quotations\\/${TYPES[0].draftId}\\/edit`), { timeout: 15000 });
+const arAfter = await afterContinueToEdit({ working: "جارٍ التنفيذ…", save: "حفظ التغييرات" });
+check("Arabic: Continue to Edit closes the confirmation and the edit page is usable",
+  confirmationGone(arAfter) && arAfter.usable, JSON.stringify(arAfter));
 await page.context().addCookies([{ name: "locale", value: "en", url: BASE }]);
 
 await page.setViewportSize({ width: 390, height: 844 });
 await page.goto(`${BASE}/sales/quotations`, { waitUntil: "networkidle" });
 const mobile = await shotDialog("edit-04-mobile");
 check("dialog works at a 390px mobile viewport", mobile.ok);
+
+// DEV-UI-01.6-C2, the live-staging reproduction at 390px: a draft Sales Invoice's detail page → Edit →
+// Continue to Edit → its edit page, with the confirmation gone.
+const inv = TYPES.find((x) => x.key === "sales_invoice");
+const mobileTabs = page.context().pages().length;
+await page.goto(`${BASE}${inv.detail}/${inv.draftId}`, { waitUntil: "networkidle" });
+await page.getByRole("button", { name: "Edit", exact: true }).first().click();
+await page.waitForTimeout(300);
+const mDialog = await dialog().first().evaluate((el) => {
+  const r = el.getBoundingClientRect();
+  return { left: Math.round(r.left), right: Math.round(r.right), vw: document.documentElement.clientWidth, text: el.innerText };
+}).catch(() => null);
+check("390px: Edit on a draft invoice's detail page opens the confirmation inside the viewport",
+  mDialog !== null && mDialog.left >= 0 && mDialog.right <= mDialog.vw && mDialog.text.includes(inv.draftNumber),
+  JSON.stringify(mDialog && { left: mDialog.left, right: mDialog.right, vw: mDialog.vw }));
+await dialog().getByRole("button", { name: "Continue to Edit" }).click();
+await page.waitForURL(new RegExp(`${inv.detail.replace(/\//g, "\\/")}\\/${inv.draftId}\\/edit`), { timeout: 15000 });
+check("390px: Continue to Edit reaches the invoice's edit page", page.url().endsWith(`${inv.detail}/${inv.draftId}/edit`), page.url());
+const mobileAfter = await afterContinueToEdit();
+check("390px: no confirmation dialog, overlay or Working… button remains after the navigation",
+  confirmationGone(mobileAfter), JSON.stringify(mobileAfter));
+check("390px: the edit page is visible and usable in the same tab",
+  mobileAfter.usable && page.context().pages().length === mobileTabs, JSON.stringify(mobileAfter));
 await page.setViewportSize({ width: 1440, height: 950 });
+
+// DEV-UI-01.6-C2: activating Continue to Edit twice in a row (the provider's double-execution guard is
+// unchanged) still ends on a usable edit page with the confirmation closed — no stuck state, no error.
+const dblErrors = [];
+const onDblError = (e) => dblErrors.push(e.message);
+page.on("pageerror", onDblError);
+await page.goto(`${BASE}${TYPES[0].detail}/${TYPES[0].draftId}`, { waitUntil: "networkidle" });
+await page.getByRole("button", { name: "Edit", exact: true }).first().click();
+await page.waitForTimeout(300);
+await dialog().getByRole("button", { name: "Continue to Edit" }).click({ clickCount: 2, delay: 20 });
+await page.waitForURL(new RegExp(`${TYPES[0].detail.replace(/\//g, "\\/")}\\/${TYPES[0].draftId}\\/edit`), { timeout: 15000 });
+const dblAfter = await afterContinueToEdit();
+page.off("pageerror", onDblError);
+check("double-activating Continue to Edit ends on a usable edit page with the confirmation closed",
+  confirmationGone(dblAfter) && dblAfter.usable && dblErrors.length === 0, JSON.stringify({ ...dblAfter, errors: dblErrors.slice(0, 2) }));
 
 // keyboard: reach and activate Edit without a mouse
 await page.goto(`${BASE}/sales/quotations`, { waitUntil: "networkidle" });

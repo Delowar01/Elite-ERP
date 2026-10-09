@@ -25,7 +25,10 @@ export function useDocumentEditAction(locale: Locale) {
       action: "document.edit",
       entityType: DOC_EDIT_CONFIG[docType].typeLabel,
       entityNumber: number,
-      navigatesOnSuccess: true,
+      // NOT `navigatesOnSuccess`: router.push is a client-side navigation, and the ConfirmProvider is
+      // mounted in the persistent app layout, so it survives the route change. The normal success
+      // path must close the dialog; otherwise it stays open in its "Working…" state on top of the edit
+      // page (same rule as the unsaved-changes guard in dirty-form.tsx).
       onConfirm: () => {
         router.push(editHrefFor(docType, id));
       },
