@@ -5,6 +5,7 @@ import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogFooter, Dialo
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { t, type Locale } from "@/lib/i18n/dict";
+import { addDays } from "@/lib/date-only";
 
 // In-page popup for the date gears (Valid Till / Due Date / Expected Delivery). It computes the
 // target date as (base date + N days) and writes it straight into the form field — no redirect, no
@@ -62,11 +63,4 @@ export function DateSettingsDialog({
       </DialogContent>
     </Dialog>
   );
-}
-
-function addDays(isoDate: string, days: number): string {
-  const d = new Date(isoDate + "T00:00:00");
-  if (isNaN(d.getTime())) return isoDate;
-  d.setDate(d.getDate() + days);
-  return d.toISOString().slice(0, 10);
 }

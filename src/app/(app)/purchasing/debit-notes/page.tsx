@@ -41,6 +41,9 @@ export default async function DebitNotesPage() {
       importColumns={entry.importColumns}
       statusOptions={entry.statuses}
       partyLabel={entry.partyLabel}
+      // "This Month" = the UTC month of this render, decided here once rather than by the browser's
+      // clock and zone; an organisation time zone can replace it later.
+      currentMonthKey={new Date().toISOString().slice(0, 7)}
     />
   );
 }

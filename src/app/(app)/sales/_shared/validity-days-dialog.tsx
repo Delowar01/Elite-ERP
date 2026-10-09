@@ -5,7 +5,11 @@ import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogFooter, Dialo
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { t, type Locale } from "@/lib/i18n/dict";
+import { addDays } from "@/lib/date-only";
 import { updateValidityDaysAction } from "../../settings/organization/actions";
+
+// The quotation form computes Valid Till with the same calendar arithmetic as this preview.
+export { addDays };
 
 // The Valid Till gear popup (Issue #4). Instead of writing a one-off date, it captures the number of
 // days after the Issue Date and REMEMBERS it for future documents (persisted on the org via
@@ -77,11 +81,4 @@ export function ValidityDaysDialog({
       </DialogContent>
     </Dialog>
   );
-}
-
-export function addDays(isoDate: string, days: number): string {
-  const d = new Date(isoDate + "T00:00:00");
-  if (isNaN(d.getTime())) return isoDate;
-  d.setDate(d.getDate() + days);
-  return d.toISOString().slice(0, 10);
 }

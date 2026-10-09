@@ -43,6 +43,7 @@ export function CnListClient({
   importColumns,
   statusOptions,
   partyLabel,
+  currentMonthKey,
 }: {
   locale: Locale;
   rows: CnRow[];
@@ -50,6 +51,8 @@ export function CnListClient({
   importColumns: ImportColumn[];
   statusOptions: string[];
   partyLabel: string;
+  /** The server's UTC month, "YYYY-MM" — what "This Month" means (docs/ui/pre-dev-ui-01-7/business-date-determinism.md). */
+  currentMonthKey: string;
 }) {
   const rowActions = useDocumentRowActions(locale);
   const { editEntry } = useDocumentEditAction(locale);
@@ -69,13 +72,9 @@ export function CnListClient({
     return counts;
   }, [rows]);
 
-  const thisMonthCount = useMemo(() => {
-    const now = new Date();
-    return rows.filter((r) => {
-      const d = new Date(r.issueDate);
-      return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
-    }).length;
-  }, [rows]);
+  // A calendar comparison of "YYYY-MM" text: neither the browser's clock nor its zone enters it, so
+  // the hydrated count is the count the server rendered.
+  const thisMonthCount = useMemo(() => rows.filter((r) => r.issueDate.slice(0, 7) === currentMonthKey).length, [rows, currentMonthKey]);
 
   return (
     <div className="max-w-6xl mx-auto">
