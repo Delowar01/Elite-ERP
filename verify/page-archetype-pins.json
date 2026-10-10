@@ -1,0 +1,1032 @@
+{
+  "baseline": "1bfdbbf2fe6bf10f02490dd1b292b0211e39fe50",
+  "routes": {
+    "pages": [
+      "(app)/clients/[id]/page.tsx",
+      "(app)/clients/new/page.tsx",
+      "(app)/clients/page.tsx",
+      "(app)/clients/recycle-bin/page.tsx",
+      "(app)/dashboard/page.tsx",
+      "(app)/finance/bank-accounts/page.tsx",
+      "(app)/finance/chart-of-accounts/page.tsx",
+      "(app)/finance/journal/page.tsx",
+      "(app)/finance/ledger/page.tsx",
+      "(app)/finance/payments/page.tsx",
+      "(app)/finance/reports/page.tsx",
+      "(app)/finance/statements/page.tsx",
+      "(app)/hr/attendance/page.tsx",
+      "(app)/hr/departments/page.tsx",
+      "(app)/hr/employees/[id]/page.tsx",
+      "(app)/hr/employees/new/page.tsx",
+      "(app)/hr/employees/page.tsx",
+      "(app)/hr/leave/page.tsx",
+      "(app)/hr/payroll/page.tsx",
+      "(app)/inventory/products/[id]/page.tsx",
+      "(app)/inventory/products/new/page.tsx",
+      "(app)/inventory/products/page.tsx",
+      "(app)/inventory/products/recycle-bin/page.tsx",
+      "(app)/projects/[id]/page.tsx",
+      "(app)/projects/new/page.tsx",
+      "(app)/projects/page.tsx",
+      "(app)/purchasing/debit-notes/[id]/edit/page.tsx",
+      "(app)/purchasing/debit-notes/[id]/page.tsx",
+      "(app)/purchasing/debit-notes/new/page.tsx",
+      "(app)/purchasing/debit-notes/page.tsx",
+      "(app)/purchasing/orders/[id]/edit/page.tsx",
+      "(app)/purchasing/orders/[id]/page.tsx",
+      "(app)/purchasing/orders/new/page.tsx",
+      "(app)/purchasing/orders/page.tsx",
+      "(app)/purchasing/vendors/[id]/page.tsx",
+      "(app)/purchasing/vendors/new/page.tsx",
+      "(app)/purchasing/vendors/page.tsx",
+      "(app)/purchasing/vendors/recycle-bin/page.tsx",
+      "(app)/recycle-bin/page.tsx",
+      "(app)/sales/credit-notes/[id]/edit/page.tsx",
+      "(app)/sales/credit-notes/[id]/page.tsx",
+      "(app)/sales/credit-notes/new/page.tsx",
+      "(app)/sales/credit-notes/page.tsx",
+      "(app)/sales/delivery-challans/[id]/edit/page.tsx",
+      "(app)/sales/delivery-challans/[id]/page.tsx",
+      "(app)/sales/delivery-challans/new/page.tsx",
+      "(app)/sales/delivery-challans/page.tsx",
+      "(app)/sales/invoices/[id]/edit/page.tsx",
+      "(app)/sales/invoices/[id]/page.tsx",
+      "(app)/sales/invoices/new/page.tsx",
+      "(app)/sales/invoices/page.tsx",
+      "(app)/sales/orders/[id]/edit/page.tsx",
+      "(app)/sales/orders/[id]/page.tsx",
+      "(app)/sales/orders/new/page.tsx",
+      "(app)/sales/orders/page.tsx",
+      "(app)/sales/proforma/[id]/edit/page.tsx",
+      "(app)/sales/proforma/[id]/page.tsx",
+      "(app)/sales/proforma/new/page.tsx",
+      "(app)/sales/proforma/page.tsx",
+      "(app)/sales/quotations/[id]/edit/page.tsx",
+      "(app)/sales/quotations/[id]/page.tsx",
+      "(app)/sales/quotations/new/page.tsx",
+      "(app)/sales/quotations/page.tsx",
+      "(app)/settings/compliance/page.tsx",
+      "(app)/settings/organization/page.tsx",
+      "(app)/settings/presets/page.tsx",
+      "(app)/settings/security/page.tsx",
+      "(app)/settings/team/page.tsx",
+      "(auth)/login/page.tsx",
+      "(auth)/register/page.tsx",
+      "page.tsx",
+      "print/[type]/[id]/page.tsx"
+    ],
+    "handlers": [
+      "(app)/documents/export/route.ts",
+      "(app)/finance/reports/export/route.ts",
+      "(app)/finance/statements/export/route.ts",
+      "api/document-pdf/[type]/[id]/route.ts",
+      "api/import-template/[module]/route.ts",
+      "auth/clear/route.ts",
+      "uploads/[...path]/route.ts"
+    ],
+    "layouts": [
+      "(app)/layout.tsx",
+      "(auth)/layout.tsx",
+      "layout.tsx",
+      "print/layout.tsx"
+    ],
+    "scope": [
+      "(app)/clients/[id]/page.tsx",
+      "(app)/clients/new/page.tsx",
+      "(app)/clients/page.tsx",
+      "(app)/clients/recycle-bin/page.tsx",
+      "(app)/dashboard/page.tsx",
+      "(app)/finance/bank-accounts/page.tsx",
+      "(app)/finance/chart-of-accounts/page.tsx",
+      "(app)/finance/journal/page.tsx",
+      "(app)/finance/ledger/page.tsx",
+      "(app)/finance/payments/page.tsx",
+      "(app)/finance/reports/page.tsx",
+      "(app)/finance/statements/page.tsx",
+      "(app)/hr/attendance/page.tsx",
+      "(app)/hr/departments/page.tsx",
+      "(app)/hr/employees/[id]/page.tsx",
+      "(app)/hr/employees/new/page.tsx",
+      "(app)/hr/employees/page.tsx",
+      "(app)/hr/leave/page.tsx",
+      "(app)/hr/payroll/page.tsx",
+      "(app)/inventory/products/[id]/page.tsx",
+      "(app)/inventory/products/new/page.tsx",
+      "(app)/inventory/products/page.tsx",
+      "(app)/inventory/products/recycle-bin/page.tsx",
+      "(app)/projects/[id]/page.tsx",
+      "(app)/projects/new/page.tsx",
+      "(app)/projects/page.tsx",
+      "(app)/purchasing/vendors/[id]/page.tsx",
+      "(app)/purchasing/vendors/new/page.tsx",
+      "(app)/purchasing/vendors/page.tsx",
+      "(app)/purchasing/vendors/recycle-bin/page.tsx",
+      "(app)/recycle-bin/page.tsx",
+      "(app)/settings/compliance/page.tsx",
+      "(app)/settings/organization/page.tsx",
+      "(app)/settings/presets/page.tsx",
+      "(app)/settings/security/page.tsx",
+      "(app)/settings/team/page.tsx"
+    ]
+  },
+  "guards": {
+    "(app)/clients/[id]/page.tsx": [
+      "notFound()",
+      "notFound()",
+      "requireSession()"
+    ],
+    "(app)/clients/new/page.tsx": [
+      "requireSession()"
+    ],
+    "(app)/clients/page.tsx": [
+      "requireSession()"
+    ],
+    "(app)/clients/recycle-bin/page.tsx": [
+      "isOwner={session.role === \"owner\"}",
+      "requireSession()"
+    ],
+    "(app)/dashboard/page.tsx": [
+      "getBaseCurrencyConfirmation(session.orgId, session.role)",
+      "requireSession()"
+    ],
+    "(app)/finance/bank-accounts/page.tsx": [
+      "requireSession()"
+    ],
+    "(app)/finance/chart-of-accounts/page.tsx": [
+      "requireSession()"
+    ],
+    "(app)/finance/journal/page.tsx": [
+      "requireSession()"
+    ],
+    "(app)/finance/ledger/page.tsx": [
+      "requireSession()"
+    ],
+    "(app)/finance/payments/page.tsx": [
+      "requireSession()"
+    ],
+    "(app)/finance/reports/page.tsx": [
+      "requireSession()"
+    ],
+    "(app)/finance/statements/page.tsx": [
+      "requireSession()"
+    ],
+    "(app)/hr/attendance/page.tsx": [
+      "requireSession()"
+    ],
+    "(app)/hr/departments/page.tsx": [
+      "requireSession()"
+    ],
+    "(app)/hr/employees/[id]/page.tsx": [
+      "notFound()",
+      "notFound()",
+      "requireSession()"
+    ],
+    "(app)/hr/employees/new/page.tsx": [
+      "requireSession()"
+    ],
+    "(app)/hr/employees/page.tsx": [
+      "requireSession()"
+    ],
+    "(app)/hr/leave/page.tsx": [
+      "canDecide = session.role === \"owner\" || session.role === \"admin\"",
+      "requireSession()"
+    ],
+    "(app)/hr/payroll/page.tsx": [
+      "requireRole(\"owner\", \"admin\")"
+    ],
+    "(app)/inventory/products/[id]/page.tsx": [
+      "notFound()",
+      "notFound()",
+      "requireSession()"
+    ],
+    "(app)/inventory/products/new/page.tsx": [],
+    "(app)/inventory/products/page.tsx": [
+      "requireSession()"
+    ],
+    "(app)/inventory/products/recycle-bin/page.tsx": [
+      "isOwner={session.role === \"owner\"}",
+      "requireSession()"
+    ],
+    "(app)/projects/[id]/page.tsx": [
+      "notFound()",
+      "notFound()",
+      "notFound()",
+      "requireSession()"
+    ],
+    "(app)/projects/new/page.tsx": [
+      "requireSession()"
+    ],
+    "(app)/projects/page.tsx": [
+      "requireSession()"
+    ],
+    "(app)/purchasing/vendors/[id]/page.tsx": [
+      "notFound()",
+      "notFound()",
+      "requireSession()"
+    ],
+    "(app)/purchasing/vendors/new/page.tsx": [
+      "requireSession()"
+    ],
+    "(app)/purchasing/vendors/page.tsx": [
+      "requireSession()"
+    ],
+    "(app)/purchasing/vendors/recycle-bin/page.tsx": [
+      "isOwner={session.role === \"owner\"}",
+      "requireSession()"
+    ],
+    "(app)/recycle-bin/page.tsx": [
+      "isOwner={session.role === \"owner\"}",
+      "requireSession()",
+      "role: session.role"
+    ],
+    "(app)/settings/compliance/page.tsx": [
+      "requireRole(\"owner\", \"admin\")"
+    ],
+    "(app)/settings/organization/page.tsx": [
+      "currentUserRole={session.role}",
+      "requireRole(\"owner\", \"admin\")"
+    ],
+    "(app)/settings/presets/page.tsx": [
+      "requireRole(\"owner\", \"admin\")"
+    ],
+    "(app)/settings/security/page.tsx": [
+      "isAdmin = session.role === \"owner\" || session.role === \"admin\"",
+      "requireSession()"
+    ],
+    "(app)/settings/team/page.tsx": [
+      "redirect(\"/settings/organization?tab=team\")"
+    ],
+    "(app)/layout.tsx": [
+      "requireSession()",
+      "role: session.role"
+    ],
+    "(auth)/layout.tsx": [
+      "getSession()",
+      "redirect(\"/dashboard\")",
+      "redirect(`/auth/clear?next=${next}`)"
+    ],
+    "layout.tsx": [],
+    "print/layout.tsx": []
+  },
+  "data": {
+    "(app)/clients/[id]/page.tsx": [
+      "69d0c23e898d (params) ({ params }: { params: Promise<{ id: string; }>; })",
+      "db122801cf02 const session = await requireSession();",
+      "2d1a9d4f64b4 const locale = await getLocale();",
+      "61e8bf3513e3 const { id } = await params;",
+      "8a1851e6afc1 const clientId = Number(id);",
+      "8c6ff320292a if (!Number.isInteger(clientId)) notFound();",
+      "5283cfdc59f2 const [client] = await db .select() .from(customersTable) .where(and(eq(…",
+      "5b5c255875b5 if (!client) notFound();",
+      "d2a819d5ceef const [org] = await db .select({ country: orgsTable.country, customTaxNa…",
+      "3dc9127c6032 const taxLabels = resolveTaxLabels(getCountryProfile(client.countryCode …",
+      "c297cbbf3dd4 const invoices = await db .select() .from(salesInvoicesTable) .where(and…",
+      "9717ba05fcae const stmtRange = presetRange(\"this_year\")!;",
+      "472dbf881cf9 const clientStatement = await getStatement(session.orgId, \"client\", clie…"
+    ],
+    "(app)/clients/new/page.tsx": [
+      "70b16e709899 (params) ()",
+      "db122801cf02 const session = await requireSession();",
+      "2d1a9d4f64b4 const locale = await getLocale();",
+      "d2a819d5ceef const [org] = await db .select({ country: orgsTable.country, customTaxNa…",
+      "889e4fe68a3e const defaultCountryCode = countryCodeByName(org?.country);"
+    ],
+    "(app)/clients/page.tsx": [
+      "00a38e2aff6d (params) ({ searchParams }: { searchParams: Promise<{ q?: string; archiv…",
+      "db122801cf02 const session = await requireSession();",
+      "2d1a9d4f64b4 const locale = await getLocale();",
+      "16a7be9e092e const { q, archived } = await searchParams;",
+      "d118db94d790 const includeArchived = archived === \"1\";",
+      "2036fd524ded const clients = await db .select() .from(customersTable) .where(and(tena…"
+    ],
+    "(app)/clients/recycle-bin/page.tsx": [
+      "70b16e709899 (params) ()",
+      "db122801cf02 const session = await requireSession();",
+      "2d1a9d4f64b4 const locale = await getLocale();",
+      "7692f4530008 const deleted = await db .select() .from(customersTable) .where(and(eq(c…"
+    ],
+    "(app)/dashboard/page.tsx": [
+      "845e80564566 function settlementColor(key: \"paid\" | \"partial\" | \"pending\" | \"overdue\"…",
+      "28e240e2b5a4 function fmt(n: number) { return formatMoneyNumber(n, \"summary\"); }",
+      "6686829fe880 (params) ({ searchParams }: { searchParams: Promise<{ range?: string; }>…",
+      "db122801cf02 const session = await requireSession();",
+      "b353385c58c4 after(() => fireEnsureFreshRates(session.orgId));",
+      "2d1a9d4f64b4 const locale = await getLocale();",
+      "fc533844872c const prefs = await getDashboardPrefs(session.orgId, session.userId);",
+      "c055d3701e5e const showZatca = profileHasFeature(getProfileByCountryName(session.orgC…",
+      "d05e0891f2e1 const sp = await searchParams;",
+      "a6273dca3cad const rangeKey: DashboardRange = isDashboardRange(sp.range) ? sp.range :…",
+      "42f8741bde92 const range = resolveRange(rangeKey);",
+      "8770da927f12 const rangeLabel = t(locale, RANGE_LABELS[rangeKey]);",
+      "b5de56c7173f const [kpis, revenue, invoicesOverview, cashFlow, recentActivity, projec…",
+      "63f40c00e915 const baseCurrency = await getBaseCurrencyConfirmation(session.orgId, se…",
+      "be0967675315 const revenueSeries = revenue.map((p) => p.total);",
+      "21b6660b935a const revenueLabels = revenue.map((p) => p.label);",
+      "add3d4a8122f const expenseSeries = revenue.map(() => 0);",
+      "734707569d05 const totalProfit = kpis.totalSalesThisMonth;",
+      "1ccff60bc2e2 const profitMarginPct = kpis.totalSalesThisMonth > 0 ? 100 : 0;",
+      "c0bbac7c2ee4 const invPct = (n: number) => (invoicesOverview.total > 0 ? Math.round((…",
+      "9cb1d3e1c4a0 const spark = revenueSeries.length > 1 ? revenueSeries : [0, 0];",
+      "592cabdf0b93 const featureStripVisible = prefs.layout.find((l) => l.key === \"feature_…"
+    ],
+    "(app)/finance/bank-accounts/page.tsx": [
+      "70b16e709899 (params) ()",
+      "db122801cf02 const session = await requireSession();",
+      "2d1a9d4f64b4 const locale = await getLocale();",
+      "213190496c55 const orgId = session.orgId;",
+      "a9b376578b34 const [bankAccounts, accounts, balances, recentPayments] = await Promise…",
+      "50025875cea1 const openingRows = await db .select({ bankAccountId: journalEntriesTabl…",
+      "4716d0ed821c const openingByBank = new Map<number, { date: string; amount: string; }>…",
+      "e4f63a3f51b9 for (const r of openingRows) { if (Number(r.debit) === 0 || r.bankAccoun…",
+      "e06f2bfd10ba const accountByGl = new Map(accounts.map((a) => [a.id, a]));",
+      "078425f5f1f6 const glOptions = eligibleBankGlAccounts(accounts);",
+      "90b8e43ebb5e const glOptionsFor = (currentGlId: number) => glOptions.some((a) => a.id…"
+    ],
+    "(app)/finance/chart-of-accounts/page.tsx": [
+      "1b3e92426488 (params) ({ searchParams }: { searchParams: Promise<{ account?: string; …",
+      "db122801cf02 const session = await requireSession();",
+      "2d1a9d4f64b4 const locale = await getLocale();",
+      "213190496c55 const orgId = session.orgId;",
+      "5733628c157f const { account } = await searchParams;",
+      "b2bdc310de51 const [accounts, balances] = await Promise.all([ db.select().from(accoun…",
+      "10b764358910 const selectedId = account ? Number(account) : accounts[0]?.id;",
+      "2d96166a6963 const selectedAccount = accounts.find((a) => a.id === selectedId) ?? nul…",
+      "bf6b1421724e const ledgerRows = selectedAccount ? await getAccountLedger(orgId, selec…"
+    ],
+    "(app)/finance/journal/page.tsx": [
+      "70b16e709899 (params) ()",
+      "db122801cf02 const session = await requireSession();",
+      "2d1a9d4f64b4 const locale = await getLocale();",
+      "213190496c55 const orgId = session.orgId;",
+      "44853529b8b6 const [accounts, recentEntries, projects] = await Promise.all([ db.selec…"
+    ],
+    "(app)/finance/ledger/page.tsx": [
+      "1b3e92426488 (params) ({ searchParams }: { searchParams: Promise<{ account?: string; …",
+      "db122801cf02 const session = await requireSession();",
+      "2d1a9d4f64b4 const locale = await getLocale();",
+      "213190496c55 const orgId = session.orgId;",
+      "5733628c157f const { account } = await searchParams;",
+      "b2bdc310de51 const [accounts, balances] = await Promise.all([ db.select().from(accoun…",
+      "10b764358910 const selectedId = account ? Number(account) : accounts[0]?.id;",
+      "2d96166a6963 const selectedAccount = accounts.find((a) => a.id === selectedId) ?? nul…",
+      "bf6b1421724e const ledgerRows = selectedAccount ? await getAccountLedger(orgId, selec…"
+    ],
+    "(app)/finance/payments/page.tsx": [
+      "70b16e709899 (params) ()",
+      "db122801cf02 const session = await requireSession();",
+      "2d1a9d4f64b4 const locale = await getLocale();",
+      "213190496c55 const orgId = session.orgId;",
+      "a91e110478d9 const [rows, bankAccounts, outstandingInvoiceRows, outstandingPoRows] = …",
+      "6c8c21d9686f const advanceLinks = await advanceInvoiceLinks(orgId, rows.filter((r) =>…",
+      "793b57f9f8f0 const rowsWithLinks = rows.map((r) => { const link = r.kind === \"advance…",
+      "f543c80eb7ae const outstandingInvoices = outstandingInvoiceRows.map((r) => ({ id: r.i…",
+      "7cefefbd63bf const outstandingPos = outstandingPoRows.map((r) => ({ id: r.id, poNumbe…"
+    ],
+    "(app)/finance/reports/page.tsx": [
+      "47ddba3bd42c async function buildPayload(orgId: number, report: ReportKind, range: Da…",
+      "3acec98ff998 (params) ({ searchParams }: { searchParams: Promise<Record<string, strin…",
+      "db122801cf02 const session = await requireSession();",
+      "2d1a9d4f64b4 const locale = await getLocale();",
+      "d05e0891f2e1 const sp = await searchParams;",
+      "16fd88259bb0 const one = (k: string) => (Array.isArray(sp[k]) ? sp[k][0] : sp[k]) as …",
+      "ef040704ef60 const report: ReportKind = isReportKind(one(\"report\") ?? \"\") ? (one(\"rep…",
+      "d584fbb9989a const [org] = await db.select({ fiscal: orgsTable.fiscalYearStartMonth }…",
+      "4346f0c1dd89 const range = resolveRange(one(\"from\"), one(\"to\"), org?.fiscal ?? 1);",
+      "0e25e714a052 const compare = one(\"compare\") === \"1\";",
+      "8596ac3cec49 const accountId = Number(one(\"account\")) || undefined;",
+      "eeae0c13563a const prev = compare ? previousPeriod(range) : undefined;",
+      "22fa89460138 const accounts = await db .select({ id: accountsTable.id, code: accounts…",
+      "d2526f952d26 const payload = await buildPayload(session.orgId, report, range, prev, a…"
+    ],
+    "(app)/finance/statements/page.tsx": [
+      "12ee7b2b3b74 (params) ({ searchParams }: { searchParams: Promise<{ kind?: string; par…",
+      "db122801cf02 const session = await requireSession();",
+      "2d1a9d4f64b4 const locale = await getLocale();",
+      "d05e0891f2e1 const sp = await searchParams;",
+      "06ed4f6e0e31 const kind: PartyKind = sp.kind === \"vendor\" ? \"vendor\" : \"client\";",
+      "54149acb8b5e const parties = await listStatementParties(session.orgId, kind);",
+      "a5e2b30b5c31 const requested = Number(sp.party);",
+      "a9f6164ca5d5 const partyId = parties.some((p) => p.id === requested) ? requested : nu…",
+      "bc7412e1eedc const range = presetRange(\"this_year\")!;",
+      "e5aaa916b263 const initial = partyId != null ? await getStatement(session.orgId, kind…"
+    ],
+    "(app)/hr/attendance/page.tsx": [
+      "d8a6f4454495 function todayIso(): string { return new Date().toISOString().slice(0, 1…",
+      "45f7244647a3 function fmtTime(d: Date | null): string { if (!d) return \"—\"; return d.…",
+      "70b16e709899 (params) ()",
+      "db122801cf02 const session = await requireSession();",
+      "2d1a9d4f64b4 const locale = await getLocale();",
+      "0fe6346f9fef const today = todayIso();",
+      "108788ef438e const [employees, records] = await Promise.all([ db .select({ id: employ…",
+      "82e1d23a08e1 const recordByEmployee = new Map(records.map((r) => [r.employeeId, r]));"
+    ],
+    "(app)/hr/departments/page.tsx": [
+      "70b16e709899 (params) ()",
+      "b764c0310b44 await requireSession();",
+      "2d1a9d4f64b4 const locale = await getLocale();"
+    ],
+    "(app)/hr/employees/[id]/page.tsx": [
+      "69d0c23e898d (params) ({ params }: { params: Promise<{ id: string; }>; })",
+      "db122801cf02 const session = await requireSession();",
+      "2d1a9d4f64b4 const locale = await getLocale();",
+      "7fad68631520 const employeeId = Number((await params).id);",
+      "391cf6618b4b if (!Number.isInteger(employeeId)) notFound();",
+      "6180b8e41ba6 const [employee] = await db .select() .from(employeesTable) .where(and(e…",
+      "63cb087588aa if (!employee) notFound();",
+      "da0b4cd46b26 const [departments, structures] = await Promise.all([ db .select({ id: d…",
+      "b1dc8e98d0ba const current = structures[0] ?? null;"
+    ],
+    "(app)/hr/employees/new/page.tsx": [
+      "70b16e709899 (params) ()",
+      "db122801cf02 const session = await requireSession();",
+      "2d1a9d4f64b4 const locale = await getLocale();",
+      "d7707e546f1c const [departments, [{ n }]] = await Promise.all([ db .select({ id: depa…",
+      "0c84b9639b18 const codeSuggestion = `EMP-${String(n + 1).padStart(3, \"0\")}`;"
+    ],
+    "(app)/hr/employees/page.tsx": [
+      "d8a6f4454495 function todayIso(): string { return new Date().toISOString().slice(0, 1…",
+      "70b16e709899 (params) ()",
+      "db122801cf02 const session = await requireSession();",
+      "2d1a9d4f64b4 const locale = await getLocale();",
+      "0ea6ddc2cb96 const [employees, departments, todayAttendance] = await Promise.all([ db…",
+      "8a6a238e5858 const attendanceByEmployee = new Map(todayAttendance.map((a) => [a.emplo…",
+      "3d25750ca4d3 const rows = employees.map((e) => ({ ...e, todayStatus: attendanceByEmpl…"
+    ],
+    "(app)/hr/leave/page.tsx": [
+      "70b16e709899 (params) ()",
+      "db122801cf02 const session = await requireSession();",
+      "2d1a9d4f64b4 const locale = await getLocale();",
+      "f1fc78c462c8 const [rows, employees] = await Promise.all([ db .select({ id: leaveRequ…",
+      "993b1ab8b608 const canDecide = session.role === \"owner\" || session.role === \"admin\";"
+    ],
+    "(app)/hr/payroll/page.tsx": [
+      "70b16e709899 (params) ()",
+      "8feafe7fdfae const session = await requireRole(\"owner\", \"admin\");",
+      "2d1a9d4f64b4 const locale = await getLocale();",
+      "9ba4d4491783 const now = new Date();",
+      "7e3d19163867 const periodMonth = now.getMonth() + 1;",
+      "6544fb37e560 const periodYear = now.getFullYear();",
+      "2082008da0b9 const [run] = await db .select() .from(payrollRunsTable) .where(and(eq(p…",
+      "2d43ed3bfa7d let lines: PayrollLine[] = [];",
+      "95ad2997fdb3 let skippedCount = 0;",
+      "5c727bf3a4cf if (run) { const slips = await db .select({ employeeId: payslipsTable.em…",
+      "a50a3847c65f const grossTotal = lines.reduce((sum, l) => sum + l.gross, 0);",
+      "6a5e255af645 const deductionsTotal = lines.reduce((sum, l) => sum + l.deductions, 0);",
+      "ccb3f7490734 const netTotal = lines.reduce((sum, l) => sum + l.net, 0);",
+      "00b33aee9635 const pastRuns = await db .select({ id: payrollRunsTable.id, periodMonth…"
+    ],
+    "(app)/inventory/products/[id]/page.tsx": [
+      "69d0c23e898d (params) ({ params }: { params: Promise<{ id: string; }>; })",
+      "db122801cf02 const session = await requireSession();",
+      "2d1a9d4f64b4 const locale = await getLocale();",
+      "61e8bf3513e3 const { id } = await params;",
+      "79afdbdf0b47 const productId = Number(id);",
+      "deb538a32d3e if (!Number.isInteger(productId)) notFound();",
+      "d871867d5724 const [product] = await db .select() .from(productsTable) .where(and(eq(…",
+      "6ce5a1a61542 if (!product) notFound();",
+      "4372874a289c const low = product.quantityOnHand <= product.reorderLevel;"
+    ],
+    "(app)/inventory/products/new/page.tsx": [
+      "70b16e709899 (params) ()"
+    ],
+    "(app)/inventory/products/page.tsx": [
+      "fa3cb8c9c1e3 (params) ({ searchParams }: { searchParams: Promise<{ q?: string; lowSto…",
+      "db122801cf02 const session = await requireSession();",
+      "2d1a9d4f64b4 const locale = await getLocale();",
+      "6de8e5007584 const { q, lowStock, archived } = await searchParams;",
+      "d118db94d790 const includeArchived = archived === \"1\";",
+      "3f107c239446 const products = await db .select() .from(productsTable) .where(and(tena…"
+    ],
+    "(app)/inventory/products/recycle-bin/page.tsx": [
+      "70b16e709899 (params) ()",
+      "db122801cf02 const session = await requireSession();",
+      "2d1a9d4f64b4 const locale = await getLocale();",
+      "e83544a353f9 const deleted = await db .select() .from(productsTable) .where(and(eq(pr…"
+    ],
+    "(app)/projects/[id]/page.tsx": [
+      "9e7899d13eb1 function weekAgoIso(): string { return new Date(Date.now() - 7 * 24 * 60…",
+      "69d0c23e898d (params) ({ params }: { params: Promise<{ id: string; }>; })",
+      "db122801cf02 const session = await requireSession();",
+      "2d1a9d4f64b4 const locale = await getLocale();",
+      "40453b47d309 const projectId = Number((await params).id);",
+      "39e59388b4ff if (!Number.isInteger(projectId)) notFound();",
+      "21e98a0206a1 const [project] = await db .select({ id: projectsTable.id, name: project…",
+      "561db86a3d1c if (!project) notFound();",
+      "cc72f92f4f84 const weekAgo = weekAgoIso();",
+      "a4288334735d const [tasks, employees, timeLogs] = await Promise.all([ db .select({ id…",
+      "7917d1998c8a const [costControl, linkedQuotations, linkedOrders, linkedInvoices, link…",
+      "427cbb3419af if (!costControl) notFound();",
+      "23bd3635f0de const linkedDocs = [ ...linkedQuotations.map((d) => ({ ...d, type: \"Quot…",
+      "7394aa3e87ea const currencyMark = resolveCurrencyMark(session.orgCurrency);",
+      "625edb5c58c7 const pillParts = [statusLabel(locale, \"project\", project.status)];",
+      "658f27bd7249 if (project.budget) pillParts.push(`${displayCurrency(currencyMark)} ${f…"
+    ],
+    "(app)/projects/new/page.tsx": [
+      "70b16e709899 (params) ()",
+      "db122801cf02 const session = await requireSession();",
+      "2d1a9d4f64b4 const locale = await getLocale();",
+      "1254cec7d9a1 const clients = await db .select({ id: customersTable.id, name: customer…"
+    ],
+    "(app)/projects/page.tsx": [
+      "70b16e709899 (params) ()",
+      "db122801cf02 const session = await requireSession();",
+      "2d1a9d4f64b4 const locale = await getLocale();",
+      "3d2c9d2771b7 const rows = await db .select({ id: projectsTable.id, name: projectsTabl…"
+    ],
+    "(app)/purchasing/vendors/[id]/page.tsx": [
+      "69d0c23e898d (params) ({ params }: { params: Promise<{ id: string; }>; })",
+      "db122801cf02 const session = await requireSession();",
+      "2d1a9d4f64b4 const locale = await getLocale();",
+      "61e8bf3513e3 const { id } = await params;",
+      "5e2698729858 const vendorId = Number(id);",
+      "ac38f62c5c1f if (!Number.isInteger(vendorId)) notFound();",
+      "d8a465d1b08e const [vendor] = await db .select() .from(vendorsTable) .where(and(eq(ve…",
+      "9775d9111f4b if (!vendor) notFound();",
+      "d2a819d5ceef const [org] = await db .select({ country: orgsTable.country, customTaxNa…",
+      "9ab0c84fc50a const labels = resolveTaxLabels(getProfileByCountryName(org?.country), o…",
+      "fb2b8d818923 const pos = await db .select() .from(purchaseOrdersTable) .where(and(eq(…",
+      "9717ba05fcae const stmtRange = presetRange(\"this_year\")!;",
+      "2c0b2be222d1 const vendorStatement = await getStatement(session.orgId, \"vendor\", vend…"
+    ],
+    "(app)/purchasing/vendors/new/page.tsx": [
+      "70b16e709899 (params) ()",
+      "db122801cf02 const session = await requireSession();",
+      "d2a819d5ceef const [org] = await db .select({ country: orgsTable.country, customTaxNa…",
+      "9ab0c84fc50a const labels = resolveTaxLabels(getProfileByCountryName(org?.country), o…"
+    ],
+    "(app)/purchasing/vendors/page.tsx": [
+      "00a38e2aff6d (params) ({ searchParams }: { searchParams: Promise<{ q?: string; archiv…",
+      "db122801cf02 const session = await requireSession();",
+      "2d1a9d4f64b4 const locale = await getLocale();",
+      "16a7be9e092e const { q, archived } = await searchParams;",
+      "d118db94d790 const includeArchived = archived === \"1\";",
+      "a54edbc54324 const vendors = await db .select() .from(vendorsTable) .where(and(tenant…"
+    ],
+    "(app)/purchasing/vendors/recycle-bin/page.tsx": [
+      "70b16e709899 (params) ()",
+      "db122801cf02 const session = await requireSession();",
+      "2d1a9d4f64b4 const locale = await getLocale();",
+      "b191bc4c569b const deleted = await db .select() .from(vendorsTable) .where(and(eq(ven…"
+    ],
+    "(app)/recycle-bin/page.tsx": [
+      "70b16e709899 (params) ()",
+      "db122801cf02 const session = await requireSession();",
+      "2d1a9d4f64b4 const locale = await getLocale();",
+      "1104dc010db0 const rows: BinRow[] = [];",
+      "7218159aaaa1 for (const docType of DOCUMENT_TYPES) { const entry = DOCUMENT_ADMIN[doc…",
+      "8c04bc9f381e rows.sort((a, b) => (a.deletedAt < b.deletedAt ? 1 : -1));"
+    ],
+    "(app)/settings/compliance/page.tsx": [
+      "70b16e709899 (params) ()",
+      "8feafe7fdfae const session = await requireRole(\"owner\", \"admin\");",
+      "2d1a9d4f64b4 const locale = await getLocale();",
+      "dd3280482f63 const consents = await db .select() .from(consentRecordsTable) .where(te…",
+      "3fc5252fc861 const customers = await db .select({ id: customersTable.id, name: custom…",
+      "d1083322ad3d const [fieldEncryption, auditTrigger] = await Promise.all([ Promise.reso…"
+    ],
+    "(app)/settings/organization/page.tsx": [
+      "d07343794355 const SETTINGS_TABS = new Set([ \"business-details\", \"logo\", \"color-theme…",
+      "3355cbac8a3b (params) ({ searchParams }: { searchParams: Promise<{ tab?: string; }>; …",
+      "8feafe7fdfae const session = await requireRole(\"owner\", \"admin\");",
+      "2d1a9d4f64b4 const locale = await getLocale();",
+      "2a1d7634add2 const { tab } = await searchParams;",
+      "4bfbc38e14a3 const [org] = await db.select().from(orgsTable).where(eq(orgsTable.id, s…",
+      "7735882aef9e const [{ n: postedCount } = { n: 0 }] = await db .select({ n: sql<number…",
+      "57effa54d029 const countryProfile = getProfileByCountryName(org.country);",
+      "f0e05031bc25 const showZatca = profileHasFeature(countryProfile, \"zatca_phase1\");",
+      "4b9c84dc1592 const requestedTab = tab && SETTINGS_TABS.has(tab) ? tab : \"color-theme\"…",
+      "535579f3d11c const defaultTab = requestedTab === \"zatca\" && !showZatca ? \"color-theme…",
+      "82e6cae0fe05 const bankAccounts = await db .select() .from(bankAccountsTable) .where(…",
+      "733137cf2763 const members = await db.select().from(usersTable).where(eq(usersTable.o…"
+    ],
+    "(app)/settings/presets/page.tsx": [
+      "70b16e709899 (params) ()",
+      "8feafe7fdfae const session = await requireRole(\"owner\", \"admin\");",
+      "2d1a9d4f64b4 const locale = await getLocale();",
+      "213190496c55 const orgId = session.orgId;",
+      "d48a5e89d85a const [taxPresets, paymentTerms, units, departments, productCategories, …",
+      "b21eed2f1492 const [bankAccounts, glAccounts, [org], sealAssets] = await Promise.all(…",
+      "0f482c8faeab const bankAccountOptions = bankAccounts.map((b) => ({ id: b.id, name: b.…",
+      "47e2569cebfb const defaultBankAccountIds = (org?.defaultBankAccountIds ?? []).filter(…",
+      "a0c182fc1ab9 after(() => fireEnsureFreshRates(orgId));",
+      "e9e5495f77f6 const [rateHistory, [fetchAttempt]] = await Promise.all([ db .select() .…",
+      "ad760e29709c const latestByPair = new Map<string, (typeof rateHistory)[number]>();",
+      "1bb262c7ad4f for (const r of rateHistory) { if (!latestByPair.has(r.fromCurrency)) la…",
+      "9ba4d4491783 const now = new Date();",
+      "726771c6da9c const staleCutoff = new Date(now.getTime() - STALE_AFTER_DAYS * 86400000…",
+      "cd2a59fc4d4c const latestRates: LatestRate[] = [...latestByPair.values()] .sort((a, b…",
+      "5fac42730228 const rateAttribution = providerForCountry(org?.country).attribution;",
+      "7c91feea78d0 const bundlesWithItems = bundles.map((bundle) => ({ ...bundle, items: bu…",
+      "3b3fc2341982 const sequenceOrder = new Map(DOCUMENT_TYPES.map((dt, i) => [dt, i]));",
+      "8931cb573642 const sequences = [...sequencesUnordered].sort((a, b) => (sequenceOrder.…"
+    ],
+    "(app)/settings/security/page.tsx": [
+      "70b16e709899 (params) ()",
+      "db122801cf02 const session = await requireSession();",
+      "2d1a9d4f64b4 const locale = await getLocale();",
+      "a6fc5dbb9fa9 const isAdmin = session.role === \"owner\" || session.role === \"admin\";",
+      "b441bbe76c9f const [me] = await db .select({ mfaEnabled: usersTable.mfaEnabled, passw…",
+      "29c635dabe0a const [org] = await db.select({ mfaRequired: orgsTable.mfaRequiredForPri…",
+      "1ff610f194cf const activeSessions = await listActiveSessions(session.userId);",
+      "c35039e1c726 const since = sql `now() - interval '30 days'`;",
+      "59c5cde00f4b const [events, alerts, stats] = isAdmin ? await Promise.all([ db .select…",
+      "998d32c1dc0f const statMap = Object.fromEntries((stats as { type: string; n: number; …"
+    ],
+    "(app)/settings/team/page.tsx": [
+      "70b16e709899 (params) ()",
+      "af32fb0ee2f9 redirect(\"/settings/organization?tab=team\");"
+    ]
+  },
+  "business": {
+    "src/app/(app)/clients/actions.ts": "315bc89e321bfec4",
+    "src/app/(app)/dashboard/_shared/queries.ts": "354a881b07d2fc07",
+    "src/app/(app)/dashboard/actions.ts": "8d4891d35a19dfe8",
+    "src/app/(app)/dashboard/dashboard-prefs-actions.ts": "5063caf42e3efff1",
+    "src/app/(app)/documents/export/route.ts": "0a32b53f9d958949",
+    "src/app/(app)/finance/_shared/actions.ts": "2c15c819b271c7ec",
+    "src/app/(app)/finance/bank-accounts/actions.ts": "10d922bfaf4889ac",
+    "src/app/(app)/finance/journal/actions.ts": "ba7b8fa4f88750cf",
+    "src/app/(app)/finance/payments/actions.ts": "4aa1539e076d8d8f",
+    "src/app/(app)/finance/reports/actions.ts": "a917671f3a27f301",
+    "src/app/(app)/finance/reports/export/route.ts": "1533168860eddde6",
+    "src/app/(app)/finance/statements/actions.ts": "3ed75c3a99be3407",
+    "src/app/(app)/finance/statements/export/route.ts": "59420f541ae20fab",
+    "src/app/(app)/hr/attendance/actions.ts": "0d7f9e50fcc18272",
+    "src/app/(app)/hr/employees/actions.ts": "f673e03051a46160",
+    "src/app/(app)/hr/leave/actions.ts": "7736abd8eba096ee",
+    "src/app/(app)/hr/payroll/actions.ts": "2b2aee51bf9752ff",
+    "src/app/(app)/hr/payroll/queries.ts": "f00c86cdc97e5342",
+    "src/app/(app)/inventory/products/actions.ts": "4d63d2bddd6f3af6",
+    "src/app/(app)/projects/actions.ts": "46855e0429daa0d4",
+    "src/app/(app)/purchasing/vendors/actions.ts": "8328c9bd5f4c923e",
+    "src/app/(app)/settings/compliance/actions.ts": "6c9bc6033eb1e75f",
+    "src/app/(app)/settings/organization/actions.ts": "b18877690cebd342",
+    "src/app/(app)/settings/presets/actions.ts": "e17b0608fb3a5170",
+    "src/app/(app)/settings/presets/document-preset-actions.ts": "59b89a81ac4ed22c",
+    "src/app/(app)/settings/presets/exchange-rates-actions.ts": "cfd3497081304e0a",
+    "src/app/(app)/settings/security/actions.ts": "d4fc9703c67456c1",
+    "src/app/(app)/settings/team/actions.ts": "e4f5dfbcbb16b82a",
+    "src/app/api/document-pdf/[type]/[id]/route.ts": "6d3dc7899981d148",
+    "src/app/api/import-template/[module]/route.ts": "658448acd46b7365",
+    "src/app/auth/clear/route.ts": "49c4309c64f3b527",
+    "src/app/uploads/[...path]/route.ts": "fab80e539e12d1f3",
+    "src/lib/accounting.ts": "3ea7bea0f5056272",
+    "src/lib/advance-allocations.ts": "3a6ca444c7f9b493",
+    "src/lib/auth.ts": "e8b05728036faa24",
+    "src/lib/bank-gl-accounts.ts": "309082ab844235bf",
+    "src/lib/bank-opening.ts": "1ccbae85d19de931",
+    "src/lib/base-currency.ts": "c6cdcf5d3f37ef2d",
+    "src/lib/dashboard-layout.ts": "11ce662d0eaeb26e",
+    "src/lib/dashboard-range.ts": "677a90301a001d81",
+    "src/lib/date-only.ts": "83454a7921723a25",
+    "src/lib/document-hrefs.ts": "7832db39fad6c257",
+    "src/lib/document-registry.ts": "90748ff873f1bd75",
+    "src/lib/documents.ts": "7957388bba403293",
+    "src/lib/exchange-rates.ts": "e47194f6bc586cda",
+    "src/lib/finance-reports.ts": "ec765dd2ce69b9e2",
+    "src/lib/invoice-posting.ts": "addea94b954b7d02",
+    "src/lib/payment-reversal.ts": "86580891aaaba835",
+    "src/lib/project-costing.ts": "decae2db39a19061",
+    "src/lib/report-export.ts": "1ba18d6c15f0739e",
+    "src/lib/role-matrix.ts": "5a1d04f1b722b490",
+    "src/lib/session.ts": "ed64a66268ea7c32",
+    "src/lib/settlement.ts": "8d46dc950a011d77",
+    "src/lib/statements.ts": "5aa9ce3f478847d8",
+    "src/lib/status-registry.ts": "d30d22a93f40d71f",
+    "src/lib/tenant.ts": "2cdce938b1dd5d78",
+    "src/proxy.ts": "70f267b1db15884b",
+    "src/db/**": "bf56b452adcee6fe (33 files)",
+    "drizzle/**": "6893824c03261a8c (12 files)",
+    "src/lib/currency/**": "f20adbeb2aabb8af (3 files)",
+    "src/lib/pdf/**": "34a7dd7b0bbe52cb (1 files)",
+    "src/app/print/**": "0792f709b18badd8 (5 files)",
+    "src/lib/security/**": "b0e8c03e8feb7ed8 (7 files)",
+    "src/lib/compliance/**": "06b1d45ef2dcc9a3 (1 files)",
+    "src/lib/rates/**": "b6365dbf5c76ef2e (3 files)"
+  },
+  "contracts": {
+    "P0 · DISPLAY_NUMBER_LOCALE is en-US": "fe3b47efbf065cc6",
+    "P0 · line-item money fmt() formats in DISPLAY_NUMBER_LOCALE": "6cf485f9efc6caf7",
+    "P0 · journal totals format in DISPLAY_NUMBER_LOCALE": "ce26e472d61b5084",
+    "P0 · ledger balances format in DISPLAY_NUMBER_LOCALE": "0a7c61d6962f65d5",
+    "P0.1 · Security Center formats in UTC": "436a504b4f04dfdb",
+    "P0.1 · Compliance Center formats in UTC": "fb4fd835f7357655",
+    "P0.2 · Credit Notes page hands the client the UTC month": "21bb4d4a9d3b54fb",
+    "P0.2 · Debit Notes page hands the client the UTC month": "21bb4d4a9d3b54fb",
+    "P0.2 · Credit Notes count This Month as date text": "0452848f588219b7",
+    "P0.2 · Debit Notes count This Month as date text": "0452848f588219b7",
+    "P0.2 · Valid Till dialog uses the calendar addDays": "22b3ab1caa28dd4d",
+    "P0.2 · Expected Delivery dialog uses the calendar addDays": "c0b7a98e1e33053e",
+    "P0.2 · the quotation form computes Valid Till with it": "1ed32ebd8034dae3"
+  },
+  "consumers": {
+    "CardTitle": [
+      "src/app/(app)/clients/[id]/page.tsx: <CardTitle>",
+      "src/app/(app)/clients/[id]/page.tsx: <CardTitle>",
+      "src/app/(app)/inventory/products/[id]/page.tsx: <CardTitle>",
+      "src/app/(app)/purchasing/vendors/[id]/page.tsx: <CardTitle>"
+    ],
+    "StatRow": [
+      "src/app/(app)/projects/projects-list-client.tsx: <StatRow items>",
+      "src/app/(app)/purchasing/debit-notes/dn-list-client.tsx: <StatRow items>",
+      "src/app/(app)/purchasing/orders/po-list-client.tsx: <StatRow items>",
+      "src/app/(app)/sales/credit-notes/cn-list-client.tsx: <StatRow items>",
+      "src/app/(app)/sales/delivery-challans/dc-list-client.tsx: <StatRow items>",
+      "src/app/(app)/sales/invoices/invoices-list-client.tsx: <StatRow items>",
+      "src/app/(app)/sales/orders/orders-list-client.tsx: <StatRow items>",
+      "src/app/(app)/sales/proforma/proforma-list-client.tsx: <StatRow items>",
+      "src/app/(app)/sales/quotations/quotations-list-client.tsx: <StatRow items>"
+    ],
+    "ListEmptyState": [
+      "src/app/(app)/projects/projects-list-client.tsx: <ListEmptyState createHref createLabel locale message>",
+      "src/app/(app)/purchasing/debit-notes/dn-list-client.tsx: <ListEmptyState createHref createLabel hint locale message>",
+      "src/app/(app)/purchasing/orders/po-list-client.tsx: <ListEmptyState createHref createLabel locale message>",
+      "src/app/(app)/sales/credit-notes/cn-list-client.tsx: <ListEmptyState createHref createLabel hint locale message>",
+      "src/app/(app)/sales/delivery-challans/dc-list-client.tsx: <ListEmptyState createHref createLabel locale message>",
+      "src/app/(app)/sales/invoices/invoices-list-client.tsx: <ListEmptyState createHref createLabel locale message>",
+      "src/app/(app)/sales/orders/orders-list-client.tsx: <ListEmptyState createHref createLabel locale message>",
+      "src/app/(app)/sales/proforma/proforma-list-client.tsx: <ListEmptyState createHref createLabel locale message>",
+      "src/app/(app)/sales/quotations/quotations-list-client.tsx: <ListEmptyState createHref createLabel locale message>"
+    ],
+    "SectionHeader": [],
+    "EmptyState": [],
+    "formatDisplayDate": []
+  },
+  "listEmptyState": "de3bd579f4f6fbdd",
+  "css": {
+    ".stat-row-2": [
+      "src/app/(app)/mockup-parity.css: .stat-row-2 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 18px; }"
+    ]
+  },
+  "actions": {
+    "(app)/clients/[id]/page.tsx": [
+      "/finance/statements/export?${}",
+      "action:archiveClientAction",
+      "action:deleteClientAction",
+      "action:getStatementAction",
+      "action:toggleClientActiveAction",
+      "action:unarchiveClientAction",
+      "action:updateClientAction",
+      "action:uploadClientLogoAction"
+    ],
+    "(app)/clients/new/page.tsx": [
+      "action:createClientAction",
+      "action:uploadClientLogoAction"
+    ],
+    "(app)/clients/page.tsx": [
+      "/api/import-template/${}?format=csv",
+      "/api/import-template/${}?format=xlsx",
+      "/clients${}",
+      "/clients/${}",
+      "/clients/new",
+      "/clients/recycle-bin",
+      "action:archiveClientAction",
+      "action:commitImportV2Action",
+      "action:deleteClientAction",
+      "action:parseImportFileAction",
+      "action:previewErrorCsvAction",
+      "action:previewImportAction",
+      "action:toggleClientActiveAction",
+      "action:unarchiveClientAction"
+    ],
+    "(app)/clients/recycle-bin/page.tsx": [
+      "/clients",
+      "action:permanentlyDeleteClientAction",
+      "action:restoreClientAction"
+    ],
+    "(app)/dashboard/page.tsx": [
+      "/dashboard?range=${}",
+      "/finance/journal",
+      "/finance/journal",
+      "/hr/employees",
+      "/hr/employees/new",
+      "/projects",
+      "/purchasing/orders",
+      "/purchasing/orders/new",
+      "/sales/invoices",
+      "/sales/invoices",
+      "/sales/invoices/new",
+      "/sales/quotations/new",
+      "/settings/organization",
+      "action:confirmBaseCurrencyAction",
+      "action:saveDashboardLayoutAction",
+      "action:setDashboardRangeAction"
+    ],
+    "(app)/finance/bank-accounts/page.tsx": [
+      "action:createBankAccountAction",
+      "action:openingContraOptionsAction",
+      "action:updateBankAccountAction"
+    ],
+    "(app)/finance/chart-of-accounts/page.tsx": [
+      "/finance/chart-of-accounts",
+      "action:createAccountAction"
+    ],
+    "(app)/finance/journal/page.tsx": [
+      "action:postJournalEntryAction"
+    ],
+    "(app)/finance/ledger/page.tsx": [
+      "/finance/ledger",
+      "action:createAccountAction"
+    ],
+    "(app)/finance/payments/page.tsx": [
+      "/api/document-pdf/${}/${}",
+      "/purchasing/orders/${}",
+      "/sales/invoices/${}",
+      "action:fetchMissingRateAction",
+      "action:recordPaymentAction",
+      "action:resolvePaymentRateAction"
+    ],
+    "(app)/finance/reports/page.tsx": [
+      "/finance/reports/export?${}",
+      "/purchasing/orders/${}",
+      "/sales/invoices/${}",
+      "action:getAccountDrilldownAction"
+    ],
+    "(app)/finance/statements/page.tsx": [
+      "/finance/statements/export?${}",
+      "/finance/statements?kind=client",
+      "/finance/statements?kind=vendor",
+      "action:getStatementAction"
+    ],
+    "(app)/hr/attendance/page.tsx": [
+      "action:checkInAction",
+      "action:checkOutAction"
+    ],
+    "(app)/hr/departments/page.tsx": [
+      "/hr/employees",
+      "/settings/presets"
+    ],
+    "(app)/hr/employees/[id]/page.tsx": [
+      "action:saveSalaryStructureAction",
+      "action:updateEmployeeAction",
+      "action:uploadEmployeePhotoAction"
+    ],
+    "(app)/hr/employees/new/page.tsx": [
+      "action:createEmployeeAction",
+      "action:uploadEmployeePhotoAction"
+    ],
+    "(app)/hr/employees/page.tsx": [
+      "/hr/employees/${}",
+      "/hr/employees/new"
+    ],
+    "(app)/hr/leave/page.tsx": [
+      "action:approveLeaveAction",
+      "action:rejectLeaveAction",
+      "action:requestLeaveAction"
+    ],
+    "(app)/hr/payroll/page.tsx": [
+      "action:processPayrollAction"
+    ],
+    "(app)/inventory/products/[id]/page.tsx": [
+      "action:adjustStockAction",
+      "action:archiveProductAction",
+      "action:deleteProductAction",
+      "action:toggleProductActiveAction",
+      "action:unarchiveProductAction",
+      "action:updateProductAction"
+    ],
+    "(app)/inventory/products/new/page.tsx": [
+      "action:createProductAction"
+    ],
+    "(app)/inventory/products/page.tsx": [
+      "/inventory/products${}",
+      "/inventory/products/${}",
+      "/inventory/products/new",
+      "/inventory/products/recycle-bin",
+      "action:archiveProductAction",
+      "action:deleteProductAction",
+      "action:toggleProductActiveAction",
+      "action:unarchiveProductAction"
+    ],
+    "(app)/inventory/products/recycle-bin/page.tsx": [
+      "/inventory/products",
+      "action:permanentlyDeleteProductAction",
+      "action:restoreProductAction"
+    ],
+    "(app)/projects/[id]/page.tsx": [
+      "/purchasing/orders/${}",
+      "/sales/invoices/${}",
+      "/sales/orders/${}",
+      "/sales/quotations/${}",
+      "action:createTaskAction",
+      "action:logTimeAction",
+      "action:updateProjectStatusAction",
+      "action:updateTaskAction"
+    ],
+    "(app)/projects/new/page.tsx": [
+      "action:createProjectAction"
+    ],
+    "(app)/projects/page.tsx": [
+      "/projects/${}",
+      "/projects/${}",
+      "/projects/new",
+      "/projects/new",
+      "/recycle-bin"
+    ],
+    "(app)/purchasing/vendors/[id]/page.tsx": [
+      "/finance/statements/export?${}",
+      "/purchasing/orders/${}",
+      "action:archiveVendorAction",
+      "action:deleteVendorAction",
+      "action:getStatementAction",
+      "action:toggleVendorActiveAction",
+      "action:unarchiveVendorAction",
+      "action:updateVendorAction",
+      "action:uploadVendorLogoAction"
+    ],
+    "(app)/purchasing/vendors/new/page.tsx": [
+      "action:createVendorAction",
+      "action:uploadVendorLogoAction"
+    ],
+    "(app)/purchasing/vendors/page.tsx": [
+      "/purchasing/vendors${}",
+      "/purchasing/vendors/${}",
+      "/purchasing/vendors/new",
+      "/purchasing/vendors/recycle-bin",
+      "action:archiveVendorAction",
+      "action:deleteVendorAction",
+      "action:toggleVendorActiveAction",
+      "action:unarchiveVendorAction"
+    ],
+    "(app)/purchasing/vendors/recycle-bin/page.tsx": [
+      "/purchasing/vendors",
+      "action:permanentlyDeleteVendorAction",
+      "action:restoreVendorAction"
+    ],
+    "(app)/recycle-bin/page.tsx": [
+      "action:permanentDeleteDocumentAction",
+      "action:restoreDocumentAction"
+    ],
+    "(app)/settings/compliance/page.tsx": [
+      "action:anonymizeCustomerAction",
+      "action:deleteConsentAction",
+      "action:exportOrgDataAction",
+      "action:recordConsentAction"
+    ],
+    "(app)/settings/organization/page.tsx": [
+      "action:addTeamMemberAction",
+      "action:changeRoleAction",
+      "action:enableZatcaPhase1Action",
+      "action:toggleMemberActiveAction",
+      "action:updateBusinessDetailsAction",
+      "action:updateColorThemeAction",
+      "action:updateDefaultBankAccountAction",
+      "action:updateFiscalYearAction",
+      "action:updateNumberFormatAction",
+      "action:updateVatConfigAction",
+      "action:uploadLogoAction"
+    ],
+    "(app)/settings/presets/page.tsx": [
+      "action:addBundleItemAction",
+      "action:createBankAccountAction",
+      "action:createBundleAction",
+      "action:createDepartmentAction",
+      "action:createLeaveTypeAction",
+      "action:createPaymentTermAction",
+      "action:createProductCategoryAction",
+      "action:createTaxPresetAction",
+      "action:createUnitAction",
+      "action:deleteBundleAction",
+      "action:deleteDepartmentAction",
+      "action:deleteLeaveTypeAction",
+      "action:deleteNoteTemplateAction",
+      "action:deletePaymentTermAction",
+      "action:deleteProductCategoryAction",
+      "action:deleteSealAssetAction",
+      "action:deleteTaxPresetAction",
+      "action:deleteTermsGroupAction",
+      "action:deleteUnitAction",
+      "action:fetchRatesNowAction",
+      "action:openingContraOptionsAction",
+      "action:removeBundleItemAction",
+      "action:saveManualRateAction",
+      "action:saveNoteTemplateAction",
+      "action:saveTermsGroupAction",
+      "action:updateBankAccountAction",
+      "action:updateBundleAction",
+      "action:updateDefaultBankAccountsAction",
+      "action:updateDepartmentAction",
+      "action:updateLeaveTypeAction",
+      "action:updatePaymentTermAction",
+      "action:updatePrintLayoutPresetAction",
+      "action:updateProductCategoryAction",
+      "action:updateSealDefaultsAction",
+      "action:updateSequenceAction",
+      "action:updateTaxPresetAction",
+      "action:updateUnitAction",
+      "action:uploadCustomLayoutAction",
+      "action:uploadSealAssetAction"
+    ],
+    "(app)/settings/security/page.tsx": [
+      "action:beginMfaSetupAction",
+      "action:changePasswordAction",
+      "action:confirmMfaAction",
+      "action:disableMfaAction",
+      "action:logoutAllOtherSessionsAction",
+      "action:terminateSessionAction"
+    ],
+    "(app)/settings/team/page.tsx": [
+      "/settings/organization?tab=team"
+    ]
+  }
+}

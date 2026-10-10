@@ -19,9 +19,11 @@ function CardHeader({ className, ...props }: React.ComponentProps<"div">) {
   );
 }
 
-function CardTitle({ className, ...props }: React.ComponentProps<"div">) {
+// `as` (DEV-UI-01.7) lets a card title be the section's real heading. It defaults to the plain
+// <div> every existing title renders, with the same classes.
+function CardTitle({ className, as: Comp = "div", ...props }: React.ComponentProps<"div"> & { as?: "div" | "h2" | "h3" }) {
   return (
-    <div
+    <Comp
       data-slot="card-title"
       className={cn("text-title-sm font-semibold text-ink", className)}
       {...props}
