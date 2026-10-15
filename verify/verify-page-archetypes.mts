@@ -64,6 +64,26 @@ const C1_PAGES = [
 const C1_DETAIL = C1_PAGES.filter((f) => f.includes("/[id]/"));
 const C1_BINS = C1_PAGES.filter((f) => f.includes("/recycle-bin/"));
 const PHF = "src/components/layout/page-header.tsx";
+// DEV-UI-01.7 C2: the seven HR routes, by the files that render them (a route's client component holds
+// its markup where it has one).
+const HR = `${A}hr/`;
+const C2_ROUTES: Record<string, string[]> = {
+  employees: [`${HR}employees/page.tsx`, `${HR}employees/employees-client.tsx`],
+  "employees/new": [`${HR}employees/new/page.tsx`],
+  "employees/[id]": [`${HR}employees/[id]/page.tsx`],
+  departments: [`${HR}departments/page.tsx`],
+  attendance: [`${HR}attendance/page.tsx`],
+  leave: [`${HR}leave/page.tsx`, `${HR}leave/leave-client.tsx`],
+  payroll: [`${HR}payroll/page.tsx`, `${HR}payroll/payroll-client.tsx`],
+};
+const C2_FILES = Object.values(C2_ROUTES).flat();
+/** The file holding each HR route's PageHeader. */
+const C2_HEADERS = [
+  `${HR}employees/employees-client.tsx`, `${HR}employees/new/page.tsx`, `${HR}employees/[id]/page.tsx`, `${HR}departments/page.tsx`,
+  `${HR}attendance/page.tsx`, `${HR}leave/leave-client.tsx`, `${HR}payroll/page.tsx`,
+];
+const C2_EMPTY = [`${HR}employees/employees-client.tsx`, `${HR}departments/page.tsx`, `${HR}attendance/page.tsx`, `${HR}leave/leave-client.tsx`, `${HR}payroll/page.tsx`];
+const C2_STATROWS = [`${HR}employees/employees-client.tsx`, `${HR}payroll/page.tsx`];
 
 let pass = 0;
 let fail = 0;
@@ -106,6 +126,8 @@ const printer = ts.createPrinter({ removeComments: true, newLine: ts.NewLineKind
 /** A node's code with comments, layout and trailing commas normalised away: what it does, not how it is typed out. */
 const canon = (n: ts.Node) =>
   printer.printNode(ts.EmitHint.Unspecified, n, n.getSourceFile()).replace(/\s+/g, " ").replace(/,\s*\}/g, " }").replace(/,\s*([\])])/g, "$1").trim();
+/** Source without comments, so a check never matches its own explanation. */
+const codeOnly = (s: string) => s.replace(/\{\/\*[\s\S]*?\*\/\}/g, "").replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/.*$/gm, "$1");
 const hasJsx = (n: ts.Node): boolean => ts.isJsxElement(n) || ts.isJsxSelfClosingElement(n) || ts.isJsxFragment(n) || !!ts.forEachChild(n, (c) => (hasJsx(c) ? true : undefined));
 const directives = (sf: ts.SourceFile) => {
   const out: string[] = [];
@@ -662,15 +684,24 @@ check("StatRow without `columns` renders exactly the 1bfdbbf markup — no data-
 const srBad = [5, 1, 0, 3.5, "3", null].map((c) => html(h(StatRow, { items: srItems, columns: c as 2 })));
 check("StatRow: any other `columns` from an untyped caller falls back to the default row", srBad.every((x) => x === SR_1BFDBBF));
 const srCols = ([2, 3, 4] as const).map((c) => html(h(StatRow, { items: srItems.slice(0, 1), columns: c })));
-check("StatRow columns 2 / 3 / 4: a fixed grid of that many columns on the same .stat-row-2 row",
-  srCols.every((x, i) => x.startsWith(`<div class="stat-row-2" data-columns="${i + 2}" style="grid-template-columns:repeat(${i + 2}, 1fr)">`)), srCols.join(" "));
+// D-6 (C2): `columns` sets --stat-cols; the .stat-row-2 rule owns the grid, so its ≤640px rule reaches
+// every row — an inline grid-template-columns (C0's first form) would beat that media rule.
+check("StatRow columns 2 / 3 / 4: the same .stat-row-2 row with --stat-cols set (D-6) — no inline grid-template-columns to beat the phone rule",
+  srCols.every((x, i) => x.startsWith(`<div class="stat-row-2" data-columns="${i + 2}" style="--stat-cols:${i + 2}">`)) &&
+    !/grid-template-columns/.test(srCols.join("")) && !/gridTemplateColumns|grid-template-columns/.test(codeOnly(read(SRF))), srCols.join(" "));
 const srNode = html(h(StatRow, { items: [{ label: "Balance", value: h("span", { className: "money" }, "SAR 1,250.00") }] }));
 check("StatRow: a ReactNode value renders inside the kpi-value", srNode.includes('margin-top:4px"><span class="money">SAR 1,250.00</span></div>'), srNode);
-check(`StatRow consumers unchanged (${pins.consumers.StatRow.length}); none passes \`columns\` in C0`,
-  same(now.consumers.StatRow, pins.consumers.StatRow) && !now.consumers.StatRow.some((u) => / columns\b/.test(u)), delta(pins.consumers.StatRow, now.consumers.StatRow));
-check("no D-6 yet: .stat-row-2 is still the one 4-column rule, with no responsive (@media) variant",
-  same(now.css[".stat-row-2"], pins.css[".stat-row-2"]) && now.css[".stat-row-2"].length === 1 && now.css[".stat-row-2"][0].endsWith(".stat-row-2 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 18px; }"),
-  now.css[".stat-row-2"].join(" | "));
+check(`StatRow consumers as pinned (${pins.consumers.StatRow.length}) — C0's nine, plus the Employees and Payroll strips (C2); none passes \`columns\``,
+  same(now.consumers.StatRow, pins.consumers.StatRow) && now.consumers.StatRow.length === 11 && !now.consumers.StatRow.some((u) => / columns\b/.test(u)) &&
+    C2_STATROWS.every((f) => now.consumers.StatRow.some((u) => u.startsWith(`${f}: `))), delta(pins.consumers.StatRow, now.consumers.StatRow));
+// D-6 (approved; C2): every KPI row is --stat-cols columns (default 4) on minmax(0, 1fr) tracks, and two
+// across at ≤640px. These are the only rules naming .stat-row-2.
+const D6_RULES = [
+  `${A}mockup-parity.css: .stat-row-2 { display: grid; grid-template-columns: repeat(var(--stat-cols, 4), minmax(0, 1fr)); gap: 12px; margin-bottom: 18px; }`,
+  `${A}mockup-parity.css: @media (max-width: 640px) > .stat-row-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }`,
+];
+check("D-6: .stat-row-2 is --stat-cols columns (default 4) of minmax(0, 1fr), and two across at ≤640px — the only rules for it",
+  same(now.css[".stat-row-2"], D6_RULES) && same(now.css[".stat-row-2"], pins.css[".stat-row-2"]), now.css[".stat-row-2"].join(" | "));
 check("StatRow / CardTitle: no physical left / right; StatRow still imports only status-registry types",
   physical(SRF).length === 0 && physical("src/components/ui/card.tsx").length === 0 && same(imports(SRF), ["@/lib/status-registry"]) && /^import type /m.test(read(SRF)));
 
@@ -775,12 +806,14 @@ if (runs.every((r) => r.res)) {
 }
 const resolved = (["en", "ar"] as const).flatMap((l) => STYLES.map((s) => formatDisplayDate("2026-06-15T09:00:00Z", l, s)));
 check("in this process too (the verifier's own zone and locale) the output is the expected one", same(resolved, EXPECTED[0].slice(1)), resolved.join(" | "));
-check("consumers: formatDisplayDate is not used by any page yet (its consumers arrive with C2 / C6)",
-  same(now.consumers.formatDisplayDate, pins.consumers.formatDisplayDate) && now.consumers.formatDisplayDate.length === 0, now.consumers.formatDisplayDate.join(" "));
+check("consumers: formatDisplayDate on exactly the two C2 date surfaces — Attendance's date pill and Payroll's title month (Dashboard's dates are C6)",
+  same(now.consumers.formatDisplayDate, pins.consumers.formatDisplayDate) && same(now.consumers.formatDisplayDate, [`${HR}attendance/page.tsx`, `${HR}payroll/page.tsx`]),
+  now.consumers.formatDisplayDate.join(" "));
 const fileOf = (u: string) => u.slice(0, u.indexOf(": <"));
-check("consumers: SectionHeader only on the client and vendor detail Statement of Account, EmptyState only in the three master-data recycle bins (C1)",
+check("consumers: SectionHeader on the client / vendor Statement of Account (C1) and Salary Structure / Past payroll runs (C2); EmptyState in the three master-data bins (C1) and the five HR empty states (C2)",
   same(now.consumers.SectionHeader, pins.consumers.SectionHeader) && same(now.consumers.EmptyState, pins.consumers.EmptyState) &&
-    same(now.consumers.SectionHeader.map(fileOf), [`${A}clients/[id]/page.tsx`, `${A}purchasing/vendors/[id]/page.tsx`]) && same(now.consumers.EmptyState.map(fileOf), [...C1_BINS].sort()),
+    same(now.consumers.SectionHeader.map(fileOf), [`${A}clients/[id]/page.tsx`, `${HR}employees/[id]/page.tsx`, `${HR}payroll/page.tsx`, `${A}purchasing/vendors/[id]/page.tsx`]) &&
+    same(now.consumers.EmptyState.map(fileOf), [...C1_BINS, ...C2_EMPTY].sort()),
   [...now.consumers.SectionHeader, ...now.consumers.EmptyState].join(" "));
 
 // ---------- 7. no abstraction creep ----------
@@ -863,9 +896,9 @@ check("PageHeader: a text-page / 600 title (no font-extrabold, no text-2xl) that
   phCode.includes(PH_H1.replace("class=", "className=")) && phLayout.length === 0 && physical(PHF).length === 0, [...phLayout.map(String), ...physical(PHF)].join(" "));
 check("PageHeader: imports only react and the cn helper", same(imports(PHF), ["react", "@/lib/utils"]), imports(PHF).join(" "));
 const phUses = now.consumers.PageHeader;
-check(`PageHeader consumers: exactly the 12 C1 pages, one header each, none patching it with a className (${phUses.length})`,
-  same(phUses, pins.consumers.PageHeader) && same(phUses.map(fileOf).sort(), [...C1_PAGES].sort()) && !phUses.some((u) => / className\b/.test(u)),
-  delta([...C1_PAGES].sort(), phUses.map(fileOf).sort()));
+check(`PageHeader consumers: the 12 C1 pages and, since C2, the 7 HR routes — one header each, none patching it with a className (${phUses.length})`,
+  same(phUses, pins.consumers.PageHeader) && same(phUses.map(fileOf).sort(), [...C1_PAGES, ...C2_HEADERS].sort()) && !phUses.some((u) => / className\b/.test(u)),
+  delta([...C1_PAGES, ...C2_HEADERS].sort(), phUses.map(fileOf).sort()));
 
 // D-9: the layout pin narrowed — every other layout file byte-pinned, one by one
 const dfPins = JSON.parse(read("verify/document-form-pins.json")) as Record<string, string>;
@@ -965,6 +998,154 @@ const toneMaps = [
 ];
 check("C1 pages: status only through StatusBadge — the same 13 badges, domains and status values as C0 — and no local tone / status / colour map",
   same(badgesNow, C0_BADGES) && toneMaps.length === 0, `${JSON.stringify(badgesNow)} ${toneMaps.join(" ")}`);
+
+// ---------- 10. C2 — HR archetypes ----------
+section("10. C2 — HR archetypes");
+/** Code with all whitespace removed: a structural comparison that ignores layout. */
+const squash = (s: string) => s.replace(/\s+/g, "");
+const isEl = (n: ts.Node): n is El => ts.isJsxOpeningElement(n) || ts.isJsxSelfClosingElement(n);
+const inside = (root: ts.Node, pred: (n: ts.Node) => boolean): ts.Node[] => {
+  const out: ts.Node[] = [];
+  const visit = (n: ts.Node) => {
+    if (pred(n)) out.push(n);
+    ts.forEachChild(n, visit);
+  };
+  ts.forEachChild(root, visit);
+  return out;
+};
+const attrText = (el: El | undefined, name: string) => (el ? squash(attr(el, name)?.initializer?.getText() ?? "") : "");
+
+// Page h1 and section headings
+const perRoute = Object.entries(C2_ROUTES).map(([r, files]) => [r, files.reduce((n, f) => n + jsxEls(f, "PageHeader").length, 0)] as const);
+const hrHand = C2_FILES.flatMap((f) => findAll(parse(f), (n) => isEl(n) && /^h[1-6]$/.test(n.tagName.getText())).map((n) => `${rel(f)}: <${(n as El).tagName.getText()}>`));
+check("C2: each of the 7 HR routes renders exactly one PageHeader (its page h1); no .main-head and no hand-written heading left in any HR file",
+  perRoute.every(([, n]) => n === 1) && hrHand.length === 0 && C2_FILES.every((f) => !codeOnly(read(f)).includes("main-head")),
+  `${perRoute.map(([r, n]) => `${r}:${n}`).join(" ")} ${hrHand.join(" ")}`);
+const HEADER_SLOTS: [string, Record<"title" | "description" | "meta" | "actions", string>][] = [
+  [`${HR}employees/employees-client.tsx`, { title: '{t(locale,"Employees")}', description: "", meta: "",
+    actions: '{<Linkhref="/hr/employees/new"className="btnbtn-primary"style={{width:"auto",padding:"018px"}}><PlusclassName="size-3.5"/>{t(locale,"AddEmployee")}</Link>}' }],
+  [`${HR}employees/new/page.tsx`, { title: '{t(locale,"NewEmployee")}', description: "", meta: "", actions: "" }],
+  [`${HR}employees/[id]/page.tsx`, { title: '{<>{employee.name}<spanclassName="font-monotext-[13px]text-ink-muted">·{employee.employeeCode}</span></>}', description: "",
+    meta: '{<StatusBadgedomain="employee"status={employee.status}locale={locale}/>}', actions: "" }],
+  [`${HR}departments/page.tsx`, { title: '{t(locale,"Departments")}', description: "", meta: "", actions: "" }],
+  [`${HR}attendance/page.tsx`, { title: '{`${t(locale,"Attendance")}—${t(locale,"Today")}`}', description: "", meta: '{<spanclassName="org-pill">{todayLabel}</span>}', actions: "" }],
+  [`${HR}leave/leave-client.tsx`, { title: '{t(locale,"LeaveRequests")}', description: "", meta: "",
+    actions: '{<ButtononClick={()=>setOpen(true)}disabled={employees.length===0}style={{padding:"018px"}}><PlusclassName="size-3.5"/>{t(locale,"RequestLeave")}</Button>}' }],
+  [`${HR}payroll/page.tsx`, { title: '{`${t(locale,"Payroll")}—${monthLabel}`}', description: "", meta: '{<StatusBadgedomain="payroll_period"status={run?"processed":"draft"}locale={locale}/>}', actions: "" }],
+];
+const headerBad = HEADER_SLOTS.flatMap(([f, want]) => {
+  const el = jsxEls(f, "PageHeader")[0];
+  return (Object.keys(want) as (keyof typeof want)[]).filter((k) => attrText(el, k) !== want[k]).map((k) => `${rel(f)} ${k}: ${attrText(el, k)}`);
+});
+check("C2 headers: the title each route had (Employees, New Employee, the employee's name + monospace code, Departments, Attendance — Today, Leave Requests, Payroll — <month>); statuses and the date pill as meta, outside the h1; Add Employee and Request Leave as the actions, as they were",
+  headerBad.length === 0, headerBad.slice(0, 4).join(" | "));
+const sectionsIn = (f: string) => jsxEls(f, "SectionHeader").map((el) => `${attrText(el, "level")} ${attrText(el, "title")}`);
+check("C2 section headings: Salary Structure (employee detail) and Past payroll runs (payroll) are SectionHeader h2s — h1 → h2, no skip",
+  same(sectionsIn(`${HR}employees/[id]/page.tsx`), ['{2} {t(locale,"SalaryStructure")}']) && same(sectionsIn(`${HR}payroll/page.tsx`), ['{2} {t(locale,"Pastpayrollruns")}']),
+  `${sectionsIn(`${HR}employees/[id]/page.tsx`)} | ${sectionsIn(`${HR}payroll/page.tsx`)}`);
+
+// Department filter
+const ECF = `${HR}employees/employees-client.tsx`;
+const tabRow = findAll(parse(ECF), (n) => ts.isJsxElement(n) && attrText(n.openingElement, "className") === '"tab-row"')[0] as ts.JsxElement | undefined;
+const filterEls = tabRow ? (inside(tabRow, (n) => isEl(n) && /^\{cn\("tab"/.test(attrText(n, "className"))) as El[]) : [];
+// The keyboard path is the button's own (Tab, Enter, Space): nothing on a filter but its key, type,
+// className, aria-pressed and onClick — no tabIndex, no key or pointer handler of its own.
+const attrNames = (el: El) => el.attributes.properties.map((p) => (ts.isJsxAttribute(p) ? p.name.getText() : "{…}")).filter((n) => n !== "key").sort().join(" ");
+const filterBad = filterEls.filter((el) => el.tagName.getText() !== "button" || attrText(el, "type") !== '"button"' || attrNames(el) !== "aria-pressed className onClick type" ||
+  // aria-pressed is exactly the condition that shows the tab as active
+  attrText(el, "className") !== `{cn("tab",${attrText(el, "aria-pressed").slice(1, -1)}&&"active")}`);
+const clickables = C2_FILES.flatMap((f) => findAll(parse(f), (n) => isEl(n) && !!attr(n, "onClick") && /^[a-z]/.test(n.tagName.getText()) && n.tagName.getText() !== "button").map((n) => `${rel(f)}: <${(n as El).tagName.getText()} onClick>`));
+check('C2 department filter: real <button type="button"> toggles on the .tab row (All departments + one per department), each aria-pressed exactly when shown active, still calling setActiveDept(null / d.id), with nothing else on them (no tabIndex, no key handler: the button\'s own keyboard behaviour); no clickable span or div left in any HR file',
+  tabRow !== undefined && filterEls.length === 2 && filterBad.length === 0 && clickables.length === 0 &&
+    attrText(filterEls[0], "onClick") === "{()=>setActiveDept(null)}" && attrText(filterEls[1], "onClick") === "{()=>setActiveDept(d.id)}",
+  `${filterEls.length} filters; ${filterBad.map((el) => el.getText().slice(0, 80)).join(" | ")} ${clickables.join(" ")}`);
+
+// KPI strips on StatRow
+const statItems = (f: string) => jsxEls(f, "StatRow").map((el) => attrText(el, "items"));
+const EMP_ITEMS =
+  '{[{label:t(locale,"Headcount"),value:rows.length},{...statusStat(locale,"attendance","present",presentToday),label:t(locale,"Presenttoday")},' +
+  'statusStat(locale,"attendance","on_leave",onLeaveToday),{label:t(locale,"Departments"),value:departments.length},]}';
+const PAY_ITEMS =
+  '{[{label:t(locale,"Employees"),value:lines.length},{label:t(locale,"Grosspay"),value:<Moneyamount={grossTotal}context="summary"/>},' +
+  '{label:t(locale,"Deductions"),value:<Moneyamount={deductionsTotal}context="summary"/>},{label:t(locale,"Netpay"),value:<Moneyamount={netTotal}context="summary"/>},]}';
+const empCode = codeOnly(read(ECF));
+check("C2 Employees KPIs: one StatRow — Headcount and Departments plain; Present today and On Leave from statusStat (attendance present / on_leave: label, tone, colour from the registry); nothing coloured by hand",
+  same(statItems(ECF), [EMP_ITEMS]) && !/statusTextClass\(|\bcolorClass\b|\btext-(success|info|warning|danger|corrective)\b|var\(--(success|info|accent-green)\)/.test(empCode),
+  statItems(ECF).join(" "));
+const PAYF = `${HR}payroll/page.tsx`;
+check("C2 Payroll KPIs: one StatRow — Employees, Gross pay, Deductions, Net pay through <Money>; Net pay neutral (the decorative orange is gone, no invented tone)",
+  same(statItems(PAYF), [PAY_ITEMS]) && !/brand-orange|\bcolorClass\b|\bcolor:/.test(codeOnly(read(PAYF))), statItems(PAYF).join(" "));
+const legacyKpis = C2_FILES.filter((f) => /stat-row-2/.test(codeOnly(read(f)))).map(rel);
+check("C2: no hand-built .stat-row-2 KPI cards left in any HR file", legacyKpis.length === 0, legacyKpis.join(" "));
+
+// Empty states
+const emptyOf = (f: string) => jsxEls(f, "EmptyState").map((el) => el.attributes.properties.map((p) => (ts.isJsxAttribute(p) ? p.name.getText() : "{…}")).sort().join(" ") + " " + attrText(el, "message"));
+const EMPTY_WANT: Record<string, string[]> = {
+  [`${HR}employees/employees-client.tsx`]: ['message {t(locale,"Noemployeesyet.Addyourfirstemployee.")}'],
+  [`${HR}attendance/page.tsx`]: ['message {t(locale,"Noactiveemployeesyet—addemployeestostarttrackingattendance.")}'],
+  [`${HR}leave/leave-client.tsx`]: ['message {t(locale,"Noleaverequestsyet.")}'],
+  [`${HR}payroll/page.tsx`]: [`message {t(locale,"Noactiveemployeeswithasalarystructure—setoneoneachemployee'sprofilefirst.")}`],
+  [`${HR}departments/page.tsx`]: ['action hint message {t(locale,"ManagedfromtheEmployeesscreen")}'],
+};
+const emptyBad = Object.entries(EMPTY_WANT).filter(([f, want]) => !same(emptyOf(f), want)).map(([f]) => `${rel(f)}: ${emptyOf(f)}`);
+const deptEmpty = jsxEls(`${HR}departments/page.tsx`, "EmptyState")[0];
+const deptAction = attrText(deptEmpty, "action");
+const deptHint = attrText(deptEmpty, "hint");
+const oldEmpty = C2_FILES.filter((f) => /rounded-2xl border border-line bg-surface shadow-elevated|padding: "52px 32px"/.test(codeOnly(read(f)))).map(rel);
+check("C2 empty states: EmptyState in Employees, Attendance, Leave, Payroll and the Departments placeholder (message / hint / its two links as the action, targets unchanged); the custom shadowed recipe is gone",
+  emptyBad.length === 0 && oldEmpty.length === 0 && /^\{<><Linkhref="\/hr\/employees"[\s\S]*<Linkhref="\/settings\/presets"[\s\S]*<\/>\}$/.test(deptAction) &&
+    deptHint.includes('{t(locale,"Departmentsarethefiltertabsatthetop') && deptHint.includes('{t(locale,"DepartmentnamesaremanagedinPresetManagement'),
+  [...emptyBad, ...oldEmpty, deptAction.slice(0, 60)].join(" | "));
+
+// Dates
+const ATTF = `${HR}attendance/page.tsx`;
+check("C2 dates: Attendance's pill and Payroll's title month go through formatDisplayDate, from the day / period the page already selected (UTC midnight) — no second clock; no plain ar-SA or toLocaleDateString left on either",
+  /const todayLabel = formatDisplayDate\(`\$\{today\}T00:00:00Z`, locale, "date"\);/.test(read(ATTF)) &&
+    /const monthLabel = formatDisplayDate\(`\$\{periodYear\}-\$\{String\(periodMonth\)\.padStart\(2, "0"\)\}-01T00:00:00Z`, locale, "monthYear"\);/.test(read(PAYF)) &&
+    [ATTF, PAYF].every((f) => !/toLocaleDateString|"ar-SA"/.test(codeOnly(read(f)))));
+
+// Payroll layout and the two grid recipes
+const PCF = `${HR}payroll/payroll-client.tsx`;
+check("C2 payroll layout: PayrollClient no longer overrides .two-col (no inline display / gridTemplateColumns; only its 18px gap)",
+  !/gridTemplateColumns|display: "grid"/.test(codeOnly(read(PCF))) && /<div className="two-col" style=\{\{ gap: 18 \}\}>/.test(read(PCF)));
+const twoCol = cssRules(".two-col");
+const acctGrid = cssRules(".acct-grid ").concat(cssRules(".acct-grid").filter((r) => / \.acct-grid \{|^[^:]+: \.acct-grid \{|> \.acct-grid \{/.test(r)));
+check(".two-col on minmax(0, 1fr) tracks — two on desktop, one at ≤1100px (C2); .acct-grid's rules unchanged (280px 1fr; 1fr at ≤1100px) until C4",
+  same(twoCol, [`${A}mockup-parity.css: .two-col { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }`, `${A}mockup-parity.css: @media (max-width: 1100px) > .two-col { grid-template-columns: minmax(0, 1fr); }`]) &&
+    same([...new Set(acctGrid)], [`${A}mockup-parity.css: .acct-grid { display: grid; grid-template-columns: 280px 1fr; gap: 16px; }`, `${A}mockup-parity.css: @media (max-width: 1100px) > .acct-grid { grid-template-columns: 1fr; }`]),
+  [...twoCol, ...new Set(acctGrid)].join(" | "));
+
+// D-6 reaches other pages through CSS and the component only
+const D6_SOURCES: Record<string, string> = {
+  "sales/quotations/quotations-list-client.tsx": "370f5b3d84d2c8a5",
+  "sales/orders/orders-list-client.tsx": "c3f158801b7afc05",
+  "sales/proforma/proforma-list-client.tsx": "b183ef64e1f23f75",
+  "sales/invoices/invoices-list-client.tsx": "df9124a4c3c54d3c",
+  "sales/delivery-challans/dc-list-client.tsx": "c837d62b68edfe78",
+  "purchasing/orders/po-list-client.tsx": "5df02b6f339170af",
+  "sales/credit-notes/cn-list-client.tsx": "32532d3b1813b82f",
+  "purchasing/debit-notes/dn-list-client.tsx": "ccfc2e25e738df80",
+  "projects/projects-list-client.tsx": "790f9f6b644e6f02",
+  "projects/[id]/page.tsx": "1df7311426f32ad0",
+  "projects/[id]/cost-control.tsx": "2b8a78d963ff9394",
+  "settings/security/security-client.tsx": "97d7c211bd24e412",
+};
+const d6Drift = Object.entries(D6_SOURCES).filter(([f, hsh]) => !exists(A + f) || sha(A + f) !== hsh).map(([f]) => f);
+check(`D-6 reaches every other KPI row through the CSS and the StatRow component only — the eight document lists, Projects (list, detail, cost control) and Security byte-identical to C1 (${Object.keys(D6_SOURCES).length} files)`,
+  d6Drift.length === 0, d6Drift.join(" "));
+
+// Status and direction
+const C1_HR_BADGES: Record<string, string[]> = {
+  "hr/employees/employees-client.tsx": ['domain="employee" status="inactive" locale={locale}', 'domain="attendance" status={r.todayStatus} locale={locale}'],
+  "hr/employees/[id]/page.tsx": ['domain="employee" status={employee.status} locale={locale}'],
+  "hr/attendance/page.tsx": ['domain="attendance" status={status} locale={locale}'],
+  "hr/leave/leave-client.tsx": ['domain="leave" status={r.status} locale={locale}'],
+  "hr/payroll/page.tsx": ['domain="payroll_period" status={run ? "processed" : "draft"} locale={locale}', 'domain="payroll_run" status={r.status} locale={locale}'],
+};
+const hrBadges = Object.fromEntries(C2_FILES.map((f) => [rel(f), jsxEls(f, "StatusBadge").map((el) => el.attributes.properties.map((p) => p.getText()).join(" "))]).filter(([, v]) => v.length));
+const hrPhys = C2_FILES.flatMap((f) => physical(f).map((x) => `${rel(f)}: ${x}`));
+check("C2 HR files: status only through StatusBadge — the same 7 badges, domains and raw values as C1; no physical left / right",
+  same(hrBadges, C1_HR_BADGES) && hrPhys.length === 0, `${JSON.stringify(hrBadges)} ${hrPhys.join(" ")}`);
 
 console.log("\nGroups:");
 for (const [g, [p, f]] of Object.entries(counts)) console.log(`  ${g}: ${p}/${p + f}`);

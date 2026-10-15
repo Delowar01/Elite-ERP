@@ -6,6 +6,8 @@ import { requireSession } from "@/lib/session";
 import { getLocale } from "@/lib/i18n/server";
 import { t } from "@/lib/i18n/dict";
 import { Card, CardContent } from "@/components/ui/card";
+import { PageHeader } from "@/components/layout/page-header";
+import { SectionHeader } from "@/components/ui/section-header";
 import { EmployeeForm } from "../employee-form";
 import { updateEmployeeAction } from "../actions";
 import { SalaryForm } from "./salary-form";
@@ -39,12 +41,15 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
 
   return (
     <div className="max-w-6xl mx-auto">
-      <div className="main-head">
-        <h3>
-          {employee.name} <span className="font-mono text-[13px] text-ink-muted">· {employee.employeeCode}</span>
-        </h3>
-        <StatusBadge domain="employee" status={employee.status} locale={locale} />
-      </div>
+      {/* The employee code stays in the title (the entity's identity); the status is meta, outside the h1. */}
+      <PageHeader
+        title={
+          <>
+            {employee.name} <span className="font-mono text-[13px] text-ink-muted">· {employee.employeeCode}</span>
+          </>
+        }
+        meta={<StatusBadge domain="employee" status={employee.status} locale={locale} />}
+      />
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
         <Card>
           <CardContent className="pt-6">
@@ -59,7 +64,7 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
         </Card>
         <Card>
           <CardContent className="pt-6">
-            <div className="text-[13px] font-bold mb-4">{t(locale, "Salary Structure")}</div>
+            <SectionHeader level={2} title={t(locale, "Salary Structure")} className="mb-4" />
             {!current && (
               <p className="text-[12px] text-ink-faint mb-4">
                 {t(locale, "No salary structure yet — payroll skips this employee until one is set.")}

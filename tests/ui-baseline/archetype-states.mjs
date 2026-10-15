@@ -22,6 +22,15 @@
  * are already above at every width. And one fixture state (4): the PageHeader under a long name —
  * client 1 renamed in the run's TEST-ONLY copy for that state only and restored straight after —
  * which fails the capture if the header overflows, clips, or puts its actions over the title.
+ *
+ * C2 (HR) adds the four HR pages not above — New Employee, Departments, Attendance, Leave — EN + AR at
+ * 1440 and 390, light, full page (16); the employees list, employee detail and payroll are above at
+ * every width. Two interactions (8), viewport screenshots: a department chosen by keyboard (Tab to it,
+ * Enter — it is pressed and keeps the focus ring; the department chips were not focusable before C2),
+ * and a payroll row selected by keyboard (Tab to the second row, Enter — its payslip). Each fails the
+ * capture if the page does not do it. And the D-6 evidence: the eight document lists — the StatRow
+ * consumers C2 does not own — EN + AR at 1440 and 390, light, full page (32; Projects and Settings ›
+ * Security are above at every width), and Bank Accounts, the other .two-col page, at every width (8).
  */
 import pg from "pg";
 import { FROZEN_NOW, VIEWPORTS } from "./config.mjs";
@@ -72,8 +81,32 @@ export function archetypeMatrix() {
   for (const [id, path, area] of C1_ROUTES) for (const locale of BOTH) for (const name of EDGE) add(id, path, area, locale, "light", name, null, true);
   for (const [id, path, action, viewports] of C1_FIXTURES)
     for (const locale of BOTH) for (const name of viewports) add(id, path, "PageHeader under a long name (fixture)", locale, "light", name, action, false);
+  for (const [id, path, area, viewports] of C2_ROUTES) for (const locale of BOTH) for (const name of viewports) add(id, path, area, locale, "light", name, null, true);
+  for (const [id, path, action, viewports] of C2_INTERACTIONS) for (const locale of BOTH) for (const name of viewports) add(id, path, "Interaction (C2)", locale, "light", name, action, false);
   return out;
 }
+
+/** [id, path, area, viewports] — C2: the HR pages not in the set above, and the D-6 / .two-col evidence. */
+const C2_ROUTES = [
+  ["c2-employee-new", "/hr/employees/new", "HR (new employee)", EDGE],
+  ["c2-departments", "/hr/departments", "HR (departments placeholder)", EDGE],
+  ["c2-attendance", "/hr/attendance", "HR (attendance)", EDGE],
+  ["c2-leave", "/hr/leave", "HR (leave requests)", EDGE],
+  ["d6-quotations", "/sales/quotations", "D-6 StatRow (quotations list)", EDGE],
+  ["d6-sales-orders", "/sales/orders", "D-6 StatRow (sales orders list)", EDGE],
+  ["d6-proforma", "/sales/proforma", "D-6 StatRow (proforma list)", EDGE],
+  ["d6-sales-invoices", "/sales/invoices", "D-6 StatRow (sales invoices list)", EDGE],
+  ["d6-delivery-challans", "/sales/delivery-challans", "D-6 StatRow (delivery challans list)", EDGE],
+  ["d6-purchase-orders", "/purchasing/orders", "D-6 StatRow (purchase orders list)", EDGE],
+  ["d6-credit-notes", "/sales/credit-notes", "D-6 StatRow (credit notes list)", EDGE],
+  ["d6-debit-notes", "/purchasing/debit-notes", "D-6 StatRow (debit notes list)", EDGE],
+  ["c2-bank-accounts", "/finance/bank-accounts", ".two-col (bank accounts)", ALLW],
+];
+/** [id, path, action, viewports] — C2 interactions (viewport screenshots). */
+const C2_INTERACTIONS = [
+  ["i04-department-keyboard", "/hr/employees", "department-keyboard", EDGE],
+  ["i05-payroll-keyboard", "/hr/payroll", "payroll-keyboard", EDGE],
+];
 
 /** [id, path, area] — C1: the master-data / entity-detail pages not in the set above (seed-stable ids; the seed's bins are empty). */
 const C1_ROUTES = [
@@ -119,7 +152,7 @@ async function tabTo(page, selector) {
 }
 
 export const ARCH_ACTIONS = {
-  // The department chips are pointer-only today (a span with onClick): the first department.
+  // The first department, by pointer (C0 recorded it on the pointer-only chips; buttons since C2).
   department: async (page) => {
     await page.locator("main .tab-row .tab").nth(1).click();
     await page.evaluate(() => window.scrollTo(0, 0));
@@ -127,6 +160,29 @@ export const ARCH_ACTIONS = {
   // The report picker's entries are real buttons: Tab until the selected one (Trial Balance) has focus.
   "report-focus": async (page) => {
     await tabTo(page, "main .tab-row button.tab.active");
+  },
+  // C2: the first department by keyboard — Tab to its button, Enter. It must be the one pressed, with
+  // the focus ring on it.
+  "department-keyboard": async (page) => {
+    await tabTo(page, "main .tab-row > :nth-child(2)");
+    await page.keyboard.press("Enter");
+    const f = await page.evaluate(() => {
+      const b = document.activeElement;
+      return { pressed: b.getAttribute("aria-pressed"), focusVisible: b.matches(":focus-visible"), allPressed: document.querySelectorAll('main .tab-row > [aria-pressed="true"]').length };
+    });
+    if (f.pressed !== "true" || !f.focusVisible || f.allPressed !== 1) throw new Error(`department by keyboard: ${JSON.stringify(f)}`);
+  },
+  // C2 (keyboard path since DEV-UI-01.5): the second payroll row by keyboard — Tab to it, Enter. It must
+  // be the selected row, and the payslip its employee's.
+  "payroll-keyboard": async (page) => {
+    await tabTo(page, "main tr[data-payroll-row]:nth-child(2)");
+    await page.keyboard.press("Enter");
+    const f = await page.evaluate(() => {
+      const r = document.activeElement;
+      const slip = document.querySelector("main .two-col > :nth-child(2) > :first-child")?.textContent ?? "";
+      return { selected: r.getAttribute("aria-selected"), focusVisible: r.matches(":focus-visible"), slipIsRow: slip.trim().endsWith(`— ${r.cells[0].textContent.trim()}`) };
+    });
+    if (f.selected !== "true" || !f.focusVisible || !f.slipIsRow) throw new Error(`payroll row by keyboard: ${JSON.stringify(f)}`);
   },
   // A kanban card opens its task for editing on click (there is no keyboard path today).
   "kanban-edit": async (page) => {

@@ -4,6 +4,7 @@ import { requireSession } from "@/lib/session";
 import { getLocale } from "@/lib/i18n/server";
 import { t } from "@/lib/i18n/dict";
 import { Card, CardContent } from "@/components/ui/card";
+import { PageHeader } from "@/components/layout/page-header";
 import { EmployeeForm } from "../employee-form";
 import { createEmployeeAction } from "../actions";
 
@@ -24,9 +25,7 @@ export default async function NewEmployeePage() {
 
   return (
     <div className="max-w-6xl mx-auto">
-      <div className="main-head">
-        <h3>{t(locale, "New Employee")}</h3>
-      </div>
+      <PageHeader title={t(locale, "New Employee")} />
       <Card>
         <CardContent className="pt-6">
           <EmployeeForm

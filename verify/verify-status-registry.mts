@@ -398,9 +398,14 @@ const COVER: [string, string, RegExp[], RegExp[]][] = [
     [/\["completed", projectsOverview\.completed\],\s*\["active", projectsOverview\.active\],\s*\["on_hold", projectsOverview\.onHold\],\s*\["planned", projectsOverview\.planned\],/,
      /statusTextClass\("project", status\)\}>\{statusLabel\(locale, "project", status\)\}/],
     [/t\(locale, "(In Progress|On Hold|Not Started)"\)/]],
+  // DEV-UI-01.7 C2: the KPI strip is a StatRow. Present and On Leave take label, tone and colour from
+  // statusStat() (Present keeps its "Present today" wording); the cards' status is still a StatusBadge;
+  // nothing in the file picks a status colour or translates a raw status by hand.
   ["employee cards present / on-leave KPIs", "hr/employees/employees-client.tsx",
-    [/className=\{statusTextClass\("attendance", "present"\)\}/, /statusLabel\(locale, "attendance", "on_leave"\)/, /className=\{statusTextClass\("attendance", "on_leave"\)\}/],
-    [/color: "var\(--(accent-green|warning)\)"/]],
+    [/<StatRow\s+items=\{\[[\s\S]*?\{ \.\.\.statusStat\(locale, "attendance", "present", presentToday\), label: t\(locale, "Present today"\) \},\s*statusStat\(locale, "attendance", "on_leave", onLeaveToday\),[\s\S]*?\]\}\s*\/>/,
+     /<StatusBadge domain="employee" status="inactive" locale=\{locale\} \/>/, /<StatusBadge domain="attendance" status=\{r\.todayStatus\} locale=\{locale\} \/>/],
+    [/statusTextClass\(/, /\bcolorClass\b/, /\btext-(success|info|warning|danger|corrective)\b/, /color: "var\(--(accent-green|warning|success|info|danger)\)"/,
+     /t\(locale, (r\.todayStatus|r\.status|"(present|late|absent|on_leave|active|inactive|On leave|Present)")\)/]],
 ];
 for (const [label, file, must, mustNot] of COVER) {
   const src = read(APP + file);

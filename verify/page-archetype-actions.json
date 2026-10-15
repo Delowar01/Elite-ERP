@@ -629,6 +629,10 @@
    "link|Go to Preset Management|/settings/presets||"
   ],
   "hr-employees|en|1440": [
+   "button|All departments||type=button|pressed=true",
+   "button|Finance||type=button|pressed=false",
+   "button|Operations||type=button|pressed=false",
+   "button|Sales||type=button|pressed=false",
    "link|Add Employee|/hr/employees/new||",
    "link|FDFaisal Dummy (Fictional)Site Technician · Finance|/hr/employees/5||",
    "link|HMHuda Mockup (Fictional)Sales Executive · Sales|/hr/employees/6||",
@@ -638,6 +642,10 @@
    "link|YPYusuf Placeholder (Fictional)Project Coordinator · Sales|/hr/employees/3||"
   ],
   "hr-employees|en|390": [
+   "button|All departments||type=button|pressed=true",
+   "button|Finance||type=button|pressed=false",
+   "button|Operations||type=button|pressed=false",
+   "button|Sales||type=button|pressed=false",
    "link|Add Employee|/hr/employees/new||",
    "link|FDFaisal Dummy (Fictional)Site Technician · Finance|/hr/employees/5||",
    "link|HMHuda Mockup (Fictional)Sales Executive · Sales|/hr/employees/6||",
@@ -1297,6 +1305,10 @@
    "link|الذهاب إلى الموظفين|/hr/employees||"
   ],
   "hr-employees|ar|1440": [
+   "button|Finance||type=button|pressed=false",
+   "button|Operations||type=button|pressed=false",
+   "button|Sales||type=button|pressed=false",
+   "button|جميع الأقسام||type=button|pressed=true",
    "link|FDFaisal Dummy (Fictional)Site Technician · Finance|/hr/employees/5||",
    "link|HMHuda Mockup (Fictional)Sales Executive · Sales|/hr/employees/6||",
    "link|KEKhalid Example (Fictional)Operations Manager · Operations|/hr/employees/1||",
@@ -1790,6 +1802,10 @@
    "link|Go to Preset Management|/settings/presets||"
   ],
   "hr-employees|en|1440": [
+   "button|All departments||type=button|pressed=true",
+   "button|Finance||type=button|pressed=false",
+   "button|Operations||type=button|pressed=false",
+   "button|Sales||type=button|pressed=false",
    "link|Add Employee|/hr/employees/new||",
    "link|FDFaisal Dummy (Fictional)Site Technician · Finance|/hr/employees/5||",
    "link|HMHuda Mockup (Fictional)Sales Executive · Sales|/hr/employees/6||",
@@ -2272,6 +2288,10 @@
    "link|الذهاب إلى الموظفين|/hr/employees||"
   ],
   "hr-employees|ar|1440": [
+   "button|Finance||type=button|pressed=false",
+   "button|Operations||type=button|pressed=false",
+   "button|Sales||type=button|pressed=false",
+   "button|جميع الأقسام||type=button|pressed=true",
    "link|FDFaisal Dummy (Fictional)Site Technician · Finance|/hr/employees/5||",
    "link|HMHuda Mockup (Fictional)Sales Executive · Sales|/hr/employees/6||",
    "link|KEKhalid Example (Fictional)Operations Manager · Operations|/hr/employees/1||",

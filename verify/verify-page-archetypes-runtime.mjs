@@ -1,12 +1,32 @@
 /**
- * DEV-UI-01.7 C0 — page-archetype runtime baseline (C1: master-data and entity-detail targets).
+ * DEV-UI-01.7 C0 — page-archetype runtime baseline (C1: master-data and entity-detail targets; C2: HR
+ * targets and the D-6 StatRow gate).
  *
  *   node verify/verify-page-archetypes-runtime.mjs                   measure, compare with the baseline
  *   node verify/verify-page-archetypes-runtime.mjs --write-baseline  measure, write the baseline files
  *   node verify/verify-page-archetypes-runtime.mjs --rebaseline=<route id,…>
  *                                                   measure every route; re-record only those routes
+ *   node verify/verify-page-archetypes-runtime.mjs --write-d6        measure the D-6 pass alone; write it as
+ *                                                   the baseline's `d6` record (C2 recorded it on C1's build)
  *   flags: --skip-build (reuse .next — only when it was built from the current tree), --only=<route id>,
  *          --measure-out=<file> (also write what this run measured, for review evidence)
+ *
+ * C2 (HR) re-recorded its seven routes with --rebaseline and holds them to targets: one PageHeader
+ * holding the only h1 — C1's titles, now h1s — with Salary Structure and Past payroll runs as h2s; no
+ * overflow at any width (Payroll was 57 / 40 px at 390); no Arabic-Indic digit, the Attendance date
+ * and the Payroll month being exactly what formatDisplayDate writes for the frozen day and month; no
+ * pointer-only clickable (the department chips were spans). Two probes use the pages as a person
+ * would, EN and AR: the department filter by keyboard (Tab to each button, Enter / Space, aria-pressed
+ * on the chosen one only, a visible focus ring, the cards the database says) and by pointer, as
+ * before; the payroll rows by keyboard, and the table / payslip layout at every width — side by side
+ * at 1440, stacked below 1100 px, nothing past the viewport, the table's last column reachable.
+ *
+ * D-6 (C2) puts every StatRow two across at ≤640 px. A pass of its own measures each consumer — the
+ * eight document lists, Projects, Settings › Security (the bare .stat-row-2 class) and C2's two HR
+ * strips — at every width, EN and AR: tracks, cards a line, clipping, the viewport; each card's label,
+ * value, tone and colour; the status badges, the tables and the actions. The baseline's `d6` record
+ * was measured on C1's build (8768cb2, --write-d6), so every run proves those consumers unchanged by
+ * C2 but for their phone layout: above 640 px their rows are C1's to the pixel.
  *
  * C1 (master data + entity detail) re-recorded its 12 routes with --rebaseline and holds them to
  * targets, below: one PageHeader holding the page's only h1, meta before actions, the title at the
@@ -76,6 +96,7 @@ const WRITE = args.includes("--write-baseline");
 const ONLY = args.find((a) => a.startsWith("--only="))?.slice(7);
 const REBASE = args.find((a) => a.startsWith("--rebaseline="))?.slice(13).split(",").filter(Boolean);
 const MEASURE_OUT = args.find((a) => a.startsWith("--measure-out="))?.slice(14);
+const WRITE_D6 = args.some((a) => a === "--write-d6" || a.startsWith("--write-d6="));
 
 // DEV-UI-01.7 C1: the routes of the 12 master-data and entity-detail pages. (nf-client renders the
 // not-found page for clients/[id]; it is not C1's and stays at its baseline.)
@@ -126,6 +147,39 @@ const WIDTHS = [[1440, 900], [1024, 768], [768, 1024], [390, 844]];
 const BROWSERS = { en: { locale: "en-US", timezoneId: "America/New_York" }, ar: { locale: "ar-SA", timezoneId: "Asia/Riyadh" } };
 const SWEEP_ZONE = "Pacific/Pago_Pago"; // UTC−11: 09:00Z on the 15th is 22:00 on the 14th there
 
+// DEV-UI-01.7 C2: the seven HR routes, and the outline each must have — C1's titles (h3s then) as the
+// page's one h1, its sections as h2s (Salary Structure was a styled div). Arabic dates are Gregorian
+// with Western digits: C1 wrote the payroll month "يونيو ٢٠٢٦".
+const C2_ROUTES = ["hr-employees", "hr-employee-new", "hr-employee-detail", "hr-departments", "hr-attendance", "hr-leave", "hr-payroll"];
+const C2_OUTLINES = {
+  "hr-employees": { en: ["h1 Employees"], ar: ["h1 الموظفون"] },
+  "hr-employee-new": { en: ["h1 New Employee"], ar: ["h1 موظف جديد"] },
+  "hr-employee-detail": { en: ["h1 Khalid Example (Fictional) · EMP-001", "h2 Salary Structure"], ar: ["h1 Khalid Example (Fictional) · EMP-001", "h2 هيكل الراتب"] },
+  "hr-departments": { en: ["h1 Departments"], ar: ["h1 الأقسام"] },
+  "hr-attendance": { en: ["h1 Attendance — Today"], ar: ["h1 الحضور والانصراف — اليوم"] },
+  "hr-leave": { en: ["h1 Leave Requests"], ar: ["h1 طلبات الإجازة"] },
+  "hr-payroll": { en: ["h1 Payroll — June 2026", "h2 Past payroll runs"], ar: ["h1 الرواتب — يونيو 2026", "h2 دورات الرواتب السابقة"] },
+};
+// The two dates C2 writes with formatDisplayDate, as they must read at FROZEN_NOW (2026-06-15): the
+// Attendance pill (the day the records are selected for) and the Payroll title (the period's month).
+const C2_DATES = { day: { en: "Jun 15, 2026", ar: "15 يونيو 2026" }, month: { en: "June 2026", ar: "يونيو 2026" } };
+const ALL_DEPARTMENTS = { en: "All departments", ar: "جميع الأقسام" };
+const PAYROLL_WORD = { en: "Payroll", ar: "الرواتب" };
+// The two HR StatRows' labels (On leave is the status registry's attendance label).
+const STRIP_LABELS = {
+  "hr-employees": { en: ["Headcount", "Present today", "On leave", "Departments"], ar: ["عدد الموظفين", "الحاضرون اليوم", "في إجازة", "الأقسام"] },
+  "hr-payroll": { en: ["Employees", "Gross pay", "Deductions", "Net pay"], ar: ["الموظفون", "الراتب الإجمالي", "الاستقطاعات", "صافي الراتب"] },
+};
+// D-6 (C2): every StatRow consumer, in a pass of its own — the eight document lists and Projects
+// (StatRow), Settings › Security (the bare .stat-row-2 class) and C2's two HR strips.
+const D6_ROUTES = [
+  ["quotations", "/sales/quotations"], ["sales-orders", "/sales/orders"], ["proforma", "/sales/proforma"], ["sales-invoices", "/sales/invoices"],
+  ["delivery-challans", "/sales/delivery-challans"], ["purchase-orders", "/purchasing/orders"], ["credit-notes", "/sales/credit-notes"], ["debit-notes", "/purchasing/debit-notes"],
+  ["projects", "/projects"], ["settings-security", "/settings/security"], ["hr-employees", "/hr/employees"], ["hr-payroll", "/hr/payroll"],
+].filter(([id]) => !ONLY || id.includes(ONLY));
+// C2's own strips are held to targets; every other consumer to the record C1's build left (`d6`).
+const D6_C2 = ["hr-employees", "hr-payroll"];
+
 // ------------------------------------------------------------------------------------- isolation
 function refuse(why) {
   console.error(`✗ refusing: ${why}`);
@@ -133,6 +187,7 @@ function refuse(why) {
 }
 if (existsSync(join(ROOT, ".env"))) refuse("a .env exists in this tree — run in an isolated worktree with no .env (the production configuration is never loaded)");
 if (!existsSync(PASSWORD_FILE)) refuse("no synthetic seed password (.ui-baseline-work/owner-password) — run `node tests/ui-baseline/run.mjs prepare` first");
+if (WRITE_D6 && (WRITE || REBASE || ONLY)) refuse("--write-d6 records the D-6 pass alone, every consumer: not with --write-baseline, --rebaseline or --only");
 if (REBASE) {
   // A partial re-record must still see every route: the routes it keeps are compared, not copied blind.
   if (ONLY || WRITE) refuse("--rebaseline measures every route and re-records only the ones it names: not with --only or --write-baseline");
@@ -276,6 +331,9 @@ const MEASURE = (literals) => {
       titleAtStart: atStart(tr),
       trailing,
       overlap,
+      // C2: what the h1 and the meta slot say (the Attendance date, the Payroll month).
+      title: (h1s[0]?.textContent ?? "").replace(/\s+/g, " ").trim(),
+      meta: meta ? meta.textContent.replace(/\s+/g, " ").trim() : null,
     };
   }
   return {
@@ -326,10 +384,135 @@ const ACTIONS = () => {
       el.getAttribute("aria-haspopup") ? `popup=${el.getAttribute("aria-haspopup")}` : "",
       role === "tab" && el.getAttribute("aria-selected") === "true" ? "selected" : "",
       (role === "checkbox" || role === "switch" || el.type === "checkbox") && (el.checked || el.getAttribute("aria-checked") === "true") ? "checked" : "",
+      // C2: a toggle button says so, pressed or not (the department filters).
+      el.hasAttribute("aria-pressed") ? `pressed=${el.getAttribute("aria-pressed")}` : "",
     ].filter(Boolean).join(",");
     out.push([kind, nameOf(el), href, type, state].join("|"));
   }
   return out.sort();
+};
+
+/**
+ * D-6: every StatRow (.stat-row-2) in <main> — its tracks, how many cards share a line, whether a card
+ * clips or leaves the viewport, the cards' widths; what each card says, its tone, its value's classes
+ * and colour — and around it the status badges and the tables.
+ */
+const D6M = () => {
+  const vw = document.documentElement.clientWidth;
+  const main = document.querySelector("main");
+  if (!main) return { noMain: true, overflow: null, statRows: [], badges: [], tables: [] };
+  const visible = (e) => {
+    const cs = getComputedStyle(e);
+    if (cs.visibility === "hidden" || cs.display === "none") return false;
+    const r = e.getBoundingClientRect();
+    return r.width > 0 && r.height > 0;
+  };
+  const norm = (s) => (s ?? "").replace(/\s+/g, " ").trim();
+  // Where a card's ink is: its text runs (not the blocks holding them) and its icons.
+  const ink = (el) => {
+    const out = [];
+    const tw = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    for (let n = tw.nextNode(); n; n = tw.nextNode()) {
+      if (!n.nodeValue.trim()) continue;
+      const r = document.createRange();
+      r.selectNodeContents(n);
+      out.push(...[...r.getClientRects()].filter((b) => b.width > 0));
+    }
+    for (const g of el.querySelectorAll("svg,img")) if (visible(g)) out.push(g.getBoundingClientRect());
+    return out;
+  };
+  const statRows = [...main.querySelectorAll(".stat-row-2")].filter(visible).map((row) => {
+    const cards = [...row.children].filter(visible);
+    const boxes = cards.map((c) => c.getBoundingClientRect());
+    const tops = boxes.map((b) => Math.round(b.top));
+    return {
+      tracks: getComputedStyle(row).gridTemplateColumns.split(" ").filter(Boolean).length,
+      cards: cards.length,
+      perRow: tops.filter((t) => t === tops[0]).length,
+      lines: new Set(tops).size,
+      // A card clips when its content is wider than the card, or any of its ink lies outside it.
+      clipped: cards.filter((c, i) => c.scrollWidth > c.clientWidth + 1 || ink(c).some((b) => b.left < boxes[i].left - 0.5 || b.right > boxes[i].right + 0.5)).length,
+      outside: boxes.filter((b) => b.left < -1 || b.right > vw + 1).length,
+      widths: boxes.map((b) => Math.round(b.width * 10) / 10),
+      height: Math.round(row.getBoundingClientRect().height * 10) / 10,
+      facts: cards.map((c) => {
+        const [label, value] = c.children;
+        return {
+          label: norm(label?.textContent),
+          value: norm(value?.textContent),
+          cls: value ? [...value.classList].filter((x) => x !== "kpi-value").sort().join(" ") : null,
+          color: value ? getComputedStyle(value).color : null,
+          tone: c.getAttribute("data-tone"),
+          status: c.getAttribute("data-status"),
+        };
+      }),
+    };
+  });
+  const badges = [...main.querySelectorAll(".status-tag")].filter(visible).map((b) => {
+    const cs = getComputedStyle(b);
+    return [b.getAttribute("data-status-domain"), b.getAttribute("data-status"), b.getAttribute("data-tone"), norm(b.textContent), cs.color, cs.backgroundColor].join("|");
+  });
+  const tables = [...main.querySelectorAll("table")].filter(visible).map((t) => ({
+    heads: [...t.querySelectorAll("thead th")].map((th) => norm(th.textContent)),
+    rows: t.querySelectorAll("tbody tr").length,
+  }));
+  return { overflow: Math.max(0, document.documentElement.scrollWidth - vw), statRows, badges, tables };
+};
+
+/** C2: the department filter — tag | type | name | aria-pressed | active, for each — the cards it shows, and focus. */
+const DEPT_STATE = () => {
+  const btns = [...document.querySelectorAll("main .tab-row > *")];
+  const a = document.activeElement;
+  const cs = btns.includes(a) ? getComputedStyle(a) : null;
+  return {
+    filters: btns.map((b) => [b.tagName.toLowerCase(), b.getAttribute("type"), b.textContent.trim(), b.getAttribute("aria-pressed"), b.classList.contains("active") ? "active" : ""].join("|")),
+    cards: [...document.querySelectorAll("main .emp-grid .emp-name")].map((e) => e.textContent.trim()),
+    focus: cs ? { index: btns.indexOf(a), focusVisible: a.matches(":focus-visible"), ring: cs.outlineStyle !== "none" && parseFloat(cs.outlineWidth) >= 1 ? `${cs.outlineStyle} ${cs.outlineWidth}` : "none" } : null,
+  };
+};
+
+/**
+ * C2: the payroll rows (name | aria-selected | tabIndex), the focused one, the payslip's heading, and the
+ * table / payslip layout — tracks, side by side or stacked, inside the viewport, and whether the table's
+ * last column is reachable by scrolling its wrap to the far end.
+ */
+const PAYROLL_STATE = () => {
+  const vw = document.documentElement.clientWidth;
+  const rtl = document.documentElement.dir === "rtl";
+  const rows = [...document.querySelectorAll("main tr[data-payroll-row]")];
+  const a = document.activeElement;
+  const two = document.querySelector("main .two-col");
+  const [table, slip] = two ? [...two.children] : [];
+  let layout = null;
+  if (table && slip) {
+    const t = table.getBoundingClientRect();
+    const s = slip.getBoundingClientRect();
+    const wrap = table.matches(".data-table-wrap") ? table : table.querySelector(".data-table-wrap");
+    let lastColumn = null;
+    if (wrap) {
+      const heads = wrap.querySelectorAll("thead th");
+      const before = wrap.scrollLeft;
+      wrap.scrollLeft = rtl ? -wrap.scrollWidth : wrap.scrollWidth;
+      const w = wrap.getBoundingClientRect();
+      const l = heads[heads.length - 1].getBoundingClientRect();
+      lastColumn = { scrolls: wrap.scrollWidth > wrap.clientWidth + 1, overflowX: getComputedStyle(wrap).overflowX, reachable: l.left >= Math.max(w.left, 0) - 1 && l.right <= Math.min(w.right, vw) + 1 };
+      wrap.scrollLeft = before;
+    }
+    layout = {
+      tracks: getComputedStyle(two).gridTemplateColumns.split(" ").filter(Boolean).length,
+      sideBySide: Math.abs(t.top - s.top) < 1 && (rtl ? s.right <= t.left + 1 : s.left >= t.right - 1),
+      stacked: s.top >= t.bottom - 1,
+      inViewport: [t, s].every((r) => r.left >= -1 && r.right <= vw + 1),
+      lastColumn,
+    };
+  }
+  return {
+    rows: rows.map((r) => [r.cells[0].textContent.trim(), r.getAttribute("aria-selected"), r.tabIndex].join("|")),
+    focus: rows.indexOf(a),
+    focusVisible: rows.includes(a) && a.matches(":focus-visible"),
+    slip: slip?.firstElementChild ? slip.firstElementChild.textContent.replace(/\s+/g, " ").trim() : null,
+    layout,
+  };
 };
 
 // ------------------------------------------------------------------------------------- run
@@ -342,11 +525,19 @@ await admin(async (c) => {
   await c.query(`create database ${DB} template ${TEMPLATE_DB}`);
   await c.query(`comment on database ${DB} is 'DEV-UI-01.7 TEST-ONLY page-archetype runtime database. Synthetic data only.'`);
 });
+let deptDb = null;
 {
   // A Staff member for the permission pass (this run's copy only, never the template).
   const c = new pg.Client({ connectionString: env.DATABASE_URL });
   await c.connect();
   await c.query(`insert into users (org_id, name, email, password_hash, role) select org_id, 'Baseline Staff', $1, password_hash, 'staff' from users where email = $2`, [STAFF_EMAIL, OWNER_EMAIL]);
+  // C2: what the department filter must show, read from this copy: the owner's departments by name, and
+  // every employee by name (the page's order) with their department.
+  const org = (await c.query("select org_id from users where email = $1", [OWNER_EMAIL])).rows[0].org_id;
+  deptDb = {
+    depts: (await c.query("select id, name from departments where org_id = $1 order by name asc", [org])).rows,
+    emps: (await c.query("select name, department_id from employees where org_id = $1 order by name asc", [org])).rows,
+  };
   await c.end();
 }
 if (!args.includes("--skip-build")) {
@@ -434,19 +625,19 @@ async function login(email) {
 }
 const is418 = (s) => /#418\b|errors\/418|hydrat/i.test(s);
 
-const now = { frozenNow: FROZEN_NOW, chromium: browser.version(), states: {}, staff: {}, sweep: {} };
+const now = { frozenNow: FROZEN_NOW, chromium: browser.version(), states: {}, staff: {}, sweep: {}, d6: {}, c2: { dept: {}, payroll: {}, dates: {} } };
 const prompts = {};
 let fdNode = {};
 const fdBrowsers = [];
 const acts = { owner: {}, staff: {} };
 try {
   const ownerState = await login(OWNER_EMAIL);
-  const staffState = await login(STAFF_EMAIL);
+  const staffState = WRITE_D6 ? null : await login(STAFF_EMAIL);
   // Audit stamps the database wrote with its own clock (these logins' sessions and events, the
   // seeded defaults, the owner's password date): moved to the frozen instant in this TEST-ONLY copy
   // (archetype-states.mjs), as the archetype screenshots do.
   await alignDatabaseTimestamps(env.DATABASE_URL);
-  async function pass(label, storageState, locale, zone, widths, onState) {
+  async function pass(label, storageState, locale, zone, widths, onState, routes = ROUTES) {
     const ctx = await context({ storageState, locale: BROWSERS[locale].locale, timezoneId: zone ?? BROWSERS[locale].timezoneId });
     await ctx.addCookies([{ name: "locale", value: locale, url: BASE }, { name: "theme", value: "light", url: BASE }]);
     const page = await ctx.newPage();
@@ -461,7 +652,7 @@ try {
       if (current) prompts[current] = (prompts[current] ?? 0) + 1;
       (d.type() === "beforeunload" ? d.accept() : d.dismiss()).catch(() => {});
     });
-    for (const [id, path] of ROUTES)
+    for (const [id, path] of routes)
       for (const [w, h] of widths) {
         errors = [];
         await page.setViewportSize({ width: w, height: h });
@@ -482,18 +673,112 @@ try {
     ...(errors.length ? { errorSample: [...new Set(errors)].slice(0, 3) } : {}),
   });
 
-  for (const locale of ["en", "ar"]) {
-    await pass(`owner ${locale}`, ownerState, locale, null, WIDTHS, async ({ id, w, page, status, finalPath, errors }) => {
-      now.states[`${id}|${locale}|${w}`] = { status, finalPath, ...(await page.evaluate(MEASURE, C1_LITERALS)), ...errFacts(errors) };
-      if (w === 1440 || (w === 390 && locale === "en")) acts.owner[`${id}|${locale}|${w}`] = await page.evaluate(ACTIONS);
-    });
-    await pass(`staff ${locale}`, staffState, locale, null, [[1440, 900]], async ({ id, page, status, finalPath, errors }) => {
-      now.staff[`${id}|${locale}`] = { status, finalPath, ...errFacts(errors) };
-      acts.staff[`${id}|${locale}|1440`] = await page.evaluate(ACTIONS);
-    });
-    await pass(`sweep ${locale} (${SWEEP_ZONE})`, ownerState, locale, SWEEP_ZONE, [[1440, 900]], async ({ id, status, finalPath, errors }) => {
-      now.sweep[`${id}|${locale}`] = { status, finalPath, ...errFacts(errors) };
-    });
+  if (!WRITE_D6)
+    for (const locale of ["en", "ar"]) {
+      await pass(`owner ${locale}`, ownerState, locale, null, WIDTHS, async ({ id, w, page, status, finalPath, errors }) => {
+        now.states[`${id}|${locale}|${w}`] = { status, finalPath, ...(await page.evaluate(MEASURE, C1_LITERALS)), ...errFacts(errors) };
+        if (w === 1440 || (w === 390 && locale === "en")) acts.owner[`${id}|${locale}|${w}`] = await page.evaluate(ACTIONS);
+      });
+      await pass(`staff ${locale}`, staffState, locale, null, [[1440, 900]], async ({ id, page, status, finalPath, errors }) => {
+        now.staff[`${id}|${locale}`] = { status, finalPath, ...errFacts(errors) };
+        acts.staff[`${id}|${locale}|1440`] = await page.evaluate(ACTIONS);
+      });
+      await pass(`sweep ${locale} (${SWEEP_ZONE})`, ownerState, locale, SWEEP_ZONE, [[1440, 900]], async ({ id, status, finalPath, errors }) => {
+        now.sweep[`${id}|${locale}`] = { status, finalPath, ...errFacts(errors) };
+      });
+    }
+  // D-6: every StatRow consumer at every width, EN and AR; actions at 1440 and 390. (--write-d6 records
+  // the consumers C2 must leave as they were — not C2's own HR strips.)
+  for (const locale of ["en", "ar"])
+    await pass(`D-6 ${locale}`, ownerState, locale, null, WIDTHS, async ({ id, w, page, status, finalPath, errors }) => {
+      now.d6[`${id}|${locale}|${w}`] = { status, finalPath, ...(await page.evaluate(D6M)), ...(w === 1440 || w === 390 ? { actions: await page.evaluate(ACTIONS) } : {}), ...errFacts(errors) };
+    }, D6_ROUTES.filter(([id]) => !WRITE_D6 || !D6_C2.includes(id)));
+
+  // C2 probes, EN and AR, as a person would use the pages. One page each, the frozen clock, the owner.
+  async function probePage(locale, [w, h], path) {
+    const ctx = await context({ storageState: ownerState, locale: BROWSERS[locale].locale, timezoneId: BROWSERS[locale].timezoneId });
+    await ctx.addCookies([{ name: "locale", value: locale, url: BASE }, { name: "theme", value: "light", url: BASE }]);
+    const page = await ctx.newPage();
+    await page.clock.setFixedTime(new Date(FROZEN_NOW));
+    const errors = [];
+    page.on("console", (m) => m.type() === "error" && errors.push(`console: ${m.text().slice(0, 160)}`));
+    page.on("pageerror", (e) => errors.push(`pageerror: ${String(e.message).slice(0, 160)}`));
+    await page.setViewportSize({ width: w, height: h });
+    await page.goto(BASE + path, { waitUntil: "networkidle", timeout: 60000 });
+    await page.evaluate(() => document.fonts.ready.then(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))));
+    return { ctx, page, errors };
+  }
+  // Tab from the top of the page until `selector` has focus: how many presses it took (null: never).
+  async function tabTo(page, selector) {
+    for (let i = 1; i <= 200; i++) {
+      await page.keyboard.press("Tab");
+      if (await page.evaluate((s) => document.activeElement?.matches(s) ?? false, selector)) return i;
+    }
+    return null;
+  }
+  // The department filter: Tab to "All departments"; Tab + Enter onto each department in turn;
+  // Shift+Tab back to All and Space; Tab + Space onto each department; back to All and Enter. Keys are
+  // pressed only once Tab has reached the filters (C1's chips never were: that step fails, and no key
+  // lands on whatever else had focus). Then by pointer, on a fresh Employees page (a key that went
+  // elsewhere may have left it), as it worked before C2: click each filter.
+  async function deptProbe(locale, size) {
+    const { ctx, page, errors } = await probePage(locale, size, "/hr/employees");
+    const state = () => page.evaluate(DEPT_STATE);
+    const steps = [{ step: "loaded", index: 0, ...(await state()) }];
+    const n = steps[0].filters.length;
+    const tabs = await tabTo(page, "main .tab-row > :first-child");
+    steps.push({ step: `Tab ×${tabs} to the first filter`, index: 0, tabs, keyboard: true, ...(await state()) });
+    if (tabs !== null)
+      for (const [key, back] of [["Enter", "Space"], ["Space", "Enter"]]) {
+        for (let i = 1; i < n; i++) {
+          await page.keyboard.press("Tab");
+          await page.keyboard.press(key === "Space" ? " " : key);
+          steps.push({ step: `Tab, ${key}`, index: i, keyboard: true, ...(await state()) });
+        }
+        for (let i = 1; i < n; i++) await page.keyboard.press("Shift+Tab");
+        await page.keyboard.press(back === "Space" ? " " : back);
+        steps.push({ step: `Shift+Tab ×${n - 1}, ${back}`, index: 0, keyboard: true, ...(await state()) });
+      }
+    await page.goto(`${BASE}/hr/employees`, { waitUntil: "networkidle", timeout: 60000 });
+    for (const i of [...Array(n).keys()].reverse()) {
+      await page.locator("main .tab-row > *").nth(i).click();
+      steps.push({ step: "click", index: i, ...(await state()) });
+    }
+    await ctx.close();
+    return { steps, errors };
+  }
+  // The payroll page: its layout; and (keys) Tab to the first row, Tab + Enter / Space down the rows,
+  // Shift+Tab back to the first and the other key.
+  async function payrollProbe(locale, size, keys) {
+    const { ctx, page, errors } = await probePage(locale, size, "/hr/payroll");
+    const state = () => page.evaluate(PAYROLL_STATE);
+    const steps = [{ step: "loaded", index: 0, ...(await state()) }];
+    if (keys) {
+      const n = steps[0].rows.length;
+      const tabs = await tabTo(page, "main tr[data-payroll-row]");
+      steps.push({ step: `Tab ×${tabs} to the first row`, index: 0, tabs, keyboard: true, ...(await state()) });
+      if (tabs !== null) {
+        for (let i = 1; i < n; i++) {
+          await page.keyboard.press("Tab");
+          await page.keyboard.press(i % 2 ? "Enter" : " ");
+          steps.push({ step: `Tab, ${i % 2 ? "Enter" : "Space"}`, index: i, keyboard: true, ...(await state()) });
+        }
+        for (let i = 1; i < n; i++) await page.keyboard.press("Shift+Tab");
+        await page.keyboard.press(n % 2 ? "Enter" : " ");
+        steps.push({ step: `Shift+Tab ×${n - 1}, ${n % 2 ? "Enter" : "Space"}`, index: 0, keyboard: true, ...(await state()) });
+      }
+    }
+    await ctx.close();
+    return { steps, errors };
+  }
+  if (!WRITE_D6) {
+    for (const locale of ["en", "ar"]) {
+      if (ROUTES.some(([id]) => id === "hr-employees"))
+        for (const size of [[1440, 900], [390, 844]]) now.c2.dept[`${locale}|${size[0]}`] = await deptProbe(locale, size);
+      if (ROUTES.some(([id]) => id === "hr-payroll"))
+        for (const size of WIDTHS) now.c2.payroll[`${locale}|${size[0]}`] = await payrollProbe(locale, size, size[0] === 1440 || size[0] === 390);
+    }
+    console.log("  C2 probes done");
   }
   // formatDisplayDate in the browser: identical to Node whatever the browser's locale and zone. (A
   // tree without the helper — main before C0 — has nothing to compare; the check below says so.)
@@ -510,6 +795,10 @@ try {
     return out;
   };
   fdNode = fdRun(fdJs, fdInstants);
+  // C2: what the two HR dates must say — the frozen day (Attendance) and the first of its month (Payroll).
+  const [day, month] = [`${FROZEN_NOW.slice(0, 10)}T00:00:00Z`, `${FROZEN_NOW.slice(0, 7)}-01T00:00:00Z`];
+  const c2Fd = fdRun(fdJs, [day, month]);
+  for (const l of ["en", "ar"]) now.c2.dates[l] = { day: c2Fd[`${day}|${l}|date`], month: c2Fd[`${month}|${l}|monthYear`] };
   for (const [locale, timezoneId] of [["en-US", "America/New_York"], ["ar-SA", "Asia/Riyadh"], ["ar-EG", "Pacific/Pago_Pago"], ["fr-FR", "Pacific/Kiritimati"]]) {
     const c = await browser.newContext({ locale, timezoneId });
     const p = await c.newPage(); // about:blank — Intl is the browser's own, independent of any page
@@ -529,12 +818,32 @@ for (const [k, n] of Object.entries(prompts)) {
 const after = readFileSync(".next/BUILD_ID", "utf8").trim();
 if (after !== buildId) refuse(`.next/BUILD_ID changed during the run (${buildId} → ${after})`);
 
-if (WRITE) {
-  writeFileSync(BASELINE_FILE, JSON.stringify({ ...now, blockedRequests: blocked }, null, 1) + "\n");
-  writeFileSync(ACTIONS_FILE, JSON.stringify(acts, null, 1) + "\n");
-  console.log(`• wrote ${BASELINE_FILE} (${Object.keys(now.states).length} owner states, ${Object.keys(now.staff).length} staff, ${Object.keys(now.sweep).length} sweep) and ${ACTIONS_FILE}`);
-}
+// The D-6 record: the consumers C2 must leave as they were (C2's own HR strips are held to targets
+// instead), with the commit and build it was measured on.
+const git = (...a) => spawnSync("git", a, { encoding: "utf8" }).stdout?.trim() ?? "";
+const d6Record = () => ({
+  recordedOn: { commit: git("rev-parse", "HEAD"), srcClean: git("status", "--porcelain", "--", "src") === "", build: buildId, chromium: now.chromium },
+  states: Object.fromEntries(Object.entries(now.d6).filter(([k]) => !D6_C2.includes(k.split("|")[0]))),
+});
 if (MEASURE_OUT) writeFileSync(MEASURE_OUT, JSON.stringify({ ...now, blockedRequests: blocked, actions: acts }, null, 1) + "\n");
+if (WRITE_D6) {
+  const failed = Object.entries(now.d6).filter(([, v]) => v.status !== 200 || v.consoleErrors || v.pageErrors || v.r418).map(([k]) => k);
+  if (failed.length) refuse(`--write-d6: not recording a pass with errors or a failed route: ${failed.slice(0, 4).join(", ")}`);
+  const file = args.find((a) => a.startsWith("--write-d6="))?.slice(11) || BASELINE_FILE;
+  const out = JSON.parse(readFileSync(file, "utf8"));
+  out.d6 = d6Record();
+  writeFileSync(file, JSON.stringify(out, null, 1) + "\n");
+  console.log(`• wrote the D-6 record into ${file}: ${Object.keys(out.d6.states).length} states, measured on ${out.d6.recordedOn.commit.slice(0, 7)} (src ${out.d6.recordedOn.srcClean ? "clean" : "MODIFIED"}), build ${buildId}`);
+  rmSync(env.STORAGE_FAKE_DIR, { recursive: true, force: true });
+  process.exit(0);
+}
+if (WRITE) {
+  // The probes are checked, not pinned; the D-6 pass is pinned as its record.
+  const measured = { frozenNow: now.frozenNow, chromium: now.chromium, states: now.states, staff: now.staff, sweep: now.sweep };
+  writeFileSync(BASELINE_FILE, JSON.stringify({ ...measured, blockedRequests: blocked, d6: d6Record() }, null, 1) + "\n");
+  writeFileSync(ACTIONS_FILE, JSON.stringify(acts, null, 1) + "\n");
+  console.log(`• wrote ${BASELINE_FILE} (${Object.keys(now.states).length} owner states, ${Object.keys(now.staff).length} staff, ${Object.keys(now.sweep).length} sweep, the D-6 record) and ${ACTIONS_FILE}`);
+}
 const rebased = (k) => Boolean(REBASE?.includes(k.split("|")[0]));
 if (REBASE) {
   // The named routes' entries are replaced by this run's; every other entry is kept exactly as pinned
@@ -646,18 +955,29 @@ check(`Staff action inventory unchanged — ${nStaff} actions (EN + AR at 1440)`
 if (REBASE) {
   // The re-recorded routes' actions must stay EQUIVALENT: the same kinds, targets, types and states.
   // English names are unchanged; an Arabic name may change only from C1 page copy that was still
-  // English to Arabic text.
+  // English to Arabic text. C2 has one intended addition: Employees' department filters, buttons now
+  // (they were spans, not actions) — "All departments" pressed and each department, named as in the
+  // database, not. They must all appear, as exactly that; nothing else may appear or vanish.
   const problems = [];
   const renamed = [];
+  const added = [];
+  const deptNames = (deptDb?.depts ?? []).map((d) => d.name);
   for (const group of ["owner", "staff"])
     for (const k of Object.keys(acts[group]).filter(rebased)) {
       const split = (a) => { const [kind, name, ...rest] = a.split("|"); return [[kind, ...rest].join("|"), name]; };
       const groups = (xs) => xs.map(split).reduce((m, [r, n]) => m.set(r, [...(m.get(r) ?? []), n].sort()), new Map());
       const was = groups(baseActs[group][k] ?? []);
       const is = groups(acts[group][k]);
+      const intended = new Map(k.startsWith("hr-employees|") ? [["button||type=button|pressed=true", [ALL_DEPARTMENTS[k.split("|")[1]]]], ["button||type=button|pressed=false", [...deptNames].sort()]] : []);
+      for (const [r] of intended) if (!is.has(r) && !was.has(r)) problems.push(`${group} ${k}: no department filter × ${r}`);
       for (const r of new Set([...was.keys(), ...is.keys()])) {
         const a = [...(was.get(r) ?? [])];
         const b = [...(is.get(r) ?? [])];
+        if (!a.length && intended.has(r)) {
+          if (JSON.stringify(b) === JSON.stringify(intended.get(r))) added.push(`${group} ${k}: + ${b.length} × ${r} (${b.join(", ")})`);
+          else problems.push(`${group} ${k}: department filters ${JSON.stringify(b)} ≠ ${JSON.stringify(intended.get(r))} (${r})`);
+          continue;
+        }
         if (a.length !== b.length) { problems.push(`${group} ${k}: ${a.length}→${b.length} × ${r}`); continue; }
         const gone = a.filter((x) => !b.includes(x));
         const came = b.filter((x) => !a.includes(x));
@@ -668,7 +988,9 @@ if (REBASE) {
     }
   console.log(`• action names translated in the re-recorded routes (${renamed.length}):`);
   for (const x of renamed) console.log(`    ${x}`);
-  check(`re-recorded routes: actions equivalent to the baseline — same kinds, targets, types and states; English names unchanged; Arabic names changed only from C1 page copy to Arabic (${renamed.length} lists)`,
+  console.log(`• actions added in the re-recorded routes (${added.length}):`);
+  for (const x of added) console.log(`    ${x}`);
+  check(`re-recorded routes: actions equivalent to the baseline — same kinds, targets, types and states; English names unchanged; Arabic names changed only from C1 page copy to Arabic (${renamed.length} lists); added only the department filter buttons (${added.length} groups)`,
     problems.length === 0, list(problems));
 }
 
@@ -694,6 +1016,143 @@ check(`C1: in Arabic, no C1 page copy renders in English (${C1_LITERALS.exact.le
 const COPY = ["client-detail", "client-new", "client-bin", "vendor-detail", "vendor-new", "vendor-bin", "product-detail", "product-new", "product-bin"];
 const blind = COPY.filter((id) => !c1Keys.some((k) => k.startsWith(`${id}|en|`) && (now.states[k].c1Literals ?? []).length > 0));
 check(`C1: …and the scan sees that copy in English on each of the ${COPY.length} pages that carry it (a control)`, ONLY || blind.length === 0, blind.join(" "));
+
+// ------------------------------------------------------------------------------------- C2 targets
+// The seven HR routes, EN and AR at every width (56 states), and the two probes.
+const c2Keys = keys.filter((k) => C2_ROUTES.includes(k.split("|")[0]));
+const c2 = (pred) => c2Keys.filter((k) => !pred(now.states[k], k));
+const show = (f) => (k) => `${k} ${f(now.states[k])}`;
+check(`C2: the ${C2_ROUTES.length} HR routes were measured (${c2Keys.length} states)`, ONLY || c2Keys.length === C2_ROUTES.length * 8, c2Keys.length);
+const c2Ph = c2((s) => s.pageHeader?.n === 1 && s.pageHeader.h1Inside && s.pageHeader.metaFirst && s.pageHeader.titleAtStart && s.pageHeader.trailing !== "misplaced" && !s.pageHeader.overlap);
+check("C2: one PageHeader per HR page, holding its only h1; meta before actions; title at the inline start; meta / actions at the end of its line or below it, never over it",
+  c2Ph.length === 0, list(c2Ph.map(show((s) => JSON.stringify(s.pageHeader)))));
+const c2Out = c2((s, k) => JSON.stringify(s.outline) === JSON.stringify(C2_OUTLINES[k.split("|")[0]][k.split("|")[1]]) && s.h1 === 1 && s.skips === 0);
+check("C2: every HR outline is C1's title as the one h1 (the employee's name and code on the detail), then Salary Structure / Past payroll runs as h2s; no skip (EN / AR, all widths)",
+  c2Out.length === 0, list(c2Out.map(show((s) => JSON.stringify(s.outline)))));
+const c2Ov = c2((s) => s.overflow === 0 && s.offenders === 0);
+check("C2: no page overflow, nothing past the viewport, on any HR page at any width — Payroll at 390 was 57 px (EN) / 40 px (AR), Employees 1 px (EN)",
+  c2Ov.length === 0, list(c2Ov.map(show((s) => `${s.overflow}px ${s.offenders} el`))));
+const c2Err = c2((s) => !s.consoleErrors && !s.pageErrors && !s.r418);
+check("C2: zero console errors, page errors and React #418 on every HR state", c2Err.length === 0, list(c2Err.map(show((s) => JSON.stringify(s.errorSample)))));
+const c2Ind = c2((s) => s.indic === 0);
+check("C2: no Arabic-Indic digit on any HR page — C1 wrote the Arabic Attendance date and Payroll month in them", c2Ind.length === 0, list(c2Ind.map(show((s) => s.indic))));
+const c2Ptr = c2((s) => s.pointerOnly === 0);
+check("C2: nothing on an HR page is clickable by pointer only — the four department chips were spans with onClick", c2Ptr.length === 0, list(c2Ptr.map(show((s) => s.pointerOnly))));
+check(`C2: formatDisplayDate writes the frozen day and month as ${["en", "ar"].map((l) => `"${C2_DATES.day[l]}" / "${C2_DATES.month[l]}"`).join(", ")} — Gregorian, Western digits`,
+  ["en", "ar"].every((l) => now.c2.dates[l]?.day === C2_DATES.day[l] && now.c2.dates[l]?.month === C2_DATES.month[l]), JSON.stringify(now.c2.dates));
+const c2Date = c2((s, k) => {
+  const [id, locale] = k.split("|");
+  if (id === "hr-attendance") return s.pageHeader?.meta === C2_DATES.day[locale];
+  if (id === "hr-payroll") return s.pageHeader?.title === `${PAYROLL_WORD[locale]} — ${C2_DATES.month[locale]}`;
+  return true;
+});
+check("C2: the Attendance pill (PageHeader meta) is that day and the Payroll title that month, to the character (EN / AR, all widths)", c2Date.length === 0,
+  list(c2Date.map(show((s) => `${s.pageHeader?.title} | ${s.pageHeader?.meta}`))));
+
+// The department filter, EN / AR at 1440 and 390, against the database: "All departments" and then the
+// departments by name; the chosen one pressed (aria-pressed and .active), no other; its employees' cards.
+const deptCards = (i) => (i === 0 ? deptDb.emps : deptDb.emps.filter((e) => e.department_id === deptDb.depts[i - 1].id)).map((e) => e.name);
+const deptFilters = (locale, i) => [ALL_DEPARTMENTS[locale], ...deptDb.depts.map((d) => d.name)].map((name, j) => `button|button|${name}|${j === i}|${j === i ? "active" : ""}`);
+const deptRuns = Object.entries(now.c2.dept);
+const deptBad = { keyboard: [], pointer: [] };
+for (const [run, { steps, errors }] of deptRuns) {
+  const locale = run.split("|")[0];
+  if (errors.length) deptBad.keyboard.push(`${run}: ${errors[0]}`);
+  for (const s of steps) {
+    const why = [];
+    if (JSON.stringify(s.filters) !== JSON.stringify(deptFilters(locale, s.index))) why.push(`filters ${JSON.stringify(s.filters)}`);
+    if (JSON.stringify(s.cards) !== JSON.stringify(deptCards(s.index))) why.push(`cards ${JSON.stringify(s.cards)} ≠ ${JSON.stringify(deptCards(s.index))}`);
+    if (s.keyboard && !(s.focus?.index === s.index && s.focus.focusVisible && s.focus.ring !== "none")) why.push(`focus ${JSON.stringify(s.focus)}`);
+    if (s.tabs === null) why.push("Tab never reached the filters");
+    if (why.length) deptBad[s.step === "click" ? "pointer" : "keyboard"].push(`${run} ${s.step} → ${s.index}: ${why.join("; ")}`);
+  }
+}
+const deptKeys = deptRuns.flatMap(([, r]) => r.steps.filter((s) => s.keyboard));
+check(`C2: department filter by keyboard — "All departments" starts pressed; Tab reaches it and each department button; Enter and Space choose; aria-pressed and .active on the chosen one only; a visible focus ring; the cards the database says (${deptDb?.depts.length} departments, ${deptDb?.emps.length} employees; EN / AR at 1440 and 390, ${deptKeys.length} keyboard steps)`,
+  (ONLY && !deptRuns.length) || ((ONLY || deptRuns.length === 4) && deptDb?.depts.length >= 2 && deptKeys.some((s) => s.step.includes("Enter")) && deptKeys.some((s) => s.step.includes("Space")) && deptBad.keyboard.length === 0), list(deptBad.keyboard));
+check("C2: …and by pointer, as before C2: clicking each filter shows exactly that",
+  (ONLY && !deptRuns.length) || ((ONLY || deptRuns.length === 4) && deptRuns.every(([, r]) => r.steps.filter((s) => s.step === "click").length === deptDb.depts.length + 1) && deptBad.pointer.length === 0), list(deptBad.pointer));
+
+// Payroll, EN / AR: the layout at every width; the rows by keyboard at 1440 and 390.
+const payRuns = Object.entries(now.c2.payroll);
+const payBad = { keys: [], layout: [] };
+for (const [run, { steps, errors }] of payRuns) {
+  const wide = Number(run.split("|")[1]) > 1100;
+  const L = steps[0].layout;
+  if (!L || L.tracks !== (wide ? 2 : 1) || !(wide ? L.sideBySide : L.stacked) || !L.inViewport || !L.lastColumn?.reachable || (L.lastColumn.scrolls && !/auto|scroll/.test(L.lastColumn.overflowX)))
+    payBad.layout.push(`${run} ${JSON.stringify(L)}`);
+  if (errors.length) payBad.keys.push(`${run}: ${errors[0]}`);
+  const names = steps[0].rows.map((r) => r.split("|")[0]);
+  if (names.length < 2) payBad.keys.push(`${run}: ${names.length} payroll rows — the probe needs two`);
+  for (const s of steps) {
+    const why = [];
+    const sel = s.rows.map((r) => r.split("|")[1]);
+    if (sel.filter((x) => x === "true").length !== 1 || sel[s.index] !== "true") why.push(`aria-selected ${sel.join(",")}`);
+    if (!s.rows.every((r) => r.endsWith("|0"))) why.push("a row left the tab order");
+    if (!s.slip?.endsWith(`— ${names[s.index]}`)) why.push(`payslip "${s.slip}"`);
+    if (s.keyboard && !(s.focus === s.index && s.focusVisible)) why.push(`focus ${s.focus} ${s.focusVisible}`);
+    if (s.tabs === null) why.push("Tab never reached a row");
+    if (why.length) payBad.keys.push(`${run} ${s.step} → ${s.index}: ${why.join("; ")}`);
+  }
+}
+const payKeys = payRuns.flatMap(([, r]) => r.steps.filter((s) => s.keyboard));
+check(`C2: payroll rows by keyboard, as before — Tab reaches each row, Enter and Space select it (aria-selected moves, the payslip follows), focus visible (EN / AR at 1440 and 390, ${payKeys.length} keyboard steps)`,
+  (ONLY && !payRuns.length) || ((ONLY || payRuns.length === 8) && payKeys.some((s) => s.step.includes("Enter")) && payKeys.some((s) => s.step.includes("Space")) && payBad.keys.length === 0), list(payBad.keys));
+check("C2: payroll layout — table and payslip side by side at 1440, stacked below 1100 px (1024 / 768 / 390), both inside the viewport, the table's last column reachable by scrolling it (EN / AR)",
+  (ONLY && !payRuns.length) || ((ONLY || payRuns.length === 8) && payBad.layout.length === 0), list(payBad.layout));
+
+// ------------------------------------------------------------------------------------- D-6
+// Every StatRow consumer is held to D-6's targets; all but C2's own strips also to C1's record.
+const d6Pinned = (WRITE ? d6Record() : pinned.d6) ?? null;
+const D6R = scoped(d6Pinned?.states ?? {});
+const d6Keys = Object.keys(now.d6);
+const rowsOf = (k) => now.d6[k].statRows ?? [];
+const d6Show = (f) => (k) => `${k} ${f(now.d6[k])}`;
+check(`D-6: every StatRow consumer measured — ${D6_ROUTES.length} routes × EN / AR × 4 widths (${d6Keys.length} states), each with its row`,
+  (ONLY || d6Keys.length === D6_ROUTES.length * 8) && d6Keys.every((k) => rowsOf(k).length >= 1), list(d6Keys.filter((k) => !rowsOf(k).length)));
+const d6Recorded = d6Keys.filter((k) => !D6_C2.includes(k.split("|")[0]));
+check(`D-6: the record covers every other consumer state (${Object.keys(D6R).length}; measured on ${d6Pinned?.recordedOn?.commit?.slice(0, 7) ?? "—"}, src ${d6Pinned?.recordedOn?.srcClean ? "clean" : "MODIFIED"}, build ${d6Pinned?.recordedOn?.build ?? "—"})`,
+  d6Pinned?.recordedOn?.srcClean === true && d6Recorded.every((k) => D6R[k]) && Object.keys(D6R).every((k) => now.d6[k]), list(d6Recorded.filter((k) => !D6R[k])));
+const phone = d6Keys.filter((k) => k.endsWith("|390"));
+const d6Two = phone.filter((k) => !rowsOf(k).every((r) => r.tracks === 2 && r.perRow === Math.min(2, r.cards) && r.lines === Math.ceil(r.cards / 2)));
+check(`D-6: at 390 every StatRow is two across — two tracks, two cards a line (${phone.length} states, EN / AR)`, d6Two.length === 0,
+  list(d6Two.map(d6Show((s) => JSON.stringify(s.statRows.map((r) => [r.tracks, r.perRow, r.lines]))))));
+const d6Four = d6Keys.filter((k) => !k.endsWith("|390") && !rowsOf(k).every((r) => r.tracks === 4 && r.perRow === Math.min(4, r.cards)));
+check(`D-6: above 640 px every row keeps its four columns (1440 / 1024 / 768: ${d6Keys.length - phone.length} states)`, d6Four.length === 0,
+  list(d6Four.map(d6Show((s) => JSON.stringify(s.statRows.map((r) => [r.tracks, r.perRow, r.lines]))))));
+const d6Clip = d6Keys.filter((k) => rowsOf(k).some((r) => r.clipped || r.outside));
+check("D-6: no card clips its label or value and none leaves the viewport — every consumer, every width, EN / AR", d6Clip.length === 0,
+  list(d6Clip.map(d6Show((s) => JSON.stringify(s.statRows.map((r) => [r.clipped, r.outside]))))));
+const d6Ov = d6Keys.filter((k) => now.d6[k].overflow !== 0);
+check("D-6: no page overflow on any StatRow consumer at any width", d6Ov.length === 0, list(d6Ov.map(d6Show((s) => `${s.overflow}px`))));
+const d6Err = d6Keys.filter((k) => now.d6[k].status !== 200 || now.d6[k].consoleErrors || now.d6[k].pageErrors || now.d6[k].r418);
+check("D-6: every consumer answers 200, with zero console errors, page errors and React #418", d6Err.length === 0, list(d6Err.map(d6Show((s) => `${s.status} ${JSON.stringify(s.errorSample)}`))));
+// Against the record: nothing changed but the phone layout.
+const d6Diff = (f, which = d6Recorded) =>
+  which.filter((k) => D6R[k] && JSON.stringify(f(now.d6[k])) !== JSON.stringify(f(D6R[k]))).map((k) => `${k} ${JSON.stringify(f(D6R[k])).slice(0, 140)} → ${JSON.stringify(f(now.d6[k])).slice(0, 140)}`);
+const says = (s) => [s.finalPath, s.statRows.map((r) => r.facts), s.badges, s.tables];
+check("D-6: the document lists, Projects and Settings › Security say what the record says — route; each card's label, value, tone, classes and colour; every status badge (tone, colours); every table (heads, rows) — all widths, EN / AR",
+  d6Diff(says).length === 0, list(d6Diff(says)));
+check("D-6: …offer the same actions (1440 and 390, EN / AR)", d6Diff((s) => s.actions ?? null).length === 0, list(d6Diff((s) => s.actions ?? null)));
+const geometry = (s) => s.statRows.map((r) => [r.tracks, r.perRow, r.lines, r.widths, r.height]);
+check("D-6: …and above 640 px their rows are the record's to the pixel — tracks, cards a line, card widths, row height (1440 / 1024 / 768)",
+  d6Diff(geometry, d6Recorded.filter((k) => !k.endsWith("|390"))).length === 0, list(d6Diff(geometry, d6Recorded.filter((k) => !k.endsWith("|390")))));
+// The intended change, listed for the review: each consumer's rows at 390, as recorded → now.
+console.log("• D-6 at 390 (tracks / cards a line / lines, recorded → now):");
+for (const k of phone.filter((k) => D6R[k])) console.log(`    ${k.padEnd(28)} ${JSON.stringify(D6R[k].statRows.map((r) => [r.tracks, r.perRow, r.lines]))} → ${JSON.stringify(rowsOf(k).map((r) => [r.tracks, r.perRow, r.lines]))}`);
+// C2's own strips: the four KPIs each; the two attendance counts in the registry's tones, the rest plain.
+const stripBad = d6Keys.filter((k) => D6_C2.includes(k.split("|")[0])).filter((k) => {
+  const [id, locale] = k.split("|");
+  const f = rowsOf(k)[0]?.facts ?? [];
+  if (rowsOf(k).length !== 1 || JSON.stringify(f.map((x) => x.label)) !== JSON.stringify(STRIP_LABELS[id][locale])) return true;
+  const col = f.map((x) => x.color);
+  if (id === "hr-employees")
+    return JSON.stringify(f.map((x) => [x.tone, x.status, x.cls])) !== JSON.stringify([[null, null, ""], ["success", "present", "text-success"], ["info", "on_leave", "text-info"], [null, null, ""]]) ||
+      col[3] !== col[0] || col[1] === col[0] || col[2] === col[0] || col[1] === col[2];
+  return f.some((x) => x.tone || x.status || x.cls) || new Set(col).size !== 1;
+});
+check("C2: the Employees strip — Headcount, Present today (attendance/present: success), On leave (attendance/on_leave: info), Departments — tones, classes and colours from the status registry, the two counts plain; the Payroll strip — Employees, Gross pay, Deductions, Net pay — all plain, one colour, Net pay no longer orange (EN / AR, all widths)",
+  (ONLY || d6Keys.filter((k) => D6_C2.includes(k.split("|")[0])).length === 16) && stripBad.length === 0, list(stripBad.map(d6Show((s) => JSON.stringify(s.statRows[0]?.facts)))));
 check(`formatDisplayDate: Chromium writes exactly the server's (Node's) strings — ${Object.keys(fdNode).length} per browser — under ${fdBrowsers.map((b) => `${b.locale}/${b.timezoneId}`).join(", ")}`,
   Object.keys(fdNode).length === 36 && Object.values(fdNode).every((v) => typeof v === "string" && v) && fdBrowsers.length === 4 && fdBrowsers.every((b) => b.diff.length === 0),
   fdBrowsers.flatMap((b) => b.diff).slice(0, 4).join(" · ") || "no formatDisplayDate in this tree");

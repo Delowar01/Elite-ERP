@@ -2903,9 +2903,9 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 Attendance — Today"
+    "h1 Attendance — Today"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 1,
    "tablesBeyond": 0,
@@ -2913,6 +2913,17 @@
    "unnamed": 0,
    "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "end",
+    "overlap": false,
+    "title": "Attendance — Today",
+    "meta": "Jun 15, 2026"
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -2926,9 +2937,9 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 Attendance — Today"
+    "h1 Attendance — Today"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 1,
    "tablesBeyond": 0,
@@ -2936,6 +2947,17 @@
    "unnamed": 0,
    "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "end",
+    "overlap": false,
+    "title": "Attendance — Today",
+    "meta": "Jun 15, 2026"
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -2949,9 +2971,9 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 Attendance — Today"
+    "h1 Attendance — Today"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 1,
    "tablesBeyond": 0,
@@ -2959,6 +2981,17 @@
    "unnamed": 0,
    "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "end",
+    "overlap": false,
+    "title": "Attendance — Today",
+    "meta": "Jun 15, 2026"
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -2972,9 +3005,9 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 Attendance — Today"
+    "h1 Attendance — Today"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 1,
    "tablesBeyond": 0,
@@ -2982,6 +3015,17 @@
    "unnamed": 0,
    "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "end",
+    "overlap": false,
+    "title": "Attendance — Today",
+    "meta": "Jun 15, 2026"
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -2995,9 +3039,9 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 Departments"
+    "h1 Departments"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 0,
    "tablesBeyond": 0,
@@ -3005,6 +3049,17 @@
    "unnamed": 0,
    "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "Departments",
+    "meta": null
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -3018,9 +3073,9 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 Departments"
+    "h1 Departments"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 0,
    "tablesBeyond": 0,
@@ -3028,6 +3083,17 @@
    "unnamed": 0,
    "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "Departments",
+    "meta": null
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -3041,9 +3107,9 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 Departments"
+    "h1 Departments"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 0,
    "tablesBeyond": 0,
@@ -3051,6 +3117,17 @@
    "unnamed": 0,
    "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "Departments",
+    "meta": null
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -3064,9 +3141,9 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 Departments"
+    "h1 Departments"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 0,
    "tablesBeyond": 0,
@@ -3074,6 +3151,17 @@
    "unnamed": 0,
    "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "Departments",
+    "meta": null
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -3087,16 +3175,27 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 Employees"
+    "h1 Employees"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 0,
    "tablesBeyond": 0,
    "indic": 0,
    "unnamed": 0,
-   "pointerOnly": 4,
+   "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "end",
+    "overlap": false,
+    "title": "Employees",
+    "meta": null
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -3110,16 +3209,27 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 Employees"
+    "h1 Employees"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 0,
    "tablesBeyond": 0,
    "indic": 0,
    "unnamed": 0,
-   "pointerOnly": 4,
+   "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "end",
+    "overlap": false,
+    "title": "Employees",
+    "meta": null
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -3133,16 +3243,27 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 Employees"
+    "h1 Employees"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 0,
    "tablesBeyond": 0,
    "indic": 0,
    "unnamed": 0,
-   "pointerOnly": 4,
+   "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "end",
+    "overlap": false,
+    "title": "Employees",
+    "meta": null
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -3153,19 +3274,30 @@
    "vw": 390,
    "dir": "ltr",
    "lang": "en",
-   "overflow": 1,
-   "offenders": 1,
+   "overflow": 0,
+   "offenders": 0,
    "outline": [
-    "h3 Employees"
+    "h1 Employees"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 0,
    "tablesBeyond": 0,
    "indic": 0,
    "unnamed": 0,
-   "pointerOnly": 4,
+   "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "end",
+    "overlap": false,
+    "title": "Employees",
+    "meta": null
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -3179,9 +3311,10 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 Khalid Example (Fictional) · EMP-001"
+    "h1 Khalid Example (Fictional) · EMP-001",
+    "h2 Salary Structure"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 0,
    "tablesBeyond": 0,
@@ -3189,6 +3322,17 @@
    "unnamed": 3,
    "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "end",
+    "overlap": false,
+    "title": "Khalid Example (Fictional) · EMP-001",
+    "meta": "Active"
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -3202,9 +3346,10 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 Khalid Example (Fictional) · EMP-001"
+    "h1 Khalid Example (Fictional) · EMP-001",
+    "h2 Salary Structure"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 0,
    "tablesBeyond": 0,
@@ -3212,6 +3357,17 @@
    "unnamed": 3,
    "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "end",
+    "overlap": false,
+    "title": "Khalid Example (Fictional) · EMP-001",
+    "meta": "Active"
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -3225,9 +3381,10 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 Khalid Example (Fictional) · EMP-001"
+    "h1 Khalid Example (Fictional) · EMP-001",
+    "h2 Salary Structure"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 0,
    "tablesBeyond": 0,
@@ -3235,6 +3392,17 @@
    "unnamed": 3,
    "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "end",
+    "overlap": false,
+    "title": "Khalid Example (Fictional) · EMP-001",
+    "meta": "Active"
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -3248,9 +3416,10 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 Khalid Example (Fictional) · EMP-001"
+    "h1 Khalid Example (Fictional) · EMP-001",
+    "h2 Salary Structure"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 0,
    "tablesBeyond": 0,
@@ -3258,6 +3427,17 @@
    "unnamed": 3,
    "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "below",
+    "overlap": false,
+    "title": "Khalid Example (Fictional) · EMP-001",
+    "meta": "Active"
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -3271,9 +3451,9 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 New Employee"
+    "h1 New Employee"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 0,
    "tablesBeyond": 0,
@@ -3281,6 +3461,17 @@
    "unnamed": 2,
    "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "New Employee",
+    "meta": null
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -3294,9 +3485,9 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 New Employee"
+    "h1 New Employee"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 0,
    "tablesBeyond": 0,
@@ -3304,6 +3495,17 @@
    "unnamed": 2,
    "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "New Employee",
+    "meta": null
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -3317,9 +3519,9 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 New Employee"
+    "h1 New Employee"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 0,
    "tablesBeyond": 0,
@@ -3327,6 +3529,17 @@
    "unnamed": 2,
    "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "New Employee",
+    "meta": null
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -3340,9 +3553,9 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 New Employee"
+    "h1 New Employee"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 0,
    "tablesBeyond": 0,
@@ -3350,6 +3563,17 @@
    "unnamed": 2,
    "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "New Employee",
+    "meta": null
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -3363,9 +3587,9 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 Leave Requests"
+    "h1 Leave Requests"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 1,
    "tablesBeyond": 0,
@@ -3373,6 +3597,17 @@
    "unnamed": 0,
    "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "end",
+    "overlap": false,
+    "title": "Leave Requests",
+    "meta": null
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -3386,9 +3621,9 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 Leave Requests"
+    "h1 Leave Requests"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 1,
    "tablesBeyond": 0,
@@ -3396,6 +3631,17 @@
    "unnamed": 0,
    "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "end",
+    "overlap": false,
+    "title": "Leave Requests",
+    "meta": null
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -3409,9 +3655,9 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 Leave Requests"
+    "h1 Leave Requests"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 1,
    "tablesBeyond": 0,
@@ -3419,6 +3665,17 @@
    "unnamed": 0,
    "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "end",
+    "overlap": false,
+    "title": "Leave Requests",
+    "meta": null
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -3432,9 +3689,9 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 Leave Requests"
+    "h1 Leave Requests"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 1,
    "tablesBeyond": 0,
@@ -3442,6 +3699,17 @@
    "unnamed": 0,
    "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "end",
+    "overlap": false,
+    "title": "Leave Requests",
+    "meta": null
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -3455,10 +3723,10 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 Payroll — June 2026",
-    "h3 Past payroll runs"
+    "h1 Payroll — June 2026",
+    "h2 Past payroll runs"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 2,
    "tablesBeyond": 0,
@@ -3466,6 +3734,17 @@
    "unnamed": 0,
    "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "end",
+    "overlap": false,
+    "title": "Payroll — June 2026",
+    "meta": "Draft"
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -3479,10 +3758,10 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 Payroll — June 2026",
-    "h3 Past payroll runs"
+    "h1 Payroll — June 2026",
+    "h2 Past payroll runs"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 2,
    "tablesBeyond": 0,
@@ -3490,6 +3769,17 @@
    "unnamed": 0,
    "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "end",
+    "overlap": false,
+    "title": "Payroll — June 2026",
+    "meta": "Draft"
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -3503,10 +3793,10 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 Payroll — June 2026",
-    "h3 Past payroll runs"
+    "h1 Payroll — June 2026",
+    "h2 Past payroll runs"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 2,
    "tablesBeyond": 0,
@@ -3514,6 +3804,17 @@
    "unnamed": 0,
    "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "end",
+    "overlap": false,
+    "title": "Payroll — June 2026",
+    "meta": "Draft"
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -3524,13 +3825,13 @@
    "vw": 390,
    "dir": "ltr",
    "lang": "en",
-   "overflow": 57,
-   "offenders": 1,
+   "overflow": 0,
+   "offenders": 0,
    "outline": [
-    "h3 Payroll — June 2026",
-    "h3 Past payroll runs"
+    "h1 Payroll — June 2026",
+    "h2 Past payroll runs"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 2,
    "tablesBeyond": 0,
@@ -3538,6 +3839,17 @@
    "unnamed": 0,
    "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "end",
+    "overlap": false,
+    "title": "Payroll — June 2026",
+    "meta": "Draft"
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -7515,16 +7827,27 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 الحضور والانصراف — اليوم"
+    "h1 الحضور والانصراف — اليوم"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 1,
    "tablesBeyond": 0,
-   "indic": 1,
+   "indic": 0,
    "unnamed": 0,
    "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "end",
+    "overlap": false,
+    "title": "الحضور والانصراف — اليوم",
+    "meta": "15 يونيو 2026"
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -7538,16 +7861,27 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 الحضور والانصراف — اليوم"
+    "h1 الحضور والانصراف — اليوم"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 1,
    "tablesBeyond": 0,
-   "indic": 1,
+   "indic": 0,
    "unnamed": 0,
    "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "end",
+    "overlap": false,
+    "title": "الحضور والانصراف — اليوم",
+    "meta": "15 يونيو 2026"
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -7561,16 +7895,27 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 الحضور والانصراف — اليوم"
+    "h1 الحضور والانصراف — اليوم"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 1,
    "tablesBeyond": 0,
-   "indic": 1,
+   "indic": 0,
    "unnamed": 0,
    "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "end",
+    "overlap": false,
+    "title": "الحضور والانصراف — اليوم",
+    "meta": "15 يونيو 2026"
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -7584,16 +7929,27 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 الحضور والانصراف — اليوم"
+    "h1 الحضور والانصراف — اليوم"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 1,
    "tablesBeyond": 0,
-   "indic": 1,
+   "indic": 0,
    "unnamed": 0,
    "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "end",
+    "overlap": false,
+    "title": "الحضور والانصراف — اليوم",
+    "meta": "15 يونيو 2026"
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -7607,9 +7963,9 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 الأقسام"
+    "h1 الأقسام"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 0,
    "tablesBeyond": 0,
@@ -7617,6 +7973,17 @@
    "unnamed": 0,
    "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "الأقسام",
+    "meta": null
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -7630,9 +7997,9 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 الأقسام"
+    "h1 الأقسام"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 0,
    "tablesBeyond": 0,
@@ -7640,6 +8007,17 @@
    "unnamed": 0,
    "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "الأقسام",
+    "meta": null
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -7653,9 +8031,9 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 الأقسام"
+    "h1 الأقسام"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 0,
    "tablesBeyond": 0,
@@ -7663,6 +8041,17 @@
    "unnamed": 0,
    "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "الأقسام",
+    "meta": null
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -7676,9 +8065,9 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 الأقسام"
+    "h1 الأقسام"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 0,
    "tablesBeyond": 0,
@@ -7686,6 +8075,17 @@
    "unnamed": 0,
    "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "الأقسام",
+    "meta": null
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -7699,16 +8099,27 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 الموظفون"
+    "h1 الموظفون"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 0,
    "tablesBeyond": 0,
    "indic": 0,
    "unnamed": 0,
-   "pointerOnly": 4,
+   "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "end",
+    "overlap": false,
+    "title": "الموظفون",
+    "meta": null
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -7722,16 +8133,27 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 الموظفون"
+    "h1 الموظفون"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 0,
    "tablesBeyond": 0,
    "indic": 0,
    "unnamed": 0,
-   "pointerOnly": 4,
+   "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "end",
+    "overlap": false,
+    "title": "الموظفون",
+    "meta": null
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -7745,16 +8167,27 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 الموظفون"
+    "h1 الموظفون"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 0,
    "tablesBeyond": 0,
    "indic": 0,
    "unnamed": 0,
-   "pointerOnly": 4,
+   "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "end",
+    "overlap": false,
+    "title": "الموظفون",
+    "meta": null
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -7768,16 +8201,27 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 الموظفون"
+    "h1 الموظفون"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 0,
    "tablesBeyond": 0,
    "indic": 0,
    "unnamed": 0,
-   "pointerOnly": 4,
+   "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "end",
+    "overlap": false,
+    "title": "الموظفون",
+    "meta": null
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -7791,9 +8235,10 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 Khalid Example (Fictional) · EMP-001"
+    "h1 Khalid Example (Fictional) · EMP-001",
+    "h2 هيكل الراتب"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 0,
    "tablesBeyond": 0,
@@ -7801,6 +8246,17 @@
    "unnamed": 3,
    "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "end",
+    "overlap": false,
+    "title": "Khalid Example (Fictional) · EMP-001",
+    "meta": "نشط"
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -7814,9 +8270,10 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 Khalid Example (Fictional) · EMP-001"
+    "h1 Khalid Example (Fictional) · EMP-001",
+    "h2 هيكل الراتب"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 0,
    "tablesBeyond": 0,
@@ -7824,6 +8281,17 @@
    "unnamed": 3,
    "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "end",
+    "overlap": false,
+    "title": "Khalid Example (Fictional) · EMP-001",
+    "meta": "نشط"
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -7837,9 +8305,10 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 Khalid Example (Fictional) · EMP-001"
+    "h1 Khalid Example (Fictional) · EMP-001",
+    "h2 هيكل الراتب"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 0,
    "tablesBeyond": 0,
@@ -7847,6 +8316,17 @@
    "unnamed": 3,
    "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "end",
+    "overlap": false,
+    "title": "Khalid Example (Fictional) · EMP-001",
+    "meta": "نشط"
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -7860,9 +8340,10 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 Khalid Example (Fictional) · EMP-001"
+    "h1 Khalid Example (Fictional) · EMP-001",
+    "h2 هيكل الراتب"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 0,
    "tablesBeyond": 0,
@@ -7870,6 +8351,17 @@
    "unnamed": 3,
    "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "below",
+    "overlap": false,
+    "title": "Khalid Example (Fictional) · EMP-001",
+    "meta": "نشط"
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -7883,9 +8375,9 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 موظف جديد"
+    "h1 موظف جديد"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 0,
    "tablesBeyond": 0,
@@ -7893,6 +8385,17 @@
    "unnamed": 2,
    "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "موظف جديد",
+    "meta": null
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -7906,9 +8409,9 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 موظف جديد"
+    "h1 موظف جديد"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 0,
    "tablesBeyond": 0,
@@ -7916,6 +8419,17 @@
    "unnamed": 2,
    "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "موظف جديد",
+    "meta": null
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -7929,9 +8443,9 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 موظف جديد"
+    "h1 موظف جديد"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 0,
    "tablesBeyond": 0,
@@ -7939,6 +8453,17 @@
    "unnamed": 2,
    "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "موظف جديد",
+    "meta": null
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -7952,9 +8477,9 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 موظف جديد"
+    "h1 موظف جديد"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 0,
    "tablesBeyond": 0,
@@ -7962,6 +8487,17 @@
    "unnamed": 2,
    "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "موظف جديد",
+    "meta": null
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -7975,9 +8511,9 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 طلبات الإجازة"
+    "h1 طلبات الإجازة"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 1,
    "tablesBeyond": 0,
@@ -7985,6 +8521,17 @@
    "unnamed": 0,
    "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "end",
+    "overlap": false,
+    "title": "طلبات الإجازة",
+    "meta": null
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -7998,9 +8545,9 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 طلبات الإجازة"
+    "h1 طلبات الإجازة"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 1,
    "tablesBeyond": 0,
@@ -8008,6 +8555,17 @@
    "unnamed": 0,
    "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "end",
+    "overlap": false,
+    "title": "طلبات الإجازة",
+    "meta": null
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -8021,9 +8579,9 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 طلبات الإجازة"
+    "h1 طلبات الإجازة"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 1,
    "tablesBeyond": 0,
@@ -8031,6 +8589,17 @@
    "unnamed": 0,
    "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "end",
+    "overlap": false,
+    "title": "طلبات الإجازة",
+    "meta": null
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -8044,9 +8613,9 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 طلبات الإجازة"
+    "h1 طلبات الإجازة"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 1,
    "tablesBeyond": 0,
@@ -8054,6 +8623,17 @@
    "unnamed": 0,
    "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "end",
+    "overlap": false,
+    "title": "طلبات الإجازة",
+    "meta": null
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -8067,17 +8647,28 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 الرواتب — يونيو ٢٠٢٦",
-    "h3 دورات الرواتب السابقة"
+    "h1 الرواتب — يونيو 2026",
+    "h2 دورات الرواتب السابقة"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 2,
    "tablesBeyond": 0,
-   "indic": 1,
+   "indic": 0,
    "unnamed": 0,
    "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "end",
+    "overlap": false,
+    "title": "الرواتب — يونيو 2026",
+    "meta": "مسودة"
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -8091,17 +8682,28 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 الرواتب — يونيو ٢٠٢٦",
-    "h3 دورات الرواتب السابقة"
+    "h1 الرواتب — يونيو 2026",
+    "h2 دورات الرواتب السابقة"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 2,
    "tablesBeyond": 0,
-   "indic": 1,
+   "indic": 0,
    "unnamed": 0,
    "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "end",
+    "overlap": false,
+    "title": "الرواتب — يونيو 2026",
+    "meta": "مسودة"
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -8115,17 +8717,28 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 الرواتب — يونيو ٢٠٢٦",
-    "h3 دورات الرواتب السابقة"
+    "h1 الرواتب — يونيو 2026",
+    "h2 دورات الرواتب السابقة"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 2,
    "tablesBeyond": 0,
-   "indic": 1,
+   "indic": 0,
    "unnamed": 0,
    "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "end",
+    "overlap": false,
+    "title": "الرواتب — يونيو 2026",
+    "meta": "مسودة"
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -8136,20 +8749,31 @@
    "vw": 390,
    "dir": "rtl",
    "lang": "ar",
-   "overflow": 40,
-   "offenders": 1,
+   "overflow": 0,
+   "offenders": 0,
    "outline": [
-    "h3 الرواتب — يونيو ٢٠٢٦",
-    "h3 دورات الرواتب السابقة"
+    "h1 الرواتب — يونيو 2026",
+    "h2 دورات الرواتب السابقة"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 2,
    "tablesBeyond": 0,
-   "indic": 1,
+   "indic": 0,
    "unnamed": 0,
    "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "end",
+    "overlap": false,
+    "title": "الرواتب — يونيو 2026",
+    "meta": "مسودة"
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -10619,5 +11243,6043 @@
    "r418": 0
   }
  },
- "blockedRequests": 0
+ "blockedRequests": 0,
+ "d6": {
+  "recordedOn": {
+   "commit": "8768cb23795c803ad14abbc3241a9ed44fc72265",
+   "srcClean": true,
+   "build": "f893fD1JE3WCE_zD8p9Jc",
+   "chromium": "141.0.7390.37"
+  },
+  "states": {
+   "quotations|en|1440": {
+    "status": 200,
+    "finalPath": "/sales/quotations",
+    "overflow": 0,
+    "statRows": [
+     {
+      "tracks": 4,
+      "cards": 4,
+      "perRow": 4,
+      "lines": 1,
+      "clipped": 0,
+      "outside": 0,
+      "widths": [
+       279,
+       279,
+       279,
+       279
+      ],
+      "height": 78,
+      "facts": [
+       {
+        "label": "Total Quotations",
+        "value": "5",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       },
+       {
+        "label": "Accepted",
+        "value": "1",
+        "cls": "text-success",
+        "color": "rgb(23, 115, 74)",
+        "tone": "success",
+        "status": "accepted"
+       },
+       {
+        "label": "Sent",
+        "value": "1",
+        "cls": "text-info",
+        "color": "rgb(47, 79, 184)",
+        "tone": "info",
+        "status": "sent"
+       },
+       {
+        "label": "Draft",
+        "value": "1",
+        "cls": "text-neutral",
+        "color": "rgb(79, 84, 110)",
+        "tone": "neutral",
+        "status": "draft"
+       }
+      ]
+     }
+    ],
+    "badges": [
+     "quotation|expired|warning|Expired|rgb(138, 90, 0)|rgb(251, 240, 217)",
+     "quotation|rejected|danger|Rejected|rgb(180, 50, 45)|rgb(251, 230, 228)",
+     "quotation|draft|neutral|Draft|rgb(79, 84, 110)|rgb(236, 238, 243)",
+     "quotation|sent|info|Sent|rgb(47, 79, 184)|rgb(231, 236, 250)",
+     "quotation|accepted|success|Accepted|rgb(23, 115, 74)|rgb(227, 242, 234)"
+    ],
+    "tables": [
+     {
+      "heads": [
+       "Quotation #",
+       "Title",
+       "Converted From",
+       "Client",
+       "Issue Date",
+       "Valid Till",
+       "Amount",
+       "Created By",
+       "Status",
+       "Actions"
+      ],
+      "rows": 5
+     }
+    ],
+    "actions": [
+     "button|Actions for QTN-0001||type=button|popup=menu",
+     "button|Actions for QTN-0002||type=button|popup=menu",
+     "button|Actions for QTN-0003||type=button|popup=menu",
+     "button|Actions for QTN-0004||type=button|popup=menu",
+     "button|Actions for QTN-0005||type=button|popup=menu",
+     "button|Export||type=button|popup=menu",
+     "button|Filters||type=button|popup=dialog",
+     "button|Import||type=button|popup=dialog",
+     "button|Views||type=button|popup=menu",
+     "link|New Quotation|/sales/quotations/new||",
+     "link|QTN-0001|/sales/quotations/1||",
+     "link|QTN-0002|/sales/quotations/2||",
+     "link|QTN-0003|/sales/quotations/3||",
+     "link|QTN-0004|/sales/quotations/4||",
+     "link|QTN-0005|/sales/quotations/5||",
+     "link|Recycle Bin|/recycle-bin||"
+    ],
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "r418": 0
+   },
+   "quotations|en|1024": {
+    "status": 200,
+    "finalPath": "/sales/quotations",
+    "overflow": 0,
+    "statRows": [
+     {
+      "tracks": 4,
+      "cards": 4,
+      "perRow": 4,
+      "lines": 1,
+      "clipped": 0,
+      "outside": 0,
+      "widths": [
+       218.5,
+       218.5,
+       218.5,
+       218.5
+      ],
+      "height": 78,
+      "facts": [
+       {
+        "label": "Total Quotations",
+        "value": "5",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       },
+       {
+        "label": "Accepted",
+        "value": "1",
+        "cls": "text-success",
+        "color": "rgb(23, 115, 74)",
+        "tone": "success",
+        "status": "accepted"
+       },
+       {
+        "label": "Sent",
+        "value": "1",
+        "cls": "text-info",
+        "color": "rgb(47, 79, 184)",
+        "tone": "info",
+        "status": "sent"
+       },
+       {
+        "label": "Draft",
+        "value": "1",
+        "cls": "text-neutral",
+        "color": "rgb(79, 84, 110)",
+        "tone": "neutral",
+        "status": "draft"
+       }
+      ]
+     }
+    ],
+    "badges": [
+     "quotation|expired|warning|Expired|rgb(138, 90, 0)|rgb(251, 240, 217)",
+     "quotation|rejected|danger|Rejected|rgb(180, 50, 45)|rgb(251, 230, 228)",
+     "quotation|draft|neutral|Draft|rgb(79, 84, 110)|rgb(236, 238, 243)",
+     "quotation|sent|info|Sent|rgb(47, 79, 184)|rgb(231, 236, 250)",
+     "quotation|accepted|success|Accepted|rgb(23, 115, 74)|rgb(227, 242, 234)"
+    ],
+    "tables": [
+     {
+      "heads": [
+       "Quotation #",
+       "Title",
+       "Converted From",
+       "Client",
+       "Issue Date",
+       "Valid Till",
+       "Amount",
+       "Created By",
+       "Status",
+       "Actions"
+      ],
+      "rows": 5
+     }
+    ],
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "r418": 0
+   },
+   "quotations|en|768": {
+    "status": 200,
+    "finalPath": "/sales/quotations",
+    "overflow": 0,
+    "statRows": [
+     {
+      "tracks": 4,
+      "cards": 4,
+      "perRow": 4,
+      "lines": 1,
+      "clipped": 0,
+      "outside": 0,
+      "widths": [
+       175,
+       175,
+       175,
+       175
+      ],
+      "height": 78,
+      "facts": [
+       {
+        "label": "Total Quotations",
+        "value": "5",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       },
+       {
+        "label": "Accepted",
+        "value": "1",
+        "cls": "text-success",
+        "color": "rgb(23, 115, 74)",
+        "tone": "success",
+        "status": "accepted"
+       },
+       {
+        "label": "Sent",
+        "value": "1",
+        "cls": "text-info",
+        "color": "rgb(47, 79, 184)",
+        "tone": "info",
+        "status": "sent"
+       },
+       {
+        "label": "Draft",
+        "value": "1",
+        "cls": "text-neutral",
+        "color": "rgb(79, 84, 110)",
+        "tone": "neutral",
+        "status": "draft"
+       }
+      ]
+     }
+    ],
+    "badges": [
+     "quotation|expired|warning|Expired|rgb(138, 90, 0)|rgb(251, 240, 217)",
+     "quotation|rejected|danger|Rejected|rgb(180, 50, 45)|rgb(251, 230, 228)",
+     "quotation|draft|neutral|Draft|rgb(79, 84, 110)|rgb(236, 238, 243)",
+     "quotation|sent|info|Sent|rgb(47, 79, 184)|rgb(231, 236, 250)",
+     "quotation|accepted|success|Accepted|rgb(23, 115, 74)|rgb(227, 242, 234)"
+    ],
+    "tables": [
+     {
+      "heads": [
+       "Quotation #",
+       "Title",
+       "Converted From",
+       "Client",
+       "Issue Date",
+       "Valid Till",
+       "Amount",
+       "Created By",
+       "Status",
+       "Actions"
+      ],
+      "rows": 5
+     }
+    ],
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "r418": 0
+   },
+   "quotations|en|390": {
+    "status": 200,
+    "finalPath": "/sales/quotations",
+    "overflow": 0,
+    "statRows": [
+     {
+      "tracks": 4,
+      "cards": 4,
+      "perRow": 4,
+      "lines": 1,
+      "clipped": 0,
+      "outside": 0,
+      "widths": [
+       94.8,
+       86.7,
+       74.3,
+       74.3
+      ],
+      "height": 98,
+      "facts": [
+       {
+        "label": "Total Quotations",
+        "value": "5",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       },
+       {
+        "label": "Accepted",
+        "value": "1",
+        "cls": "text-success",
+        "color": "rgb(23, 115, 74)",
+        "tone": "success",
+        "status": "accepted"
+       },
+       {
+        "label": "Sent",
+        "value": "1",
+        "cls": "text-info",
+        "color": "rgb(47, 79, 184)",
+        "tone": "info",
+        "status": "sent"
+       },
+       {
+        "label": "Draft",
+        "value": "1",
+        "cls": "text-neutral",
+        "color": "rgb(79, 84, 110)",
+        "tone": "neutral",
+        "status": "draft"
+       }
+      ]
+     }
+    ],
+    "badges": [
+     "quotation|expired|warning|Expired|rgb(138, 90, 0)|rgb(251, 240, 217)",
+     "quotation|rejected|danger|Rejected|rgb(180, 50, 45)|rgb(251, 230, 228)",
+     "quotation|draft|neutral|Draft|rgb(79, 84, 110)|rgb(236, 238, 243)",
+     "quotation|sent|info|Sent|rgb(47, 79, 184)|rgb(231, 236, 250)",
+     "quotation|accepted|success|Accepted|rgb(23, 115, 74)|rgb(227, 242, 234)"
+    ],
+    "tables": [
+     {
+      "heads": [
+       "Quotation #",
+       "Title",
+       "Converted From",
+       "Client",
+       "Issue Date",
+       "Valid Till",
+       "Amount",
+       "Created By",
+       "Status",
+       "Actions"
+      ],
+      "rows": 5
+     }
+    ],
+    "actions": [
+     "button|Actions for QTN-0001||type=button|popup=menu",
+     "button|Actions for QTN-0002||type=button|popup=menu",
+     "button|Actions for QTN-0003||type=button|popup=menu",
+     "button|Actions for QTN-0004||type=button|popup=menu",
+     "button|Actions for QTN-0005||type=button|popup=menu",
+     "button|Export||type=button|popup=menu",
+     "button|Filters||type=button|popup=dialog",
+     "button|Import||type=button|popup=dialog",
+     "button|Views||type=button|popup=menu",
+     "link|New Quotation|/sales/quotations/new||",
+     "link|QTN-0001|/sales/quotations/1||",
+     "link|QTN-0002|/sales/quotations/2||",
+     "link|QTN-0003|/sales/quotations/3||",
+     "link|QTN-0004|/sales/quotations/4||",
+     "link|QTN-0005|/sales/quotations/5||",
+     "link|Recycle Bin|/recycle-bin||"
+    ],
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "r418": 0
+   },
+   "sales-orders|en|1440": {
+    "status": 200,
+    "finalPath": "/sales/orders",
+    "overflow": 0,
+    "statRows": [
+     {
+      "tracks": 4,
+      "cards": 4,
+      "perRow": 4,
+      "lines": 1,
+      "clipped": 0,
+      "outside": 0,
+      "widths": [
+       279,
+       279,
+       279,
+       279
+      ],
+      "height": 78,
+      "facts": [
+       {
+        "label": "Total Sales Orders",
+        "value": "0",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       },
+       {
+        "label": "Confirmed",
+        "value": "0",
+        "cls": "text-info",
+        "color": "rgb(47, 79, 184)",
+        "tone": "info",
+        "status": "confirmed"
+       },
+       {
+        "label": "Fulfilled",
+        "value": "0",
+        "cls": "text-success",
+        "color": "rgb(23, 115, 74)",
+        "tone": "success",
+        "status": "fulfilled"
+       },
+       {
+        "label": "Draft",
+        "value": "0",
+        "cls": "text-neutral",
+        "color": "rgb(79, 84, 110)",
+        "tone": "neutral",
+        "status": "draft"
+       }
+      ]
+     }
+    ],
+    "badges": [],
+    "tables": [],
+    "actions": [
+     "button|Export||type=button|popup=menu",
+     "button|Filters||type=button|popup=dialog",
+     "button|Import||type=button|popup=dialog",
+     "button|Views||type=button|popup=menu",
+     "link|New Sales Order|/sales/orders/new||",
+     "link|New Sales Order|/sales/orders/new||",
+     "link|Recycle Bin|/recycle-bin||"
+    ],
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "r418": 0
+   },
+   "sales-orders|en|1024": {
+    "status": 200,
+    "finalPath": "/sales/orders",
+    "overflow": 0,
+    "statRows": [
+     {
+      "tracks": 4,
+      "cards": 4,
+      "perRow": 4,
+      "lines": 1,
+      "clipped": 0,
+      "outside": 0,
+      "widths": [
+       218.5,
+       218.5,
+       218.5,
+       218.5
+      ],
+      "height": 78,
+      "facts": [
+       {
+        "label": "Total Sales Orders",
+        "value": "0",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       },
+       {
+        "label": "Confirmed",
+        "value": "0",
+        "cls": "text-info",
+        "color": "rgb(47, 79, 184)",
+        "tone": "info",
+        "status": "confirmed"
+       },
+       {
+        "label": "Fulfilled",
+        "value": "0",
+        "cls": "text-success",
+        "color": "rgb(23, 115, 74)",
+        "tone": "success",
+        "status": "fulfilled"
+       },
+       {
+        "label": "Draft",
+        "value": "0",
+        "cls": "text-neutral",
+        "color": "rgb(79, 84, 110)",
+        "tone": "neutral",
+        "status": "draft"
+       }
+      ]
+     }
+    ],
+    "badges": [],
+    "tables": [],
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "r418": 0
+   },
+   "sales-orders|en|768": {
+    "status": 200,
+    "finalPath": "/sales/orders",
+    "overflow": 0,
+    "statRows": [
+     {
+      "tracks": 4,
+      "cards": 4,
+      "perRow": 4,
+      "lines": 1,
+      "clipped": 0,
+      "outside": 0,
+      "widths": [
+       175,
+       175,
+       175,
+       175
+      ],
+      "height": 78,
+      "facts": [
+       {
+        "label": "Total Sales Orders",
+        "value": "0",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       },
+       {
+        "label": "Confirmed",
+        "value": "0",
+        "cls": "text-info",
+        "color": "rgb(47, 79, 184)",
+        "tone": "info",
+        "status": "confirmed"
+       },
+       {
+        "label": "Fulfilled",
+        "value": "0",
+        "cls": "text-success",
+        "color": "rgb(23, 115, 74)",
+        "tone": "success",
+        "status": "fulfilled"
+       },
+       {
+        "label": "Draft",
+        "value": "0",
+        "cls": "text-neutral",
+        "color": "rgb(79, 84, 110)",
+        "tone": "neutral",
+        "status": "draft"
+       }
+      ]
+     }
+    ],
+    "badges": [],
+    "tables": [],
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "r418": 0
+   },
+   "sales-orders|en|390": {
+    "status": 200,
+    "finalPath": "/sales/orders",
+    "overflow": 0,
+    "statRows": [
+     {
+      "tracks": 4,
+      "cards": 4,
+      "perRow": 4,
+      "lines": 1,
+      "clipped": 0,
+      "outside": 0,
+      "widths": [
+       79.3,
+       91.9,
+       79.5,
+       79.3
+      ],
+      "height": 118,
+      "facts": [
+       {
+        "label": "Total Sales Orders",
+        "value": "0",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       },
+       {
+        "label": "Confirmed",
+        "value": "0",
+        "cls": "text-info",
+        "color": "rgb(47, 79, 184)",
+        "tone": "info",
+        "status": "confirmed"
+       },
+       {
+        "label": "Fulfilled",
+        "value": "0",
+        "cls": "text-success",
+        "color": "rgb(23, 115, 74)",
+        "tone": "success",
+        "status": "fulfilled"
+       },
+       {
+        "label": "Draft",
+        "value": "0",
+        "cls": "text-neutral",
+        "color": "rgb(79, 84, 110)",
+        "tone": "neutral",
+        "status": "draft"
+       }
+      ]
+     }
+    ],
+    "badges": [],
+    "tables": [],
+    "actions": [
+     "button|Export||type=button|popup=menu",
+     "button|Filters||type=button|popup=dialog",
+     "button|Import||type=button|popup=dialog",
+     "button|Views||type=button|popup=menu",
+     "link|New Sales Order|/sales/orders/new||",
+     "link|New Sales Order|/sales/orders/new||",
+     "link|Recycle Bin|/recycle-bin||"
+    ],
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "r418": 0
+   },
+   "proforma|en|1440": {
+    "status": 200,
+    "finalPath": "/sales/proforma",
+    "overflow": 0,
+    "statRows": [
+     {
+      "tracks": 4,
+      "cards": 3,
+      "perRow": 3,
+      "lines": 1,
+      "clipped": 0,
+      "outside": 0,
+      "widths": [
+       279,
+       279,
+       279
+      ],
+      "height": 78,
+      "facts": [
+       {
+        "label": "Total Proformas",
+        "value": "0",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       },
+       {
+        "label": "Sent",
+        "value": "0",
+        "cls": "text-info",
+        "color": "rgb(47, 79, 184)",
+        "tone": "info",
+        "status": "sent"
+       },
+       {
+        "label": "Draft",
+        "value": "0",
+        "cls": "text-neutral",
+        "color": "rgb(79, 84, 110)",
+        "tone": "neutral",
+        "status": "draft"
+       }
+      ]
+     }
+    ],
+    "badges": [],
+    "tables": [],
+    "actions": [
+     "button|Export||type=button|popup=menu",
+     "button|Filters||type=button|popup=dialog",
+     "button|Import||type=button|popup=dialog",
+     "button|Views||type=button|popup=menu",
+     "link|New Proforma Invoice|/sales/proforma/new||",
+     "link|New Proforma Invoice|/sales/proforma/new||",
+     "link|Recycle Bin|/recycle-bin||"
+    ],
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "r418": 0
+   },
+   "proforma|en|1024": {
+    "status": 200,
+    "finalPath": "/sales/proforma",
+    "overflow": 0,
+    "statRows": [
+     {
+      "tracks": 4,
+      "cards": 3,
+      "perRow": 3,
+      "lines": 1,
+      "clipped": 0,
+      "outside": 0,
+      "widths": [
+       218.5,
+       218.5,
+       218.5
+      ],
+      "height": 78,
+      "facts": [
+       {
+        "label": "Total Proformas",
+        "value": "0",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       },
+       {
+        "label": "Sent",
+        "value": "0",
+        "cls": "text-info",
+        "color": "rgb(47, 79, 184)",
+        "tone": "info",
+        "status": "sent"
+       },
+       {
+        "label": "Draft",
+        "value": "0",
+        "cls": "text-neutral",
+        "color": "rgb(79, 84, 110)",
+        "tone": "neutral",
+        "status": "draft"
+       }
+      ]
+     }
+    ],
+    "badges": [],
+    "tables": [],
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "r418": 0
+   },
+   "proforma|en|768": {
+    "status": 200,
+    "finalPath": "/sales/proforma",
+    "overflow": 0,
+    "statRows": [
+     {
+      "tracks": 4,
+      "cards": 3,
+      "perRow": 3,
+      "lines": 1,
+      "clipped": 0,
+      "outside": 0,
+      "widths": [
+       175,
+       175,
+       175
+      ],
+      "height": 78,
+      "facts": [
+       {
+        "label": "Total Proformas",
+        "value": "0",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       },
+       {
+        "label": "Sent",
+        "value": "0",
+        "cls": "text-info",
+        "color": "rgb(47, 79, 184)",
+        "tone": "info",
+        "status": "sent"
+       },
+       {
+        "label": "Draft",
+        "value": "0",
+        "cls": "text-neutral",
+        "color": "rgb(79, 84, 110)",
+        "tone": "neutral",
+        "status": "draft"
+       }
+      ]
+     }
+    ],
+    "badges": [],
+    "tables": [],
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "r418": 0
+   },
+   "proforma|en|390": {
+    "status": 200,
+    "finalPath": "/sales/proforma",
+    "overflow": 0,
+    "statRows": [
+     {
+      "tracks": 4,
+      "cards": 3,
+      "perRow": 3,
+      "lines": 1,
+      "clipped": 0,
+      "outside": 0,
+      "widths": [
+       91.5,
+       79.5,
+       79.5
+      ],
+      "height": 98,
+      "facts": [
+       {
+        "label": "Total Proformas",
+        "value": "0",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       },
+       {
+        "label": "Sent",
+        "value": "0",
+        "cls": "text-info",
+        "color": "rgb(47, 79, 184)",
+        "tone": "info",
+        "status": "sent"
+       },
+       {
+        "label": "Draft",
+        "value": "0",
+        "cls": "text-neutral",
+        "color": "rgb(79, 84, 110)",
+        "tone": "neutral",
+        "status": "draft"
+       }
+      ]
+     }
+    ],
+    "badges": [],
+    "tables": [],
+    "actions": [
+     "button|Export||type=button|popup=menu",
+     "button|Filters||type=button|popup=dialog",
+     "button|Import||type=button|popup=dialog",
+     "button|Views||type=button|popup=menu",
+     "link|New Proforma Invoice|/sales/proforma/new||",
+     "link|New Proforma Invoice|/sales/proforma/new||",
+     "link|Recycle Bin|/recycle-bin||"
+    ],
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "r418": 0
+   },
+   "sales-invoices|en|1440": {
+    "status": 200,
+    "finalPath": "/sales/invoices",
+    "overflow": 0,
+    "statRows": [
+     {
+      "tracks": 4,
+      "cards": 4,
+      "perRow": 4,
+      "lines": 1,
+      "clipped": 0,
+      "outside": 0,
+      "widths": [
+       279,
+       279,
+       279,
+       279
+      ],
+      "height": 78,
+      "facts": [
+       {
+        "label": "Total Invoices",
+        "value": "8",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       },
+       {
+        "label": "Paid",
+        "value": "2",
+        "cls": "text-success",
+        "color": "rgb(23, 115, 74)",
+        "tone": "success",
+        "status": "paid"
+       },
+       {
+        "label": "Sent",
+        "value": "3",
+        "cls": "text-info",
+        "color": "rgb(47, 79, 184)",
+        "tone": "info",
+        "status": "sent"
+       },
+       {
+        "label": "Draft",
+        "value": "1",
+        "cls": "text-neutral",
+        "color": "rgb(79, 84, 110)",
+        "tone": "neutral",
+        "status": "draft"
+       }
+      ]
+     }
+    ],
+    "badges": [
+     "sales_invoice|void|danger|Void|rgb(180, 50, 45)|rgb(251, 230, 228)",
+     "sales_invoice|sent|info|Sent|rgb(47, 79, 184)|rgb(231, 236, 250)",
+     "sales_invoice|draft|neutral|Draft|rgb(79, 84, 110)|rgb(236, 238, 243)",
+     "sales_invoice|paid|success|Paid|rgb(23, 115, 74)|rgb(227, 242, 234)",
+     "sales_invoice|sent|info|Sent|rgb(47, 79, 184)|rgb(231, 236, 250)",
+     "sales_invoice|sent|info|Sent|rgb(47, 79, 184)|rgb(231, 236, 250)",
+     "sales_invoice|partially_paid|warning|Partially paid|rgb(138, 90, 0)|rgb(251, 240, 217)",
+     "sales_invoice|paid|success|Paid|rgb(23, 115, 74)|rgb(227, 242, 234)"
+    ],
+    "tables": [
+     {
+      "heads": [
+       "Invoice #",
+       "Title",
+       "Converted From",
+       "Client",
+       "Issue Date",
+       "Amount",
+       "Created By",
+       "Status",
+       "Actions"
+      ],
+      "rows": 8
+     }
+    ],
+    "actions": [
+     "button|Actions for INV-0001||type=button|popup=menu",
+     "button|Actions for INV-0002||type=button|popup=menu",
+     "button|Actions for INV-0003||type=button|popup=menu",
+     "button|Actions for INV-0004||type=button|popup=menu",
+     "button|Actions for INV-0005||type=button|popup=menu",
+     "button|Actions for INV-0006||type=button|popup=menu",
+     "button|Actions for INV-0007||type=button|popup=menu",
+     "button|Actions for INV-0008||type=button|popup=menu",
+     "button|Export||type=button|popup=menu",
+     "button|Filters||type=button|popup=dialog",
+     "button|Import||type=button|popup=dialog",
+     "button|Views||type=button|popup=menu",
+     "link|INV-0001|/sales/invoices/1||",
+     "link|INV-0002|/sales/invoices/2||",
+     "link|INV-0003|/sales/invoices/3||",
+     "link|INV-0004|/sales/invoices/4||",
+     "link|INV-0005|/sales/invoices/5||",
+     "link|INV-0006|/sales/invoices/6||",
+     "link|INV-0007|/sales/invoices/7||",
+     "link|INV-0008|/sales/invoices/8||",
+     "link|New Invoice|/sales/invoices/new||",
+     "link|Recycle Bin|/recycle-bin||"
+    ],
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "r418": 0
+   },
+   "sales-invoices|en|1024": {
+    "status": 200,
+    "finalPath": "/sales/invoices",
+    "overflow": 0,
+    "statRows": [
+     {
+      "tracks": 4,
+      "cards": 4,
+      "perRow": 4,
+      "lines": 1,
+      "clipped": 0,
+      "outside": 0,
+      "widths": [
+       218.5,
+       218.5,
+       218.5,
+       218.5
+      ],
+      "height": 78,
+      "facts": [
+       {
+        "label": "Total Invoices",
+        "value": "8",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       },
+       {
+        "label": "Paid",
+        "value": "2",
+        "cls": "text-success",
+        "color": "rgb(23, 115, 74)",
+        "tone": "success",
+        "status": "paid"
+       },
+       {
+        "label": "Sent",
+        "value": "3",
+        "cls": "text-info",
+        "color": "rgb(47, 79, 184)",
+        "tone": "info",
+        "status": "sent"
+       },
+       {
+        "label": "Draft",
+        "value": "1",
+        "cls": "text-neutral",
+        "color": "rgb(79, 84, 110)",
+        "tone": "neutral",
+        "status": "draft"
+       }
+      ]
+     }
+    ],
+    "badges": [
+     "sales_invoice|void|danger|Void|rgb(180, 50, 45)|rgb(251, 230, 228)",
+     "sales_invoice|sent|info|Sent|rgb(47, 79, 184)|rgb(231, 236, 250)",
+     "sales_invoice|draft|neutral|Draft|rgb(79, 84, 110)|rgb(236, 238, 243)",
+     "sales_invoice|paid|success|Paid|rgb(23, 115, 74)|rgb(227, 242, 234)",
+     "sales_invoice|sent|info|Sent|rgb(47, 79, 184)|rgb(231, 236, 250)",
+     "sales_invoice|sent|info|Sent|rgb(47, 79, 184)|rgb(231, 236, 250)",
+     "sales_invoice|partially_paid|warning|Partially paid|rgb(138, 90, 0)|rgb(251, 240, 217)",
+     "sales_invoice|paid|success|Paid|rgb(23, 115, 74)|rgb(227, 242, 234)"
+    ],
+    "tables": [
+     {
+      "heads": [
+       "Invoice #",
+       "Title",
+       "Converted From",
+       "Client",
+       "Issue Date",
+       "Amount",
+       "Created By",
+       "Status",
+       "Actions"
+      ],
+      "rows": 8
+     }
+    ],
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "r418": 0
+   },
+   "sales-invoices|en|768": {
+    "status": 200,
+    "finalPath": "/sales/invoices",
+    "overflow": 0,
+    "statRows": [
+     {
+      "tracks": 4,
+      "cards": 4,
+      "perRow": 4,
+      "lines": 1,
+      "clipped": 0,
+      "outside": 0,
+      "widths": [
+       175,
+       175,
+       175,
+       175
+      ],
+      "height": 78,
+      "facts": [
+       {
+        "label": "Total Invoices",
+        "value": "8",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       },
+       {
+        "label": "Paid",
+        "value": "2",
+        "cls": "text-success",
+        "color": "rgb(23, 115, 74)",
+        "tone": "success",
+        "status": "paid"
+       },
+       {
+        "label": "Sent",
+        "value": "3",
+        "cls": "text-info",
+        "color": "rgb(47, 79, 184)",
+        "tone": "info",
+        "status": "sent"
+       },
+       {
+        "label": "Draft",
+        "value": "1",
+        "cls": "text-neutral",
+        "color": "rgb(79, 84, 110)",
+        "tone": "neutral",
+        "status": "draft"
+       }
+      ]
+     }
+    ],
+    "badges": [
+     "sales_invoice|void|danger|Void|rgb(180, 50, 45)|rgb(251, 230, 228)",
+     "sales_invoice|sent|info|Sent|rgb(47, 79, 184)|rgb(231, 236, 250)",
+     "sales_invoice|draft|neutral|Draft|rgb(79, 84, 110)|rgb(236, 238, 243)",
+     "sales_invoice|paid|success|Paid|rgb(23, 115, 74)|rgb(227, 242, 234)",
+     "sales_invoice|sent|info|Sent|rgb(47, 79, 184)|rgb(231, 236, 250)",
+     "sales_invoice|sent|info|Sent|rgb(47, 79, 184)|rgb(231, 236, 250)",
+     "sales_invoice|partially_paid|warning|Partially paid|rgb(138, 90, 0)|rgb(251, 240, 217)",
+     "sales_invoice|paid|success|Paid|rgb(23, 115, 74)|rgb(227, 242, 234)"
+    ],
+    "tables": [
+     {
+      "heads": [
+       "Invoice #",
+       "Title",
+       "Converted From",
+       "Client",
+       "Issue Date",
+       "Amount",
+       "Created By",
+       "Status",
+       "Actions"
+      ],
+      "rows": 8
+     }
+    ],
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "r418": 0
+   },
+   "sales-invoices|en|390": {
+    "status": 200,
+    "finalPath": "/sales/invoices",
+    "overflow": 0,
+    "statRows": [
+     {
+      "tracks": 4,
+      "cards": 4,
+      "perRow": 4,
+      "lines": 1,
+      "clipped": 0,
+      "outside": 0,
+      "widths": [
+       82.5,
+       82.5,
+       82.5,
+       82.5
+      ],
+      "height": 98,
+      "facts": [
+       {
+        "label": "Total Invoices",
+        "value": "8",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       },
+       {
+        "label": "Paid",
+        "value": "2",
+        "cls": "text-success",
+        "color": "rgb(23, 115, 74)",
+        "tone": "success",
+        "status": "paid"
+       },
+       {
+        "label": "Sent",
+        "value": "3",
+        "cls": "text-info",
+        "color": "rgb(47, 79, 184)",
+        "tone": "info",
+        "status": "sent"
+       },
+       {
+        "label": "Draft",
+        "value": "1",
+        "cls": "text-neutral",
+        "color": "rgb(79, 84, 110)",
+        "tone": "neutral",
+        "status": "draft"
+       }
+      ]
+     }
+    ],
+    "badges": [
+     "sales_invoice|void|danger|Void|rgb(180, 50, 45)|rgb(251, 230, 228)",
+     "sales_invoice|sent|info|Sent|rgb(47, 79, 184)|rgb(231, 236, 250)",
+     "sales_invoice|draft|neutral|Draft|rgb(79, 84, 110)|rgb(236, 238, 243)",
+     "sales_invoice|paid|success|Paid|rgb(23, 115, 74)|rgb(227, 242, 234)",
+     "sales_invoice|sent|info|Sent|rgb(47, 79, 184)|rgb(231, 236, 250)",
+     "sales_invoice|sent|info|Sent|rgb(47, 79, 184)|rgb(231, 236, 250)",
+     "sales_invoice|partially_paid|warning|Partially paid|rgb(138, 90, 0)|rgb(251, 240, 217)",
+     "sales_invoice|paid|success|Paid|rgb(23, 115, 74)|rgb(227, 242, 234)"
+    ],
+    "tables": [
+     {
+      "heads": [
+       "Invoice #",
+       "Title",
+       "Converted From",
+       "Client",
+       "Issue Date",
+       "Amount",
+       "Created By",
+       "Status",
+       "Actions"
+      ],
+      "rows": 8
+     }
+    ],
+    "actions": [
+     "button|Actions for INV-0001||type=button|popup=menu",
+     "button|Actions for INV-0002||type=button|popup=menu",
+     "button|Actions for INV-0003||type=button|popup=menu",
+     "button|Actions for INV-0004||type=button|popup=menu",
+     "button|Actions for INV-0005||type=button|popup=menu",
+     "button|Actions for INV-0006||type=button|popup=menu",
+     "button|Actions for INV-0007||type=button|popup=menu",
+     "button|Actions for INV-0008||type=button|popup=menu",
+     "button|Export||type=button|popup=menu",
+     "button|Filters||type=button|popup=dialog",
+     "button|Import||type=button|popup=dialog",
+     "button|Views||type=button|popup=menu",
+     "link|INV-0001|/sales/invoices/1||",
+     "link|INV-0002|/sales/invoices/2||",
+     "link|INV-0003|/sales/invoices/3||",
+     "link|INV-0004|/sales/invoices/4||",
+     "link|INV-0005|/sales/invoices/5||",
+     "link|INV-0006|/sales/invoices/6||",
+     "link|INV-0007|/sales/invoices/7||",
+     "link|INV-0008|/sales/invoices/8||",
+     "link|New Invoice|/sales/invoices/new||",
+     "link|Recycle Bin|/recycle-bin||"
+    ],
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "r418": 0
+   },
+   "delivery-challans|en|1440": {
+    "status": 200,
+    "finalPath": "/sales/delivery-challans",
+    "overflow": 0,
+    "statRows": [
+     {
+      "tracks": 4,
+      "cards": 4,
+      "perRow": 4,
+      "lines": 1,
+      "clipped": 0,
+      "outside": 0,
+      "widths": [
+       279,
+       279,
+       279,
+       279
+      ],
+      "height": 78,
+      "facts": [
+       {
+        "label": "Total Challans",
+        "value": "0",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       },
+       {
+        "label": "Delivered",
+        "value": "0",
+        "cls": "text-success",
+        "color": "rgb(23, 115, 74)",
+        "tone": "success",
+        "status": "delivered"
+       },
+       {
+        "label": "Dispatched",
+        "value": "0",
+        "cls": "text-info",
+        "color": "rgb(47, 79, 184)",
+        "tone": "info",
+        "status": "dispatched"
+       },
+       {
+        "label": "Draft",
+        "value": "0",
+        "cls": "text-neutral",
+        "color": "rgb(79, 84, 110)",
+        "tone": "neutral",
+        "status": "draft"
+       }
+      ]
+     }
+    ],
+    "badges": [],
+    "tables": [],
+    "actions": [
+     "button|Export||type=button|popup=menu",
+     "button|Filters||type=button|popup=dialog",
+     "button|Import||type=button|popup=dialog",
+     "button|Views||type=button|popup=menu",
+     "link|New Delivery Challan|/sales/delivery-challans/new||",
+     "link|New Delivery Challan|/sales/delivery-challans/new||",
+     "link|Recycle Bin|/recycle-bin||"
+    ],
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "r418": 0
+   },
+   "delivery-challans|en|1024": {
+    "status": 200,
+    "finalPath": "/sales/delivery-challans",
+    "overflow": 0,
+    "statRows": [
+     {
+      "tracks": 4,
+      "cards": 4,
+      "perRow": 4,
+      "lines": 1,
+      "clipped": 0,
+      "outside": 0,
+      "widths": [
+       218.5,
+       218.5,
+       218.5,
+       218.5
+      ],
+      "height": 78,
+      "facts": [
+       {
+        "label": "Total Challans",
+        "value": "0",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       },
+       {
+        "label": "Delivered",
+        "value": "0",
+        "cls": "text-success",
+        "color": "rgb(23, 115, 74)",
+        "tone": "success",
+        "status": "delivered"
+       },
+       {
+        "label": "Dispatched",
+        "value": "0",
+        "cls": "text-info",
+        "color": "rgb(47, 79, 184)",
+        "tone": "info",
+        "status": "dispatched"
+       },
+       {
+        "label": "Draft",
+        "value": "0",
+        "cls": "text-neutral",
+        "color": "rgb(79, 84, 110)",
+        "tone": "neutral",
+        "status": "draft"
+       }
+      ]
+     }
+    ],
+    "badges": [],
+    "tables": [],
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "r418": 0
+   },
+   "delivery-challans|en|768": {
+    "status": 200,
+    "finalPath": "/sales/delivery-challans",
+    "overflow": 0,
+    "statRows": [
+     {
+      "tracks": 4,
+      "cards": 4,
+      "perRow": 4,
+      "lines": 1,
+      "clipped": 0,
+      "outside": 0,
+      "widths": [
+       175,
+       175,
+       175,
+       175
+      ],
+      "height": 78,
+      "facts": [
+       {
+        "label": "Total Challans",
+        "value": "0",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       },
+       {
+        "label": "Delivered",
+        "value": "0",
+        "cls": "text-success",
+        "color": "rgb(23, 115, 74)",
+        "tone": "success",
+        "status": "delivered"
+       },
+       {
+        "label": "Dispatched",
+        "value": "0",
+        "cls": "text-info",
+        "color": "rgb(47, 79, 184)",
+        "tone": "info",
+        "status": "dispatched"
+       },
+       {
+        "label": "Draft",
+        "value": "0",
+        "cls": "text-neutral",
+        "color": "rgb(79, 84, 110)",
+        "tone": "neutral",
+        "status": "draft"
+       }
+      ]
+     }
+    ],
+    "badges": [],
+    "tables": [],
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "r418": 0
+   },
+   "delivery-challans|en|390": {
+    "status": 200,
+    "finalPath": "/sales/delivery-challans",
+    "overflow": 0,
+    "statRows": [
+     {
+      "tracks": 4,
+      "cards": 4,
+      "perRow": 4,
+      "lines": 1,
+      "clipped": 0,
+      "outside": 0,
+      "widths": [
+       82.3,
+       87.1,
+       96.3,
+       64.4
+      ],
+      "height": 98,
+      "facts": [
+       {
+        "label": "Total Challans",
+        "value": "0",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       },
+       {
+        "label": "Delivered",
+        "value": "0",
+        "cls": "text-success",
+        "color": "rgb(23, 115, 74)",
+        "tone": "success",
+        "status": "delivered"
+       },
+       {
+        "label": "Dispatched",
+        "value": "0",
+        "cls": "text-info",
+        "color": "rgb(47, 79, 184)",
+        "tone": "info",
+        "status": "dispatched"
+       },
+       {
+        "label": "Draft",
+        "value": "0",
+        "cls": "text-neutral",
+        "color": "rgb(79, 84, 110)",
+        "tone": "neutral",
+        "status": "draft"
+       }
+      ]
+     }
+    ],
+    "badges": [],
+    "tables": [],
+    "actions": [
+     "button|Export||type=button|popup=menu",
+     "button|Filters||type=button|popup=dialog",
+     "button|Import||type=button|popup=dialog",
+     "button|Views||type=button|popup=menu",
+     "link|New Delivery Challan|/sales/delivery-challans/new||",
+     "link|New Delivery Challan|/sales/delivery-challans/new||",
+     "link|Recycle Bin|/recycle-bin||"
+    ],
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "r418": 0
+   },
+   "purchase-orders|en|1440": {
+    "status": 200,
+    "finalPath": "/purchasing/orders",
+    "overflow": 0,
+    "statRows": [
+     {
+      "tracks": 4,
+      "cards": 4,
+      "perRow": 4,
+      "lines": 1,
+      "clipped": 0,
+      "outside": 0,
+      "widths": [
+       279,
+       279,
+       279,
+       279
+      ],
+      "height": 78,
+      "facts": [
+       {
+        "label": "Total POs",
+        "value": "3",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       },
+       {
+        "label": "Received",
+        "value": "1",
+        "cls": "text-success",
+        "color": "rgb(23, 115, 74)",
+        "tone": "success",
+        "status": "received"
+       },
+       {
+        "label": "Ordered",
+        "value": "1",
+        "cls": "text-info",
+        "color": "rgb(47, 79, 184)",
+        "tone": "info",
+        "status": "ordered"
+       },
+       {
+        "label": "Draft",
+        "value": "1",
+        "cls": "text-neutral",
+        "color": "rgb(79, 84, 110)",
+        "tone": "neutral",
+        "status": "draft"
+       }
+      ]
+     }
+    ],
+    "badges": [
+     "purchase_order|draft|neutral|Draft|rgb(79, 84, 110)|rgb(236, 238, 243)",
+     "purchase_order|ordered|info|Ordered|rgb(47, 79, 184)|rgb(231, 236, 250)",
+     "purchase_order|received|success|Received|rgb(23, 115, 74)|rgb(227, 242, 234)"
+    ],
+    "tables": [
+     {
+      "heads": [
+       "PO #",
+       "Title",
+       "Converted From",
+       "Vendor",
+       "Order Date",
+       "Expected Delivery",
+       "Amount",
+       "Created By",
+       "Status",
+       "Actions"
+      ],
+      "rows": 3
+     }
+    ],
+    "actions": [
+     "button|Actions for PO-0001||type=button|popup=menu",
+     "button|Actions for PO-0002||type=button|popup=menu",
+     "button|Actions for PO-0003||type=button|popup=menu",
+     "button|Export||type=button|popup=menu",
+     "button|Filters||type=button|popup=dialog",
+     "button|Import||type=button|popup=dialog",
+     "button|Views||type=button|popup=menu",
+     "link|New Purchase Order|/purchasing/orders/new||",
+     "link|PO-0001|/purchasing/orders/1||",
+     "link|PO-0002|/purchasing/orders/2||",
+     "link|PO-0003|/purchasing/orders/3||",
+     "link|Recycle Bin|/recycle-bin||"
+    ],
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "r418": 0
+   },
+   "purchase-orders|en|1024": {
+    "status": 200,
+    "finalPath": "/purchasing/orders",
+    "overflow": 0,
+    "statRows": [
+     {
+      "tracks": 4,
+      "cards": 4,
+      "perRow": 4,
+      "lines": 1,
+      "clipped": 0,
+      "outside": 0,
+      "widths": [
+       218.5,
+       218.5,
+       218.5,
+       218.5
+      ],
+      "height": 78,
+      "facts": [
+       {
+        "label": "Total POs",
+        "value": "3",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       },
+       {
+        "label": "Received",
+        "value": "1",
+        "cls": "text-success",
+        "color": "rgb(23, 115, 74)",
+        "tone": "success",
+        "status": "received"
+       },
+       {
+        "label": "Ordered",
+        "value": "1",
+        "cls": "text-info",
+        "color": "rgb(47, 79, 184)",
+        "tone": "info",
+        "status": "ordered"
+       },
+       {
+        "label": "Draft",
+        "value": "1",
+        "cls": "text-neutral",
+        "color": "rgb(79, 84, 110)",
+        "tone": "neutral",
+        "status": "draft"
+       }
+      ]
+     }
+    ],
+    "badges": [
+     "purchase_order|draft|neutral|Draft|rgb(79, 84, 110)|rgb(236, 238, 243)",
+     "purchase_order|ordered|info|Ordered|rgb(47, 79, 184)|rgb(231, 236, 250)",
+     "purchase_order|received|success|Received|rgb(23, 115, 74)|rgb(227, 242, 234)"
+    ],
+    "tables": [
+     {
+      "heads": [
+       "PO #",
+       "Title",
+       "Converted From",
+       "Vendor",
+       "Order Date",
+       "Expected Delivery",
+       "Amount",
+       "Created By",
+       "Status",
+       "Actions"
+      ],
+      "rows": 3
+     }
+    ],
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "r418": 0
+   },
+   "purchase-orders|en|768": {
+    "status": 200,
+    "finalPath": "/purchasing/orders",
+    "overflow": 0,
+    "statRows": [
+     {
+      "tracks": 4,
+      "cards": 4,
+      "perRow": 4,
+      "lines": 1,
+      "clipped": 0,
+      "outside": 0,
+      "widths": [
+       175,
+       175,
+       175,
+       175
+      ],
+      "height": 78,
+      "facts": [
+       {
+        "label": "Total POs",
+        "value": "3",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       },
+       {
+        "label": "Received",
+        "value": "1",
+        "cls": "text-success",
+        "color": "rgb(23, 115, 74)",
+        "tone": "success",
+        "status": "received"
+       },
+       {
+        "label": "Ordered",
+        "value": "1",
+        "cls": "text-info",
+        "color": "rgb(47, 79, 184)",
+        "tone": "info",
+        "status": "ordered"
+       },
+       {
+        "label": "Draft",
+        "value": "1",
+        "cls": "text-neutral",
+        "color": "rgb(79, 84, 110)",
+        "tone": "neutral",
+        "status": "draft"
+       }
+      ]
+     }
+    ],
+    "badges": [
+     "purchase_order|draft|neutral|Draft|rgb(79, 84, 110)|rgb(236, 238, 243)",
+     "purchase_order|ordered|info|Ordered|rgb(47, 79, 184)|rgb(231, 236, 250)",
+     "purchase_order|received|success|Received|rgb(23, 115, 74)|rgb(227, 242, 234)"
+    ],
+    "tables": [
+     {
+      "heads": [
+       "PO #",
+       "Title",
+       "Converted From",
+       "Vendor",
+       "Order Date",
+       "Expected Delivery",
+       "Amount",
+       "Created By",
+       "Status",
+       "Actions"
+      ],
+      "rows": 3
+     }
+    ],
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "r418": 0
+   },
+   "purchase-orders|en|390": {
+    "status": 200,
+    "finalPath": "/purchasing/orders",
+    "overflow": 0,
+    "statRows": [
+     {
+      "tracks": 4,
+      "cards": 4,
+      "perRow": 4,
+      "lines": 1,
+      "clipped": 0,
+      "outside": 0,
+      "widths": [
+       81.7,
+       85,
+       81.7,
+       81.7
+      ],
+      "height": 98,
+      "facts": [
+       {
+        "label": "Total POs",
+        "value": "3",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       },
+       {
+        "label": "Received",
+        "value": "1",
+        "cls": "text-success",
+        "color": "rgb(23, 115, 74)",
+        "tone": "success",
+        "status": "received"
+       },
+       {
+        "label": "Ordered",
+        "value": "1",
+        "cls": "text-info",
+        "color": "rgb(47, 79, 184)",
+        "tone": "info",
+        "status": "ordered"
+       },
+       {
+        "label": "Draft",
+        "value": "1",
+        "cls": "text-neutral",
+        "color": "rgb(79, 84, 110)",
+        "tone": "neutral",
+        "status": "draft"
+       }
+      ]
+     }
+    ],
+    "badges": [
+     "purchase_order|draft|neutral|Draft|rgb(79, 84, 110)|rgb(236, 238, 243)",
+     "purchase_order|ordered|info|Ordered|rgb(47, 79, 184)|rgb(231, 236, 250)",
+     "purchase_order|received|success|Received|rgb(23, 115, 74)|rgb(227, 242, 234)"
+    ],
+    "tables": [
+     {
+      "heads": [
+       "PO #",
+       "Title",
+       "Converted From",
+       "Vendor",
+       "Order Date",
+       "Expected Delivery",
+       "Amount",
+       "Created By",
+       "Status",
+       "Actions"
+      ],
+      "rows": 3
+     }
+    ],
+    "actions": [
+     "button|Actions for PO-0001||type=button|popup=menu",
+     "button|Actions for PO-0002||type=button|popup=menu",
+     "button|Actions for PO-0003||type=button|popup=menu",
+     "button|Export||type=button|popup=menu",
+     "button|Filters||type=button|popup=dialog",
+     "button|Import||type=button|popup=dialog",
+     "button|Views||type=button|popup=menu",
+     "link|New Purchase Order|/purchasing/orders/new||",
+     "link|PO-0001|/purchasing/orders/1||",
+     "link|PO-0002|/purchasing/orders/2||",
+     "link|PO-0003|/purchasing/orders/3||",
+     "link|Recycle Bin|/recycle-bin||"
+    ],
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "r418": 0
+   },
+   "credit-notes|en|1440": {
+    "status": 200,
+    "finalPath": "/sales/credit-notes",
+    "overflow": 0,
+    "statRows": [
+     {
+      "tracks": 4,
+      "cards": 4,
+      "perRow": 4,
+      "lines": 1,
+      "clipped": 0,
+      "outside": 0,
+      "widths": [
+       279,
+       279,
+       279,
+       279
+      ],
+      "height": 78,
+      "facts": [
+       {
+        "label": "Total Credit Notes",
+        "value": "0",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       },
+       {
+        "label": "Issued",
+        "value": "0",
+        "cls": "text-corrective",
+        "color": "rgb(91, 63, 184)",
+        "tone": "corrective",
+        "status": "issued"
+       },
+       {
+        "label": "Draft",
+        "value": "0",
+        "cls": "text-neutral",
+        "color": "rgb(79, 84, 110)",
+        "tone": "neutral",
+        "status": "draft"
+       },
+       {
+        "label": "This Month",
+        "value": "0",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       }
+      ]
+     }
+    ],
+    "badges": [],
+    "tables": [],
+    "actions": [
+     "button|Export||type=button|popup=menu",
+     "button|Filters||type=button|popup=dialog",
+     "button|Import||type=button|popup=dialog",
+     "button|Views||type=button|popup=menu",
+     "link|New Credit Note|/sales/credit-notes/new||",
+     "link|New Credit Note|/sales/credit-notes/new||",
+     "link|Recycle Bin|/recycle-bin||"
+    ],
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "r418": 0
+   },
+   "credit-notes|en|1024": {
+    "status": 200,
+    "finalPath": "/sales/credit-notes",
+    "overflow": 0,
+    "statRows": [
+     {
+      "tracks": 4,
+      "cards": 4,
+      "perRow": 4,
+      "lines": 1,
+      "clipped": 0,
+      "outside": 0,
+      "widths": [
+       218.5,
+       218.5,
+       218.5,
+       218.5
+      ],
+      "height": 78,
+      "facts": [
+       {
+        "label": "Total Credit Notes",
+        "value": "0",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       },
+       {
+        "label": "Issued",
+        "value": "0",
+        "cls": "text-corrective",
+        "color": "rgb(91, 63, 184)",
+        "tone": "corrective",
+        "status": "issued"
+       },
+       {
+        "label": "Draft",
+        "value": "0",
+        "cls": "text-neutral",
+        "color": "rgb(79, 84, 110)",
+        "tone": "neutral",
+        "status": "draft"
+       },
+       {
+        "label": "This Month",
+        "value": "0",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       }
+      ]
+     }
+    ],
+    "badges": [],
+    "tables": [],
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "r418": 0
+   },
+   "credit-notes|en|768": {
+    "status": 200,
+    "finalPath": "/sales/credit-notes",
+    "overflow": 0,
+    "statRows": [
+     {
+      "tracks": 4,
+      "cards": 4,
+      "perRow": 4,
+      "lines": 1,
+      "clipped": 0,
+      "outside": 0,
+      "widths": [
+       175,
+       175,
+       175,
+       175
+      ],
+      "height": 78,
+      "facts": [
+       {
+        "label": "Total Credit Notes",
+        "value": "0",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       },
+       {
+        "label": "Issued",
+        "value": "0",
+        "cls": "text-corrective",
+        "color": "rgb(91, 63, 184)",
+        "tone": "corrective",
+        "status": "issued"
+       },
+       {
+        "label": "Draft",
+        "value": "0",
+        "cls": "text-neutral",
+        "color": "rgb(79, 84, 110)",
+        "tone": "neutral",
+        "status": "draft"
+       },
+       {
+        "label": "This Month",
+        "value": "0",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       }
+      ]
+     }
+    ],
+    "badges": [],
+    "tables": [],
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "r418": 0
+   },
+   "credit-notes|en|390": {
+    "status": 200,
+    "finalPath": "/sales/credit-notes",
+    "overflow": 0,
+    "statRows": [
+     {
+      "tracks": 4,
+      "cards": 4,
+      "perRow": 4,
+      "lines": 1,
+      "clipped": 0,
+      "outside": 0,
+      "widths": [
+       82.5,
+       82.5,
+       82.5,
+       82.5
+      ],
+      "height": 118,
+      "facts": [
+       {
+        "label": "Total Credit Notes",
+        "value": "0",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       },
+       {
+        "label": "Issued",
+        "value": "0",
+        "cls": "text-corrective",
+        "color": "rgb(91, 63, 184)",
+        "tone": "corrective",
+        "status": "issued"
+       },
+       {
+        "label": "Draft",
+        "value": "0",
+        "cls": "text-neutral",
+        "color": "rgb(79, 84, 110)",
+        "tone": "neutral",
+        "status": "draft"
+       },
+       {
+        "label": "This Month",
+        "value": "0",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       }
+      ]
+     }
+    ],
+    "badges": [],
+    "tables": [],
+    "actions": [
+     "button|Export||type=button|popup=menu",
+     "button|Filters||type=button|popup=dialog",
+     "button|Import||type=button|popup=dialog",
+     "button|Views||type=button|popup=menu",
+     "link|New Credit Note|/sales/credit-notes/new||",
+     "link|New Credit Note|/sales/credit-notes/new||",
+     "link|Recycle Bin|/recycle-bin||"
+    ],
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "r418": 0
+   },
+   "debit-notes|en|1440": {
+    "status": 200,
+    "finalPath": "/purchasing/debit-notes",
+    "overflow": 0,
+    "statRows": [
+     {
+      "tracks": 4,
+      "cards": 4,
+      "perRow": 4,
+      "lines": 1,
+      "clipped": 0,
+      "outside": 0,
+      "widths": [
+       279,
+       279,
+       279,
+       279
+      ],
+      "height": 78,
+      "facts": [
+       {
+        "label": "Total Debit Notes",
+        "value": "0",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       },
+       {
+        "label": "Issued",
+        "value": "0",
+        "cls": "text-corrective",
+        "color": "rgb(91, 63, 184)",
+        "tone": "corrective",
+        "status": "issued"
+       },
+       {
+        "label": "Draft",
+        "value": "0",
+        "cls": "text-neutral",
+        "color": "rgb(79, 84, 110)",
+        "tone": "neutral",
+        "status": "draft"
+       },
+       {
+        "label": "This Month",
+        "value": "0",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       }
+      ]
+     }
+    ],
+    "badges": [],
+    "tables": [],
+    "actions": [
+     "button|Export||type=button|popup=menu",
+     "button|Filters||type=button|popup=dialog",
+     "button|Import||type=button|popup=dialog",
+     "button|Views||type=button|popup=menu",
+     "link|New Debit Note|/purchasing/debit-notes/new||",
+     "link|New Debit Note|/purchasing/debit-notes/new||",
+     "link|Recycle Bin|/recycle-bin||"
+    ],
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "r418": 0
+   },
+   "debit-notes|en|1024": {
+    "status": 200,
+    "finalPath": "/purchasing/debit-notes",
+    "overflow": 0,
+    "statRows": [
+     {
+      "tracks": 4,
+      "cards": 4,
+      "perRow": 4,
+      "lines": 1,
+      "clipped": 0,
+      "outside": 0,
+      "widths": [
+       218.5,
+       218.5,
+       218.5,
+       218.5
+      ],
+      "height": 78,
+      "facts": [
+       {
+        "label": "Total Debit Notes",
+        "value": "0",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       },
+       {
+        "label": "Issued",
+        "value": "0",
+        "cls": "text-corrective",
+        "color": "rgb(91, 63, 184)",
+        "tone": "corrective",
+        "status": "issued"
+       },
+       {
+        "label": "Draft",
+        "value": "0",
+        "cls": "text-neutral",
+        "color": "rgb(79, 84, 110)",
+        "tone": "neutral",
+        "status": "draft"
+       },
+       {
+        "label": "This Month",
+        "value": "0",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       }
+      ]
+     }
+    ],
+    "badges": [],
+    "tables": [],
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "r418": 0
+   },
+   "debit-notes|en|768": {
+    "status": 200,
+    "finalPath": "/purchasing/debit-notes",
+    "overflow": 0,
+    "statRows": [
+     {
+      "tracks": 4,
+      "cards": 4,
+      "perRow": 4,
+      "lines": 1,
+      "clipped": 0,
+      "outside": 0,
+      "widths": [
+       175,
+       175,
+       175,
+       175
+      ],
+      "height": 78,
+      "facts": [
+       {
+        "label": "Total Debit Notes",
+        "value": "0",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       },
+       {
+        "label": "Issued",
+        "value": "0",
+        "cls": "text-corrective",
+        "color": "rgb(91, 63, 184)",
+        "tone": "corrective",
+        "status": "issued"
+       },
+       {
+        "label": "Draft",
+        "value": "0",
+        "cls": "text-neutral",
+        "color": "rgb(79, 84, 110)",
+        "tone": "neutral",
+        "status": "draft"
+       },
+       {
+        "label": "This Month",
+        "value": "0",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       }
+      ]
+     }
+    ],
+    "badges": [],
+    "tables": [],
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "r418": 0
+   },
+   "debit-notes|en|390": {
+    "status": 200,
+    "finalPath": "/purchasing/debit-notes",
+    "overflow": 0,
+    "statRows": [
+     {
+      "tracks": 4,
+      "cards": 4,
+      "perRow": 4,
+      "lines": 1,
+      "clipped": 0,
+      "outside": 0,
+      "widths": [
+       82.5,
+       82.5,
+       82.5,
+       82.5
+      ],
+      "height": 118,
+      "facts": [
+       {
+        "label": "Total Debit Notes",
+        "value": "0",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       },
+       {
+        "label": "Issued",
+        "value": "0",
+        "cls": "text-corrective",
+        "color": "rgb(91, 63, 184)",
+        "tone": "corrective",
+        "status": "issued"
+       },
+       {
+        "label": "Draft",
+        "value": "0",
+        "cls": "text-neutral",
+        "color": "rgb(79, 84, 110)",
+        "tone": "neutral",
+        "status": "draft"
+       },
+       {
+        "label": "This Month",
+        "value": "0",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       }
+      ]
+     }
+    ],
+    "badges": [],
+    "tables": [],
+    "actions": [
+     "button|Export||type=button|popup=menu",
+     "button|Filters||type=button|popup=dialog",
+     "button|Import||type=button|popup=dialog",
+     "button|Views||type=button|popup=menu",
+     "link|New Debit Note|/purchasing/debit-notes/new||",
+     "link|New Debit Note|/purchasing/debit-notes/new||",
+     "link|Recycle Bin|/recycle-bin||"
+    ],
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "r418": 0
+   },
+   "projects|en|1440": {
+    "status": 200,
+    "finalPath": "/projects",
+    "overflow": 0,
+    "statRows": [
+     {
+      "tracks": 4,
+      "cards": 4,
+      "perRow": 4,
+      "lines": 1,
+      "clipped": 0,
+      "outside": 0,
+      "widths": [
+       279,
+       279,
+       279,
+       279
+      ],
+      "height": 78,
+      "facts": [
+       {
+        "label": "Total Projects",
+        "value": "3",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       },
+       {
+        "label": "Active",
+        "value": "1",
+        "cls": "text-info",
+        "color": "rgb(47, 79, 184)",
+        "tone": "info",
+        "status": "active"
+       },
+       {
+        "label": "Completed",
+        "value": "1",
+        "cls": "text-success",
+        "color": "rgb(23, 115, 74)",
+        "tone": "success",
+        "status": "completed"
+       },
+       {
+        "label": "Planned",
+        "value": "1",
+        "cls": "text-neutral",
+        "color": "rgb(79, 84, 110)",
+        "tone": "neutral",
+        "status": "planned"
+       }
+      ]
+     }
+    ],
+    "badges": [
+     "project|completed|success|Completed|rgb(23, 115, 74)|rgb(227, 242, 234)",
+     "project|planned|neutral|Planned|rgb(79, 84, 110)|rgb(236, 238, 243)",
+     "project|active|info|Active|rgb(47, 79, 184)|rgb(231, 236, 250)"
+    ],
+    "tables": [
+     {
+      "heads": [
+       "Name",
+       "Client",
+       "Start Date",
+       "End Date",
+       "Budget",
+       "Tasks",
+       "Status",
+       "Actions"
+      ],
+      "rows": 3
+     }
+    ],
+    "actions": [
+     "button|Actions for Annual brand refresh||type=button|popup=menu",
+     "button|Actions for Jeddah Hospitality Summit||type=button|popup=menu",
+     "button|Actions for Riyadh Tech Expo 2026 booth||type=button|popup=menu",
+     "link|Annual brand refresh|/projects/3||",
+     "link|Jeddah Hospitality Summit|/projects/2||",
+     "link|New Project|/projects/new||",
+     "link|Riyadh Tech Expo 2026 booth|/projects/1||"
+    ],
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "r418": 0
+   },
+   "projects|en|1024": {
+    "status": 200,
+    "finalPath": "/projects",
+    "overflow": 0,
+    "statRows": [
+     {
+      "tracks": 4,
+      "cards": 4,
+      "perRow": 4,
+      "lines": 1,
+      "clipped": 0,
+      "outside": 0,
+      "widths": [
+       218.5,
+       218.5,
+       218.5,
+       218.5
+      ],
+      "height": 78,
+      "facts": [
+       {
+        "label": "Total Projects",
+        "value": "3",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       },
+       {
+        "label": "Active",
+        "value": "1",
+        "cls": "text-info",
+        "color": "rgb(47, 79, 184)",
+        "tone": "info",
+        "status": "active"
+       },
+       {
+        "label": "Completed",
+        "value": "1",
+        "cls": "text-success",
+        "color": "rgb(23, 115, 74)",
+        "tone": "success",
+        "status": "completed"
+       },
+       {
+        "label": "Planned",
+        "value": "1",
+        "cls": "text-neutral",
+        "color": "rgb(79, 84, 110)",
+        "tone": "neutral",
+        "status": "planned"
+       }
+      ]
+     }
+    ],
+    "badges": [
+     "project|completed|success|Completed|rgb(23, 115, 74)|rgb(227, 242, 234)",
+     "project|planned|neutral|Planned|rgb(79, 84, 110)|rgb(236, 238, 243)",
+     "project|active|info|Active|rgb(47, 79, 184)|rgb(231, 236, 250)"
+    ],
+    "tables": [
+     {
+      "heads": [
+       "Name",
+       "Client",
+       "Start Date",
+       "End Date",
+       "Budget",
+       "Tasks",
+       "Status",
+       "Actions"
+      ],
+      "rows": 3
+     }
+    ],
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "r418": 0
+   },
+   "projects|en|768": {
+    "status": 200,
+    "finalPath": "/projects",
+    "overflow": 0,
+    "statRows": [
+     {
+      "tracks": 4,
+      "cards": 4,
+      "perRow": 4,
+      "lines": 1,
+      "clipped": 0,
+      "outside": 0,
+      "widths": [
+       175,
+       175,
+       175,
+       175
+      ],
+      "height": 78,
+      "facts": [
+       {
+        "label": "Total Projects",
+        "value": "3",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       },
+       {
+        "label": "Active",
+        "value": "1",
+        "cls": "text-info",
+        "color": "rgb(47, 79, 184)",
+        "tone": "info",
+        "status": "active"
+       },
+       {
+        "label": "Completed",
+        "value": "1",
+        "cls": "text-success",
+        "color": "rgb(23, 115, 74)",
+        "tone": "success",
+        "status": "completed"
+       },
+       {
+        "label": "Planned",
+        "value": "1",
+        "cls": "text-neutral",
+        "color": "rgb(79, 84, 110)",
+        "tone": "neutral",
+        "status": "planned"
+       }
+      ]
+     }
+    ],
+    "badges": [
+     "project|completed|success|Completed|rgb(23, 115, 74)|rgb(227, 242, 234)",
+     "project|planned|neutral|Planned|rgb(79, 84, 110)|rgb(236, 238, 243)",
+     "project|active|info|Active|rgb(47, 79, 184)|rgb(231, 236, 250)"
+    ],
+    "tables": [
+     {
+      "heads": [
+       "Name",
+       "Client",
+       "Start Date",
+       "End Date",
+       "Budget",
+       "Tasks",
+       "Status",
+       "Actions"
+      ],
+      "rows": 3
+     }
+    ],
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "r418": 0
+   },
+   "projects|en|390": {
+    "status": 200,
+    "finalPath": "/projects",
+    "overflow": 0,
+    "statRows": [
+     {
+      "tracks": 4,
+      "cards": 4,
+      "perRow": 4,
+      "lines": 1,
+      "clipped": 0,
+      "outside": 0,
+      "widths": [
+       80.1,
+       74.9,
+       94.7,
+       80.3
+      ],
+      "height": 98,
+      "facts": [
+       {
+        "label": "Total Projects",
+        "value": "3",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       },
+       {
+        "label": "Active",
+        "value": "1",
+        "cls": "text-info",
+        "color": "rgb(47, 79, 184)",
+        "tone": "info",
+        "status": "active"
+       },
+       {
+        "label": "Completed",
+        "value": "1",
+        "cls": "text-success",
+        "color": "rgb(23, 115, 74)",
+        "tone": "success",
+        "status": "completed"
+       },
+       {
+        "label": "Planned",
+        "value": "1",
+        "cls": "text-neutral",
+        "color": "rgb(79, 84, 110)",
+        "tone": "neutral",
+        "status": "planned"
+       }
+      ]
+     }
+    ],
+    "badges": [
+     "project|completed|success|Completed|rgb(23, 115, 74)|rgb(227, 242, 234)",
+     "project|planned|neutral|Planned|rgb(79, 84, 110)|rgb(236, 238, 243)",
+     "project|active|info|Active|rgb(47, 79, 184)|rgb(231, 236, 250)"
+    ],
+    "tables": [
+     {
+      "heads": [
+       "Name",
+       "Client",
+       "Start Date",
+       "End Date",
+       "Budget",
+       "Tasks",
+       "Status",
+       "Actions"
+      ],
+      "rows": 3
+     }
+    ],
+    "actions": [
+     "button|Actions for Annual brand refresh||type=button|popup=menu",
+     "button|Actions for Jeddah Hospitality Summit||type=button|popup=menu",
+     "button|Actions for Riyadh Tech Expo 2026 booth||type=button|popup=menu",
+     "link|Annual brand refresh|/projects/3||",
+     "link|Jeddah Hospitality Summit|/projects/2||",
+     "link|New Project|/projects/new||",
+     "link|Riyadh Tech Expo 2026 booth|/projects/1||"
+    ],
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "r418": 0
+   },
+   "settings-security|en|1440": {
+    "status": 200,
+    "finalPath": "/settings/security",
+    "overflow": 0,
+    "statRows": [
+     {
+      "tracks": 4,
+      "cards": 4,
+      "perRow": 4,
+      "lines": 1,
+      "clipped": 0,
+      "outside": 0,
+      "widths": [
+       247,
+       247,
+       247,
+       247
+      ],
+      "height": 78,
+      "facts": [
+       {
+        "label": "Successful logins",
+        "value": "0",
+        "cls": "",
+        "color": "rgb(23, 115, 74)",
+        "tone": null,
+        "status": null
+       },
+       {
+        "label": "Failed logins",
+        "value": "0",
+        "cls": "",
+        "color": "rgb(138, 90, 0)",
+        "tone": null,
+        "status": null
+       },
+       {
+        "label": "MFA events",
+        "value": "0",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       },
+       {
+        "label": "Password changes",
+        "value": "0",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       }
+      ]
+     }
+    ],
+    "badges": [],
+    "tables": [
+     {
+      "heads": [
+       "Device",
+       "IP address",
+       "Signed in",
+       "Last active",
+       "Actions"
+      ],
+      "rows": 1
+     }
+    ],
+    "actions": [
+     "button|Change password||type=submit|disabled",
+     "button|Enable MFA||type=submit|",
+     "button|End||type=submit|"
+    ],
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "r418": 0
+   },
+   "settings-security|en|1024": {
+    "status": 200,
+    "finalPath": "/settings/security",
+    "overflow": 0,
+    "statRows": [
+     {
+      "tracks": 4,
+      "cards": 4,
+      "perRow": 4,
+      "lines": 1,
+      "clipped": 0,
+      "outside": 0,
+      "widths": [
+       218.5,
+       218.5,
+       218.5,
+       218.5
+      ],
+      "height": 78,
+      "facts": [
+       {
+        "label": "Successful logins",
+        "value": "0",
+        "cls": "",
+        "color": "rgb(23, 115, 74)",
+        "tone": null,
+        "status": null
+       },
+       {
+        "label": "Failed logins",
+        "value": "0",
+        "cls": "",
+        "color": "rgb(138, 90, 0)",
+        "tone": null,
+        "status": null
+       },
+       {
+        "label": "MFA events",
+        "value": "0",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       },
+       {
+        "label": "Password changes",
+        "value": "0",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       }
+      ]
+     }
+    ],
+    "badges": [],
+    "tables": [
+     {
+      "heads": [
+       "Device",
+       "IP address",
+       "Signed in",
+       "Last active",
+       "Actions"
+      ],
+      "rows": 1
+     }
+    ],
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "r418": 0
+   },
+   "settings-security|en|768": {
+    "status": 200,
+    "finalPath": "/settings/security",
+    "overflow": 0,
+    "statRows": [
+     {
+      "tracks": 4,
+      "cards": 4,
+      "perRow": 4,
+      "lines": 1,
+      "clipped": 0,
+      "outside": 0,
+      "widths": [
+       175,
+       175,
+       175,
+       175
+      ],
+      "height": 78,
+      "facts": [
+       {
+        "label": "Successful logins",
+        "value": "0",
+        "cls": "",
+        "color": "rgb(23, 115, 74)",
+        "tone": null,
+        "status": null
+       },
+       {
+        "label": "Failed logins",
+        "value": "0",
+        "cls": "",
+        "color": "rgb(138, 90, 0)",
+        "tone": null,
+        "status": null
+       },
+       {
+        "label": "MFA events",
+        "value": "0",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       },
+       {
+        "label": "Password changes",
+        "value": "0",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       }
+      ]
+     }
+    ],
+    "badges": [],
+    "tables": [
+     {
+      "heads": [
+       "Device",
+       "IP address",
+       "Signed in",
+       "Last active",
+       "Actions"
+      ],
+      "rows": 1
+     }
+    ],
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "r418": 0
+   },
+   "settings-security|en|390": {
+    "status": 200,
+    "finalPath": "/settings/security",
+    "overflow": 0,
+    "statRows": [
+     {
+      "tracks": 4,
+      "cards": 4,
+      "perRow": 4,
+      "lines": 1,
+      "clipped": 0,
+      "outside": 0,
+      "widths": [
+       93.4,
+       74.3,
+       74.3,
+       88.1
+      ],
+      "height": 98,
+      "facts": [
+       {
+        "label": "Successful logins",
+        "value": "0",
+        "cls": "",
+        "color": "rgb(23, 115, 74)",
+        "tone": null,
+        "status": null
+       },
+       {
+        "label": "Failed logins",
+        "value": "0",
+        "cls": "",
+        "color": "rgb(138, 90, 0)",
+        "tone": null,
+        "status": null
+       },
+       {
+        "label": "MFA events",
+        "value": "0",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       },
+       {
+        "label": "Password changes",
+        "value": "0",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       }
+      ]
+     }
+    ],
+    "badges": [],
+    "tables": [
+     {
+      "heads": [
+       "Device",
+       "IP address",
+       "Signed in",
+       "Last active",
+       "Actions"
+      ],
+      "rows": 1
+     }
+    ],
+    "actions": [
+     "button|Change password||type=submit|disabled",
+     "button|Enable MFA||type=submit|",
+     "button|End||type=submit|"
+    ],
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "r418": 0
+   },
+   "quotations|ar|1440": {
+    "status": 200,
+    "finalPath": "/sales/quotations",
+    "overflow": 0,
+    "statRows": [
+     {
+      "tracks": 4,
+      "cards": 4,
+      "perRow": 4,
+      "lines": 1,
+      "clipped": 0,
+      "outside": 0,
+      "widths": [
+       279,
+       279,
+       279,
+       279
+      ],
+      "height": 86,
+      "facts": [
+       {
+        "label": "إجمالي عروض الأسعار",
+        "value": "5",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       },
+       {
+        "label": "مقبول",
+        "value": "1",
+        "cls": "text-success",
+        "color": "rgb(23, 115, 74)",
+        "tone": "success",
+        "status": "accepted"
+       },
+       {
+        "label": "مُرسل",
+        "value": "1",
+        "cls": "text-info",
+        "color": "rgb(47, 79, 184)",
+        "tone": "info",
+        "status": "sent"
+       },
+       {
+        "label": "مسودة",
+        "value": "1",
+        "cls": "text-neutral",
+        "color": "rgb(79, 84, 110)",
+        "tone": "neutral",
+        "status": "draft"
+       }
+      ]
+     }
+    ],
+    "badges": [
+     "quotation|expired|warning|منتهي الصلاحية|rgb(138, 90, 0)|rgb(251, 240, 217)",
+     "quotation|rejected|danger|مرفوض|rgb(180, 50, 45)|rgb(251, 230, 228)",
+     "quotation|draft|neutral|مسودة|rgb(79, 84, 110)|rgb(236, 238, 243)",
+     "quotation|sent|info|مُرسل|rgb(47, 79, 184)|rgb(231, 236, 250)",
+     "quotation|accepted|success|مقبول|rgb(23, 115, 74)|rgb(227, 242, 234)"
+    ],
+    "tables": [
+     {
+      "heads": [
+       "رقم عرض السعر",
+       "العنوان",
+       "محوّل من",
+       "العميل",
+       "تاريخ الإصدار",
+       "صالح حتى",
+       "المبلغ",
+       "أنشأه",
+       "الحالة",
+       "الإجراءات"
+      ],
+      "rows": 5
+     }
+    ],
+    "actions": [
+     "button|إجراءات QTN-0001||type=button|popup=menu",
+     "button|إجراءات QTN-0002||type=button|popup=menu",
+     "button|إجراءات QTN-0003||type=button|popup=menu",
+     "button|إجراءات QTN-0004||type=button|popup=menu",
+     "button|إجراءات QTN-0005||type=button|popup=menu",
+     "button|استيراد||type=button|popup=dialog",
+     "button|التصفية||type=button|popup=dialog",
+     "button|تصدير||type=button|popup=menu",
+     "button|طرق العرض||type=button|popup=menu",
+     "link|QTN-0001|/sales/quotations/1||",
+     "link|QTN-0002|/sales/quotations/2||",
+     "link|QTN-0003|/sales/quotations/3||",
+     "link|QTN-0004|/sales/quotations/4||",
+     "link|QTN-0005|/sales/quotations/5||",
+     "link|سلة المحذوفات|/recycle-bin||",
+     "link|عرض سعر جديد|/sales/quotations/new||"
+    ],
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "r418": 0
+   },
+   "quotations|ar|1024": {
+    "status": 200,
+    "finalPath": "/sales/quotations",
+    "overflow": 0,
+    "statRows": [
+     {
+      "tracks": 4,
+      "cards": 4,
+      "perRow": 4,
+      "lines": 1,
+      "clipped": 0,
+      "outside": 0,
+      "widths": [
+       218.5,
+       218.5,
+       218.5,
+       218.5
+      ],
+      "height": 86,
+      "facts": [
+       {
+        "label": "إجمالي عروض الأسعار",
+        "value": "5",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       },
+       {
+        "label": "مقبول",
+        "value": "1",
+        "cls": "text-success",
+        "color": "rgb(23, 115, 74)",
+        "tone": "success",
+        "status": "accepted"
+       },
+       {
+        "label": "مُرسل",
+        "value": "1",
+        "cls": "text-info",
+        "color": "rgb(47, 79, 184)",
+        "tone": "info",
+        "status": "sent"
+       },
+       {
+        "label": "مسودة",
+        "value": "1",
+        "cls": "text-neutral",
+        "color": "rgb(79, 84, 110)",
+        "tone": "neutral",
+        "status": "draft"
+       }
+      ]
+     }
+    ],
+    "badges": [
+     "quotation|expired|warning|منتهي الصلاحية|rgb(138, 90, 0)|rgb(251, 240, 217)",
+     "quotation|rejected|danger|مرفوض|rgb(180, 50, 45)|rgb(251, 230, 228)",
+     "quotation|draft|neutral|مسودة|rgb(79, 84, 110)|rgb(236, 238, 243)",
+     "quotation|sent|info|مُرسل|rgb(47, 79, 184)|rgb(231, 236, 250)",
+     "quotation|accepted|success|مقبول|rgb(23, 115, 74)|rgb(227, 242, 234)"
+    ],
+    "tables": [
+     {
+      "heads": [
+       "رقم عرض السعر",
+       "العنوان",
+       "محوّل من",
+       "العميل",
+       "تاريخ الإصدار",
+       "صالح حتى",
+       "المبلغ",
+       "أنشأه",
+       "الحالة",
+       "الإجراءات"
+      ],
+      "rows": 5
+     }
+    ],
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "r418": 0
+   },
+   "quotations|ar|768": {
+    "status": 200,
+    "finalPath": "/sales/quotations",
+    "overflow": 0,
+    "statRows": [
+     {
+      "tracks": 4,
+      "cards": 4,
+      "perRow": 4,
+      "lines": 1,
+      "clipped": 0,
+      "outside": 0,
+      "widths": [
+       175,
+       175,
+       175,
+       175
+      ],
+      "height": 86,
+      "facts": [
+       {
+        "label": "إجمالي عروض الأسعار",
+        "value": "5",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       },
+       {
+        "label": "مقبول",
+        "value": "1",
+        "cls": "text-success",
+        "color": "rgb(23, 115, 74)",
+        "tone": "success",
+        "status": "accepted"
+       },
+       {
+        "label": "مُرسل",
+        "value": "1",
+        "cls": "text-info",
+        "color": "rgb(47, 79, 184)",
+        "tone": "info",
+        "status": "sent"
+       },
+       {
+        "label": "مسودة",
+        "value": "1",
+        "cls": "text-neutral",
+        "color": "rgb(79, 84, 110)",
+        "tone": "neutral",
+        "status": "draft"
+       }
+      ]
+     }
+    ],
+    "badges": [
+     "quotation|expired|warning|منتهي الصلاحية|rgb(138, 90, 0)|rgb(251, 240, 217)",
+     "quotation|rejected|danger|مرفوض|rgb(180, 50, 45)|rgb(251, 230, 228)",
+     "quotation|draft|neutral|مسودة|rgb(79, 84, 110)|rgb(236, 238, 243)",
+     "quotation|sent|info|مُرسل|rgb(47, 79, 184)|rgb(231, 236, 250)",
+     "quotation|accepted|success|مقبول|rgb(23, 115, 74)|rgb(227, 242, 234)"
+    ],
+    "tables": [
+     {
+      "heads": [
+       "رقم عرض السعر",
+       "العنوان",
+       "محوّل من",
+       "العميل",
+       "تاريخ الإصدار",
+       "صالح حتى",
+       "المبلغ",
+       "أنشأه",
+       "الحالة",
+       "الإجراءات"
+      ],
+      "rows": 5
+     }
+    ],
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "r418": 0
+   },
+   "quotations|ar|390": {
+    "status": 200,
+    "finalPath": "/sales/quotations",
+    "overflow": 0,
+    "statRows": [
+     {
+      "tracks": 4,
+      "cards": 4,
+      "perRow": 4,
+      "lines": 1,
+      "clipped": 0,
+      "outside": 0,
+      "widths": [
+       82.5,
+       82.5,
+       82.5,
+       82.5
+      ],
+      "height": 134,
+      "facts": [
+       {
+        "label": "إجمالي عروض الأسعار",
+        "value": "5",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       },
+       {
+        "label": "مقبول",
+        "value": "1",
+        "cls": "text-success",
+        "color": "rgb(23, 115, 74)",
+        "tone": "success",
+        "status": "accepted"
+       },
+       {
+        "label": "مُرسل",
+        "value": "1",
+        "cls": "text-info",
+        "color": "rgb(47, 79, 184)",
+        "tone": "info",
+        "status": "sent"
+       },
+       {
+        "label": "مسودة",
+        "value": "1",
+        "cls": "text-neutral",
+        "color": "rgb(79, 84, 110)",
+        "tone": "neutral",
+        "status": "draft"
+       }
+      ]
+     }
+    ],
+    "badges": [
+     "quotation|expired|warning|منتهي الصلاحية|rgb(138, 90, 0)|rgb(251, 240, 217)",
+     "quotation|rejected|danger|مرفوض|rgb(180, 50, 45)|rgb(251, 230, 228)",
+     "quotation|draft|neutral|مسودة|rgb(79, 84, 110)|rgb(236, 238, 243)",
+     "quotation|sent|info|مُرسل|rgb(47, 79, 184)|rgb(231, 236, 250)",
+     "quotation|accepted|success|مقبول|rgb(23, 115, 74)|rgb(227, 242, 234)"
+    ],
+    "tables": [
+     {
+      "heads": [
+       "رقم عرض السعر",
+       "العنوان",
+       "محوّل من",
+       "العميل",
+       "تاريخ الإصدار",
+       "صالح حتى",
+       "المبلغ",
+       "أنشأه",
+       "الحالة",
+       "الإجراءات"
+      ],
+      "rows": 5
+     }
+    ],
+    "actions": [
+     "button|إجراءات QTN-0001||type=button|popup=menu",
+     "button|إجراءات QTN-0002||type=button|popup=menu",
+     "button|إجراءات QTN-0003||type=button|popup=menu",
+     "button|إجراءات QTN-0004||type=button|popup=menu",
+     "button|إجراءات QTN-0005||type=button|popup=menu",
+     "button|استيراد||type=button|popup=dialog",
+     "button|التصفية||type=button|popup=dialog",
+     "button|تصدير||type=button|popup=menu",
+     "button|طرق العرض||type=button|popup=menu",
+     "link|QTN-0001|/sales/quotations/1||",
+     "link|QTN-0002|/sales/quotations/2||",
+     "link|QTN-0003|/sales/quotations/3||",
+     "link|QTN-0004|/sales/quotations/4||",
+     "link|QTN-0005|/sales/quotations/5||",
+     "link|سلة المحذوفات|/recycle-bin||",
+     "link|عرض سعر جديد|/sales/quotations/new||"
+    ],
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "r418": 0
+   },
+   "sales-orders|ar|1440": {
+    "status": 200,
+    "finalPath": "/sales/orders",
+    "overflow": 0,
+    "statRows": [
+     {
+      "tracks": 4,
+      "cards": 4,
+      "perRow": 4,
+      "lines": 1,
+      "clipped": 0,
+      "outside": 0,
+      "widths": [
+       279,
+       279,
+       279,
+       279
+      ],
+      "height": 86,
+      "facts": [
+       {
+        "label": "إجمالي أوامر البيع",
+        "value": "0",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       },
+       {
+        "label": "مؤكد",
+        "value": "0",
+        "cls": "text-info",
+        "color": "rgb(47, 79, 184)",
+        "tone": "info",
+        "status": "confirmed"
+       },
+       {
+        "label": "منفّذ",
+        "value": "0",
+        "cls": "text-success",
+        "color": "rgb(23, 115, 74)",
+        "tone": "success",
+        "status": "fulfilled"
+       },
+       {
+        "label": "مسودة",
+        "value": "0",
+        "cls": "text-neutral",
+        "color": "rgb(79, 84, 110)",
+        "tone": "neutral",
+        "status": "draft"
+       }
+      ]
+     }
+    ],
+    "badges": [],
+    "tables": [],
+    "actions": [
+     "button|استيراد||type=button|popup=dialog",
+     "button|التصفية||type=button|popup=dialog",
+     "button|تصدير||type=button|popup=menu",
+     "button|طرق العرض||type=button|popup=menu",
+     "link|أمر بيع جديد|/sales/orders/new||",
+     "link|أمر بيع جديد|/sales/orders/new||",
+     "link|سلة المحذوفات|/recycle-bin||"
+    ],
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "r418": 0
+   },
+   "sales-orders|ar|1024": {
+    "status": 200,
+    "finalPath": "/sales/orders",
+    "overflow": 0,
+    "statRows": [
+     {
+      "tracks": 4,
+      "cards": 4,
+      "perRow": 4,
+      "lines": 1,
+      "clipped": 0,
+      "outside": 0,
+      "widths": [
+       218.5,
+       218.5,
+       218.5,
+       218.5
+      ],
+      "height": 86,
+      "facts": [
+       {
+        "label": "إجمالي أوامر البيع",
+        "value": "0",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       },
+       {
+        "label": "مؤكد",
+        "value": "0",
+        "cls": "text-info",
+        "color": "rgb(47, 79, 184)",
+        "tone": "info",
+        "status": "confirmed"
+       },
+       {
+        "label": "منفّذ",
+        "value": "0",
+        "cls": "text-success",
+        "color": "rgb(23, 115, 74)",
+        "tone": "success",
+        "status": "fulfilled"
+       },
+       {
+        "label": "مسودة",
+        "value": "0",
+        "cls": "text-neutral",
+        "color": "rgb(79, 84, 110)",
+        "tone": "neutral",
+        "status": "draft"
+       }
+      ]
+     }
+    ],
+    "badges": [],
+    "tables": [],
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "r418": 0
+   },
+   "sales-orders|ar|768": {
+    "status": 200,
+    "finalPath": "/sales/orders",
+    "overflow": 0,
+    "statRows": [
+     {
+      "tracks": 4,
+      "cards": 4,
+      "perRow": 4,
+      "lines": 1,
+      "clipped": 0,
+      "outside": 0,
+      "widths": [
+       175,
+       175,
+       175,
+       175
+      ],
+      "height": 86,
+      "facts": [
+       {
+        "label": "إجمالي أوامر البيع",
+        "value": "0",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       },
+       {
+        "label": "مؤكد",
+        "value": "0",
+        "cls": "text-info",
+        "color": "rgb(47, 79, 184)",
+        "tone": "info",
+        "status": "confirmed"
+       },
+       {
+        "label": "منفّذ",
+        "value": "0",
+        "cls": "text-success",
+        "color": "rgb(23, 115, 74)",
+        "tone": "success",
+        "status": "fulfilled"
+       },
+       {
+        "label": "مسودة",
+        "value": "0",
+        "cls": "text-neutral",
+        "color": "rgb(79, 84, 110)",
+        "tone": "neutral",
+        "status": "draft"
+       }
+      ]
+     }
+    ],
+    "badges": [],
+    "tables": [],
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "r418": 0
+   },
+   "sales-orders|ar|390": {
+    "status": 200,
+    "finalPath": "/sales/orders",
+    "overflow": 0,
+    "statRows": [
+     {
+      "tracks": 4,
+      "cards": 4,
+      "perRow": 4,
+      "lines": 1,
+      "clipped": 0,
+      "outside": 0,
+      "widths": [
+       82.5,
+       82.5,
+       82.5,
+       82.5
+      ],
+      "height": 110,
+      "facts": [
+       {
+        "label": "إجمالي أوامر البيع",
+        "value": "0",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       },
+       {
+        "label": "مؤكد",
+        "value": "0",
+        "cls": "text-info",
+        "color": "rgb(47, 79, 184)",
+        "tone": "info",
+        "status": "confirmed"
+       },
+       {
+        "label": "منفّذ",
+        "value": "0",
+        "cls": "text-success",
+        "color": "rgb(23, 115, 74)",
+        "tone": "success",
+        "status": "fulfilled"
+       },
+       {
+        "label": "مسودة",
+        "value": "0",
+        "cls": "text-neutral",
+        "color": "rgb(79, 84, 110)",
+        "tone": "neutral",
+        "status": "draft"
+       }
+      ]
+     }
+    ],
+    "badges": [],
+    "tables": [],
+    "actions": [
+     "button|استيراد||type=button|popup=dialog",
+     "button|التصفية||type=button|popup=dialog",
+     "button|تصدير||type=button|popup=menu",
+     "button|طرق العرض||type=button|popup=menu",
+     "link|أمر بيع جديد|/sales/orders/new||",
+     "link|أمر بيع جديد|/sales/orders/new||",
+     "link|سلة المحذوفات|/recycle-bin||"
+    ],
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "r418": 0
+   },
+   "proforma|ar|1440": {
+    "status": 200,
+    "finalPath": "/sales/proforma",
+    "overflow": 0,
+    "statRows": [
+     {
+      "tracks": 4,
+      "cards": 3,
+      "perRow": 3,
+      "lines": 1,
+      "clipped": 0,
+      "outside": 0,
+      "widths": [
+       279,
+       279,
+       279
+      ],
+      "height": 86,
+      "facts": [
+       {
+        "label": "إجمالي الفواتير المبدئية",
+        "value": "0",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       },
+       {
+        "label": "مُرسل",
+        "value": "0",
+        "cls": "text-info",
+        "color": "rgb(47, 79, 184)",
+        "tone": "info",
+        "status": "sent"
+       },
+       {
+        "label": "مسودة",
+        "value": "0",
+        "cls": "text-neutral",
+        "color": "rgb(79, 84, 110)",
+        "tone": "neutral",
+        "status": "draft"
+       }
+      ]
+     }
+    ],
+    "badges": [],
+    "tables": [],
+    "actions": [
+     "button|استيراد||type=button|popup=dialog",
+     "button|التصفية||type=button|popup=dialog",
+     "button|تصدير||type=button|popup=menu",
+     "button|طرق العرض||type=button|popup=menu",
+     "link|سلة المحذوفات|/recycle-bin||",
+     "link|فاتورة مبدئية جديدة|/sales/proforma/new||",
+     "link|فاتورة مبدئية جديدة|/sales/proforma/new||"
+    ],
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "r418": 0
+   },
+   "proforma|ar|1024": {
+    "status": 200,
+    "finalPath": "/sales/proforma",
+    "overflow": 0,
+    "statRows": [
+     {
+      "tracks": 4,
+      "cards": 3,
+      "perRow": 3,
+      "lines": 1,
+      "clipped": 0,
+      "outside": 0,
+      "widths": [
+       218.5,
+       218.5,
+       218.5
+      ],
+      "height": 86,
+      "facts": [
+       {
+        "label": "إجمالي الفواتير المبدئية",
+        "value": "0",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       },
+       {
+        "label": "مُرسل",
+        "value": "0",
+        "cls": "text-info",
+        "color": "rgb(47, 79, 184)",
+        "tone": "info",
+        "status": "sent"
+       },
+       {
+        "label": "مسودة",
+        "value": "0",
+        "cls": "text-neutral",
+        "color": "rgb(79, 84, 110)",
+        "tone": "neutral",
+        "status": "draft"
+       }
+      ]
+     }
+    ],
+    "badges": [],
+    "tables": [],
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "r418": 0
+   },
+   "proforma|ar|768": {
+    "status": 200,
+    "finalPath": "/sales/proforma",
+    "overflow": 0,
+    "statRows": [
+     {
+      "tracks": 4,
+      "cards": 3,
+      "perRow": 3,
+      "lines": 1,
+      "clipped": 0,
+      "outside": 0,
+      "widths": [
+       175,
+       175,
+       175
+      ],
+      "height": 86,
+      "facts": [
+       {
+        "label": "إجمالي الفواتير المبدئية",
+        "value": "0",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       },
+       {
+        "label": "مُرسل",
+        "value": "0",
+        "cls": "text-info",
+        "color": "rgb(47, 79, 184)",
+        "tone": "info",
+        "status": "sent"
+       },
+       {
+        "label": "مسودة",
+        "value": "0",
+        "cls": "text-neutral",
+        "color": "rgb(79, 84, 110)",
+        "tone": "neutral",
+        "status": "draft"
+       }
+      ]
+     }
+    ],
+    "badges": [],
+    "tables": [],
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "r418": 0
+   },
+   "proforma|ar|390": {
+    "status": 200,
+    "finalPath": "/sales/proforma",
+    "overflow": 0,
+    "statRows": [
+     {
+      "tracks": 4,
+      "cards": 3,
+      "perRow": 3,
+      "lines": 1,
+      "clipped": 0,
+      "outside": 0,
+      "widths": [
+       82.5,
+       82.5,
+       82.5
+      ],
+      "height": 134,
+      "facts": [
+       {
+        "label": "إجمالي الفواتير المبدئية",
+        "value": "0",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       },
+       {
+        "label": "مُرسل",
+        "value": "0",
+        "cls": "text-info",
+        "color": "rgb(47, 79, 184)",
+        "tone": "info",
+        "status": "sent"
+       },
+       {
+        "label": "مسودة",
+        "value": "0",
+        "cls": "text-neutral",
+        "color": "rgb(79, 84, 110)",
+        "tone": "neutral",
+        "status": "draft"
+       }
+      ]
+     }
+    ],
+    "badges": [],
+    "tables": [],
+    "actions": [
+     "button|استيراد||type=button|popup=dialog",
+     "button|التصفية||type=button|popup=dialog",
+     "button|تصدير||type=button|popup=menu",
+     "button|طرق العرض||type=button|popup=menu",
+     "link|سلة المحذوفات|/recycle-bin||",
+     "link|فاتورة مبدئية جديدة|/sales/proforma/new||",
+     "link|فاتورة مبدئية جديدة|/sales/proforma/new||"
+    ],
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "r418": 0
+   },
+   "sales-invoices|ar|1440": {
+    "status": 200,
+    "finalPath": "/sales/invoices",
+    "overflow": 0,
+    "statRows": [
+     {
+      "tracks": 4,
+      "cards": 4,
+      "perRow": 4,
+      "lines": 1,
+      "clipped": 0,
+      "outside": 0,
+      "widths": [
+       279,
+       279,
+       279,
+       279
+      ],
+      "height": 86,
+      "facts": [
+       {
+        "label": "إجمالي الفواتير",
+        "value": "8",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       },
+       {
+        "label": "مدفوع",
+        "value": "2",
+        "cls": "text-success",
+        "color": "rgb(23, 115, 74)",
+        "tone": "success",
+        "status": "paid"
+       },
+       {
+        "label": "مُرسل",
+        "value": "3",
+        "cls": "text-info",
+        "color": "rgb(47, 79, 184)",
+        "tone": "info",
+        "status": "sent"
+       },
+       {
+        "label": "مسودة",
+        "value": "1",
+        "cls": "text-neutral",
+        "color": "rgb(79, 84, 110)",
+        "tone": "neutral",
+        "status": "draft"
+       }
+      ]
+     }
+    ],
+    "badges": [
+     "sales_invoice|void|danger|ملغاة|rgb(180, 50, 45)|rgb(251, 230, 228)",
+     "sales_invoice|sent|info|مُرسل|rgb(47, 79, 184)|rgb(231, 236, 250)",
+     "sales_invoice|draft|neutral|مسودة|rgb(79, 84, 110)|rgb(236, 238, 243)",
+     "sales_invoice|paid|success|مدفوع|rgb(23, 115, 74)|rgb(227, 242, 234)",
+     "sales_invoice|sent|info|مُرسل|rgb(47, 79, 184)|rgb(231, 236, 250)",
+     "sales_invoice|sent|info|مُرسل|rgb(47, 79, 184)|rgb(231, 236, 250)",
+     "sales_invoice|partially_paid|warning|مدفوع جزئيًا|rgb(138, 90, 0)|rgb(251, 240, 217)",
+     "sales_invoice|paid|success|مدفوع|rgb(23, 115, 74)|rgb(227, 242, 234)"
+    ],
+    "tables": [
+     {
+      "heads": [
+       "رقم الفاتورة",
+       "العنوان",
+       "محوّل من",
+       "العميل",
+       "تاريخ الإصدار",
+       "المبلغ",
+       "أنشأه",
+       "الحالة",
+       "الإجراءات"
+      ],
+      "rows": 8
+     }
+    ],
+    "actions": [
+     "button|إجراءات INV-0001||type=button|popup=menu",
+     "button|إجراءات INV-0002||type=button|popup=menu",
+     "button|إجراءات INV-0003||type=button|popup=menu",
+     "button|إجراءات INV-0004||type=button|popup=menu",
+     "button|إجراءات INV-0005||type=button|popup=menu",
+     "button|إجراءات INV-0006||type=button|popup=menu",
+     "button|إجراءات INV-0007||type=button|popup=menu",
+     "button|إجراءات INV-0008||type=button|popup=menu",
+     "button|استيراد||type=button|popup=dialog",
+     "button|التصفية||type=button|popup=dialog",
+     "button|تصدير||type=button|popup=menu",
+     "button|طرق العرض||type=button|popup=menu",
+     "link|INV-0001|/sales/invoices/1||",
+     "link|INV-0002|/sales/invoices/2||",
+     "link|INV-0003|/sales/invoices/3||",
+     "link|INV-0004|/sales/invoices/4||",
+     "link|INV-0005|/sales/invoices/5||",
+     "link|INV-0006|/sales/invoices/6||",
+     "link|INV-0007|/sales/invoices/7||",
+     "link|INV-0008|/sales/invoices/8||",
+     "link|سلة المحذوفات|/recycle-bin||",
+     "link|فاتورة جديدة|/sales/invoices/new||"
+    ],
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "r418": 0
+   },
+   "sales-invoices|ar|1024": {
+    "status": 200,
+    "finalPath": "/sales/invoices",
+    "overflow": 0,
+    "statRows": [
+     {
+      "tracks": 4,
+      "cards": 4,
+      "perRow": 4,
+      "lines": 1,
+      "clipped": 0,
+      "outside": 0,
+      "widths": [
+       218.5,
+       218.5,
+       218.5,
+       218.5
+      ],
+      "height": 86,
+      "facts": [
+       {
+        "label": "إجمالي الفواتير",
+        "value": "8",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       },
+       {
+        "label": "مدفوع",
+        "value": "2",
+        "cls": "text-success",
+        "color": "rgb(23, 115, 74)",
+        "tone": "success",
+        "status": "paid"
+       },
+       {
+        "label": "مُرسل",
+        "value": "3",
+        "cls": "text-info",
+        "color": "rgb(47, 79, 184)",
+        "tone": "info",
+        "status": "sent"
+       },
+       {
+        "label": "مسودة",
+        "value": "1",
+        "cls": "text-neutral",
+        "color": "rgb(79, 84, 110)",
+        "tone": "neutral",
+        "status": "draft"
+       }
+      ]
+     }
+    ],
+    "badges": [
+     "sales_invoice|void|danger|ملغاة|rgb(180, 50, 45)|rgb(251, 230, 228)",
+     "sales_invoice|sent|info|مُرسل|rgb(47, 79, 184)|rgb(231, 236, 250)",
+     "sales_invoice|draft|neutral|مسودة|rgb(79, 84, 110)|rgb(236, 238, 243)",
+     "sales_invoice|paid|success|مدفوع|rgb(23, 115, 74)|rgb(227, 242, 234)",
+     "sales_invoice|sent|info|مُرسل|rgb(47, 79, 184)|rgb(231, 236, 250)",
+     "sales_invoice|sent|info|مُرسل|rgb(47, 79, 184)|rgb(231, 236, 250)",
+     "sales_invoice|partially_paid|warning|مدفوع جزئيًا|rgb(138, 90, 0)|rgb(251, 240, 217)",
+     "sales_invoice|paid|success|مدفوع|rgb(23, 115, 74)|rgb(227, 242, 234)"
+    ],
+    "tables": [
+     {
+      "heads": [
+       "رقم الفاتورة",
+       "العنوان",
+       "محوّل من",
+       "العميل",
+       "تاريخ الإصدار",
+       "المبلغ",
+       "أنشأه",
+       "الحالة",
+       "الإجراءات"
+      ],
+      "rows": 8
+     }
+    ],
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "r418": 0
+   },
+   "sales-invoices|ar|768": {
+    "status": 200,
+    "finalPath": "/sales/invoices",
+    "overflow": 0,
+    "statRows": [
+     {
+      "tracks": 4,
+      "cards": 4,
+      "perRow": 4,
+      "lines": 1,
+      "clipped": 0,
+      "outside": 0,
+      "widths": [
+       175,
+       175,
+       175,
+       175
+      ],
+      "height": 86,
+      "facts": [
+       {
+        "label": "إجمالي الفواتير",
+        "value": "8",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       },
+       {
+        "label": "مدفوع",
+        "value": "2",
+        "cls": "text-success",
+        "color": "rgb(23, 115, 74)",
+        "tone": "success",
+        "status": "paid"
+       },
+       {
+        "label": "مُرسل",
+        "value": "3",
+        "cls": "text-info",
+        "color": "rgb(47, 79, 184)",
+        "tone": "info",
+        "status": "sent"
+       },
+       {
+        "label": "مسودة",
+        "value": "1",
+        "cls": "text-neutral",
+        "color": "rgb(79, 84, 110)",
+        "tone": "neutral",
+        "status": "draft"
+       }
+      ]
+     }
+    ],
+    "badges": [
+     "sales_invoice|void|danger|ملغاة|rgb(180, 50, 45)|rgb(251, 230, 228)",
+     "sales_invoice|sent|info|مُرسل|rgb(47, 79, 184)|rgb(231, 236, 250)",
+     "sales_invoice|draft|neutral|مسودة|rgb(79, 84, 110)|rgb(236, 238, 243)",
+     "sales_invoice|paid|success|مدفوع|rgb(23, 115, 74)|rgb(227, 242, 234)",
+     "sales_invoice|sent|info|مُرسل|rgb(47, 79, 184)|rgb(231, 236, 250)",
+     "sales_invoice|sent|info|مُرسل|rgb(47, 79, 184)|rgb(231, 236, 250)",
+     "sales_invoice|partially_paid|warning|مدفوع جزئيًا|rgb(138, 90, 0)|rgb(251, 240, 217)",
+     "sales_invoice|paid|success|مدفوع|rgb(23, 115, 74)|rgb(227, 242, 234)"
+    ],
+    "tables": [
+     {
+      "heads": [
+       "رقم الفاتورة",
+       "العنوان",
+       "محوّل من",
+       "العميل",
+       "تاريخ الإصدار",
+       "المبلغ",
+       "أنشأه",
+       "الحالة",
+       "الإجراءات"
+      ],
+      "rows": 8
+     }
+    ],
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "r418": 0
+   },
+   "sales-invoices|ar|390": {
+    "status": 200,
+    "finalPath": "/sales/invoices",
+    "overflow": 0,
+    "statRows": [
+     {
+      "tracks": 4,
+      "cards": 4,
+      "perRow": 4,
+      "lines": 1,
+      "clipped": 0,
+      "outside": 0,
+      "widths": [
+       82.5,
+       82.5,
+       82.5,
+       82.5
+      ],
+      "height": 110,
+      "facts": [
+       {
+        "label": "إجمالي الفواتير",
+        "value": "8",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       },
+       {
+        "label": "مدفوع",
+        "value": "2",
+        "cls": "text-success",
+        "color": "rgb(23, 115, 74)",
+        "tone": "success",
+        "status": "paid"
+       },
+       {
+        "label": "مُرسل",
+        "value": "3",
+        "cls": "text-info",
+        "color": "rgb(47, 79, 184)",
+        "tone": "info",
+        "status": "sent"
+       },
+       {
+        "label": "مسودة",
+        "value": "1",
+        "cls": "text-neutral",
+        "color": "rgb(79, 84, 110)",
+        "tone": "neutral",
+        "status": "draft"
+       }
+      ]
+     }
+    ],
+    "badges": [
+     "sales_invoice|void|danger|ملغاة|rgb(180, 50, 45)|rgb(251, 230, 228)",
+     "sales_invoice|sent|info|مُرسل|rgb(47, 79, 184)|rgb(231, 236, 250)",
+     "sales_invoice|draft|neutral|مسودة|rgb(79, 84, 110)|rgb(236, 238, 243)",
+     "sales_invoice|paid|success|مدفوع|rgb(23, 115, 74)|rgb(227, 242, 234)",
+     "sales_invoice|sent|info|مُرسل|rgb(47, 79, 184)|rgb(231, 236, 250)",
+     "sales_invoice|sent|info|مُرسل|rgb(47, 79, 184)|rgb(231, 236, 250)",
+     "sales_invoice|partially_paid|warning|مدفوع جزئيًا|rgb(138, 90, 0)|rgb(251, 240, 217)",
+     "sales_invoice|paid|success|مدفوع|rgb(23, 115, 74)|rgb(227, 242, 234)"
+    ],
+    "tables": [
+     {
+      "heads": [
+       "رقم الفاتورة",
+       "العنوان",
+       "محوّل من",
+       "العميل",
+       "تاريخ الإصدار",
+       "المبلغ",
+       "أنشأه",
+       "الحالة",
+       "الإجراءات"
+      ],
+      "rows": 8
+     }
+    ],
+    "actions": [
+     "button|إجراءات INV-0001||type=button|popup=menu",
+     "button|إجراءات INV-0002||type=button|popup=menu",
+     "button|إجراءات INV-0003||type=button|popup=menu",
+     "button|إجراءات INV-0004||type=button|popup=menu",
+     "button|إجراءات INV-0005||type=button|popup=menu",
+     "button|إجراءات INV-0006||type=button|popup=menu",
+     "button|إجراءات INV-0007||type=button|popup=menu",
+     "button|إجراءات INV-0008||type=button|popup=menu",
+     "button|استيراد||type=button|popup=dialog",
+     "button|التصفية||type=button|popup=dialog",
+     "button|تصدير||type=button|popup=menu",
+     "button|طرق العرض||type=button|popup=menu",
+     "link|INV-0001|/sales/invoices/1||",
+     "link|INV-0002|/sales/invoices/2||",
+     "link|INV-0003|/sales/invoices/3||",
+     "link|INV-0004|/sales/invoices/4||",
+     "link|INV-0005|/sales/invoices/5||",
+     "link|INV-0006|/sales/invoices/6||",
+     "link|INV-0007|/sales/invoices/7||",
+     "link|INV-0008|/sales/invoices/8||",
+     "link|سلة المحذوفات|/recycle-bin||",
+     "link|فاتورة جديدة|/sales/invoices/new||"
+    ],
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "r418": 0
+   },
+   "delivery-challans|ar|1440": {
+    "status": 200,
+    "finalPath": "/sales/delivery-challans",
+    "overflow": 0,
+    "statRows": [
+     {
+      "tracks": 4,
+      "cards": 4,
+      "perRow": 4,
+      "lines": 1,
+      "clipped": 0,
+      "outside": 0,
+      "widths": [
+       279,
+       279,
+       279,
+       279
+      ],
+      "height": 86,
+      "facts": [
+       {
+        "label": "إجمالي أذون التسليم",
+        "value": "0",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       },
+       {
+        "label": "تم التسليم",
+        "value": "0",
+        "cls": "text-success",
+        "color": "rgb(23, 115, 74)",
+        "tone": "success",
+        "status": "delivered"
+       },
+       {
+        "label": "تم الشحن",
+        "value": "0",
+        "cls": "text-info",
+        "color": "rgb(47, 79, 184)",
+        "tone": "info",
+        "status": "dispatched"
+       },
+       {
+        "label": "مسودة",
+        "value": "0",
+        "cls": "text-neutral",
+        "color": "rgb(79, 84, 110)",
+        "tone": "neutral",
+        "status": "draft"
+       }
+      ]
+     }
+    ],
+    "badges": [],
+    "tables": [],
+    "actions": [
+     "button|استيراد||type=button|popup=dialog",
+     "button|التصفية||type=button|popup=dialog",
+     "button|تصدير||type=button|popup=menu",
+     "button|طرق العرض||type=button|popup=menu",
+     "link|إذن تسليم جديد|/sales/delivery-challans/new||",
+     "link|إذن تسليم جديد|/sales/delivery-challans/new||",
+     "link|سلة المحذوفات|/recycle-bin||"
+    ],
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "r418": 0
+   },
+   "delivery-challans|ar|1024": {
+    "status": 200,
+    "finalPath": "/sales/delivery-challans",
+    "overflow": 0,
+    "statRows": [
+     {
+      "tracks": 4,
+      "cards": 4,
+      "perRow": 4,
+      "lines": 1,
+      "clipped": 0,
+      "outside": 0,
+      "widths": [
+       218.5,
+       218.5,
+       218.5,
+       218.5
+      ],
+      "height": 86,
+      "facts": [
+       {
+        "label": "إجمالي أذون التسليم",
+        "value": "0",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       },
+       {
+        "label": "تم التسليم",
+        "value": "0",
+        "cls": "text-success",
+        "color": "rgb(23, 115, 74)",
+        "tone": "success",
+        "status": "delivered"
+       },
+       {
+        "label": "تم الشحن",
+        "value": "0",
+        "cls": "text-info",
+        "color": "rgb(47, 79, 184)",
+        "tone": "info",
+        "status": "dispatched"
+       },
+       {
+        "label": "مسودة",
+        "value": "0",
+        "cls": "text-neutral",
+        "color": "rgb(79, 84, 110)",
+        "tone": "neutral",
+        "status": "draft"
+       }
+      ]
+     }
+    ],
+    "badges": [],
+    "tables": [],
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "r418": 0
+   },
+   "delivery-challans|ar|768": {
+    "status": 200,
+    "finalPath": "/sales/delivery-challans",
+    "overflow": 0,
+    "statRows": [
+     {
+      "tracks": 4,
+      "cards": 4,
+      "perRow": 4,
+      "lines": 1,
+      "clipped": 0,
+      "outside": 0,
+      "widths": [
+       175,
+       175,
+       175,
+       175
+      ],
+      "height": 86,
+      "facts": [
+       {
+        "label": "إجمالي أذون التسليم",
+        "value": "0",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       },
+       {
+        "label": "تم التسليم",
+        "value": "0",
+        "cls": "text-success",
+        "color": "rgb(23, 115, 74)",
+        "tone": "success",
+        "status": "delivered"
+       },
+       {
+        "label": "تم الشحن",
+        "value": "0",
+        "cls": "text-info",
+        "color": "rgb(47, 79, 184)",
+        "tone": "info",
+        "status": "dispatched"
+       },
+       {
+        "label": "مسودة",
+        "value": "0",
+        "cls": "text-neutral",
+        "color": "rgb(79, 84, 110)",
+        "tone": "neutral",
+        "status": "draft"
+       }
+      ]
+     }
+    ],
+    "badges": [],
+    "tables": [],
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "r418": 0
+   },
+   "delivery-challans|ar|390": {
+    "status": 200,
+    "finalPath": "/sales/delivery-challans",
+    "overflow": 0,
+    "statRows": [
+     {
+      "tracks": 4,
+      "cards": 4,
+      "perRow": 4,
+      "lines": 1,
+      "clipped": 0,
+      "outside": 0,
+      "widths": [
+       82.5,
+       82.5,
+       82.5,
+       82.5
+      ],
+      "height": 134,
+      "facts": [
+       {
+        "label": "إجمالي أذون التسليم",
+        "value": "0",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       },
+       {
+        "label": "تم التسليم",
+        "value": "0",
+        "cls": "text-success",
+        "color": "rgb(23, 115, 74)",
+        "tone": "success",
+        "status": "delivered"
+       },
+       {
+        "label": "تم الشحن",
+        "value": "0",
+        "cls": "text-info",
+        "color": "rgb(47, 79, 184)",
+        "tone": "info",
+        "status": "dispatched"
+       },
+       {
+        "label": "مسودة",
+        "value": "0",
+        "cls": "text-neutral",
+        "color": "rgb(79, 84, 110)",
+        "tone": "neutral",
+        "status": "draft"
+       }
+      ]
+     }
+    ],
+    "badges": [],
+    "tables": [],
+    "actions": [
+     "button|استيراد||type=button|popup=dialog",
+     "button|التصفية||type=button|popup=dialog",
+     "button|تصدير||type=button|popup=menu",
+     "button|طرق العرض||type=button|popup=menu",
+     "link|إذن تسليم جديد|/sales/delivery-challans/new||",
+     "link|إذن تسليم جديد|/sales/delivery-challans/new||",
+     "link|سلة المحذوفات|/recycle-bin||"
+    ],
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "r418": 0
+   },
+   "purchase-orders|ar|1440": {
+    "status": 200,
+    "finalPath": "/purchasing/orders",
+    "overflow": 0,
+    "statRows": [
+     {
+      "tracks": 4,
+      "cards": 4,
+      "perRow": 4,
+      "lines": 1,
+      "clipped": 0,
+      "outside": 0,
+      "widths": [
+       279,
+       279,
+       279,
+       279
+      ],
+      "height": 86,
+      "facts": [
+       {
+        "label": "إجمالي أوامر الشراء",
+        "value": "3",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       },
+       {
+        "label": "تم الاستلام",
+        "value": "1",
+        "cls": "text-success",
+        "color": "rgb(23, 115, 74)",
+        "tone": "success",
+        "status": "received"
+       },
+       {
+        "label": "تم الطلب",
+        "value": "1",
+        "cls": "text-info",
+        "color": "rgb(47, 79, 184)",
+        "tone": "info",
+        "status": "ordered"
+       },
+       {
+        "label": "مسودة",
+        "value": "1",
+        "cls": "text-neutral",
+        "color": "rgb(79, 84, 110)",
+        "tone": "neutral",
+        "status": "draft"
+       }
+      ]
+     }
+    ],
+    "badges": [
+     "purchase_order|draft|neutral|مسودة|rgb(79, 84, 110)|rgb(236, 238, 243)",
+     "purchase_order|ordered|info|تم الطلب|rgb(47, 79, 184)|rgb(231, 236, 250)",
+     "purchase_order|received|success|تم الاستلام|rgb(23, 115, 74)|rgb(227, 242, 234)"
+    ],
+    "tables": [
+     {
+      "heads": [
+       "رقم أمر الشراء",
+       "العنوان",
+       "محوّل من",
+       "المورّد",
+       "تاريخ الطلب",
+       "التسليم المتوقع",
+       "المبلغ",
+       "أنشأه",
+       "الحالة",
+       "الإجراءات"
+      ],
+      "rows": 3
+     }
+    ],
+    "actions": [
+     "button|إجراءات PO-0001||type=button|popup=menu",
+     "button|إجراءات PO-0002||type=button|popup=menu",
+     "button|إجراءات PO-0003||type=button|popup=menu",
+     "button|استيراد||type=button|popup=dialog",
+     "button|التصفية||type=button|popup=dialog",
+     "button|تصدير||type=button|popup=menu",
+     "button|طرق العرض||type=button|popup=menu",
+     "link|PO-0001|/purchasing/orders/1||",
+     "link|PO-0002|/purchasing/orders/2||",
+     "link|PO-0003|/purchasing/orders/3||",
+     "link|أمر شراء جديد|/purchasing/orders/new||",
+     "link|سلة المحذوفات|/recycle-bin||"
+    ],
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "r418": 0
+   },
+   "purchase-orders|ar|1024": {
+    "status": 200,
+    "finalPath": "/purchasing/orders",
+    "overflow": 0,
+    "statRows": [
+     {
+      "tracks": 4,
+      "cards": 4,
+      "perRow": 4,
+      "lines": 1,
+      "clipped": 0,
+      "outside": 0,
+      "widths": [
+       218.5,
+       218.5,
+       218.5,
+       218.5
+      ],
+      "height": 86,
+      "facts": [
+       {
+        "label": "إجمالي أوامر الشراء",
+        "value": "3",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       },
+       {
+        "label": "تم الاستلام",
+        "value": "1",
+        "cls": "text-success",
+        "color": "rgb(23, 115, 74)",
+        "tone": "success",
+        "status": "received"
+       },
+       {
+        "label": "تم الطلب",
+        "value": "1",
+        "cls": "text-info",
+        "color": "rgb(47, 79, 184)",
+        "tone": "info",
+        "status": "ordered"
+       },
+       {
+        "label": "مسودة",
+        "value": "1",
+        "cls": "text-neutral",
+        "color": "rgb(79, 84, 110)",
+        "tone": "neutral",
+        "status": "draft"
+       }
+      ]
+     }
+    ],
+    "badges": [
+     "purchase_order|draft|neutral|مسودة|rgb(79, 84, 110)|rgb(236, 238, 243)",
+     "purchase_order|ordered|info|تم الطلب|rgb(47, 79, 184)|rgb(231, 236, 250)",
+     "purchase_order|received|success|تم الاستلام|rgb(23, 115, 74)|rgb(227, 242, 234)"
+    ],
+    "tables": [
+     {
+      "heads": [
+       "رقم أمر الشراء",
+       "العنوان",
+       "محوّل من",
+       "المورّد",
+       "تاريخ الطلب",
+       "التسليم المتوقع",
+       "المبلغ",
+       "أنشأه",
+       "الحالة",
+       "الإجراءات"
+      ],
+      "rows": 3
+     }
+    ],
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "r418": 0
+   },
+   "purchase-orders|ar|768": {
+    "status": 200,
+    "finalPath": "/purchasing/orders",
+    "overflow": 0,
+    "statRows": [
+     {
+      "tracks": 4,
+      "cards": 4,
+      "perRow": 4,
+      "lines": 1,
+      "clipped": 0,
+      "outside": 0,
+      "widths": [
+       175,
+       175,
+       175,
+       175
+      ],
+      "height": 86,
+      "facts": [
+       {
+        "label": "إجمالي أوامر الشراء",
+        "value": "3",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       },
+       {
+        "label": "تم الاستلام",
+        "value": "1",
+        "cls": "text-success",
+        "color": "rgb(23, 115, 74)",
+        "tone": "success",
+        "status": "received"
+       },
+       {
+        "label": "تم الطلب",
+        "value": "1",
+        "cls": "text-info",
+        "color": "rgb(47, 79, 184)",
+        "tone": "info",
+        "status": "ordered"
+       },
+       {
+        "label": "مسودة",
+        "value": "1",
+        "cls": "text-neutral",
+        "color": "rgb(79, 84, 110)",
+        "tone": "neutral",
+        "status": "draft"
+       }
+      ]
+     }
+    ],
+    "badges": [
+     "purchase_order|draft|neutral|مسودة|rgb(79, 84, 110)|rgb(236, 238, 243)",
+     "purchase_order|ordered|info|تم الطلب|rgb(47, 79, 184)|rgb(231, 236, 250)",
+     "purchase_order|received|success|تم الاستلام|rgb(23, 115, 74)|rgb(227, 242, 234)"
+    ],
+    "tables": [
+     {
+      "heads": [
+       "رقم أمر الشراء",
+       "العنوان",
+       "محوّل من",
+       "المورّد",
+       "تاريخ الطلب",
+       "التسليم المتوقع",
+       "المبلغ",
+       "أنشأه",
+       "الحالة",
+       "الإجراءات"
+      ],
+      "rows": 3
+     }
+    ],
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "r418": 0
+   },
+   "purchase-orders|ar|390": {
+    "status": 200,
+    "finalPath": "/purchasing/orders",
+    "overflow": 0,
+    "statRows": [
+     {
+      "tracks": 4,
+      "cards": 4,
+      "perRow": 4,
+      "lines": 1,
+      "clipped": 0,
+      "outside": 0,
+      "widths": [
+       82.5,
+       82.5,
+       82.5,
+       82.5
+      ],
+      "height": 134,
+      "facts": [
+       {
+        "label": "إجمالي أوامر الشراء",
+        "value": "3",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       },
+       {
+        "label": "تم الاستلام",
+        "value": "1",
+        "cls": "text-success",
+        "color": "rgb(23, 115, 74)",
+        "tone": "success",
+        "status": "received"
+       },
+       {
+        "label": "تم الطلب",
+        "value": "1",
+        "cls": "text-info",
+        "color": "rgb(47, 79, 184)",
+        "tone": "info",
+        "status": "ordered"
+       },
+       {
+        "label": "مسودة",
+        "value": "1",
+        "cls": "text-neutral",
+        "color": "rgb(79, 84, 110)",
+        "tone": "neutral",
+        "status": "draft"
+       }
+      ]
+     }
+    ],
+    "badges": [
+     "purchase_order|draft|neutral|مسودة|rgb(79, 84, 110)|rgb(236, 238, 243)",
+     "purchase_order|ordered|info|تم الطلب|rgb(47, 79, 184)|rgb(231, 236, 250)",
+     "purchase_order|received|success|تم الاستلام|rgb(23, 115, 74)|rgb(227, 242, 234)"
+    ],
+    "tables": [
+     {
+      "heads": [
+       "رقم أمر الشراء",
+       "العنوان",
+       "محوّل من",
+       "المورّد",
+       "تاريخ الطلب",
+       "التسليم المتوقع",
+       "المبلغ",
+       "أنشأه",
+       "الحالة",
+       "الإجراءات"
+      ],
+      "rows": 3
+     }
+    ],
+    "actions": [
+     "button|إجراءات PO-0001||type=button|popup=menu",
+     "button|إجراءات PO-0002||type=button|popup=menu",
+     "button|إجراءات PO-0003||type=button|popup=menu",
+     "button|استيراد||type=button|popup=dialog",
+     "button|التصفية||type=button|popup=dialog",
+     "button|تصدير||type=button|popup=menu",
+     "button|طرق العرض||type=button|popup=menu",
+     "link|PO-0001|/purchasing/orders/1||",
+     "link|PO-0002|/purchasing/orders/2||",
+     "link|PO-0003|/purchasing/orders/3||",
+     "link|أمر شراء جديد|/purchasing/orders/new||",
+     "link|سلة المحذوفات|/recycle-bin||"
+    ],
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "r418": 0
+   },
+   "credit-notes|ar|1440": {
+    "status": 200,
+    "finalPath": "/sales/credit-notes",
+    "overflow": 0,
+    "statRows": [
+     {
+      "tracks": 4,
+      "cards": 4,
+      "perRow": 4,
+      "lines": 1,
+      "clipped": 0,
+      "outside": 0,
+      "widths": [
+       279,
+       279,
+       279,
+       279
+      ],
+      "height": 86,
+      "facts": [
+       {
+        "label": "إجمالي إشعارات الدائن",
+        "value": "0",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       },
+       {
+        "label": "صادر",
+        "value": "0",
+        "cls": "text-corrective",
+        "color": "rgb(91, 63, 184)",
+        "tone": "corrective",
+        "status": "issued"
+       },
+       {
+        "label": "مسودة",
+        "value": "0",
+        "cls": "text-neutral",
+        "color": "rgb(79, 84, 110)",
+        "tone": "neutral",
+        "status": "draft"
+       },
+       {
+        "label": "هذا الشهر",
+        "value": "0",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       }
+      ]
+     }
+    ],
+    "badges": [],
+    "tables": [],
+    "actions": [
+     "button|استيراد||type=button|popup=dialog",
+     "button|التصفية||type=button|popup=dialog",
+     "button|تصدير||type=button|popup=menu",
+     "button|طرق العرض||type=button|popup=menu",
+     "link|إشعار دائن جديد|/sales/credit-notes/new||",
+     "link|إشعار دائن جديد|/sales/credit-notes/new||",
+     "link|سلة المحذوفات|/recycle-bin||"
+    ],
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "r418": 0
+   },
+   "credit-notes|ar|1024": {
+    "status": 200,
+    "finalPath": "/sales/credit-notes",
+    "overflow": 0,
+    "statRows": [
+     {
+      "tracks": 4,
+      "cards": 4,
+      "perRow": 4,
+      "lines": 1,
+      "clipped": 0,
+      "outside": 0,
+      "widths": [
+       218.5,
+       218.5,
+       218.5,
+       218.5
+      ],
+      "height": 86,
+      "facts": [
+       {
+        "label": "إجمالي إشعارات الدائن",
+        "value": "0",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       },
+       {
+        "label": "صادر",
+        "value": "0",
+        "cls": "text-corrective",
+        "color": "rgb(91, 63, 184)",
+        "tone": "corrective",
+        "status": "issued"
+       },
+       {
+        "label": "مسودة",
+        "value": "0",
+        "cls": "text-neutral",
+        "color": "rgb(79, 84, 110)",
+        "tone": "neutral",
+        "status": "draft"
+       },
+       {
+        "label": "هذا الشهر",
+        "value": "0",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       }
+      ]
+     }
+    ],
+    "badges": [],
+    "tables": [],
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "r418": 0
+   },
+   "credit-notes|ar|768": {
+    "status": 200,
+    "finalPath": "/sales/credit-notes",
+    "overflow": 0,
+    "statRows": [
+     {
+      "tracks": 4,
+      "cards": 4,
+      "perRow": 4,
+      "lines": 1,
+      "clipped": 0,
+      "outside": 0,
+      "widths": [
+       175,
+       175,
+       175,
+       175
+      ],
+      "height": 86,
+      "facts": [
+       {
+        "label": "إجمالي إشعارات الدائن",
+        "value": "0",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       },
+       {
+        "label": "صادر",
+        "value": "0",
+        "cls": "text-corrective",
+        "color": "rgb(91, 63, 184)",
+        "tone": "corrective",
+        "status": "issued"
+       },
+       {
+        "label": "مسودة",
+        "value": "0",
+        "cls": "text-neutral",
+        "color": "rgb(79, 84, 110)",
+        "tone": "neutral",
+        "status": "draft"
+       },
+       {
+        "label": "هذا الشهر",
+        "value": "0",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       }
+      ]
+     }
+    ],
+    "badges": [],
+    "tables": [],
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "r418": 0
+   },
+   "credit-notes|ar|390": {
+    "status": 200,
+    "finalPath": "/sales/credit-notes",
+    "overflow": 0,
+    "statRows": [
+     {
+      "tracks": 4,
+      "cards": 4,
+      "perRow": 4,
+      "lines": 1,
+      "clipped": 0,
+      "outside": 0,
+      "widths": [
+       82.5,
+       82.5,
+       82.5,
+       82.5
+      ],
+      "height": 134,
+      "facts": [
+       {
+        "label": "إجمالي إشعارات الدائن",
+        "value": "0",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       },
+       {
+        "label": "صادر",
+        "value": "0",
+        "cls": "text-corrective",
+        "color": "rgb(91, 63, 184)",
+        "tone": "corrective",
+        "status": "issued"
+       },
+       {
+        "label": "مسودة",
+        "value": "0",
+        "cls": "text-neutral",
+        "color": "rgb(79, 84, 110)",
+        "tone": "neutral",
+        "status": "draft"
+       },
+       {
+        "label": "هذا الشهر",
+        "value": "0",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       }
+      ]
+     }
+    ],
+    "badges": [],
+    "tables": [],
+    "actions": [
+     "button|استيراد||type=button|popup=dialog",
+     "button|التصفية||type=button|popup=dialog",
+     "button|تصدير||type=button|popup=menu",
+     "button|طرق العرض||type=button|popup=menu",
+     "link|إشعار دائن جديد|/sales/credit-notes/new||",
+     "link|إشعار دائن جديد|/sales/credit-notes/new||",
+     "link|سلة المحذوفات|/recycle-bin||"
+    ],
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "r418": 0
+   },
+   "debit-notes|ar|1440": {
+    "status": 200,
+    "finalPath": "/purchasing/debit-notes",
+    "overflow": 0,
+    "statRows": [
+     {
+      "tracks": 4,
+      "cards": 4,
+      "perRow": 4,
+      "lines": 1,
+      "clipped": 0,
+      "outside": 0,
+      "widths": [
+       279,
+       279,
+       279,
+       279
+      ],
+      "height": 86,
+      "facts": [
+       {
+        "label": "إجمالي إشعارات المدين",
+        "value": "0",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       },
+       {
+        "label": "صادر",
+        "value": "0",
+        "cls": "text-corrective",
+        "color": "rgb(91, 63, 184)",
+        "tone": "corrective",
+        "status": "issued"
+       },
+       {
+        "label": "مسودة",
+        "value": "0",
+        "cls": "text-neutral",
+        "color": "rgb(79, 84, 110)",
+        "tone": "neutral",
+        "status": "draft"
+       },
+       {
+        "label": "هذا الشهر",
+        "value": "0",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       }
+      ]
+     }
+    ],
+    "badges": [],
+    "tables": [],
+    "actions": [
+     "button|استيراد||type=button|popup=dialog",
+     "button|التصفية||type=button|popup=dialog",
+     "button|تصدير||type=button|popup=menu",
+     "button|طرق العرض||type=button|popup=menu",
+     "link|إشعار مدين جديد|/purchasing/debit-notes/new||",
+     "link|إشعار مدين جديد|/purchasing/debit-notes/new||",
+     "link|سلة المحذوفات|/recycle-bin||"
+    ],
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "r418": 0
+   },
+   "debit-notes|ar|1024": {
+    "status": 200,
+    "finalPath": "/purchasing/debit-notes",
+    "overflow": 0,
+    "statRows": [
+     {
+      "tracks": 4,
+      "cards": 4,
+      "perRow": 4,
+      "lines": 1,
+      "clipped": 0,
+      "outside": 0,
+      "widths": [
+       218.5,
+       218.5,
+       218.5,
+       218.5
+      ],
+      "height": 86,
+      "facts": [
+       {
+        "label": "إجمالي إشعارات المدين",
+        "value": "0",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       },
+       {
+        "label": "صادر",
+        "value": "0",
+        "cls": "text-corrective",
+        "color": "rgb(91, 63, 184)",
+        "tone": "corrective",
+        "status": "issued"
+       },
+       {
+        "label": "مسودة",
+        "value": "0",
+        "cls": "text-neutral",
+        "color": "rgb(79, 84, 110)",
+        "tone": "neutral",
+        "status": "draft"
+       },
+       {
+        "label": "هذا الشهر",
+        "value": "0",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       }
+      ]
+     }
+    ],
+    "badges": [],
+    "tables": [],
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "r418": 0
+   },
+   "debit-notes|ar|768": {
+    "status": 200,
+    "finalPath": "/purchasing/debit-notes",
+    "overflow": 0,
+    "statRows": [
+     {
+      "tracks": 4,
+      "cards": 4,
+      "perRow": 4,
+      "lines": 1,
+      "clipped": 0,
+      "outside": 0,
+      "widths": [
+       175,
+       175,
+       175,
+       175
+      ],
+      "height": 86,
+      "facts": [
+       {
+        "label": "إجمالي إشعارات المدين",
+        "value": "0",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       },
+       {
+        "label": "صادر",
+        "value": "0",
+        "cls": "text-corrective",
+        "color": "rgb(91, 63, 184)",
+        "tone": "corrective",
+        "status": "issued"
+       },
+       {
+        "label": "مسودة",
+        "value": "0",
+        "cls": "text-neutral",
+        "color": "rgb(79, 84, 110)",
+        "tone": "neutral",
+        "status": "draft"
+       },
+       {
+        "label": "هذا الشهر",
+        "value": "0",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       }
+      ]
+     }
+    ],
+    "badges": [],
+    "tables": [],
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "r418": 0
+   },
+   "debit-notes|ar|390": {
+    "status": 200,
+    "finalPath": "/purchasing/debit-notes",
+    "overflow": 0,
+    "statRows": [
+     {
+      "tracks": 4,
+      "cards": 4,
+      "perRow": 4,
+      "lines": 1,
+      "clipped": 0,
+      "outside": 0,
+      "widths": [
+       82.5,
+       82.5,
+       82.5,
+       82.5
+      ],
+      "height": 134,
+      "facts": [
+       {
+        "label": "إجمالي إشعارات المدين",
+        "value": "0",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       },
+       {
+        "label": "صادر",
+        "value": "0",
+        "cls": "text-corrective",
+        "color": "rgb(91, 63, 184)",
+        "tone": "corrective",
+        "status": "issued"
+       },
+       {
+        "label": "مسودة",
+        "value": "0",
+        "cls": "text-neutral",
+        "color": "rgb(79, 84, 110)",
+        "tone": "neutral",
+        "status": "draft"
+       },
+       {
+        "label": "هذا الشهر",
+        "value": "0",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       }
+      ]
+     }
+    ],
+    "badges": [],
+    "tables": [],
+    "actions": [
+     "button|استيراد||type=button|popup=dialog",
+     "button|التصفية||type=button|popup=dialog",
+     "button|تصدير||type=button|popup=menu",
+     "button|طرق العرض||type=button|popup=menu",
+     "link|إشعار مدين جديد|/purchasing/debit-notes/new||",
+     "link|إشعار مدين جديد|/purchasing/debit-notes/new||",
+     "link|سلة المحذوفات|/recycle-bin||"
+    ],
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "r418": 0
+   },
+   "projects|ar|1440": {
+    "status": 200,
+    "finalPath": "/projects",
+    "overflow": 0,
+    "statRows": [
+     {
+      "tracks": 4,
+      "cards": 4,
+      "perRow": 4,
+      "lines": 1,
+      "clipped": 0,
+      "outside": 0,
+      "widths": [
+       279,
+       279,
+       279,
+       279
+      ],
+      "height": 86,
+      "facts": [
+       {
+        "label": "إجمالي المشاريع",
+        "value": "3",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       },
+       {
+        "label": "نشط",
+        "value": "1",
+        "cls": "text-info",
+        "color": "rgb(47, 79, 184)",
+        "tone": "info",
+        "status": "active"
+       },
+       {
+        "label": "مكتمل",
+        "value": "1",
+        "cls": "text-success",
+        "color": "rgb(23, 115, 74)",
+        "tone": "success",
+        "status": "completed"
+       },
+       {
+        "label": "مخطط",
+        "value": "1",
+        "cls": "text-neutral",
+        "color": "rgb(79, 84, 110)",
+        "tone": "neutral",
+        "status": "planned"
+       }
+      ]
+     }
+    ],
+    "badges": [
+     "project|completed|success|مكتمل|rgb(23, 115, 74)|rgb(227, 242, 234)",
+     "project|planned|neutral|مخطط|rgb(79, 84, 110)|rgb(236, 238, 243)",
+     "project|active|info|نشط|rgb(47, 79, 184)|rgb(231, 236, 250)"
+    ],
+    "tables": [
+     {
+      "heads": [
+       "الاسم",
+       "العميل",
+       "تاريخ البدء",
+       "تاريخ الانتهاء",
+       "الميزانية",
+       "المهام",
+       "الحالة",
+       "الإجراءات"
+      ],
+      "rows": 3
+     }
+    ],
+    "actions": [
+     "button|إجراءات Annual brand refresh||type=button|popup=menu",
+     "button|إجراءات Jeddah Hospitality Summit||type=button|popup=menu",
+     "button|إجراءات Riyadh Tech Expo 2026 booth||type=button|popup=menu",
+     "link|Annual brand refresh|/projects/3||",
+     "link|Jeddah Hospitality Summit|/projects/2||",
+     "link|Riyadh Tech Expo 2026 booth|/projects/1||",
+     "link|مشروع جديد|/projects/new||"
+    ],
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "r418": 0
+   },
+   "projects|ar|1024": {
+    "status": 200,
+    "finalPath": "/projects",
+    "overflow": 0,
+    "statRows": [
+     {
+      "tracks": 4,
+      "cards": 4,
+      "perRow": 4,
+      "lines": 1,
+      "clipped": 0,
+      "outside": 0,
+      "widths": [
+       218.5,
+       218.5,
+       218.5,
+       218.5
+      ],
+      "height": 86,
+      "facts": [
+       {
+        "label": "إجمالي المشاريع",
+        "value": "3",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       },
+       {
+        "label": "نشط",
+        "value": "1",
+        "cls": "text-info",
+        "color": "rgb(47, 79, 184)",
+        "tone": "info",
+        "status": "active"
+       },
+       {
+        "label": "مكتمل",
+        "value": "1",
+        "cls": "text-success",
+        "color": "rgb(23, 115, 74)",
+        "tone": "success",
+        "status": "completed"
+       },
+       {
+        "label": "مخطط",
+        "value": "1",
+        "cls": "text-neutral",
+        "color": "rgb(79, 84, 110)",
+        "tone": "neutral",
+        "status": "planned"
+       }
+      ]
+     }
+    ],
+    "badges": [
+     "project|completed|success|مكتمل|rgb(23, 115, 74)|rgb(227, 242, 234)",
+     "project|planned|neutral|مخطط|rgb(79, 84, 110)|rgb(236, 238, 243)",
+     "project|active|info|نشط|rgb(47, 79, 184)|rgb(231, 236, 250)"
+    ],
+    "tables": [
+     {
+      "heads": [
+       "الاسم",
+       "العميل",
+       "تاريخ البدء",
+       "تاريخ الانتهاء",
+       "الميزانية",
+       "المهام",
+       "الحالة",
+       "الإجراءات"
+      ],
+      "rows": 3
+     }
+    ],
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "r418": 0
+   },
+   "projects|ar|768": {
+    "status": 200,
+    "finalPath": "/projects",
+    "overflow": 0,
+    "statRows": [
+     {
+      "tracks": 4,
+      "cards": 4,
+      "perRow": 4,
+      "lines": 1,
+      "clipped": 0,
+      "outside": 0,
+      "widths": [
+       175,
+       175,
+       175,
+       175
+      ],
+      "height": 86,
+      "facts": [
+       {
+        "label": "إجمالي المشاريع",
+        "value": "3",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       },
+       {
+        "label": "نشط",
+        "value": "1",
+        "cls": "text-info",
+        "color": "rgb(47, 79, 184)",
+        "tone": "info",
+        "status": "active"
+       },
+       {
+        "label": "مكتمل",
+        "value": "1",
+        "cls": "text-success",
+        "color": "rgb(23, 115, 74)",
+        "tone": "success",
+        "status": "completed"
+       },
+       {
+        "label": "مخطط",
+        "value": "1",
+        "cls": "text-neutral",
+        "color": "rgb(79, 84, 110)",
+        "tone": "neutral",
+        "status": "planned"
+       }
+      ]
+     }
+    ],
+    "badges": [
+     "project|completed|success|مكتمل|rgb(23, 115, 74)|rgb(227, 242, 234)",
+     "project|planned|neutral|مخطط|rgb(79, 84, 110)|rgb(236, 238, 243)",
+     "project|active|info|نشط|rgb(47, 79, 184)|rgb(231, 236, 250)"
+    ],
+    "tables": [
+     {
+      "heads": [
+       "الاسم",
+       "العميل",
+       "تاريخ البدء",
+       "تاريخ الانتهاء",
+       "الميزانية",
+       "المهام",
+       "الحالة",
+       "الإجراءات"
+      ],
+      "rows": 3
+     }
+    ],
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "r418": 0
+   },
+   "projects|ar|390": {
+    "status": 200,
+    "finalPath": "/projects",
+    "overflow": 0,
+    "statRows": [
+     {
+      "tracks": 4,
+      "cards": 4,
+      "perRow": 4,
+      "lines": 1,
+      "clipped": 0,
+      "outside": 0,
+      "widths": [
+       82.5,
+       82.5,
+       82.5,
+       82.5
+      ],
+      "height": 110,
+      "facts": [
+       {
+        "label": "إجمالي المشاريع",
+        "value": "3",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       },
+       {
+        "label": "نشط",
+        "value": "1",
+        "cls": "text-info",
+        "color": "rgb(47, 79, 184)",
+        "tone": "info",
+        "status": "active"
+       },
+       {
+        "label": "مكتمل",
+        "value": "1",
+        "cls": "text-success",
+        "color": "rgb(23, 115, 74)",
+        "tone": "success",
+        "status": "completed"
+       },
+       {
+        "label": "مخطط",
+        "value": "1",
+        "cls": "text-neutral",
+        "color": "rgb(79, 84, 110)",
+        "tone": "neutral",
+        "status": "planned"
+       }
+      ]
+     }
+    ],
+    "badges": [
+     "project|completed|success|مكتمل|rgb(23, 115, 74)|rgb(227, 242, 234)",
+     "project|planned|neutral|مخطط|rgb(79, 84, 110)|rgb(236, 238, 243)",
+     "project|active|info|نشط|rgb(47, 79, 184)|rgb(231, 236, 250)"
+    ],
+    "tables": [
+     {
+      "heads": [
+       "الاسم",
+       "العميل",
+       "تاريخ البدء",
+       "تاريخ الانتهاء",
+       "الميزانية",
+       "المهام",
+       "الحالة",
+       "الإجراءات"
+      ],
+      "rows": 3
+     }
+    ],
+    "actions": [
+     "button|إجراءات Annual brand refresh||type=button|popup=menu",
+     "button|إجراءات Jeddah Hospitality Summit||type=button|popup=menu",
+     "button|إجراءات Riyadh Tech Expo 2026 booth||type=button|popup=menu",
+     "link|Annual brand refresh|/projects/3||",
+     "link|Jeddah Hospitality Summit|/projects/2||",
+     "link|Riyadh Tech Expo 2026 booth|/projects/1||",
+     "link|مشروع جديد|/projects/new||"
+    ],
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "r418": 0
+   },
+   "settings-security|ar|1440": {
+    "status": 200,
+    "finalPath": "/settings/security",
+    "overflow": 0,
+    "statRows": [
+     {
+      "tracks": 4,
+      "cards": 4,
+      "perRow": 4,
+      "lines": 1,
+      "clipped": 0,
+      "outside": 0,
+      "widths": [
+       247,
+       247,
+       247,
+       247
+      ],
+      "height": 86,
+      "facts": [
+       {
+        "label": "عمليات دخول ناجحة",
+        "value": "0",
+        "cls": "",
+        "color": "rgb(23, 115, 74)",
+        "tone": null,
+        "status": null
+       },
+       {
+        "label": "عمليات دخول فاشلة",
+        "value": "0",
+        "cls": "",
+        "color": "rgb(138, 90, 0)",
+        "tone": null,
+        "status": null
+       },
+       {
+        "label": "أحداث المصادقة الثنائية",
+        "value": "0",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       },
+       {
+        "label": "تغييرات كلمة المرور",
+        "value": "0",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       }
+      ]
+     }
+    ],
+    "badges": [],
+    "tables": [
+     {
+      "heads": [
+       "الجهاز",
+       "عنوان IP",
+       "تاريخ الدخول",
+       "آخر نشاط",
+       "الإجراءات"
+      ],
+      "rows": 1
+     }
+    ],
+    "actions": [
+     "button|إنهاء||type=submit|",
+     "button|تغيير كلمة المرور||type=submit|disabled",
+     "button|تفعيل المصادقة الثنائية||type=submit|"
+    ],
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "r418": 0
+   },
+   "settings-security|ar|1024": {
+    "status": 200,
+    "finalPath": "/settings/security",
+    "overflow": 0,
+    "statRows": [
+     {
+      "tracks": 4,
+      "cards": 4,
+      "perRow": 4,
+      "lines": 1,
+      "clipped": 0,
+      "outside": 0,
+      "widths": [
+       218.5,
+       218.5,
+       218.5,
+       218.5
+      ],
+      "height": 86,
+      "facts": [
+       {
+        "label": "عمليات دخول ناجحة",
+        "value": "0",
+        "cls": "",
+        "color": "rgb(23, 115, 74)",
+        "tone": null,
+        "status": null
+       },
+       {
+        "label": "عمليات دخول فاشلة",
+        "value": "0",
+        "cls": "",
+        "color": "rgb(138, 90, 0)",
+        "tone": null,
+        "status": null
+       },
+       {
+        "label": "أحداث المصادقة الثنائية",
+        "value": "0",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       },
+       {
+        "label": "تغييرات كلمة المرور",
+        "value": "0",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       }
+      ]
+     }
+    ],
+    "badges": [],
+    "tables": [
+     {
+      "heads": [
+       "الجهاز",
+       "عنوان IP",
+       "تاريخ الدخول",
+       "آخر نشاط",
+       "الإجراءات"
+      ],
+      "rows": 1
+     }
+    ],
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "r418": 0
+   },
+   "settings-security|ar|768": {
+    "status": 200,
+    "finalPath": "/settings/security",
+    "overflow": 0,
+    "statRows": [
+     {
+      "tracks": 4,
+      "cards": 4,
+      "perRow": 4,
+      "lines": 1,
+      "clipped": 0,
+      "outside": 0,
+      "widths": [
+       175,
+       175,
+       175,
+       175
+      ],
+      "height": 86,
+      "facts": [
+       {
+        "label": "عمليات دخول ناجحة",
+        "value": "0",
+        "cls": "",
+        "color": "rgb(23, 115, 74)",
+        "tone": null,
+        "status": null
+       },
+       {
+        "label": "عمليات دخول فاشلة",
+        "value": "0",
+        "cls": "",
+        "color": "rgb(138, 90, 0)",
+        "tone": null,
+        "status": null
+       },
+       {
+        "label": "أحداث المصادقة الثنائية",
+        "value": "0",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       },
+       {
+        "label": "تغييرات كلمة المرور",
+        "value": "0",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       }
+      ]
+     }
+    ],
+    "badges": [],
+    "tables": [
+     {
+      "heads": [
+       "الجهاز",
+       "عنوان IP",
+       "تاريخ الدخول",
+       "آخر نشاط",
+       "الإجراءات"
+      ],
+      "rows": 1
+     }
+    ],
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "r418": 0
+   },
+   "settings-security|ar|390": {
+    "status": 200,
+    "finalPath": "/settings/security",
+    "overflow": 0,
+    "statRows": [
+     {
+      "tracks": 4,
+      "cards": 4,
+      "perRow": 4,
+      "lines": 1,
+      "clipped": 0,
+      "outside": 0,
+      "widths": [
+       82.5,
+       82.5,
+       82.5,
+       82.5
+      ],
+      "height": 134,
+      "facts": [
+       {
+        "label": "عمليات دخول ناجحة",
+        "value": "0",
+        "cls": "",
+        "color": "rgb(23, 115, 74)",
+        "tone": null,
+        "status": null
+       },
+       {
+        "label": "عمليات دخول فاشلة",
+        "value": "0",
+        "cls": "",
+        "color": "rgb(138, 90, 0)",
+        "tone": null,
+        "status": null
+       },
+       {
+        "label": "أحداث المصادقة الثنائية",
+        "value": "0",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       },
+       {
+        "label": "تغييرات كلمة المرور",
+        "value": "0",
+        "cls": "",
+        "color": "rgb(23, 23, 63)",
+        "tone": null,
+        "status": null
+       }
+      ]
+     }
+    ],
+    "badges": [],
+    "tables": [
+     {
+      "heads": [
+       "الجهاز",
+       "عنوان IP",
+       "تاريخ الدخول",
+       "آخر نشاط",
+       "الإجراءات"
+      ],
+      "rows": 1
+     }
+    ],
+    "actions": [
+     "button|إنهاء||type=submit|",
+     "button|تغيير كلمة المرور||type=submit|disabled",
+     "button|تفعيل المصادقة الثنائية||type=submit|"
+    ],
+    "consoleErrors": 0,
+    "pageErrors": 0,
+    "r418": 0
+   }
+  }
+ }
 }

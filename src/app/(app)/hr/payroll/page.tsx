@@ -5,9 +5,14 @@ import { requireRole } from "@/lib/session";
 import { getLocale } from "@/lib/i18n/server";
 import { t } from "@/lib/i18n/dict";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
+import { PageHeader } from "@/components/layout/page-header";
+import { SectionHeader } from "@/components/ui/section-header";
+import { EmptyState } from "@/components/ui/empty-state";
+import { formatDisplayDate } from "@/lib/i18n/format-date";
 import { latestStructures } from "./queries";
 import { PayrollClient, type PayrollLine } from "./payroll-client";
 import { Money } from "../../sales/_shared/money";
+import { StatRow } from "../../sales/_shared/stat-row";
 
 export default async function PayrollPage() {
   const session = await requireRole("owner", "admin");
@@ -16,7 +21,9 @@ export default async function PayrollPage() {
   const now = new Date();
   const periodMonth = now.getMonth() + 1;
   const periodYear = now.getFullYear();
-  const monthLabel = now.toLocaleDateString(locale === "ar" ? "ar-SA" : "en-US", { month: "long", year: "numeric" });
+  // The title shows the period selected above (its first day, written out in UTC), so the formatter never
+  // picks a month of its own; Gregorian with Western digits in Arabic too.
+  const monthLabel = formatDisplayDate(`${periodYear}-${String(periodMonth).padStart(2, "0")}-01T00:00:00Z`, locale, "monthYear");
 
   const [run] = await db
     .select()
@@ -97,38 +104,23 @@ export default async function PayrollPage() {
 
   return (
     <div className="max-w-6xl mx-auto">
-      <div className="main-head">
-        <h3>
-          {t(locale, "Payroll")} — {monthLabel}
-        </h3>
-        <StatusBadge domain="payroll_period" status={run ? "processed" : "draft"} locale={locale} />
-      </div>
+      <PageHeader
+        title={`${t(locale, "Payroll")} — ${monthLabel}`}
+        meta={<StatusBadge domain="payroll_period" status={run ? "processed" : "draft"} locale={locale} />}
+      />
 
-      <div className="stat-row-2">
-        <div className="card" style={{ padding: "16px 18px" }}>
-          <div style={{ fontSize: 11.5, color: "var(--ink-muted)" }}>{t(locale, "Employees")}</div>
-          <div style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 20, marginTop: 4 }}>{lines.length}</div>
-        </div>
-        <div className="card" style={{ padding: "16px 18px" }}>
-          <div style={{ fontSize: 11.5, color: "var(--ink-muted)" }}>{t(locale, "Gross pay")}</div>
-          <div style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 20, marginTop: 4 }}><Money amount={grossTotal} context="summary" /></div>
-        </div>
-        <div className="card" style={{ padding: "16px 18px" }}>
-          <div style={{ fontSize: 11.5, color: "var(--ink-muted)" }}>{t(locale, "Deductions")}</div>
-          <div style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 20, marginTop: 4 }}><Money amount={deductionsTotal} context="summary" /></div>
-        </div>
-        <div className="card" style={{ padding: "16px 18px" }}>
-          <div style={{ fontSize: 11.5, color: "var(--ink-muted)" }}>{t(locale, "Net pay")}</div>
-          <div style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 20, marginTop: 4, color: "var(--brand-orange)" }}>
-            <Money amount={netTotal} context="summary" />
-          </div>
-        </div>
-      </div>
+      {/* Totals, not statuses: plain values (no tone), money through <Money>. */}
+      <StatRow
+        items={[
+          { label: t(locale, "Employees"), value: lines.length },
+          { label: t(locale, "Gross pay"), value: <Money amount={grossTotal} context="summary" /> },
+          { label: t(locale, "Deductions"), value: <Money amount={deductionsTotal} context="summary" /> },
+          { label: t(locale, "Net pay"), value: <Money amount={netTotal} context="summary" /> },
+        ]}
+      />
 
       {lines.length === 0 ? (
-        <div className="rounded-2xl border border-line bg-surface shadow-elevated py-12 text-center text-ink-muted text-sm">
-          {t(locale, "No active employees with a salary structure — set one on each employee's profile first.")}
-        </div>
+        <EmptyState message={t(locale, "No active employees with a salary structure — set one on each employee's profile first.")} />
       ) : (
         <>
           {!run && skippedCount > 0 && (
@@ -142,9 +134,7 @@ export default async function PayrollPage() {
 
       {pastRuns.length > 0 && (
         <>
-          <div className="main-head" style={{ marginTop: 26 }}>
-            <h3 style={{ fontSize: 15 }}>{t(locale, "Past payroll runs")}</h3>
-          </div>
+          <SectionHeader level={2} title={t(locale, "Past payroll runs")} className="mt-[26px] mb-[22px]" />
           <Table>
             <TableHeader>
               <TableRow>

@@ -729,6 +729,8 @@
       "src/app/(app)/purchasing/vendors/[id]/page.tsx: <CardTitle as>"
     ],
     "StatRow": [
+      "src/app/(app)/hr/employees/employees-client.tsx: <StatRow items>",
+      "src/app/(app)/hr/payroll/page.tsx: <StatRow items>",
       "src/app/(app)/projects/projects-list-client.tsx: <StatRow items>",
       "src/app/(app)/purchasing/debit-notes/dn-list-client.tsx: <StatRow items>",
       "src/app/(app)/purchasing/orders/po-list-client.tsx: <StatRow items>",
@@ -752,19 +754,36 @@
     ],
     "SectionHeader": [
       "src/app/(app)/clients/[id]/page.tsx: <SectionHeader className level title>",
+      "src/app/(app)/hr/employees/[id]/page.tsx: <SectionHeader className level title>",
+      "src/app/(app)/hr/payroll/page.tsx: <SectionHeader className level title>",
       "src/app/(app)/purchasing/vendors/[id]/page.tsx: <SectionHeader className level title>"
     ],
     "EmptyState": [
       "src/app/(app)/clients/recycle-bin/page.tsx: <EmptyState message>",
+      "src/app/(app)/hr/attendance/page.tsx: <EmptyState message>",
+      "src/app/(app)/hr/departments/page.tsx: <EmptyState action hint message>",
+      "src/app/(app)/hr/employees/employees-client.tsx: <EmptyState message>",
+      "src/app/(app)/hr/leave/leave-client.tsx: <EmptyState message>",
+      "src/app/(app)/hr/payroll/page.tsx: <EmptyState message>",
       "src/app/(app)/inventory/products/recycle-bin/page.tsx: <EmptyState message>",
       "src/app/(app)/purchasing/vendors/recycle-bin/page.tsx: <EmptyState message>"
     ],
-    "formatDisplayDate": [],
+    "formatDisplayDate": [
+      "src/app/(app)/hr/attendance/page.tsx",
+      "src/app/(app)/hr/payroll/page.tsx"
+    ],
     "PageHeader": [
       "src/app/(app)/clients/[id]/page.tsx: <PageHeader actions description meta title>",
       "src/app/(app)/clients/new/page.tsx: <PageHeader description title>",
       "src/app/(app)/clients/page.tsx: <PageHeader actions description title>",
       "src/app/(app)/clients/recycle-bin/page.tsx: <PageHeader actions description title>",
+      "src/app/(app)/hr/attendance/page.tsx: <PageHeader meta title>",
+      "src/app/(app)/hr/departments/page.tsx: <PageHeader title>",
+      "src/app/(app)/hr/employees/[id]/page.tsx: <PageHeader meta title>",
+      "src/app/(app)/hr/employees/employees-client.tsx: <PageHeader actions title>",
+      "src/app/(app)/hr/employees/new/page.tsx: <PageHeader title>",
+      "src/app/(app)/hr/leave/leave-client.tsx: <PageHeader actions title>",
+      "src/app/(app)/hr/payroll/page.tsx: <PageHeader meta title>",
       "src/app/(app)/inventory/products/[id]/page.tsx: <PageHeader actions description meta title>",
       "src/app/(app)/inventory/products/new/page.tsx: <PageHeader description title>",
       "src/app/(app)/inventory/products/page.tsx: <PageHeader actions description title>",
@@ -778,7 +797,8 @@
   "listEmptyState": "de3bd579f4f6fbdd",
   "css": {
     ".stat-row-2": [
-      "src/app/(app)/mockup-parity.css: .stat-row-2 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 18px; }"
+      "src/app/(app)/mockup-parity.css: .stat-row-2 { display: grid; grid-template-columns: repeat(var(--stat-cols, 4), minmax(0, 1fr)); gap: 12px; margin-bottom: 18px; }",
+      "src/app/(app)/mockup-parity.css: @media (max-width: 640px) > .stat-row-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }"
     ]
   },
   "actions": {
