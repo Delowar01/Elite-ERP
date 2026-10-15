@@ -1,12 +1,14 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { toast } from "sonner";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FormField } from "@/components/ui/form-field";
+import { SectionHeader } from "@/components/ui/section-header";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { t, type Locale } from "@/lib/i18n/dict";
@@ -54,6 +56,9 @@ function initials(name: string): string {
     .toUpperCase();
 }
 
+// How a task card's accessible name joins its parts, per language.
+const LIST_SEPARATOR: Record<Locale, string> = { en: ", ", ar: "، " };
+
 type DialogState = { mode: "new" } | { mode: "edit"; task: TaskRow } | null;
 
 export function KanbanBoard({
@@ -75,8 +80,11 @@ export function KanbanBoard({
   const [priority, setPriority] = useState("medium");
   const [dueDate, setDueDate] = useState("");
   const [pending, startTransition] = useTransition();
+  // The control that opened the dialog (a task card or Add Task): focus goes back to it on close.
+  const opener = useRef<HTMLElement | null>(null);
 
-  function openNew() {
+  function openNew(trigger: HTMLElement) {
+    opener.current = trigger;
     setTitle("");
     setDescription("");
     setAssigneeId("");
@@ -86,7 +94,8 @@ export function KanbanBoard({
     setDialog({ mode: "new" });
   }
 
-  function openEdit(task: TaskRow) {
+  function openEdit(task: TaskRow, trigger: HTMLElement) {
+    opener.current = trigger;
     setTitle(task.title);
     setDescription(task.description ?? "");
     setAssigneeId(task.assigneeId ? String(task.assigneeId) : "");
@@ -116,19 +125,30 @@ export function KanbanBoard({
     });
   }
 
+  // A task card's accessible name says what the card shows, in full: title, status, priority, assignee.
+  const taskName = (task: TaskRow) =>
+    [
+      task.title,
+      statusLabel(locale, "task", task.status),
+      `${t(locale, "Priority")}: ${t(locale, PRIORITY_LABEL[task.priority ?? "medium"])}`,
+      `${t(locale, "Assignee")}: ${task.assigneeName ?? t(locale, "Unassigned")}`,
+    ].join(LIST_SEPARATOR[locale]);
+
   return (
     <>
-      <div className="flex items-center justify-between mb-3">
-        <div />
-        <Button variant="secondary" onClick={openNew}>
-          <Plus className="size-3.5" /> {t(locale, "Add Task")}
-        </Button>
-      </div>
+      <SectionHeader
+        level={2}
+        title={t(locale, "Tasks")}
+        actions={
+          <Button variant="secondary" onClick={(e) => openNew(e.currentTarget)}>
+            <Plus className="size-3.5" /> {t(locale, "Add Task")}
+          </Button>
+        }
+        className="mb-3"
+      />
 
       {tasks.length === 0 ? (
-        <div className="rounded-2xl border border-line bg-surface shadow-elevated py-12 text-center text-ink-muted text-sm">
-          {t(locale, "No tasks yet. Add the first task to this project.")}
-        </div>
+        <EmptyState message={t(locale, "No tasks yet. Add the first task to this project.")} />
       ) : (
         <div className="kanban">
           {COLUMNS.map((col) => {
@@ -136,15 +156,23 @@ export function KanbanBoard({
             return (
               <div key={col.status} className="kanban-col">
                 <div className="kanban-col-head">
-                  <span>{statusLabel(locale, "task", col.status)}</span>
+                  <h3>{statusLabel(locale, "task", col.status)}</h3>
                   <span>{colTasks.length}</span>
                 </div>
                 {colTasks.map((task) => {
                   const grad = task.assigneeId ? AVATAR_GRADIENTS[task.assigneeId % AVATAR_GRADIENTS.length] : null;
                   return (
-                    <div key={task.id} className="kanban-card" onClick={() => openEdit(task)}>
-                      <div className="t">{task.title}</div>
-                      <div className="meta-row">
+                    // A real button: Tab reaches it and Enter / Space open the task — the browser's own keys.
+                    <button
+                      key={task.id}
+                      type="button"
+                      className="kanban-card block w-full text-start focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+                      aria-label={taskName(task)}
+                      data-task-id={task.id}
+                      onClick={(e) => openEdit(task, e.currentTarget)}
+                    >
+                      <span className="t block">{task.title}</span>
+                      <span className="meta-row">
                         {col.status === "done" ? (
                           <StatusBadge domain="task" status="done" locale={locale} />
                         ) : (
@@ -153,14 +181,14 @@ export function KanbanBoard({
                           </span>
                         )}
                         {task.assigneeName && grad ? (
-                          <div className="kanban-avatar" style={{ background: grad }} title={task.assigneeName}>
+                          <span className="kanban-avatar" style={{ background: grad }} title={task.assigneeName}>
                             {initials(task.assigneeName)}
-                          </div>
+                          </span>
                         ) : (
                           <span />
                         )}
-                      </div>
-                    </div>
+                      </span>
+                    </button>
                   );
                 })}
               </div>
@@ -170,7 +198,16 @@ export function KanbanBoard({
       )}
 
       <Dialog open={dialog !== null} onOpenChange={(open) => !open && setDialog(null)}>
-        <DialogContent>
+        <DialogContent
+          onCloseAutoFocus={(e) => {
+            // Back to the card (or Add Task) that opened the dialog. If a save re-rendered the board, the
+            // same task's card, found by its id.
+            e.preventDefault();
+            const el = opener.current;
+            const id = el?.dataset.taskId;
+            (el?.isConnected ? el : id ? document.querySelector<HTMLElement>(`.kanban-card[data-task-id="${id}"]`) : null)?.focus();
+          }}
+        >
           <DialogHeader>
             <DialogTitle>{dialog?.mode === "edit" ? t(locale, "Edit Task") : t(locale, "New Task")}</DialogTitle>
           </DialogHeader>

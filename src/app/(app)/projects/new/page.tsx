@@ -5,6 +5,7 @@ import { getLocale } from "@/lib/i18n/server";
 import { tenantScope } from "@/lib/tenant";
 import { t } from "@/lib/i18n/dict";
 import { Card, CardContent } from "@/components/ui/card";
+import { PageHeader } from "@/components/layout/page-header";
 import { ProjectForm } from "../project-form";
 import { createProjectAction } from "../actions";
 
@@ -20,10 +21,7 @@ export default async function NewProjectPage() {
 
   return (
     <div className="max-w-6xl mx-auto">
-      <div className="main-head">
-        <h3>{t(locale, "New Project")}</h3>
-      </div>
-      <p className="text-[12.5px] text-ink-muted -mt-3 mb-5">{t(locale, "Add a project to plan tasks and track time against it.")}</p>
+      <PageHeader title={t(locale, "New Project")} description={t(locale, "Add a project to plan tasks and track time against it.")} />
       <Card>
         <CardContent className="pt-6">
           <ProjectForm locale={locale} clients={clients} action={createProjectAction} />

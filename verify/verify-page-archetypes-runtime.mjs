@@ -8,6 +8,8 @@
  *                                                   measure every route; re-record only those routes
  *   node verify/verify-page-archetypes-runtime.mjs --write-d6        measure the D-6 pass alone; write it as
  *                                                   the baseline's `d6` record (C2 recorded it on C1's build)
+ *   node verify/verify-page-archetypes-runtime.mjs --write-c3ref     measure the C3 project pass alone; write it as
+ *                                                   the baseline's `c3ref` record (C3 recorded it on C2's build)
  *   flags: --skip-build (reuse .next — only when it was built from the current tree), --only=<route id>,
  *          --measure-out=<file> (also write what this run measured, for review evidence)
  *
@@ -27,6 +29,21 @@
  * value, tone and colour; the status badges, the tables and the actions. The baseline's `d6` record
  * was measured on C1's build (8768cb2, --write-d6), so every run proves those consumers unchanged by
  * C2 but for their phone layout: above 640 px their rows are C1's to the pixel.
+ *
+ * C3 (Projects + kanban) re-recorded its four routes (the list, New Project, the populated project and
+ * the empty one) and holds them to targets: one PageHeader holding the only h1, the detail's h1 → h2 →
+ * h3 outline, no overflow, no error, Western digits, no pointer-only clickable (the task cards were
+ * divs). A pass of its own measures the project detail at every width, EN and AR: the summary two
+ * across in its 520px, Cost & Profitability three across above 640 px and two at 390, Revenue / Costs
+ * side by side to 1024 and stacked from 900 px down, the numeric columns at the logical end in either
+ * direction, the health badge and every figure. Three probes use the pages as a person would: the
+ * kanban by keyboard (Tab to a card — its focus ring, its full name; Enter opens Edit Task for that
+ * task, Escape closes and focus is back on that card; Space, the close button, Save, Add Task the
+ * same) and by pointer, no task changing; the empty project's Tasks heading, Add Task and EmptyState;
+ * the Hours column with one time log (a fixture row in this run's TEST-ONLY copy, removed after). The
+ * baseline's `c3ref` record was measured on C2's build (c060e8b, --write-c3ref): every figure, the
+ * badge, the kanban's columns, heads and cards — computed style and geometry, at rest and hovered —
+ * so a run proves the div → button change left the cards as they were.
  *
  * C1 (master data + entity detail) re-recorded its 12 routes with --rebaseline and holds them to
  * targets, below: one PageHeader holding the page's only h1, meta before actions, the title at the
@@ -97,6 +114,9 @@ const ONLY = args.find((a) => a.startsWith("--only="))?.slice(7);
 const REBASE = args.find((a) => a.startsWith("--rebaseline="))?.slice(13).split(",").filter(Boolean);
 const MEASURE_OUT = args.find((a) => a.startsWith("--measure-out="))?.slice(14);
 const WRITE_D6 = args.some((a) => a === "--write-d6" || a.startsWith("--write-d6="));
+const WRITE_C3REF = args.some((a) => a === "--write-c3ref" || a.startsWith("--write-c3ref="));
+/** A pass that records one thing alone: no owner / Staff / sweep passes, no probes. */
+const RECORD_ONLY = WRITE_D6 || WRITE_C3REF;
 
 // DEV-UI-01.7 C1: the routes of the 12 master-data and entity-detail pages. (nf-client renders the
 // not-found page for clients/[id]; it is not C1's and stays at its baseline.)
@@ -180,6 +200,59 @@ const D6_ROUTES = [
 // C2's own strips are held to targets; every other consumer to the record C1's build left (`d6`).
 const D6_C2 = ["hr-employees", "hr-payroll"];
 
+// DEV-UI-01.7 C3: the four Projects routes. The project detail's outline: its name as the h1, Cost &
+// Profitability (Revenue and Costs under it), Tasks (its four status columns — on the populated
+// project only), Time logged this week, Linked Documents. Words from the dictionary; the task column
+// labels are the task status registry's, Arabic included.
+const C3_ROUTES = ["projects", "project-new", "project-detail", "project-empty"];
+const C3_DETAIL = ["project-detail", "project-empty"];
+const TASK_STATUSES = ["todo", "in_progress", "blocked", "done"];
+const TASK_STATUS = {
+  en: { todo: "To do", in_progress: "In progress", blocked: "Blocked", done: "Done" },
+  ar: { todo: "للتنفيذ", in_progress: "قيد التنفيذ", blocked: "معطَّل", done: "تم" },
+};
+const C3_WORDS = {
+  en: {
+    projects: "Projects", newProject: "New Project", cost: "Cost & Profitability", revenue: "Revenue", costs: "Costs", tasks: "Tasks", time: "Time logged this week",
+    docs: "Linked Documents", priority: "Priority", assignee: "Assignee", unassigned: "Unassigned", low: "Low", medium: "Medium", high: "High", sep: ", ",
+    editTask: "Edit Task", newTask: "New Task", addTask: "Add Task", save: "Save", noTasks: "No tasks yet. Add the first task to this project.",
+    amount: "Amount", hours: "Hours", budget: "Budget", hoursLogged: "hours logged",
+    kpis: ["Sales Value", "Invoiced", "Collected", "Total Cost", "Actual Profit", "Profit Margin"],
+  },
+  ar: {
+    projects: "المشاريع", newProject: "مشروع جديد", cost: "التكلفة والربحية", revenue: "الإيرادات", costs: "التكاليف", tasks: "المهام", time: "الساعات المسجلة هذا الأسبوع",
+    docs: "المستندات المرتبطة", priority: "الأولوية", assignee: "المكلَّف", unassigned: "غير مكلَّف", low: "منخفض", medium: "متوسط", high: "مرتفع", sep: "، ",
+    editTask: "تعديل المهمة", newTask: "مهمة جديدة", addTask: "إضافة مهمة", save: "حفظ", noTasks: "لا توجد مهام بعد. أضف المهمة الأولى لهذا المشروع.",
+    amount: "المبلغ", hours: "الساعات", budget: "الميزانية", hoursLogged: "الساعات المسجَّلة",
+    kpis: ["قيمة المبيعات", "المفوتر", "المُحصَّل", "إجمالي التكلفة", "الربح الفعلي", "هامش الربح"],
+  },
+};
+const C3_NUMERIC = [C3_WORDS.en.amount, C3_WORDS.en.hours, C3_WORDS.ar.amount, C3_WORDS.ar.hours];
+/** The outline a Projects route must have (the project names come from this run's database copy). */
+function c3Outline(id, l, names) {
+  const W = C3_WORDS[l];
+  if (id === "projects") return [`h1 ${W.projects}`];
+  if (id === "project-new") return [`h1 ${W.newProject}`];
+  const columns = id === "project-detail" ? TASK_STATUSES.map((s) => `h3 ${TASK_STATUS[l][s]}`) : [];
+  return [`h1 ${names[id]}`, `h2 ${W.cost}`, `h3 ${W.revenue}`, `h3 ${W.costs}`, `h2 ${W.tasks}`, ...columns, `h2 ${W.time}`, `h2 ${W.docs}`];
+}
+/** A task card's accessible name, built here from the database row (an independent oracle). */
+const taskName = (l, task) => {
+  const W = C3_WORDS[l];
+  return [task.title, TASK_STATUS[l][task.status], `${W.priority}: ${W[task.priority ?? "medium"]}`, `${W.assignee}: ${task.assignee ?? W.unassigned}`].join(W.sep);
+};
+// The computed style C3M compares between C2's div card and C3's button card (and their insides).
+const CARD_PROPS = [
+  "display", "box-sizing", "width", "height", "margin-top", "margin-right", "margin-bottom", "margin-left", "padding-top", "padding-right", "padding-bottom", "padding-left",
+  "border-top-width", "border-right-width", "border-bottom-width", "border-left-width", "border-top-style", "border-right-style", "border-bottom-style", "border-left-style",
+  "border-top-color", "border-right-color", "border-bottom-color", "border-left-color", "border-top-left-radius", "border-top-right-radius", "border-bottom-left-radius",
+  "border-bottom-right-radius", "background-color", "background-image", "box-shadow", "color", "font-family", "font-size", "font-weight", "font-style", "line-height",
+  "letter-spacing", "text-align", "text-transform", "text-decoration-line", "text-indent", "white-space", "cursor", "opacity", "transform", "outline-style", "outline-width",
+  "vertical-align", "overflow-x", "overflow-y",
+];
+const INNER_PROPS = ["display", "font-family", "font-size", "font-weight", "line-height", "letter-spacing", "text-align", "text-transform", "color", "background-color", "margin-bottom"];
+const HEAD_PROPS = ["font-family", "font-size", "font-weight", "line-height", "letter-spacing", "text-transform", "color", "margin-top", "margin-bottom", "text-wrap-mode", "text-wrap-style"];
+
 // ------------------------------------------------------------------------------------- isolation
 function refuse(why) {
   console.error(`✗ refusing: ${why}`);
@@ -188,6 +261,7 @@ function refuse(why) {
 if (existsSync(join(ROOT, ".env"))) refuse("a .env exists in this tree — run in an isolated worktree with no .env (the production configuration is never loaded)");
 if (!existsSync(PASSWORD_FILE)) refuse("no synthetic seed password (.ui-baseline-work/owner-password) — run `node tests/ui-baseline/run.mjs prepare` first");
 if (WRITE_D6 && (WRITE || REBASE || ONLY)) refuse("--write-d6 records the D-6 pass alone, every consumer: not with --write-baseline, --rebaseline or --only");
+if (WRITE_C3REF && (WRITE || REBASE || ONLY || WRITE_D6)) refuse("--write-c3ref records the C3 project pass alone, both projects: not with --write-baseline, --rebaseline, --only or --write-d6");
 if (REBASE) {
   // A partial re-record must still see every route: the routes it keeps are compared, not copied blind.
   if (ONLY || WRITE) refuse("--rebaseline measures every route and re-records only the ones it names: not with --only or --write-baseline");
@@ -515,6 +589,200 @@ const PAYROLL_STATE = () => {
   };
 };
 
+/**
+ * C3: the project detail's composition — the summary and Cost & Profitability rows (tracks, cards a line,
+ * width, clipping; each card's label, value and the colour its value's text is drawn in), the Revenue /
+ * Costs breakdown (tracks, side by side or stacked, its headings), the kanban's tracks, the health badge,
+ * the registry's tone colours (probed), and the numeric columns (Amount, Hours): each cell's text-align
+ * and how far its text sits from the cell's inline end and start, in the page's direction.
+ */
+const C3M = (numericWords) => {
+  const vw = document.documentElement.clientWidth;
+  const rtl = document.documentElement.dir === "rtl";
+  const main = document.querySelector("main");
+  if (!main) return { noMain: true };
+  const visible = (e) => {
+    const cs = getComputedStyle(e);
+    if (cs.visibility === "hidden" || cs.display === "none") return false;
+    const r = e.getBoundingClientRect();
+    return r.width > 0 && r.height > 0;
+  };
+  const norm = (s) => (s ?? "").replace(/\s+/g, " ").trim();
+  const round = (x) => Math.round(x * 10) / 10;
+  const tracks = (el) => getComputedStyle(el).gridTemplateColumns.split(" ").filter(Boolean).length;
+  // The colour the first text of an element is drawn in.
+  const inkOf = (el) => {
+    const tw = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    for (let n = tw.nextNode(); n; n = tw.nextNode()) if (n.nodeValue.trim()) return getComputedStyle(n.parentElement).color;
+    return null;
+  };
+  const row = (r) => {
+    if (!r) return null;
+    const cards = [...r.children].filter(visible);
+    const boxes = cards.map((c) => c.getBoundingClientRect());
+    const tops = boxes.map((b) => Math.round(b.top));
+    return {
+      tracks: tracks(r), cards: cards.length, perRow: tops.filter((t) => t === tops[0]).length, lines: new Set(tops).size, width: round(r.getBoundingClientRect().width),
+      clipped: cards.filter((c) => c.scrollWidth > c.clientWidth + 1).length, outside: boxes.filter((b) => b.left < -1 || b.right > vw + 1).length,
+      facts: cards.map((c) => {
+        const [label, value] = c.children;
+        return { label: norm(label?.textContent), value: norm(value?.textContent), ink: value ? inkOf(value) : null };
+      }),
+    };
+  };
+  const section = main.querySelector("section");
+  const statRows = [...main.querySelectorAll(".stat-row-2")].filter(visible);
+  const summary = row(statRows.find((r) => !section?.contains(r)) ?? null);
+  const cost = row(section?.querySelector(".stat-row-2") ?? null);
+  const bd = main.querySelector(".cost-breakdown-grid");
+  let breakdown = null;
+  if (bd && visible(bd)) {
+    const cards = [...bd.children].filter(visible);
+    const [a, b] = cards.map((c) => c.getBoundingClientRect());
+    breakdown = {
+      tracks: tracks(bd), cards: cards.length,
+      sideBySide: Boolean(a && b) && Math.abs(a.top - b.top) < 1 && (rtl ? b.right <= a.left + 1 : b.left >= a.right - 1),
+      stacked: Boolean(a && b) && b.top >= a.bottom - 1,
+      inViewport: cards.every((c) => { const r = c.getBoundingClientRect(); return r.left >= -1 && r.right <= vw + 1; }),
+      clipped: cards.filter((c) => c.scrollWidth > c.clientWidth + 1).length,
+      widths: cards.map((c) => round(c.getBoundingClientRect().width)),
+      headings: [...bd.querySelectorAll("h1,h2,h3,h4,h5,h6")].map((h) => `${h.tagName.toLowerCase()} ${norm(h.textContent)}`),
+    };
+  }
+  const kb = main.querySelector(".kanban");
+  const kanban = kb && visible(kb) ? { tracks: tracks(kb), columns: kb.children.length } : null;
+  const badgeEl = section?.querySelector('.status-tag[data-status-domain="project_health"]');
+  let badge = null;
+  if (badgeEl) {
+    const cs = getComputedStyle(badgeEl);
+    const head = badgeEl.closest('[data-slot="section-header"]');
+    badge = {
+      status: badgeEl.getAttribute("data-status"), tone: badgeEl.getAttribute("data-tone"), text: norm(badgeEl.textContent), color: cs.color, background: cs.backgroundColor,
+      inHeading: Boolean(badgeEl.closest("h1,h2,h3,h4,h5,h6")), beside: head ? norm(head.querySelector("h2")?.textContent) : null,
+    };
+  }
+  // The registry's tone colours, as this page draws them.
+  const probe = (cls) => {
+    const s = document.createElement("span");
+    s.className = cls;
+    main.appendChild(s);
+    const c = getComputedStyle(s).color;
+    s.remove();
+    return c;
+  };
+  const tones = { success: probe("text-success"), danger: probe("text-danger"), neutral: probe("text-neutral") };
+  const align = (c) => {
+    const cs = getComputedStyle(c);
+    const r = c.getBoundingClientRect();
+    const range = document.createRange();
+    range.selectNodeContents(c);
+    const rects = [...range.getClientRects()].filter((b) => b.width > 0);
+    const out = { align: cs.textAlign, cell: c.getAttribute("data-cell") };
+    if (!rects.length) return out;
+    const left = Math.min(...rects.map((b) => b.left));
+    const right = Math.max(...rects.map((b) => b.right));
+    const inL = r.left + parseFloat(cs.paddingLeft) + parseFloat(cs.borderLeftWidth);
+    const inR = r.right - parseFloat(cs.paddingRight) - parseFloat(cs.borderRightWidth);
+    return { ...out, endGap: round(rtl ? left - inL : inR - right), startGap: round(rtl ? inR - right : left - inL) };
+  };
+  const numeric = [];
+  // The page's own tables (Time logged this week, Linked Documents) — not the cost control's drill tables,
+  // which C3 leaves as they are (their .num cells, §26).
+  for (const t of [...main.querySelectorAll("table")].filter((t) => visible(t) && !t.closest("section")))
+    [...t.querySelectorAll("thead th")].forEach((th, i) => {
+      const col = norm(th.textContent);
+      if (!numericWords.includes(col)) return;
+      for (const c of [th, ...[...t.querySelectorAll("tbody tr")].map((tr) => tr.children[i]).filter(Boolean)]) numeric.push({ col, tag: c.tagName.toLowerCase(), text: norm(c.textContent), ...align(c) });
+    });
+  return { vw, overflow: Math.max(0, document.documentElement.scrollWidth - vw), summary, cost, breakdown, kanban, badge, tones, numeric };
+};
+
+/**
+ * C3: the kanban's column heads and cards, compared between C2's div cards and C3's buttons. Each card:
+ * its box within its column, its computed style (CARD_PROPS), and each element inside it — box within
+ * the card, computed style (INNER_PROPS), text. Each column head: its height, the label's and the
+ * count's boxes and type (HEAD_PROPS). `only` limits it to the card with that title (the hovered one).
+ */
+const KANBAN_FACTS = ([cardProps, innerProps, headProps, only]) => {
+  const round = (x) => Math.round(x * 10) / 10;
+  const box = (b, o) => [round(b.left - o.left), round(b.top - o.top), round(b.width), round(b.height)].join(",");
+  const style = (el, props) => {
+    const cs = getComputedStyle(el);
+    return props.map((p) => cs.getPropertyValue(p)).join("|");
+  };
+  const cards = [...document.querySelectorAll("main .kanban-card")]
+    .filter((el) => !only || el.querySelector(".t")?.textContent.trim() === only)
+    .map((el) => {
+      const r = el.getBoundingClientRect();
+      return {
+        title: el.querySelector(".t")?.textContent.trim(),
+        box: box(r, el.closest(".kanban-col").getBoundingClientRect()),
+        style: style(el, cardProps),
+        inner: [...el.querySelectorAll("*")].map((n) => `${box(n.getBoundingClientRect(), r)}|${style(n, innerProps)}|${n.children.length ? "" : n.textContent.trim()}`),
+      };
+    });
+  if (only) return { cards };
+  const heads = [...document.querySelectorAll("main .kanban-col-head")].map((h) => {
+    const hb = h.getBoundingClientRect();
+    const [label, count] = h.children;
+    return {
+      label: label.textContent.trim(), count: count?.textContent.trim(), tag: label.tagName.toLowerCase(), height: round(hb.height),
+      labelBox: box(label.getBoundingClientRect(), hb), labelStyle: style(label, headProps), countBox: count ? box(count.getBoundingClientRect(), hb) : null, countStyle: count ? style(count, headProps) : null,
+    };
+  });
+  return { heads, cards };
+};
+
+/** C3: the kanban by keyboard — where focus is (a card: which, its name, ring), the dialog, the board. */
+const KANBAN_STATE = () => {
+  const a = document.activeElement;
+  const cards = [...document.querySelectorAll("main .kanban-card")];
+  const dlg = document.querySelector('[role="dialog"]');
+  const probe = document.createElement("span");
+  probe.style.color = "var(--focus)";
+  document.body.appendChild(probe);
+  const focusColor = getComputedStyle(probe).color;
+  probe.remove();
+  let focus = null;
+  if (a && a !== document.body) {
+    const cs = getComputedStyle(a);
+    focus = {
+      card: cards.indexOf(a), taskId: a.getAttribute("data-task-id"), tag: a.tagName.toLowerCase(), type: a.getAttribute("type"), name: a.getAttribute("aria-label") ?? a.textContent.trim().slice(0, 60),
+      same: Boolean(window.__opener) && a === window.__opener, focusVisible: a.matches(":focus-visible"),
+      ring: cs.outlineStyle !== "none" && parseFloat(cs.outlineWidth) >= 1 ? { style: cs.outlineStyle, width: cs.outlineWidth, offset: cs.outlineOffset, token: cs.outlineColor === focusColor } : null,
+    };
+  }
+  const o = window.__opener;
+  return {
+    focus,
+    opener: o ? { taskId: o.getAttribute("data-task-id"), title: o.querySelector(".t")?.textContent.trim() ?? null, text: o.textContent.trim().slice(0, 60) } : null,
+    dialog: dlg ? { title: dlg.querySelector("h2")?.textContent.trim(), taskTitle: dlg.querySelector("#task-title")?.value ?? null, status: dlg.querySelector("#task-status")?.textContent.trim() ?? null } : null,
+    board: [...document.querySelectorAll("main .kanban-col")].map((c) => [...c.querySelectorAll(".kanban-card")].map((k) => k.getAttribute("data-task-id") ?? k.querySelector(".t")?.textContent.trim()).join(",")),
+    names: cards.map((c) => [c.getAttribute("data-task-id"), c.tagName.toLowerCase(), c.getAttribute("type"), c.getAttribute("aria-label"), c.hasAttribute("draggable")].join("|")),
+  };
+};
+
+/** C3: the empty project's Tasks section — its h2, Add Task beside it, the EmptyState, no board — and the page's overflow. */
+const EMPTY_FACTS = (W) => {
+  const main = document.querySelector("main");
+  const vw = document.documentElement.clientWidth;
+  const visible = (e) => {
+    const cs = getComputedStyle(e);
+    if (cs.visibility === "hidden" || cs.display === "none") return false;
+    const r = e.getBoundingClientRect();
+    return r.width > 0 && r.height > 0;
+  };
+  const h2 = [...main.querySelectorAll("h2")].find((h) => h.textContent.trim() === W.tasks);
+  const head = h2?.closest('[data-slot="section-header"]');
+  const add = head ? [...head.querySelectorAll("button")].find((b) => b.textContent.trim() === W.addTask) : null;
+  const empty = [...main.querySelectorAll('[data-slot="empty-state"]')].find((e) => e.textContent.trim() === W.noTasks);
+  return {
+    tasksH2: Boolean(h2 && visible(h2)), addTask: Boolean(add && visible(add) && !add.disabled), emptyState: Boolean(empty && visible(empty)),
+    emptyAfterHead: Boolean(head && empty && head.compareDocumentPosition(empty) & Node.DOCUMENT_POSITION_FOLLOWING),
+    kanban: main.querySelectorAll(".kanban, .kanban-col, .kanban-card").length, overflow: Math.max(0, document.documentElement.scrollWidth - vw),
+  };
+};
+
 // ------------------------------------------------------------------------------------- run
 const pinned = WRITE ? null : JSON.parse(readFileSync(BASELINE_FILE, "utf8"));
 const pinnedActions = WRITE ? null : JSON.parse(readFileSync(ACTIONS_FILE, "utf8"));
@@ -526,6 +794,7 @@ await admin(async (c) => {
   await c.query(`comment on database ${DB} is 'DEV-UI-01.7 TEST-ONLY page-archetype runtime database. Synthetic data only.'`);
 });
 let deptDb = null;
+let projDb = null;
 {
   // A Staff member for the permission pass (this run's copy only, never the template).
   const c = new pg.Client({ connectionString: env.DATABASE_URL });
@@ -538,7 +807,25 @@ let deptDb = null;
     depts: (await c.query("select id, name from departments where org_id = $1 order by name asc", [org])).rows,
     emps: (await c.query("select name, department_id from employees where org_id = $1 order by name asc", [org])).rows,
   };
+  // C3: the two seeded projects' names, the populated one's tasks (title, status, priority, assignee) and
+  // the empty one's task count — what the outline, the cards' names and the empty kanban must show.
+  projDb = {
+    org,
+    names: Object.fromEntries((await c.query("select id, name from projects where org_id = $1 and id in (1, 2)", [org])).rows.map((r) => [r.id === 1 ? "project-detail" : "project-empty", r.name])),
+    tasks: (await c.query("select t.id, t.title, t.status, t.priority, e.name as assignee from tasks t left join employees e on e.id = t.assignee_id where t.org_id = $1 and t.project_id = 1 order by t.id", [org])).rows,
+    emptyTasks: (await c.query("select count(*)::int as n from tasks where org_id = $1 and project_id = 2", [org])).rows[0].n,
+  };
   await c.end();
+}
+/** Every task of the populated project as the database holds it — what opening and closing must not change. */
+async function taskRows() {
+  const c = new pg.Client({ connectionString: env.DATABASE_URL });
+  await c.connect();
+  try {
+    return (await c.query("select id, title, description, assignee_id, status, priority, due_date::text from tasks where org_id = $1 and project_id = 1 order by id", [projDb.org])).rows;
+  } finally {
+    await c.end();
+  }
 }
 if (!args.includes("--skip-build")) {
   console.log("• building (test environment)…");
@@ -625,14 +912,14 @@ async function login(email) {
 }
 const is418 = (s) => /#418\b|errors\/418|hydrat/i.test(s);
 
-const now = { frozenNow: FROZEN_NOW, chromium: browser.version(), states: {}, staff: {}, sweep: {}, d6: {}, c2: { dept: {}, payroll: {}, dates: {} } };
+const now = { frozenNow: FROZEN_NOW, chromium: browser.version(), states: {}, staff: {}, sweep: {}, d6: {}, c2: { dept: {}, payroll: {}, dates: {} }, c3: { layout: {}, kanban: {}, empty: {}, hours: {} } };
 const prompts = {};
 let fdNode = {};
 const fdBrowsers = [];
 const acts = { owner: {}, staff: {} };
 try {
   const ownerState = await login(OWNER_EMAIL);
-  const staffState = WRITE_D6 ? null : await login(STAFF_EMAIL);
+  const staffState = RECORD_ONLY ? null : await login(STAFF_EMAIL);
   // Audit stamps the database wrote with its own clock (these logins' sessions and events, the
   // seeded defaults, the owner's password date): moved to the frozen instant in this TEST-ONLY copy
   // (archetype-states.mjs), as the archetype screenshots do.
@@ -673,7 +960,7 @@ try {
     ...(errors.length ? { errorSample: [...new Set(errors)].slice(0, 3) } : {}),
   });
 
-  if (!WRITE_D6)
+  if (!RECORD_ONLY)
     for (const locale of ["en", "ar"]) {
       await pass(`owner ${locale}`, ownerState, locale, null, WIDTHS, async ({ id, w, page, status, finalPath, errors }) => {
         now.states[`${id}|${locale}|${w}`] = { status, finalPath, ...(await page.evaluate(MEASURE, C1_LITERALS)), ...errFacts(errors) };
@@ -689,10 +976,34 @@ try {
     }
   // D-6: every StatRow consumer at every width, EN and AR; actions at 1440 and 390. (--write-d6 records
   // the consumers C2 must leave as they were — not C2's own HR strips.)
-  for (const locale of ["en", "ar"])
-    await pass(`D-6 ${locale}`, ownerState, locale, null, WIDTHS, async ({ id, w, page, status, finalPath, errors }) => {
-      now.d6[`${id}|${locale}|${w}`] = { status, finalPath, ...(await page.evaluate(D6M)), ...(w === 1440 || w === 390 ? { actions: await page.evaluate(ACTIONS) } : {}), ...errFacts(errors) };
-    }, D6_ROUTES.filter(([id]) => !WRITE_D6 || !D6_C2.includes(id)));
+  if (!WRITE_C3REF)
+    for (const locale of ["en", "ar"])
+      await pass(`D-6 ${locale}`, ownerState, locale, null, WIDTHS, async ({ id, w, page, status, finalPath, errors }) => {
+        now.d6[`${id}|${locale}|${w}`] = { status, finalPath, ...(await page.evaluate(D6M)), ...(w === 1440 || w === 390 ? { actions: await page.evaluate(ACTIONS) } : {}), ...errFacts(errors) };
+      }, D6_ROUTES.filter(([id]) => !WRITE_D6 || !D6_C2.includes(id)));
+
+  // C3: the populated and the empty project at every width, EN and AR — the composition (C3M) and, at 1440
+  // and 390 on the populated one, the kanban's heads and cards at rest and each card hovered (CSS
+  // transitions finished). --write-c3ref records this pass on C2's build.
+  if (!WRITE_D6)
+    for (const locale of ["en", "ar"])
+      await pass(`C3 ${locale}`, ownerState, locale, null, WIDTHS, async ({ id, w, page, status, finalPath, errors }) => {
+        const layout = await page.evaluate(C3M, C3_NUMERIC);
+        let kanbanFacts = null;
+        if (id === "project-detail" && (w === 1440 || w === 390)) {
+          kanbanFacts = await page.evaluate(KANBAN_FACTS, [CARD_PROPS, INNER_PROPS, HEAD_PROPS, null]);
+          kanbanFacts.hover = [];
+          for (const c of kanbanFacts.cards) {
+            const card = page.locator("main .kanban-card").filter({ has: page.locator(".t", { hasText: new RegExp(`^${c.title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`) }) });
+            await card.scrollIntoViewIfNeeded();
+            await card.hover();
+            await page.evaluate(() => document.getAnimations().forEach((a) => a.finish()));
+            kanbanFacts.hover.push((await page.evaluate(KANBAN_FACTS, [CARD_PROPS, INNER_PROPS, HEAD_PROPS, c.title])).cards[0] ?? null);
+          }
+          await page.mouse.move(0, 0);
+        }
+        now.c3.layout[`${id}|${locale}|${w}`] = { status, finalPath, ...layout, ...(kanbanFacts ? { kanbanFacts } : {}), ...errFacts(errors) };
+      }, ROUTES.filter(([id]) => C3_DETAIL.includes(id)));
 
   // C2 probes, EN and AR, as a person would use the pages. One page each, the frozen clock, the owner.
   async function probePage(locale, [w, h], path) {
@@ -771,7 +1082,7 @@ try {
     await ctx.close();
     return { steps, errors };
   }
-  if (!WRITE_D6) {
+  if (!RECORD_ONLY) {
     for (const locale of ["en", "ar"]) {
       if (ROUTES.some(([id]) => id === "hr-employees"))
         for (const size of [[1440, 900], [390, 844]]) now.c2.dept[`${locale}|${size[0]}`] = await deptProbe(locale, size);
@@ -779,6 +1090,137 @@ try {
         for (const size of WIDTHS) now.c2.payroll[`${locale}|${size[0]}`] = await payrollProbe(locale, size, size[0] === 1440 || size[0] === 390);
     }
     console.log("  C2 probes done");
+  }
+
+  // C3 probes, EN and AR at 1440 and 390, the owner. Keys are pressed only once Tab has reached what they
+  // are meant for; a step that cannot be reached is recorded as such and fails below.
+  /** Press `key` until the focused element matches `selector` (and, if given, has exactly `text`): presses taken, or null. */
+  async function tabUntil(page, selector, text = null, key = "Tab", max = 200) {
+    for (let i = 1; i <= max; i++) {
+      await page.keyboard.press(key);
+      if (await page.evaluate(([s, t]) => { const a = document.activeElement; return Boolean(a && a.matches(s) && (t === null || a.textContent.trim() === t)); }, [selector, text])) return i;
+    }
+    return null;
+  }
+  const dialogOpened = (page) => page.locator('[role="dialog"]').waitFor({ state: "visible", timeout: 15000 }).then(() => true, () => false);
+  const dialogClosed = (page) => page.locator('[role="dialog"]').waitFor({ state: "detached", timeout: 15000 }).then(() => true, () => false);
+  // Steady state before a measurement: running transitions finished (Button's transition-colors would
+  // otherwise be caught mid-way), two frames, and — when a control has keyboard focus — its focus
+  // outline drawn (a control that never draws one times out here and fails the check).
+  const twoFrames = async (page) => {
+    await page.evaluate(() => { document.getAnimations().forEach((a) => a.finish()); return new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))); });
+    await page.waitForFunction(() => { const a = document.activeElement; return !a || a === document.body || !a.matches(":focus-visible") || getComputedStyle(a).outlineStyle !== "none"; }, null, { timeout: 3000 }).catch(() => {});
+    await page.evaluate(() => document.getAnimations().forEach((a) => a.finish()));
+  };
+  const markOpener = (page) => page.evaluate(() => { window.__opener = document.activeElement; });
+  // The kanban by keyboard: Tab to a card; Enter opens it, Escape closes; Space opens it, the dialog's
+  // close button (by keyboard) closes; Tab to the next card, Enter, Save with nothing changed; Shift+Tab
+  // to Add Task, Enter, Escape. Then by pointer on a fresh page: click the third card, click the close
+  // button. Every task row is read from the database before and after.
+  async function kanbanProbe(locale, size) {
+    const W = C3_WORDS[locale];
+    const { ctx, page, errors } = await probePage(locale, size, "/projects/1");
+    const before = await taskRows();
+    const steps = [];
+    const push = async (step, kind, extra = {}) => {
+      await twoFrames(page);
+      steps.push({ step, kind, ...extra, ...(await page.evaluate(KANBAN_STATE)) });
+    };
+    const tabs = await tabUntil(page, "main .kanban-card");
+    await push(`Tab ×${tabs} to a task card`, "focus", { tabs });
+    if (tabs !== null) {
+      await markOpener(page);
+      await page.keyboard.press("Enter");
+      await push("Enter", "open", { ok: await dialogOpened(page) });
+      await page.keyboard.press("Escape");
+      await push("Escape", "return", { ok: await dialogClosed(page) });
+      await page.keyboard.press(" ");
+      await push("Space", "open", { ok: await dialogOpened(page) });
+      const toClose = await tabUntil(page, '[role="dialog"] button', "Close", "Tab", 30);
+      if (toClose !== null) await page.keyboard.press("Enter");
+      await push(`Tab ×${toClose} to the close button, Enter`, "return", { ok: toClose !== null && (await dialogClosed(page)) });
+      await page.keyboard.press("Tab");
+      await markOpener(page);
+      await push("Tab to the next card", "focus");
+      await page.keyboard.press("Enter");
+      await push("Enter", "open", { ok: await dialogOpened(page) });
+      const toSave = await tabUntil(page, '[role="dialog"] button', W.save, "Tab", 30);
+      if (toSave !== null) await page.keyboard.press("Enter");
+      await push(`Tab ×${toSave} to Save, Enter (nothing changed)`, "return", { ok: toSave !== null && (await dialogClosed(page)) });
+      const toAdd = await tabUntil(page, "main button", W.addTask, "Shift+Tab", 60);
+      await markOpener(page);
+      if (toAdd !== null) await page.keyboard.press("Enter");
+      await push(`Shift+Tab ×${toAdd} to Add Task, Enter`, "new", { ok: toAdd !== null && (await dialogOpened(page)) });
+      await page.keyboard.press("Escape");
+      await push("Escape", "return-add", { ok: await dialogClosed(page) });
+    }
+    await page.goto(`${BASE}/projects/1`, { waitUntil: "networkidle", timeout: 60000 });
+    const third = page.locator("main .kanban-card").nth(2);
+    await third.evaluate((el) => { window.__opener = el; });
+    await third.click();
+    await push("click the third card", "open", { ok: await dialogOpened(page), pointer: true });
+    await page.locator('[role="dialog"] button', { hasText: "Close" }).click();
+    await push("click the close button", "return", { ok: await dialogClosed(page), pointer: true });
+    const after = await taskRows();
+    await ctx.close();
+    return { steps, errors, unchanged: JSON.stringify(before) === JSON.stringify(after), rows: before.length };
+  }
+  // The empty project: its Tasks section as it loads; then Tab to Add Task, Enter (New Task), Escape.
+  async function emptyProbe(locale, size) {
+    const W = C3_WORDS[locale];
+    const { ctx, page, errors } = await probePage(locale, size, "/projects/2");
+    const facts = await page.evaluate(EMPTY_FACTS, W);
+    const steps = [];
+    const push = async (step, kind, extra = {}) => {
+      await twoFrames(page);
+      steps.push({ step, kind, ...extra, ...(await page.evaluate(KANBAN_STATE)) });
+    };
+    const tabs = await tabUntil(page, "main button", W.addTask);
+    await markOpener(page);
+    await push(`Tab ×${tabs} to Add Task`, "focus-add", { tabs });
+    if (tabs !== null) {
+      await page.keyboard.press("Enter");
+      await push("Enter", "new", { ok: await dialogOpened(page) });
+      await page.keyboard.press("Escape");
+      await push("Escape", "return-add", { ok: await dialogClosed(page) });
+    }
+    await ctx.close();
+    return { facts, steps, errors };
+  }
+  // The Hours column: one time log on the populated project's first task, today, in this run's TEST-ONLY
+  // copy (the seed has none in the rolling week) — measured, then removed.
+  async function withTimeLog(fn) {
+    const c = new pg.Client({ connectionString: env.DATABASE_URL });
+    await c.connect();
+    const emp = (await c.query("select id from employees where org_id = $1 and status = 'active' order by id limit 1", [projDb.org])).rows[0].id;
+    const id = (await c.query("insert into time_logs (org_id, task_id, employee_id, date, hours, billable) values ($1, $2, $3, $4, 2.5, true) returning id",
+      [projDb.org, projDb.tasks[0].id, emp, FROZEN_NOW.slice(0, 10)])).rows[0].id;
+    try {
+      return await fn();
+    } finally {
+      await c.query("delete from time_logs where id = $1", [id]);
+      await c.end();
+    }
+  }
+  async function hoursProbe(locale, size) {
+    const { ctx, page, errors } = await probePage(locale, size, "/projects/1");
+    const layout = await page.evaluate(C3M, C3_NUMERIC);
+    await ctx.close();
+    return { numeric: layout.numeric, overflow: layout.overflow, errors };
+  }
+  if (!RECORD_ONLY) {
+    const EDGE_SIZES = [[1440, 900], [390, 844]];
+    for (const locale of ["en", "ar"]) {
+      if (ROUTES.some(([id]) => id === "project-detail"))
+        for (const size of EDGE_SIZES) now.c3.kanban[`${locale}|${size[0]}`] = await kanbanProbe(locale, size);
+      if (ROUTES.some(([id]) => id === "project-empty"))
+        for (const size of EDGE_SIZES) now.c3.empty[`${locale}|${size[0]}`] = await emptyProbe(locale, size);
+    }
+    if (ROUTES.some(([id]) => id === "project-detail"))
+      await withTimeLog(async () => {
+        for (const locale of ["en", "ar"]) for (const size of EDGE_SIZES) now.c3.hours[`${locale}|${size[0]}`] = await hoursProbe(locale, size);
+      });
+    console.log("  C3 probes done");
   }
   // formatDisplayDate in the browser: identical to Node whatever the browser's locale and zone. (A
   // tree without the helper — main before C0 — has nothing to compare; the check below says so.)
@@ -825,6 +1267,16 @@ const d6Record = () => ({
   recordedOn: { commit: git("rev-parse", "HEAD"), srcClean: git("status", "--porcelain", "--", "src") === "", build: buildId, chromium: now.chromium },
   states: Object.fromEntries(Object.entries(now.d6).filter(([k]) => !D6_C2.includes(k.split("|")[0]))),
 });
+// The C3 record: what C2's build drew for both projects — every figure (label and value), the health
+// badge, the kanban's tracks, column heads and cards (at rest and hovered) — with the commit and build.
+const c3Record = () => ({
+  recordedOn: { commit: git("rev-parse", "HEAD"), srcClean: git("status", "--porcelain", "--", "src") === "", build: buildId, chromium: now.chromium },
+  states: Object.fromEntries(Object.entries(now.c3.layout).map(([k, v]) => [k, {
+    summary: v.summary?.facts.map(({ label, value }) => ({ label, value })) ?? null,
+    cost: v.cost?.facts.map(({ label, value }) => ({ label, value })) ?? null,
+    badge: v.badge, kanban: v.kanban, kanbanFacts: v.kanbanFacts ?? null,
+  }])),
+});
 if (MEASURE_OUT) writeFileSync(MEASURE_OUT, JSON.stringify({ ...now, blockedRequests: blocked, actions: acts }, null, 1) + "\n");
 if (WRITE_D6) {
   const failed = Object.entries(now.d6).filter(([, v]) => v.status !== 200 || v.consoleErrors || v.pageErrors || v.r418).map(([k]) => k);
@@ -837,10 +1289,23 @@ if (WRITE_D6) {
   rmSync(env.STORAGE_FAKE_DIR, { recursive: true, force: true });
   process.exit(0);
 }
+if (WRITE_C3REF) {
+  const failed = Object.entries(now.c3.layout).filter(([, v]) => v.status !== 200 || v.consoleErrors || v.pageErrors || v.r418).map(([k]) => k);
+  if (failed.length) refuse(`--write-c3ref: not recording a pass with errors or a failed route: ${failed.slice(0, 4).join(", ")}`);
+  const file = args.find((a) => a.startsWith("--write-c3ref="))?.slice(14) || BASELINE_FILE;
+  const out = JSON.parse(readFileSync(file, "utf8"));
+  out.c3ref = c3Record();
+  writeFileSync(file, JSON.stringify(out, null, 1) + "\n");
+  console.log(`• wrote the C3 record into ${file}: ${Object.keys(out.c3ref.states).length} states, measured on ${out.c3ref.recordedOn.commit.slice(0, 7)} (src ${out.c3ref.recordedOn.srcClean ? "clean" : "MODIFIED"}), build ${buildId}`);
+  rmSync(env.STORAGE_FAKE_DIR, { recursive: true, force: true });
+  process.exit(0);
+}
 if (WRITE) {
-  // The probes are checked, not pinned; the D-6 pass is pinned as its record.
+  // The probes are checked, not pinned; the D-6 pass is pinned as its record. The C3 record was measured
+  // on C2's build and cannot be re-measured here: it is carried over as it is.
   const measured = { frozenNow: now.frozenNow, chromium: now.chromium, states: now.states, staff: now.staff, sweep: now.sweep };
-  writeFileSync(BASELINE_FILE, JSON.stringify({ ...measured, blockedRequests: blocked, d6: d6Record() }, null, 1) + "\n");
+  const c3ref = existsSync(BASELINE_FILE) ? JSON.parse(readFileSync(BASELINE_FILE, "utf8")).c3ref : undefined;
+  writeFileSync(BASELINE_FILE, JSON.stringify({ ...measured, blockedRequests: blocked, d6: d6Record(), ...(c3ref ? { c3ref } : {}) }, null, 1) + "\n");
   writeFileSync(ACTIONS_FILE, JSON.stringify(acts, null, 1) + "\n");
   console.log(`• wrote ${BASELINE_FILE} (${Object.keys(now.states).length} owner states, ${Object.keys(now.staff).length} staff, ${Object.keys(now.sweep).length} sweep, the D-6 record) and ${ACTIONS_FILE}`);
 }
@@ -968,14 +1433,17 @@ if (REBASE) {
       const groups = (xs) => xs.map(split).reduce((m, [r, n]) => m.set(r, [...(m.get(r) ?? []), n].sort()), new Map());
       const was = groups(baseActs[group][k] ?? []);
       const is = groups(acts[group][k]);
-      const intended = new Map(k.startsWith("hr-employees|") ? [["button||type=button|pressed=true", [ALL_DEPARTMENTS[k.split("|")[1]]]], ["button||type=button|pressed=false", [...deptNames].sort()]] : []);
-      for (const [r] of intended) if (!is.has(r) && !was.has(r)) problems.push(`${group} ${k}: no department filter × ${r}`);
+      const intended = new Map(k.startsWith("hr-employees|") ? [["button||type=button|pressed=true", [ALL_DEPARTMENTS[k.split("|")[1]]]], ["button||type=button|pressed=false", [...deptNames].sort()]] :
+        // C3: the populated project's task cards, buttons now (they were divs with onClick, not actions) —
+        // one each, named title / status / priority / assignee as the database says, in the page's language.
+        k.startsWith("project-detail|") ? [["button||type=button|", projDb.tasks.map((task) => taskName(k.split("|")[1], task).replace(/\s+/g, " ").trim().slice(0, 80)).sort()]] : []);
+      for (const [r] of intended) if (!is.has(r) && !was.has(r)) problems.push(`${group} ${k}: no intended addition × ${r}`);
       for (const r of new Set([...was.keys(), ...is.keys()])) {
         const a = [...(was.get(r) ?? [])];
         const b = [...(is.get(r) ?? [])];
         if (!a.length && intended.has(r)) {
           if (JSON.stringify(b) === JSON.stringify(intended.get(r))) added.push(`${group} ${k}: + ${b.length} × ${r} (${b.join(", ")})`);
-          else problems.push(`${group} ${k}: department filters ${JSON.stringify(b)} ≠ ${JSON.stringify(intended.get(r))} (${r})`);
+          else problems.push(`${group} ${k}: added ${JSON.stringify(b)} ≠ intended ${JSON.stringify(intended.get(r))} (${r})`);
           continue;
         }
         if (a.length !== b.length) { problems.push(`${group} ${k}: ${a.length}→${b.length} × ${r}`); continue; }
@@ -990,7 +1458,7 @@ if (REBASE) {
   for (const x of renamed) console.log(`    ${x}`);
   console.log(`• actions added in the re-recorded routes (${added.length}):`);
   for (const x of added) console.log(`    ${x}`);
-  check(`re-recorded routes: actions equivalent to the baseline — same kinds, targets, types and states; English names unchanged; Arabic names changed only from C1 page copy to Arabic (${renamed.length} lists); added only the department filter buttons (${added.length} groups)`,
+  check(`re-recorded routes: actions equivalent to the baseline — same kinds, targets, types and states; English names unchanged; Arabic names changed only from C1 page copy to Arabic (${renamed.length} lists); added only the intended controls — C2's department filters, C3's task-card buttons (${added.length} groups)`,
     problems.length === 0, list(problems));
 }
 
@@ -1100,6 +1568,180 @@ check(`C2: payroll rows by keyboard, as before — Tab reaches each row, Enter a
   (ONLY && !payRuns.length) || ((ONLY || payRuns.length === 8) && payKeys.some((s) => s.step.includes("Enter")) && payKeys.some((s) => s.step.includes("Space")) && payBad.keys.length === 0), list(payBad.keys));
 check("C2: payroll layout — table and payslip side by side at 1440, stacked below 1100 px (1024 / 768 / 390), both inside the viewport, the table's last column reachable by scrolling it (EN / AR)",
   (ONLY && !payRuns.length) || ((ONLY || payRuns.length === 8) && payBad.layout.length === 0), list(payBad.layout));
+
+// ------------------------------------------------------------------------------------- C3 targets
+// The four Projects routes, EN and AR at every width (32 states); the project pass; the three probes.
+const c3Keys = keys.filter((k) => C3_ROUTES.includes(k.split("|")[0]));
+const c3 = (pred) => c3Keys.filter((k) => !pred(now.states[k], k));
+check(`C3: the ${C3_ROUTES.length} Projects routes were measured (${c3Keys.length} states)`, ONLY || c3Keys.length === C3_ROUTES.length * 8, c3Keys.length);
+const c3Ph = c3((s) => s.pageHeader?.n === 1 && s.pageHeader.h1Inside && s.pageHeader.metaFirst && s.pageHeader.titleAtStart && s.pageHeader.trailing !== "misplaced" && !s.pageHeader.overlap);
+check("C3: one PageHeader per Projects page, holding its only h1; meta (the project's pill) before actions (its status select); title at the inline start; meta / actions at the end of its line or below it, never over it",
+  c3Ph.length === 0, list(c3Ph.map(show((s) => JSON.stringify(s.pageHeader)))));
+const c3Out = c3((s, k) => {
+  const [id, l] = k.split("|");
+  return JSON.stringify(s.outline) === JSON.stringify(c3Outline(id, l, projDb.names)) && s.h1 === 1 && s.skips === 0;
+});
+check("C3: every Projects outline exact — the list and New Project their h1; a project its name (h1), Cost & Profitability (h2) › Revenue, Costs (h3), Tasks (h2) › To do, In progress, Blocked, Done (h3, the registry's labels; populated project only), Time logged this week, Linked Documents (h2); no skip (EN / AR, all widths)",
+  c3Out.length === 0, list(c3Out.map(show((s) => JSON.stringify(s.outline)))));
+const c3Ov = c3((s) => s.overflow === 0 && s.offenders === 0 && s.tablesBeyond === 0);
+check("C3: no page overflow, nothing past the viewport, no table beyond it, on any Projects page at any width", c3Ov.length === 0, list(c3Ov.map(show((s) => `${s.overflow}px ${s.offenders} el ${s.tablesBeyond} tables`))));
+const c3Err = c3((s) => !s.consoleErrors && !s.pageErrors && !s.r418);
+check("C3: zero console errors, page errors and React #418 on every Projects state", c3Err.length === 0, list(c3Err.map(show((s) => JSON.stringify(s.errorSample)))));
+const c3Ind = c3((s) => s.indic === 0);
+check("C3: Western digits — no Arabic-Indic digit on any Projects page", c3Ind.length === 0, list(c3Ind.map(show((s) => s.indic))));
+const c3Ptr = c3((s) => s.pointerOnly === 0);
+check("C3: nothing on a Projects page is clickable by pointer only — the eight task cards were divs with onClick", c3Ptr.length === 0, list(c3Ptr.map(show((s) => s.pointerOnly))));
+const c3Staff = Object.entries(now.staff).filter(([k]) => C3_ROUTES.includes(k.split("|")[0]));
+check("C3: permissions — Staff open the four Projects routes where they are, as the baseline says",
+  (ONLY && !c3Staff.length) || ((ONLY || c3Staff.length === 8) && c3Staff.every(([k, v]) => v.status === 200 && v.finalPath === ROUTES.find((r) => r[0] === k.split("|")[0])[1] && BS[k]?.finalPath === v.finalPath)),
+  list(c3Staff.filter(([k, v]) => v.status !== 200 || BS[k]?.finalPath !== v.finalPath).map(([k, v]) => `${k} ${v.status} ${v.finalPath}`)));
+
+// The project pass: composition at every width (targets) and what C2 drew (the c3ref record).
+const c3Ref = (WRITE ? null : pinned.c3ref) ?? null;
+const C3R = scoped(c3Ref?.states ?? {});
+const c3L = Object.entries(now.c3.layout);
+const c3Lbad = (pred) => c3L.filter(([k, v]) => !pred(v, k)).map(([k]) => k);
+const lshow = (f) => (k) => `${k} ${f(now.c3.layout[k])}`;
+check(`C3 project pass: both projects measured at every width, EN / AR (${c3L.length} states), each answering 200 with no error`,
+  (ONLY ? true : c3L.length === 16) && c3Lbad((v) => v.status === 200 && !v.consoleErrors && !v.pageErrors && !v.r418 && v.overflow === 0).length === 0, list(c3Lbad((v) => v.status === 200 && !v.consoleErrors && !v.pageErrors && !v.r418)));
+check(`C3 record: c3ref covers every state of the pass (measured on ${c3Ref?.recordedOn?.commit?.slice(0, 7) ?? "—"}, src ${c3Ref?.recordedOn?.srcClean ? "clean" : "MODIFIED"}, build ${c3Ref?.recordedOn?.build ?? "—"})`,
+  c3Ref?.recordedOn?.srcClean === true && c3L.every(([k]) => C3R[k]), list(c3L.filter(([k]) => !C3R[k]).map(([k]) => k)));
+const W_ = (k) => C3_WORDS[k.split("|")[1]];
+const summaryBad = c3Lbad((v, k) => {
+  const s = v.summary;
+  return s && s.tracks === 2 && s.cards === 2 && s.perRow === 2 && s.lines === 1 && s.width <= 520.5 && !s.clipped && !s.outside &&
+    s.facts[0].label === W_(k).budget && s.facts[1].label.startsWith(`${W_(k).tasks} · `) && s.facts[1].label.endsWith(W_(k).hoursLogged);
+});
+check("C3 project summary: two across at every width (StatRow columns 2) inside its 520px — Budget, then Tasks · <hours> hours logged — nothing clipped",
+  summaryBad.length === 0, list(summaryBad.map(lshow((s) => JSON.stringify(s.summary && [s.summary.tracks, s.summary.perRow, s.summary.width, s.summary.facts.map((f) => f.label)])))));
+const costBad = c3Lbad((v, k) => {
+  const c = v.cost;
+  const phone = k.endsWith("|390");
+  return c && c.cards === 6 && c.tracks === (phone ? 2 : 3) && c.perRow === (phone ? 2 : 3) && c.lines === (phone ? 3 : 2) && !c.clipped && !c.outside &&
+    JSON.stringify(c.facts.map((f) => f.label)) === JSON.stringify(W_(k).kpis);
+});
+check("C3 Cost & Profitability: six cards — Sales Value, Invoiced, Collected, Total Cost, Actual Profit, Profit Margin — three across above 640 px (1440 / 1024 / 768) and two across at 390 (D-6); nothing clipped or past the viewport",
+  costBad.length === 0, list(costBad.map(lshow((s) => JSON.stringify(s.cost && [s.cost.tracks, s.cost.perRow, s.cost.lines, s.cost.clipped, s.cost.facts.map((f) => f.label)])))));
+const colourBad = c3Lbad((v) => {
+  const f = v.cost?.facts ?? [];
+  const plain = f[0]?.ink;
+  const tone = v.badge?.tone;
+  return f.length === 6 && plain && [1, 2, 3].every((i) => f[i].ink === plain) && v.tones[tone] && f[4].ink === v.tones[tone] && f[5].ink === v.tones[tone] && (tone === "neutral" || f[4].ink !== plain);
+});
+check("C3 D-6 colour: Sales Value, Invoiced, Collected and Total Cost drawn in the one plain value colour (Collected's green and Total Cost's warning gone); Actual Profit and Profit Margin in the registry colour of the project's health — the badge's tone",
+  colourBad.length === 0, list(colourBad.map(lshow((s) => JSON.stringify([s.cost?.facts.map((f) => f.ink), s.badge?.tone, s.tones])))));
+const sameFigures = c3Lbad((v, k) => C3R[k] && JSON.stringify(v.summary?.facts.map(({ label, value }) => ({ label, value }))) === JSON.stringify(C3R[k].summary) &&
+  JSON.stringify(v.cost?.facts.map(({ label, value }) => ({ label, value }))) === JSON.stringify(C3R[k].cost));
+check("D-2 held: every figure C2 showed is shown, to the character — Budget, Tasks · hours, Sales Value, Invoiced, Collected, Total Cost, Actual Profit, Profit Margin — on both projects, every width, EN / AR (the c3ref record)",
+  sameFigures.length === 0, list(sameFigures.map((k) => `${k} ${JSON.stringify(C3R[k]?.cost)} → ${JSON.stringify(now.c3.layout[k].cost?.facts.map((f) => f.value))}`)));
+const badgeBad = c3Lbad((v, k) => v.badge && !v.badge.inHeading && v.badge.beside === W_(k).cost && C3R[k] && JSON.stringify(v.badge) .length > 0 &&
+  ["status", "tone", "text", "color", "background"].every((f) => v.badge[f] === C3R[k].badge?.[f]));
+check("D-2 held: the project_health badge as C2 drew it — status, tone, label, colours — now the meta of the Cost & Profitability h2, outside the heading",
+  badgeBad.length === 0, list(badgeBad.map(lshow((s) => JSON.stringify(s.badge)))));
+const bdBad = c3Lbad((v, k) => {
+  const b = v.breakdown;
+  const wide = Number(k.split("|")[2]) > 900;
+  return b && b.cards === 2 && b.tracks === (wide ? 2 : 1) && (wide ? b.sideBySide : b.stacked) && b.inViewport && !b.clipped &&
+    JSON.stringify(b.headings) === JSON.stringify([`h3 ${W_(k).revenue}`, `h3 ${W_(k).costs}`]);
+});
+check("C3 cost breakdown: Revenue and Costs (h3s) side by side at 1440 and 1024, stacked at 768 and 390 (≤900 px), inside the viewport, neither card clipped",
+  bdBad.length === 0, list(bdBad.map(lshow((s) => JSON.stringify(s.breakdown)))));
+const kbBad = c3Lbad((v, k) => (k.startsWith("project-empty|") ? v.kanban === null : v.kanban && C3R[k] && JSON.stringify(v.kanban) === JSON.stringify(C3R[k].kanban) && v.kanban.tracks === (k.endsWith("|1440") ? 4 : 2)));
+check("C3 kanban layout as C2's: four columns at 1440, two at 1024, 768 and 390 (its own mobile rule, not redesigned); no board on the empty project",
+  kbBad.length === 0, list(kbBad.map(lshow((s) => JSON.stringify(s.kanban)))));
+const numAll = [...c3L.map(([k, v]) => [k, v.numeric]), ...Object.entries(now.c3.hours).map(([k, v]) => [`hours ${k}`, v.numeric])];
+const numBad = numAll.flatMap(([k, cells]) => cells.filter((c) => !(c.align === "end" && c.cell === "numeric" && c.endGap !== undefined && c.endGap <= 1)).map((c) => `${k} ${c.col} ${c.tag} "${c.text}" ${c.align} gap ${c.endGap}`));
+const amountSeen = c3L.filter(([, v]) => v.numeric.some((c) => c.tag === "td")).length;
+const hoursRuns = Object.values(now.c3.hours);
+check(`C3 logical numeric columns: Amount (Linked Documents) and Hours (time logged — one fixture log) — header and every cell — sit at the inline end in EN and AR: text-align end, the table's numeric cell, flush with the end padding (${numAll.reduce((n, [, c]) => n + c.length, 0)} cells)`,
+  numBad.length === 0 && (ONLY || amountSeen === 16) && (ONLY && !hoursRuns.length || (hoursRuns.length === 4 && hoursRuns.every((h) => h.numeric.some((c) => c.tag === "td" && c.text === "2.5") && !h.errors.length && h.overflow === 0))),
+  list(numBad));
+// §36: the kanban cards, C2's div vs C3's button — computed style and geometry at rest and hovered; the heads.
+const factsDiff = [];
+for (const [k, v] of c3L) {
+  const ref = C3R[k]?.kanbanFacts;
+  if (!v.kanbanFacts) continue;
+  if (!ref) { factsDiff.push(`${k}: no record`); continue; }
+  const byTitle = (xs) => Object.fromEntries((xs ?? []).filter(Boolean).map((c) => [c.title, c]));
+  for (const [what, a, b] of [["card", byTitle(ref.cards), byTitle(v.kanbanFacts.cards)], ["hovered", byTitle(ref.hover), byTitle(v.kanbanFacts.hover)]]) {
+    if (JSON.stringify(Object.keys(a).sort()) !== JSON.stringify(Object.keys(b).sort())) factsDiff.push(`${k} ${what}s: ${Object.keys(a)} → ${Object.keys(b)}`);
+    for (const t of Object.keys(a)) {
+      if (!b[t]) continue;
+      if (a[t].box !== b[t].box) factsDiff.push(`${k} ${what} "${t}" box ${a[t].box} → ${b[t].box}`);
+      const sa = a[t].style.split("|"), sb = b[t].style.split("|");
+      CARD_PROPS.forEach((p, i) => sa[i] !== sb[i] && factsDiff.push(`${k} ${what} "${t}" ${p}: ${sa[i]} → ${sb[i]}`));
+      if (JSON.stringify(a[t].inner) !== JSON.stringify(b[t].inner)) factsDiff.push(`${k} ${what} "${t}" inside: ${JSON.stringify(a[t].inner).slice(0, 120)} → ${JSON.stringify(b[t].inner).slice(0, 120)}`);
+    }
+  }
+  // A head's label element changes tag on purpose (span → h3); everything else about it is compared.
+  const heads = (xs) => JSON.stringify((xs ?? []).map((h) => Object.fromEntries(Object.entries(h).filter(([f]) => f !== "tag"))));
+  if (heads(ref.heads) !== heads(v.kanbanFacts.heads)) factsDiff.push(`${k} heads: ${heads(ref.heads).slice(0, 160)} → ${heads(v.kanbanFacts.heads).slice(0, 160)}`);
+  if (!v.kanbanFacts.heads.every((h) => h.tag === "h3")) factsDiff.push(`${k} heads: not h3`);
+}
+const kfStates = c3L.filter(([, v]) => v.kanbanFacts).length;
+check(`C3 kanban visual equivalence (C2 div → C3 button): every card's ${CARD_PROPS.length} computed properties (width, height, border, radius, background, shadow, padding, margin, font, colour, text-align, cursor, transform…), its box in the column and everything inside it — at rest and hovered — and every column head (label now an h3: same box, same type) are C2's, at 1440 and 390, EN / AR (${kfStates} states)`,
+  (ONLY || kfStates === 4) && factsDiff.length === 0, list(factsDiff));
+
+// §34: the kanban by keyboard (blocking) and by pointer.
+const nameOf = (l, id) => { const t = projDb.tasks.find((x) => String(x.id) === String(id)); return t ? taskName(l, t) : null; };
+const rowOf = (id) => projDb.tasks.find((x) => String(x.id) === String(id));
+const kRuns = Object.entries(now.c3.kanban);
+const kBad = [];
+for (const [run, r] of kRuns) {
+  const l = run.split("|")[0];
+  const W = C3_WORDS[l];
+  if (r.errors.length) kBad.push(`${run}: ${r.errors[0]}`);
+  if (!r.unchanged) kBad.push(`${run}: a task changed in the database`);
+  const s0 = r.steps[0];
+  const expectNames = projDb.tasks.map((t) => `${t.id}|button|button|${taskName(l, t)}|false`).sort();
+  if (JSON.stringify([...s0.names].sort()) !== JSON.stringify(expectNames)) kBad.push(`${run}: card names ${JSON.stringify(s0.names)}`);
+  const kinds = r.steps.map((s) => s.kind).join(",");
+  if (kinds !== "focus,open,return,open,return,focus,open,return,new,return-add,open,return") kBad.push(`${run}: steps ${kinds} (a step was never reached)`);
+  for (const s of r.steps) {
+    const why = [];
+    const keyboard = !s.pointer;
+    if (JSON.stringify(s.board) !== JSON.stringify(s0.board)) why.push("the board changed");
+    if (s.kind === "focus") {
+      if (!(s.focus?.card >= 0 && s.focus.tag === "button" && s.focus.type === "button")) why.push(`focus ${JSON.stringify(s.focus)}`);
+      else if (!(s.focus.focusVisible && s.focus.ring && s.focus.ring.token && parseFloat(s.focus.ring.width) >= 2)) why.push(`no focus ring ${JSON.stringify(s.focus)}`);
+      else if (s.focus.name !== nameOf(l, s.focus.taskId)) why.push(`name "${s.focus.name}" ≠ "${nameOf(l, s.focus.taskId)}"`);
+    }
+    if (s.kind === "open") {
+      const t = rowOf(s.opener?.taskId);
+      if (!s.ok || !s.dialog || s.dialog.title !== W.editTask || !t || s.dialog.taskTitle !== t.title || s.dialog.status !== TASK_STATUS[l][t.status]) why.push(`dialog ${JSON.stringify(s.dialog)} for ${JSON.stringify(s.opener)}`);
+    }
+    if (s.kind === "return") {
+      if (!s.ok || s.dialog) why.push("the dialog did not close");
+      if (!(s.focus?.same && s.focus.card >= 0)) why.push(`focus not back on the card that opened it: ${JSON.stringify(s.focus)}`);
+      else if (keyboard && !(s.focus.focusVisible && s.focus.ring?.token)) why.push(`focus back without its ring ${JSON.stringify(s.focus)}`);
+    }
+    if (s.kind === "new" && (!s.ok || s.dialog?.title !== W.newTask || s.opener?.text !== W.addTask)) why.push(`Add Task: ${JSON.stringify(s.dialog)} ${JSON.stringify(s.opener)}`);
+    if (s.kind === "return-add" && (!s.ok || s.dialog || !s.focus?.same || s.focus.name !== W.addTask)) why.push(`Add Task focus: ${JSON.stringify(s.focus)}`);
+    if (why.length) kBad.push(`${run} ${s.step}: ${why.join("; ")}`);
+  }
+}
+check(`C3 kanban by keyboard (blocking; EN / AR at 1440 and 390): Tab reaches a task card — a real button with the focus ring in the --focus colour and its full name (title, status, priority, assignee / Unassigned; all ${projDb?.tasks.length} cards); Enter opens Edit Task for that task; Escape closes and focus is back on that very card; Space opens it again; the close button closes, focus back; Save closes, focus back; Add Task opens New Task and Escape returns to it; no task changes`,
+  (ONLY && !kRuns.length) || ((ONLY || kRuns.length === 4) && projDb?.tasks.length === 8 && kBad.length === 0), list(kBad));
+check("C3 kanban by pointer, as before: clicking a card opens Edit Task for it, the close button closes it and focus returns to that card; the board and the database unchanged",
+  (ONLY && !kRuns.length) || ((ONLY || kRuns.length === 4) && kRuns.every(([, r]) => r.steps.filter((s) => s.pointer).length === 2) && !kBad.some((x) => /click/.test(x))), list(kBad.filter((x) => /click/.test(x))));
+// §35: the empty project.
+const eRuns = Object.entries(now.c3.empty);
+const eBad = [];
+for (const [run, r] of eRuns) {
+  const l = run.split("|")[0];
+  const f = r.facts;
+  if (r.errors.length) eBad.push(`${run}: ${r.errors[0]}`);
+  if (!(f.tasksH2 && f.addTask && f.emptyState && f.emptyAfterHead && f.kanban === 0 && f.overflow === 0)) eBad.push(`${run}: ${JSON.stringify(f)}`);
+  const kinds = r.steps.map((s) => s.kind).join(",");
+  if (kinds !== "focus-add,new,return-add") eBad.push(`${run}: steps ${kinds}`);
+  for (const s of r.steps) {
+    if (s.kind === "focus-add" && !(s.focus?.name === C3_WORDS[l].addTask && s.focus.focusVisible)) eBad.push(`${run} ${s.step}: ${JSON.stringify(s.focus)}`);
+    if (s.kind === "new" && !(s.ok && s.dialog?.title === C3_WORDS[l].newTask)) eBad.push(`${run} ${s.step}: ${JSON.stringify(s.dialog)}`);
+    if (s.kind === "return-add" && !(s.ok && !s.dialog && s.focus?.same && s.focus.focusVisible)) eBad.push(`${run} ${s.step}: ${JSON.stringify(s.focus)}`);
+  }
+}
+check(`C3 empty kanban (EN / AR at 1440 and 390; the seeded project with ${projDb?.emptyTasks} tasks): the Tasks h2 with Add Task beside it, the EmptyState after it, no column or card; Tab reaches Add Task, Enter opens New Task, Escape returns to it; no error, no overflow`,
+  (ONLY && !eRuns.length) || ((ONLY || eRuns.length === 4) && projDb?.emptyTasks === 0 && eBad.length === 0), list(eBad));
 
 // ------------------------------------------------------------------------------------- D-6
 // Every StatRow consumer is held to D-6's targets; all but C2's own strips also to C1's record.

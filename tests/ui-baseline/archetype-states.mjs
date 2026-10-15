@@ -31,6 +31,12 @@
  * capture if the page does not do it. And the D-6 evidence: the eight document lists — the StatRow
  * consumers C2 does not own — EN + AR at 1440 and 390, light, full page (32; Projects and Settings ›
  * Security are above at every width), and Bank Accounts, the other .two-col page, at every width (8).
+ *
+ * C3 (Projects + kanban) adds New Project, EN + AR at 1440 and 390, light, full page (4); the list and
+ * both projects are above at every width. Three interactions (12), viewport screenshots: a task card
+ * focused by keyboard (Tab to it — a button now, with the focus ring), Edit Task opened by keyboard
+ * (Tab, Enter — the dialog for that card's task), and the empty project's Tasks section with Add Task
+ * reached by keyboard beside its EmptyState. Each fails the capture if the page does not do it.
  */
 import pg from "pg";
 import { FROZEN_NOW, VIEWPORTS } from "./config.mjs";
@@ -83,6 +89,8 @@ export function archetypeMatrix() {
     for (const locale of BOTH) for (const name of viewports) add(id, path, "PageHeader under a long name (fixture)", locale, "light", name, action, false);
   for (const [id, path, area, viewports] of C2_ROUTES) for (const locale of BOTH) for (const name of viewports) add(id, path, area, locale, "light", name, null, true);
   for (const [id, path, action, viewports] of C2_INTERACTIONS) for (const locale of BOTH) for (const name of viewports) add(id, path, "Interaction (C2)", locale, "light", name, action, false);
+  for (const [id, path, area, viewports] of C3_ROUTES) for (const locale of BOTH) for (const name of viewports) add(id, path, area, locale, "light", name, null, true);
+  for (const [id, path, action, viewports] of C3_INTERACTIONS) for (const locale of BOTH) for (const name of viewports) add(id, path, "Interaction (C3)", locale, "light", name, action, false);
   return out;
 }
 
@@ -106,6 +114,15 @@ const C2_ROUTES = [
 const C2_INTERACTIONS = [
   ["i04-department-keyboard", "/hr/employees", "department-keyboard", EDGE],
   ["i05-payroll-keyboard", "/hr/payroll", "payroll-keyboard", EDGE],
+];
+
+/** [id, path, area, viewports] — C3: the Projects page not in the set above. */
+const C3_ROUTES = [["c3-project-new", "/projects/new", "Projects (new project)", EDGE]];
+/** [id, path, action, viewports] — C3 interactions (viewport screenshots). */
+const C3_INTERACTIONS = [
+  ["i06-kanban-card-focus", "/projects/1", "kanban-card-focus", EDGE],
+  ["i07-kanban-keyboard-edit", "/projects/1", "kanban-keyboard-edit", EDGE],
+  ["i08-kanban-empty", "/projects/2", "kanban-empty", EDGE],
 ];
 
 /** [id, path, area] — C1: the master-data / entity-detail pages not in the set above (seed-stable ids; the seed's bins are empty). */
@@ -188,6 +205,34 @@ export const ARCH_ACTIONS = {
   "kanban-edit": async (page) => {
     await page.locator("main .kanban-card").first().click();
     await page.getByRole("dialog").waitFor();
+  },
+  // C3: the first task card by keyboard — Tab to it. It must be a button with a name and the focus ring.
+  "kanban-card-focus": async (page) => {
+    await tabTo(page, "main .kanban-card");
+    const f = await page.evaluate(() => {
+      const a = document.activeElement;
+      return { tag: a.tagName, name: a.getAttribute("aria-label"), focusVisible: a.matches(":focus-visible"), ring: getComputedStyle(a).outlineStyle };
+    });
+    if (f.tag !== "BUTTON" || !f.name || !f.focusVisible || f.ring === "none") throw new Error(`kanban card by keyboard: ${JSON.stringify(f)}`);
+  },
+  // C3: Edit Task by keyboard — Tab to the first card, Enter. The dialog must be that card's task.
+  "kanban-keyboard-edit": async (page) => {
+    await tabTo(page, "main .kanban-card");
+    const title = await page.evaluate(() => document.activeElement.querySelector(".t").textContent.trim());
+    await page.keyboard.press("Enter");
+    await page.getByRole("dialog").waitFor();
+    const got = await page.evaluate(() => document.querySelector('[role="dialog"] #task-title')?.value);
+    if (got !== title) throw new Error(`Edit Task by keyboard opened "${got}", not "${title}"`);
+  },
+  // C3: the empty project — Tab to Add Task in the Tasks header; the EmptyState beside it, no board.
+  "kanban-empty": async (page) => {
+    await tabTo(page, 'main [data-slot="section-header"] button');
+    const f = await page.evaluate(() => ({
+      focusVisible: document.activeElement.matches(":focus-visible"),
+      empty: document.querySelectorAll('main [data-slot="empty-state"]').length,
+      board: document.querySelectorAll("main .kanban, main .kanban-card").length,
+    }));
+    if (!f.focusVisible || f.empty < 1 || f.board !== 0) throw new Error(`empty kanban: ${JSON.stringify(f)}`);
   },
   // C1 fixture: client 1 under LONG_NAME. The header must wrap — the h1 over several lines inside its
   // column, at the inline start; meta and actions at the end of the title's line or below it at the

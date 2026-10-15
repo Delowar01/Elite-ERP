@@ -1,23 +1,16 @@
 import Link from "next/link";
-import { statusLabel, type StatusDomain } from "@/lib/status-registry";
+import { statusLabel, statusTextClass, type StatusDomain } from "@/lib/status-registry";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { SectionHeader } from "@/components/ui/section-header";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { t, type Locale } from "@/lib/i18n/dict";
 import type { CostDrillRow, ProjectCostControl } from "@/lib/project-costing";
 import { Money } from "../../sales/_shared/money";
+import { StatRow } from "../../sales/_shared/stat-row";
 
 // Cost & Profitability for one project. Every number arrives already computed by
 // src/lib/project-costing.ts — this file only lays it out, so the figures on screen and the figures
 // in the engine can never drift apart.
-
-function StatCard({ label, value, tone }: { label: string; value: React.ReactNode; tone?: string }) {
-  return (
-    <div className="card" style={{ padding: "16px 18px" }}>
-      <div style={{ fontSize: 11.5, color: "var(--ink-muted)" }}>{label}</div>
-      <div style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 20, marginTop: 4, color: tone }}>{value}</div>
-    </div>
-  );
-}
 
 function FigureRow({
   label,
@@ -100,33 +93,36 @@ const ROW_TYPE_DOMAIN: Record<string, StatusDomain> = {
 };
 export function ProjectCostControlSection({ locale, data }: { locale: Locale; data: ProjectCostControl }) {
   const { revenue, cost, profit, marginPercent, health, rows, labourEstimate, excludedUnconverted } = data;
-  const profitTone = health === "loss" ? "var(--accent-red)" : health === "profitable" ? "var(--accent-green)" : "var(--ink-muted)";
+  // Actual Profit and Profit Margin keep the project's health colour — the status registry's
+  // (project_health), the same tone as the badge beside the heading. No other figure is coloured.
+  const healthText = statusTextClass("project_health", health);
 
   return (
     <section>
-      <div className="main-head">
-        <h3 style={{ fontSize: 15 }}>{t(locale, "Cost & Profitability")}</h3>
-        <StatusBadge domain="project_health" status={health} locale={locale} />
-      </div>
+      <SectionHeader
+        level={2}
+        title={t(locale, "Cost & Profitability")}
+        meta={<StatusBadge domain="project_health" status={health} locale={locale} />}
+        className="mb-[22px]"
+      />
 
-      <div className="stat-row-2" style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
-        <StatCard label={t(locale, "Sales Value")} value={<Money amount={revenue.confirmed} context="summary" />} />
-        <StatCard label={t(locale, "Invoiced")} value={<Money amount={revenue.invoiced} context="summary" />} />
-        <StatCard label={t(locale, "Collected")} value={<Money amount={revenue.received} context="summary" />} tone="var(--accent-green)" />
-        <StatCard label={t(locale, "Total Cost")} value={<Money amount={cost.total} context="summary" />} tone="var(--warning)" />
-        <StatCard label={t(locale, "Actual Profit")} value={<Money amount={profit} context="summary" />} tone={profitTone} />
-        <StatCard
-          label={t(locale, "Profit Margin")}
-          value={marginPercent === null ? "—" : `${marginPercent.toFixed(1)}%`}
-          tone={profitTone}
-        />
-      </div>
+      {/* Six figures, three across (two at ≤640px, D-6): plain values, Collected and Total Cost included. */}
+      <StatRow
+        columns={3}
+        items={[
+          { label: t(locale, "Sales Value"), value: <Money amount={revenue.confirmed} context="summary" /> },
+          { label: t(locale, "Invoiced"), value: <Money amount={revenue.invoiced} context="summary" /> },
+          { label: t(locale, "Collected"), value: <Money amount={revenue.received} context="summary" /> },
+          { label: t(locale, "Total Cost"), value: <Money amount={cost.total} context="summary" /> },
+          { label: t(locale, "Actual Profit"), value: <span className={healthText}><Money amount={profit} context="summary" /></span> },
+          { label: t(locale, "Profit Margin"), value: <span className={healthText}>{marginPercent === null ? "—" : `${marginPercent.toFixed(1)}%`}</span> },
+        ]}
+      />
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }} className="cost-breakdown-grid">
+      {/* .cost-breakdown-grid (mockup-parity.css) owns the layout: two across, stacked at ≤900px. */}
+      <div className="cost-breakdown-grid">
         <div className="card" style={{ padding: "16px 18px" }}>
-          <div style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 13, marginBottom: 6 }}>
-            {t(locale, "Revenue")}
-          </div>
+          <SectionHeader level={3} title={t(locale, "Revenue")} className="mb-1.5" />
           <FigureRow label={t(locale, "Quoted Value")} amount={revenue.quoted} hint={t(locale, "Committed — sent and accepted quotations")} />
           <FigureRow label={t(locale, "Confirmed Sales Value")} amount={revenue.confirmed} hint={t(locale, "Committed — confirmed and fulfilled sales orders")} />
           <FigureRow label={t(locale, "Invoiced Amount")} amount={revenue.invoiced} hint={t(locale, "Actual — posted invoices, net of issued credit notes")} />
@@ -141,9 +137,7 @@ export function ProjectCostControlSection({ locale, data }: { locale: Locale; da
         </div>
 
         <div className="card" style={{ padding: "16px 18px" }}>
-          <div style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 13, marginBottom: 6 }}>
-            {t(locale, "Costs")}
-          </div>
+          <SectionHeader level={3} title={t(locale, "Costs")} className="mb-1.5" />
           <FigureRow label={t(locale, "Purchase / Supplier Cost")} amount={cost.purchase} hint={t(locale, "Committed — ordered and received purchase orders, net of issued debit notes")} />
           <FigureRow label={t(locale, "Amount Paid to Suppliers")} amount={cost.paidToSuppliers} hint={t(locale, "Actual — cash paid against these purchase orders")} />
           <FigureRow label={t(locale, "Outstanding Supplier Cost")} amount={cost.outstandingSupplier} />

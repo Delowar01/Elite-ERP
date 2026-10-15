@@ -3863,9 +3863,9 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 Projects"
+    "h1 Projects"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 1,
    "tablesBeyond": 0,
@@ -3873,6 +3873,17 @@
    "unnamed": 0,
    "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "Projects",
+    "meta": null
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -3886,9 +3897,9 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 Projects"
+    "h1 Projects"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 1,
    "tablesBeyond": 0,
@@ -3896,6 +3907,17 @@
    "unnamed": 0,
    "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "Projects",
+    "meta": null
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -3909,9 +3931,9 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 Projects"
+    "h1 Projects"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 1,
    "tablesBeyond": 0,
@@ -3919,6 +3941,17 @@
    "unnamed": 0,
    "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "Projects",
+    "meta": null
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -3932,9 +3965,9 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 Projects"
+    "h1 Projects"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 1,
    "tablesBeyond": 0,
@@ -3942,6 +3975,17 @@
    "unnamed": 0,
    "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "Projects",
+    "meta": null
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -3955,19 +3999,37 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 Riyadh Tech Expo 2026 booth",
-    "h3 Cost & Profitability",
-    "h3 Time logged this week",
-    "h3 Linked Documents"
+    "h1 Riyadh Tech Expo 2026 booth",
+    "h2 Cost & Profitability",
+    "h3 Revenue",
+    "h3 Costs",
+    "h2 Tasks",
+    "h3 To do",
+    "h3 In progress",
+    "h3 Blocked",
+    "h3 Done",
+    "h2 Time logged this week",
+    "h2 Linked Documents"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 2,
    "tablesBeyond": 0,
    "indic": 0,
    "unnamed": 0,
-   "pointerOnly": 8,
+   "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "end",
+    "overlap": false,
+    "title": "Riyadh Tech Expo 2026 booth",
+    "meta": "Active · SAR 185,000 budget"
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -3981,19 +4043,37 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 Riyadh Tech Expo 2026 booth",
-    "h3 Cost & Profitability",
-    "h3 Time logged this week",
-    "h3 Linked Documents"
+    "h1 Riyadh Tech Expo 2026 booth",
+    "h2 Cost & Profitability",
+    "h3 Revenue",
+    "h3 Costs",
+    "h2 Tasks",
+    "h3 To do",
+    "h3 In progress",
+    "h3 Blocked",
+    "h3 Done",
+    "h2 Time logged this week",
+    "h2 Linked Documents"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 2,
    "tablesBeyond": 0,
    "indic": 0,
    "unnamed": 0,
-   "pointerOnly": 8,
+   "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "end",
+    "overlap": false,
+    "title": "Riyadh Tech Expo 2026 booth",
+    "meta": "Active · SAR 185,000 budget"
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -4007,19 +4087,37 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 Riyadh Tech Expo 2026 booth",
-    "h3 Cost & Profitability",
-    "h3 Time logged this week",
-    "h3 Linked Documents"
+    "h1 Riyadh Tech Expo 2026 booth",
+    "h2 Cost & Profitability",
+    "h3 Revenue",
+    "h3 Costs",
+    "h2 Tasks",
+    "h3 To do",
+    "h3 In progress",
+    "h3 Blocked",
+    "h3 Done",
+    "h2 Time logged this week",
+    "h2 Linked Documents"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 2,
    "tablesBeyond": 0,
    "indic": 0,
    "unnamed": 0,
-   "pointerOnly": 8,
+   "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "end",
+    "overlap": false,
+    "title": "Riyadh Tech Expo 2026 booth",
+    "meta": "Active · SAR 185,000 budget"
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -4033,19 +4131,37 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 Riyadh Tech Expo 2026 booth",
-    "h3 Cost & Profitability",
-    "h3 Time logged this week",
-    "h3 Linked Documents"
+    "h1 Riyadh Tech Expo 2026 booth",
+    "h2 Cost & Profitability",
+    "h3 Revenue",
+    "h3 Costs",
+    "h2 Tasks",
+    "h3 To do",
+    "h3 In progress",
+    "h3 Blocked",
+    "h3 Done",
+    "h2 Time logged this week",
+    "h2 Linked Documents"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 2,
    "tablesBeyond": 0,
    "indic": 0,
    "unnamed": 0,
-   "pointerOnly": 8,
+   "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "below",
+    "overlap": false,
+    "title": "Riyadh Tech Expo 2026 booth",
+    "meta": "Active · SAR 185,000 budget"
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -4059,12 +4175,15 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 Jeddah Hospitality Summit",
-    "h3 Cost & Profitability",
-    "h3 Time logged this week",
-    "h3 Linked Documents"
+    "h1 Jeddah Hospitality Summit",
+    "h2 Cost & Profitability",
+    "h3 Revenue",
+    "h3 Costs",
+    "h2 Tasks",
+    "h2 Time logged this week",
+    "h2 Linked Documents"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 2,
    "tablesBeyond": 0,
@@ -4072,6 +4191,17 @@
    "unnamed": 0,
    "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "end",
+    "overlap": false,
+    "title": "Jeddah Hospitality Summit",
+    "meta": "Planned · SAR 92,000 budget"
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -4085,12 +4215,15 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 Jeddah Hospitality Summit",
-    "h3 Cost & Profitability",
-    "h3 Time logged this week",
-    "h3 Linked Documents"
+    "h1 Jeddah Hospitality Summit",
+    "h2 Cost & Profitability",
+    "h3 Revenue",
+    "h3 Costs",
+    "h2 Tasks",
+    "h2 Time logged this week",
+    "h2 Linked Documents"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 2,
    "tablesBeyond": 0,
@@ -4098,6 +4231,17 @@
    "unnamed": 0,
    "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "end",
+    "overlap": false,
+    "title": "Jeddah Hospitality Summit",
+    "meta": "Planned · SAR 92,000 budget"
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -4111,12 +4255,15 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 Jeddah Hospitality Summit",
-    "h3 Cost & Profitability",
-    "h3 Time logged this week",
-    "h3 Linked Documents"
+    "h1 Jeddah Hospitality Summit",
+    "h2 Cost & Profitability",
+    "h3 Revenue",
+    "h3 Costs",
+    "h2 Tasks",
+    "h2 Time logged this week",
+    "h2 Linked Documents"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 2,
    "tablesBeyond": 0,
@@ -4124,6 +4271,17 @@
    "unnamed": 0,
    "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "end",
+    "overlap": false,
+    "title": "Jeddah Hospitality Summit",
+    "meta": "Planned · SAR 92,000 budget"
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -4137,12 +4295,15 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 Jeddah Hospitality Summit",
-    "h3 Cost & Profitability",
-    "h3 Time logged this week",
-    "h3 Linked Documents"
+    "h1 Jeddah Hospitality Summit",
+    "h2 Cost & Profitability",
+    "h3 Revenue",
+    "h3 Costs",
+    "h2 Tasks",
+    "h2 Time logged this week",
+    "h2 Linked Documents"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 2,
    "tablesBeyond": 0,
@@ -4150,6 +4311,17 @@
    "unnamed": 0,
    "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "below",
+    "overlap": false,
+    "title": "Jeddah Hospitality Summit",
+    "meta": "Planned · SAR 92,000 budget"
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -4163,9 +4335,9 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 New Project"
+    "h1 New Project"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 0,
    "tablesBeyond": 0,
@@ -4173,6 +4345,17 @@
    "unnamed": 2,
    "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "New Project",
+    "meta": null
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -4186,9 +4369,9 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 New Project"
+    "h1 New Project"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 0,
    "tablesBeyond": 0,
@@ -4196,6 +4379,17 @@
    "unnamed": 2,
    "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "New Project",
+    "meta": null
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -4209,9 +4403,9 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 New Project"
+    "h1 New Project"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 0,
    "tablesBeyond": 0,
@@ -4219,6 +4413,17 @@
    "unnamed": 2,
    "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "New Project",
+    "meta": null
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -4232,9 +4437,9 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 New Project"
+    "h1 New Project"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 0,
    "tablesBeyond": 0,
@@ -4242,6 +4447,17 @@
    "unnamed": 2,
    "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "New Project",
+    "meta": null
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -8787,9 +9003,9 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 المشاريع"
+    "h1 المشاريع"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 1,
    "tablesBeyond": 0,
@@ -8797,6 +9013,17 @@
    "unnamed": 0,
    "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "المشاريع",
+    "meta": null
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -8810,9 +9037,9 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 المشاريع"
+    "h1 المشاريع"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 1,
    "tablesBeyond": 0,
@@ -8820,6 +9047,17 @@
    "unnamed": 0,
    "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "المشاريع",
+    "meta": null
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -8833,9 +9071,9 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 المشاريع"
+    "h1 المشاريع"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 1,
    "tablesBeyond": 0,
@@ -8843,6 +9081,17 @@
    "unnamed": 0,
    "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "المشاريع",
+    "meta": null
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -8856,9 +9105,9 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 المشاريع"
+    "h1 المشاريع"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 1,
    "tablesBeyond": 0,
@@ -8866,6 +9115,17 @@
    "unnamed": 0,
    "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "المشاريع",
+    "meta": null
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -8879,19 +9139,37 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 Riyadh Tech Expo 2026 booth",
-    "h3 التكلفة والربحية",
-    "h3 الساعات المسجلة هذا الأسبوع",
-    "h3 المستندات المرتبطة"
+    "h1 Riyadh Tech Expo 2026 booth",
+    "h2 التكلفة والربحية",
+    "h3 الإيرادات",
+    "h3 التكاليف",
+    "h2 المهام",
+    "h3 للتنفيذ",
+    "h3 قيد التنفيذ",
+    "h3 معطَّل",
+    "h3 تم",
+    "h2 الساعات المسجلة هذا الأسبوع",
+    "h2 المستندات المرتبطة"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 2,
    "tablesBeyond": 0,
    "indic": 0,
    "unnamed": 0,
-   "pointerOnly": 8,
+   "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "end",
+    "overlap": false,
+    "title": "Riyadh Tech Expo 2026 booth",
+    "meta": "نشط · SAR 185,000 ميزانية"
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -8905,19 +9183,37 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 Riyadh Tech Expo 2026 booth",
-    "h3 التكلفة والربحية",
-    "h3 الساعات المسجلة هذا الأسبوع",
-    "h3 المستندات المرتبطة"
+    "h1 Riyadh Tech Expo 2026 booth",
+    "h2 التكلفة والربحية",
+    "h3 الإيرادات",
+    "h3 التكاليف",
+    "h2 المهام",
+    "h3 للتنفيذ",
+    "h3 قيد التنفيذ",
+    "h3 معطَّل",
+    "h3 تم",
+    "h2 الساعات المسجلة هذا الأسبوع",
+    "h2 المستندات المرتبطة"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 2,
    "tablesBeyond": 0,
    "indic": 0,
    "unnamed": 0,
-   "pointerOnly": 8,
+   "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "end",
+    "overlap": false,
+    "title": "Riyadh Tech Expo 2026 booth",
+    "meta": "نشط · SAR 185,000 ميزانية"
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -8931,19 +9227,37 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 Riyadh Tech Expo 2026 booth",
-    "h3 التكلفة والربحية",
-    "h3 الساعات المسجلة هذا الأسبوع",
-    "h3 المستندات المرتبطة"
+    "h1 Riyadh Tech Expo 2026 booth",
+    "h2 التكلفة والربحية",
+    "h3 الإيرادات",
+    "h3 التكاليف",
+    "h2 المهام",
+    "h3 للتنفيذ",
+    "h3 قيد التنفيذ",
+    "h3 معطَّل",
+    "h3 تم",
+    "h2 الساعات المسجلة هذا الأسبوع",
+    "h2 المستندات المرتبطة"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 2,
    "tablesBeyond": 0,
    "indic": 0,
    "unnamed": 0,
-   "pointerOnly": 8,
+   "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "end",
+    "overlap": false,
+    "title": "Riyadh Tech Expo 2026 booth",
+    "meta": "نشط · SAR 185,000 ميزانية"
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -8957,19 +9271,37 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 Riyadh Tech Expo 2026 booth",
-    "h3 التكلفة والربحية",
-    "h3 الساعات المسجلة هذا الأسبوع",
-    "h3 المستندات المرتبطة"
+    "h1 Riyadh Tech Expo 2026 booth",
+    "h2 التكلفة والربحية",
+    "h3 الإيرادات",
+    "h3 التكاليف",
+    "h2 المهام",
+    "h3 للتنفيذ",
+    "h3 قيد التنفيذ",
+    "h3 معطَّل",
+    "h3 تم",
+    "h2 الساعات المسجلة هذا الأسبوع",
+    "h2 المستندات المرتبطة"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 2,
    "tablesBeyond": 0,
    "indic": 0,
    "unnamed": 0,
-   "pointerOnly": 8,
+   "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "below",
+    "overlap": false,
+    "title": "Riyadh Tech Expo 2026 booth",
+    "meta": "نشط · SAR 185,000 ميزانية"
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -8983,12 +9315,15 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 Jeddah Hospitality Summit",
-    "h3 التكلفة والربحية",
-    "h3 الساعات المسجلة هذا الأسبوع",
-    "h3 المستندات المرتبطة"
+    "h1 Jeddah Hospitality Summit",
+    "h2 التكلفة والربحية",
+    "h3 الإيرادات",
+    "h3 التكاليف",
+    "h2 المهام",
+    "h2 الساعات المسجلة هذا الأسبوع",
+    "h2 المستندات المرتبطة"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 2,
    "tablesBeyond": 0,
@@ -8996,6 +9331,17 @@
    "unnamed": 0,
    "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "end",
+    "overlap": false,
+    "title": "Jeddah Hospitality Summit",
+    "meta": "مخطط · SAR 92,000 ميزانية"
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -9009,12 +9355,15 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 Jeddah Hospitality Summit",
-    "h3 التكلفة والربحية",
-    "h3 الساعات المسجلة هذا الأسبوع",
-    "h3 المستندات المرتبطة"
+    "h1 Jeddah Hospitality Summit",
+    "h2 التكلفة والربحية",
+    "h3 الإيرادات",
+    "h3 التكاليف",
+    "h2 المهام",
+    "h2 الساعات المسجلة هذا الأسبوع",
+    "h2 المستندات المرتبطة"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 2,
    "tablesBeyond": 0,
@@ -9022,6 +9371,17 @@
    "unnamed": 0,
    "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "end",
+    "overlap": false,
+    "title": "Jeddah Hospitality Summit",
+    "meta": "مخطط · SAR 92,000 ميزانية"
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -9035,12 +9395,15 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 Jeddah Hospitality Summit",
-    "h3 التكلفة والربحية",
-    "h3 الساعات المسجلة هذا الأسبوع",
-    "h3 المستندات المرتبطة"
+    "h1 Jeddah Hospitality Summit",
+    "h2 التكلفة والربحية",
+    "h3 الإيرادات",
+    "h3 التكاليف",
+    "h2 المهام",
+    "h2 الساعات المسجلة هذا الأسبوع",
+    "h2 المستندات المرتبطة"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 2,
    "tablesBeyond": 0,
@@ -9048,6 +9411,17 @@
    "unnamed": 0,
    "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "end",
+    "overlap": false,
+    "title": "Jeddah Hospitality Summit",
+    "meta": "مخطط · SAR 92,000 ميزانية"
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -9061,12 +9435,15 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 Jeddah Hospitality Summit",
-    "h3 التكلفة والربحية",
-    "h3 الساعات المسجلة هذا الأسبوع",
-    "h3 المستندات المرتبطة"
+    "h1 Jeddah Hospitality Summit",
+    "h2 التكلفة والربحية",
+    "h3 الإيرادات",
+    "h3 التكاليف",
+    "h2 المهام",
+    "h2 الساعات المسجلة هذا الأسبوع",
+    "h2 المستندات المرتبطة"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 2,
    "tablesBeyond": 0,
@@ -9074,6 +9451,17 @@
    "unnamed": 0,
    "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "below",
+    "overlap": false,
+    "title": "Jeddah Hospitality Summit",
+    "meta": "مخطط · SAR 92,000 ميزانية"
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -9087,9 +9475,9 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 مشروع جديد"
+    "h1 مشروع جديد"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 0,
    "tablesBeyond": 0,
@@ -9097,6 +9485,17 @@
    "unnamed": 2,
    "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "مشروع جديد",
+    "meta": null
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -9110,9 +9509,9 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 مشروع جديد"
+    "h1 مشروع جديد"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 0,
    "tablesBeyond": 0,
@@ -9120,6 +9519,17 @@
    "unnamed": 2,
    "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "مشروع جديد",
+    "meta": null
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -9133,9 +9543,9 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 مشروع جديد"
+    "h1 مشروع جديد"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 0,
    "tablesBeyond": 0,
@@ -9143,6 +9553,17 @@
    "unnamed": 2,
    "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "مشروع جديد",
+    "meta": null
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -9156,9 +9577,9 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 مشروع جديد"
+    "h1 مشروع جديد"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 0,
    "tablesBeyond": 0,
@@ -9166,6 +9587,17 @@
    "unnamed": 2,
    "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "مشروع جديد",
+    "meta": null
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -17279,6 +17711,1716 @@
     "consoleErrors": 0,
     "pageErrors": 0,
     "r418": 0
+   }
+  }
+ },
+ "c3ref": {
+  "recordedOn": {
+   "commit": "c060e8bbeb44feb54f5b666a5e3106e43ea04d70",
+   "srcClean": true,
+   "build": "D13TDfI3-9bRAHLGTvmMq",
+   "chromium": "141.0.7390.37"
+  },
+  "states": {
+   "project-detail|en|1440": {
+    "summary": [
+     {
+      "label": "Budget",
+      "value": "185,000"
+     },
+     {
+      "label": "Tasks · 0.0 hours logged",
+      "value": "8"
+     }
+    ],
+    "cost": [
+     {
+      "label": "Sales Value",
+      "value": "0"
+     },
+     {
+      "label": "Invoiced",
+      "value": "53,383"
+     },
+     {
+      "label": "Collected",
+      "value": "53,383"
+     },
+     {
+      "label": "Total Cost",
+      "value": "0"
+     },
+     {
+      "label": "Actual Profit",
+      "value": "53,383"
+     },
+     {
+      "label": "Profit Margin",
+      "value": "100.0%"
+     }
+    ],
+    "badge": {
+     "status": "profitable",
+     "tone": "success",
+     "text": "Profitable",
+     "color": "rgb(23, 115, 74)",
+     "background": "rgb(227, 242, 234)",
+     "inHeading": false,
+     "beside": null
+    },
+    "kanban": {
+     "tracks": 4,
+     "columns": 4
+    },
+    "kanbanFacts": {
+     "heads": [
+      {
+       "label": "To do",
+       "count": "3",
+       "tag": "span",
+       "height": 20,
+       "labelBox": "2,0,35.7,20",
+       "labelStyle": "\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|11.5px|700|20px|0.46px|uppercase|rgb(100, 105, 130)|0px|0px|wrap|auto",
+       "countBox": "242.1,0,7.4,20",
+       "countStyle": "\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|11.5px|700|20px|0.46px|uppercase|rgb(100, 105, 130)|0px|0px|wrap|auto"
+      },
+      {
+       "label": "In progress",
+       "count": "2",
+       "tag": "span",
+       "height": 20,
+       "labelBox": "2,0,80.6,20",
+       "labelStyle": "\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|11.5px|700|20px|0.46px|uppercase|rgb(100, 105, 130)|0px|0px|wrap|auto",
+       "countBox": "242.1,0,7.4,20",
+       "countStyle": "\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|11.5px|700|20px|0.46px|uppercase|rgb(100, 105, 130)|0px|0px|wrap|auto"
+      },
+      {
+       "label": "Blocked",
+       "count": "1",
+       "tag": "span",
+       "height": 20,
+       "labelBox": "2,0,54.6,20",
+       "labelStyle": "\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|11.5px|700|20px|0.46px|uppercase|rgb(100, 105, 130)|0px|0px|wrap|auto",
+       "countBox": "242.1,0,7.4,20",
+       "countStyle": "\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|11.5px|700|20px|0.46px|uppercase|rgb(100, 105, 130)|0px|0px|wrap|auto"
+      },
+      {
+       "label": "Done",
+       "count": "2",
+       "tag": "span",
+       "height": 20,
+       "labelBox": "2,0,33.1,20",
+       "labelStyle": "\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|11.5px|700|20px|0.46px|uppercase|rgb(100, 105, 130)|0px|0px|wrap|auto",
+       "countBox": "242.1,0,7.4,20",
+       "countStyle": "\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|11.5px|700|20px|0.46px|uppercase|rgb(100, 105, 130)|0px|0px|wrap|auto"
+      }
+     ],
+     "cards": [
+      {
+       "title": "Post-show teardown",
+       "box": "13,43,251.5,78",
+       "style": "block|border-box|251.5px|78px|0px|0px|9px|0px|11px|12px|11px|12px|1px|1px|1px|1px|solid|solid|solid|solid|rgb(226, 229, 235)|rgb(226, 229, 235)|rgb(226, 229, 235)|rgb(226, 229, 235)|11px|11px|11px|11px|rgb(255, 255, 255)|none|rgba(23, 23, 63, 0.06) 0px 1px 2px 0px|rgb(23, 23, 63)|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|normal|20px|normal|start|none|none|0px|normal|pointer|1|none|none|0px|baseline|visible|visible",
+       "inner": [
+        "13,12,225.5,20|block|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|12.5px|600|20px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|6px|Post-show teardown",
+        "13,38,225.5,28|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|20px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|0px|",
+        "13,38,71,28|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|11px|600|20px|normal|start|none|rgb(47, 79, 184)|rgb(231, 236, 250)|0px|Medium",
+        "218.5,42,20,20|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|9px|700|20px|normal|start|none|rgb(255, 255, 255)|rgba(0, 0, 0, 0)|0px|FD"
+       ]
+      },
+      {
+       "title": "Staff rota for show days",
+       "box": "13,130,251.5,80",
+       "style": "block|border-box|251.5px|80px|0px|0px|9px|0px|11px|12px|11px|12px|1px|1px|1px|1px|solid|solid|solid|solid|rgb(226, 229, 235)|rgb(226, 229, 235)|rgb(226, 229, 235)|rgb(226, 229, 235)|11px|11px|11px|11px|rgb(255, 255, 255)|none|rgba(23, 23, 63, 0.06) 0px 1px 2px 0px|rgb(23, 23, 63)|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|normal|20px|normal|start|none|none|0px|normal|pointer|1|none|none|0px|baseline|visible|visible",
+       "inner": [
+        "13,12,225.5,20|block|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|12.5px|600|20px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|6px|Staff rota for show days",
+        "13,38,225.5,30|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|20px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|0px|",
+        "13,38,52.7,30|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|11px|600|20px|normal|start|none|rgb(85, 90, 117)|rgb(255, 255, 255)|0px|Low",
+        "218.5,43,20,20|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|9px|700|20px|normal|start|none|rgb(255, 255, 255)|rgba(0, 0, 0, 0)|0px|YP"
+       ]
+      },
+      {
+       "title": "Install carpet and lighting",
+       "box": "13,219,251.5,78",
+       "style": "block|border-box|251.5px|78px|0px|0px|9px|0px|11px|12px|11px|12px|1px|1px|1px|1px|solid|solid|solid|solid|rgb(226, 229, 235)|rgb(226, 229, 235)|rgb(226, 229, 235)|rgb(226, 229, 235)|11px|11px|11px|11px|rgb(255, 255, 255)|none|rgba(23, 23, 63, 0.06) 0px 1px 2px 0px|rgb(23, 23, 63)|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|normal|20px|normal|start|none|none|0px|normal|pointer|1|none|none|0px|baseline|visible|visible",
+       "inner": [
+        "13,12,225.5,20|block|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|12.5px|600|20px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|6px|Install carpet and lighting",
+        "13,38,225.5,28|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|20px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|0px|",
+        "13,38,53.4,28|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|11px|600|20px|normal|start|none|rgb(180, 50, 45)|rgb(251, 230, 228)|0px|High",
+        "218.5,42,20,20|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|9px|700|20px|normal|start|none|rgb(255, 255, 255)|rgba(0, 0, 0, 0)|0px|FD"
+       ]
+      },
+      {
+       "title": "Book freight to venue",
+       "box": "13,43,251.5,78",
+       "style": "block|border-box|251.5px|78px|0px|0px|9px|0px|11px|12px|11px|12px|1px|1px|1px|1px|solid|solid|solid|solid|rgb(226, 229, 235)|rgb(226, 229, 235)|rgb(226, 229, 235)|rgb(226, 229, 235)|11px|11px|11px|11px|rgb(255, 255, 255)|none|rgba(23, 23, 63, 0.06) 0px 1px 2px 0px|rgb(23, 23, 63)|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|normal|20px|normal|start|none|none|0px|normal|pointer|1|none|none|0px|baseline|visible|visible",
+       "inner": [
+        "13,12,225.5,20|block|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|12.5px|600|20px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|6px|Book freight to venue",
+        "13,38,225.5,28|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|20px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|0px|",
+        "13,38,53.4,28|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|11px|600|20px|normal|start|none|rgb(180, 50, 45)|rgb(251, 230, 228)|0px|High",
+        "218.5,42,20,20|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|9px|700|20px|normal|start|none|rgb(255, 255, 255)|rgba(0, 0, 0, 0)|0px|YP"
+       ]
+      },
+      {
+       "title": "Print brochures",
+       "box": "13,130,251.5,78",
+       "style": "block|border-box|251.5px|78px|0px|0px|9px|0px|11px|12px|11px|12px|1px|1px|1px|1px|solid|solid|solid|solid|rgb(226, 229, 235)|rgb(226, 229, 235)|rgb(226, 229, 235)|rgb(226, 229, 235)|11px|11px|11px|11px|rgb(255, 255, 255)|none|rgba(23, 23, 63, 0.06) 0px 1px 2px 0px|rgb(23, 23, 63)|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|normal|20px|normal|start|none|none|0px|normal|pointer|1|none|none|0px|baseline|visible|visible",
+       "inner": [
+        "13,12,225.5,20|block|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|12.5px|600|20px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|6px|Print brochures",
+        "13,38,225.5,28|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|20px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|0px|",
+        "13,38,71,28|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|11px|600|20px|normal|start|none|rgb(47, 79, 184)|rgb(231, 236, 250)|0px|Medium",
+        "218.5,42,20,20|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|9px|700|20px|normal|start|none|rgb(255, 255, 255)|rgba(0, 0, 0, 0)|0px|LS"
+       ]
+      },
+      {
+       "title": "Venue power approval",
+       "box": "13,43,251.5,78",
+       "style": "block|border-box|251.5px|78px|0px|0px|9px|0px|11px|12px|11px|12px|1px|1px|1px|1px|solid|solid|solid|solid|rgb(226, 229, 235)|rgb(226, 229, 235)|rgb(226, 229, 235)|rgb(226, 229, 235)|11px|11px|11px|11px|rgb(255, 255, 255)|none|rgba(23, 23, 63, 0.06) 0px 1px 2px 0px|rgb(23, 23, 63)|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|normal|20px|normal|start|none|none|0px|normal|pointer|1|none|none|0px|baseline|visible|visible",
+       "inner": [
+        "13,12,225.5,20|block|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|12.5px|600|20px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|6px|Venue power approval",
+        "13,38,225.5,28|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|20px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|0px|",
+        "13,38,53.4,28|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|11px|600|20px|normal|start|none|rgb(180, 50, 45)|rgb(251, 230, 228)|0px|High",
+        "218.5,42,20,20|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|9px|700|20px|normal|start|none|rgb(255, 255, 255)|rgba(0, 0, 0, 0)|0px|KE"
+       ]
+      },
+      {
+       "title": "Order LED wall",
+       "box": "13,43,251.5,70",
+       "style": "block|border-box|251.5px|70px|0px|0px|9px|0px|11px|12px|11px|12px|1px|1px|1px|1px|solid|solid|solid|solid|rgb(226, 229, 235)|rgb(226, 229, 235)|rgb(226, 229, 235)|rgb(226, 229, 235)|11px|11px|11px|11px|rgb(255, 255, 255)|none|rgba(23, 23, 63, 0.06) 0px 1px 2px 0px|rgb(23, 23, 63)|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|normal|20px|normal|start|none|none|0px|normal|pointer|1|none|none|0px|baseline|visible|visible",
+       "inner": [
+        "13,12,225.5,20|block|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|12.5px|600|20px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|6px|Order LED wall",
+        "13,38,225.5,20|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|20px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|0px|",
+        "13,38,42.2,20|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|11px|500|16px|normal|start|none|rgb(23, 115, 74)|rgb(227, 242, 234)|0px|Done",
+        "218.5,38,20,20|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|9px|700|20px|normal|start|none|rgb(255, 255, 255)|rgba(0, 0, 0, 0)|0px|KE"
+       ]
+      },
+      {
+       "title": "Finalize booth floor plan",
+       "box": "13,122,251.5,70",
+       "style": "block|border-box|251.5px|70px|0px|0px|9px|0px|11px|12px|11px|12px|1px|1px|1px|1px|solid|solid|solid|solid|rgb(226, 229, 235)|rgb(226, 229, 235)|rgb(226, 229, 235)|rgb(226, 229, 235)|11px|11px|11px|11px|rgb(255, 255, 255)|none|rgba(23, 23, 63, 0.06) 0px 1px 2px 0px|rgb(23, 23, 63)|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|normal|20px|normal|start|none|none|0px|normal|pointer|1|none|none|0px|baseline|visible|visible",
+       "inner": [
+        "13,12,225.5,20|block|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|12.5px|600|20px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|6px|Finalize booth floor plan",
+        "13,38,225.5,20|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|20px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|0px|",
+        "13,38,42.2,20|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|11px|500|16px|normal|start|none|rgb(23, 115, 74)|rgb(227, 242, 234)|0px|Done",
+        "218.5,38,20,20|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|9px|700|20px|normal|start|none|rgb(255, 255, 255)|rgba(0, 0, 0, 0)|0px|LS"
+       ]
+      }
+     ],
+     "hover": [
+      {
+       "title": "Post-show teardown",
+       "box": "13,42,251.5,78",
+       "style": "block|border-box|251.5px|78px|0px|0px|9px|0px|11px|12px|11px|12px|1px|1px|1px|1px|solid|solid|solid|solid|rgb(232, 119, 34)|rgb(232, 119, 34)|rgb(232, 119, 34)|rgb(232, 119, 34)|11px|11px|11px|11px|rgb(255, 255, 255)|none|rgba(23, 23, 63, 0.06) 0px 1px 2px 0px|rgb(23, 23, 63)|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|normal|20px|normal|start|none|none|0px|normal|pointer|1|matrix(1, 0, 0, 1, 0, -1)|none|0px|baseline|visible|visible",
+       "inner": [
+        "13,12,225.5,20|block|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|12.5px|600|20px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|6px|Post-show teardown",
+        "13,38,225.5,28|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|20px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|0px|",
+        "13,38,71,28|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|11px|600|20px|normal|start|none|rgb(47, 79, 184)|rgb(231, 236, 250)|0px|Medium",
+        "218.5,42,20,20|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|9px|700|20px|normal|start|none|rgb(255, 255, 255)|rgba(0, 0, 0, 0)|0px|FD"
+       ]
+      },
+      {
+       "title": "Staff rota for show days",
+       "box": "13,129,251.5,80",
+       "style": "block|border-box|251.5px|80px|0px|0px|9px|0px|11px|12px|11px|12px|1px|1px|1px|1px|solid|solid|solid|solid|rgb(232, 119, 34)|rgb(232, 119, 34)|rgb(232, 119, 34)|rgb(232, 119, 34)|11px|11px|11px|11px|rgb(255, 255, 255)|none|rgba(23, 23, 63, 0.06) 0px 1px 2px 0px|rgb(23, 23, 63)|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|normal|20px|normal|start|none|none|0px|normal|pointer|1|matrix(1, 0, 0, 1, 0, -1)|none|0px|baseline|visible|visible",
+       "inner": [
+        "13,12,225.5,20|block|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|12.5px|600|20px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|6px|Staff rota for show days",
+        "13,38,225.5,30|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|20px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|0px|",
+        "13,38,52.7,30|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|11px|600|20px|normal|start|none|rgb(85, 90, 117)|rgb(255, 255, 255)|0px|Low",
+        "218.5,43,20,20|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|9px|700|20px|normal|start|none|rgb(255, 255, 255)|rgba(0, 0, 0, 0)|0px|YP"
+       ]
+      },
+      {
+       "title": "Install carpet and lighting",
+       "box": "13,218,251.5,78",
+       "style": "block|border-box|251.5px|78px|0px|0px|9px|0px|11px|12px|11px|12px|1px|1px|1px|1px|solid|solid|solid|solid|rgb(232, 119, 34)|rgb(232, 119, 34)|rgb(232, 119, 34)|rgb(232, 119, 34)|11px|11px|11px|11px|rgb(255, 255, 255)|none|rgba(23, 23, 63, 0.06) 0px 1px 2px 0px|rgb(23, 23, 63)|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|normal|20px|normal|start|none|none|0px|normal|pointer|1|matrix(1, 0, 0, 1, 0, -1)|none|0px|baseline|visible|visible",
+       "inner": [
+        "13,12,225.5,20|block|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|12.5px|600|20px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|6px|Install carpet and lighting",
+        "13,38,225.5,28|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|20px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|0px|",
+        "13,38,53.4,28|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|11px|600|20px|normal|start|none|rgb(180, 50, 45)|rgb(251, 230, 228)|0px|High",
+        "218.5,42,20,20|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|9px|700|20px|normal|start|none|rgb(255, 255, 255)|rgba(0, 0, 0, 0)|0px|FD"
+       ]
+      },
+      {
+       "title": "Book freight to venue",
+       "box": "13,42,251.5,78",
+       "style": "block|border-box|251.5px|78px|0px|0px|9px|0px|11px|12px|11px|12px|1px|1px|1px|1px|solid|solid|solid|solid|rgb(232, 119, 34)|rgb(232, 119, 34)|rgb(232, 119, 34)|rgb(232, 119, 34)|11px|11px|11px|11px|rgb(255, 255, 255)|none|rgba(23, 23, 63, 0.06) 0px 1px 2px 0px|rgb(23, 23, 63)|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|normal|20px|normal|start|none|none|0px|normal|pointer|1|matrix(1, 0, 0, 1, 0, -1)|none|0px|baseline|visible|visible",
+       "inner": [
+        "13,12,225.5,20|block|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|12.5px|600|20px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|6px|Book freight to venue",
+        "13,38,225.5,28|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|20px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|0px|",
+        "13,38,53.4,28|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|11px|600|20px|normal|start|none|rgb(180, 50, 45)|rgb(251, 230, 228)|0px|High",
+        "218.5,42,20,20|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|9px|700|20px|normal|start|none|rgb(255, 255, 255)|rgba(0, 0, 0, 0)|0px|YP"
+       ]
+      },
+      {
+       "title": "Print brochures",
+       "box": "13,129,251.5,78",
+       "style": "block|border-box|251.5px|78px|0px|0px|9px|0px|11px|12px|11px|12px|1px|1px|1px|1px|solid|solid|solid|solid|rgb(232, 119, 34)|rgb(232, 119, 34)|rgb(232, 119, 34)|rgb(232, 119, 34)|11px|11px|11px|11px|rgb(255, 255, 255)|none|rgba(23, 23, 63, 0.06) 0px 1px 2px 0px|rgb(23, 23, 63)|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|normal|20px|normal|start|none|none|0px|normal|pointer|1|matrix(1, 0, 0, 1, 0, -1)|none|0px|baseline|visible|visible",
+       "inner": [
+        "13,12,225.5,20|block|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|12.5px|600|20px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|6px|Print brochures",
+        "13,38,225.5,28|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|20px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|0px|",
+        "13,38,71,28|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|11px|600|20px|normal|start|none|rgb(47, 79, 184)|rgb(231, 236, 250)|0px|Medium",
+        "218.5,42,20,20|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|9px|700|20px|normal|start|none|rgb(255, 255, 255)|rgba(0, 0, 0, 0)|0px|LS"
+       ]
+      },
+      {
+       "title": "Venue power approval",
+       "box": "13,42,251.5,78",
+       "style": "block|border-box|251.5px|78px|0px|0px|9px|0px|11px|12px|11px|12px|1px|1px|1px|1px|solid|solid|solid|solid|rgb(232, 119, 34)|rgb(232, 119, 34)|rgb(232, 119, 34)|rgb(232, 119, 34)|11px|11px|11px|11px|rgb(255, 255, 255)|none|rgba(23, 23, 63, 0.06) 0px 1px 2px 0px|rgb(23, 23, 63)|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|normal|20px|normal|start|none|none|0px|normal|pointer|1|matrix(1, 0, 0, 1, 0, -1)|none|0px|baseline|visible|visible",
+       "inner": [
+        "13,12,225.5,20|block|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|12.5px|600|20px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|6px|Venue power approval",
+        "13,38,225.5,28|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|20px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|0px|",
+        "13,38,53.4,28|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|11px|600|20px|normal|start|none|rgb(180, 50, 45)|rgb(251, 230, 228)|0px|High",
+        "218.5,42,20,20|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|9px|700|20px|normal|start|none|rgb(255, 255, 255)|rgba(0, 0, 0, 0)|0px|KE"
+       ]
+      },
+      {
+       "title": "Order LED wall",
+       "box": "13,42,251.5,70",
+       "style": "block|border-box|251.5px|70px|0px|0px|9px|0px|11px|12px|11px|12px|1px|1px|1px|1px|solid|solid|solid|solid|rgb(232, 119, 34)|rgb(232, 119, 34)|rgb(232, 119, 34)|rgb(232, 119, 34)|11px|11px|11px|11px|rgb(255, 255, 255)|none|rgba(23, 23, 63, 0.06) 0px 1px 2px 0px|rgb(23, 23, 63)|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|normal|20px|normal|start|none|none|0px|normal|pointer|1|matrix(1, 0, 0, 1, 0, -1)|none|0px|baseline|visible|visible",
+       "inner": [
+        "13,12,225.5,20|block|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|12.5px|600|20px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|6px|Order LED wall",
+        "13,38,225.5,20|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|20px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|0px|",
+        "13,38,42.2,20|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|11px|500|16px|normal|start|none|rgb(23, 115, 74)|rgb(227, 242, 234)|0px|Done",
+        "218.5,38,20,20|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|9px|700|20px|normal|start|none|rgb(255, 255, 255)|rgba(0, 0, 0, 0)|0px|KE"
+       ]
+      },
+      {
+       "title": "Finalize booth floor plan",
+       "box": "13,121,251.5,70",
+       "style": "block|border-box|251.5px|70px|0px|0px|9px|0px|11px|12px|11px|12px|1px|1px|1px|1px|solid|solid|solid|solid|rgb(232, 119, 34)|rgb(232, 119, 34)|rgb(232, 119, 34)|rgb(232, 119, 34)|11px|11px|11px|11px|rgb(255, 255, 255)|none|rgba(23, 23, 63, 0.06) 0px 1px 2px 0px|rgb(23, 23, 63)|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|normal|20px|normal|start|none|none|0px|normal|pointer|1|matrix(1, 0, 0, 1, 0, -1)|none|0px|baseline|visible|visible",
+       "inner": [
+        "13,12,225.5,20|block|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|12.5px|600|20px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|6px|Finalize booth floor plan",
+        "13,38,225.5,20|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|20px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|0px|",
+        "13,38,42.2,20|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|11px|500|16px|normal|start|none|rgb(23, 115, 74)|rgb(227, 242, 234)|0px|Done",
+        "218.5,38,20,20|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|9px|700|20px|normal|start|none|rgb(255, 255, 255)|rgba(0, 0, 0, 0)|0px|LS"
+       ]
+      }
+     ]
+    }
+   },
+   "project-detail|en|1024": {
+    "summary": [
+     {
+      "label": "Budget",
+      "value": "185,000"
+     },
+     {
+      "label": "Tasks · 0.0 hours logged",
+      "value": "8"
+     }
+    ],
+    "cost": [
+     {
+      "label": "Sales Value",
+      "value": "0"
+     },
+     {
+      "label": "Invoiced",
+      "value": "53,383"
+     },
+     {
+      "label": "Collected",
+      "value": "53,383"
+     },
+     {
+      "label": "Total Cost",
+      "value": "0"
+     },
+     {
+      "label": "Actual Profit",
+      "value": "53,383"
+     },
+     {
+      "label": "Profit Margin",
+      "value": "100.0%"
+     }
+    ],
+    "badge": {
+     "status": "profitable",
+     "tone": "success",
+     "text": "Profitable",
+     "color": "rgb(23, 115, 74)",
+     "background": "rgb(227, 242, 234)",
+     "inHeading": false,
+     "beside": null
+    },
+    "kanban": {
+     "tracks": 2,
+     "columns": 4
+    },
+    "kanbanFacts": null
+   },
+   "project-detail|en|768": {
+    "summary": [
+     {
+      "label": "Budget",
+      "value": "185,000"
+     },
+     {
+      "label": "Tasks · 0.0 hours logged",
+      "value": "8"
+     }
+    ],
+    "cost": [
+     {
+      "label": "Sales Value",
+      "value": "0"
+     },
+     {
+      "label": "Invoiced",
+      "value": "53,383"
+     },
+     {
+      "label": "Collected",
+      "value": "53,383"
+     },
+     {
+      "label": "Total Cost",
+      "value": "0"
+     },
+     {
+      "label": "Actual Profit",
+      "value": "53,383"
+     },
+     {
+      "label": "Profit Margin",
+      "value": "100.0%"
+     }
+    ],
+    "badge": {
+     "status": "profitable",
+     "tone": "success",
+     "text": "Profitable",
+     "color": "rgb(23, 115, 74)",
+     "background": "rgb(227, 242, 234)",
+     "inHeading": false,
+     "beside": null
+    },
+    "kanban": {
+     "tracks": 2,
+     "columns": 4
+    },
+    "kanbanFacts": null
+   },
+   "project-detail|en|390": {
+    "summary": [
+     {
+      "label": "Budget",
+      "value": "185,000"
+     },
+     {
+      "label": "Tasks · 0.0 hours logged",
+      "value": "8"
+     }
+    ],
+    "cost": [
+     {
+      "label": "Sales Value",
+      "value": "0"
+     },
+     {
+      "label": "Invoiced",
+      "value": "53,383"
+     },
+     {
+      "label": "Collected",
+      "value": "53,383"
+     },
+     {
+      "label": "Total Cost",
+      "value": "0"
+     },
+     {
+      "label": "Actual Profit",
+      "value": "53,383"
+     },
+     {
+      "label": "Profit Margin",
+      "value": "100.0%"
+     }
+    ],
+    "badge": {
+     "status": "profitable",
+     "tone": "success",
+     "text": "Profitable",
+     "color": "rgb(23, 115, 74)",
+     "background": "rgb(227, 242, 234)",
+     "inHeading": false,
+     "beside": null
+    },
+    "kanban": {
+     "tracks": 2,
+     "columns": 4
+    },
+    "kanbanFacts": {
+     "heads": [
+      {
+       "label": "To do",
+       "count": "3",
+       "tag": "span",
+       "height": 20,
+       "labelBox": "2,0,35.7,20",
+       "labelStyle": "\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|11.5px|700|20px|0.46px|uppercase|rgb(100, 105, 130)|0px|0px|wrap|auto",
+       "countBox": "140.6,0,7.4,20",
+       "countStyle": "\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|11.5px|700|20px|0.46px|uppercase|rgb(100, 105, 130)|0px|0px|wrap|auto"
+      },
+      {
+       "label": "In progress",
+       "count": "2",
+       "tag": "span",
+       "height": 20,
+       "labelBox": "2,0,80.6,20",
+       "labelStyle": "\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|11.5px|700|20px|0.46px|uppercase|rgb(100, 105, 130)|0px|0px|wrap|auto",
+       "countBox": "140.6,0,7.4,20",
+       "countStyle": "\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|11.5px|700|20px|0.46px|uppercase|rgb(100, 105, 130)|0px|0px|wrap|auto"
+      },
+      {
+       "label": "Blocked",
+       "count": "1",
+       "tag": "span",
+       "height": 20,
+       "labelBox": "2,0,54.6,20",
+       "labelStyle": "\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|11.5px|700|20px|0.46px|uppercase|rgb(100, 105, 130)|0px|0px|wrap|auto",
+       "countBox": "140.6,0,7.4,20",
+       "countStyle": "\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|11.5px|700|20px|0.46px|uppercase|rgb(100, 105, 130)|0px|0px|wrap|auto"
+      },
+      {
+       "label": "Done",
+       "count": "2",
+       "tag": "span",
+       "height": 20,
+       "labelBox": "2,0,33.1,20",
+       "labelStyle": "\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|11.5px|700|20px|0.46px|uppercase|rgb(100, 105, 130)|0px|0px|wrap|auto",
+       "countBox": "140.6,0,7.4,20",
+       "countStyle": "\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|11.5px|700|20px|0.46px|uppercase|rgb(100, 105, 130)|0px|0px|wrap|auto"
+      }
+     ],
+     "cards": [
+      {
+       "title": "Post-show teardown",
+       "box": "13,43,150,78",
+       "style": "block|border-box|150px|78px|0px|0px|9px|0px|11px|12px|11px|12px|1px|1px|1px|1px|solid|solid|solid|solid|rgb(226, 229, 235)|rgb(226, 229, 235)|rgb(226, 229, 235)|rgb(226, 229, 235)|11px|11px|11px|11px|rgb(255, 255, 255)|none|rgba(23, 23, 63, 0.06) 0px 1px 2px 0px|rgb(23, 23, 63)|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|normal|20px|normal|start|none|none|0px|normal|pointer|1|none|none|0px|baseline|visible|visible",
+       "inner": [
+        "13,12,124,20|block|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|12.5px|600|20px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|6px|Post-show teardown",
+        "13,38,124,28|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|20px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|0px|",
+        "13,38,71,28|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|11px|600|20px|normal|start|none|rgb(47, 79, 184)|rgb(231, 236, 250)|0px|Medium",
+        "117,42,20,20|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|9px|700|20px|normal|start|none|rgb(255, 255, 255)|rgba(0, 0, 0, 0)|0px|FD"
+       ]
+      },
+      {
+       "title": "Staff rota for show days",
+       "box": "13,130,150,100",
+       "style": "block|border-box|150px|100px|0px|0px|9px|0px|11px|12px|11px|12px|1px|1px|1px|1px|solid|solid|solid|solid|rgb(226, 229, 235)|rgb(226, 229, 235)|rgb(226, 229, 235)|rgb(226, 229, 235)|11px|11px|11px|11px|rgb(255, 255, 255)|none|rgba(23, 23, 63, 0.06) 0px 1px 2px 0px|rgb(23, 23, 63)|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|normal|20px|normal|start|none|none|0px|normal|pointer|1|none|none|0px|baseline|visible|visible",
+       "inner": [
+        "13,12,124,40|block|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|12.5px|600|20px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|6px|Staff rota for show days",
+        "13,58,124,30|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|20px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|0px|",
+        "13,58,52.7,30|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|11px|600|20px|normal|start|none|rgb(85, 90, 117)|rgb(255, 255, 255)|0px|Low",
+        "117,63,20,20|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|9px|700|20px|normal|start|none|rgb(255, 255, 255)|rgba(0, 0, 0, 0)|0px|YP"
+       ]
+      },
+      {
+       "title": "Install carpet and lighting",
+       "box": "13,239,150,98",
+       "style": "block|border-box|150px|98px|0px|0px|9px|0px|11px|12px|11px|12px|1px|1px|1px|1px|solid|solid|solid|solid|rgb(226, 229, 235)|rgb(226, 229, 235)|rgb(226, 229, 235)|rgb(226, 229, 235)|11px|11px|11px|11px|rgb(255, 255, 255)|none|rgba(23, 23, 63, 0.06) 0px 1px 2px 0px|rgb(23, 23, 63)|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|normal|20px|normal|start|none|none|0px|normal|pointer|1|none|none|0px|baseline|visible|visible",
+       "inner": [
+        "13,12,124,40|block|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|12.5px|600|20px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|6px|Install carpet and lighting",
+        "13,58,124,28|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|20px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|0px|",
+        "13,58,53.4,28|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|11px|600|20px|normal|start|none|rgb(180, 50, 45)|rgb(251, 230, 228)|0px|High",
+        "117,62,20,20|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|9px|700|20px|normal|start|none|rgb(255, 255, 255)|rgba(0, 0, 0, 0)|0px|FD"
+       ]
+      },
+      {
+       "title": "Book freight to venue",
+       "box": "13,43,150,78",
+       "style": "block|border-box|150px|78px|0px|0px|9px|0px|11px|12px|11px|12px|1px|1px|1px|1px|solid|solid|solid|solid|rgb(226, 229, 235)|rgb(226, 229, 235)|rgb(226, 229, 235)|rgb(226, 229, 235)|11px|11px|11px|11px|rgb(255, 255, 255)|none|rgba(23, 23, 63, 0.06) 0px 1px 2px 0px|rgb(23, 23, 63)|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|normal|20px|normal|start|none|none|0px|normal|pointer|1|none|none|0px|baseline|visible|visible",
+       "inner": [
+        "13,12,124,20|block|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|12.5px|600|20px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|6px|Book freight to venue",
+        "13,38,124,28|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|20px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|0px|",
+        "13,38,53.4,28|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|11px|600|20px|normal|start|none|rgb(180, 50, 45)|rgb(251, 230, 228)|0px|High",
+        "117,42,20,20|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|9px|700|20px|normal|start|none|rgb(255, 255, 255)|rgba(0, 0, 0, 0)|0px|YP"
+       ]
+      },
+      {
+       "title": "Print brochures",
+       "box": "13,130,150,78",
+       "style": "block|border-box|150px|78px|0px|0px|9px|0px|11px|12px|11px|12px|1px|1px|1px|1px|solid|solid|solid|solid|rgb(226, 229, 235)|rgb(226, 229, 235)|rgb(226, 229, 235)|rgb(226, 229, 235)|11px|11px|11px|11px|rgb(255, 255, 255)|none|rgba(23, 23, 63, 0.06) 0px 1px 2px 0px|rgb(23, 23, 63)|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|normal|20px|normal|start|none|none|0px|normal|pointer|1|none|none|0px|baseline|visible|visible",
+       "inner": [
+        "13,12,124,20|block|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|12.5px|600|20px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|6px|Print brochures",
+        "13,38,124,28|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|20px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|0px|",
+        "13,38,71,28|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|11px|600|20px|normal|start|none|rgb(47, 79, 184)|rgb(231, 236, 250)|0px|Medium",
+        "117,42,20,20|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|9px|700|20px|normal|start|none|rgb(255, 255, 255)|rgba(0, 0, 0, 0)|0px|LS"
+       ]
+      },
+      {
+       "title": "Venue power approval",
+       "box": "13,43,150,98",
+       "style": "block|border-box|150px|98px|0px|0px|9px|0px|11px|12px|11px|12px|1px|1px|1px|1px|solid|solid|solid|solid|rgb(226, 229, 235)|rgb(226, 229, 235)|rgb(226, 229, 235)|rgb(226, 229, 235)|11px|11px|11px|11px|rgb(255, 255, 255)|none|rgba(23, 23, 63, 0.06) 0px 1px 2px 0px|rgb(23, 23, 63)|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|normal|20px|normal|start|none|none|0px|normal|pointer|1|none|none|0px|baseline|visible|visible",
+       "inner": [
+        "13,12,124,40|block|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|12.5px|600|20px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|6px|Venue power approval",
+        "13,58,124,28|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|20px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|0px|",
+        "13,58,53.4,28|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|11px|600|20px|normal|start|none|rgb(180, 50, 45)|rgb(251, 230, 228)|0px|High",
+        "117,62,20,20|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|9px|700|20px|normal|start|none|rgb(255, 255, 255)|rgba(0, 0, 0, 0)|0px|KE"
+       ]
+      },
+      {
+       "title": "Order LED wall",
+       "box": "13,43,150,70",
+       "style": "block|border-box|150px|70px|0px|0px|9px|0px|11px|12px|11px|12px|1px|1px|1px|1px|solid|solid|solid|solid|rgb(226, 229, 235)|rgb(226, 229, 235)|rgb(226, 229, 235)|rgb(226, 229, 235)|11px|11px|11px|11px|rgb(255, 255, 255)|none|rgba(23, 23, 63, 0.06) 0px 1px 2px 0px|rgb(23, 23, 63)|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|normal|20px|normal|start|none|none|0px|normal|pointer|1|none|none|0px|baseline|visible|visible",
+       "inner": [
+        "13,12,124,20|block|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|12.5px|600|20px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|6px|Order LED wall",
+        "13,38,124,20|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|20px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|0px|",
+        "13,38,42.2,20|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|11px|500|16px|normal|start|none|rgb(23, 115, 74)|rgb(227, 242, 234)|0px|Done",
+        "117,38,20,20|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|9px|700|20px|normal|start|none|rgb(255, 255, 255)|rgba(0, 0, 0, 0)|0px|KE"
+       ]
+      },
+      {
+       "title": "Finalize booth floor plan",
+       "box": "13,122,150,90",
+       "style": "block|border-box|150px|90px|0px|0px|9px|0px|11px|12px|11px|12px|1px|1px|1px|1px|solid|solid|solid|solid|rgb(226, 229, 235)|rgb(226, 229, 235)|rgb(226, 229, 235)|rgb(226, 229, 235)|11px|11px|11px|11px|rgb(255, 255, 255)|none|rgba(23, 23, 63, 0.06) 0px 1px 2px 0px|rgb(23, 23, 63)|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|normal|20px|normal|start|none|none|0px|normal|pointer|1|none|none|0px|baseline|visible|visible",
+       "inner": [
+        "13,12,124,40|block|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|12.5px|600|20px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|6px|Finalize booth floor plan",
+        "13,58,124,20|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|20px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|0px|",
+        "13,58,42.2,20|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|11px|500|16px|normal|start|none|rgb(23, 115, 74)|rgb(227, 242, 234)|0px|Done",
+        "117,58,20,20|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|9px|700|20px|normal|start|none|rgb(255, 255, 255)|rgba(0, 0, 0, 0)|0px|LS"
+       ]
+      }
+     ],
+     "hover": [
+      {
+       "title": "Post-show teardown",
+       "box": "13,42,150,78",
+       "style": "block|border-box|150px|78px|0px|0px|9px|0px|11px|12px|11px|12px|1px|1px|1px|1px|solid|solid|solid|solid|rgb(232, 119, 34)|rgb(232, 119, 34)|rgb(232, 119, 34)|rgb(232, 119, 34)|11px|11px|11px|11px|rgb(255, 255, 255)|none|rgba(23, 23, 63, 0.06) 0px 1px 2px 0px|rgb(23, 23, 63)|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|normal|20px|normal|start|none|none|0px|normal|pointer|1|matrix(1, 0, 0, 1, 0, -1)|none|0px|baseline|visible|visible",
+       "inner": [
+        "13,12,124,20|block|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|12.5px|600|20px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|6px|Post-show teardown",
+        "13,38,124,28|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|20px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|0px|",
+        "13,38,71,28|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|11px|600|20px|normal|start|none|rgb(47, 79, 184)|rgb(231, 236, 250)|0px|Medium",
+        "117,42,20,20|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|9px|700|20px|normal|start|none|rgb(255, 255, 255)|rgba(0, 0, 0, 0)|0px|FD"
+       ]
+      },
+      {
+       "title": "Staff rota for show days",
+       "box": "13,129,150,100",
+       "style": "block|border-box|150px|100px|0px|0px|9px|0px|11px|12px|11px|12px|1px|1px|1px|1px|solid|solid|solid|solid|rgb(232, 119, 34)|rgb(232, 119, 34)|rgb(232, 119, 34)|rgb(232, 119, 34)|11px|11px|11px|11px|rgb(255, 255, 255)|none|rgba(23, 23, 63, 0.06) 0px 1px 2px 0px|rgb(23, 23, 63)|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|normal|20px|normal|start|none|none|0px|normal|pointer|1|matrix(1, 0, 0, 1, 0, -1)|none|0px|baseline|visible|visible",
+       "inner": [
+        "13,12,124,40|block|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|12.5px|600|20px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|6px|Staff rota for show days",
+        "13,58,124,30|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|20px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|0px|",
+        "13,58,52.7,30|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|11px|600|20px|normal|start|none|rgb(85, 90, 117)|rgb(255, 255, 255)|0px|Low",
+        "117,63,20,20|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|9px|700|20px|normal|start|none|rgb(255, 255, 255)|rgba(0, 0, 0, 0)|0px|YP"
+       ]
+      },
+      {
+       "title": "Install carpet and lighting",
+       "box": "13,238,150,98",
+       "style": "block|border-box|150px|98px|0px|0px|9px|0px|11px|12px|11px|12px|1px|1px|1px|1px|solid|solid|solid|solid|rgb(232, 119, 34)|rgb(232, 119, 34)|rgb(232, 119, 34)|rgb(232, 119, 34)|11px|11px|11px|11px|rgb(255, 255, 255)|none|rgba(23, 23, 63, 0.06) 0px 1px 2px 0px|rgb(23, 23, 63)|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|normal|20px|normal|start|none|none|0px|normal|pointer|1|matrix(1, 0, 0, 1, 0, -1)|none|0px|baseline|visible|visible",
+       "inner": [
+        "13,12,124,40|block|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|12.5px|600|20px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|6px|Install carpet and lighting",
+        "13,58,124,28|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|20px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|0px|",
+        "13,58,53.4,28|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|11px|600|20px|normal|start|none|rgb(180, 50, 45)|rgb(251, 230, 228)|0px|High",
+        "117,62,20,20|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|9px|700|20px|normal|start|none|rgb(255, 255, 255)|rgba(0, 0, 0, 0)|0px|FD"
+       ]
+      },
+      {
+       "title": "Book freight to venue",
+       "box": "13,42,150,78",
+       "style": "block|border-box|150px|78px|0px|0px|9px|0px|11px|12px|11px|12px|1px|1px|1px|1px|solid|solid|solid|solid|rgb(232, 119, 34)|rgb(232, 119, 34)|rgb(232, 119, 34)|rgb(232, 119, 34)|11px|11px|11px|11px|rgb(255, 255, 255)|none|rgba(23, 23, 63, 0.06) 0px 1px 2px 0px|rgb(23, 23, 63)|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|normal|20px|normal|start|none|none|0px|normal|pointer|1|matrix(1, 0, 0, 1, 0, -1)|none|0px|baseline|visible|visible",
+       "inner": [
+        "13,12,124,20|block|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|12.5px|600|20px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|6px|Book freight to venue",
+        "13,38,124,28|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|20px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|0px|",
+        "13,38,53.4,28|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|11px|600|20px|normal|start|none|rgb(180, 50, 45)|rgb(251, 230, 228)|0px|High",
+        "117,42,20,20|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|9px|700|20px|normal|start|none|rgb(255, 255, 255)|rgba(0, 0, 0, 0)|0px|YP"
+       ]
+      },
+      {
+       "title": "Print brochures",
+       "box": "13,129,150,78",
+       "style": "block|border-box|150px|78px|0px|0px|9px|0px|11px|12px|11px|12px|1px|1px|1px|1px|solid|solid|solid|solid|rgb(232, 119, 34)|rgb(232, 119, 34)|rgb(232, 119, 34)|rgb(232, 119, 34)|11px|11px|11px|11px|rgb(255, 255, 255)|none|rgba(23, 23, 63, 0.06) 0px 1px 2px 0px|rgb(23, 23, 63)|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|normal|20px|normal|start|none|none|0px|normal|pointer|1|matrix(1, 0, 0, 1, 0, -1)|none|0px|baseline|visible|visible",
+       "inner": [
+        "13,12,124,20|block|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|12.5px|600|20px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|6px|Print brochures",
+        "13,38,124,28|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|20px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|0px|",
+        "13,38,71,28|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|11px|600|20px|normal|start|none|rgb(47, 79, 184)|rgb(231, 236, 250)|0px|Medium",
+        "117,42,20,20|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|9px|700|20px|normal|start|none|rgb(255, 255, 255)|rgba(0, 0, 0, 0)|0px|LS"
+       ]
+      },
+      {
+       "title": "Venue power approval",
+       "box": "13,42,150,98",
+       "style": "block|border-box|150px|98px|0px|0px|9px|0px|11px|12px|11px|12px|1px|1px|1px|1px|solid|solid|solid|solid|rgb(232, 119, 34)|rgb(232, 119, 34)|rgb(232, 119, 34)|rgb(232, 119, 34)|11px|11px|11px|11px|rgb(255, 255, 255)|none|rgba(23, 23, 63, 0.06) 0px 1px 2px 0px|rgb(23, 23, 63)|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|normal|20px|normal|start|none|none|0px|normal|pointer|1|matrix(1, 0, 0, 1, 0, -1)|none|0px|baseline|visible|visible",
+       "inner": [
+        "13,12,124,40|block|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|12.5px|600|20px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|6px|Venue power approval",
+        "13,58,124,28|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|20px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|0px|",
+        "13,58,53.4,28|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|11px|600|20px|normal|start|none|rgb(180, 50, 45)|rgb(251, 230, 228)|0px|High",
+        "117,62,20,20|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|9px|700|20px|normal|start|none|rgb(255, 255, 255)|rgba(0, 0, 0, 0)|0px|KE"
+       ]
+      },
+      {
+       "title": "Order LED wall",
+       "box": "13,42,150,70",
+       "style": "block|border-box|150px|70px|0px|0px|9px|0px|11px|12px|11px|12px|1px|1px|1px|1px|solid|solid|solid|solid|rgb(232, 119, 34)|rgb(232, 119, 34)|rgb(232, 119, 34)|rgb(232, 119, 34)|11px|11px|11px|11px|rgb(255, 255, 255)|none|rgba(23, 23, 63, 0.06) 0px 1px 2px 0px|rgb(23, 23, 63)|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|normal|20px|normal|start|none|none|0px|normal|pointer|1|matrix(1, 0, 0, 1, 0, -1)|none|0px|baseline|visible|visible",
+       "inner": [
+        "13,12,124,20|block|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|12.5px|600|20px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|6px|Order LED wall",
+        "13,38,124,20|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|20px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|0px|",
+        "13,38,42.2,20|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|11px|500|16px|normal|start|none|rgb(23, 115, 74)|rgb(227, 242, 234)|0px|Done",
+        "117,38,20,20|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|9px|700|20px|normal|start|none|rgb(255, 255, 255)|rgba(0, 0, 0, 0)|0px|KE"
+       ]
+      },
+      {
+       "title": "Finalize booth floor plan",
+       "box": "13,121,150,90",
+       "style": "block|border-box|150px|90px|0px|0px|9px|0px|11px|12px|11px|12px|1px|1px|1px|1px|solid|solid|solid|solid|rgb(232, 119, 34)|rgb(232, 119, 34)|rgb(232, 119, 34)|rgb(232, 119, 34)|11px|11px|11px|11px|rgb(255, 255, 255)|none|rgba(23, 23, 63, 0.06) 0px 1px 2px 0px|rgb(23, 23, 63)|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|normal|20px|normal|start|none|none|0px|normal|pointer|1|matrix(1, 0, 0, 1, 0, -1)|none|0px|baseline|visible|visible",
+       "inner": [
+        "13,12,124,40|block|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|12.5px|600|20px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|6px|Finalize booth floor plan",
+        "13,58,124,20|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|20px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|0px|",
+        "13,58,42.2,20|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|11px|500|16px|normal|start|none|rgb(23, 115, 74)|rgb(227, 242, 234)|0px|Done",
+        "117,58,20,20|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|9px|700|20px|normal|start|none|rgb(255, 255, 255)|rgba(0, 0, 0, 0)|0px|LS"
+       ]
+      }
+     ]
+    }
+   },
+   "project-empty|en|1440": {
+    "summary": [
+     {
+      "label": "Budget",
+      "value": "92,000"
+     },
+     {
+      "label": "Tasks · 0.0 hours logged",
+      "value": "0"
+     }
+    ],
+    "cost": [
+     {
+      "label": "Sales Value",
+      "value": "0"
+     },
+     {
+      "label": "Invoiced",
+      "value": "28,842"
+     },
+     {
+      "label": "Collected",
+      "value": "11,537"
+     },
+     {
+      "label": "Total Cost",
+      "value": "0"
+     },
+     {
+      "label": "Actual Profit",
+      "value": "28,842"
+     },
+     {
+      "label": "Profit Margin",
+      "value": "100.0%"
+     }
+    ],
+    "badge": {
+     "status": "profitable",
+     "tone": "success",
+     "text": "Profitable",
+     "color": "rgb(23, 115, 74)",
+     "background": "rgb(227, 242, 234)",
+     "inHeading": false,
+     "beside": null
+    },
+    "kanban": null,
+    "kanbanFacts": null
+   },
+   "project-empty|en|1024": {
+    "summary": [
+     {
+      "label": "Budget",
+      "value": "92,000"
+     },
+     {
+      "label": "Tasks · 0.0 hours logged",
+      "value": "0"
+     }
+    ],
+    "cost": [
+     {
+      "label": "Sales Value",
+      "value": "0"
+     },
+     {
+      "label": "Invoiced",
+      "value": "28,842"
+     },
+     {
+      "label": "Collected",
+      "value": "11,537"
+     },
+     {
+      "label": "Total Cost",
+      "value": "0"
+     },
+     {
+      "label": "Actual Profit",
+      "value": "28,842"
+     },
+     {
+      "label": "Profit Margin",
+      "value": "100.0%"
+     }
+    ],
+    "badge": {
+     "status": "profitable",
+     "tone": "success",
+     "text": "Profitable",
+     "color": "rgb(23, 115, 74)",
+     "background": "rgb(227, 242, 234)",
+     "inHeading": false,
+     "beside": null
+    },
+    "kanban": null,
+    "kanbanFacts": null
+   },
+   "project-empty|en|768": {
+    "summary": [
+     {
+      "label": "Budget",
+      "value": "92,000"
+     },
+     {
+      "label": "Tasks · 0.0 hours logged",
+      "value": "0"
+     }
+    ],
+    "cost": [
+     {
+      "label": "Sales Value",
+      "value": "0"
+     },
+     {
+      "label": "Invoiced",
+      "value": "28,842"
+     },
+     {
+      "label": "Collected",
+      "value": "11,537"
+     },
+     {
+      "label": "Total Cost",
+      "value": "0"
+     },
+     {
+      "label": "Actual Profit",
+      "value": "28,842"
+     },
+     {
+      "label": "Profit Margin",
+      "value": "100.0%"
+     }
+    ],
+    "badge": {
+     "status": "profitable",
+     "tone": "success",
+     "text": "Profitable",
+     "color": "rgb(23, 115, 74)",
+     "background": "rgb(227, 242, 234)",
+     "inHeading": false,
+     "beside": null
+    },
+    "kanban": null,
+    "kanbanFacts": null
+   },
+   "project-empty|en|390": {
+    "summary": [
+     {
+      "label": "Budget",
+      "value": "92,000"
+     },
+     {
+      "label": "Tasks · 0.0 hours logged",
+      "value": "0"
+     }
+    ],
+    "cost": [
+     {
+      "label": "Sales Value",
+      "value": "0"
+     },
+     {
+      "label": "Invoiced",
+      "value": "28,842"
+     },
+     {
+      "label": "Collected",
+      "value": "11,537"
+     },
+     {
+      "label": "Total Cost",
+      "value": "0"
+     },
+     {
+      "label": "Actual Profit",
+      "value": "28,842"
+     },
+     {
+      "label": "Profit Margin",
+      "value": "100.0%"
+     }
+    ],
+    "badge": {
+     "status": "profitable",
+     "tone": "success",
+     "text": "Profitable",
+     "color": "rgb(23, 115, 74)",
+     "background": "rgb(227, 242, 234)",
+     "inHeading": false,
+     "beside": null
+    },
+    "kanban": null,
+    "kanbanFacts": null
+   },
+   "project-detail|ar|1440": {
+    "summary": [
+     {
+      "label": "الميزانية",
+      "value": "185,000"
+     },
+     {
+      "label": "المهام · 0.0 الساعات المسجَّلة",
+      "value": "8"
+     }
+    ],
+    "cost": [
+     {
+      "label": "قيمة المبيعات",
+      "value": "0"
+     },
+     {
+      "label": "المفوتر",
+      "value": "53,383"
+     },
+     {
+      "label": "المُحصَّل",
+      "value": "53,383"
+     },
+     {
+      "label": "إجمالي التكلفة",
+      "value": "0"
+     },
+     {
+      "label": "الربح الفعلي",
+      "value": "53,383"
+     },
+     {
+      "label": "هامش الربح",
+      "value": "100.0%"
+     }
+    ],
+    "badge": {
+     "status": "profitable",
+     "tone": "success",
+     "text": "رابح",
+     "color": "rgb(23, 115, 74)",
+     "background": "rgb(227, 242, 234)",
+     "inHeading": false,
+     "beside": null
+    },
+    "kanban": {
+     "tracks": 4,
+     "columns": 4
+    },
+    "kanbanFacts": {
+     "heads": [
+      {
+       "label": "للتنفيذ",
+       "count": "3",
+       "tag": "span",
+       "height": 24,
+       "labelBox": "219.2,0,30.3,24",
+       "labelStyle": "\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|11.5px|700|24px|normal|none|rgb(100, 105, 130)|0px|0px|wrap|auto",
+       "countBox": "2,0,6.9,24",
+       "countStyle": "\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|11.5px|700|24px|normal|none|rgb(100, 105, 130)|0px|0px|wrap|auto"
+      },
+      {
+       "label": "قيد التنفيذ",
+       "count": "2",
+       "tag": "span",
+       "height": 24,
+       "labelBox": "201.6,0,47.9,24",
+       "labelStyle": "\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|11.5px|700|24px|normal|none|rgb(100, 105, 130)|0px|0px|wrap|auto",
+       "countBox": "2,0,6.9,24",
+       "countStyle": "\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|11.5px|700|24px|normal|none|rgb(100, 105, 130)|0px|0px|wrap|auto"
+      },
+      {
+       "label": "معطَّل",
+       "count": "1",
+       "tag": "span",
+       "height": 24,
+       "labelBox": "221.4,0,28.1,24",
+       "labelStyle": "\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|11.5px|700|24px|normal|none|rgb(100, 105, 130)|0px|0px|wrap|auto",
+       "countBox": "2,0,6.9,24",
+       "countStyle": "\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|11.5px|700|24px|normal|none|rgb(100, 105, 130)|0px|0px|wrap|auto"
+      },
+      {
+       "label": "تم",
+       "count": "2",
+       "tag": "span",
+       "height": 24,
+       "labelBox": "238.3,0,11.2,24",
+       "labelStyle": "\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|11.5px|700|24px|normal|none|rgb(100, 105, 130)|0px|0px|wrap|auto",
+       "countBox": "2,0,6.9,24",
+       "countStyle": "\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|11.5px|700|24px|normal|none|rgb(100, 105, 130)|0px|0px|wrap|auto"
+      }
+     ],
+     "cards": [
+      {
+       "title": "Post-show teardown",
+       "box": "13,47,251.5,86",
+       "style": "block|border-box|251.5px|86px|0px|0px|9px|0px|11px|12px|11px|12px|1px|1px|1px|1px|solid|solid|solid|solid|rgb(226, 229, 235)|rgb(226, 229, 235)|rgb(226, 229, 235)|rgb(226, 229, 235)|11px|11px|11px|11px|rgb(255, 255, 255)|none|rgba(23, 23, 63, 0.06) 0px 1px 2px 0px|rgb(23, 23, 63)|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|normal|24px|normal|start|none|none|0px|normal|pointer|1|none|none|0px|baseline|visible|visible",
+       "inner": [
+        "13,12,225.5,24|block|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|12.5px|600|24px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|6px|Post-show teardown",
+        "13,42,225.5,32|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|24px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|0px|",
+        "177,42,61.5,32|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|11px|600|24px|normal|start|none|rgb(47, 79, 184)|rgb(231, 236, 250)|0px|متوسط",
+        "13,48,20,20|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|9px|700|24px|normal|start|none|rgb(255, 255, 255)|rgba(0, 0, 0, 0)|0px|FD"
+       ]
+      },
+      {
+       "title": "Staff rota for show days",
+       "box": "13,142,251.5,88",
+       "style": "block|border-box|251.5px|88px|0px|0px|9px|0px|11px|12px|11px|12px|1px|1px|1px|1px|solid|solid|solid|solid|rgb(226, 229, 235)|rgb(226, 229, 235)|rgb(226, 229, 235)|rgb(226, 229, 235)|11px|11px|11px|11px|rgb(255, 255, 255)|none|rgba(23, 23, 63, 0.06) 0px 1px 2px 0px|rgb(23, 23, 63)|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|normal|24px|normal|start|none|none|0px|normal|pointer|1|none|none|0px|baseline|visible|visible",
+       "inner": [
+        "13,12,225.5,24|block|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|12.5px|600|24px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|6px|Staff rota for show days",
+        "13,42,225.5,34|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|24px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|0px|",
+        "170.4,42,68.1,34|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|11px|600|24px|normal|start|none|rgb(85, 90, 117)|rgb(255, 255, 255)|0px|منخفض",
+        "13,49,20,20|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|9px|700|24px|normal|start|none|rgb(255, 255, 255)|rgba(0, 0, 0, 0)|0px|YP"
+       ]
+      },
+      {
+       "title": "Install carpet and lighting",
+       "box": "13,239,251.5,86",
+       "style": "block|border-box|251.5px|86px|0px|0px|9px|0px|11px|12px|11px|12px|1px|1px|1px|1px|solid|solid|solid|solid|rgb(226, 229, 235)|rgb(226, 229, 235)|rgb(226, 229, 235)|rgb(226, 229, 235)|11px|11px|11px|11px|rgb(255, 255, 255)|none|rgba(23, 23, 63, 0.06) 0px 1px 2px 0px|rgb(23, 23, 63)|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|normal|24px|normal|start|none|none|0px|normal|pointer|1|none|none|0px|baseline|visible|visible",
+       "inner": [
+        "13,12,225.5,24|block|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|12.5px|600|24px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|6px|Install carpet and lighting",
+        "13,42,225.5,32|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|24px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|0px|",
+        "184.3,42,54.3,32|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|11px|600|24px|normal|start|none|rgb(180, 50, 45)|rgb(251, 230, 228)|0px|مرتفع",
+        "13,48,20,20|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|9px|700|24px|normal|start|none|rgb(255, 255, 255)|rgba(0, 0, 0, 0)|0px|FD"
+       ]
+      },
+      {
+       "title": "Book freight to venue",
+       "box": "13,47,251.5,86",
+       "style": "block|border-box|251.5px|86px|0px|0px|9px|0px|11px|12px|11px|12px|1px|1px|1px|1px|solid|solid|solid|solid|rgb(226, 229, 235)|rgb(226, 229, 235)|rgb(226, 229, 235)|rgb(226, 229, 235)|11px|11px|11px|11px|rgb(255, 255, 255)|none|rgba(23, 23, 63, 0.06) 0px 1px 2px 0px|rgb(23, 23, 63)|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|normal|24px|normal|start|none|none|0px|normal|pointer|1|none|none|0px|baseline|visible|visible",
+       "inner": [
+        "13,12,225.5,24|block|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|12.5px|600|24px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|6px|Book freight to venue",
+        "13,42,225.5,32|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|24px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|0px|",
+        "184.3,42,54.3,32|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|11px|600|24px|normal|start|none|rgb(180, 50, 45)|rgb(251, 230, 228)|0px|مرتفع",
+        "13,48,20,20|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|9px|700|24px|normal|start|none|rgb(255, 255, 255)|rgba(0, 0, 0, 0)|0px|YP"
+       ]
+      },
+      {
+       "title": "Print brochures",
+       "box": "13,142,251.5,86",
+       "style": "block|border-box|251.5px|86px|0px|0px|9px|0px|11px|12px|11px|12px|1px|1px|1px|1px|solid|solid|solid|solid|rgb(226, 229, 235)|rgb(226, 229, 235)|rgb(226, 229, 235)|rgb(226, 229, 235)|11px|11px|11px|11px|rgb(255, 255, 255)|none|rgba(23, 23, 63, 0.06) 0px 1px 2px 0px|rgb(23, 23, 63)|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|normal|24px|normal|start|none|none|0px|normal|pointer|1|none|none|0px|baseline|visible|visible",
+       "inner": [
+        "13,12,225.5,24|block|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|12.5px|600|24px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|6px|Print brochures",
+        "13,42,225.5,32|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|24px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|0px|",
+        "177,42,61.5,32|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|11px|600|24px|normal|start|none|rgb(47, 79, 184)|rgb(231, 236, 250)|0px|متوسط",
+        "13,48,20,20|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|9px|700|24px|normal|start|none|rgb(255, 255, 255)|rgba(0, 0, 0, 0)|0px|LS"
+       ]
+      },
+      {
+       "title": "Venue power approval",
+       "box": "13,47,251.5,86",
+       "style": "block|border-box|251.5px|86px|0px|0px|9px|0px|11px|12px|11px|12px|1px|1px|1px|1px|solid|solid|solid|solid|rgb(226, 229, 235)|rgb(226, 229, 235)|rgb(226, 229, 235)|rgb(226, 229, 235)|11px|11px|11px|11px|rgb(255, 255, 255)|none|rgba(23, 23, 63, 0.06) 0px 1px 2px 0px|rgb(23, 23, 63)|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|normal|24px|normal|start|none|none|0px|normal|pointer|1|none|none|0px|baseline|visible|visible",
+       "inner": [
+        "13,12,225.5,24|block|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|12.5px|600|24px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|6px|Venue power approval",
+        "13,42,225.5,32|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|24px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|0px|",
+        "184.3,42,54.3,32|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|11px|600|24px|normal|start|none|rgb(180, 50, 45)|rgb(251, 230, 228)|0px|مرتفع",
+        "13,48,20,20|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|9px|700|24px|normal|start|none|rgb(255, 255, 255)|rgba(0, 0, 0, 0)|0px|KE"
+       ]
+      },
+      {
+       "title": "Order LED wall",
+       "box": "13,47,251.5,76",
+       "style": "block|border-box|251.5px|76px|0px|0px|9px|0px|11px|12px|11px|12px|1px|1px|1px|1px|solid|solid|solid|solid|rgb(226, 229, 235)|rgb(226, 229, 235)|rgb(226, 229, 235)|rgb(226, 229, 235)|11px|11px|11px|11px|rgb(255, 255, 255)|none|rgba(23, 23, 63, 0.06) 0px 1px 2px 0px|rgb(23, 23, 63)|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|normal|24px|normal|start|none|none|0px|normal|pointer|1|none|none|0px|baseline|visible|visible",
+       "inner": [
+        "13,12,225.5,24|block|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|12.5px|600|24px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|6px|Order LED wall",
+        "13,42,225.5,22|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|24px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|0px|",
+        "212.1,42,26.4,22|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|11px|500|18px|normal|start|none|rgb(23, 115, 74)|rgb(227, 242, 234)|0px|تم",
+        "13,43,20,20|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|9px|700|24px|normal|start|none|rgb(255, 255, 255)|rgba(0, 0, 0, 0)|0px|KE"
+       ]
+      },
+      {
+       "title": "Finalize booth floor plan",
+       "box": "13,132,251.5,76",
+       "style": "block|border-box|251.5px|76px|0px|0px|9px|0px|11px|12px|11px|12px|1px|1px|1px|1px|solid|solid|solid|solid|rgb(226, 229, 235)|rgb(226, 229, 235)|rgb(226, 229, 235)|rgb(226, 229, 235)|11px|11px|11px|11px|rgb(255, 255, 255)|none|rgba(23, 23, 63, 0.06) 0px 1px 2px 0px|rgb(23, 23, 63)|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|normal|24px|normal|start|none|none|0px|normal|pointer|1|none|none|0px|baseline|visible|visible",
+       "inner": [
+        "13,12,225.5,24|block|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|12.5px|600|24px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|6px|Finalize booth floor plan",
+        "13,42,225.5,22|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|24px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|0px|",
+        "212.1,42,26.4,22|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|11px|500|18px|normal|start|none|rgb(23, 115, 74)|rgb(227, 242, 234)|0px|تم",
+        "13,43,20,20|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|9px|700|24px|normal|start|none|rgb(255, 255, 255)|rgba(0, 0, 0, 0)|0px|LS"
+       ]
+      }
+     ],
+     "hover": [
+      {
+       "title": "Post-show teardown",
+       "box": "13,46,251.5,86",
+       "style": "block|border-box|251.5px|86px|0px|0px|9px|0px|11px|12px|11px|12px|1px|1px|1px|1px|solid|solid|solid|solid|rgb(232, 119, 34)|rgb(232, 119, 34)|rgb(232, 119, 34)|rgb(232, 119, 34)|11px|11px|11px|11px|rgb(255, 255, 255)|none|rgba(23, 23, 63, 0.06) 0px 1px 2px 0px|rgb(23, 23, 63)|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|normal|24px|normal|start|none|none|0px|normal|pointer|1|matrix(1, 0, 0, 1, 0, -1)|none|0px|baseline|visible|visible",
+       "inner": [
+        "13,12,225.5,24|block|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|12.5px|600|24px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|6px|Post-show teardown",
+        "13,42,225.5,32|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|24px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|0px|",
+        "177,42,61.5,32|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|11px|600|24px|normal|start|none|rgb(47, 79, 184)|rgb(231, 236, 250)|0px|متوسط",
+        "13,48,20,20|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|9px|700|24px|normal|start|none|rgb(255, 255, 255)|rgba(0, 0, 0, 0)|0px|FD"
+       ]
+      },
+      {
+       "title": "Staff rota for show days",
+       "box": "13,141,251.5,88",
+       "style": "block|border-box|251.5px|88px|0px|0px|9px|0px|11px|12px|11px|12px|1px|1px|1px|1px|solid|solid|solid|solid|rgb(232, 119, 34)|rgb(232, 119, 34)|rgb(232, 119, 34)|rgb(232, 119, 34)|11px|11px|11px|11px|rgb(255, 255, 255)|none|rgba(23, 23, 63, 0.06) 0px 1px 2px 0px|rgb(23, 23, 63)|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|normal|24px|normal|start|none|none|0px|normal|pointer|1|matrix(1, 0, 0, 1, 0, -1)|none|0px|baseline|visible|visible",
+       "inner": [
+        "13,12,225.5,24|block|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|12.5px|600|24px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|6px|Staff rota for show days",
+        "13,42,225.5,34|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|24px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|0px|",
+        "170.4,42,68.1,34|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|11px|600|24px|normal|start|none|rgb(85, 90, 117)|rgb(255, 255, 255)|0px|منخفض",
+        "13,49,20,20|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|9px|700|24px|normal|start|none|rgb(255, 255, 255)|rgba(0, 0, 0, 0)|0px|YP"
+       ]
+      },
+      {
+       "title": "Install carpet and lighting",
+       "box": "13,238,251.5,86",
+       "style": "block|border-box|251.5px|86px|0px|0px|9px|0px|11px|12px|11px|12px|1px|1px|1px|1px|solid|solid|solid|solid|rgb(232, 119, 34)|rgb(232, 119, 34)|rgb(232, 119, 34)|rgb(232, 119, 34)|11px|11px|11px|11px|rgb(255, 255, 255)|none|rgba(23, 23, 63, 0.06) 0px 1px 2px 0px|rgb(23, 23, 63)|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|normal|24px|normal|start|none|none|0px|normal|pointer|1|matrix(1, 0, 0, 1, 0, -1)|none|0px|baseline|visible|visible",
+       "inner": [
+        "13,12,225.5,24|block|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|12.5px|600|24px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|6px|Install carpet and lighting",
+        "13,42,225.5,32|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|24px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|0px|",
+        "184.3,42,54.3,32|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|11px|600|24px|normal|start|none|rgb(180, 50, 45)|rgb(251, 230, 228)|0px|مرتفع",
+        "13,48,20,20|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|9px|700|24px|normal|start|none|rgb(255, 255, 255)|rgba(0, 0, 0, 0)|0px|FD"
+       ]
+      },
+      {
+       "title": "Book freight to venue",
+       "box": "13,46,251.5,86",
+       "style": "block|border-box|251.5px|86px|0px|0px|9px|0px|11px|12px|11px|12px|1px|1px|1px|1px|solid|solid|solid|solid|rgb(232, 119, 34)|rgb(232, 119, 34)|rgb(232, 119, 34)|rgb(232, 119, 34)|11px|11px|11px|11px|rgb(255, 255, 255)|none|rgba(23, 23, 63, 0.06) 0px 1px 2px 0px|rgb(23, 23, 63)|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|normal|24px|normal|start|none|none|0px|normal|pointer|1|matrix(1, 0, 0, 1, 0, -1)|none|0px|baseline|visible|visible",
+       "inner": [
+        "13,12,225.5,24|block|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|12.5px|600|24px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|6px|Book freight to venue",
+        "13,42,225.5,32|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|24px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|0px|",
+        "184.3,42,54.3,32|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|11px|600|24px|normal|start|none|rgb(180, 50, 45)|rgb(251, 230, 228)|0px|مرتفع",
+        "13,48,20,20|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|9px|700|24px|normal|start|none|rgb(255, 255, 255)|rgba(0, 0, 0, 0)|0px|YP"
+       ]
+      },
+      {
+       "title": "Print brochures",
+       "box": "13,141,251.5,86",
+       "style": "block|border-box|251.5px|86px|0px|0px|9px|0px|11px|12px|11px|12px|1px|1px|1px|1px|solid|solid|solid|solid|rgb(232, 119, 34)|rgb(232, 119, 34)|rgb(232, 119, 34)|rgb(232, 119, 34)|11px|11px|11px|11px|rgb(255, 255, 255)|none|rgba(23, 23, 63, 0.06) 0px 1px 2px 0px|rgb(23, 23, 63)|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|normal|24px|normal|start|none|none|0px|normal|pointer|1|matrix(1, 0, 0, 1, 0, -1)|none|0px|baseline|visible|visible",
+       "inner": [
+        "13,12,225.5,24|block|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|12.5px|600|24px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|6px|Print brochures",
+        "13,42,225.5,32|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|24px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|0px|",
+        "177,42,61.5,32|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|11px|600|24px|normal|start|none|rgb(47, 79, 184)|rgb(231, 236, 250)|0px|متوسط",
+        "13,48,20,20|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|9px|700|24px|normal|start|none|rgb(255, 255, 255)|rgba(0, 0, 0, 0)|0px|LS"
+       ]
+      },
+      {
+       "title": "Venue power approval",
+       "box": "13,46,251.5,86",
+       "style": "block|border-box|251.5px|86px|0px|0px|9px|0px|11px|12px|11px|12px|1px|1px|1px|1px|solid|solid|solid|solid|rgb(232, 119, 34)|rgb(232, 119, 34)|rgb(232, 119, 34)|rgb(232, 119, 34)|11px|11px|11px|11px|rgb(255, 255, 255)|none|rgba(23, 23, 63, 0.06) 0px 1px 2px 0px|rgb(23, 23, 63)|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|normal|24px|normal|start|none|none|0px|normal|pointer|1|matrix(1, 0, 0, 1, 0, -1)|none|0px|baseline|visible|visible",
+       "inner": [
+        "13,12,225.5,24|block|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|12.5px|600|24px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|6px|Venue power approval",
+        "13,42,225.5,32|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|24px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|0px|",
+        "184.3,42,54.3,32|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|11px|600|24px|normal|start|none|rgb(180, 50, 45)|rgb(251, 230, 228)|0px|مرتفع",
+        "13,48,20,20|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|9px|700|24px|normal|start|none|rgb(255, 255, 255)|rgba(0, 0, 0, 0)|0px|KE"
+       ]
+      },
+      {
+       "title": "Order LED wall",
+       "box": "13,46,251.5,76",
+       "style": "block|border-box|251.5px|76px|0px|0px|9px|0px|11px|12px|11px|12px|1px|1px|1px|1px|solid|solid|solid|solid|rgb(232, 119, 34)|rgb(232, 119, 34)|rgb(232, 119, 34)|rgb(232, 119, 34)|11px|11px|11px|11px|rgb(255, 255, 255)|none|rgba(23, 23, 63, 0.06) 0px 1px 2px 0px|rgb(23, 23, 63)|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|normal|24px|normal|start|none|none|0px|normal|pointer|1|matrix(1, 0, 0, 1, 0, -1)|none|0px|baseline|visible|visible",
+       "inner": [
+        "13,12,225.5,24|block|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|12.5px|600|24px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|6px|Order LED wall",
+        "13,42,225.5,22|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|24px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|0px|",
+        "212.1,42,26.4,22|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|11px|500|18px|normal|start|none|rgb(23, 115, 74)|rgb(227, 242, 234)|0px|تم",
+        "13,43,20,20|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|9px|700|24px|normal|start|none|rgb(255, 255, 255)|rgba(0, 0, 0, 0)|0px|KE"
+       ]
+      },
+      {
+       "title": "Finalize booth floor plan",
+       "box": "13,131,251.5,76",
+       "style": "block|border-box|251.5px|76px|0px|0px|9px|0px|11px|12px|11px|12px|1px|1px|1px|1px|solid|solid|solid|solid|rgb(232, 119, 34)|rgb(232, 119, 34)|rgb(232, 119, 34)|rgb(232, 119, 34)|11px|11px|11px|11px|rgb(255, 255, 255)|none|rgba(23, 23, 63, 0.06) 0px 1px 2px 0px|rgb(23, 23, 63)|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|normal|24px|normal|start|none|none|0px|normal|pointer|1|matrix(1, 0, 0, 1, 0, -1)|none|0px|baseline|visible|visible",
+       "inner": [
+        "13,12,225.5,24|block|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|12.5px|600|24px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|6px|Finalize booth floor plan",
+        "13,42,225.5,22|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|24px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|0px|",
+        "212.1,42,26.4,22|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|11px|500|18px|normal|start|none|rgb(23, 115, 74)|rgb(227, 242, 234)|0px|تم",
+        "13,43,20,20|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|9px|700|24px|normal|start|none|rgb(255, 255, 255)|rgba(0, 0, 0, 0)|0px|LS"
+       ]
+      }
+     ]
+    }
+   },
+   "project-detail|ar|1024": {
+    "summary": [
+     {
+      "label": "الميزانية",
+      "value": "185,000"
+     },
+     {
+      "label": "المهام · 0.0 الساعات المسجَّلة",
+      "value": "8"
+     }
+    ],
+    "cost": [
+     {
+      "label": "قيمة المبيعات",
+      "value": "0"
+     },
+     {
+      "label": "المفوتر",
+      "value": "53,383"
+     },
+     {
+      "label": "المُحصَّل",
+      "value": "53,383"
+     },
+     {
+      "label": "إجمالي التكلفة",
+      "value": "0"
+     },
+     {
+      "label": "الربح الفعلي",
+      "value": "53,383"
+     },
+     {
+      "label": "هامش الربح",
+      "value": "100.0%"
+     }
+    ],
+    "badge": {
+     "status": "profitable",
+     "tone": "success",
+     "text": "رابح",
+     "color": "rgb(23, 115, 74)",
+     "background": "rgb(227, 242, 234)",
+     "inHeading": false,
+     "beside": null
+    },
+    "kanban": {
+     "tracks": 2,
+     "columns": 4
+    },
+    "kanbanFacts": null
+   },
+   "project-detail|ar|768": {
+    "summary": [
+     {
+      "label": "الميزانية",
+      "value": "185,000"
+     },
+     {
+      "label": "المهام · 0.0 الساعات المسجَّلة",
+      "value": "8"
+     }
+    ],
+    "cost": [
+     {
+      "label": "قيمة المبيعات",
+      "value": "0"
+     },
+     {
+      "label": "المفوتر",
+      "value": "53,383"
+     },
+     {
+      "label": "المُحصَّل",
+      "value": "53,383"
+     },
+     {
+      "label": "إجمالي التكلفة",
+      "value": "0"
+     },
+     {
+      "label": "الربح الفعلي",
+      "value": "53,383"
+     },
+     {
+      "label": "هامش الربح",
+      "value": "100.0%"
+     }
+    ],
+    "badge": {
+     "status": "profitable",
+     "tone": "success",
+     "text": "رابح",
+     "color": "rgb(23, 115, 74)",
+     "background": "rgb(227, 242, 234)",
+     "inHeading": false,
+     "beside": null
+    },
+    "kanban": {
+     "tracks": 2,
+     "columns": 4
+    },
+    "kanbanFacts": null
+   },
+   "project-detail|ar|390": {
+    "summary": [
+     {
+      "label": "الميزانية",
+      "value": "185,000"
+     },
+     {
+      "label": "المهام · 0.0 الساعات المسجَّلة",
+      "value": "8"
+     }
+    ],
+    "cost": [
+     {
+      "label": "قيمة المبيعات",
+      "value": "0"
+     },
+     {
+      "label": "المفوتر",
+      "value": "53,383"
+     },
+     {
+      "label": "المُحصَّل",
+      "value": "53,383"
+     },
+     {
+      "label": "إجمالي التكلفة",
+      "value": "0"
+     },
+     {
+      "label": "الربح الفعلي",
+      "value": "53,383"
+     },
+     {
+      "label": "هامش الربح",
+      "value": "100.0%"
+     }
+    ],
+    "badge": {
+     "status": "profitable",
+     "tone": "success",
+     "text": "رابح",
+     "color": "rgb(23, 115, 74)",
+     "background": "rgb(227, 242, 234)",
+     "inHeading": false,
+     "beside": null
+    },
+    "kanban": {
+     "tracks": 2,
+     "columns": 4
+    },
+    "kanbanFacts": {
+     "heads": [
+      {
+       "label": "للتنفيذ",
+       "count": "3",
+       "tag": "span",
+       "height": 24,
+       "labelBox": "117.7,0,30.3,24",
+       "labelStyle": "\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|11.5px|700|24px|normal|none|rgb(100, 105, 130)|0px|0px|wrap|auto",
+       "countBox": "2,0,6.9,24",
+       "countStyle": "\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|11.5px|700|24px|normal|none|rgb(100, 105, 130)|0px|0px|wrap|auto"
+      },
+      {
+       "label": "قيد التنفيذ",
+       "count": "2",
+       "tag": "span",
+       "height": 24,
+       "labelBox": "100.1,0,47.9,24",
+       "labelStyle": "\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|11.5px|700|24px|normal|none|rgb(100, 105, 130)|0px|0px|wrap|auto",
+       "countBox": "2,0,6.9,24",
+       "countStyle": "\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|11.5px|700|24px|normal|none|rgb(100, 105, 130)|0px|0px|wrap|auto"
+      },
+      {
+       "label": "معطَّل",
+       "count": "1",
+       "tag": "span",
+       "height": 24,
+       "labelBox": "119.9,0,28.1,24",
+       "labelStyle": "\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|11.5px|700|24px|normal|none|rgb(100, 105, 130)|0px|0px|wrap|auto",
+       "countBox": "2,0,6.9,24",
+       "countStyle": "\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|11.5px|700|24px|normal|none|rgb(100, 105, 130)|0px|0px|wrap|auto"
+      },
+      {
+       "label": "تم",
+       "count": "2",
+       "tag": "span",
+       "height": 24,
+       "labelBox": "136.8,0,11.2,24",
+       "labelStyle": "\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|11.5px|700|24px|normal|none|rgb(100, 105, 130)|0px|0px|wrap|auto",
+       "countBox": "2,0,6.9,24",
+       "countStyle": "\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|11.5px|700|24px|normal|none|rgb(100, 105, 130)|0px|0px|wrap|auto"
+      }
+     ],
+     "cards": [
+      {
+       "title": "Post-show teardown",
+       "box": "13,47,150,86",
+       "style": "block|border-box|150px|86px|0px|0px|9px|0px|11px|12px|11px|12px|1px|1px|1px|1px|solid|solid|solid|solid|rgb(226, 229, 235)|rgb(226, 229, 235)|rgb(226, 229, 235)|rgb(226, 229, 235)|11px|11px|11px|11px|rgb(255, 255, 255)|none|rgba(23, 23, 63, 0.06) 0px 1px 2px 0px|rgb(23, 23, 63)|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|normal|24px|normal|start|none|none|0px|normal|pointer|1|none|none|0px|baseline|visible|visible",
+       "inner": [
+        "13,12,124,24|block|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|12.5px|600|24px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|6px|Post-show teardown",
+        "13,42,124,32|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|24px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|0px|",
+        "75.5,42,61.5,32|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|11px|600|24px|normal|start|none|rgb(47, 79, 184)|rgb(231, 236, 250)|0px|متوسط",
+        "13,48,20,20|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|9px|700|24px|normal|start|none|rgb(255, 255, 255)|rgba(0, 0, 0, 0)|0px|FD"
+       ]
+      },
+      {
+       "title": "Staff rota for show days",
+       "box": "13,142,150,112",
+       "style": "block|border-box|150px|112px|0px|0px|9px|0px|11px|12px|11px|12px|1px|1px|1px|1px|solid|solid|solid|solid|rgb(226, 229, 235)|rgb(226, 229, 235)|rgb(226, 229, 235)|rgb(226, 229, 235)|11px|11px|11px|11px|rgb(255, 255, 255)|none|rgba(23, 23, 63, 0.06) 0px 1px 2px 0px|rgb(23, 23, 63)|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|normal|24px|normal|start|none|none|0px|normal|pointer|1|none|none|0px|baseline|visible|visible",
+       "inner": [
+        "13,12,124,48|block|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|12.5px|600|24px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|6px|Staff rota for show days",
+        "13,66,124,34|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|24px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|0px|",
+        "68.9,66,68.1,34|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|11px|600|24px|normal|start|none|rgb(85, 90, 117)|rgb(255, 255, 255)|0px|منخفض",
+        "13,73,20,20|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|9px|700|24px|normal|start|none|rgb(255, 255, 255)|rgba(0, 0, 0, 0)|0px|YP"
+       ]
+      },
+      {
+       "title": "Install carpet and lighting",
+       "box": "13,263,150,110",
+       "style": "block|border-box|150px|110px|0px|0px|9px|0px|11px|12px|11px|12px|1px|1px|1px|1px|solid|solid|solid|solid|rgb(226, 229, 235)|rgb(226, 229, 235)|rgb(226, 229, 235)|rgb(226, 229, 235)|11px|11px|11px|11px|rgb(255, 255, 255)|none|rgba(23, 23, 63, 0.06) 0px 1px 2px 0px|rgb(23, 23, 63)|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|normal|24px|normal|start|none|none|0px|normal|pointer|1|none|none|0px|baseline|visible|visible",
+       "inner": [
+        "13,12,124,48|block|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|12.5px|600|24px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|6px|Install carpet and lighting",
+        "13,66,124,32|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|24px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|0px|",
+        "82.8,66,54.3,32|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|11px|600|24px|normal|start|none|rgb(180, 50, 45)|rgb(251, 230, 228)|0px|مرتفع",
+        "13,72,20,20|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|9px|700|24px|normal|start|none|rgb(255, 255, 255)|rgba(0, 0, 0, 0)|0px|FD"
+       ]
+      },
+      {
+       "title": "Book freight to venue",
+       "box": "13,47,150,86",
+       "style": "block|border-box|150px|86px|0px|0px|9px|0px|11px|12px|11px|12px|1px|1px|1px|1px|solid|solid|solid|solid|rgb(226, 229, 235)|rgb(226, 229, 235)|rgb(226, 229, 235)|rgb(226, 229, 235)|11px|11px|11px|11px|rgb(255, 255, 255)|none|rgba(23, 23, 63, 0.06) 0px 1px 2px 0px|rgb(23, 23, 63)|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|normal|24px|normal|start|none|none|0px|normal|pointer|1|none|none|0px|baseline|visible|visible",
+       "inner": [
+        "13,12,124,24|block|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|12.5px|600|24px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|6px|Book freight to venue",
+        "13,42,124,32|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|24px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|0px|",
+        "82.8,42,54.3,32|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|11px|600|24px|normal|start|none|rgb(180, 50, 45)|rgb(251, 230, 228)|0px|مرتفع",
+        "13,48,20,20|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|9px|700|24px|normal|start|none|rgb(255, 255, 255)|rgba(0, 0, 0, 0)|0px|YP"
+       ]
+      },
+      {
+       "title": "Print brochures",
+       "box": "13,142,150,86",
+       "style": "block|border-box|150px|86px|0px|0px|9px|0px|11px|12px|11px|12px|1px|1px|1px|1px|solid|solid|solid|solid|rgb(226, 229, 235)|rgb(226, 229, 235)|rgb(226, 229, 235)|rgb(226, 229, 235)|11px|11px|11px|11px|rgb(255, 255, 255)|none|rgba(23, 23, 63, 0.06) 0px 1px 2px 0px|rgb(23, 23, 63)|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|normal|24px|normal|start|none|none|0px|normal|pointer|1|none|none|0px|baseline|visible|visible",
+       "inner": [
+        "13,12,124,24|block|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|12.5px|600|24px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|6px|Print brochures",
+        "13,42,124,32|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|24px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|0px|",
+        "75.5,42,61.5,32|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|11px|600|24px|normal|start|none|rgb(47, 79, 184)|rgb(231, 236, 250)|0px|متوسط",
+        "13,48,20,20|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|9px|700|24px|normal|start|none|rgb(255, 255, 255)|rgba(0, 0, 0, 0)|0px|LS"
+       ]
+      },
+      {
+       "title": "Venue power approval",
+       "box": "13,47,150,110",
+       "style": "block|border-box|150px|110px|0px|0px|9px|0px|11px|12px|11px|12px|1px|1px|1px|1px|solid|solid|solid|solid|rgb(226, 229, 235)|rgb(226, 229, 235)|rgb(226, 229, 235)|rgb(226, 229, 235)|11px|11px|11px|11px|rgb(255, 255, 255)|none|rgba(23, 23, 63, 0.06) 0px 1px 2px 0px|rgb(23, 23, 63)|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|normal|24px|normal|start|none|none|0px|normal|pointer|1|none|none|0px|baseline|visible|visible",
+       "inner": [
+        "13,12,124,48|block|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|12.5px|600|24px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|6px|Venue power approval",
+        "13,66,124,32|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|24px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|0px|",
+        "82.8,66,54.3,32|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|11px|600|24px|normal|start|none|rgb(180, 50, 45)|rgb(251, 230, 228)|0px|مرتفع",
+        "13,72,20,20|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|9px|700|24px|normal|start|none|rgb(255, 255, 255)|rgba(0, 0, 0, 0)|0px|KE"
+       ]
+      },
+      {
+       "title": "Order LED wall",
+       "box": "13,47,150,76",
+       "style": "block|border-box|150px|76px|0px|0px|9px|0px|11px|12px|11px|12px|1px|1px|1px|1px|solid|solid|solid|solid|rgb(226, 229, 235)|rgb(226, 229, 235)|rgb(226, 229, 235)|rgb(226, 229, 235)|11px|11px|11px|11px|rgb(255, 255, 255)|none|rgba(23, 23, 63, 0.06) 0px 1px 2px 0px|rgb(23, 23, 63)|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|normal|24px|normal|start|none|none|0px|normal|pointer|1|none|none|0px|baseline|visible|visible",
+       "inner": [
+        "13,12,124,24|block|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|12.5px|600|24px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|6px|Order LED wall",
+        "13,42,124,22|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|24px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|0px|",
+        "110.6,42,26.4,22|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|11px|500|18px|normal|start|none|rgb(23, 115, 74)|rgb(227, 242, 234)|0px|تم",
+        "13,43,20,20|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|9px|700|24px|normal|start|none|rgb(255, 255, 255)|rgba(0, 0, 0, 0)|0px|KE"
+       ]
+      },
+      {
+       "title": "Finalize booth floor plan",
+       "box": "13,132,150,100",
+       "style": "block|border-box|150px|100px|0px|0px|9px|0px|11px|12px|11px|12px|1px|1px|1px|1px|solid|solid|solid|solid|rgb(226, 229, 235)|rgb(226, 229, 235)|rgb(226, 229, 235)|rgb(226, 229, 235)|11px|11px|11px|11px|rgb(255, 255, 255)|none|rgba(23, 23, 63, 0.06) 0px 1px 2px 0px|rgb(23, 23, 63)|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|normal|24px|normal|start|none|none|0px|normal|pointer|1|none|none|0px|baseline|visible|visible",
+       "inner": [
+        "13,12,124,48|block|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|12.5px|600|24px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|6px|Finalize booth floor plan",
+        "13,66,124,22|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|24px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|0px|",
+        "110.6,66,26.4,22|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|11px|500|18px|normal|start|none|rgb(23, 115, 74)|rgb(227, 242, 234)|0px|تم",
+        "13,67,20,20|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|9px|700|24px|normal|start|none|rgb(255, 255, 255)|rgba(0, 0, 0, 0)|0px|LS"
+       ]
+      }
+     ],
+     "hover": [
+      {
+       "title": "Post-show teardown",
+       "box": "13,46,150,86",
+       "style": "block|border-box|150px|86px|0px|0px|9px|0px|11px|12px|11px|12px|1px|1px|1px|1px|solid|solid|solid|solid|rgb(232, 119, 34)|rgb(232, 119, 34)|rgb(232, 119, 34)|rgb(232, 119, 34)|11px|11px|11px|11px|rgb(255, 255, 255)|none|rgba(23, 23, 63, 0.06) 0px 1px 2px 0px|rgb(23, 23, 63)|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|normal|24px|normal|start|none|none|0px|normal|pointer|1|matrix(1, 0, 0, 1, 0, -1)|none|0px|baseline|visible|visible",
+       "inner": [
+        "13,12,124,24|block|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|12.5px|600|24px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|6px|Post-show teardown",
+        "13,42,124,32|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|24px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|0px|",
+        "75.5,42,61.5,32|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|11px|600|24px|normal|start|none|rgb(47, 79, 184)|rgb(231, 236, 250)|0px|متوسط",
+        "13,48,20,20|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|9px|700|24px|normal|start|none|rgb(255, 255, 255)|rgba(0, 0, 0, 0)|0px|FD"
+       ]
+      },
+      {
+       "title": "Staff rota for show days",
+       "box": "13,141,150,112",
+       "style": "block|border-box|150px|112px|0px|0px|9px|0px|11px|12px|11px|12px|1px|1px|1px|1px|solid|solid|solid|solid|rgb(232, 119, 34)|rgb(232, 119, 34)|rgb(232, 119, 34)|rgb(232, 119, 34)|11px|11px|11px|11px|rgb(255, 255, 255)|none|rgba(23, 23, 63, 0.06) 0px 1px 2px 0px|rgb(23, 23, 63)|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|normal|24px|normal|start|none|none|0px|normal|pointer|1|matrix(1, 0, 0, 1, 0, -1)|none|0px|baseline|visible|visible",
+       "inner": [
+        "13,12,124,48|block|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|12.5px|600|24px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|6px|Staff rota for show days",
+        "13,66,124,34|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|24px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|0px|",
+        "68.9,66,68.1,34|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|11px|600|24px|normal|start|none|rgb(85, 90, 117)|rgb(255, 255, 255)|0px|منخفض",
+        "13,73,20,20|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|9px|700|24px|normal|start|none|rgb(255, 255, 255)|rgba(0, 0, 0, 0)|0px|YP"
+       ]
+      },
+      {
+       "title": "Install carpet and lighting",
+       "box": "13,262,150,110",
+       "style": "block|border-box|150px|110px|0px|0px|9px|0px|11px|12px|11px|12px|1px|1px|1px|1px|solid|solid|solid|solid|rgb(232, 119, 34)|rgb(232, 119, 34)|rgb(232, 119, 34)|rgb(232, 119, 34)|11px|11px|11px|11px|rgb(255, 255, 255)|none|rgba(23, 23, 63, 0.06) 0px 1px 2px 0px|rgb(23, 23, 63)|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|normal|24px|normal|start|none|none|0px|normal|pointer|1|matrix(1, 0, 0, 1, 0, -1)|none|0px|baseline|visible|visible",
+       "inner": [
+        "13,12,124,48|block|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|12.5px|600|24px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|6px|Install carpet and lighting",
+        "13,66,124,32|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|24px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|0px|",
+        "82.8,66,54.3,32|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|11px|600|24px|normal|start|none|rgb(180, 50, 45)|rgb(251, 230, 228)|0px|مرتفع",
+        "13,72,20,20|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|9px|700|24px|normal|start|none|rgb(255, 255, 255)|rgba(0, 0, 0, 0)|0px|FD"
+       ]
+      },
+      {
+       "title": "Book freight to venue",
+       "box": "13,46,150,86",
+       "style": "block|border-box|150px|86px|0px|0px|9px|0px|11px|12px|11px|12px|1px|1px|1px|1px|solid|solid|solid|solid|rgb(232, 119, 34)|rgb(232, 119, 34)|rgb(232, 119, 34)|rgb(232, 119, 34)|11px|11px|11px|11px|rgb(255, 255, 255)|none|rgba(23, 23, 63, 0.06) 0px 1px 2px 0px|rgb(23, 23, 63)|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|normal|24px|normal|start|none|none|0px|normal|pointer|1|matrix(1, 0, 0, 1, 0, -1)|none|0px|baseline|visible|visible",
+       "inner": [
+        "13,12,124,24|block|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|12.5px|600|24px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|6px|Book freight to venue",
+        "13,42,124,32|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|24px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|0px|",
+        "82.8,42,54.3,32|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|11px|600|24px|normal|start|none|rgb(180, 50, 45)|rgb(251, 230, 228)|0px|مرتفع",
+        "13,48,20,20|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|9px|700|24px|normal|start|none|rgb(255, 255, 255)|rgba(0, 0, 0, 0)|0px|YP"
+       ]
+      },
+      {
+       "title": "Print brochures",
+       "box": "13,141,150,86",
+       "style": "block|border-box|150px|86px|0px|0px|9px|0px|11px|12px|11px|12px|1px|1px|1px|1px|solid|solid|solid|solid|rgb(232, 119, 34)|rgb(232, 119, 34)|rgb(232, 119, 34)|rgb(232, 119, 34)|11px|11px|11px|11px|rgb(255, 255, 255)|none|rgba(23, 23, 63, 0.06) 0px 1px 2px 0px|rgb(23, 23, 63)|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|normal|24px|normal|start|none|none|0px|normal|pointer|1|matrix(1, 0, 0, 1, 0, -1)|none|0px|baseline|visible|visible",
+       "inner": [
+        "13,12,124,24|block|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|12.5px|600|24px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|6px|Print brochures",
+        "13,42,124,32|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|24px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|0px|",
+        "75.5,42,61.5,32|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|11px|600|24px|normal|start|none|rgb(47, 79, 184)|rgb(231, 236, 250)|0px|متوسط",
+        "13,48,20,20|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|9px|700|24px|normal|start|none|rgb(255, 255, 255)|rgba(0, 0, 0, 0)|0px|LS"
+       ]
+      },
+      {
+       "title": "Venue power approval",
+       "box": "13,46,150,110",
+       "style": "block|border-box|150px|110px|0px|0px|9px|0px|11px|12px|11px|12px|1px|1px|1px|1px|solid|solid|solid|solid|rgb(232, 119, 34)|rgb(232, 119, 34)|rgb(232, 119, 34)|rgb(232, 119, 34)|11px|11px|11px|11px|rgb(255, 255, 255)|none|rgba(23, 23, 63, 0.06) 0px 1px 2px 0px|rgb(23, 23, 63)|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|normal|24px|normal|start|none|none|0px|normal|pointer|1|matrix(1, 0, 0, 1, 0, -1)|none|0px|baseline|visible|visible",
+       "inner": [
+        "13,12,124,48|block|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|12.5px|600|24px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|6px|Venue power approval",
+        "13,66,124,32|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|24px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|0px|",
+        "82.8,66,54.3,32|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|11px|600|24px|normal|start|none|rgb(180, 50, 45)|rgb(251, 230, 228)|0px|مرتفع",
+        "13,72,20,20|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|9px|700|24px|normal|start|none|rgb(255, 255, 255)|rgba(0, 0, 0, 0)|0px|KE"
+       ]
+      },
+      {
+       "title": "Order LED wall",
+       "box": "13,46,150,76",
+       "style": "block|border-box|150px|76px|0px|0px|9px|0px|11px|12px|11px|12px|1px|1px|1px|1px|solid|solid|solid|solid|rgb(232, 119, 34)|rgb(232, 119, 34)|rgb(232, 119, 34)|rgb(232, 119, 34)|11px|11px|11px|11px|rgb(255, 255, 255)|none|rgba(23, 23, 63, 0.06) 0px 1px 2px 0px|rgb(23, 23, 63)|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|normal|24px|normal|start|none|none|0px|normal|pointer|1|matrix(1, 0, 0, 1, 0, -1)|none|0px|baseline|visible|visible",
+       "inner": [
+        "13,12,124,24|block|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|12.5px|600|24px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|6px|Order LED wall",
+        "13,42,124,22|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|24px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|0px|",
+        "110.6,42,26.4,22|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|11px|500|18px|normal|start|none|rgb(23, 115, 74)|rgb(227, 242, 234)|0px|تم",
+        "13,43,20,20|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|9px|700|24px|normal|start|none|rgb(255, 255, 255)|rgba(0, 0, 0, 0)|0px|KE"
+       ]
+      },
+      {
+       "title": "Finalize booth floor plan",
+       "box": "13,131,150,100",
+       "style": "block|border-box|150px|100px|0px|0px|9px|0px|11px|12px|11px|12px|1px|1px|1px|1px|solid|solid|solid|solid|rgb(232, 119, 34)|rgb(232, 119, 34)|rgb(232, 119, 34)|rgb(232, 119, 34)|11px|11px|11px|11px|rgb(255, 255, 255)|none|rgba(23, 23, 63, 0.06) 0px 1px 2px 0px|rgb(23, 23, 63)|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|normal|24px|normal|start|none|none|0px|normal|pointer|1|matrix(1, 0, 0, 1, 0, -1)|none|0px|baseline|visible|visible",
+       "inner": [
+        "13,12,124,48|block|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|12.5px|600|24px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|6px|Finalize booth floor plan",
+        "13,66,124,22|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|14px|400|24px|normal|start|none|rgb(23, 23, 63)|rgba(0, 0, 0, 0)|0px|",
+        "110.6,66,26.4,22|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|11px|500|18px|normal|start|none|rgb(23, 115, 74)|rgb(227, 242, 234)|0px|تم",
+        "13,67,20,20|flex|\"IBM Plex Sans\", \"IBM Plex Sans Fallback\", \"IBM Plex Sans Arabic\", \"IBM Plex Sans Arabic Fallback\", system-ui, sans-serif|9px|700|24px|normal|start|none|rgb(255, 255, 255)|rgba(0, 0, 0, 0)|0px|LS"
+       ]
+      }
+     ]
+    }
+   },
+   "project-empty|ar|1440": {
+    "summary": [
+     {
+      "label": "الميزانية",
+      "value": "92,000"
+     },
+     {
+      "label": "المهام · 0.0 الساعات المسجَّلة",
+      "value": "0"
+     }
+    ],
+    "cost": [
+     {
+      "label": "قيمة المبيعات",
+      "value": "0"
+     },
+     {
+      "label": "المفوتر",
+      "value": "28,842"
+     },
+     {
+      "label": "المُحصَّل",
+      "value": "11,537"
+     },
+     {
+      "label": "إجمالي التكلفة",
+      "value": "0"
+     },
+     {
+      "label": "الربح الفعلي",
+      "value": "28,842"
+     },
+     {
+      "label": "هامش الربح",
+      "value": "100.0%"
+     }
+    ],
+    "badge": {
+     "status": "profitable",
+     "tone": "success",
+     "text": "رابح",
+     "color": "rgb(23, 115, 74)",
+     "background": "rgb(227, 242, 234)",
+     "inHeading": false,
+     "beside": null
+    },
+    "kanban": null,
+    "kanbanFacts": null
+   },
+   "project-empty|ar|1024": {
+    "summary": [
+     {
+      "label": "الميزانية",
+      "value": "92,000"
+     },
+     {
+      "label": "المهام · 0.0 الساعات المسجَّلة",
+      "value": "0"
+     }
+    ],
+    "cost": [
+     {
+      "label": "قيمة المبيعات",
+      "value": "0"
+     },
+     {
+      "label": "المفوتر",
+      "value": "28,842"
+     },
+     {
+      "label": "المُحصَّل",
+      "value": "11,537"
+     },
+     {
+      "label": "إجمالي التكلفة",
+      "value": "0"
+     },
+     {
+      "label": "الربح الفعلي",
+      "value": "28,842"
+     },
+     {
+      "label": "هامش الربح",
+      "value": "100.0%"
+     }
+    ],
+    "badge": {
+     "status": "profitable",
+     "tone": "success",
+     "text": "رابح",
+     "color": "rgb(23, 115, 74)",
+     "background": "rgb(227, 242, 234)",
+     "inHeading": false,
+     "beside": null
+    },
+    "kanban": null,
+    "kanbanFacts": null
+   },
+   "project-empty|ar|768": {
+    "summary": [
+     {
+      "label": "الميزانية",
+      "value": "92,000"
+     },
+     {
+      "label": "المهام · 0.0 الساعات المسجَّلة",
+      "value": "0"
+     }
+    ],
+    "cost": [
+     {
+      "label": "قيمة المبيعات",
+      "value": "0"
+     },
+     {
+      "label": "المفوتر",
+      "value": "28,842"
+     },
+     {
+      "label": "المُحصَّل",
+      "value": "11,537"
+     },
+     {
+      "label": "إجمالي التكلفة",
+      "value": "0"
+     },
+     {
+      "label": "الربح الفعلي",
+      "value": "28,842"
+     },
+     {
+      "label": "هامش الربح",
+      "value": "100.0%"
+     }
+    ],
+    "badge": {
+     "status": "profitable",
+     "tone": "success",
+     "text": "رابح",
+     "color": "rgb(23, 115, 74)",
+     "background": "rgb(227, 242, 234)",
+     "inHeading": false,
+     "beside": null
+    },
+    "kanban": null,
+    "kanbanFacts": null
+   },
+   "project-empty|ar|390": {
+    "summary": [
+     {
+      "label": "الميزانية",
+      "value": "92,000"
+     },
+     {
+      "label": "المهام · 0.0 الساعات المسجَّلة",
+      "value": "0"
+     }
+    ],
+    "cost": [
+     {
+      "label": "قيمة المبيعات",
+      "value": "0"
+     },
+     {
+      "label": "المفوتر",
+      "value": "28,842"
+     },
+     {
+      "label": "المُحصَّل",
+      "value": "11,537"
+     },
+     {
+      "label": "إجمالي التكلفة",
+      "value": "0"
+     },
+     {
+      "label": "الربح الفعلي",
+      "value": "28,842"
+     },
+     {
+      "label": "هامش الربح",
+      "value": "100.0%"
+     }
+    ],
+    "badge": {
+     "status": "profitable",
+     "tone": "success",
+     "text": "رابح",
+     "color": "rgb(23, 115, 74)",
+     "background": "rgb(227, 242, 234)",
+     "inHeading": false,
+     "beside": null
+    },
+    "kanban": null,
+    "kanbanFacts": null
    }
   }
  }

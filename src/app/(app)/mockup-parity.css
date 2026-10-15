@@ -799,6 +799,15 @@ table.data-table.line-table td { padding: 9px 14px; }
 @media (max-width: 1100px) {
   .kanban { grid-template-columns: repeat(2, 1fr); }
 }
+/* DEV-UI-01.7 C3: a column's status label is its h3, set in the column head's own type (11.5px, 700,
+   uppercase) rather than the global heading face. */
+.kanban-col-head h3 { font: inherit; text-wrap: inherit; }
+/* DEV-UI-01.7 C3: Project Cost & Profitability — the Revenue and Costs cards, two across on minmax(0, 1fr)
+   tracks, stacked at ≤900px so neither card is squeezed. */
+.cost-breakdown-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-bottom: 16px; }
+@media (max-width: 900px) {
+  .cost-breakdown-grid { grid-template-columns: minmax(0, 1fr); }
+}
 
 /* ---- Section 7: HR / Employees (ported verbatim from build_mockup_v12.py BASE CSS) ---- */
 .emp-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }

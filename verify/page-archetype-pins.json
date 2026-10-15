@@ -731,6 +731,8 @@
     "StatRow": [
       "src/app/(app)/hr/employees/employees-client.tsx: <StatRow items>",
       "src/app/(app)/hr/payroll/page.tsx: <StatRow items>",
+      "src/app/(app)/projects/[id]/cost-control.tsx: <StatRow columns items>",
+      "src/app/(app)/projects/[id]/page.tsx: <StatRow columns items>",
       "src/app/(app)/projects/projects-list-client.tsx: <StatRow items>",
       "src/app/(app)/purchasing/debit-notes/dn-list-client.tsx: <StatRow items>",
       "src/app/(app)/purchasing/orders/po-list-client.tsx: <StatRow items>",
@@ -756,6 +758,12 @@
       "src/app/(app)/clients/[id]/page.tsx: <SectionHeader className level title>",
       "src/app/(app)/hr/employees/[id]/page.tsx: <SectionHeader className level title>",
       "src/app/(app)/hr/payroll/page.tsx: <SectionHeader className level title>",
+      "src/app/(app)/projects/[id]/cost-control.tsx: <SectionHeader className level meta title>",
+      "src/app/(app)/projects/[id]/cost-control.tsx: <SectionHeader className level title>",
+      "src/app/(app)/projects/[id]/cost-control.tsx: <SectionHeader className level title>",
+      "src/app/(app)/projects/[id]/kanban-board.tsx: <SectionHeader actions className level title>",
+      "src/app/(app)/projects/[id]/page.tsx: <SectionHeader actions className level title>",
+      "src/app/(app)/projects/[id]/page.tsx: <SectionHeader className level title>",
       "src/app/(app)/purchasing/vendors/[id]/page.tsx: <SectionHeader className level title>"
     ],
     "EmptyState": [
@@ -766,6 +774,9 @@
       "src/app/(app)/hr/leave/leave-client.tsx: <EmptyState message>",
       "src/app/(app)/hr/payroll/page.tsx: <EmptyState message>",
       "src/app/(app)/inventory/products/recycle-bin/page.tsx: <EmptyState message>",
+      "src/app/(app)/projects/[id]/kanban-board.tsx: <EmptyState message>",
+      "src/app/(app)/projects/[id]/page.tsx: <EmptyState message>",
+      "src/app/(app)/projects/[id]/page.tsx: <EmptyState message>",
       "src/app/(app)/purchasing/vendors/recycle-bin/page.tsx: <EmptyState message>"
     ],
     "formatDisplayDate": [
@@ -788,6 +799,9 @@
       "src/app/(app)/inventory/products/new/page.tsx: <PageHeader description title>",
       "src/app/(app)/inventory/products/page.tsx: <PageHeader actions description title>",
       "src/app/(app)/inventory/products/recycle-bin/page.tsx: <PageHeader actions description title>",
+      "src/app/(app)/projects/[id]/page.tsx: <PageHeader actions meta title>",
+      "src/app/(app)/projects/new/page.tsx: <PageHeader description title>",
+      "src/app/(app)/projects/projects-list-client.tsx: <PageHeader title>",
       "src/app/(app)/purchasing/vendors/[id]/page.tsx: <PageHeader actions description meta title>",
       "src/app/(app)/purchasing/vendors/new/page.tsx: <PageHeader description title>",
       "src/app/(app)/purchasing/vendors/page.tsx: <PageHeader actions description title>",

@@ -387,10 +387,18 @@ const COVER: [string, string, RegExp[], RegExp[]][] = [
     [/statusLabel\(locale, "delivery_challan", s\)/, /value: statusLabel\(locale, "delivery_challan", value\)/], [/t\(locale, (s|value)\)/]],
   ["list workspace status filter", "documents/_workspace/list-workspace-toolbar.tsx",
     [/module: DocumentType;/, /statusOptions\.map\(\(s\) =>[\s\S]{0,120}\{statusLabel\(locale, module, s\)\}/], [/t\(locale, s\)/, /isStatusDomain/]],
-  ["task kanban column labels + status select", "projects/[id]/kanban-board.tsx",
+  // DEV-UI-01.7 C3: each column's label is its h3 (the count beside it, outside), a card's accessible name
+  // carries the task's own status label, and a Done card keeps its task/done badge — all from the
+  // registry; no second task-status label map, no raw or hard-coded status through t().
+  ["task kanban column h3 labels, card names, Done badge + status select", "projects/[id]/kanban-board.tsx",
     [/const COLUMNS: \{ status: string \}\[\] = \[\{ status: "todo" \}, \{ status: "in_progress" \}, \{ status: "blocked" \}, \{ status: "done" \}\];/,
-     /<span>\{statusLabel\(locale, "task", col\.status\)\}<\/span>/, /COLUMNS\.map\(\(c\) =>[\s\S]{0,140}\{statusLabel\(locale, "task", c\.status\)\}/],
-    [/label: "(To Do|In Progress|Blocked|Done)"/, /t\(locale, (col|c)\.label\)/]],
+     /<div className="kanban-col-head">\s*<h3>\{statusLabel\(locale, "task", col\.status\)\}<\/h3>\s*<span>\{colTasks\.length\}<\/span>\s*<\/div>/,
+     /COLUMNS\.map\(\(c\) =>[\s\S]{0,140}\{statusLabel\(locale, "task", c\.status\)\}/,
+     /\{col\.status === "done" \? \(\s*<StatusBadge domain="task" status="done" locale=\{locale\} \/>/,
+     /const taskName = \(task: TaskRow\) =>\s*\[\s*task\.title,\s*statusLabel\(locale, "task", task\.status\),/],
+    [/label: "(To Do|To do|In Progress|In progress|Blocked|Done)"/, /t\(locale, (col|c|task)\.(label|status)\)/,
+     /t\(locale, "(todo|in_progress|blocked|done|To Do|To do|In Progress|In progress|Blocked|Done)"\)/,
+     /<span>\{statusLabel\(locale, "task", col\.status\)\}<\/span>/, /\b(todo|in_progress|blocked)\s*:\s*["'`]/]],
   ["dashboard HR snapshot (attendance)", "dashboard/page.tsx",
     [/\["present", hrSnapshot\.present\],\s*\["on_leave", hrSnapshot\.onLeave\],\s*\["absent", hrSnapshot\.absent\],/, /statusTextClass\("attendance", status\)\}>\{statusLabel\(locale, "attendance", status\)\}/],
     [/t\(locale, "(Present|On Leave|Absent)"\)/]],

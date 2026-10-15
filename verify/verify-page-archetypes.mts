@@ -38,9 +38,18 @@
  * pins re-baseline: two data statements (New Vendor / New Product read the UI locale) and the
  * consumer inventory; nothing else.
  *
+ * C3 (Projects + kanban) adds group 11: the list, New Project and the project detail on PageHeader; the
+ * detail's h2 / h3 outline (Cost & Profitability › Revenue / Costs, Tasks › the four status columns,
+ * Time logged this week, Linked Documents); its two KPI rows on StatRow (columns 2 and 3) and the cost
+ * breakdown on its own CSS rule; task cards as real buttons with a full accessible name, the focus
+ * ring and focus returned to the opener; EmptyState for its three empty sections; logical numeric
+ * columns; D-2 held as it is (every figure, the health badge); and the proof that nothing else moved —
+ * each Projects file is C2's plus C3's own hunks. Its pins re-baseline the consumer inventory only.
+ *
  * `--write-pins` recomputes verify/page-archetype-pins.json from the working tree. Only a stage that
  * deliberately re-baselines may run it, and the diff of that file is what its review reads.
- * docs/ui/dev-ui-01-7/c0-foundations-and-guardrails.md, docs/ui/dev-ui-01-7/c1-master-data-and-detail.md
+ * docs/ui/dev-ui-01-7/c0-foundations-and-guardrails.md, docs/ui/dev-ui-01-7/c1-master-data-and-detail.md,
+ * docs/ui/dev-ui-01-7/c3-projects-and-kanban.md
  */
 import { readFileSync, readdirSync, statSync, existsSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
@@ -84,6 +93,19 @@ const C2_HEADERS = [
 ];
 const C2_EMPTY = [`${HR}employees/employees-client.tsx`, `${HR}departments/page.tsx`, `${HR}attendance/page.tsx`, `${HR}leave/leave-client.tsx`, `${HR}payroll/page.tsx`];
 const C2_STATROWS = [`${HR}employees/employees-client.tsx`, `${HR}payroll/page.tsx`];
+// DEV-UI-01.7 C3: the Projects family — the list, New Project, and the project detail with its cost
+// control and kanban board.
+const PR = `${A}projects/`;
+const C3_LIST = `${PR}projects-list-client.tsx`;
+const C3_NEW = `${PR}new/page.tsx`;
+const C3_DETAIL = `${PR}[id]/page.tsx`;
+const C3_COST = `${PR}[id]/cost-control.tsx`;
+const C3_KANBAN = `${PR}[id]/kanban-board.tsx`;
+const C3_FILES = [C3_LIST, C3_NEW, C3_DETAIL, C3_COST, C3_KANBAN];
+/** The file holding each Projects route's PageHeader. */
+const C3_HEADERS = [C3_LIST, C3_NEW, C3_DETAIL];
+/** The project detail's two KPI rows: the summary (columns 2) and Cost & Profitability (columns 3). */
+const C3_STATROWS = [C3_COST, C3_DETAIL];
 
 let pass = 0;
 let fail = 0;
@@ -480,7 +502,7 @@ function delta(want: string[], got: string[]) {
   return [...w.map((x) => `- ${x}`), ...extra.map((x) => `+ ${x}`)].slice(0, 8).join("\n          ");
 }
 
-console.log("Page archetypes — C0 foundations and guardrails (baseline 1bfdbbf) + C1 master data and entity detail");
+console.log("Page archetypes — C0 foundations and guardrails (baseline 1bfdbbf) + C1 master data and entity detail + C2 HR + C3 Projects");
 
 // ---------- 1. routes ----------
 section("1. routes");
@@ -691,9 +713,12 @@ check("StatRow columns 2 / 3 / 4: the same .stat-row-2 row with --stat-cols set 
     !/grid-template-columns/.test(srCols.join("")) && !/gridTemplateColumns|grid-template-columns/.test(codeOnly(read(SRF))), srCols.join(" "));
 const srNode = html(h(StatRow, { items: [{ label: "Balance", value: h("span", { className: "money" }, "SAR 1,250.00") }] }));
 check("StatRow: a ReactNode value renders inside the kpi-value", srNode.includes('margin-top:4px"><span class="money">SAR 1,250.00</span></div>'), srNode);
-check(`StatRow consumers as pinned (${pins.consumers.StatRow.length}) — C0's nine, plus the Employees and Payroll strips (C2); none passes \`columns\``,
-  same(now.consumers.StatRow, pins.consumers.StatRow) && now.consumers.StatRow.length === 11 && !now.consumers.StatRow.some((u) => / columns\b/.test(u)) &&
-    C2_STATROWS.every((f) => now.consumers.StatRow.some((u) => u.startsWith(`${f}: `))), delta(pins.consumers.StatRow, now.consumers.StatRow));
+// C3: the project detail's summary and Cost & Profitability rows are StatRows too — the only two that pass
+// `columns` (2 and 3; group 11 checks the values).
+const srWithColumns = now.consumers.StatRow.filter((u) => / columns\b/.test(u)).map((u) => u.slice(0, u.indexOf(": <")));
+check(`StatRow consumers as pinned (${pins.consumers.StatRow.length}) — C0's nine, the Employees and Payroll strips (C2), the project summary and Cost & Profitability (C3); only C3's two pass \`columns\``,
+  same(now.consumers.StatRow, pins.consumers.StatRow) && now.consumers.StatRow.length === 13 && same(srWithColumns, C3_STATROWS) &&
+    [...C2_STATROWS, ...C3_STATROWS].every((f) => now.consumers.StatRow.some((u) => u.startsWith(`${f}: `))), delta(pins.consumers.StatRow, now.consumers.StatRow));
 // D-6 (approved; C2): every KPI row is --stat-cols columns (default 4) on minmax(0, 1fr) tracks, and two
 // across at ≤640px. These are the only rules naming .stat-row-2.
 const D6_RULES = [
@@ -810,10 +835,11 @@ check("consumers: formatDisplayDate on exactly the two C2 date surfaces — Atte
   same(now.consumers.formatDisplayDate, pins.consumers.formatDisplayDate) && same(now.consumers.formatDisplayDate, [`${HR}attendance/page.tsx`, `${HR}payroll/page.tsx`]),
   now.consumers.formatDisplayDate.join(" "));
 const fileOf = (u: string) => u.slice(0, u.indexOf(": <"));
-check("consumers: SectionHeader on the client / vendor Statement of Account (C1) and Salary Structure / Past payroll runs (C2); EmptyState in the three master-data bins (C1) and the five HR empty states (C2)",
+check("consumers: SectionHeader on the client / vendor Statement of Account (C1), Salary Structure / Past payroll runs (C2) and the project detail's six sections (C3); EmptyState in the three master-data bins (C1), the five HR empty states (C2) and the project detail's three (C3)",
   same(now.consumers.SectionHeader, pins.consumers.SectionHeader) && same(now.consumers.EmptyState, pins.consumers.EmptyState) &&
-    same(now.consumers.SectionHeader.map(fileOf), [`${A}clients/[id]/page.tsx`, `${HR}employees/[id]/page.tsx`, `${HR}payroll/page.tsx`, `${A}purchasing/vendors/[id]/page.tsx`]) &&
-    same(now.consumers.EmptyState.map(fileOf), [...C1_BINS, ...C2_EMPTY].sort()),
+    same(now.consumers.SectionHeader.map(fileOf), [`${A}clients/[id]/page.tsx`, `${HR}employees/[id]/page.tsx`, `${HR}payroll/page.tsx`, `${A}purchasing/vendors/[id]/page.tsx`,
+      C3_COST, C3_COST, C3_COST, C3_KANBAN, C3_DETAIL, C3_DETAIL].sort()) &&
+    same(now.consumers.EmptyState.map(fileOf), [...C1_BINS, ...C2_EMPTY, C3_KANBAN, C3_DETAIL, C3_DETAIL].sort()),
   [...now.consumers.SectionHeader, ...now.consumers.EmptyState].join(" "));
 
 // ---------- 7. no abstraction creep ----------
@@ -896,9 +922,9 @@ check("PageHeader: a text-page / 600 title (no font-extrabold, no text-2xl) that
   phCode.includes(PH_H1.replace("class=", "className=")) && phLayout.length === 0 && physical(PHF).length === 0, [...phLayout.map(String), ...physical(PHF)].join(" "));
 check("PageHeader: imports only react and the cn helper", same(imports(PHF), ["react", "@/lib/utils"]), imports(PHF).join(" "));
 const phUses = now.consumers.PageHeader;
-check(`PageHeader consumers: the 12 C1 pages and, since C2, the 7 HR routes — one header each, none patching it with a className (${phUses.length})`,
-  same(phUses, pins.consumers.PageHeader) && same(phUses.map(fileOf).sort(), [...C1_PAGES, ...C2_HEADERS].sort()) && !phUses.some((u) => / className\b/.test(u)),
-  delta([...C1_PAGES, ...C2_HEADERS].sort(), phUses.map(fileOf).sort()));
+check(`PageHeader consumers: the 12 C1 pages, the 7 HR routes (C2) and the 3 Projects routes (C3) — one header each, none patching it with a className (${phUses.length})`,
+  same(phUses, pins.consumers.PageHeader) && same(phUses.map(fileOf).sort(), [...C1_PAGES, ...C2_HEADERS, ...C3_HEADERS].sort()) && !phUses.some((u) => / className\b/.test(u)),
+  delta([...C1_PAGES, ...C2_HEADERS, ...C3_HEADERS].sort(), phUses.map(fileOf).sort()));
 
 // D-9: the layout pin narrowed — every other layout file byte-pinned, one by one
 const dfPins = JSON.parse(read("verify/document-form-pins.json")) as Record<string, string>;
@@ -1130,9 +1156,12 @@ const D6_SOURCES: Record<string, string> = {
   "projects/[id]/cost-control.tsx": "2b8a78d963ff9394",
   "settings/security/security-client.tsx": "97d7c211bd24e412",
 };
-const d6Drift = Object.entries(D6_SOURCES).filter(([f, hsh]) => !exists(A + f) || sha(A + f) !== hsh).map(([f]) => f);
-check(`D-6 reaches every other KPI row through the CSS and the StatRow component only — the eight document lists, Projects (list, detail, cost control) and Security byte-identical to C1 (${Object.keys(D6_SOURCES).length} files)`,
-  d6Drift.length === 0, d6Drift.join(" "));
+// C3 converged Projects' three files (list, detail, cost control) on purpose: group 11 holds them from
+// here — C2's code plus C3's own hunks, nothing else. The other nine stay byte-identical to C1.
+const d6Held = Object.entries(D6_SOURCES).filter(([f]) => !C3_FILES.includes(A + f));
+const d6Drift = d6Held.filter(([f, hsh]) => !exists(A + f) || sha(A + f) !== hsh).map(([f]) => f);
+check(`D-6 reaches every other KPI row through the CSS and the StatRow component only — the eight document lists and Security byte-identical to C1 (${d6Held.length} files; Projects' three are C3's, group 11)`,
+  d6Held.length === 9 && d6Drift.length === 0, d6Drift.join(" "));
 
 // Status and direction
 const C1_HR_BADGES: Record<string, string[]> = {
@@ -1146,6 +1175,368 @@ const hrBadges = Object.fromEntries(C2_FILES.map((f) => [rel(f), jsxEls(f, "Stat
 const hrPhys = C2_FILES.flatMap((f) => physical(f).map((x) => `${rel(f)}: ${x}`));
 check("C2 HR files: status only through StatusBadge — the same 7 badges, domains and raw values as C1; no physical left / right",
   same(hrBadges, C1_HR_BADGES) && hrPhys.length === 0, `${JSON.stringify(hrBadges)} ${hrPhys.join(" ")}`);
+
+// ---------- 11. C3 — Projects and the kanban ----------
+section("11. C3 — Projects and the kanban");
+/** Code without comments or whitespace. */
+const flat = (s: string) => squash(codeOnly(s));
+/** An attribute's code without comments or whitespace. */
+const attrCode = (el: El | undefined, name: string) => (el ? flat(attr(el, name)?.initializer?.getText() ?? "") : "");
+const strAttr = (el: El | undefined, name: string) => {
+  const v = el ? attr(el, name)?.initializer : undefined;
+  return v && ts.isStringLiteral(v) ? v.text : null;
+};
+
+// Nothing moved but C3's own changes: each Projects file is C2's (c060e8b) with exactly these hunks
+// applied — [C2 code, C3 code], compared without comments or whitespace. Undo them all and the file
+// must be C2's again, so a query, a FigureRow, a drill table, the dialog, the list's search, stats,
+// table, RowMenu, ListEmptyState or live region cannot change unseen.
+const C3_HUNKS: Record<string, [string, string][]> = {
+  [C3_LIST]: [
+    ["", `import { PageHeader } from "@/components/layout/page-header";`],
+    [`<div className="flex items-center justify-between mb-[22px]"><h3 className="text-[19px] font-bold">{t(locale, "Projects")}</h3></div>`,
+      `<PageHeader title={t(locale, "Projects")} />`],
+  ],
+  [C3_NEW]: [
+    ["", `import { PageHeader } from "@/components/layout/page-header";`],
+    [`<div className="main-head"><h3>{t(locale, "New Project")}</h3></div>
+      <p className="text-[12.5px] text-ink-muted -mt-3 mb-5">{t(locale, "Add a project to plan tasks and track time against it.")}</p>`,
+      `<PageHeader title={t(locale, "New Project")} description={t(locale, "Add a project to plan tasks and track time against it.")} />`],
+  ],
+  [C3_DETAIL]: [
+    ["", `import { PageHeader } from "@/components/layout/page-header"; import { SectionHeader } from "@/components/ui/section-header";
+      import { EmptyState } from "@/components/ui/empty-state";`],
+    ["", `import { StatRow } from "../../sales/_shared/stat-row";`],
+    [`<div className="main-head"><h3>{project.name}</h3><div className="flex items-center gap-3">
+        <span className="org-pill">{pillParts.join(" · ")}</span>
+        <ProjectStatusSelect locale={locale} projectId={project.id} status={project.status} /></div></div>`,
+      `<PageHeader title={project.name} meta={<span className="org-pill">{pillParts.join(" · ")}</span>}
+        actions={<ProjectStatusSelect locale={locale} projectId={project.id} status={project.status} />} />`],
+    [`<div className="stat-row-2" style={{ gridTemplateColumns: "repeat(2, 1fr)", maxWidth: 520 }}>
+        <div className="card" style={{ padding: "16px 18px" }}>
+          <div style={{ fontSize: 11.5, color: "var(--ink-muted)" }}>{t(locale, "Budget")}</div>
+          <div style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 20, marginTop: 4 }}>
+            {project.budget ? <Money amount={project.budget} context="summary" /> : "—"}</div></div>
+        <div className="card" style={{ padding: "16px 18px" }}>
+          <div style={{ fontSize: 11.5, color: "var(--ink-muted)" }}>
+            {t(locale, "Tasks")} · {costControl.labourEstimate.hours.toFixed(1)} {t(locale, "Hours logged").toLowerCase()}</div>
+          <div style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 20, marginTop: 4 }}>{tasks.length}</div></div></div>`,
+      `<div className="max-w-[520px]"><StatRow columns={2} items={[
+        { label: t(locale, "Budget"), value: project.budget ? <Money amount={project.budget} context="summary" /> : "—" },
+        { label: \`\${t(locale, "Tasks")} · \${costControl.labourEstimate.hours.toFixed(1)} \${t(locale, "Hours logged").toLowerCase()}\`, value: tasks.length, },
+      ]} /></div>`],
+    [`<div className="main-head" style={{ marginTop: 22 }}><h3 style={{ fontSize: 15 }}>{t(locale, "Time logged this week")}</h3>
+        {employees.length > 0 && tasks.length > 0 ? (
+          <LogTimeDialog locale={locale} tasks={tasks.map((task) => ({ id: task.id, title: task.title }))} employees={employees} />
+        ) : null}</div>`,
+      `<SectionHeader level={2} title={t(locale, "Time logged this week")} actions={employees.length > 0 && tasks.length > 0 ? (
+          <LogTimeDialog locale={locale} tasks={tasks.map((task) => ({ id: task.id, title: task.title }))} employees={employees} />
+        ) : null} className="mt-[22px] mb-[22px]" />`],
+    [`<div className="rounded-2xl border border-line bg-surface shadow-elevated py-8 text-center text-ink-muted text-sm">{t(locale, "No time logged yet.")}</div>`,
+      `<EmptyState message={t(locale, "No time logged yet.")} />`],
+    [`<TableHead className="text-right">{t(locale, "Hours")}</TableHead>`, `<TableHead numeric>{t(locale, "Hours")}</TableHead>`],
+    [`<TableCell className="text-right num-tabular">{Number(log.hours).toFixed(1)}</TableCell>`, `<TableCell numeric className="num-tabular">{Number(log.hours).toFixed(1)}</TableCell>`],
+    [`<div className="main-head" style={{ marginTop: 22 }}><h3 style={{ fontSize: 15 }}>{t(locale, "Linked Documents")}</h3></div>`,
+      `<SectionHeader level={2} title={t(locale, "Linked Documents")} className="mt-[22px] mb-[22px]" />`],
+    [`<div className="rounded-2xl border border-line bg-surface shadow-elevated py-8 text-center text-ink-muted text-sm">
+        {t(locale, "No documents tagged to this project yet. Pick this project in the Project field when creating a quotation, sales order, or invoice.")}</div>`,
+      `<EmptyState message={t(locale, "No documents tagged to this project yet. Pick this project in the Project field when creating a quotation, sales order, or invoice.")} />`],
+    [`<TableHead className="text-right">{t(locale, "Amount")}</TableHead>`, `<TableHead numeric>{t(locale, "Amount")}</TableHead>`],
+    [`<TableCell className="text-right num-tabular"><Money amount={d.total} /></TableCell>`, `<TableCell numeric className="num-tabular"><Money amount={d.total} /></TableCell>`],
+  ],
+  [C3_COST]: [
+    [`import { statusLabel, type StatusDomain } from "@/lib/status-registry";`, `import { statusLabel, statusTextClass, type StatusDomain } from "@/lib/status-registry";`],
+    ["", `import { SectionHeader } from "@/components/ui/section-header";`],
+    ["", `import { StatRow } from "../../sales/_shared/stat-row";`],
+    [`function StatCard({ label, value, tone }: { label: string; value: React.ReactNode; tone?: string }) { return (
+        <div className="card" style={{ padding: "16px 18px" }}><div style={{ fontSize: 11.5, color: "var(--ink-muted)" }}>{label}</div>
+        <div style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 20, marginTop: 4, color: tone }}>{value}</div></div>); }
+      function FigureRow`, `function FigureRow`],
+    [`const profitTone = health === "loss" ? "var(--accent-red)" : health === "profitable" ? "var(--accent-green)" : "var(--ink-muted)";`,
+      `const healthText = statusTextClass("project_health", health);`],
+    [`<div className="main-head"><h3 style={{ fontSize: 15 }}>{t(locale, "Cost & Profitability")}</h3>
+        <StatusBadge domain="project_health" status={health} locale={locale} /></div>`,
+      `<SectionHeader level={2} title={t(locale, "Cost & Profitability")} meta={<StatusBadge domain="project_health" status={health} locale={locale} />} className="mb-[22px]" />`],
+    [`<div className="stat-row-2" style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
+        <StatCard label={t(locale, "Sales Value")} value={<Money amount={revenue.confirmed} context="summary" />} />
+        <StatCard label={t(locale, "Invoiced")} value={<Money amount={revenue.invoiced} context="summary" />} />
+        <StatCard label={t(locale, "Collected")} value={<Money amount={revenue.received} context="summary" />} tone="var(--accent-green)" />
+        <StatCard label={t(locale, "Total Cost")} value={<Money amount={cost.total} context="summary" />} tone="var(--warning)" />
+        <StatCard label={t(locale, "Actual Profit")} value={<Money amount={profit} context="summary" />} tone={profitTone} />
+        <StatCard label={t(locale, "Profit Margin")} value={marginPercent === null ? "—" : \`\${marginPercent.toFixed(1)}%\`} tone={profitTone} /></div>`,
+      `<StatRow columns={3} items={[
+        { label: t(locale, "Sales Value"), value: <Money amount={revenue.confirmed} context="summary" /> },
+        { label: t(locale, "Invoiced"), value: <Money amount={revenue.invoiced} context="summary" /> },
+        { label: t(locale, "Collected"), value: <Money amount={revenue.received} context="summary" /> },
+        { label: t(locale, "Total Cost"), value: <Money amount={cost.total} context="summary" /> },
+        { label: t(locale, "Actual Profit"), value: <span className={healthText}><Money amount={profit} context="summary" /></span> },
+        { label: t(locale, "Profit Margin"), value: <span className={healthText}>{marginPercent === null ? "—" : \`\${marginPercent.toFixed(1)}%\`}</span> },
+      ]} />`],
+    [`<div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }} className="cost-breakdown-grid">`, `<div className="cost-breakdown-grid">`],
+    [`<div style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 13, marginBottom: 6 }}>{t(locale, "Revenue")}</div>`,
+      `<SectionHeader level={3} title={t(locale, "Revenue")} className="mb-1.5" />`],
+    [`<div style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 13, marginBottom: 6 }}>{t(locale, "Costs")}</div>`,
+      `<SectionHeader level={3} title={t(locale, "Costs")} className="mb-1.5" />`],
+  ],
+  [C3_KANBAN]: [
+    [`import { useState, useTransition } from "react";`, `import { useRef, useState, useTransition } from "react";`],
+    ["", `import { SectionHeader } from "@/components/ui/section-header"; import { EmptyState } from "@/components/ui/empty-state";`],
+    ["", `const LIST_SEPARATOR: Record<Locale, string> = { en: ", ", ar: "، " };`],
+    [`const [pending, startTransition] = useTransition(); function openNew() {`,
+      `const [pending, startTransition] = useTransition(); const opener = useRef<HTMLElement | null>(null);
+       function openNew(trigger: HTMLElement) { opener.current = trigger;`],
+    [`function openEdit(task: TaskRow) {`, `function openEdit(task: TaskRow, trigger: HTMLElement) { opener.current = trigger;`],
+    ["", `const taskName = (task: TaskRow) => [task.title, statusLabel(locale, "task", task.status),
+        \`\${t(locale, "Priority")}: \${t(locale, PRIORITY_LABEL[task.priority ?? "medium"])}\`,
+        \`\${t(locale, "Assignee")}: \${task.assigneeName ?? t(locale, "Unassigned")}\`,
+      ].join(LIST_SEPARATOR[locale]);`],
+    [`<div className="flex items-center justify-between mb-3"><div />
+        <Button variant="secondary" onClick={openNew}><Plus className="size-3.5" /> {t(locale, "Add Task")}</Button></div>`,
+      `<SectionHeader level={2} title={t(locale, "Tasks")} actions={
+        <Button variant="secondary" onClick={(e) => openNew(e.currentTarget)}><Plus className="size-3.5" /> {t(locale, "Add Task")}</Button>
+      } className="mb-3" />`],
+    [`<div className="rounded-2xl border border-line bg-surface shadow-elevated py-12 text-center text-ink-muted text-sm">
+        {t(locale, "No tasks yet. Add the first task to this project.")}</div>`,
+      `<EmptyState message={t(locale, "No tasks yet. Add the first task to this project.")} />`],
+    [`<span>{statusLabel(locale, "task", col.status)}</span>`, `<h3>{statusLabel(locale, "task", col.status)}</h3>`],
+    [`<div key={task.id} className="kanban-card" onClick={() => openEdit(task)}><div className="t">{task.title}</div><div className="meta-row">`,
+      `<button key={task.id} type="button"
+        className="kanban-card block w-full text-start focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+        aria-label={taskName(task)} data-task-id={task.id} onClick={(e) => openEdit(task, e.currentTarget)}>
+        <span className="t block">{task.title}</span><span className="meta-row">`],
+    [`<div className="kanban-avatar" style={{ background: grad }} title={task.assigneeName}>{initials(task.assigneeName)}</div>`,
+      `<span className="kanban-avatar" style={{ background: grad }} title={task.assigneeName}>{initials(task.assigneeName)}</span>`],
+    [`<span />)}</div></div>);`, `<span />)}</span></button>);`],
+    [`<DialogContent>`, `<DialogContent onCloseAutoFocus={(e) => { e.preventDefault(); const el = opener.current; const id = el?.dataset.taskId;
+        (el?.isConnected ? el : id ? document.querySelector<HTMLElement>(\`.kanban-card[data-task-id="\${id}"]\`) : null)?.focus(); }}>`],
+  ],
+};
+/** Each file at C2 (c060e8b), without comments or whitespace. */
+const C2_FLAT: Record<string, string> = {
+  [C3_LIST]: "ccc3e64668a6ce70", [C3_NEW]: "35cc34171702f1ff", [C3_DETAIL]: "967efb501c0295ab", [C3_COST]: "5c7ee04673c55a0e", [C3_KANBAN]: "b6e2f0cc15c603a8",
+};
+const hunkBad: string[] = [];
+for (const f of C3_FILES) {
+  let s = flat(read(f));
+  for (const [was, is] of C3_HUNKS[f]) {
+    const n = s.split(squash(is)).length - 1;
+    if (n !== 1) hunkBad.push(`${rel(f)}: ${n}× ${squash(is).slice(0, 60)}…`);
+    s = s.replace(squash(is), () => squash(was));
+  }
+  if (h16(s) !== C2_FLAT[f]) hunkBad.push(`${rel(f)}: not C2's once C3's hunks are undone (${h16(s)})`);
+}
+const nHunks = Object.values(C3_HUNKS).flat().length;
+check(`C3 changed nothing in the five Projects files but its own ${nHunks} hunks: undo them and each is C2's code to the character (comments and whitespace aside) — the queries, FigureRow, the drill tables, the warning, the dialog; the list's search, stats, table, RowMenu, ListEmptyState and live region`,
+  hunkBad.length === 0 && nHunks === 39, hunkBad.join(" | "));
+// Projects files C3 must not touch, byte for byte (actions.ts and project-costing.ts are group 4's business pins).
+const C3_UNTOUCHED: Record<string, string> = {
+  [`${PR}page.tsx`]: "7b5c54fc98d94ed6", [`${PR}project-form.tsx`]: "7202780083f91f63",
+  [`${PR}[id]/project-status-select.tsx`]: "8eb0ff66d5388d04", [`${PR}[id]/log-time-dialog.tsx`]: "4cdb163691cb2c64",
+};
+const untouched = Object.entries(C3_UNTOUCHED).filter(([f, hsh]) => !exists(f) || sha(f) !== hsh).map(([f]) => rel(f));
+const bizPinned = [`${PR}actions.ts`, "src/lib/project-costing.ts"].every((f) => pins.business[f] && now.business[f] === pins.business[f]);
+check("C3: projects/page.tsx (the list query), ProjectForm, ProjectStatusSelect and LogTimeDialog byte-identical to C2; projects/actions.ts and src/lib/project-costing.ts still their business pins",
+  untouched.length === 0 && bizPinned, untouched.join(" "));
+const C3_PAGES = ["(app)/projects/page.tsx", "(app)/projects/new/page.tsx", "(app)/projects/[id]/page.tsx"];
+check(`C3: the three Projects pages' server data sections (${C3_PAGES.map((p) => pins.data[p].length).join(" / ")} statements — the queries, weekAgoIso, the linked documents and their sort, getProjectCostControl(…), pillParts), guards and action inventories (${C3_PAGES.map((p) => pins.actions[p].length).join(" / ")}) are the pinned ones`,
+  C3_PAGES.every((p) => same(now.data[p], pins.data[p]) && same(now.guards[p], pins.guards[p]) && same(now.actions[p], pins.actions[p])) &&
+    same(findAll(parse(C3_DETAIL), (n) => ts.isCallExpression(n) && n.expression.getText() === "getProjectCostControl").map(canon), ["getProjectCostControl(session.orgId, projectId, session.orgCurrency)"]));
+
+// Page headers
+const c3Count = C3_FILES.map((f) => jsxEls(f, "PageHeader").length);
+const c3Hand = C3_FILES.flatMap((f) => findAll(parse(f), (n) => isEl(n) && /^h[1-6]$/.test(n.tagName.getText())).map((n) => `${rel(f)}: <${(n as El).tagName.getText()}>`));
+check("C3: the list, New Project and the project detail each render one PageHeader — the page's one h1 — and the board and cost control none; no .main-head left; the only hand-written heading is the kanban column's <h3>",
+  same(c3Count, [1, 1, 1, 0, 0]) && same(c3Hand, ["projects/[id]/kanban-board.tsx: <h3>"]) && C3_FILES.every((f) => !codeOnly(read(f)).includes("main-head")), `${c3Count.join(" ")} ${c3Hand.join(" ")}`);
+const C3_HEADER_SLOTS: [string, Record<"title" | "description" | "meta" | "actions" | "className", string>][] = [
+  [C3_LIST, { title: '{t(locale,"Projects")}', description: "", meta: "", actions: "", className: "" }],
+  [C3_NEW, { title: '{t(locale,"NewProject")}', description: '{t(locale,"Addaprojecttoplantasksandtracktimeagainstit.")}', meta: "", actions: "", className: "" }],
+  [C3_DETAIL, { title: "{project.name}", description: "", meta: '{<spanclassName="org-pill">{pillParts.join("·")}</span>}',
+    actions: "{<ProjectStatusSelectlocale={locale}projectId={project.id}status={project.status}/>}", className: "" }],
+];
+const c3HeaderBad = C3_HEADER_SLOTS.flatMap(([f, want]) => {
+  const el = jsxEls(f, "PageHeader")[0];
+  return (Object.keys(want) as (keyof typeof want)[]).filter((k) => attrCode(el, k) !== want[k]).map((k) => `${rel(f)} ${k}: ${attrCode(el, k)}`);
+});
+const toolbar = jsxEls(C3_LIST, "ListToolbar");
+check("C3 headers: Projects; New Project with its description; the project's name as the h1 with the org-pill (pillParts: status label, budget) as meta and ProjectStatusSelect (same props) as the action, both outside it — New Project stays in the list's ListToolbar (/projects/new), not repeated in the header",
+  c3HeaderBad.length === 0 && toolbar.length === 1 && attrCode(toolbar[0], "createHref") === '"/projects/new"' && attrCode(toolbar[0], "createLabel") === '{t(locale,"NewProject")}',
+  c3HeaderBad.join(" | "));
+
+// Sections: h1 → h2 → h3
+const C3_SECTIONS: Record<string, string[]> = {
+  [C3_DETAIL]: ['{2} {t(locale,"Timeloggedthisweek")}', '{2} {t(locale,"LinkedDocuments")}'],
+  [C3_COST]: ['{2} {t(locale,"Cost&Profitability")}', '{3} {t(locale,"Revenue")}', '{3} {t(locale,"Costs")}'],
+  [C3_KANBAN]: ['{2} {t(locale,"Tasks")}'],
+};
+const secBad = Object.entries(C3_SECTIONS).filter(([f, want]) => !same(sectionsIn(f), want)).map(([f]) => `${rel(f)}: ${sectionsIn(f).join(", ")}`);
+const sec = (f: string, key: string) => jsxEls(f, "SectionHeader").find((el) => attrCode(el, "title") === `{t(locale,"${key}")}`);
+const [costHead, tasksHead, timeHead, docsHead] = [sec(C3_COST, "Cost&Profitability"), sec(C3_KANBAN, "Tasks"), sec(C3_DETAIL, "Timeloggedthisweek"), sec(C3_DETAIL, "LinkedDocuments")];
+check("C3 sections: Cost & Profitability, Tasks, Time logged this week and Linked Documents are SectionHeader h2s; Revenue and Costs SectionHeader h3s in the breakdown cards",
+  secBad.length === 0, secBad.join(" | "));
+check("C3 section slots: the project_health StatusBadge is Cost & Profitability's meta (outside the h2; domain and raw status as before); Add Task — label, variant, the create dialog — the Tasks action; LogTimeDialog the Time-logged action under the same condition (employees and tasks); Linked Documents none",
+  attrCode(costHead, "meta") === '{<StatusBadgedomain="project_health"status={health}locale={locale}/>}' && attrCode(costHead, "actions") === "" &&
+    attrCode(tasksHead, "actions") === '{<Buttonvariant="secondary"onClick={(e)=>openNew(e.currentTarget)}><PlusclassName="size-3.5"/>{t(locale,"AddTask")}</Button>}' && attrCode(tasksHead, "meta") === "" &&
+    attrCode(timeHead, "actions") === '{employees.length>0&&tasks.length>0?(<LogTimeDialoglocale={locale}tasks={tasks.map((task)=>({id:task.id,title:task.title}))}employees={employees}/>):null}' &&
+    attrCode(docsHead, "actions") === "" && attrCode(docsHead, "meta") === "");
+const colHead = findAll(parse(C3_KANBAN), (n) => ts.isJsxElement(n) && attrCode(n.openingElement, "className") === '"kanban-col-head"') as ts.JsxElement[];
+const colKids = colHead[0] ? colHead[0].children.filter((c) => !(ts.isJsxText(c) && !c.text.trim())).map((c) => flat(c.getText())) : [];
+check('C3 kanban columns: a column head is its status label as an <h3> — statusLabel(locale, "task", col.status), the registry\'s, not hard-coded — and the count in a <span> beside it, outside the heading; one head per COLUMNS entry',
+  colHead.length === 1 && same(colKids, ['<h3>{statusLabel(locale,"task",col.status)}</h3>', "<span>{colTasks.length}</span>"]) && flat(read(C3_KANBAN)).includes("{COLUMNS.map((col)=>{"),
+  colKids.join(" "));
+check("C3 kanban: COLUMNS unchanged — todo, in_progress, blocked, done, in that order; no label map beside it",
+  same(findAll(parse(C3_KANBAN), varNamed("COLUMNS")).map(canon), ['const COLUMNS: { status: string; }[] = [{ status: "todo" }, { status: "in_progress" }, { status: "blocked" }, { status: "done" }];']));
+
+// KPI rows on StatRow (columns 2 and 3), the breakdown on its CSS rule
+const SUMMARY_ITEMS =
+  '{[{label:t(locale,"Budget"),value:project.budget?<Moneyamount={project.budget}context="summary"/>:"—"},' +
+  '{label:`${t(locale,"Tasks")}·${costControl.labourEstimate.hours.toFixed(1)}${t(locale,"Hourslogged").toLowerCase()}`,value:tasks.length,},]}';
+const COST_ITEMS =
+  '{[{label:t(locale,"SalesValue"),value:<Moneyamount={revenue.confirmed}context="summary"/>},{label:t(locale,"Invoiced"),value:<Moneyamount={revenue.invoiced}context="summary"/>},' +
+  '{label:t(locale,"Collected"),value:<Moneyamount={revenue.received}context="summary"/>},{label:t(locale,"TotalCost"),value:<Moneyamount={cost.total}context="summary"/>},' +
+  '{label:t(locale,"ActualProfit"),value:<spanclassName={healthText}><Moneyamount={profit}context="summary"/></span>},' +
+  '{label:t(locale,"ProfitMargin"),value:<spanclassName={healthText}>{marginPercent===null?"—":`${marginPercent.toFixed(1)}%`}</span>},]}';
+const rowsOf = (f: string) => jsxEls(f, "StatRow").map((el) => [attrCode(el, "columns"), attrCode(el, "items")]);
+const summaryRow = jsxEls(C3_DETAIL, "StatRow")[0];
+const summaryBox = summaryRow && ts.isJsxElement(summaryRow.parent) ? summaryRow.parent.openingElement : undefined;
+check("C3 project summary: one StatRow, columns={2} — Budget (its Money, or —) and Tasks · <hours> hours logged (labourEstimate.hours, tasks.length), the labels as they were — in a max-w-[520px] box (the 520px composition), no inline style",
+  same(rowsOf(C3_DETAIL), [["{2}", SUMMARY_ITEMS]]) && summaryBox !== undefined && strAttr(summaryBox, "className") === "max-w-[520px]" && summaryBox.attributes.properties.length === 1,
+  JSON.stringify(rowsOf(C3_DETAIL)));
+check("C3 Cost & Profitability KPIs: one StatRow, columns={3} — Sales Value, Invoiced, Collected, Total Cost, Actual Profit, Profit Margin, in that order, the engine's figures as handed in; Collected and Total Cost plain (their green / warning was decoration); no colorClass on any item",
+  same(rowsOf(C3_COST), [["{3}", COST_ITEMS]]), JSON.stringify(rowsOf(C3_COST)));
+const inlineGrid = C3_FILES.filter((f) => /gridTemplateColumns|display:\s*"grid"|stat-row-2|repeat\(/.test(codeOnly(read(f)))).map(rel);
+const gridTokens = C3_FILES.flatMap((f) => classTokens(f).filter((c) => /^(grid-cols-\d+|col-span-\d+)$/.test(c)).map((c) => `${rel(f)}: ${c}`));
+check("C3: no inline grid in a Projects file — no gridTemplateColumns, no inline display: grid, no hand-built .stat-row-2 (StatRow and mockup-parity.css own the grids); the one grid utility is the task dialog's two-field row, as in C2",
+  inlineGrid.length === 0 && same(gridTokens, ["projects/[id]/kanban-board.tsx: grid-cols-2"]), [...inlineGrid, ...gridTokens].join(" "));
+const breakdown = findAll(parse(C3_COST), (n) => isEl(n) && /cost-breakdown-grid/.test(attrCode(n, "className"))) as El[];
+const CSSF = `${A}mockup-parity.css`;
+check(".cost-breakdown-grid owns the breakdown: two minmax(0, 1fr) tracks, 16px gap, 16px below; one track at ≤900px — exactly that rule, nowhere else; the cost control's box carries the class and nothing inline",
+  same(cssRules(".cost-breakdown-grid"), [
+    `${CSSF}: .cost-breakdown-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-bottom: 16px; }`,
+    `${CSSF}: @media (max-width: 900px) > .cost-breakdown-grid { grid-template-columns: minmax(0, 1fr); }`,
+  ]) && breakdown.length === 1 && breakdown[0].attributes.properties.length === 1 && strAttr(breakdown[0], "className") === "cost-breakdown-grid",
+  cssRules(".cost-breakdown-grid").join(" | "));
+const KANBAN_RULES = [
+  `${CSSF}: .kanban { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; align-items: start; }`,
+  `${CSSF}: .kanban-col { background: var(--canvas); border: 1px solid var(--line); border-radius: 14px; padding: 12px; }`,
+  `${CSSF}: .kanban-col-head { display: flex; justify-content: space-between; align-items: center; font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--ink-faint); margin-bottom: 10px; padding: 0 2px; }`,
+  `${CSSF}: .kanban-card { background: var(--surface); border: 1px solid var(--line); border-radius: 11px; padding: 11px 12px; margin-bottom: 9px; box-shadow: var(--shadow-sm); }`,
+  `${CSSF}: .kanban-card .t { font-size: 12.5px; font-weight: 600; margin-bottom: 6px; }`,
+  `${CSSF}: .kanban-card .meta-row { display: flex; justify-content: space-between; align-items: center; }`,
+  `${CSSF}: .kanban-avatar { width: 20px; height: 20px; border-radius: 6px; font-size: 9px; display: flex; align-items: center; justify-content: center; font-weight: 700; color: #fff; }`,
+  `${CSSF}: .kanban-card { cursor: pointer; }`,
+  `${CSSF}: .kanban-card:hover { border-color: var(--brand-orange); box-shadow: var(--shadow-card-hover); transform: translateY(-1px); }`,
+  `${CSSF}: @media (max-width: 1100px) > .kanban { grid-template-columns: repeat(2, 1fr); }`,
+  `${CSSF}: .kanban-col-head h3 { font: inherit; text-wrap: inherit; }`,
+];
+check(".kanban rules: C2's, untouched — four columns, two at ≤1100px (390 included), the card and its hover — plus one: the column head's h3 takes the head's own type (font: inherit), so the label looks as it did",
+  same(cssRules(".kanban"), KANBAN_RULES), cssRules(".kanban").join(" | "));
+// The stylesheet is C2's plus those two additions — comments and whitespace aside.
+const cssFlat = (s: string) => s.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\s+/g, "");
+const C3_CSS = `.kanban-col-head h3 { font: inherit; text-wrap: inherit; }
+  .cost-breakdown-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-bottom: 16px; }
+  @media (max-width: 900px) { .cost-breakdown-grid { grid-template-columns: minmax(0, 1fr); } }`;
+const cssNow = cssFlat(read(CSSF));
+check("mockup-parity.css is C2's plus C3's two additions and nothing else (.stat-row-2, .two-col, .acct-grid, the dashboard, Settings, document and print rules untouched)",
+  cssNow.split(cssFlat(C3_CSS)).length === 2 && h16(cssNow.replace(cssFlat(C3_CSS), "")) === "198cad6c7e2da464", h16(cssNow.replace(cssFlat(C3_CSS), "")));
+
+// Task cards
+const cards = findAll(parse(C3_KANBAN), (n) => isEl(n) && /kanban-card/.test(attrCode(n, "className"))) as El[];
+const card = cards[0];
+const cardAttrs = card ? card.attributes.properties.map((p) => (ts.isJsxAttribute(p) ? p.name.getText() : "{…}")).sort().join(" ") : "";
+check('C3 task card: the one .kanban-card is a <button type="button"> (no div card) — class kept, block / full width / text-start (logical) — with only key, type, className, aria-label, data-task-id and onClick: no tabIndex, role or key handler (Tab, Enter and Space are the button\'s own)',
+  cards.length === 1 && card.tagName.getText() === "button" && strAttr(card, "type") === "button" && cardAttrs === "aria-label className data-task-id key onClick type" &&
+    strAttr(card, "className") === "kanban-card block w-full text-start focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus" &&
+    attrCode(card, "onClick") === "{(e)=>openEdit(task,e.currentTarget)}" && attrCode(card, "data-task-id") === "{task.id}", `${card?.tagName.getText()} ${cardAttrs}`);
+const kCode = codeOnly(read(C3_KANBAN));
+const kBanned = [/\bdraggable\b/, /\bonDrag\w*/, /\bonDrop\b/, /\bonKey(Down|Up|Press)\b/, /\btabIndex\b/, /\brole=/, /dispatchEvent|KeyboardEvent|\.click\(\)/, /\bsetTimeout\b|\bsetInterval\b|requestAnimationFrame|queueMicrotask/, /\bonMouse(Down|Up)\b|\bonPointer\w+/]
+  .filter((re) => re.test(kCode));
+check("C3 kanban: no drag and drop (no draggable, no drag / drop handler), no key simulation (no key handler, tabIndex, role, synthetic event or click()), no timer-based focus anywhere in the board",
+  kBanned.length === 0, kBanned.map(String).join(" "));
+check('C3 task card name: aria-label={taskName(task)} — the title, the task\'s status from the registry, "Priority: <label>", "Assignee: <name>" or Unassigned, through t() and joined per locale (", " / "، "); no id in it; Priority, Assignee and Unassigned have Arabic',
+  same(findAll(parse(C3_KANBAN), varNamed("taskName")).map(canon), [
+    'const taskName = (task: TaskRow) => [ task.title, statusLabel(locale, "task", task.status), `${t(locale, "Priority")}: ${t(locale, PRIORITY_LABEL[task.priority ?? "medium"])}`, `${t(locale, "Assignee")}: ${task.assigneeName ?? t(locale, "Unassigned")}`].join(LIST_SEPARATOR[locale]);',
+  ]) && same(findAll(parse(C3_KANBAN), varNamed("LIST_SEPARATOR")).map(canon), ['const LIST_SEPARATOR: Record<Locale, string> = { en: ", ", ar: "، " };']) &&
+    attrCode(card, "aria-label") === "{taskName(task)}" && ["Priority", "Assignee", "Unassigned", "Low", "Medium", "High"].every((k) => /[؀-ۿ]/.test(translate("ar", k))));
+const cardClasses = (strAttr(card, "className") ?? "").split(" ");
+check("C3 task card focus: the repository's focus-visible pattern (Button, Checkbox, RadioGroup: outline-2, outline-offset-2, outline-focus — the --focus token through @theme's --color-focus) on the card; its hover rule untouched (above)",
+  ["focus-visible:outline-2", "focus-visible:outline-offset-2", "focus-visible:outline-focus"].every((c) => cardClasses.includes(c)) &&
+    read("src/components/ui/button.tsx").includes("focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus") && /--color-focus: var\(--focus\);/.test(read("src/app/globals.css")));
+const dialogContent = jsxEls(C3_KANBAN, "DialogContent");
+const kSrc = read(C3_KANBAN);
+check("C3 focus return: the control that opened the dialog — a task card or Add Task, e.currentTarget — is kept in a ref, and DialogContent's onCloseAutoFocus stops Radix's default and focuses it again (or, if a save re-rendered the board, the same task's card by data-task-id): Escape, the close button and Save alike",
+  /const opener = useRef<HTMLElement \| null>\(null\);/.test(kSrc) && /function openNew\(trigger: HTMLElement\) \{\s*opener\.current = trigger;/.test(kSrc) &&
+    /function openEdit\(task: TaskRow, trigger: HTMLElement\) \{\s*opener\.current = trigger;/.test(kSrc) && dialogContent.length === 1 &&
+    attrCode(dialogContent[0], "onCloseAutoFocus") === '{(e)=>{e.preventDefault();constel=opener.current;constid=el?.dataset.taskId;(el?.isConnected?el:id?document.querySelector<HTMLElement>(`.kanban-card[data-task-id="${id}"]`):null)?.focus();}}',
+  attrCode(dialogContent[0], "onCloseAutoFocus"));
+const statusCalls = findAll(parse(C3_KANBAN), (n) => ts.isCallExpression(n) && n.expression.getText() === "statusLabel").map((n) => squash(n.getText())).sort();
+const prioUses = findAll(parse(C3_KANBAN), (n) => ts.isElementAccessExpression(n) && /^PRIORITY_(LABEL|STYLE)$/.test(n.expression.getText())).map((n) => squash(n.getText())).sort();
+check("C3 status / priority boundary: task status only through the registry — statusLabel(locale, \"task\", …) for the column h3, the card name and the Status select, StatusBadge task/done on a Done card — and priority only through the page-local PRIORITY_LABEL / PRIORITY_STYLE, unchanged (deferred to DEV-UI-01.8), no priority in the registry",
+  same(statusCalls, ['statusLabel(locale,"task",c.status)', 'statusLabel(locale,"task",col.status)', 'statusLabel(locale,"task",task.status)']) &&
+    same(prioUses, ["PRIORITY_LABEL[p]", 'PRIORITY_LABEL[task.priority??"medium"]', 'PRIORITY_LABEL[task.priority??"medium"]', 'PRIORITY_STYLE[task.priority??"medium"]']) &&
+    same(findAll(parse(C3_KANBAN), (n) => varNamed("PRIORITY_LABEL")(n) || varNamed("PRIORITY_STYLE")(n)).map(canon), [
+      'const PRIORITY_LABEL: Record<string, string> = { low: "Low", medium: "Medium", high: "High" };',
+      'const PRIORITY_STYLE: Record<string, React.CSSProperties> = { low: { background: "var(--surface)", color: "var(--ink-muted)", border: "1px solid var(--line)" }, medium: { background: "var(--info-bg)", color: "var(--info)" }, high: { background: "var(--danger-bg)", color: "var(--danger)" } };',
+    ]) && !/priority/i.test(read("src/lib/status-registry.ts")),
+  `${statusCalls.join(" ")} | ${prioUses.join(" ")}`);
+
+// Empty states
+const C3_EMPTY_WANT: Record<string, string[]> = {
+  [C3_KANBAN]: ['message {t(locale,"Notasksyet.Addthefirsttasktothisproject.")}'],
+  [C3_DETAIL]: ['message {t(locale,"Notimeloggedyet.")}', 'message {t(locale,"Nodocumentstaggedtothisprojectyet.PickthisprojectintheProjectfieldwhencreatingaquotation,salesorder,orinvoice.")}'],
+};
+const c3EmptyBad = Object.entries(C3_EMPTY_WANT).filter(([f, want]) => !same(emptyOf(f), want)).map(([f]) => `${rel(f)}: ${emptyOf(f).join(", ")}`);
+check("C3 empty states: EmptyState for no tasks, no time logged and no linked documents — the same messages, no action inside (Add Task stays in the Tasks header); the shadowed custom box is gone; the no-employee note kept",
+  c3EmptyBad.length === 0 && C3_FILES.every((f) => !/shadow-elevated|rounded-2xl border border-line/.test(codeOnly(read(f)))) &&
+    flat(read(C3_DETAIL)).includes('{employees.length===0&&(<pclassName="text-[12px]text-ink-faint-mt-2mb-3">{t(locale,"Timeloggingneedsatleastoneemployee—thePeoplemoduleshipsinalatersection.")}</p>)}'),
+  c3EmptyBad.join(" | "));
+
+// Direction: logical numeric columns
+const c3Phys = C3_FILES.flatMap((f) => physical(f).map((x) => `${rel(f)}: ${x}`));
+const numHeads = jsxEls(C3_DETAIL, "TableHead").filter((el) => attr(el, "numeric")).map((el) => (ts.isJsxElement(el.parent) ? flat(el.parent.children.map((c) => c.getText()).join("")) : ""));
+const numCells = jsxEls(C3_DETAIL, "TableCell").filter((el) => attr(el, "numeric")).map((el) => strAttr(el, "className"));
+check("C3 RTL: no physical left / right in the five Projects files (the four text-right sites are gone); Hours and Amount — header and cell — on the table's logical numeric API (TableHead / TableCell numeric: the inline end, either direction), num-tabular kept",
+  c3Phys.length === 0 && same(numHeads, ['{t(locale,"Hours")}', '{t(locale,"Amount")}']) && same(numCells, ["num-tabular", "num-tabular"]), [...c3Phys, ...numHeads, ...numCells].join(" "));
+
+// D-2: held exactly as it is
+const costSrc = read(C3_COST);
+const recompute = C3_FILES.flatMap((f) =>
+  findAll(parse(f), (n) => ts.isBinaryExpression(n) && [ts.SyntaxKind.PlusToken, ts.SyntaxKind.MinusToken, ts.SyntaxKind.AsteriskToken, ts.SyntaxKind.SlashToken, ts.SyntaxKind.PercentToken].includes(n.operatorToken.kind))
+    .map((n) => `${rel(f)}: ${squash(n.getText())}`));
+const figureRefs = findAll(parse(C3_COST), (n) => ts.isIdentifier(n) && (n.text === "profit" || n.text === "marginPercent")).length;
+check("D-2 (still undecided — held, not resolved): Actual Profit and Profit Margin are shown, from the engine's result as handed in (the destructure of data unchanged: profit / marginPercent read nowhere else), the project_health badge beside the heading; no arithmetic in a Projects file but C2's own (the task-avatar colour index, the 7-day window, the list's status counts) — nothing recomputed in the page; the detail still hands getProjectCostControl's result to the section",
+  costSrc.includes("const { revenue, cost, profit, marginPercent, health, rows, labourEstimate, excludedUnconverted } = data;") && figureRefs === 5 &&
+    COST_ITEMS.includes('{label:t(locale,"ActualProfit"),value:<spanclassName={healthText}><Moneyamount={profit}context="summary"/></span>}') &&
+    COST_ITEMS.includes('{label:t(locale,"ProfitMargin"),value:<spanclassName={healthText}>{marginPercent===null?"—":`${marginPercent.toFixed(1)}%`}</span>}') &&
+    attrCode(costHead, "meta") === '{<StatusBadgedomain="project_health"status={health}locale={locale}/>}' &&
+    same(recompute, ["projects/projects-list-client.tsx: (counts[r.status]??0)+1", "projects/[id]/page.tsx: Date.now()-7*24*60*60*1000", "projects/[id]/page.tsx: 7*24*60*60*1000",
+      "projects/[id]/page.tsx: 7*24*60*60", "projects/[id]/page.tsx: 7*24*60", "projects/[id]/page.tsx: 7*24", "projects/[id]/kanban-board.tsx: task.assigneeId%AVATAR_GRADIENTS.length"]) &&
+    jsxEls(C3_DETAIL, "ProjectCostControlSection").map((el) => flat(el.getText())).join() === "<ProjectCostControlSectionlocale={locale}data={costControl}/>",
+  `${figureRefs} ${recompute.join(" | ")}`);
+const accents = (codeOnly(costSrc).match(/var\(--(accent-red|accent-green|warning|success|danger)\)/g) ?? []).sort();
+check('C3 project-health colour: Actual Profit and Profit Margin take the registry\'s class — statusTextClass("project_health", health) around the value — and nothing else picks it: no profitTone, no health → colour map or comparison of health in a Projects file; the only accent colours left in the cost control are the lower detail\'s, as in C2 (Received Payments green, Total Project Cost warning, a negative drill row red)',
+  costSrc.includes('const healthText = statusTextClass("project_health", health);') && C3_FILES.every((f) => !/profitTone|\bhealth\s*[!=]==|\b(loss|profitable|no_revenue)\s*:/.test(codeOnly(read(f)))) &&
+    same(accents, ["var(--accent-green)", "var(--accent-red)", "var(--warning)"]) &&
+    (costSrc.match(/tone="var\(--accent-green\)"/g) ?? []).length === 1 && (costSrc.match(/strong tone="var\(--warning\)"/g) ?? []).length === 1 && /r\.negative \? "var\(--accent-red\)"/.test(costSrc),
+  accents.join(" "));
+
+// Status and copy
+const C2_PROJECT_BADGES: Record<string, string[]> = {
+  "projects/projects-list-client.tsx": ['domain="project" status={r.status} locale={locale}'],
+  "projects/[id]/cost-control.tsx": ['domain="project_health" status={health} locale={locale}'],
+  "projects/[id]/kanban-board.tsx": ['domain="task" status="done" locale={locale}'],
+};
+const c3Badges = Object.fromEntries(C3_FILES.map((f) => [rel(f), jsxEls(f, "StatusBadge").map((el) => el.attributes.properties.map((p) => p.getText()).join(" "))]).filter(([, v]) => v.length));
+const c3Keys = new Set<string>();
+for (const f of C3_FILES) {
+  const visit = (n: ts.Node) => {
+    if (ts.isCallExpression(n) && n.expression.getText() === "t" && n.arguments.length === 2) for (const k of textLits(n.arguments[1])) c3Keys.add(k);
+    ts.forEachChild(n, visit);
+  };
+  visit(parse(f));
+}
+const c3NoArabic = [...c3Keys].filter((k) => !/[؀-ۿ]/.test(translate("ar", k)));
+check(`C3: status only through StatusBadge in the Projects files — the same 3 badges, domains and raw values as C2 — and every t() key they use (${c3Keys.size}) has an Arabic entry`,
+  same(c3Badges, C2_PROJECT_BADGES) && c3NoArabic.length === 0, `${JSON.stringify(c3Badges)} ${c3NoArabic.join(" | ")}`);
 
 console.log("\nGroups:");
 for (const [g, [p, f]] of Object.entries(counts)) console.log(`  ${g}: ${p}/${p + f}`);
