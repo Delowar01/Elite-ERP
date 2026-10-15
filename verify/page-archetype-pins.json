@@ -487,7 +487,8 @@
       "4372874a289c const low = product.quantityOnHand <= product.reorderLevel;"
     ],
     "(app)/inventory/products/new/page.tsx": [
-      "70b16e709899 (params) ()"
+      "70b16e709899 (params) ()",
+      "2d1a9d4f64b4 const locale = await getLocale();"
     ],
     "(app)/inventory/products/page.tsx": [
       "fa3cb8c9c1e3 (params) ({ searchParams }: { searchParams: Promise<{ q?: string; lowSto…",
@@ -551,6 +552,7 @@
     "(app)/purchasing/vendors/new/page.tsx": [
       "70b16e709899 (params) ()",
       "db122801cf02 const session = await requireSession();",
+      "2d1a9d4f64b4 const locale = await getLocale();",
       "d2a819d5ceef const [org] = await db .select({ country: orgsTable.country, customTaxNa…",
       "9ab0c84fc50a const labels = resolveTaxLabels(getProfileByCountryName(org?.country), o…"
     ],
@@ -721,10 +723,10 @@
   },
   "consumers": {
     "CardTitle": [
-      "src/app/(app)/clients/[id]/page.tsx: <CardTitle>",
-      "src/app/(app)/clients/[id]/page.tsx: <CardTitle>",
-      "src/app/(app)/inventory/products/[id]/page.tsx: <CardTitle>",
-      "src/app/(app)/purchasing/vendors/[id]/page.tsx: <CardTitle>"
+      "src/app/(app)/clients/[id]/page.tsx: <CardTitle as>",
+      "src/app/(app)/clients/[id]/page.tsx: <CardTitle as>",
+      "src/app/(app)/inventory/products/[id]/page.tsx: <CardTitle as>",
+      "src/app/(app)/purchasing/vendors/[id]/page.tsx: <CardTitle as>"
     ],
     "StatRow": [
       "src/app/(app)/projects/projects-list-client.tsx: <StatRow items>",
@@ -748,9 +750,30 @@
       "src/app/(app)/sales/proforma/proforma-list-client.tsx: <ListEmptyState createHref createLabel locale message>",
       "src/app/(app)/sales/quotations/quotations-list-client.tsx: <ListEmptyState createHref createLabel locale message>"
     ],
-    "SectionHeader": [],
-    "EmptyState": [],
-    "formatDisplayDate": []
+    "SectionHeader": [
+      "src/app/(app)/clients/[id]/page.tsx: <SectionHeader className level title>",
+      "src/app/(app)/purchasing/vendors/[id]/page.tsx: <SectionHeader className level title>"
+    ],
+    "EmptyState": [
+      "src/app/(app)/clients/recycle-bin/page.tsx: <EmptyState message>",
+      "src/app/(app)/inventory/products/recycle-bin/page.tsx: <EmptyState message>",
+      "src/app/(app)/purchasing/vendors/recycle-bin/page.tsx: <EmptyState message>"
+    ],
+    "formatDisplayDate": [],
+    "PageHeader": [
+      "src/app/(app)/clients/[id]/page.tsx: <PageHeader actions description meta title>",
+      "src/app/(app)/clients/new/page.tsx: <PageHeader description title>",
+      "src/app/(app)/clients/page.tsx: <PageHeader actions description title>",
+      "src/app/(app)/clients/recycle-bin/page.tsx: <PageHeader actions description title>",
+      "src/app/(app)/inventory/products/[id]/page.tsx: <PageHeader actions description meta title>",
+      "src/app/(app)/inventory/products/new/page.tsx: <PageHeader description title>",
+      "src/app/(app)/inventory/products/page.tsx: <PageHeader actions description title>",
+      "src/app/(app)/inventory/products/recycle-bin/page.tsx: <PageHeader actions description title>",
+      "src/app/(app)/purchasing/vendors/[id]/page.tsx: <PageHeader actions description meta title>",
+      "src/app/(app)/purchasing/vendors/new/page.tsx: <PageHeader description title>",
+      "src/app/(app)/purchasing/vendors/page.tsx: <PageHeader actions description title>",
+      "src/app/(app)/purchasing/vendors/recycle-bin/page.tsx: <PageHeader actions description title>"
+    ]
   },
   "listEmptyState": "de3bd579f4f6fbdd",
   "css": {

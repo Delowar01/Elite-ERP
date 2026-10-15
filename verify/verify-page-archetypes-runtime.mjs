@@ -1,9 +1,19 @@
 /**
- * DEV-UI-01.7 C0 — page-archetype runtime baseline.
+ * DEV-UI-01.7 C0 — page-archetype runtime baseline (C1: master-data and entity-detail targets).
  *
  *   node verify/verify-page-archetypes-runtime.mjs                   measure, compare with the baseline
  *   node verify/verify-page-archetypes-runtime.mjs --write-baseline  measure, write the baseline files
- *   flags: --skip-build (reuse .next — only when it was built from the current tree), --only=<route id>
+ *   node verify/verify-page-archetypes-runtime.mjs --rebaseline=<route id,…>
+ *                                                   measure every route; re-record only those routes
+ *   flags: --skip-build (reuse .next — only when it was built from the current tree), --only=<route id>,
+ *          --measure-out=<file> (also write what this run measured, for review evidence)
+ *
+ * C1 (master data + entity detail) re-recorded its 12 routes with --rebaseline and holds them to
+ * targets, below: one PageHeader holding the page's only h1, meta before actions, the title at the
+ * inline start; one h1 and no heading-level skip; no overflow at any width (client detail was 65 / 54
+ * px at 390); in Arabic, none of the page copy C1 translated renders in English. A --rebaseline run
+ * still compares those routes with the baseline it replaces — route behaviour, direction, Staff
+ * permissions and every never-worse measure — and prints their outline and action changes for review.
  *
  * The 36 DEV-UI-01.7 pages, through 44 routes (detail, tab and report variants, an empty project, an
  * unknown id), served by a production build. For every route it records what the page is TODAY:
@@ -64,6 +74,29 @@ const ACTIONS_FILE = "verify/page-archetype-actions.json";
 const args = process.argv.slice(2);
 const WRITE = args.includes("--write-baseline");
 const ONLY = args.find((a) => a.startsWith("--only="))?.slice(7);
+const REBASE = args.find((a) => a.startsWith("--rebaseline="))?.slice(13).split(",").filter(Boolean);
+const MEASURE_OUT = args.find((a) => a.startsWith("--measure-out="))?.slice(14);
+
+// DEV-UI-01.7 C1: the routes of the 12 master-data and entity-detail pages. (nf-client renders the
+// not-found page for clients/[id]; it is not C1's and stays at its baseline.)
+const C1_ROUTES = ["clients", "client-detail", "client-new", "client-bin", "vendors", "vendor-detail", "vendor-new", "vendor-bin", "products", "product-detail", "product-new", "product-bin"];
+// The page copy C1 moved onto t(): in Arabic none of it may render in English. A text node equal to
+// one of `exact`, or starting with a prefix ("SKU BTH-3X3", "Reorder level: 5"), counts when it is
+// outside a <form>: a form's own labels (ClientForm / VendorForm / ProductForm internals — ProductForm
+// has its own "Reorder level" field) are not page copy and not C1's. The submit labels a page hands its
+// form (submitLabel) are page copy rendered inside the form, so they count anywhere.
+const C1_LITERALS = {
+  exact: [
+    "Client profile", "Vendor profile", "No invoices yet.", "Purchase Orders", "No purchase orders yet.", "Stock", "Quantity on hand",
+    "New Vendor", "New Product", "Add a vendor to order and receive against.", "Add a product to your inventory catalog.",
+    "Clients — Recycle Bin", "Vendors — Recycle Bin", "Products — Recycle Bin", "Deleted clients live here until restored or permanently deleted.",
+    "Deleted vendors live here until restored or permanently deleted.", "Deleted products live here until restored or permanently deleted.",
+    "Back to Clients", "Back to Vendors", "Back to Products",
+  ],
+  prefixes: ["SKU ", "Reorder level"],
+  submit: ["Save changes", "Create Client", "Create Vendor", "Create Product"],
+};
+const isC1Literal = (s) => C1_LITERALS.submit.includes(s) || C1_LITERALS.exact.includes(s) || C1_LITERALS.prefixes.some((p) => s.startsWith(p));
 
 // [id, path, the DEV-UI-01.7 page it renders]
 const ROUTES = [
@@ -100,6 +133,12 @@ function refuse(why) {
 }
 if (existsSync(join(ROOT, ".env"))) refuse("a .env exists in this tree — run in an isolated worktree with no .env (the production configuration is never loaded)");
 if (!existsSync(PASSWORD_FILE)) refuse("no synthetic seed password (.ui-baseline-work/owner-password) — run `node tests/ui-baseline/run.mjs prepare` first");
+if (REBASE) {
+  // A partial re-record must still see every route: the routes it keeps are compared, not copied blind.
+  if (ONLY || WRITE) refuse("--rebaseline measures every route and re-records only the ones it names: not with --only or --write-baseline");
+  const unknown = REBASE.filter((id) => !ROUTES.some((r) => r[0] === id));
+  if (!REBASE.length || unknown.length) refuse(`--rebaseline: unknown route id(s): ${unknown.join(", ") || "(none given)"}`);
+}
 const env = serverEnv({ frozenNow: FROZEN_NOW, storageDir: join(ROOT, ".ui-baseline-work/storage-fake-archetypes") });
 env.DATABASE_URL = dbUrl(DB); // devui010_test_only_* on a loopback host, or isolation.mjs throws
 const target = new URL(env.DATABASE_URL);
@@ -124,7 +163,7 @@ async function admin(fn) {
 }
 
 // ------------------------------------------------------------------------------------- in-page measures
-const MEASURE = () => {
+const MEASURE = (literals) => {
   const vw = document.documentElement.clientWidth;
   const main = document.querySelector("main");
   if (!main) return { noMain: true, vw, dir: document.documentElement.getAttribute("dir"), lang: document.documentElement.lang, overflow: document.documentElement.scrollWidth - vw };
@@ -196,9 +235,53 @@ const MEASURE = () => {
     const r = sn.getBoundingClientRect(), m = main.getBoundingClientRect();
     navAtStart = document.documentElement.dir === "rtl" ? m.right - r.right <= r.left - m.left : r.left - m.left <= m.right - r.right;
   }
+  // C1: visible text nodes that are C1 page copy still in English (counted only in Arabic, below).
+  const c1Literals = [];
+  const tw2 = document.createTreeWalker(main, NodeFilter.SHOW_TEXT);
+  for (let n = tw2.nextNode(); n; n = tw2.nextNode()) {
+    const s = n.nodeValue.replace(/\s+/g, " ").trim();
+    if (!s || !n.parentElement || !visible(n.parentElement)) continue;
+    const pageCopy = !n.parentElement.closest("form") && (literals.exact.includes(s) || literals.prefixes.some((p) => s.startsWith(p)));
+    if (pageCopy || literals.submit.includes(s)) c1Literals.push(s);
+  }
+  // C1: the PageHeader — how many, whether it holds the only h1, meta before actions, the title at the
+  // inline start, and where its meta / actions group sits: at the inline end of the title's line, or
+  // wrapped below it at the inline start; never overlapping the title.
+  const phs = [...main.querySelectorAll('[data-slot="page-header"]')].filter(visible);
+  let pageHeader = null;
+  if (phs.length) {
+    const ph = phs[0];
+    const rtl = document.documentElement.dir === "rtl";
+    const box = ph.getBoundingClientRect();
+    const title = ph.firstElementChild;
+    const trail = ph.children[1] ?? null;
+    const h1s = [...main.querySelectorAll("h1")].filter(visible);
+    const meta = ph.querySelector('[data-slot="page-header-meta"]');
+    const act = ph.querySelector('[data-slot="page-header-actions"]');
+    const tr = title.getBoundingClientRect();
+    const atStart = (r) => (rtl ? box.right - r.right : r.left - box.left) <= 1;
+    const atEnd = (r) => (rtl ? r.left - box.left : box.right - r.right) <= 1;
+    let trailing = "none";
+    let overlap = false;
+    if (trail) {
+      const r = trail.getBoundingClientRect();
+      const sameLine = r.top < tr.bottom - 1;
+      trailing = sameLine ? (atEnd(r) ? "end" : "misplaced") : atStart(r) ? "below" : "misplaced";
+      overlap = sameLine && (rtl ? r.right > tr.left + 1 : r.left < tr.right - 1);
+    }
+    pageHeader = {
+      n: phs.length,
+      h1Inside: h1s.length === 1 && title.contains(h1s[0]),
+      metaFirst: !(meta && act) || Boolean(meta.compareDocumentPosition(act) & Node.DOCUMENT_POSITION_FOLLOWING),
+      titleAtStart: atStart(tr),
+      trailing,
+      overlap,
+    };
+  }
   return {
     vw, dir: document.documentElement.getAttribute("dir"), lang: document.documentElement.lang, overflow: Math.max(0, document.documentElement.scrollWidth - vw), offenders,
     outline: heads.map((h) => `h${h.lv} ${h.t}`), h1: heads.filter((h) => h.lv === 1).length, skips, tables: tables.length, tablesBeyond, indic, unnamed, pointerOnly, navAtStart,
+    c1Literals, pageHeader,
   };
 };
 
@@ -401,7 +484,7 @@ try {
 
   for (const locale of ["en", "ar"]) {
     await pass(`owner ${locale}`, ownerState, locale, null, WIDTHS, async ({ id, w, page, status, finalPath, errors }) => {
-      now.states[`${id}|${locale}|${w}`] = { status, finalPath, ...(await page.evaluate(MEASURE)), ...errFacts(errors) };
+      now.states[`${id}|${locale}|${w}`] = { status, finalPath, ...(await page.evaluate(MEASURE, C1_LITERALS)), ...errFacts(errors) };
       if (w === 1440 || (w === 390 && locale === "en")) acts.owner[`${id}|${locale}|${w}`] = await page.evaluate(ACTIONS);
     });
     await pass(`staff ${locale}`, staffState, locale, null, [[1440, 900]], async ({ id, page, status, finalPath, errors }) => {
@@ -451,6 +534,27 @@ if (WRITE) {
   writeFileSync(ACTIONS_FILE, JSON.stringify(acts, null, 1) + "\n");
   console.log(`• wrote ${BASELINE_FILE} (${Object.keys(now.states).length} owner states, ${Object.keys(now.staff).length} staff, ${Object.keys(now.sweep).length} sweep) and ${ACTIONS_FILE}`);
 }
+if (MEASURE_OUT) writeFileSync(MEASURE_OUT, JSON.stringify({ ...now, blockedRequests: blocked, actions: acts }, null, 1) + "\n");
+const rebased = (k) => Boolean(REBASE?.includes(k.split("|")[0]));
+if (REBASE) {
+  // The named routes' entries are replaced by this run's; every other entry is kept exactly as pinned
+  // (same keys, same order), so the diff of the two files is those routes and nothing else.
+  const merge = (old, cur, what) => {
+    const lost = Object.keys(old).filter((k) => !(k in cur));
+    if (lost.length) refuse(`--rebaseline: ${what} in the baseline were not measured: ${lost.slice(0, 4).join(", ")}`);
+    const out = {};
+    for (const k of Object.keys(old)) out[k] = rebased(k) ? cur[k] : old[k];
+    for (const k of Object.keys(cur)) if (!(k in out)) refuse(`--rebaseline: ${what}: ${k} is not in the baseline`);
+    return out;
+  };
+  const nextBase = { ...pinned, states: merge(pinned.states, now.states, "owner states"), staff: merge(pinned.staff, now.staff, "staff states"), sweep: merge(pinned.sweep, now.sweep, "sweep states") };
+  const nextActs = { owner: merge(pinnedActions.owner, acts.owner, "owner action lists"), staff: merge(pinnedActions.staff, acts.staff, "staff action lists") };
+  writeFileSync(BASELINE_FILE, JSON.stringify(nextBase, null, 1) + "\n");
+  writeFileSync(ACTIONS_FILE, JSON.stringify(nextActs, null, 1) + "\n");
+  const n = (o) => Object.keys(o).filter(rebased).length;
+  console.log(`• re-recorded ${REBASE.length} routes in ${BASELINE_FILE} and ${ACTIONS_FILE}: ${n(now.states)} owner states, ${n(now.staff)} staff, ${n(now.sweep)} sweep, ` +
+    `${n(acts.owner) + n(acts.staff)} action lists; every other route kept as pinned. The checks below compare with the baseline they replace.`);
+}
 
 // ------------------------------------------------------------------------------------- checks
 const base = WRITE ? { ...now } : pinned;
@@ -473,7 +577,21 @@ check("every baseline state was measured", missing.length === 0, list(missing));
 const exact = (field) => keys.filter((k) => B[k] && JSON.stringify(now.states[k][field]) !== JSON.stringify(B[k][field])).map((k) => `${k} ${JSON.stringify(B[k][field])}→${JSON.stringify(now.states[k][field])}`);
 check("route behaviour: status and final path as the baseline", exact("status").length + exact("finalPath").length === 0, list([...exact("status"), ...exact("finalPath")]));
 check("direction: lang / dir as the baseline (ar → rtl, en → ltr)", exact("lang").length + exact("dir").length === 0 && keys.every((k) => now.states[k].dir === (k.includes("|ar|") ? "rtl" : "ltr")), list([...exact("lang"), ...exact("dir")]));
-check("heading outline inside <main> as the baseline", exact("outline").length === 0, list(exact("outline")));
+// A --rebaseline run re-records the outline and actions of its routes on purpose: those are listed
+// for review below instead of failing; everything else about them is still compared.
+const outlineDrift = exact("outline").filter((d) => !rebased(d));
+check(`heading outline inside <main> as the baseline${REBASE ? " (re-recorded routes: changes listed below)" : ""}`, outlineDrift.length === 0, list(outlineDrift));
+if (REBASE) {
+  const byRoute = new Map();
+  for (const k of keys.filter((k) => rebased(k) && JSON.stringify(now.states[k].outline) !== JSON.stringify(B[k]?.outline))) {
+    const [id, locale, w] = k.split("|");
+    const change = `${JSON.stringify(B[k]?.outline)} → ${JSON.stringify(now.states[k].outline)}`;
+    const key = `${id}|${locale}  ${change}`;
+    byRoute.set(key, [...(byRoute.get(key) ?? []), w]);
+  }
+  console.log(`• outline changes in the re-recorded routes (${byRoute.size}):`);
+  for (const [k, ws] of byRoute) console.log(`    ${k.replace("  ", ` @${ws.join("/")}  `)}`);
+}
 const worse = (f, better = (n, b) => n <= b) => keys.filter((k) => B[k] && !better(now.states[k][f] ?? 0, B[k][f] ?? 0)).map((k) => `${k} ${B[k][f]}→${now.states[k][f]}`);
 const atBase = (f, bad = (v) => v > 0) => Object.keys(B).filter((k) => bad(B[k][f] ?? 0)).length;
 check(`page overflow never worse (baseline: ${atBase("overflow")} states overflow)`, worse("overflow").length === 0, list(worse("overflow")));
@@ -504,11 +622,12 @@ check("Staff open every other 01.7 route where it is (session pages)", staffOpen
 const BSw = scoped(base.sweep);
 const sweepWorse = Object.keys(now.sweep).filter((k) => BSw[k] && (now.sweep[k].consoleErrors > BSw[k].consoleErrors || now.sweep[k].finalPath !== BSw[k].finalPath));
 check(`${SWEEP_ZONE} sweep: same routes, console errors never more`, sweepWorse.length === 0, list(sweepWorse));
-function actionDelta(group) {
+function actionDelta(group, which = (k) => !rebased(k)) {
   const want = scoped(baseActs[group]);
   const got = acts[group];
   const out = [];
   for (const k of new Set([...Object.keys(want), ...Object.keys(got)])) {
+    if (!which(k)) continue;
     const w = [...(want[k] ?? [])];
     const extra = [];
     for (const g of got[k] ?? []) {
@@ -524,6 +643,57 @@ const nOwner = Object.values(acts.owner).reduce((n, a) => n + a.length, 0);
 const nStaff = Object.values(acts.staff).reduce((n, a) => n + a.length, 0);
 check(`owner action inventory unchanged — ${nOwner} actions (EN + AR at 1440, EN at 390): name, target, type, disabled`, actionDelta("owner").length === 0, list(actionDelta("owner")));
 check(`Staff action inventory unchanged — ${nStaff} actions (EN + AR at 1440)`, actionDelta("staff").length === 0, list(actionDelta("staff")));
+if (REBASE) {
+  // The re-recorded routes' actions must stay EQUIVALENT: the same kinds, targets, types and states.
+  // English names are unchanged; an Arabic name may change only from C1 page copy that was still
+  // English to Arabic text.
+  const problems = [];
+  const renamed = [];
+  for (const group of ["owner", "staff"])
+    for (const k of Object.keys(acts[group]).filter(rebased)) {
+      const split = (a) => { const [kind, name, ...rest] = a.split("|"); return [[kind, ...rest].join("|"), name]; };
+      const groups = (xs) => xs.map(split).reduce((m, [r, n]) => m.set(r, [...(m.get(r) ?? []), n].sort()), new Map());
+      const was = groups(baseActs[group][k] ?? []);
+      const is = groups(acts[group][k]);
+      for (const r of new Set([...was.keys(), ...is.keys()])) {
+        const a = [...(was.get(r) ?? [])];
+        const b = [...(is.get(r) ?? [])];
+        if (a.length !== b.length) { problems.push(`${group} ${k}: ${a.length}→${b.length} × ${r}`); continue; }
+        const gone = a.filter((x) => !b.includes(x));
+        const came = b.filter((x) => !a.includes(x));
+        if (!gone.length) continue;
+        if (k.includes("|en|") || !gone.every(isC1Literal) || !came.every((x) => /[\u0600-\u06FF]/.test(x))) problems.push(`${group} ${k}: ${gone.join(", ")} → ${came.join(", ")} (${r})`);
+        else renamed.push(`${group} ${k}: "${gone.join('", "')}" → "${came.join('", "')}"`);
+      }
+    }
+  console.log(`• action names translated in the re-recorded routes (${renamed.length}):`);
+  for (const x of renamed) console.log(`    ${x}`);
+  check(`re-recorded routes: actions equivalent to the baseline — same kinds, targets, types and states; English names unchanged; Arabic names changed only from C1 page copy to Arabic (${renamed.length} lists)`,
+    problems.length === 0, list(problems));
+}
+
+// ------------------------------------------------------------------------------------- C1 targets
+// The 12 master-data and entity-detail pages, EN and AR at every width (96 states).
+const c1Keys = keys.filter((k) => C1_ROUTES.includes(k.split("|")[0]));
+const c1 = (pred) => c1Keys.filter((k) => !pred(now.states[k], k));
+check(`C1: the ${C1_ROUTES.length} master-data / entity-detail routes were measured (${c1Keys.length} states)`, ONLY || c1Keys.length === C1_ROUTES.length * 8, c1Keys.length);
+const phBad = c1((s) => s.pageHeader?.n === 1 && s.pageHeader.h1Inside && s.pageHeader.metaFirst && s.pageHeader.titleAtStart && s.pageHeader.trailing !== "misplaced" && !s.pageHeader.overlap);
+check("C1: one PageHeader per page, holding the page's only h1; meta before actions; title at the inline start; meta / actions at the inline end of its line or wrapped below at the start, never over the title",
+  phBad.length === 0, list(phBad.map((k) => `${k} ${JSON.stringify(now.states[k].pageHeader)}`)));
+const hBad = c1((s) => s.h1 === 1 && s.skips === 0);
+check("C1: exactly one h1 and no heading-level skip on every C1 page (EN / AR, all widths) — client and vendor detail jumped h1 → h3", hBad.length === 0, list(hBad.map((k) => `${k} h1=${now.states[k].h1} skips=${now.states[k].skips}`)));
+const DETAIL = ["client-detail", "vendor-detail", "product-detail"];
+const dBad = c1((s, k) => !DETAIL.includes(k.split("|")[0]) || (s.outline?.[0]?.startsWith("h1 ") && s.outline.length > 1 && s.outline.slice(1).every((o) => o.startsWith("h2 "))));
+check("C1: entity detail outlines are the entity's h1, then h2 sections only (side cards, Statement of Account)", dBad.length === 0, list(dBad.map((k) => `${k} ${JSON.stringify(now.states[k].outline)}`)));
+const oBad = c1((s) => s.overflow === 0 && s.offenders === 0);
+check("C1: no page overflow and no element past the viewport on any C1 page at any width — client detail at 390 was 65 px (EN) / 54 px (AR)", oBad.length === 0, list(oBad.map((k) => `${k} ${now.states[k].overflow}px ${now.states[k].offenders} el`)));
+const litBad = c1((s, k) => !k.includes("|ar|") || (s.c1Literals ?? []).length === 0);
+check(`C1: in Arabic, no C1 page copy renders in English (${C1_LITERALS.exact.length} strings, ${C1_LITERALS.prefixes.length} prefixes; ${c1Keys.filter((k) => k.includes("|ar|")).length} states)`,
+  litBad.length === 0, list(litBad.map((k) => `${k} ${JSON.stringify(now.states[k].c1Literals)}`)));
+// The scan is not blind: in English the same copy is found on every C1 page that carries any.
+const COPY = ["client-detail", "client-new", "client-bin", "vendor-detail", "vendor-new", "vendor-bin", "product-detail", "product-new", "product-bin"];
+const blind = COPY.filter((id) => !c1Keys.some((k) => k.startsWith(`${id}|en|`) && (now.states[k].c1Literals ?? []).length > 0));
+check(`C1: …and the scan sees that copy in English on each of the ${COPY.length} pages that carry it (a control)`, ONLY || blind.length === 0, blind.join(" "));
 check(`formatDisplayDate: Chromium writes exactly the server's (Node's) strings — ${Object.keys(fdNode).length} per browser — under ${fdBrowsers.map((b) => `${b.locale}/${b.timezoneId}`).join(", ")}`,
   Object.keys(fdNode).length === 36 && Object.values(fdNode).every((v) => typeof v === "string" && v) && fdBrowsers.length === 4 && fdBrowsers.every((b) => b.diff.length === 0),
   fdBrowsers.flatMap((b) => b.diff).slice(0, 4).join(" · ") || "no formatDisplayDate in this tree");

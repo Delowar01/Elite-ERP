@@ -30,9 +30,17 @@
  * the kanban, Settings direction — are deliberately NOT failures here. The runtime half
  * (verify/verify-page-archetypes-runtime.mjs) records them as a baseline that may only improve.
  *
+ * C1 (master data + entity detail) adds group 9 and turns the C0 "no consumer yet" checks into what
+ * C1 migrated: PageHeader evolved in place (one <h1>, meta before actions, a row that wraps; D-9
+ * narrows the layout pin to byte pins of every other layout file), and the 12 master-data / entity-
+ * detail pages on it — responsive detail grids, h2 section headings (CardTitle as="h2",
+ * SectionHeader), their copy through t(), EmptyState in the three master-data recycle bins. Its
+ * pins re-baseline: two data statements (New Vendor / New Product read the UI locale) and the
+ * consumer inventory; nothing else.
+ *
  * `--write-pins` recomputes verify/page-archetype-pins.json from the working tree. Only a stage that
  * deliberately re-baselines may run it, and the diff of that file is what its review reads.
- * docs/ui/dev-ui-01-7/c0-foundations-and-guardrails.md
+ * docs/ui/dev-ui-01-7/c0-foundations-and-guardrails.md, docs/ui/dev-ui-01-7/c1-master-data-and-detail.md
  */
 import { readFileSync, readdirSync, statSync, existsSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
@@ -48,6 +56,14 @@ const WRITE = process.argv.includes("--write-pins");
 const read = (p: string) => readFileSync(path.join(ROOT, p), "utf8");
 const h16 = (s: string | Buffer) => createHash("sha256").update(s).digest("hex").slice(0, 16);
 const A = "src/app/(app)/";
+// DEV-UI-01.7 C1: the 12 master-data and entity-detail pages, and the shared header they sit on.
+const C1_PAGES = [
+  "clients", "clients/[id]", "clients/new", "clients/recycle-bin", "purchasing/vendors", "purchasing/vendors/[id]", "purchasing/vendors/new", "purchasing/vendors/recycle-bin",
+  "inventory/products", "inventory/products/[id]", "inventory/products/new", "inventory/products/recycle-bin",
+].map((p) => `${A}${p}/page.tsx`);
+const C1_DETAIL = C1_PAGES.filter((f) => f.includes("/[id]/"));
+const C1_BINS = C1_PAGES.filter((f) => f.includes("/recycle-bin/"));
+const PHF = "src/components/layout/page-header.tsx";
 
 let pass = 0;
 let fail = 0;
@@ -387,6 +403,7 @@ function snapshot(): Pins {
       SectionHeader: uses("SectionHeader", "src/components/ui/section-header.tsx"),
       EmptyState: uses("EmptyState", "src/components/ui/empty-state.tsx"),
       formatDisplayDate: importers("formatDisplayDate", "i18n/format-date"),
+      PageHeader: uses("PageHeader", PHF),
     },
     listEmptyState: sha(SH + "list-empty-state.tsx"),
     css: { ".stat-row-2": cssRules(".stat-row-2") },
@@ -427,7 +444,9 @@ const { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } 
 const { StatRow } = await import("../src/app/(app)/sales/_shared/stat-row");
 const { statusStat } = await import("../src/lib/status-registry");
 const { formatDisplayDate } = await import("../src/lib/i18n/format-date");
-const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
+const { PageHeader } = await import("../src/components/layout/page-header");
+const { t: translate } = await import("../src/lib/i18n/dict");
+const same =(a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
 function delta(want: string[], got: string[]) {
   const w = [...want];
   const extra: string[] = [];
@@ -439,7 +458,7 @@ function delta(want: string[], got: string[]) {
   return [...w.map((x) => `- ${x}`), ...extra.map((x) => `+ ${x}`)].slice(0, 8).join("\n          ");
 }
 
-console.log("Page archetypes — C0 foundations and guardrails (baseline 1bfdbbf)");
+console.log("Page archetypes — C0 foundations and guardrails (baseline 1bfdbbf) + C1 master data and entity detail");
 
 // ---------- 1. routes ----------
 section("1. routes");
@@ -615,8 +634,11 @@ const ctH2 = html(h(CardTitle, { as: "h2", id: "h" }, "Contact"));
 const ctH3 = html(h(CardTitle, { as: "h3" }, "Contact"));
 check("CardTitle as h2 / h3: the same slot and classes on a real heading, and `as` never reaches the DOM",
   ctH2 === '<h2 data-slot="card-title" class="text-title-sm font-semibold text-ink" id="h">Contact</h2>' && ctH3 === '<h3 data-slot="card-title" class="text-title-sm font-semibold text-ink">Contact</h3>', `${ctH2} ${ctH3}`);
-check(`CardTitle consumers unchanged (${pins.consumers.CardTitle.length}); none passes \`as\` in C0`,
-  same(now.consumers.CardTitle, pins.consumers.CardTitle) && !now.consumers.CardTitle.some((u) => / as\b/.test(u)), delta(pins.consumers.CardTitle, now.consumers.CardTitle));
+// C1: the four CardTitle consumers are the entity-detail side cards; each now passes as="h2"
+// (group 9 checks the value). No other CardTitle passes `as`.
+const ctAs = now.consumers.CardTitle.filter((u) => / as\b/.test(u));
+check(`CardTitle consumers as pinned (${pins.consumers.CardTitle.length}); \`as\` only on the C1 entity-detail side cards (${ctAs.length})`,
+  same(now.consumers.CardTitle, pins.consumers.CardTitle) && ctAs.length === 4 && ctAs.every((u) => C1_DETAIL.some((f) => u.startsWith(`${f}: `))), delta(pins.consumers.CardTitle, now.consumers.CardTitle));
 
 // StatRow
 const SRF = SH + "stat-row.tsx";
@@ -753,10 +775,13 @@ if (runs.every((r) => r.res)) {
 }
 const resolved = (["en", "ar"] as const).flatMap((l) => STYLES.map((s) => formatDisplayDate("2026-06-15T09:00:00Z", l, s)));
 check("in this process too (the verifier's own zone and locale) the output is the expected one", same(resolved, EXPECTED[0].slice(1)), resolved.join(" | "));
-check("consumers: formatDisplayDate, SectionHeader and EmptyState are not used by any page yet (no consumer migrated in C0)",
-  same(now.consumers.formatDisplayDate, pins.consumers.formatDisplayDate) && same(now.consumers.SectionHeader, pins.consumers.SectionHeader) && same(now.consumers.EmptyState, pins.consumers.EmptyState) &&
-    now.consumers.formatDisplayDate.length + now.consumers.SectionHeader.length + now.consumers.EmptyState.length === 0,
-  [...now.consumers.formatDisplayDate, ...now.consumers.SectionHeader, ...now.consumers.EmptyState].join(" "));
+check("consumers: formatDisplayDate is not used by any page yet (its consumers arrive with C2 / C6)",
+  same(now.consumers.formatDisplayDate, pins.consumers.formatDisplayDate) && now.consumers.formatDisplayDate.length === 0, now.consumers.formatDisplayDate.join(" "));
+const fileOf = (u: string) => u.slice(0, u.indexOf(": <"));
+check("consumers: SectionHeader only on the client and vendor detail Statement of Account, EmptyState only in the three master-data recycle bins (C1)",
+  same(now.consumers.SectionHeader, pins.consumers.SectionHeader) && same(now.consumers.EmptyState, pins.consumers.EmptyState) &&
+    same(now.consumers.SectionHeader.map(fileOf), [`${A}clients/[id]/page.tsx`, `${A}purchasing/vendors/[id]/page.tsx`]) && same(now.consumers.EmptyState.map(fileOf), [...C1_BINS].sort()),
+  [...now.consumers.SectionHeader, ...now.consumers.EmptyState].join(" "));
 
 // ---------- 7. no abstraction creep ----------
 section("7. no abstraction creep");
@@ -774,12 +799,13 @@ for (const f of walk("src").filter((f) => /\.(tsx?|css)$/.test(f))) {
   visit(parse(f));
 }
 check(`none of the rejected abstractions exist — ${BANNED.join(", ")}`, creep.length === 0, creep.join(" "));
-const PRIMS = [SHF, ESF, FDF, "src/components/ui/card.tsx", SRF];
+const PRIMS = [SHF, ESF, FDF, "src/components/ui/card.tsx", SRF, PHF];
 const aware = PRIMS.flatMap((f) => routeAware(f).map((x) => `${f}: ${x}`));
 const domainImports = PRIMS.flatMap((f) => imports(f).filter((s) => /^(next\/|@\/db|@\/app|@\/lib\/(session|tenant|auth|role-matrix))/.test(s)).map((s) => `${f}: ${s}`));
-check("the shared primitives do not branch on routes or domains: no router / pathname / session, no route strings, no app / DB / session imports",
+check("the shared primitives (and C1's PageHeader) do not branch on routes or domains: no router / pathname / session, no route strings, no app / DB / session imports",
   aware.length === 0 && domainImports.length === 0, [...aware, ...domainImports].join(" "));
-const props = [shProps, esProps].flatMap((p) => Object.keys(p));
+const phProps = propsOf(PHF, "PageHeader");
+const props = [shProps, esProps, phProps].flatMap((p) => Object.keys(p));
 check("no business-domain props on the new primitives (title / level / id / description / meta / actions / message / hint / action / className only)",
   props.every((k) => ["title", "level", "id", "description", "meta", "actions", "className", "message", "hint", "action"].includes(k)), props.join(" "));
 
@@ -791,6 +817,154 @@ check(`link targets and server actions of the 36 pages unchanged (${nActs} pinne
   actDrift.map((p) => `${p}\n          ${delta(pins.actions[p], now.actions[p])}`).join("\n          "));
 const emptyInventory = pins.routes.scope.filter((p) => now.actions[p].length === 0);
 check("every page has an inventory (the scan is not silently empty)", emptyInventory.length === 0, emptyInventory.join(" "));
+
+// ---------- 9. C1 — master data and entity detail ----------
+section("9. C1 — master data and entity detail");
+/** Source without comments, so a check never matches its own explanation. */
+const strip = (s: string) => s.replace(/\{\/\*[\s\S]*?\*\/\}/g, "").replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/.*$/gm, "$1");
+type El = ts.JsxOpeningElement | ts.JsxSelfClosingElement;
+const jsxEls = (f: string, tag: string) => findAll(parse(f), (n) => (ts.isJsxOpeningElement(n) || ts.isJsxSelfClosingElement(n)) && n.tagName.getText() === tag) as El[];
+const attr = (el: El, name: string) => el.attributes.properties.find((p): p is ts.JsxAttribute => ts.isJsxAttribute(p) && p.name.getText() === name);
+const rel = (f: string) => f.replace(A, "");
+
+// PageHeader, evolved in place (D-9)
+check("PageHeader: the C1 API — title, description?, meta?, actions? (React.ReactNode), className? — and nothing else",
+  same(phProps, {
+    title: { type: "React.ReactNode", optional: false },
+    description: { type: "React.ReactNode", optional: true },
+    meta: { type: "React.ReactNode", optional: true },
+    actions: { type: "React.ReactNode", optional: true },
+    className: { type: "string", optional: true },
+  }), JSON.stringify(phProps));
+const PH_ROW = '<div data-slot="page-header" class="flex flex-wrap items-start justify-between gap-x-4 gap-y-3 mb-6';
+const PH_H1 = '<h1 class="text-page font-semibold break-words">';
+const phFull = html(h(PageHeader, { title: "Al Noor Contracting (Fictional)", description: "Client profile", meta: h("span", null, "Active"), actions: h("button", { type: "button" }, "Actions") }));
+check("PageHeader: the C1 markup — one wrapping flex row (flex-wrap, items-start, justify-between, gap-x-4 / gap-y-3), a min-w-0 title column with the h1 and the description, then one group: meta, then actions",
+  phFull === `${PH_ROW}"><div class="min-w-0">${PH_H1}Al Noor Contracting (Fictional)</h1><p class="mt-1 text-body-lg text-ink-muted">Client profile</p></div>` +
+    '<div class="flex min-w-0 flex-wrap items-center gap-2"><div data-slot="page-header-meta" class="flex flex-wrap items-center gap-2"><span>Active</span></div>' +
+    '<div data-slot="page-header-actions" class="flex flex-wrap items-center gap-2"><button type="button">Actions</button></div></div></div>', phFull);
+const phH1 = phFull.match(/<h1[^>]*>([\s\S]*?)<\/h1>/)?.[1];
+const phNode = html(h(PageHeader, { title: h("span", null, "X"), description: h("strong", null, "D"), meta: "M", actions: "A" }));
+check("PageHeader: exactly one <h1>, holding only the title — description, meta and actions render outside it (string or element title alike)",
+  same(headings(phFull), ["h1"]) && phH1 === "Al Noor Contracting (Fictional)" && same(headings(phNode), ["h1"]) && phNode.includes(`${PH_H1}<span>X</span></h1>`), `${phFull} ${phNode}`);
+const phMeta = html(h(PageHeader, { title: "T", meta: "M" }));
+const phActs = html(h(PageHeader, { title: "T", actions: "A" }));
+const iMeta = phFull.indexOf('data-slot="page-header-meta"');
+const iActs = phFull.indexOf('data-slot="page-header-actions"');
+check("PageHeader: meta after the title and before the actions; each group only when it is given",
+  phFull.indexOf("</h1>") < iMeta && iMeta < iActs && phMeta.includes("page-header-meta") && !phMeta.includes("page-header-actions") && phActs.includes("page-header-actions") && !phActs.includes("page-header-meta"),
+  `${phMeta} ${phActs}`);
+const phBare = html(h(PageHeader, { title: "Products", description: false, meta: "", actions: null, className: "mt-2" }));
+check('PageHeader: empty slots (false, "", null) render nothing; className merges onto the row', phBare === `${PH_ROW} mt-2"><div class="min-w-0">${PH_H1}Products</h1></div></div>`, phBare);
+const phCode = strip(read(PHF));
+const phLayout = [/\babsolute\b/, /\bfixed\b/, /\bsticky\b/, /\binset-/, /\btranslate-/, /(?<![\w-])w-(\d|\[|full|screen)/, /(?<![\w-])max-w-/, /(?<![\w-])min-w-(?!0\b)/, /\bshrink-0\b/, /\bflex-nowrap\b/, /font-extrabold|font-bold|text-2xl/]
+  .filter((re) => re.test(phCode));
+check("PageHeader: a text-page / 600 title (no font-extrabold, no text-2xl) that wraps in a min-w-0 column; logical layout only — no left / right, no fixed width, nothing positioned, no shrink-0 group",
+  phCode.includes(PH_H1.replace("class=", "className=")) && phLayout.length === 0 && physical(PHF).length === 0, [...phLayout.map(String), ...physical(PHF)].join(" "));
+check("PageHeader: imports only react and the cn helper", same(imports(PHF), ["react", "@/lib/utils"]), imports(PHF).join(" "));
+const phUses = now.consumers.PageHeader;
+check(`PageHeader consumers: exactly the 12 C1 pages, one header each, none patching it with a className (${phUses.length})`,
+  same(phUses, pins.consumers.PageHeader) && same(phUses.map(fileOf).sort(), [...C1_PAGES].sort()) && !phUses.some((u) => / className\b/.test(u)),
+  delta([...C1_PAGES].sort(), phUses.map(fileOf).sort()));
+
+// D-9: the layout pin narrowed — every other layout file byte-pinned, one by one
+const dfPins = JSON.parse(read("verify/document-form-pins.json")) as Record<string, string>;
+const layoutFiles = walk("src/components/layout");
+const layoutPinned = Object.keys(dfPins).filter((k) => k.startsWith("src/components/layout/"));
+const layoutDrift = layoutPinned.filter((f) => !exists(f) || sha(f) !== dfPins[f]);
+check(`D-9: no src/components/layout/** directory pin; the ${layoutFiles.length - 1} other layout files byte-pinned one by one in verify/document-form-pins.json (a new, removed or changed layout file fails) — page-header.tsx alone is free, held by this group`,
+  !layoutPinned.some((k) => k.endsWith("**")) && same([...layoutPinned].sort(), layoutFiles.filter((f) => f !== PHF)) && layoutDrift.length === 0 && layoutFiles.includes(PHF),
+  `pinned ${layoutPinned.length}; changed ${layoutDrift.join(" ")}; unpinned ${layoutFiles.filter((f) => f !== PHF && !layoutPinned.includes(f)).join(" ")}`);
+
+// Headings: h1 from PageHeader, then h2 sections — no hand-written headings, no h1 → h3 jump
+const handHeadings = C1_PAGES.flatMap((f) => findAll(parse(f), (n) => (ts.isJsxOpeningElement(n) || ts.isJsxSelfClosingElement(n)) && /^h[1-6]$/.test(n.tagName.getText())).map((n) => `${rel(f)}: <${(n as El).tagName.getText()}>`));
+check('C1 pages: no hand-written heading and no .main-head — the h1 comes from PageHeader, the h2s from CardTitle as="h2" and SectionHeader',
+  handHeadings.length === 0 && C1_PAGES.every((f) => !strip(read(f)).includes("main-head")), handHeadings.join(" "));
+const cardTitles = C1_DETAIL.flatMap((f) => jsxEls(f, "CardTitle").map((el) => `${rel(f)}: as=${attr(el, "as")?.initializer?.getText() ?? "(div)"}`));
+check(`C1 detail pages: every side-card title is a real <h2> — CardTitle as="h2" (${cardTitles.length}: client Details, Invoices; vendor Purchase Orders; product Stock)`,
+  cardTitles.length === 4 && cardTitles.every((x) => x.endsWith('as="h2"')), cardTitles.join(" "));
+const sectionHeads = C1_PAGES.flatMap((f) => jsxEls(f, "SectionHeader").map((el) => `${rel(f)}: level=${attr(el, "level")?.initializer?.getText() ?? "(default)"} title=${attr(el, "title")?.initializer?.getText()}`));
+check("C1 detail pages: Statement of Account is a SectionHeader at level 2 on client and vendor detail (it was an h3 under the h1)",
+  same(sectionHeads, ['clients/[id]/page.tsx: level={2} title={t(locale, "Statement of Account")}', 'purchasing/vendors/[id]/page.tsx: level={2} title={t(locale, "Statement of Account")}']), sectionHeads.join(" | "));
+
+// Responsive entity-detail composition
+const classTokens = (f: string) => findAll(parse(f), (n) => ts.isStringLiteral(n) || ts.isNoSubstitutionTemplateLiteral(n)).flatMap((n) => (n as ts.StringLiteral).text.split(/\s+/));
+const fixedGrid = C1_PAGES.flatMap((f) => classTokens(f).filter((c) => /^(grid-cols-([2-9]|1[0-2])|col-span-([2-9]|1[0-2]))$/.test(c)).map((c) => `${rel(f)}: ${c}`));
+const detailGrid = C1_DETAIL.filter((f) => !["grid-cols-1", "lg:grid-cols-3", "lg:col-span-2"].every((c) => classTokens(f).includes(c))).map(rel);
+check("C1 pages: no multi-column grid below a breakpoint (no bare grid-cols-N / col-span-N); the three detail pages are one column, then form 2/3 + side 1/3 from lg (grid-cols-1 lg:grid-cols-3, lg:col-span-2)",
+  fixedGrid.length === 0 && detailGrid.length === 0, [...fixedGrid, ...detailGrid.map((f) => `${f}: no responsive grid`)].join(" "));
+
+// Page copy through t(), with Arabic
+/** Literal text an expression renders as-is: strings and template text, through ?:, &&, ||, ?? and parentheses — not t()'s argument. */
+const textLits = (e: ts.Expression | undefined): string[] => {
+  if (!e) return [];
+  if (ts.isStringLiteral(e) || ts.isNoSubstitutionTemplateLiteral(e)) return [e.text];
+  if (ts.isTemplateExpression(e)) return [e.head.text, ...e.templateSpans.map((s) => s.literal.text)];
+  if (ts.isParenthesizedExpression(e)) return textLits(e.expression);
+  if (ts.isConditionalExpression(e)) return [...textLits(e.whenTrue), ...textLits(e.whenFalse)];
+  if (ts.isBinaryExpression(e) && e.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken) return textLits(e.right);
+  if (ts.isBinaryExpression(e) && [ts.SyntaxKind.BarBarToken, ts.SyntaxKind.QuestionQuestionToken].includes(e.operatorToken.kind)) return [...textLits(e.left), ...textLits(e.right)];
+  return [];
+};
+const USER_FACING = new Set(["title", "description", "submitLabel", "label", "message", "hint", "placeholder", "aria-label", "moduleLabel", "alt"]);
+const english: string[] = [];
+const keysUsed = new Set<string>();
+for (const f of C1_PAGES) {
+  const visit = (n: ts.Node) => {
+    if (ts.isJsxText(n) && /[A-Za-z]{2,}/.test(n.text)) english.push(`${rel(f)}: "${n.text.trim()}"`);
+    if (ts.isJsxAttribute(n) && USER_FACING.has(n.name.getText()) && n.initializer) {
+      const lits = ts.isStringLiteral(n.initializer) ? [n.initializer.text] : ts.isJsxExpression(n.initializer) ? textLits(n.initializer.expression) : [];
+      for (const s of lits) if (/[A-Za-z]{2,}/.test(s)) english.push(`${rel(f)}: ${n.name.getText()}="${s}"`);
+    }
+    if (ts.isJsxExpression(n) && (ts.isJsxElement(n.parent) || ts.isJsxFragment(n.parent))) for (const s of textLits(n.expression)) if (/[A-Za-z]{2,}/.test(s)) english.push(`${rel(f)}: {"${s}"}`);
+    if (ts.isCallExpression(n) && n.expression.getText() === "t" && n.arguments.length === 2) for (const k of textLits(n.arguments[1])) keysUsed.add(k);
+    ts.forEachChild(n, visit);
+  };
+  visit(parse(f));
+}
+const ternaries = C1_PAGES.filter((f) => /\blocale\s*!?==?\s*["'](ar|en)["']|["'](ar|en)["']\s*!?==?\s*locale\b/.test(strip(read(f)))).map(rel);
+check("C1 pages: no English typed outside t() — JSX text, user-facing props (title, description, submitLabel, label, message…), text in JSX expressions — and no inline locale ternaries",
+  english.length === 0 && ternaries.length === 0, [...english, ...ternaries.map((f) => `${f}: locale ternary`)].join(" | "));
+const C1_COPY = [
+  "Client profile", "Vendor profile", "Save changes", "No invoices yet.", "Purchase Orders", "No purchase orders yet.", "SKU", "Stock", "Quantity on hand", "Reorder level",
+  "New Vendor", "Add a vendor to order and receive against.", "Create Vendor", "New Product", "Add a product to your inventory catalog.", "Create Product", "Create Client",
+  "Clients — Recycle Bin", "Vendors — Recycle Bin", "Products — Recycle Bin", "Deleted clients live here until restored or permanently deleted.",
+  "Deleted vendors live here until restored or permanently deleted.", "Deleted products live here until restored or permanently deleted.", "Back to Clients", "Back to Vendors", "Back to Products",
+];
+const notMoved = C1_COPY.filter((k) => !keysUsed.has(k));
+const noArabic = [...keysUsed].filter((k) => translate("ar", k) === k || !/[\u0600-\u06FF]/.test(translate("ar", k)));
+check(`C1 pages: the ${C1_COPY.length} strings C1 moved go through t(), and every t() key on the 12 pages (${keysUsed.size}) has an Arabic entry`,
+  notMoved.length === 0 && noArabic.length === 0, [...notMoved.map((k) => `not via t(): ${k}`), ...noArabic.map((k) => `no Arabic: ${k}`)].join(" | "));
+const localeReads = C1_PAGES.filter((f) => now.data[f.replace("src/app/", "")]?.some((e) => e.endsWith(" const locale = await getLocale();"))).map(rel);
+check("C1 pages: all 12 read the UI locale with getLocale() — New Vendor and New Product gained exactly that statement in C1 (their only data change; group 3)",
+  localeReads.length === 12, C1_PAGES.map(rel).filter((f) => !localeReads.includes(f)).join(" "));
+
+// Recycle bins: EmptyState
+const binEmpty = C1_BINS.map((f) => jsxEls(f, "EmptyState").map((el) => el.attributes.properties.map((p) => p.getText()).join(" ")));
+const binOld = C1_BINS.filter((f) => /py-12 text-center|from "@\/components\/ui\/card"/.test(strip(read(f)))).map(rel);
+check("C1 recycle bins: an empty bin is one EmptyState with the same message (there was no action; none added); the Card py-12 recipe is gone",
+  binEmpty.length === 3 && binEmpty.every((x) => same(x, ['message={t(locale, "Recycle Bin is empty.")}'])) && binOld.length === 0, `${JSON.stringify(binEmpty)} ${binOld.join(" ")}`);
+
+// Direction and status
+const physC1 = C1_PAGES.flatMap((f) => physical(f).map((x) => `${rel(f)}: ${x}`));
+check("C1 pages: no physical left / right (none in C0 either)", physC1.length === 0, physC1.join(" "));
+// The StatusBadges of the 12 pages in C0 (6ad311b), attribute for attribute.
+const C0_BADGES: Record<string, string[]> = {
+  "clients/page.tsx": ['domain="active_flag" status={c.isActive ? "active" : "inactive"} locale={locale}', 'domain="record_state" status="archived" locale={locale}'],
+  "clients/[id]/page.tsx": ['domain="active_flag" status={client.isActive ? "active" : "inactive"} locale={locale}', 'domain="record_state" status="archived" locale={locale}'],
+  "purchasing/vendors/page.tsx": ['domain="active_flag" status={v.isActive ? "active" : "inactive"} locale={locale}', 'domain="record_state" status="archived" locale={locale}'],
+  "purchasing/vendors/[id]/page.tsx": ['domain="active_flag" status={vendor.isActive ? "active" : "inactive"} locale={locale}', 'domain="record_state" status="archived" locale={locale}'],
+  "inventory/products/page.tsx": ['domain="stock" status="low_stock" locale={locale}', 'domain="active_flag" status={p.isActive ? "active" : "inactive"} locale={locale}', 'domain="record_state" status="archived" locale={locale}'],
+  "inventory/products/[id]/page.tsx": ['domain="stock" status={low ? "low_stock" : "in_stock"} locale={locale}', 'domain="record_state" status="archived" locale={locale}'],
+};
+const badgesNow = Object.fromEntries(C1_PAGES.map((f) => [rel(f), jsxEls(f, "StatusBadge").map((el) => el.attributes.properties.map((p) => p.getText()).join(" "))]).filter(([, v]) => v.length));
+const TONE = /\b(?:text|bg|border)-(?:success|danger|warning|info|neutral|corrective|positive|negative)\b|^(?:success|danger|warning|info|neutral|corrective)$/;
+const toneMaps = [
+  ...C1_PAGES.flatMap((f) => findAll(parse(f), (n) => ts.isObjectLiteralExpression(n) && n.properties.some((p) => ts.isPropertyAssignment(p) && (ts.isStringLiteral(p.initializer) || ts.isNoSubstitutionTemplateLiteral(p.initializer)) && TONE.test(p.initializer.text))).map(() => `${rel(f)}: object map`)),
+  ...C1_PAGES.flatMap((f) => findAll(parse(f), (n) => ts.isVariableDeclaration(n) && /tone|status(map|class|color|variant|style)|badge(map|class|color)|colou?r(map|s)\b/i.test(n.name.getText())).map((n) => `${rel(f)}: ${(n as ts.VariableDeclaration).name.getText()}`)),
+];
+check("C1 pages: status only through StatusBadge — the same 13 badges, domains and status values as C0 — and no local tone / status / colour map",
+  same(badgesNow, C0_BADGES) && toneMaps.length === 0, `${JSON.stringify(badgesNow)} ${toneMaps.join(" ")}`);
 
 console.log("\nGroups:");
 for (const [g, [p, f]] of Object.entries(counts)) console.log(`  ${g}: ${p}/${p + f}`);

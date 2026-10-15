@@ -15,10 +15,17 @@
  * Same frozen clock, seed, TEST-ONLY database and pinned Chromium as the 256-state matrix, no
  * masking and no injected CSS. One fixture step belongs to this set (alignDatabaseTimestamps
  * below): the Security page shows rows the database stamped with its own clock.
+ *
+ * C1 (master data + entity detail) adds the other nine of its 12 pages — the vendor and product
+ * lists, the vendor and product detail, the three New pages, the vendor and product recycle bins —
+ * EN + AR at 1440 and 390, light, full page (36); the clients list, client detail and clients bin
+ * are already above at every width. And one fixture state (4): the PageHeader under a long name —
+ * client 1 renamed in the run's TEST-ONLY copy for that state only and restored straight after —
+ * which fails the capture if the header overflows, clips, or puts its actions over the title.
  */
 import pg from "pg";
 import { FROZEN_NOW, VIEWPORTS } from "./config.mjs";
-import { DB_PREFIX, IsolationError } from "./isolation.mjs";
+import { DB_PREFIX, IsolationError, RUN_DB, dbUrl } from "./isolation.mjs";
 
 const vp = (name) => VIEWPORTS.find((v) => v.name === name);
 const ALLW = ["1440", "1024", "768", "390"];
@@ -62,7 +69,44 @@ export function archetypeMatrix() {
     }
   for (const [id, path, action, viewports] of INTERACTIONS)
     for (const locale of BOTH) for (const name of viewports) add(id, path, "Interaction (today's behaviour)", locale, "light", name, action, false);
+  for (const [id, path, area] of C1_ROUTES) for (const locale of BOTH) for (const name of EDGE) add(id, path, area, locale, "light", name, null, true);
+  for (const [id, path, action, viewports] of C1_FIXTURES)
+    for (const locale of BOTH) for (const name of viewports) add(id, path, "PageHeader under a long name (fixture)", locale, "light", name, action, false);
   return out;
+}
+
+/** [id, path, area] — C1: the master-data / entity-detail pages not in the set above (seed-stable ids; the seed's bins are empty). */
+const C1_ROUTES = [
+  ["c1-vendors", "/purchasing/vendors", "Master-data list (vendors)"],
+  ["c1-vendor-detail", "/purchasing/vendors/1", "Entity detail (vendor)"],
+  ["c1-vendor-new", "/purchasing/vendors/new", "New vendor"],
+  ["c1-vendor-recycle-bin-empty", "/purchasing/vendors/recycle-bin", "Recycle bin (vendors, empty)"],
+  ["c1-products", "/inventory/products", "Master-data list (products)"],
+  ["c1-product-detail", "/inventory/products/1", "Entity detail (product)"],
+  ["c1-product-new", "/inventory/products/new", "New product"],
+  ["c1-product-recycle-bin-empty", "/inventory/products/recycle-bin", "Recycle bin (products, empty)"],
+  ["c1-client-new", "/clients/new", "New client"],
+];
+/** [id, path, action, viewports] — C1 fixture states (viewport screenshots). */
+const C1_FIXTURES = [["f01-page-header-long-name", "/clients/1", "long-name", EDGE]];
+
+// A client name long enough to wrap the h1 at every width, with one 44-character word that only
+// breaks because the title column may shrink (min-w-0) and wrap it (break-words).
+const LONG_NAME = "AlNoorContractingGeneralTradingEstablishment for Exhibitions, Events and Conference Services (Fictional)";
+/** Rename client 1 in the run's TEST-ONLY copy; returns the name it had. */
+async function renameClient1(name) {
+  const url = dbUrl(RUN_DB);
+  if (!new URL(url).pathname.startsWith(`/${DB_PREFIX}`)) throw new IsolationError(`refusing to edit '${new URL(url).pathname}': not a ${DB_PREFIX}* database`);
+  const c = new pg.Client({ connectionString: url });
+  await c.connect();
+  try {
+    const before = (await c.query("select name from customers where id = 1")).rows[0]?.name;
+    if (before === undefined) throw new Error("client 1 is not in the run copy");
+    await c.query("update customers set name = $1 where id = 1", [name]);
+    return before;
+  } finally {
+    await c.end();
+  }
 }
 
 /** Reach a control with the keyboard (Tab), so :focus-visible matches as it would for a user. */
@@ -88,6 +132,49 @@ export const ARCH_ACTIONS = {
   "kanban-edit": async (page) => {
     await page.locator("main .kanban-card").first().click();
     await page.getByRole("dialog").waitFor();
+  },
+  // C1 fixture: client 1 under LONG_NAME. The header must wrap — the h1 over several lines inside its
+  // column, at the inline start; meta and actions at the end of the title's line or below it at the
+  // start, never over the title; nothing past the viewport — or the capture fails here.
+  "long-name": async (page) => {
+    const before = await renameClient1(LONG_NAME);
+    try {
+      await page.reload({ waitUntil: "networkidle", timeout: 60000 });
+      await page.evaluate(() => document.fonts.ready.then(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))));
+      const f = await page.evaluate(() => {
+        const de = document.documentElement;
+        const ph = document.querySelector('main [data-slot="page-header"]');
+        if (!ph) return { error: "no PageHeader" };
+        const rtl = de.dir === "rtl";
+        const box = ph.getBoundingClientRect();
+        const h1 = ph.querySelector("h1");
+        const r = h1.getBoundingClientRect();
+        const title = ph.firstElementChild.getBoundingClientRect();
+        const trail = ph.children[1]?.getBoundingClientRect();
+        const sameLine = Boolean(trail && trail.top < title.bottom - 1);
+        const startGap = (x) => (rtl ? box.right - x.right : x.left - box.left);
+        const endGap = (x) => (rtl ? x.left - box.left : box.right - x.right);
+        return {
+          dir: de.dir,
+          text: h1.textContent,
+          overflow: de.scrollWidth - de.clientWidth,
+          lines: Math.round(r.height / parseFloat(getComputedStyle(h1).lineHeight)),
+          h1Inside: r.left >= box.left - 1 && r.right <= box.right + 1 && h1.scrollWidth <= h1.clientWidth + 1,
+          titleAtStart: startGap(title) <= 1,
+          trailing: !trail ? "none" : sameLine ? (endGap(trail) <= 1 ? "end" : "misplaced") : startGap(trail) <= 1 ? "below" : "misplaced",
+          overlap: sameLine && (rtl ? trail.right > title.left + 1 : trail.left < title.right - 1),
+          inViewport: box.left >= -1 && box.right <= de.clientWidth + 1,
+        };
+      });
+      const { text, ...facts } = f;
+      const width = page.viewportSize().width;
+      console.log(`    PageHeader long name @${width}: ${JSON.stringify(facts)}`);
+      // At 1440 the name fits on one line beside meta and actions; at 390 it cannot, so it must wrap.
+      const ok = text === LONG_NAME && f.overflow <= 0 && (width >= 1024 || f.lines >= 2) && f.h1Inside && f.titleAtStart && f.trailing !== "misplaced" && !f.overlap && f.inViewport;
+      if (!ok) throw new Error(`PageHeader under a long name: ${JSON.stringify(f)}`);
+    } finally {
+      await renameClient1(before);
+    }
   },
 };
 

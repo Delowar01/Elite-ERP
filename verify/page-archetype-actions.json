@@ -1044,7 +1044,7 @@
    "input:radio|فرد|||"
   ],
   "client-bin|ar|1440": [
-   "link|Back to Clients|/clients||"
+   "link|العودة إلى العملاء|/clients||"
   ],
   "vendors|ar|1440": [
    "button|إجراءات Atlas Logistics (Fictional)||type=button|popup=menu",
@@ -1060,11 +1060,11 @@
    "link|مورّد جديد|/purchasing/vendors/new||"
   ],
   "vendor-detail|ar|1440": [
-   "button|Save changes||type=submit|",
    "button|Upload Logo||type=button|",
    "button|أمر شراء||type=button|",
    "button|إجراءات المورد||type=button|popup=menu",
    "button|إشعار مدين||type=button|",
+   "button|حفظ التغييرات||type=submit|",
    "button|دفعة مسددة||type=button|",
    "button|قيد اليومية||type=button|",
    "combobox|الكل||type=button|",
@@ -1076,10 +1076,10 @@
    "link|تنزيل PDF|/finance/statements/export?kind=vendor&party=1&from=2026-01-01&to=2026-12-31&format=pdf&pay=all||"
   ],
   "vendor-new|ar|1440": [
-   "button|Create Vendor||type=submit|"
+   "button|إنشاء مورّد||type=submit|"
   ],
   "vendor-bin|ar|1440": [
-   "link|Back to Vendors|/purchasing/vendors||"
+   "link|العودة إلى الموردين|/purchasing/vendors||"
   ],
   "products|ar|1440": [
    "button|إجراءات Brochure print run (1,000)||type=button|popup=menu",
@@ -1104,14 +1104,14 @@
   ],
   "product-detail|ar|1440": [
    "button|Adjust stock||type=button|popup=dialog",
-   "button|Save changes||type=submit|",
-   "button|إجراءات المنتج||type=button|popup=menu"
+   "button|إجراءات المنتج||type=button|popup=menu",
+   "button|حفظ التغييرات||type=submit|"
   ],
   "product-new|ar|1440": [
-   "button|Create Product||type=submit|"
+   "button|إنشاء منتج||type=submit|"
   ],
   "product-bin|ar|1440": [
-   "link|Back to Products|/inventory/products||"
+   "link|العودة إلى المنتجات|/inventory/products||"
   ],
   "bank-accounts|ar|1440": [
    "button|إضافة حساب||type=button|popup=dialog",
@@ -2019,7 +2019,7 @@
    "input:radio|فرد|||"
   ],
   "client-bin|ar|1440": [
-   "link|Back to Clients|/clients||"
+   "link|العودة إلى العملاء|/clients||"
   ],
   "vendors|ar|1440": [
    "button|إجراءات Atlas Logistics (Fictional)||type=button|popup=menu",
@@ -2035,11 +2035,11 @@
    "link|مورّد جديد|/purchasing/vendors/new||"
   ],
   "vendor-detail|ar|1440": [
-   "button|Save changes||type=submit|",
    "button|Upload Logo||type=button|",
    "button|أمر شراء||type=button|",
    "button|إجراءات المورد||type=button|popup=menu",
    "button|إشعار مدين||type=button|",
+   "button|حفظ التغييرات||type=submit|",
    "button|دفعة مسددة||type=button|",
    "button|قيد اليومية||type=button|",
    "combobox|الكل||type=button|",
@@ -2051,10 +2051,10 @@
    "link|تنزيل PDF|/finance/statements/export?kind=vendor&party=1&from=2026-01-01&to=2026-12-31&format=pdf&pay=all||"
   ],
   "vendor-new|ar|1440": [
-   "button|Create Vendor||type=submit|"
+   "button|إنشاء مورّد||type=submit|"
   ],
   "vendor-bin|ar|1440": [
-   "link|Back to Vendors|/purchasing/vendors||"
+   "link|العودة إلى الموردين|/purchasing/vendors||"
   ],
   "products|ar|1440": [
    "button|إجراءات Brochure print run (1,000)||type=button|popup=menu",
@@ -2079,14 +2079,14 @@
   ],
   "product-detail|ar|1440": [
    "button|Adjust stock||type=button|popup=dialog",
-   "button|Save changes||type=submit|",
-   "button|إجراءات المنتج||type=button|popup=menu"
+   "button|إجراءات المنتج||type=button|popup=menu",
+   "button|حفظ التغييرات||type=submit|"
   ],
   "product-new|ar|1440": [
-   "button|Create Product||type=submit|"
+   "button|إنشاء منتج||type=submit|"
   ],
   "product-bin|ar|1440": [
-   "link|Back to Products|/inventory/products||"
+   "link|العودة إلى المنتجات|/inventory/products||"
   ],
   "bank-accounts|ar|1440": [
    "button|إضافة حساب||type=button|popup=dialog",
