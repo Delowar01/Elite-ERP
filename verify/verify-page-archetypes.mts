@@ -56,10 +56,26 @@
  * hunks — and the frozen P0 hydration verifiers byte-identical. Its pins re-baseline the consumer
  * inventory only.
  *
+ * C6 (the Dashboard) adds group 14: a PageHeader "Dashboard" with the range selector and Customize Layout
+ * as its actions; the seven widget titles as h2s (their CSS twins carry the h4 rules' declarations); D-1 —
+ * no profit, margin or expenses, Financial Overview the real revenue total and the revenue chart alone
+ * (ComboChart's expenses optional); D-4 — the four marketing cards gone, the strip the ZATCA Phase 1 card
+ * alone and only where the profile enables it; D-5 — a trend or sparkline only where a real one exists
+ * (KpiCard's optional props), Cash Flow without its pseudo-series; the activity time on formatDisplayDate;
+ * DashWidget's size as custom properties the grid reads (12 tracks → 2 at ≤1100px → 1 at ≤640px, natural
+ * rows below 1100px); the range labels' Arabic in Western digits — and the proof that nothing else moved:
+ * each Dashboard file is C5's plus C6's own hunks, the stylesheet and the dictionary C5's once C6's hunks
+ * are undone (groups 11 – 13 undo them first), the queries, layout registry, ranges, preferences and
+ * Customize dialog byte-identical — and the one verifier maintenance its review approved: the compliance-claims
+ * suite's Dashboard check now requires the D-4-removed Secure & Reliable copy gone (otherwise C5's to the byte).
+ * Its pins re-baseline the consumer inventory and the Dashboard's data section (the four D-1 / D-5 statements
+ * removed, revenueSpark in spark's place) only.
+ *
  * `--write-pins` recomputes verify/page-archetype-pins.json from the working tree. Only a stage that
  * deliberately re-baselines may run it, and the diff of that file is what its review reads.
  * docs/ui/dev-ui-01-7/c0-foundations-and-guardrails.md, docs/ui/dev-ui-01-7/c1-master-data-and-detail.md,
- * docs/ui/dev-ui-01-7/c3-projects-and-kanban.md, docs/ui/dev-ui-01-7/c4-finance-and-reports.md
+ * docs/ui/dev-ui-01-7/c3-projects-and-kanban.md, docs/ui/dev-ui-01-7/c4-finance-and-reports.md,
+ * docs/ui/dev-ui-01-7/c6-dashboard-archetype.md
  */
 import { readFileSync, readdirSync, statSync, existsSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
@@ -174,6 +190,53 @@ const C5_DICT_BLOCKS = [
   "  // DEV-UI-01.7 C5: the readiness groups' h2 — a structural label, no certification claim.\n  \"Readiness checklist\": \"قائمة التحقق من الجاهزية\",\n",
 ];
 const undoC5Dict = (s: string) => C5_DICT_BLOCKS.reduce((t, b) => t.replace(b, ""), s);
+// DEV-UI-01.7 C6: the Dashboard — its page, its toolbar (now the PageHeader's actions), the KPI card and the charts.
+const DASH = `${A}dashboard/`;
+const C6_PAGE = `${DASH}page.tsx`;
+const C6_TOOLBAR = `${DASH}dashboard-toolbar.tsx`;
+const C6_KPI = `${DASH}_shared/kpi-card.tsx`;
+const C6_CHARTS = `${DASH}_shared/charts.tsx`;
+const C6_FILES = [C6_PAGE, C6_TOOLBAR, C6_KPI, C6_CHARTS];
+const C6_HEADERS = [C6_PAGE];
+/**
+ * C6's one dictionary edit, [C5, C6] byte for byte: the Dashboard's two range labels with their number in Western
+ * digits — the Arabic wrote "Last 7 Days" / "Last 30 Days" in Arabic-Indic ones, and C6's runtime target is Western
+ * digits on every Dashboard state. Groups 12 and 13 undo it to hold dict.ts at C5's bytes; group 14 proves it is
+ * C6's only dictionary change.
+ */
+const C6_DICT_EDIT: [string, string] = [
+  '  "Last 7 Days": "آخر ٧ أيام",\n  "Last 30 Days": "آخر ٣٠ يوماً",\n',
+  '  "Last 7 Days": "آخر 7 أيام",\n  "Last 30 Days": "آخر 30 يوماً",\n',
+];
+const undoC6Dict = (s: string) => s.replace(C6_DICT_EDIT[1], () => C6_DICT_EDIT[0]);
+/**
+ * C6's mockup-parity.css hunks, [C5, C6] — Dashboard selectors only, compared without comments or whitespace. Groups
+ * 11 and 12 undo them before holding the stylesheet at C3's / C4's; group 14 proves they are C6's only CSS change.
+ */
+const C6_CSS_HUNKS: [string, string][] = [
+  [".dash-toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }", ".dash-toolbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }"],
+  [".dash-grid { display: grid; grid-template-columns: repeat(12, 1fr); grid-auto-rows: 86px; gap: 16px; grid-auto-flow: row dense; margin-bottom: 16px; }",
+    ".dash-grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); grid-auto-rows: 86px; gap: 16px; grid-auto-flow: row dense; margin-bottom: 16px; }"],
+  [".dash-widget { position: relative; display: flex; flex-direction: column; min-width: 0; }",
+    ".dash-widget { position: relative; display: flex; flex-direction: column; min-width: 0; grid-column: span var(--dash-span); grid-row: span var(--dash-rows); }"],
+  [".kpi-spark { margin-top: 10px; margin-left: -4px; }", ".kpi-spark { margin-top: 10px; margin-inline-start: -4px; }"],
+  [".fin-legend .dot { width: 8px; height: 8px; border-radius: 999px; display: inline-block; margin-right: 5px; }", ".fin-legend .dot { width: 8px; height: 8px; border-radius: 999px; display: inline-block; margin-inline-end: 5px; }"],
+  [".fin-profit-label { font-size: 12.5px; color: var(--ink-muted); margin-top: 14px; }", ".fin-total-label { font-size: 12.5px; color: var(--ink-muted); margin-top: 14px; }"],
+  [".fin-profit-value { font-family: var(--font-display); font-weight: 800; font-size: 25px; margin-top: 4px; }", ".fin-total-value { font-family: var(--font-display); font-weight: 800; font-size: 25px; margin-top: 4px; }"],
+  [".donut-legend-row .dot { width: 8px; height: 8px; border-radius: 999px; display: inline-block; margin-right: 7px; }",
+    ".donut-legend-row .dot { width: 8px; height: 8px; border-radius: 999px; display: inline-block; margin-inline-end: 7px; }"],
+  [".side-panel-head h4 { font-size: 14px; font-weight: 700; }", ".side-panel-head h2 { font-size: 14px; font-weight: 700; }"],
+  [".bottom-card h4 { font-size: 12.5px; font-weight: 700; margin-bottom: 14px; }", ".bottom-card h2 { font-size: 12.5px; font-weight: 700; margin-bottom: 14px; }"],
+  [".feature-strip { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }", ".feature-strip { display: flex; flex-wrap: wrap; gap: 12px; }"],
+  [".feature-card.highlight { background: var(--accent-orange-bg); border-color: transparent; } .feature-card .f-icon { width: 38px; height: 38px; border-radius: 11px; background: var(--accent-orange-bg); color: var(--brand-orange); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }",
+    ".feature-card .f-icon { width: 38px; height: 38px; border-radius: 11px; background: var(--accent-orange-bg); color: var(--brand-orange); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }"],
+  [".feature-card.highlight .f-icon { background: var(--surface); } .feature-card .f-title { font-size: 12px; font-weight: 700; display: flex; align-items: center; gap: 6px; }",
+    ".feature-card .f-title { font-size: 12px; font-weight: 700; display: flex; align-items: center; gap: 6px; }"],
+  [".coming-soon-pill { font-size: 8.5px; font-weight: 700; background: var(--brand-orange); color: var(--brand-primary-foreground); padding: 2px 6px; border-radius: 999px; } @media (max-width: 1100px) { .kpi-grid-v4, .fin-overview-grid, .feature-strip { grid-template-columns: repeat(2, 1fr); } }",
+    "@media (max-width: 1100px) { .kpi-grid-v4, .fin-overview-grid { grid-template-columns: repeat(2, 1fr); } } " +
+    "@media (max-width: 1100px) { .dash-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: auto; } .dash-widget { grid-column: auto; grid-row: auto; } .dash-widget[data-wide] { grid-column: 1 / -1; } .dash-widget > *:not(.dash-widget-chrome):not(.dash-resize-handle) { overflow: visible; } } " +
+    "@media (max-width: 640px) { .dash-grid { grid-template-columns: minmax(0, 1fr); } }"],
+];
 
 let pass = 0;
 let fail = 0;
@@ -899,8 +962,8 @@ if (runs.every((r) => r.res)) {
 }
 const resolved = (["en", "ar"] as const).flatMap((l) => STYLES.map((s) => formatDisplayDate("2026-06-15T09:00:00Z", l, s)));
 check("in this process too (the verifier's own zone and locale) the output is the expected one", same(resolved, EXPECTED[0].slice(1)), resolved.join(" | "));
-check("consumers: formatDisplayDate on exactly the two C2 date surfaces — Attendance's date pill and Payroll's title month (Dashboard's dates are C6)",
-  same(now.consumers.formatDisplayDate, pins.consumers.formatDisplayDate) && same(now.consumers.formatDisplayDate, [`${HR}attendance/page.tsx`, `${HR}payroll/page.tsx`]),
+check("consumers: formatDisplayDate on exactly the three planned date surfaces — Attendance's date pill and Payroll's title month (C2), the Dashboard's recent-activity times (C6)",
+  same(now.consumers.formatDisplayDate, pins.consumers.formatDisplayDate) && same(now.consumers.formatDisplayDate, [C6_PAGE, `${HR}attendance/page.tsx`, `${HR}payroll/page.tsx`]),
   now.consumers.formatDisplayDate.join(" "));
 const fileOf = (u: string) => u.slice(0, u.indexOf(": <"));
 check("consumers: SectionHeader on the client / vendor Statement of Account (C1), Salary Structure / Past payroll runs (C2), the project detail's six sections (C3) and the selected report, the selected ledger account and the journal / bank secondary sections (C4), the 13 Settings panel titles, Security's Active Sessions / Security Timeline and Compliance's three sections (C5); EmptyState in the three master-data bins (C1), the five HR empty states (C2), the project detail's three (C3), the six finance empty messages (C4) and the Security Timeline's (C5)",
@@ -992,10 +1055,10 @@ check("PageHeader: a text-page / 600 title (no font-extrabold, no text-2xl) that
   phCode.includes(PH_H1.replace("class=", "className=")) && phLayout.length === 0 && physical(PHF).length === 0, [...phLayout.map(String), ...physical(PHF)].join(" "));
 check("PageHeader: imports only react and the cn helper", same(imports(PHF), ["react", "@/lib/utils"]), imports(PHF).join(" "));
 const phUses = now.consumers.PageHeader;
-check(`PageHeader consumers: the 12 C1 pages, the 7 HR routes (C2), the 3 Projects routes (C3), the 7 finance routes (C4) and the 4 Settings pages (C5) — one header each, none patching it with a className (${phUses.length})`,
-  same(phUses, pins.consumers.PageHeader) && same(phUses.map(fileOf).sort(), [...C1_PAGES, ...C2_HEADERS, ...C3_HEADERS, ...C4_HEADERS, ...C5_HEADERS].sort()) && phUses.length === 33 &&
+check(`PageHeader consumers: the 12 C1 pages, the 7 HR routes (C2), the 3 Projects routes (C3), the 7 finance routes (C4), the 4 Settings pages (C5) and the Dashboard (C6) — one header each, none patching it with a className (${phUses.length})`,
+  same(phUses, pins.consumers.PageHeader) && same(phUses.map(fileOf).sort(), [...C1_PAGES, ...C2_HEADERS, ...C3_HEADERS, ...C4_HEADERS, ...C5_HEADERS, ...C6_HEADERS].sort()) && phUses.length === 34 &&
     !phUses.some((u) => / className\b/.test(u)),
-  delta([...C1_PAGES, ...C2_HEADERS, ...C3_HEADERS, ...C4_HEADERS, ...C5_HEADERS].sort(), phUses.map(fileOf).sort()));
+  delta([...C1_PAGES, ...C2_HEADERS, ...C3_HEADERS, ...C4_HEADERS, ...C5_HEADERS, ...C6_HEADERS].sort(), phUses.map(fileOf).sort()));
 
 // D-9: the layout pin narrowed — every other layout file byte-pinned, one by one
 const dfPins = JSON.parse(read("verify/document-form-pins.json")) as Record<string, string>;
@@ -1508,9 +1571,11 @@ const C3_CSS = `.kanban-col-head h3 { font: inherit; text-wrap: inherit; }
   .cost-breakdown-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-bottom: 16px; }
   @media (max-width: 900px) { .cost-breakdown-grid { grid-template-columns: minmax(0, 1fr); } }`;
 const cssNow = cssFlat(read(CSSF));
-// C4's two .acct-grid edits undone first (group 12 proves they are its only ones).
-const cssC3 = C4_CSS_HUNKS.reduce((s, [was, is]) => s.replace(cssFlat(is), () => cssFlat(was)), cssNow);
-check("mockup-parity.css is C2's plus C3's two additions and nothing else (.stat-row-2, .two-col, .acct-grid, the dashboard, Settings, document and print rules untouched) — C4's two .acct-grid edits aside (group 12)",
+/** The stylesheet with C6's Dashboard hunks undone — C5's (and C4's), when they are C6's only change (group 14). */
+const undoC6Css = (flatCss: string) => C6_CSS_HUNKS.reduce((s, [was, is]) => s.replace(cssFlat(is), () => cssFlat(was)), flatCss);
+// C6's Dashboard hunks, then C4's two .acct-grid edits, undone first (groups 14 and 12 prove they are their only ones).
+const cssC3 = C4_CSS_HUNKS.reduce((s, [was, is]) => s.replace(cssFlat(is), () => cssFlat(was)), undoC6Css(cssNow));
+check("mockup-parity.css is C2's plus C3's two additions and nothing else (.stat-row-2, .two-col, .acct-grid, the dashboard, Settings, document and print rules untouched) — C4's two .acct-grid edits (group 12) and C6's Dashboard hunks (group 14) aside",
   cssC3.split(cssFlat(C3_CSS)).length === 2 && h16(cssC3.replace(cssFlat(C3_CSS), "")) === "198cad6c7e2da464", h16(cssC3.replace(cssFlat(C3_CSS), "")));
 
 // Task cards
@@ -1708,7 +1773,7 @@ const nC4Hunks = Object.values(C4_HUNKS).flat().length;
 check(`C4 changed nothing in the eight finance files but its own ${nC4Hunks} hunks: undo them and each is C3's code to the character (comments and whitespace aside) — the report bodies and their figures, the date presets, the export links, the compare toggle, the drill-down, the statement and ledger queries, the ledger table, the payments table, the journal form, the bank cards, every dialog and its trigger`,
   c4HunkBad.length === 0 && nC4Hunks === 32, c4HunkBad.join(" | "));
 const c4CssCount = C4_CSS_HUNKS.map(([, is]) => cssNow.split(cssFlat(is)).length - 1);
-check("mockup-parity.css is C3's plus C4's two .acct-grid edits and nothing else: undo them and it is C3's to the character (comments and whitespace aside) — .two-col, .stat-row-2 (D-6), .cost-breakdown-grid, .kanban, the dashboard, Settings, document and print rules untouched",
+check("mockup-parity.css is C3's plus C4's two .acct-grid edits and nothing else: undo them and it is C3's to the character (comments and whitespace aside) — .two-col, .stat-row-2 (D-6), .cost-breakdown-grid, .kanban, the dashboard, Settings, document and print rules untouched (C6's Dashboard hunks aside, group 14)",
   same(c4CssCount, [1, 1]) && h16(cssC3) === "b8892a533a3a2524", `${c4CssCount.join(" ")} ${h16(cssC3)}`);
 
 // Byte pins: the finance files C4 does not touch, the dictionary, and the frozen P0 / P0.1 / P0.2
@@ -1735,9 +1800,10 @@ const c4FinanceFiles = walk(`${A}finance`);
 const c4Unaccounted = c4FinanceFiles.filter((f) => !C4_FILES.includes(f) && !(f in C4_UNTOUCHED) && !c4BizFiles.includes(f));
 check(`C4: the other ${Object.keys(C4_UNTOUCHED).length} finance files byte-identical to C3 — StatementView (its Search / Document type copy deferred), JournalForm (its Add line and inputs deferred to DEV-UI-01.8), the account, payment and bank-account dialogs, the payment history and its buttons, the reports and payments pages, the loading boundaries; every finance file is one of C4's eight, one of these or a business pin`,
   c4Untouched.length === 0 && c4Unaccounted.length === 0 && c4FinanceFiles.length === C4_FILES.length + Object.keys(C4_UNTOUCHED).length + c4BizFiles.length, [...c4Untouched, ...c4Unaccounted.map((f) => `unaccounted: ${f}`)].join(" "));
-// dict.ts: C4's bytes once C5's two additions (C5_DICT_BLOCKS — group 13 proves they are its only edit) are undone.
-const c4Frozen = Object.entries(C4_FROZEN).filter(([f, hsh]) => !exists(f) || (f === "src/lib/i18n/dict.ts" ? h16(undoC5Dict(read(f))) : sha(f)) !== hsh).map(([f]) => f);
-check("C4: the P0 / P0.1 / P0.2 verifiers byte-pinned — the Arabic-locale hydration suite as C3's approved reconstruction left it plus C4's approved Payments-trigger selector (frozen), the settings time-zone and business-date hydration suites, number-locale, date-timezone, business-dates — and dict.ts byte-identical (C4 needed no new entry; C5's two additions aside, group 13)",
+// dict.ts: C4's bytes once C6's range-label digits (group 14) and C5's two additions (C5_DICT_BLOCKS — group 13 proves
+// they are its only edit) are undone.
+const c4Frozen = Object.entries(C4_FROZEN).filter(([f, hsh]) => !exists(f) || (f === "src/lib/i18n/dict.ts" ? h16(undoC5Dict(undoC6Dict(read(f)))) : sha(f)) !== hsh).map(([f]) => f);
+check("C4: the P0 / P0.1 / P0.2 verifiers byte-pinned — the Arabic-locale hydration suite as C3's approved reconstruction left it plus C4's approved Payments-trigger selector (frozen), the settings time-zone and business-date hydration suites, number-locale, date-timezone, business-dates — and dict.ts byte-identical (C4 needed no new entry; C5's two additions aside, group 13, and C6's range-label digits, group 14)",
   c4Frozen.length === 0, c4Frozen.join(" "));
 const C4_BIZ = ["src/lib/finance-reports.ts", "src/lib/statements.ts", "src/lib/accounting.ts", "src/lib/settlement.ts", "src/lib/currency/**", "src/db/**", "drizzle/**"];
 const c4BizWant = [`${FN}_shared/actions.ts`, `${FN}bank-accounts/actions.ts`, `${FN}journal/actions.ts`, `${FN}payments/actions.ts`, `${FN}reports/actions.ts`, `${FN}reports/export/route.ts`,
@@ -2039,8 +2105,8 @@ const nC5Hunks = Object.values(C5_HUNKS).flat().length;
 check(`C5 changed nothing in the 15 Settings files but its own ${nC5Hunks} hunks: undo them and each is C4's code to the character (comments and whitespace aside) — every form, field, query, save action, permission, tab value, panel mapping, MFA / password / session control, readiness claim and consent control as it was`,
   c5HunkBad.length === 0 && nC5Hunks === 51 && C5_FILES.every((f) => f in C5_HUNKS && f in C4_FLAT), c5HunkBad.join(" | "));
 const dictNow = read("src/lib/i18n/dict.ts");
-check("C5's dictionary change is exactly its two additions — the four Settings navigation labels, and one structural heading — and nothing else (undone, dict.ts is C4's to the byte: group 12)",
-  C5_DICT_BLOCKS.every((b) => dictNow.split(b).length === 2) && h16(undoC5Dict(dictNow)) === "796829703fc96bf4", h16(undoC5Dict(dictNow)));
+check("C5's dictionary change is exactly its two additions — the four Settings navigation labels, and one structural heading — and nothing else (undone, dict.ts is C4's to the byte: group 12; C6's range-label digits aside, group 14)",
+  C5_DICT_BLOCKS.every((b) => dictNow.split(b).length === 2) && h16(undoC5Dict(undoC6Dict(dictNow))) === "796829703fc96bf4", h16(undoC5Dict(undoC6Dict(dictNow))));
 const C5_AR: Record<string, string> = {
   "Fiscal Year": "السنة المالية", "VAT Configuration": "إعدادات ضريبة القيمة المضافة", Users: "المستخدمون", Integrations: "التكاملات", "Readiness checklist": "قائمة التحقق من الجاهزية",
 };
@@ -2182,6 +2248,256 @@ const C5_PHYS_C4: Record<string, string[]> = { [C5_COMPANY]: ["text-left", "righ
 const c5Phys = C5_FILES.filter((f) => !same(physical(f), C5_PHYS_C4[f] ?? [])).map((f) => `${rel(f)}: ${physical(f).join(" ")}`);
 check("C5: no physical left / right added — none in SettingsNav, Security or Compliance (the alert stripe now border-inline-start); the only ones left in a C5 file are C4's own, deferred: Color Theme's text-left / right-3 and Print Layout's two text-left",
   c5Phys.length === 0 && [C5_NAV, C5_SECURITY, C5_COMPLIANCE, C5_ORG, C5_PRESETS].every((f) => physical(f).length === 0), c5Phys.join(" | "));
+
+// ---------- 14. C6 — the Dashboard ----------
+section("14. C6 — the Dashboard");
+
+// Nothing moved but C6's own changes: each Dashboard file is C5's (e8f629b) with exactly these hunks applied —
+// [C5 code, C6 code], compared without comments or whitespace. Undo them all and the file must be C5's again, so
+// a query call, a range, a preference, an action, a figure, a link, a status colour or a widget's size cannot
+// change unseen.
+const kpiAttrs = (label: string, rest: string) => `<KpiCard locale={locale} label="${label}" ${rest} />`;
+const toRtl = (link: string) => [`{t(locale, "${link}")} <ChevronRight className="size-3" style={{ color: "var(--brand-orange)" }} />`, `{t(locale, "${link}")} <ChevronRight className="size-3 rtl:rotate-180" style={{ color: "var(--brand-orange)" }} />`] as [string, string];
+const C6_HUNKS: Record<string, [string, string][]> = {
+  [C6_PAGE]: [
+    ['import { ShoppingCart, FileText, Wallet, CreditCard, BookOpen, ChevronRight, FileSignature, Building2, UserPlus, Shield, Lock, TrendingUp, RefreshCw, Link2 } from "lucide-react";',
+      'import { ShoppingCart, FileText, Wallet, CreditCard, BookOpen, ChevronRight, FileSignature, Building2, UserPlus, Shield } from "lucide-react";'],
+    ["", `import { formatDisplayDate } from "@/lib/i18n/format-date"; ${PH_IMPORT}`],
+    ['import { ComboChart, Donut, Sparkline } from "./_shared/charts";', 'import { ComboChart, Donut } from "./_shared/charts";'],
+    ['function DashWidget({ col, row, children }: { col: number; row: number; children: React.ReactNode }) { return (<div className="dash-widget" style={{ gridColumn: `span ${col}`, gridRow: `span ${row}` }}>{children}</div>); }',
+      'function DashWidget({ col, row, wide, children }: { col: number; row: number; wide?: boolean; children: React.ReactNode }) { return (<div className="dash-widget" data-wide={wide ? "" : undefined} style={{ "--dash-span": col, "--dash-rows": row } as React.CSSProperties}>{children}</div>); }'],
+    ["const revenueLabels = revenue.map((p) => p.label); const expenseSeries = revenue.map(() => 0); const totalProfit = kpis.totalSalesThisMonth; const profitMarginPct = kpis.totalSalesThisMonth > 0 ? 100 : 0;",
+      "const revenueLabels = revenue.map((p) => p.label);"],
+    ["const spark = revenueSeries.length > 1 ? revenueSeries : [0, 0];", "const revenueSpark = revenueSeries.length > 1 ? revenueSeries : undefined;"],
+    [kpiAttrs("Total Sales", 'value={fmt(kpis.totalSalesThisMonth)} isCurrency trendPct={kpis.totalSalesTrend.pct} trendUp={kpis.totalSalesTrend.up} icon={ShoppingCart} accent="var(--brand-orange)" sparkValues={spark}'),
+      kpiAttrs("Total Sales", 'value={fmt(kpis.totalSalesThisMonth)} isCurrency trendPct={kpis.totalSalesTrend.pct} trendUp={kpis.totalSalesTrend.up} icon={ShoppingCart} accent="var(--brand-orange)" sparkValues={revenueSpark}')],
+    [kpiAttrs("Total Invoices", 'value={String(kpis.totalInvoices)} trendPct={kpis.totalInvoicesTrend.pct} trendUp={kpis.totalInvoicesTrend.up} icon={FileText} accent="var(--accent-purple)" sparkValues={spark}'),
+      kpiAttrs("Total Invoices", 'value={String(kpis.totalInvoices)} trendPct={kpis.totalInvoicesTrend.pct} trendUp={kpis.totalInvoicesTrend.up} icon={FileText} accent="var(--accent-purple)"')],
+    [kpiAttrs("Total Receivables", 'value={fmt(kpis.totalReceivables)} isCurrency trendPct="0%" trendUp icon={Wallet} accent="var(--accent-green)" sparkValues={spark}'),
+      kpiAttrs("Total Receivables", 'value={fmt(kpis.totalReceivables)} isCurrency icon={Wallet} accent="var(--accent-green)"')],
+    [kpiAttrs("Total Payables", 'value={fmt(kpis.totalPayables)} isCurrency trendPct="0%" trendUp={false} icon={CreditCard} accent="var(--accent-red)" sparkValues={[0, 0]}'),
+      kpiAttrs("Total Payables", 'value={fmt(kpis.totalPayables)} isCurrency icon={CreditCard} accent="var(--accent-red)"')],
+    ['<DashWidget col={8} row={5}><div className="card fin-card" style={{ display: "grid", gridTemplateColumns: "1.9fr 1.1fr", gap: 24 }}><div><div className="fin-head"><h4 style={{ fontSize: 14, fontWeight: 700 }}>{t(locale, "Financial Overview")}</h4><div className="select-pill" style={{ pointerEvents: "none" }}>{rangeLabel}</div></div>' +
+      '<div className="fin-profit-label">{t(locale, "Total Profit")} · {rangeLabel}</div><div style={{ display: "flex", alignItems: "baseline", gap: 14 }}><div className="fin-profit-value"><Money amount={totalProfit} context="summary" /></div></div>' +
+      '<div className="fin-legend" style={{ marginTop: 14 }}><span><span className="dot" style={{ background: "var(--brand-orange)" }} />{t(locale, "Revenue")}</span><span><span className="dot" style={{ background: "var(--chart-navy)" }} />{t(locale, "Expenses")}</span></div>' +
+      '<div style={{ marginTop: 8 }}><ComboChart revenue={spark} expenses={expenseSeries.length > 1 ? expenseSeries : [0, 0]} labels={revenueLabels.length > 1 ? revenueLabels : ["", ""]} /></div></div>' +
+      '<div style={{ borderLeft: "1px solid var(--line)", paddingLeft: 24, display: "flex", flexDirection: "column", alignItems: "center" }}><div style={{ alignSelf: "flex-start", fontSize: 12, fontWeight: 600, color: "var(--ink-muted)", marginBottom: 10 }}>{t(locale, "Profit Margin")}</div>' +
+      '<Donut segments={[{ value: profitMarginPct, color: "var(--brand-orange)" }, { value: 100 - profitMarginPct, color: "var(--chart-navy)" }]} size={150} thickness={17} centerLabel={t(locale, "Profit Margin")} centerValue={`${profitMarginPct.toFixed(0)}%`} />' +
+      '<div style={{ width: "100%", marginTop: 16 }}><div className="donut-legend-row"><span className="lbl"><span className="dot" style={{ background: "var(--brand-orange)" }} />{t(locale, "Total Revenue")}</span><span className="val"><Money amount={kpis.totalSalesThisMonth} context="summary" /></span></div>' +
+      '<div className="donut-legend-row"><span className="lbl"><span className="dot" style={{ background: "var(--chart-navy)" }} />{t(locale, "Total Expenses")}</span><span className="val"><Money amount={0} context="summary" /></span></div>' +
+      '<div className="donut-legend-row" style={{ borderTop: "1px solid var(--line)", marginTop: 4, paddingTop: 10 }}><span className="lbl" style={{ fontWeight: 600, color: "var(--ink)" }}>{t(locale, "Total Profit")}</span><span className="val" style={{ color: "var(--accent-green)" }}><Money amount={totalProfit} context="summary" /></span></div></div></div></div></DashWidget>',
+      '<DashWidget col={8} row={5} wide><div className="card fin-card"><div className="fin-head"><h2 style={{ fontSize: 14, fontWeight: 700 }}>{t(locale, "Financial Overview")}</h2><div className="select-pill" style={{ pointerEvents: "none" }}>{rangeLabel}</div></div>' +
+      '<div className="fin-total-label">{t(locale, "Total Revenue")} · {rangeLabel}</div><div className="fin-total-value"><Money amount={kpis.totalSalesThisMonth} context="summary" /></div>' +
+      '{revenueSpark && (<div style={{ marginTop: 14 }}><ComboChart revenue={revenueSpark} labels={revenueLabels} /></div>)}</div></DashWidget>'],
+    ['<div className="side-panel-head"><h4>{t(locale, "Quick Actions")}</h4></div>', '<div className="side-panel-head"><h2>{t(locale, "Quick Actions")}</h2></div>'],
+    ['<div className="side-panel-head"><h4>{t(locale, "Recent Activities")}</h4></div>', '<div className="side-panel-head"><h2>{t(locale, "Recent Activities")}</h2></div>'],
+    ['<div className="activity-time">{a.time.toLocaleString(locale === "ar" ? "ar-SA" : "en-US")}</div>', '<div className="activity-time">{formatDisplayDate(a.time, locale, "dateTime")}</div>'],
+    ['<div className="activity-chev"><ChevronRight className="size-3.5" /></div>', '<div className="activity-chev"><ChevronRight className="size-3.5 rtl:rotate-180" /></div>'],
+    ['<h4>{t(locale, "Cash Flow")} · {rangeLabel}</h4>', '<h2>{t(locale, "Cash Flow")} · {rangeLabel}</h2>'],
+    ['<span className="val"><Money amount={cashFlow.net} context="summary" /></span></div><div style={{ marginTop: 12 }}><Sparkline values={[cashFlow.inflow || 1, cashFlow.outflow || 1, Math.abs(cashFlow.net) || 1]} color="var(--accent-green)" w={180} h={46} /></div>',
+      '<span className="val"><Money amount={cashFlow.net} context="summary" /></span></div>'],
+    ['<h4 style={{ alignSelf: "flex-start" }}>{t(locale, "Invoices Overview")}</h4>', '<h2 style={{ alignSelf: "flex-start" }}>{t(locale, "Invoices Overview")}</h2>'],
+    toRtl("View All Invoices"),
+    ['<h4>{t(locale, "Project Overview")}</h4>', '<h2>{t(locale, "Project Overview")}</h2>'],
+    toRtl("Go to Projects"),
+    ['<h4>{t(locale, "HR Snapshot")}</h4>', '<h2>{t(locale, "HR Snapshot")}</h2>'],
+    toRtl("Go to HRM"),
+    ["<DashboardToolbar locale={locale} range={rangeKey} layout={prefs.layout} />", '<PageHeader title={t(locale, "Dashboard")} actions={<DashboardToolbar locale={locale} range={rangeKey} layout={prefs.layout} />} />'],
+    ['{featureStripVisible && (<div className="feature-strip">{showZatca && (<div className="feature-card"><div className="f-icon"><Shield className="size-4.5" /></div><div><div className="f-title">{t(locale, "ZATCA Phase 1 QR")}</div><div className="f-sub">{t(locale, "On printed tax invoices")}</div></div></div>)}' +
+      '<div className="feature-card"><div className="f-icon"><Lock className="size-4.5" /></div><div><div className="f-title">{t(locale, "Secure & Reliable")}</div><div className="f-sub">{t(locale, "Encrypted connection, encrypted credentials")}</div></div></div>' +
+      '<div className="feature-card"><div className="f-icon"><TrendingUp className="size-4.5" /></div><div><div className="f-title">{t(locale, "Real-time Insights")}</div><div className="f-sub">{t(locale, "Data driven decisions")}</div></div></div>' +
+      '<div className="feature-card"><div className="f-icon"><RefreshCw className="size-4.5" /></div><div><div className="f-title">{t(locale, "Automated Processes")}</div><div className="f-sub">{t(locale, "Save time, work smarter")}</div></div></div>' +
+      '<div className="feature-card highlight"><div className="f-icon"><Link2 className="size-4.5" /></div><div><div className="f-title">{t(locale, "CRM Integration")} <span className="coming-soon-pill">{t(locale, "Coming Soon")}</span></div><div className="f-sub">{t(locale, "We will connect our existing CRM")}</div></div></div></div>)}',
+      '{featureStripVisible && showZatca && (<div className="feature-strip"><div className="feature-card"><div className="f-icon"><Shield className="size-4.5" /></div><div><div className="f-title">{t(locale, "ZATCA Phase 1 QR")}</div><div className="f-sub">{t(locale, "On printed tax invoices")}</div></div></div></div>)}'],
+  ],
+  [C6_TOOLBAR]: [['<div className="toolbar-actions-right"><CustomizeLayoutDialog locale={locale} layout={layout} /></div>', "<CustomizeLayoutDialog locale={locale} layout={layout} />"]],
+  [C6_KPI]: [
+    ["trendPct: string; trendUp: boolean; icon: LucideIcon; accent: string; sparkValues: number[];", "trendPct?: string; trendUp?: boolean; icon: LucideIcon; accent: string; sparkValues?: number[];"],
+    ['<div className={`kpi-trend ${trendUp ? "up" : "down"}`}>{trendUp ? <ArrowUp className="size-2.5" style={{ color: "var(--accent-green)" }} /> : <ArrowDown className="size-2.5" style={{ color: "var(--accent-red)" }} />}{trendPct} <span className="muted">{t(locale, "vs prev. period")}</span></div><div className="kpi-spark"><Sparkline values={sparkValues} color={accent} /></div>',
+      '{trendPct !== undefined && trendUp !== undefined && (<div className={`kpi-trend ${trendUp ? "up" : "down"}`}>{trendUp ? <ArrowUp className="size-2.5" style={{ color: "var(--accent-green)" }} /> : <ArrowDown className="size-2.5" style={{ color: "var(--accent-red)" }} />}{trendPct} <span className="muted">{t(locale, "vs prev. period")}</span></div>)}' +
+      '{sparkValues && sparkValues.length > 1 && (<div className="kpi-spark"><Sparkline values={sparkValues} color={accent} /></div>)}'],
+  ],
+  [C6_CHARTS]: [
+    ["expenses: number[];", "expenses?: number[];"],
+    ["const hi = Math.max(...revenue, ...expenses) * 1.15 || 1;", "const hi = Math.max(...revenue, ...(expenses ?? [])) * 1.15 || 1;"],
+    ["const expPts = expenses.map((v, i) => [padL + i * step, y(v)] as const);", "const expPts = expenses?.map((v, i) => [padL + i * step, y(v)] as const);"],
+    ['const expLine = expPts.map(([x, yy]) => `${x.toFixed(1)},${yy.toFixed(1)}`).join(" L ");', 'const expLine = expPts?.map(([x, yy]) => `${x.toFixed(1)},${yy.toFixed(1)}`).join(" L ");'],
+    ['<path d={`M ${expLine}`} fill="none" stroke="var(--chart-navy)" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" />',
+      '{expPts && <path d={`M ${expLine}`} fill="none" stroke="var(--chart-navy)" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" />}'],
+    ["{expPts.map(([x, yy], i) => (", "{expPts?.map(([x, yy], i) => ("],
+  ],
+};
+/** Each file at C5 (e8f629b), without comments or whitespace. */
+const C5_FLAT: Record<string, string> = { [C6_PAGE]: "4b3073f0ec0ca844", [C6_TOOLBAR]: "68302bc6550726d7", [C6_KPI]: "bc1ed47eb2b84aa7", [C6_CHARTS]: "9d034282a19415b3" };
+const c6HunkBad: string[] = [];
+for (const f of C6_FILES) {
+  let s = flat(read(f));
+  for (const [was, is] of C6_HUNKS[f]) {
+    const n = s.split(squash(is)).length - 1;
+    if (n !== 1) c6HunkBad.push(`${rel(f)}: ${n}× ${squash(is).slice(0, 60)}…`);
+    s = s.replace(squash(is), () => squash(was));
+  }
+  if (h16(s) !== C5_FLAT[f]) c6HunkBad.push(`${rel(f)}: not C5's once C6's hunks are undone (${h16(s)})`);
+}
+const nC6Hunks = Object.values(C6_HUNKS).flat().length;
+check(`C6 changed nothing in the four Dashboard files but its own ${nC6Hunks} hunks: undo them and each is C5's code to the character (comments and whitespace aside) — every query call, range, preference, action, link, figure, status colour, widget key and size, Quick Actions, Invoices Overview, Project Overview, HR Snapshot and the base-currency notice as they were`,
+  c6HunkBad.length === 0 && nC6Hunks === 34 && C6_FILES.every((f) => f in C6_HUNKS && f in C5_FLAT), c6HunkBad.join(" | "));
+const c6CssCount = C6_CSS_HUNKS.map(([, is]) => cssNow.split(cssFlat(is)).length - 1);
+check(`C6's stylesheet change is its ${C6_CSS_HUNKS.length} Dashboard hunks and nothing else: undo them and mockup-parity.css is C5's (C4's) to the character (comments and whitespace aside) — .stat-row-2, .two-col, .acct-grid, .cost-breakdown-grid, .kanban, Settings, document and print rules untouched`,
+  same(c6CssCount, C6_CSS_HUNKS.map(() => 1)) && h16(undoC6Css(cssNow)) === "87c4bda56f3dc27f", `${c6CssCount.join(" ")} ${h16(undoC6Css(cssNow))}`);
+check("C6's dictionary change is its one edit — the Dashboard's Last 7 Days / Last 30 Days with their number in Western digits (آخر 7 أيام, آخر 30 يوماً; C5 آخر ٧ أيام, آخر ٣٠ يوماً) — and nothing else: undone, dict.ts is C5's to the byte; no Dashboard range label left with an Arabic-Indic digit, English unchanged",
+  dictNow.split(C6_DICT_EDIT[1]).length === 2 && !dictNow.includes(C6_DICT_EDIT[0]) && h16(undoC6Dict(dictNow)) === "0728e58762d9648b"
+    && ["This Month", "Last Month", "Last 7 Days", "Last 30 Days", "This Quarter", "This Year", "All Time"].every((r) => !/[٠-٩۰-۹]/.test(translate("ar", r)) && translate("en", r) === r),
+  h16(undoC6Dict(dictNow)));
+
+// The header: one PageHeader, the toolbar its actions
+const c6Code = flat(read(C6_PAGE));
+const c6Ph = jsxEls(C6_PAGE, "PageHeader");
+check("C6 header: one PageHeader — the title t(locale, \"Dashboard\") (the existing dictionary word) and the DashboardToolbar as its actions, nothing else (no description, meta or className); the toolbar rendered nowhere else; after the base-currency notice and the data-quality banner, before the grid",
+  c6Ph.length === 1 && c6Ph[0].attributes.properties.length === 2 && attrCode(c6Ph[0], "title") === `{t(locale,"Dashboard")}`
+    && attrCode(c6Ph[0], "actions") === squash("{<DashboardToolbar locale={locale} range={rangeKey} layout={prefs.layout} />}") && jsxEls(C6_PAGE, "DashboardToolbar").length === 1
+    && c6Code.indexOf("data-testid=\"base-data-quality\"") < c6Code.indexOf("<PageHeader") && c6Code.indexOf("<PageHeader") < c6Code.indexOf('<divclassName="dash-grid">') && translate("en", "Dashboard") === "Dashboard",
+  c6Ph.map((el) => el.getText()).join(" "));
+const tbCode = flat(read(C6_TOOLBAR));
+check("C6 toolbar: the range DropdownMenu and Customize Layout side by side in one .dash-toolbar (flex, wrapping) — no .toolbar-actions-right; pick() as in C5 (setDashboardRangeAction, then ?range=<key>, then refresh); the seven DASHBOARD_RANGES in order, each its RANGE_LABELS word, the current one checked",
+  !tbCode.includes("toolbar-actions-right") && tbCode.includes(squash('return (<div className="dash-toolbar"><DropdownMenu>')) && tbCode.includes(squash("</DropdownMenu><CustomizeLayoutDialog locale={locale} layout={layout} /></div>);"))
+    && tbCode.includes(squash("function pick(next: DashboardRange) { if (next === range) return; startTransition(async () => { await setDashboardRangeAction(next); router.push(`/dashboard?range=${next}`); router.refresh(); }); }"))
+    && tbCode.includes(squash('{DASHBOARD_RANGES.map((r) => (<DropdownMenuItem key={r} className="cursor-pointer justify-between" onSelect={() => pick(r)}>{t(locale, RANGE_LABELS[r])}{r === range && <Check className="size-3.5 text-brand-orange" />}</DropdownMenuItem>))}'))
+    && physical(C6_TOOLBAR).length === 0);
+
+// Headings
+const C6_H2 = ["Financial Overview", "Quick Actions", "Recent Activities", "Cash Flow", "Invoices Overview", "Project Overview", "HR Snapshot"];
+const h2s = jsxEls(C6_PAGE, "h2").map((el) => squash((el.parent as ts.JsxElement).children.map((c) => c.getText()).join("")));
+check("C6 headings: no h1 in the page (PageHeader's), no h3–h6; the seven widget titles h2s (h4s in C5) — Financial Overview, Quick Actions, Recent Activities, Cash Flow · <range>, Invoices Overview, Project Overview, HR Snapshot — their words unchanged",
+  same(h2s, C6_H2.map((w) => squash(w === "Cash Flow" ? `{t(locale, "Cash Flow")} · {rangeLabel}` : `{t(locale, "${w}")}`))) && !/<h[13456][\s>]/.test(read(C6_PAGE)),
+  h2s.join(" | "));
+check("C6 heading styles: .side-panel-head h2 and .bottom-card h2 carry exactly the declarations the h4 rules had (14px / 700; 12.5px / 700 / 14px below) — the titles look as they did; no .side-panel-head h4 or .bottom-card h4 rule left",
+  same(cssRules(".side-panel-head h"), [`${CSSF}: .side-panel-head h2 { font-size: 14px; font-weight: 700; }`]) && same(cssRules(".bottom-card h"), [`${CSSF}: .bottom-card h2 { font-size: 12.5px; font-weight: 700; margin-bottom: 14px; }`]),
+  [...cssRules(".side-panel-head h"), ...cssRules(".bottom-card h")].join(" | "));
+
+// D-1: no profit, margin or expenses — revenue only
+const pageNoComments = codeOnly(read(C6_PAGE));
+const finWidget = c6Code.slice(c6Code.indexOf("financial_overview:"), c6Code.indexOf("quick_actions:"));
+check("C6 D-1: no expenseSeries, totalProfit or profitMarginPct; no Total Profit, Profit Margin, Total Expenses, Expenses or the Revenue / Expenses legend; nothing named profit, margin-percentage or expense in the Dashboard's code (comments aside) — removed, not hidden",
+  !/expenseSeries|totalProfit|profitMarginPct|Total Profit|Profit Margin|Total Expenses|"Expenses"|"Revenue"|fin-legend|donut-legend-row|fin-profit/.test(pageNoComments) && !/profit|expense/i.test(pageNoComments) && !/profit/i.test(codeOnly(read(C6_KPI))),
+  (pageNoComments.match(/.*(profit|expense).*/gi) ?? []).join(" | "));
+check("C6 D-1 Financial Overview: the key financial_overview, its h2, the range pill, \"Total Revenue · <range>\" over Money(kpis.totalSalesThisMonth) — the KPI's own figure — and the revenue chart alone (ComboChart revenue={revenueSpark} labels={revenueLabels}, no expenses); no donut, no legend, no 1.9fr / 1.1fr split; the widget wide on a tablet",
+  finWidget.includes(squash('<div className="fin-total-label">{t(locale, "Total Revenue")} · {rangeLabel}</div><div className="fin-total-value"><Money amount={kpis.totalSalesThisMonth} context="summary" /></div>'))
+    && same(jsxEls(C6_PAGE, "ComboChart").map((el) => el.getText()), ["<ComboChart revenue={revenueSpark} labels={revenueLabels} />"]) && !finWidget.includes("<Donut") && !c6Code.includes("1.9fr")
+    && jsxEls(C6_PAGE, "Donut").length === 1 && finWidget.startsWith(squash("financial_overview: (<DashWidget col={8} row={5} wide>")),
+  finWidget.slice(0, 200));
+const chCode = flat(read(C6_CHARTS));
+check("C6 ComboChart: expenses optional — without it no expense line, no expense points and the scale from revenue alone; with it, the line and points as before; still no chart library (charts.tsx imports nothing)",
+  chCode.includes("expenses?:number[];") && chCode.includes(squash("{expPts && <path d={`M ${expLine}`}")) && chCode.includes(squash("{expPts?.map(([x, yy], i) => (<circle key={`e${i}`}"))
+    && chCode.includes(squash("const hi = Math.max(...revenue, ...(expenses ?? [])) * 1.15 || 1;")) && imports(C6_CHARTS).length === 0,
+  imports(C6_CHARTS).join(" "));
+
+// D-4: the strip holds the factual card alone, and only where it applies
+const stripCode = c6Code.slice(c6Code.indexOf("{featureStripVisible"));
+check("C6 D-4: no Secure & Reliable, Real-time Insights, Automated Processes, CRM Integration, Coming Soon or their subtitles; no Lock / TrendingUp / RefreshCw / Link2 import; the strip rendered only when the feature_strip widget is shown and the country profile enables ZATCA Phase 1 — one card, Shield + ZATCA Phase 1 QR / On printed tax invoices — so no empty strip elsewhere",
+  !/Secure & Reliable|Real-time Insights|Automated Processes|CRM Integration|Coming Soon|Encrypted connection|Data driven decisions|Save time, work smarter|existing CRM|coming-soon-pill|highlight/.test(pageNoComments)
+    && !/\b(Lock|TrendingUp|RefreshCw|Link2)\b/.test(pageNoComments) && imports(C6_PAGE).includes("lucide-react") && /\bShield\b/.test(pageNoComments)
+    && stripCode.startsWith(squash('{featureStripVisible && showZatca && (<div className="feature-strip"><div className="feature-card"><div className="f-icon"><Shield className="size-4.5" /></div><div><div className="f-title">{t(locale, "ZATCA Phase 1 QR")}</div><div className="f-sub">{t(locale, "On printed tax invoices")}</div></div></div></div>)}'))
+    && c6Code.split('className="feature-card"').length === 2 && c6Code.includes(squash('const showZatca = profileHasFeature(getProfileByCountryName(session.orgCountry), "zatca_phase1");'))
+    && c6Code.includes(squash('const featureStripVisible = prefs.layout.find((l) => l.key === "feature_strip")?.visible ?? true;')));
+check("C6 D-4 CSS: .feature-card.highlight, its icon rule and .coming-soon-pill gone (no consumer left); the strip a wrapping row; .feature-card itself unchanged",
+  cssRules(".feature-card.highlight").length === 0 && cssRules(".coming-soon-pill").length === 0 && same(cssRules(".feature-strip"), [`${CSSF}: .feature-strip { display: flex; flex-wrap: wrap; gap: 12px; }`])
+    && same(cssRules(".feature-card").filter((r) => r.includes(": .feature-card {")), [`${CSSF}: .feature-card { display: flex; align-items: center; gap: 12px; padding: 16px 16px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow-sm); }`]),
+  [...cssRules(".feature-card.highlight"), ...cssRules(".coming-soon-pill"), ...cssRules(".feature-strip")].join(" | "));
+
+// D-5: only real trends and real series
+const kpis = jsxEls(C6_PAGE, "KpiCard").map((el) => [attrCode(el, "label"), attrCode(el, "trendPct"), attrCode(el, "trendUp"), attrCode(el, "sparkValues")]);
+check("C6 D-5: Total Sales — its query trend (kpis.totalSalesTrend) and the selected range's revenue buckets as its sparkline; Total Invoices — its query trend, no sparkline; Total Receivables and Total Payables — no trend, no sparkline (C5: \"0%\" and a borrowed / [0, 0] line); no \"0%\" or [0, 0] anywhere in the page",
+  same(kpis, [
+    ['"TotalSales"', "{kpis.totalSalesTrend.pct}", "{kpis.totalSalesTrend.up}", "{revenueSpark}"],
+    ['"TotalInvoices"', "{kpis.totalInvoicesTrend.pct}", "{kpis.totalInvoicesTrend.up}", ""],
+    ['"TotalReceivables"', "", "", ""],
+    ['"TotalPayables"', "", "", ""],
+  ]) && !/"0%"|\[0,\s*0\]/.test(pageNoComments) && c6Code.includes(squash("const revenueSpark = revenueSeries.length > 1 ? revenueSeries : undefined;")),
+  JSON.stringify(kpis));
+const kpiCode = flat(read(C6_KPI));
+check("C6 KpiCard: trendPct, trendUp and sparkValues optional; the trend rendered only when both are given, the sparkline only for two or more points — otherwise nothing, no placeholder; label, value, icon and currency mark as before",
+  kpiCode.includes("trendPct?:string;trendUp?:boolean;") && kpiCode.includes("sparkValues?:number[];") && kpiCode.includes(squash("{trendPct !== undefined && trendUp !== undefined && (<div className={`kpi-trend"))
+    && kpiCode.includes(squash("{sparkValues && sparkValues.length > 1 && (<div className=\"kpi-spark\">")) && same(imports(C6_KPI), ["lucide-react", "lucide-react", "@/components/ui/currency-mark", "@/lib/i18n/dict", "./charts"]),
+  imports(C6_KPI).join(" "));
+check("C6 D-5 Cash Flow: its three figures (Cash Inflow, Cash Outflow, Net Cash Flow) and no sparkline — the page no longer imports Sparkline at all",
+  !/Sparkline/.test(pageNoComments) && ["Cash Inflow", "Cash Outflow", "Net Cash Flow"].every((w) => c6Code.includes(squash(`{t(locale, "${w}")}`))));
+
+// Dates
+check("C6 dates: the recent-activity time is formatDisplayDate(a.time, locale, \"dateTime\") — the third planned consumer; no toLocaleString / toLocaleDateString / toLocaleTimeString / Intl.DateTimeFormat in the four Dashboard files; format-date.ts as C5 left it",
+  c6Code.split(squash('{formatDisplayDate(a.time, locale, "dateTime")}')).length === 2 && C6_FILES.every((f) => !/toLocale(Date|Time)?String|Intl\.DateTimeFormat/.test(codeOnly(read(f))))
+    && sha("src/lib/i18n/format-date.ts") === "199aa879e7cfa055");
+
+// The grid
+check("C6 grid (source): DashWidget writes its desktop size as --dash-span / --dash-rows (and data-wide when wide) — no inline grid-column or grid-row anywhere in the page; Financial Overview the one wide widget; every widget's col / row as in C5",
+  c6Code.includes(squash('<div className="dash-widget" data-wide={wide ? "" : undefined} style={{ "--dash-span": col, "--dash-rows": row } as React.CSSProperties}>')) && !/gridColumn|gridRow|grid-column|grid-row/.test(pageNoComments)
+    && same(jsxEls(C6_PAGE, "DashWidget").map((el) => `${attrCode(el, "col")}/${attrCode(el, "row")}${attr(el, "wide") ? " wide" : ""}`),
+      ["{3}/{2}", "{3}/{2}", "{3}/{2}", "{3}/{2}", "{8}/{5} wide", "{4}/{4}", "{4}/{5}", "{3}/{3}", "{3}/{4}", "{3}/{4}", "{3}/{3}"]),
+  jsxEls(C6_PAGE, "DashWidget").map((el) => `${attrCode(el, "col")}/${attrCode(el, "row")}`).join(" "));
+const C6_GRID_RULES = [
+  `${CSSF}: .dash-grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); grid-auto-rows: 86px; gap: 16px; grid-auto-flow: row dense; margin-bottom: 16px; }`,
+  `${CSSF}: @media (max-width: 1100px) > .dash-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: auto; }`,
+  `${CSSF}: @media (max-width: 640px) > .dash-grid { grid-template-columns: minmax(0, 1fr); }`,
+];
+const C6_WIDGET_RULES = [
+  `${CSSF}: .dash-widget { position: relative; display: flex; flex-direction: column; min-width: 0; grid-column: span var(--dash-span); grid-row: span var(--dash-rows); }`,
+  `${CSSF}: .dash-widget > *:not(.dash-widget-chrome):not(.dash-resize-handle) { flex: 1; min-height: 0; overflow: auto; }`,
+  `${CSSF}: @media (max-width: 1100px) > .dash-widget { grid-column: auto; grid-row: auto; }`,
+  `${CSSF}: @media (max-width: 1100px) > .dash-widget[data-wide] { grid-column: 1 / -1; }`,
+  `${CSSF}: @media (max-width: 1100px) > .dash-widget > *:not(.dash-widget-chrome):not(.dash-resize-handle) { overflow: visible; }`,
+  "src/app/globals.css: body, .sidebar, .topbar, .card, .dash-widget, main { transition: background-color 0.25s ease, border-color 0.25s ease, color 0.25s ease; }",
+];
+check("C6 grid (CSS): above 1100px twelve shrink-safe tracks (minmax(0, 1fr)) and 86px rows, each widget spanning its --dash-span / --dash-rows; at ≤1100px two shrink-safe tracks, rows as tall as their content, every widget one track and a wide one (data-wide) the whole row, nothing clipped or scrolled inside; at ≤640px one track",
+  same(cssRules(".dash-grid"), C6_GRID_RULES) && same(cssRules(".dash-widget"), C6_WIDGET_RULES),
+  [...cssRules(".dash-grid"), ...cssRules(".dash-widget")].join(" | "));
+
+// Logical direction
+check("C6: no physical left / right in the four Dashboard files (C5's borderLeft / paddingLeft split went with D-1); the activity row's and the three card links' chevrons turn in Arabic (rtl:rotate-180); the Dashboard CSS C6 touched logical (margin-inline-start / -end)",
+  C6_FILES.every((f) => physical(f).length === 0) && c6Code.split("rtl:rotate-180").length === 5 && !/margin-(left|right)/.test(cssRules(".kpi-spark").join(" ") + cssRules(" .dot").join(" ")),
+  C6_FILES.flatMap((f) => physical(f).map((p) => `${rel(f)}: ${p}`)).join(" "));
+
+// What C6 must leave alone
+const C6_UNTOUCHED: Record<string, string> = {
+  [`${DASH}_shared/queries.ts`]: "354a881b07d2fc07", "src/lib/dashboard-layout.ts": "11ce662d0eaeb26e", "src/lib/dashboard-range.ts": "677a90301a001d81", "src/lib/user-prefs.ts": "e5c023eb951bb241",
+  [`${DASH}dashboard-prefs-actions.ts`]: "5063caf42e3efff1", [`${DASH}customize-layout-dialog.tsx`]: "e34458835871f082", "src/lib/status-registry.ts": "d30d22a93f40d71f",
+  [`${DASH}base-currency-notice.tsx`]: "585829fe0d6c2b3f", [`${DASH}actions.ts`]: "8d4891d35a19dfe8", [`${DASH}loading.tsx`]: "56c22d1d1aa51824",
+  "src/components/layout/page-header.tsx": "f54789d9a9de8073", "src/lib/geo/country-profiles.ts": "6e7e0646559b4c91", "src/lib/base-currency.ts": "c6cdcf5d3f37ef2d", [`${A}sales/_shared/money.tsx`]: "874b9b2b3e282eff",
+};
+const c6Drift = Object.entries(C6_UNTOUCHED).filter(([f, hsh]) => !exists(f) || sha(f) !== hsh).map(([f]) => rel(f));
+const dashFiles = walk(DASH);
+check(`C6: the Dashboard's queries, the layout registry (its twelve keys, feature_strip among them), the ranges, the preference store and its two actions, Customize Layout, the status registry, the base-currency notice and its action, the loading boundary, PageHeader, the country profiles and Money byte-identical to C5 (${Object.keys(C6_UNTOUCHED).length} files); every Dashboard file is C6's or one of these`,
+  c6Drift.length === 0 && dashFiles.every((f) => C6_FILES.includes(f) || f in C6_UNTOUCHED) && dashFiles.length === C6_FILES.length + 6,
+  [...c6Drift, ...dashFiles.filter((f) => !C6_FILES.includes(f) && !(f in C6_UNTOUCHED)).map((f) => `unaccounted: ${f}`)].join(" "));
+check("C6: the Dashboard's guards (requireSession, the base-currency confirmation), server data section (C5's statements but the four D-1 / D-5 ones — expenseSeries, totalProfit, profitMarginPct, the borrowed spark — and revenueSpark in spark's place: the pin's only change) and static action inventory (the routes it links, confirmBaseCurrencyAction, saveDashboardLayoutAction, setDashboardRangeAction) are the pinned ones",
+  same(now.guards["(app)/dashboard/page.tsx"], pins.guards["(app)/dashboard/page.tsx"]) && same(now.data["(app)/dashboard/page.tsx"], pins.data["(app)/dashboard/page.tsx"])
+    && same(now.actions["(app)/dashboard/page.tsx"], pins.actions["(app)/dashboard/page.tsx"]) && same(pins.guards["(app)/dashboard/page.tsx"], ["getBaseCurrencyConfirmation(session.orgId, session.role)", "requireSession()"])
+    && !pins.data["(app)/dashboard/page.tsx"].some((d) => /expenseSeries|totalProfit|profitMarginPct|const spark =/.test(d)) && pins.data["(app)/dashboard/page.tsx"].some((d) => d.startsWith("2a84fbd7053b const revenueSpark = revenueSeries.length > 1 ? revenueSeries : ")),
+  JSON.stringify(now.actions["(app)/dashboard/page.tsx"]));
+// The Settings family exactly as C5 committed it.
+const C5_COMMITTED: Record<string, string> = {
+  [C5_NAV]: "b8c6e3364bca7a42", [C5_ORG]: "e5238b33f8f955af", [C5_COMPANY]: "08718389db2f7dfb", [C5_FINANCE]: "5209ce4d6f3b6c2e", [C5_VAT]: "41e9587805709143",
+  [C5_NUMBERS]: "77ba22dfa8d2b279", [C5_ROLES]: "b80899c149dad8fe", [C5_ZATCA]: "d2774a1244fefe43", [C5_TEAM]: "54f2bc449cd89d80", [C5_PRESETS]: "47e371129cb709d7",
+  [C5_PRESET_BANK]: "4599754357ae5ee1", [C5_PRINT]: "1b9e3a18be23d089", [C5_SEAL]: "e26c30632b9f210f", [C5_SECURITY]: "dca0e6cda20a46e8", [C5_COMPLIANCE]: "aa2fa11de29abfbf",
+};
+const c5Moved = Object.entries(C5_COMMITTED).filter(([f, hsh]) => !exists(f) || sha(f) !== hsh).map(([f]) => `${rel(f)} ${exists(f) ? sha(f) : "missing"}`);
+check("C6: the 15 Settings files byte-identical to C5 (e8f629b) — C6 touches no Settings code; the P0 / P0.1 / P0.2 verifiers as group 13 holds them",
+  c5Moved.length === 0 && sha("verify/verify-ar-locale-hydration.mjs") === "a226b47188ddf478", c5Moved.join(" | "));
+// The one verifier maintenance C6's review approved: verify-compliance-claims.mjs required the Dashboard to show the
+// Secure & Reliable card's subtitle, the card D-4 removes; that check now requires the card's copy gone. Every other
+// byte of the suite is C5's — the Compliance Center claims (EN / AR), the refusal of "Your data is encrypted".
+const C6_COMPLIANCE_EDIT: [string, string] = [
+  'ok("dashboard says what is actually encrypted", dash.includes("Encrypted connection, encrypted credentials"));\n',
+  'ok(\n  "dashboard removes the Secure & Reliable security marketing copy (DEV-UI-01.7 C6, D-4)",\n  !dash.includes("Secure & Reliable") &&\n    !dash.includes("Encrypted connection, encrypted credentials"),\n);\n',
+];
+const ccNow = read("verify/verify-compliance-claims.mjs");
+const ccC5 = h16(ccNow.replace(C6_COMPLIANCE_EDIT[1], () => C6_COMPLIANCE_EDIT[0]));
+check("C6's approved verifier maintenance: verify-compliance-claims.mjs changes only its Dashboard check that required the Secure & Reliable card's subtitle — now it requires that card's title and subtitle gone (D-4); \"Your data is encrypted\" still refused, every Compliance Center check, the fixture, the locales and the exit as they were — undone, the suite is C5's to the byte",
+  ccNow.split(C6_COMPLIANCE_EDIT[1]).length === 2 && !ccNow.includes(C6_COMPLIANCE_EDIT[0]) && ccC5 === "d6a11364db596383"
+    && ccNow.includes(`ok("dashboard does NOT claim 'Your data is encrypted'", !dash.includes("Your data is encrypted"));\n`),
+  ccC5);
+const C6_BANNED = ["DashboardSection", "DashboardCard", "DashboardHeader", "DashboardLayout", "DashboardShell", "WidgetFrame", "ChartCard"];
+const c6Creep = walk("src").filter((f) => /\.(tsx?|css)$/.test(f) && C6_BANNED.some((b) => new RegExp(`\\b${b}\\b`).test(strip(read(f)))));
+check(`C6: no Dashboard abstraction — none of ${C6_BANNED.join(", ")}; the page composes PageHeader, DashWidget, KpiCard and the charts itself`, c6Creep.length === 0, c6Creep.join(" "));
 
 console.log("\nGroups:");
 for (const [g, [p, f]] of Object.entries(counts)) console.log(`  ${g}: ${p}/${p + f}`);

@@ -322,11 +322,8 @@
       "63f40c00e915 const baseCurrency = await getBaseCurrencyConfirmation(session.orgId, se…",
       "be0967675315 const revenueSeries = revenue.map((p) => p.total);",
       "21b6660b935a const revenueLabels = revenue.map((p) => p.label);",
-      "add3d4a8122f const expenseSeries = revenue.map(() => 0);",
-      "734707569d05 const totalProfit = kpis.totalSalesThisMonth;",
-      "1ccff60bc2e2 const profitMarginPct = kpis.totalSalesThisMonth > 0 ? 100 : 0;",
       "c0bbac7c2ee4 const invPct = (n: number) => (invoicesOverview.total > 0 ? Math.round((…",
-      "9cb1d3e1c4a0 const spark = revenueSeries.length > 1 ? revenueSeries : [0, 0];",
+      "2a84fbd7053b const revenueSpark = revenueSeries.length > 1 ? revenueSeries : undefine…",
       "592cabdf0b93 const featureStripVisible = prefs.layout.find((l) => l.key === \"feature_…"
     ],
     "(app)/finance/bank-accounts/page.tsx": [
@@ -809,6 +806,7 @@
       "src/app/(app)/settings/security/security-client.tsx: <EmptyState message>"
     ],
     "formatDisplayDate": [
+      "src/app/(app)/dashboard/page.tsx",
       "src/app/(app)/hr/attendance/page.tsx",
       "src/app/(app)/hr/payroll/page.tsx"
     ],
@@ -817,6 +815,7 @@
       "src/app/(app)/clients/new/page.tsx: <PageHeader description title>",
       "src/app/(app)/clients/page.tsx: <PageHeader actions description title>",
       "src/app/(app)/clients/recycle-bin/page.tsx: <PageHeader actions description title>",
+      "src/app/(app)/dashboard/page.tsx: <PageHeader actions title>",
       "src/app/(app)/finance/bank-accounts/page.tsx: <PageHeader actions title>",
       "src/app/(app)/finance/chart-of-accounts/page.tsx: <PageHeader title>",
       "src/app/(app)/finance/journal/page.tsx: <PageHeader meta title>",

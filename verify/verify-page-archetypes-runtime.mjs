@@ -1,6 +1,7 @@
 /**
  * DEV-UI-01.7 C0 — page-archetype runtime baseline (C1: master-data and entity-detail targets; C2: HR
- * targets and the D-6 StatRow gate; C3: Projects and the kanban; C4: finance and reports; C5: Settings).
+ * targets and the D-6 StatRow gate; C3: Projects and the kanban; C4: finance and reports; C5: Settings;
+ * C6: the Dashboard).
  *
  *   node verify/verify-page-archetypes-runtime.mjs                   measure, compare with the baseline
  *   node verify/verify-page-archetypes-runtime.mjs --write-baseline  measure, write the baseline files
@@ -13,8 +14,32 @@
  *                                                   the baseline's `c3ref` record (C3 recorded it on C2's build)
  *   node verify/verify-page-archetypes-runtime.mjs --write-c4ref     measure the C4 value pass alone; write it as
  *                                                   the baseline's `c4ref` record (C4 recorded it on C3's build)
+ *   node verify/verify-page-archetypes-runtime.mjs --write-c6ref     measure the C6 Dashboard value pass alone; write
+ *                                                   it as the baseline's `c6ref` record (C6 recorded it on C5's build)
  *   flags: --skip-build (reuse .next — only when it was built from the current tree), --only=<route id>[,<route id>…],
  *          --measure-out=<file> (also write what this run measured, for review evidence)
+ *
+ * C6 (the Dashboard) re-recorded its route and holds it to targets: one PageHeader holding the only h1
+ * (Dashboard, the range selector and Customize Layout its actions); the seven widget titles as h2s; no
+ * overflow, nothing past the viewport; no error; Western digits (the Recent Activities times were
+ * Arabic-Indic, and so were the Arabic "Last 7 / 30 Days"). The grid is measured at every width, EN and AR:
+ * twelve tracks with each widget's desktop span above 1100 px, two at ≤1100 px (Financial Overview the whole
+ * row), one at ≤640 px — and no widget clips its content, across or down. What the page must no longer say
+ * is asserted on every state: no Total
+ * Profit, Profit Margin, Total Expenses or Expenses (D-1); none of the four marketing cards or "Coming
+ * Soon" (D-4); the KPI trends and sparklines only where they are real (D-5: Total Sales both, Total
+ * Invoices its trend, Receivables and Payables neither; no sparkline in Cash Flow). A value pass reads every
+ * factual figure — the KPIs and their real trends, the revenue chart's bars, line and labels, the total
+ * revenue, Cash Flow, the invoice statuses, projects, HR, the recent activities, the quick actions, the
+ * ZATCA card — for this month, the last 30 days and this year, EN and AR at 1440 and 390, and holds it to the
+ * baseline's `c6ref` record, measured on C5's build (e8f629b, --write-c6ref). Probes: the grid's two
+ * breakpoints (1101 / 1100, 641 / 640 px); the range selector in the PageHeader (another range chosen: the
+ * URL, the saved preference, the figures and labels follow; set back after); Customize Layout in an org
+ * registered through the UI (the feature strip and Quick Actions hidden, HR Snapshot moved up, saved under the
+ * same twelve keys, rendered so; reset after); an org whose country has no ZATCA Phase 1 (no feature strip at
+ * all, its preference still there); the activity times — one made deterministic at a date-crossing instant —
+ * under each browser's zone, Pacific/Pago_Pago and Pacific/Kiritimati: exactly formatDisplayDate's UTC
+ * "dateTime" strings of what the database holds.
  *
  * C5 (Settings) re-recorded its 14 Settings routes — Business Settings on each of its ten tabs (seven of
  * them new routes, first recorded on C4's build — 54 routes), /settings/team (its redirect to the Team
@@ -164,8 +189,9 @@ const MEASURE_OUT = args.find((a) => a.startsWith("--measure-out="))?.slice(14);
 const WRITE_D6 = args.some((a) => a === "--write-d6" || a.startsWith("--write-d6="));
 const WRITE_C3REF = args.some((a) => a === "--write-c3ref" || a.startsWith("--write-c3ref="));
 const WRITE_C4REF = args.some((a) => a === "--write-c4ref" || a.startsWith("--write-c4ref="));
+const WRITE_C6REF = args.some((a) => a === "--write-c6ref" || a.startsWith("--write-c6ref="));
 /** A pass that records one thing alone: no owner / Staff / sweep passes, no probes. */
-const RECORD_ONLY = WRITE_D6 || WRITE_C3REF || WRITE_C4REF;
+const RECORD_ONLY = WRITE_D6 || WRITE_C3REF || WRITE_C4REF || WRITE_C6REF;
 /** --only=<id>[,<id>…]: a route (or pass) id containing any of them. */
 const onlyId = (id) => !ONLY || ONLY.split(",").some((o) => o && id.includes(o));
 
@@ -391,6 +417,11 @@ new Function("module", "exports", "require", ts.transpileModule(readFileSync("sr
   dictMod, dictMod.exports, (spec) => { throw new Error(`dict.ts imports ${spec}`); });
 /** What the page says for `en` in locale `l` — the dictionary's t(). */
 const T = (l, en) => dictMod.exports.t(l, en);
+/** C6: the customizable widgets (key, dialog label, default order) — dashboard-layout.ts itself, a pure module. */
+const layoutMod = { exports: {} };
+new Function("module", "exports", "require", ts.transpileModule(readFileSync("src/lib/dashboard-layout.ts", "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 } }).outputText)(
+  layoutMod, layoutMod.exports, (spec) => { throw new Error(`dashboard-layout.ts imports ${spec}`); });
+const C6_LAYOUT_WIDGETS = layoutMod.exports.DASHBOARD_WIDGETS;
 const C5_SECURITY = ["Two-Factor Authentication", "Password", "Active Sessions", "Security Timeline"];
 const C5_READINESS = ["GDPR", "ISO 27001 — roadmap", "Platform security"];
 /** The outline a Settings route must have (headings are measured to 48 characters). */
@@ -406,6 +437,33 @@ function c5Outline(id, l, admin = true) {
   return [h(1, "Security & Compliance Readiness"), h(2, "Readiness checklist"), ...C5_READINESS.map((w) => h(3, w)), h(2, "Data Subject Rights"), h(2, "Consent Management")];
 }
 
+// DEV-UI-01.7 C6: the Dashboard. Its widgets in the default order, with their desktop column and row spans (the
+// DashWidget `col` / `row`) — the KPI cards by their label, the others by their h2 — and the factual-value
+// cases: this month (the default), the last 30 days (day buckets) and this year (month buckets).
+const C6_WIDGETS = [
+  ["Total Sales", 3, 2], ["Total Invoices", 3, 2], ["Total Receivables", 3, 2], ["Total Payables", 3, 2], ["Financial Overview", 8, 5], ["Quick Actions", 4, 4],
+  ["Recent Activities", 4, 5], ["Cash Flow", 3, 3], ["Invoices Overview", 3, 4], ["Project Overview", 3, 4], ["HR Snapshot", 3, 3],
+];
+const C6_H2 = ["Financial Overview", "Quick Actions", "Recent Activities", "Cash Flow", "Invoices Overview", "Project Overview", "HR Snapshot"];
+/** D-5: [label, a real trend, a real sparkline]. */
+const C6_KPIS = [["Total Sales", true, true], ["Total Invoices", true, false], ["Total Receivables", false, false], ["Total Payables", false, false]];
+/** What the Dashboard no longer says (D-1, D-4), in English — and in Arabic where the dictionary has it. */
+const C6_GONE_EN = ["Total Profit", "Profit Margin", "Total Expenses", "Expenses", "Secure & Reliable", "Encrypted connection, encrypted credentials", "Real-time Insights",
+  "Data driven decisions", "Automated Processes", "Save time, work smarter", "CRM Integration", "Coming Soon", "We will connect our existing CRM"];
+const c6Gone = (l) => [...new Set(C6_GONE_EN.flatMap((en) => [en, T(l, en)]))];
+const C6_VALUE_CASES = [["dash-this_month", "/dashboard"], ["dash-last_30_days", "/dashboard?range=last_30_days"], ["dash-this_year", "/dashboard?range=this_year"]];
+const C6_RANGE_OF = { "dash-this_month": "This Month", "dash-last_30_days": "Last 30 Days", "dash-this_year": "This Year" };
+/** The deterministic activity instant the probe gives one quotation (UTC, as the column holds it). */
+const C6_STAMP = "2026-06-14 23:30:00";
+const C6_RANGE_KEYS = { this_month: "This Month", last_month: "Last Month", last_7_days: "Last 7 Days", last_30_days: "Last 30 Days", this_quarter: "This Quarter", this_year: "This Year", all_time: "All Time" };
+/** The outline the Dashboard must have for a range label (headings are measured to 48 characters). */
+const c6Outline = (l, range = "This Month") => [`h1 ${T(l, "Dashboard")}`, ...C6_H2.map((w) => `h2 ${w === "Cash Flow" ? `${T(l, w)} · ${T(l, range)}` : T(l, w)}`.slice(0, 51))];
+/** The words the in-page C6 measures look for, in the page's language. */
+const c6W = (l) => ({
+  gone: c6Gone(l), cash: T(l, "Cash Flow"), invoices: T(l, "Invoices Overview"), projects: T(l, "Project Overview"), hr: T(l, "HR Snapshot"),
+  totalRevenue: T(l, "Total Revenue"), zatca: T(l, "ZATCA Phase 1 QR"), customize: T(l, "Customize Layout"),
+});
+
 // ------------------------------------------------------------------------------------- isolation
 function refuse(why) {
   console.error(`✗ refusing: ${why}`);
@@ -416,6 +474,7 @@ if (!existsSync(PASSWORD_FILE)) refuse("no synthetic seed password (.ui-baseline
 if (WRITE_D6 && (WRITE || REBASE || ONLY)) refuse("--write-d6 records the D-6 pass alone, every consumer: not with --write-baseline, --rebaseline or --only");
 if (WRITE_C3REF && (WRITE || REBASE || ONLY || WRITE_D6)) refuse("--write-c3ref records the C3 project pass alone, both projects: not with --write-baseline, --rebaseline, --only or --write-d6");
 if (WRITE_C4REF && (WRITE || REBASE || ONLY || WRITE_D6 || WRITE_C3REF)) refuse("--write-c4ref records the C4 value pass alone, every case: not with --write-baseline, --rebaseline, --only, --write-d6 or --write-c3ref");
+if (WRITE_C6REF && (WRITE || REBASE || ONLY || WRITE_D6 || WRITE_C3REF || WRITE_C4REF)) refuse("--write-c6ref records the C6 Dashboard value pass alone, every case: not with --write-baseline, --rebaseline, --only, --write-d6, --write-c3ref or --write-c4ref");
 if (REBASE) {
   // A partial re-record must still see every route: the routes it keeps are compared, not copied blind.
   if (ONLY || WRITE) refuse("--rebaseline measures every route and re-records only the ones it names: not with --only or --write-baseline");
@@ -1210,6 +1269,119 @@ const COMPLIANCE_FACTS = (W) => {
   };
 };
 
+/**
+ * C6: the Dashboard as laid out and what it says — the grid's tracks; each widget's name (a KPI card's label,
+ * else its heading), track span, box and whether its card clips its content (across or down) or sits outside
+ * the grid or the viewport, and any inline grid placement; each KPI card's value, trend and sparkline;
+ * Financial Overview's total and chart (bars, the revenue line and points, any expense line or points, its
+ * labels) and anything else drawn in it; Cash Flow's figures and any sparkline; the recent activities;
+ * the feature strip; the PageHeader's actions; and every phrase in W.gone found in <main>'s text or
+ * accessible names, hidden or not.
+ */
+const DASH_FACTS = (W) => {
+  const main = document.querySelector("main");
+  const grid = main?.querySelector(".dash-grid");
+  if (!grid) return null;
+  const vw = document.documentElement.clientWidth;
+  const text = (e) => (e?.textContent ?? "").replace(/\s+/g, " ").trim();
+  const r1 = (n) => Math.round(n * 10) / 10;
+  const gcs = getComputedStyle(grid);
+  const tracks = gcs.gridTemplateColumns.split(" ").map(parseFloat).filter((n) => !Number.isNaN(n));
+  const gap = parseFloat(gcs.columnGap) || 0;
+  const g = grid.getBoundingClientRect();
+  const sparks = (el) => (el ? el.querySelectorAll('svg linearGradient[id^="spark-"]').length : null);
+  const widgets = [...grid.children].map((w) => {
+    const r = w.getBoundingClientRect();
+    const card = w.firstElementChild;
+    const kpi = w.querySelector(".kpi-card-v4");
+    const ws = getComputedStyle(w);
+    return {
+      name: kpi ? text(kpi.querySelector(".kpi-label")) : text(w.querySelector("h1, h2, h3, h4, h5, h6")),
+      wide: w.hasAttribute("data-wide"), span: tracks.length ? Math.round((r.width + gap) / (tracks[0] + gap)) : null, width: r1(r.width), height: r1(r.height),
+      clipX: card ? card.scrollWidth > card.clientWidth + 1 : null, clipY: card ? card.scrollHeight > card.clientHeight + 1 : null,
+      inGrid: r.left >= g.left - 1 && r.right <= g.right + 1, inView: r.left >= -1 && r.right <= vw + 1,
+      inline: Boolean(w.style.gridColumn || w.style.gridRow), vars: [w.style.getPropertyValue("--dash-span"), w.style.getPropertyValue("--dash-rows")],
+      // How the widget is placed in rows, as computed: `span <rows>` (desktop) or auto (natural rows).
+      row: [ws.gridRowStart, ws.gridRowEnd],
+    };
+  });
+  const kpis = [...main.querySelectorAll(".kpi-card-v4")].map((c) => ({
+    label: text(c.querySelector(".kpi-label")), value: text(c.querySelector(".kpi-value")),
+    trend: c.querySelector(".kpi-trend") ? text(c.querySelector(".kpi-trend")) : null, sparks: sparks(c), sparkBox: c.querySelectorAll(".kpi-spark").length,
+  }));
+  const finCard = main.querySelector(".fin-card");
+  const chart = finCard ? [...finCard.querySelectorAll("svg")].find((v) => v.querySelector("rect")) ?? null : null;
+  const fin = finCard && {
+    label: text(finCard.querySelector(".fin-total-label")), value: text(finCard.querySelector(".fin-total-value")), pill: text(finCard.querySelector(".select-pill")),
+    // Money's currency mark (an svg for the riyal) is the figure's, not a drawing: left out.
+    svgs: [...finCard.querySelectorAll("svg")].filter((v) => !v.closest(".num-tabular")).length, donuts: finCard.querySelectorAll("svg circle[stroke-dasharray]").length,
+    legends: finCard.querySelectorAll(".fin-legend, .donut-legend-row").length,
+    chart: chart && {
+      bars: chart.querySelectorAll("rect").length, revenueLine: chart.querySelectorAll('path[stroke="var(--brand-orange)"]').length,
+      expenseLine: chart.querySelectorAll('path[stroke="var(--chart-navy)"]').length, revenueDots: chart.querySelectorAll('circle[fill="var(--brand-orange)"]').length,
+      expenseDots: chart.querySelectorAll('circle[fill="var(--chart-navy)"]').length, labels: chart.querySelectorAll("text").length,
+      width: r1(chart.getBoundingClientRect().width), direction: getComputedStyle(chart).direction,
+    },
+  };
+  const cardOf = (title) => [...main.querySelectorAll(".bottom-card")].find((c) => text(c.querySelector("h1, h2, h3, h4, h5, h6")).startsWith(title)) ?? null;
+  const cash = cardOf(W.cash);
+  const act = main.querySelector('[data-slot="page-header"] [data-slot="page-header-actions"]');
+  const strip = main.querySelector(".feature-strip");
+  const hay = [main.textContent ?? "", ...[...main.querySelectorAll("[aria-label], [title], [alt]")].map((e) => ["aria-label", "title", "alt"].map((a) => e.getAttribute(a) ?? "").join(" "))].join("\n");
+  return {
+    tracks, gap, gridWidth: r1(g.width), autoRows: gcs.gridAutoRows, widgets, kpis, fin,
+    cash: cash && { title: text(cash.querySelector("h1, h2, h3, h4, h5, h6")), rows: [...cash.querySelectorAll(".bc-stat-row")].map((r) => text(r)), sparks: sparks(cash) },
+    activity: [...main.querySelectorAll(".activity-row")].map((r) => ({ text: text(r.querySelector(".activity-text")), time: text(r.querySelector(".activity-time")) })),
+    strip: strip && { cards: [...strip.querySelectorAll(".feature-card")].map((c) => [text(c.querySelector(".f-title")), text(c.querySelector(".f-sub"))]), inView: strip.getBoundingClientRect().right <= vw + 1 },
+    header: {
+      range: act ? text(act.querySelector('[aria-haspopup="menu"]')) : null,
+      customize: act ? [...act.querySelectorAll("button")].some((b) => text(b) === W.customize) : false,
+      controlsOutside: [...main.querySelectorAll('[aria-haspopup="menu"], button')].filter((b) => (text(b) === W.customize || b.getAttribute("aria-haspopup") === "menu") && !act?.contains(b)).length,
+    },
+    gone: W.gone.filter((p) => hay.includes(p)),
+  };
+};
+/**
+ * C6: every factual value the Dashboard shows, read the same way from C5's markup and C6's — the KPI cards
+ * (value, trend, sparkline path), the revenue chart (bars, line, points, labels), the total revenue (C5: its
+ * donut legend row; C6: the Financial Overview total), the range label, Cash Flow, the invoice statuses
+ * and total, projects, HR, the activities (and, apart, their times), every link, the data-quality notice
+ * and the ZATCA card.
+ */
+const DASH_VALUES = (W) => {
+  const main = document.querySelector("main");
+  const text = (e) => (e?.textContent ?? "").replace(/\s+/g, " ").trim();
+  const kpis = Object.fromEntries([...main.querySelectorAll(".kpi-card-v4")].map((c) => [text(c.querySelector(".kpi-label")), {
+    value: text(c.querySelector(".kpi-value")), trend: c.querySelector(".kpi-trend") ? text(c.querySelector(".kpi-trend")) : null,
+    spark: [...c.querySelectorAll(".kpi-spark svg path")].map((p) => p.getAttribute("d")),
+  }]));
+  const finCard = main.querySelector(".fin-card");
+  const chart = finCard ? [...finCard.querySelectorAll("svg")].find((v) => v.querySelector("rect")) ?? null : null;
+  const legendTotal = finCard ? [...finCard.querySelectorAll(".donut-legend-row")].find((r) => text(r.querySelector(".lbl")) === W.totalRevenue) : null;
+  const cardOf = (title) => [...main.querySelectorAll(".bottom-card")].find((c) => text(c.querySelector("h1, h2, h3, h4, h5, h6")).startsWith(title)) ?? null;
+  const rows = (c) => (c ? [...c.querySelectorAll(".bc-stat-row")].map((r) => `${text(r.querySelector(".lbl"))} = ${text(r.querySelector(".val"))}`) : null);
+  const [cash, inv, proj, hr] = [W.cash, W.invoices, W.projects, W.hr].map(cardOf);
+  return {
+    kpis,
+    chart: chart && {
+      viewBox: chart.getAttribute("viewBox"), bars: [...chart.querySelectorAll("rect")].map((r) => ["x", "y", "width", "height"].map((a) => r.getAttribute(a)).join(",")),
+      revenue: chart.querySelector('path[stroke="var(--brand-orange)"]')?.getAttribute("d") ?? null,
+      points: [...chart.querySelectorAll('circle[fill="var(--brand-orange)"]')].map((c) => `${c.getAttribute("cx")},${c.getAttribute("cy")}`),
+      labels: [...chart.querySelectorAll("text")].map((t) => t.textContent),
+    },
+    totalRevenue: finCard ? text(finCard.querySelector(".fin-total-value")) || text(legendTotal?.querySelector(".val")) || null : null,
+    range: text(finCard?.querySelector(".select-pill")) || null,
+    cashTitle: text(cash?.querySelector("h1, h2, h3, h4, h5, h6")) || null, cash: rows(cash),
+    invoices: rows(inv), invoicesDonut: inv ? [...inv.querySelectorAll("svg text")].map((t) => t.textContent) : null,
+    projects: rows(proj), projectsBig: text(proj?.querySelector(".bc-bignum")) || null, hr: rows(hr), hrBig: text(hr?.querySelector(".bc-bignum")) || null,
+    activity: [...main.querySelectorAll(".activity-row")].map((r) => text(r.querySelector(".activity-text"))),
+    activityTimes: [...main.querySelectorAll(".activity-time")].map((e) => text(e)),
+    links: [...main.querySelectorAll("a[href]")].map((a) => `${a.getAttribute("href")} ${text(a)}`),
+    banner: text(main.querySelector('[data-testid="base-data-quality"]')) || null,
+    zatca: [...main.querySelectorAll(".feature-card .f-title")].map((e) => text(e)).filter((t) => t === W.zatca).length,
+  };
+};
+
 // ------------------------------------------------------------------------------------- run
 const pinned = WRITE ? null : JSON.parse(readFileSync(BASELINE_FILE, "utf8"));
 const pinnedActions = WRITE ? null : JSON.parse(readFileSync(ACTIONS_FILE, "utf8"));
@@ -1223,6 +1395,7 @@ await admin(async (c) => {
 let deptDb = null;
 let projDb = null;
 let finDb = null;
+let c6Seed = null;
 {
   // A Staff member for the permission pass (this run's copy only, never the template).
   const c = new pg.Client({ connectionString: env.DATABASE_URL });
@@ -1249,6 +1422,8 @@ let finDb = null;
     first: (await c.query("select id, code, name from accounts where org_id = $1 order by code limit 1", [org])).rows[0],
     account1: (await c.query("select code, name from accounts where org_id = $1 and id = 1", [org])).rows[0] ?? null,
   };
+  // C6: the seeded org's country — where ZATCA Phase 1 applies, the strip's one card shows.
+  c6Seed = { country: (await c.query("select country from orgs where id = $1", [org])).rows[0]?.country ?? null };
   await c.end();
 }
 /** Every task of the populated project as the database holds it — what opening and closing must not change. */
@@ -1350,6 +1525,7 @@ const now = {
   frozenNow: FROZEN_NOW, chromium: browser.version(), states: {}, staff: {}, sweep: {}, d6: {}, c2: { dept: {}, payroll: {}, dates: {} }, c3: { layout: {}, kanban: {}, empty: {}, hours: {} },
   c4: { ledger: {}, values: {}, picker: {}, links: {}, empty: {} },
   c5: { nav: {}, d7: {}, keys: {}, presets: {}, staff: {}, timeline: {}, security: {}, alert: {}, compliance: {} },
+  c6: { dash: {}, values: {}, ranges: {}, bp: {}, range: {}, customize: {}, noZatca: {}, zones: {} },
 };
 const prompts = {};
 let fdNode = {};
@@ -1407,6 +1583,8 @@ try {
         if (id === "ledger" || id === "coa") now.c4.ledger[`${id}|${locale}|${w}`] = await page.evaluate(LEDGER_FACTS, C4_WORDS[locale].addAccount);
         // C5: Business Settings' navigation beside or above its panel (D-7), its direction and its tabs.
         if (C5_TABS[id]) now.c5.nav[`${id}|${locale}|${w}`] = await page.evaluate(SETTINGS_FACTS);
+        // C6: the Dashboard's grid, widgets and what it says.
+        if (id === "dashboard") now.c6.dash[`${locale}|${w}`] = await page.evaluate(DASH_FACTS, c6W(locale));
       });
       await pass(`staff ${locale}`, staffState, locale, null, [[1440, 900]], async ({ id, page, status, finalPath, errors }) => {
         now.staff[`${id}|${locale}`] = { status, finalPath, ...errFacts(errors) };
@@ -1418,7 +1596,7 @@ try {
     }
   // D-6: every StatRow consumer at every width, EN and AR; actions at 1440 and 390. (--write-d6 records
   // the consumers C2 must leave as they were — not C2's own HR strips.)
-  if (!WRITE_C3REF && !WRITE_C4REF)
+  if (!WRITE_C3REF && !WRITE_C4REF && !WRITE_C6REF)
     for (const locale of ["en", "ar"])
       await pass(`D-6 ${locale}`, ownerState, locale, null, WIDTHS, async ({ id, w, page, status, finalPath, errors }) => {
         now.d6[`${id}|${locale}|${w}`] = { status, finalPath, ...(await page.evaluate(D6M)), ...(w === 1440 || w === 390 ? { actions: await page.evaluate(ACTIONS) } : {}), ...errFacts(errors) };
@@ -1427,7 +1605,7 @@ try {
   // C3: the populated and the empty project at every width, EN and AR — the composition (C3M) and, at 1440
   // and 390 on the populated one, the kanban's heads and cards at rest and each card hovered (CSS
   // transitions finished). --write-c3ref records this pass on C2's build.
-  if (!WRITE_D6 && !WRITE_C4REF)
+  if (!WRITE_D6 && !WRITE_C4REF && !WRITE_C6REF)
     for (const locale of ["en", "ar"])
       await pass(`C3 ${locale}`, ownerState, locale, null, WIDTHS, async ({ id, w, page, status, finalPath, errors }) => {
         const layout = await page.evaluate(C3M, C3_NUMERIC);
@@ -1451,7 +1629,7 @@ try {
   // STATEMENT_FACTS); at 1440 also a search, the first drill-down and a statement's from-date filter, read
   // the same way. --write-c4ref records this pass on C3's build; every other run holds it to that record.
   const C4_ON = ROUTES.some(([id]) => C4_ROUTES.includes(id));
-  if (!WRITE_D6 && !WRITE_C3REF && (C4_ON || WRITE_C4REF)) {
+  if (!WRITE_D6 && !WRITE_C3REF && !WRITE_C6REF && (C4_ON || WRITE_C4REF)) {
     const settle = async (page) => {
       await page.waitForLoadState("networkidle");
       await page.evaluate(() => { document.getAnimations().forEach((a) => a.finish()); return new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))); });
@@ -1500,6 +1678,20 @@ try {
         }
       }, C4_VALUE_CASES);
   }
+
+  // C6: the Dashboard value pass — this month, the last 30 days, this year at 1440 and 390, EN / AR: every
+  // factual value (DASH_VALUES), and on C6's build also the C6 facts of those states. --write-c6ref records
+  // it on C5's build; every other run holds it to that record.
+  const C6_ON = ROUTES.some(([id]) => id === "dashboard");
+  if (!WRITE_D6 && !WRITE_C3REF && !WRITE_C4REF && (C6_ON || WRITE_C6REF))
+    for (const locale of ["en", "ar"])
+      await pass(`C6 values ${locale}`, ownerState, locale, null, [[1440, 900], [390, 844]], async ({ id, w, page, status, finalPath, errors }) => {
+        now.c6.values[`${id}|${locale}|${w}`] = { status, finalPath, ...(await page.evaluate(DASH_VALUES, c6W(locale))), ...errFacts(errors) };
+        if (!WRITE_C6REF) {
+          const m = await page.evaluate(MEASURE, C1_LITERALS);
+          now.c6.ranges[`${id}|${locale}|${w}`] = { outline: m.outline, h1: m.h1, skips: m.skips, overflow: m.overflow, offenders: m.offenders, indic: m.indic, pageHeader: m.pageHeader, ...(await page.evaluate(DASH_FACTS, c6W(locale))), ...errFacts(errors) };
+        }
+      }, C6_VALUE_CASES);
 
   // C2 probes, EN and AR, as a person would use the pages. One page each, the frozen clock, the owner
   // (C4: or the org a probe registered).
@@ -1999,6 +2191,191 @@ try {
     delete now.c5.alertOrgState;
     console.log("  C5 probes done");
   }
+  // C6 probes, EN and AR. The grid's two breakpoints (1101 / 1100 px: twelve tracks → two; 641 / 640 px: two →
+  // one). The range selector in the PageHeader, by pointer (the owner, 1440): Last Month chosen — the URL
+  // ?range=last_month, the preference saved, the label, the figures and the chart re-read and equal to a direct
+  // load of that range — then This Month again (saved back). Customize Layout, in an org registered through
+  // the UI in this run's TEST-ONLY copy (Saudi Arabia: the ZATCA card shows): the feature strip unticked and
+  // HR Snapshot moved above Project Overview, saved — the page re-rendered so, the preference stored under the
+  // same twelve keys — then Reset to default, saved. An org whose country has no ZATCA Phase 1 (the United Arab
+  // Emirates, also registered through the UI): no feature strip and nothing empty in its place, at 1440 and
+  // 390. The activity times (the owner): each the formatDisplayDate(…, "dateTime") string of its document's
+  // created_at — read from this copy, formatted here in Node — under the usual browsers and under
+  // Pacific/Pago_Pago (UTC−11, where the frozen instant is still the 14th).
+  if (!RECORD_ONLY && ROUTES.some(([id]) => id === "dashboard")) {
+    const dbq6 = async (fn) => {
+      const c = new pg.Client({ connectionString: env.DATABASE_URL });
+      await c.connect();
+      try {
+        return await fn(c);
+      } finally {
+        await c.end();
+      }
+    };
+    const settle6 = async (page) => {
+      await page.waitForLoadState("networkidle");
+      await twoFrames(page);
+    };
+    const prefOf = (email) => dbq6(async (c) => (await c.query("select dashboard_range, dashboard_layout from user_preferences where user_id = (select id from users where email = $1)", [email])).rows[0] ?? null);
+    for (const locale of ["en", "ar"])
+      for (const w of [1101, 1100, 641, 640]) {
+        const { ctx, page, errors } = await probePage(locale, [w, 900], "/dashboard");
+        const f = await page.evaluate(DASH_FACTS, c6W(locale));
+        now.c6.bp[`${locale}|${w}`] = { tracks: f?.tracks.length ?? null, autoRows: f?.autoRows ?? null, widgets: f?.widgets.map(({ name, span, clipX, clipY, inGrid, inView, row }) => ({ name, span, clipX, clipY, inGrid, inView, row })) ?? null,
+          gone: f?.gone ?? null, overflow: (await page.evaluate(MEASURE, C1_LITERALS)).overflow, ...errFacts(errors) };
+        await ctx.close();
+      }
+    for (const locale of ["en", "ar"]) {
+      const { ctx, page, errors } = await probePage(locale, [1440, 900], "/dashboard");
+      const trigger = page.locator('main [data-slot="page-header-actions"] [aria-haspopup="menu"]');
+      const before = { range: (await page.evaluate(DASH_FACTS, c6W(locale)))?.header.range ?? null, url: new URL(page.url()).search };
+      const choose = async (en) => {
+        await trigger.click();
+        const menu = page.locator('[role="menu"]');
+        const opened = await menu.waitFor({ state: "visible", timeout: 15000 }).then(() => true, () => false);
+        const items = opened ? (await menu.locator('[role="menuitem"]').allInnerTexts()).map((x) => x.replace(/\s+/g, " ").trim()) : [];
+        if (opened) {
+          const key = Object.keys(C6_RANGE_KEYS).find((k) => C6_RANGE_KEYS[k] === en);
+          await Promise.all([page.waitForURL((u) => u.search === `?range=${key}`, { timeout: 30000 }).catch(() => {}), menu.getByRole("menuitem", { name: T(locale, en), exact: true }).click()]);
+          await page.waitForFunction((label) => document.querySelector('main [data-slot="page-header-actions"] [aria-haspopup="menu"]')?.textContent.includes(label), T(locale, en), { timeout: 30000 }).catch(() => {});
+          await settle6(page);
+        }
+        return { opened, items };
+      };
+      const pick1 = await choose("Last Month");
+      const m1 = await page.evaluate(MEASURE, C1_LITERALS);
+      const after = { url: new URL(page.url()).search, facts: await page.evaluate(DASH_FACTS, c6W(locale)), values: await page.evaluate(DASH_VALUES, c6W(locale)), outline: m1.outline, h1: m1.h1, saved: (await prefOf(OWNER_EMAIL))?.dashboard_range ?? null };
+      const pick2 = await choose("This Month");
+      const back = { url: new URL(page.url()).search, range: (await page.evaluate(DASH_FACTS, c6W(locale)))?.header.range ?? null, saved: (await prefOf(OWNER_EMAIL))?.dashboard_range ?? null };
+      await ctx.close();
+      const direct = await probePage(locale, [1440, 900], "/dashboard?range=last_month");
+      const directValues = await direct.page.evaluate(DASH_VALUES, c6W(locale));
+      await direct.ctx.close();
+      now.c6.range[locale] = { before, pick1, after, pick2, back, directValues, ...errFacts([...errors, ...direct.errors]) };
+    }
+    // Fresh orgs, registered as a person would.
+    const freshOrg = async (country, tag) => {
+      const email = `c6-${tag}@visual-baseline.test`;
+      const password = `Aa1!${randomUUID()}`;
+      const ctx = await context({ locale: "en-US", timezoneId: "UTC" });
+      const p = await ctx.newPage();
+      await p.setViewportSize({ width: 1440, height: 900 });
+      await p.goto(`${BASE}/register`, { waitUntil: "networkidle", timeout: 60000 });
+      await p.fill('input[name="orgName"]', `TEST-ONLY ${tag} Co. (Fictional)`);
+      await p.fill('input[name="name"]', `${tag} Owner`);
+      await p.fill('input[name="email"]', email);
+      await p.fill('input[name="password"]', password);
+      const confirm = p.locator('input[name="confirmPassword"]');
+      if (await confirm.count()) await confirm.fill(password);
+      await pickCountry(p, country);
+      await Promise.all([p.waitForURL(`${BASE}/dashboard`, { timeout: 60000 }), p.getByRole("button", { name: /register|create|sign up/i }).first().click()]);
+      const state = await ctx.storageState();
+      await ctx.close();
+      return { email, state, country: await dbq6(async (c) => (await c.query("select o.country from orgs o join users u on u.org_id = o.id where u.email = $1", [email])).rows[0]?.country ?? null) };
+    };
+    const ksa = await freshOrg("Saudi Arabia", "customize");
+    const names = (f) => f?.widgets.map((x) => x.name) ?? null;
+    for (const locale of ["en", "ar"]) {
+      const { ctx, page, errors } = await probePage(locale, [1440, 900], "/dashboard", ksa.state);
+      const before = await page.evaluate(DASH_FACTS, c6W(locale));
+      const dialog = page.getByRole("dialog");
+      const open = async () => {
+        await page.locator('main [data-slot="page-header-actions"]').getByRole("button", { name: T(locale, "Customize Layout"), exact: true }).click();
+        return dialog.waitFor({ state: "visible", timeout: 15000 }).then(() => true, () => false);
+      };
+      const save = async () => {
+        await dialog.getByRole("button", { name: T(locale, "Save"), exact: true }).click();
+        const closed = await dialog.waitFor({ state: "detached", timeout: 30000 }).then(() => true, () => false);
+        await page.waitForFunction(() => !document.querySelector('[role="dialog"]'), null, { timeout: 15000 }).catch(() => {});
+        await page.waitForTimeout(500);
+        await settle6(page);
+        return closed;
+      };
+      const opened = await open();
+      const labels = opened ? (await dialog.locator('label[for^="w-"]').allInnerTexts()).map((x) => x.replace(/\s+/g, " ").trim()) : [];
+      if (opened) {
+        await dialog.locator("#w-feature_strip").click();
+        await dialog.locator("#w-quick_actions").click();
+        await dialog.locator("div").filter({ has: page.locator('label[for="w-hr_snapshot"]') }).last().getByRole("button", { name: T(locale, "Move up"), exact: true }).click();
+      }
+      const saved = opened ? await save() : false;
+      const customized = { facts: await page.evaluate(DASH_FACTS, c6W(locale)), stored: (await prefOf(ksa.email))?.dashboard_layout ?? null };
+      const reopened = await open();
+      if (reopened) await dialog.getByRole("button", { name: T(locale, "Reset to default"), exact: true }).click();
+      const resetSaved = reopened ? await save() : false;
+      const reset = { facts: await page.evaluate(DASH_FACTS, c6W(locale)), stored: (await prefOf(ksa.email))?.dashboard_layout ?? null };
+      now.c6.customize[locale] = { org: ksa.country, before: { names: names(before), strip: before?.strip ?? null, gone: before?.gone ?? null }, opened, labels, saved,
+        customized: { names: names(customized.facts), strip: customized.facts?.strip ?? null, gone: customized.facts?.gone ?? null, stored: customized.stored }, reopened, resetSaved,
+        reset: { names: names(reset.facts), strip: reset.facts?.strip ?? null, gone: reset.facts?.gone ?? null, stored: reset.stored }, ...errFacts(errors) };
+      await ctx.close();
+    }
+    const uae = await freshOrg("United Arab Emirates", "no-zatca");
+    for (const locale of ["en", "ar"])
+      for (const size of [[1440, 900], [390, 844]]) {
+        const { ctx, page, errors } = await probePage(locale, size, "/dashboard", uae.state);
+        const m = await page.evaluate(MEASURE, C1_LITERALS);
+        const f = await page.evaluate(DASH_FACTS, c6W(locale));
+        now.c6.noZatca[`${locale}|${size[0]}`] = { org: uae.country, strip: f?.strip ?? null, stripShell: await page.evaluate(() => document.querySelectorAll("main .feature-strip, main .feature-card").length),
+          zatcaText: await page.evaluate((z) => (document.querySelector("main")?.textContent ?? "").includes(z), T(locale, "ZATCA Phase 1 QR")),
+          outline: m.outline, h1: m.h1, skips: m.skips, overflow: m.overflow, offenders: m.offenders, indic: m.indic, gone: f?.gone ?? null,
+          widgets: f?.widgets.map(({ name, span, clipX, clipY, inView }) => ({ name, span, clipX, clipY, inView })) ?? null, ...errFacts(errors) };
+        // The preference is still there — Feature Highlights, ticked — though this org has no card to show for it.
+        if (size[0] === 1440) {
+          await page.locator('main [data-slot="page-header-actions"]').getByRole("button", { name: T(locale, "Customize Layout"), exact: true }).click();
+          const dialog = page.getByRole("dialog");
+          const opened = await dialog.waitFor({ state: "visible", timeout: 15000 }).then(() => true, () => false);
+          now.c6.noZatca[`${locale}|${size[0]}`].pref = opened
+            ? { labels: (await dialog.locator('label[for^="w-"]').allInnerTexts()).map((x) => x.replace(/\s+/g, " ").trim()), strip: await dialog.locator("#w-feature_strip").getAttribute("data-state") }
+            : null;
+          await page.keyboard.press("Escape");
+        }
+        await ctx.close();
+      }
+    // The activity times. The seed's documents carry fixed creation instants (11:00Z / 12:00Z); one more is made
+    // deterministic here — the owner's oldest quotation given 23:30Z on the 14th in this TEST-ONLY copy (then the
+    // newest activity; already the 15th in Riyadh and on Kiritimati, the 14th in New York and Pago Pago), restored
+    // after. The owner's Dashboard (this month) under each browser's own zone, Pacific/Pago_Pago (UTC−11) and
+    // Pacific/Kiritimati (UTC+14).
+    const moved = await dbq6(async (c) => {
+      const q = (await c.query("select q.id, q.quotation_number as number, q.created_at::text as raw from quotations q join users u on u.org_id = q.org_id where u.email = $1 order by q.created_at asc, q.id asc limit 1", [OWNER_EMAIL])).rows[0] ?? null;
+      if (q) await c.query("update quotations set created_at = $1::timestamp where id = $2", [C6_STAMP, q.id]);
+      return q;
+    });
+    now.c6.stamp = moved && { number: moved.number, was: moved.raw, at: C6_STAMP };
+    try {
+      for (const locale of ["en", "ar"])
+        for (const zone of [BROWSERS[locale].timezoneId, SWEEP_ZONE, "Pacific/Kiritimati"]) {
+          const ctx = await context({ storageState: ownerState, locale: BROWSERS[locale].locale, timezoneId: zone });
+          await ctx.addCookies([{ name: "locale", value: locale, url: BASE }, { name: "theme", value: "light", url: BASE }]);
+          const page = await ctx.newPage();
+          await page.clock.setFixedTime(new Date(FROZEN_NOW));
+          const errors = [];
+          page.on("console", (msg) => msg.type() === "error" && errors.push(`console: ${msg.text().slice(0, 160)}`));
+          page.on("pageerror", (e) => errors.push(`pageerror: ${String(e.message).slice(0, 160)}`));
+          await page.setViewportSize({ width: 1440, height: 900 });
+          await page.goto(`${BASE}/dashboard`, { waitUntil: "networkidle", timeout: 60000 });
+          const rows = (await page.evaluate(DASH_FACTS, c6W(locale)))?.activity ?? [];
+          const docs = await dbq6(async (c) => {
+            const out = [];
+            for (const r of rows) {
+              const isInvoice = r.text.startsWith(T(locale, "Invoice created"));
+              const number = r.text.slice(r.text.indexOf(":") + 1).split(" · ")[0].trim();
+              const q = isInvoice
+                ? "select i.created_at from sales_invoices i join users u on u.org_id = i.org_id where u.email = $1 and i.invoice_number = $2"
+                : "select q.created_at from quotations q join users u on u.org_id = q.org_id where u.email = $1 and q.quotation_number = $2";
+              out.push({ kind: isInvoice ? "invoice" : "quotation", number, createdAt: (await c.query(q, [OWNER_EMAIL, number])).rows[0]?.created_at?.toISOString() ?? null });
+            }
+            return out;
+          });
+          now.c6.zones[`${locale}|${zone}`] = { rows, docs, ...errFacts(errors) };
+          await ctx.close();
+        }
+    } finally {
+      if (moved) await dbq6((c) => c.query("update quotations set created_at = $1::timestamp where id = $2", [moved.raw, moved.id]));
+      if (now.c6.stamp) now.c6.stamp.restored = await dbq6(async (c) => (await c.query("select created_at::text as raw from quotations where id = $1", [moved.id])).rows[0]?.raw ?? null);
+    }
+    console.log("  C6 probes done");
+  }
   // formatDisplayDate in the browser: identical to Node whatever the browser's locale and zone. (A
   // tree without the helper — main before C0 — has nothing to compare; the check below says so.)
   const fdSource = existsSync("src/lib/i18n/format-date.ts") ? readFileSync("src/lib/i18n/format-date.ts", "utf8") : "exports.formatDisplayDate = () => undefined;";
@@ -2014,6 +2391,15 @@ try {
     return out;
   };
   fdNode = fdRun(fdJs, fdInstants);
+  // C6: what each recent activity's time must say — formatDisplayDate(its document's created_at, locale,
+  // "dateTime"), formatted here in Node from the value the database holds.
+  {
+    const m = { exports: {} };
+    new Function("module", "exports", "require", fdJs)(m, m.exports, (spec) => {
+      throw new Error(`format-date.ts imports ${spec}`);
+    });
+    for (const [k, z] of Object.entries(now.c6.zones)) z.expected = z.docs.map((d) => (d.createdAt ? m.exports.formatDisplayDate(d.createdAt, k.split("|")[0], "dateTime") : null));
+  }
   // C2: what the two HR dates must say — the frozen day (Attendance) and the first of its month (Payroll).
   const [day, month] = [`${FROZEN_NOW.slice(0, 10)}T00:00:00Z`, `${FROZEN_NOW.slice(0, 7)}-01T00:00:00Z`];
   const c2Fd = fdRun(fdJs, [day, month]);
@@ -2060,6 +2446,12 @@ const c4Record = () => ({
   recordedOn: { commit: git("rev-parse", "HEAD"), srcClean: git("status", "--porcelain", "--", "src") === "", build: buildId, chromium: now.chromium },
   states: now.c4.values,
 });
+// The C6 record: every factual value C5's build showed on the Dashboard for the three value cases — with the
+// commit and build it was measured on.
+const c6Record = () => ({
+  recordedOn: { commit: git("rev-parse", "HEAD"), srcClean: git("status", "--porcelain", "--", "src") === "", build: buildId, chromium: now.chromium },
+  states: now.c6.values,
+});
 if (MEASURE_OUT) writeFileSync(MEASURE_OUT, JSON.stringify({ ...now, blockedRequests: blocked, actions: acts }, null, 1) + "\n");
 if (WRITE_D6) {
   const failed = Object.entries(now.d6).filter(([, v]) => v.status !== 200 || v.consoleErrors || v.pageErrors || v.r418).map(([k]) => k);
@@ -2094,12 +2486,23 @@ if (WRITE_C4REF) {
   rmSync(env.STORAGE_FAKE_DIR, { recursive: true, force: true });
   process.exit(0);
 }
+if (WRITE_C6REF) {
+  const failed = Object.entries(now.c6.values).filter(([k, v]) => v.status !== 200 || v.finalPath !== Object.fromEntries(C6_VALUE_CASES)[k.split("|")[0]] || v.consoleErrors || v.pageErrors || v.r418 || !Object.keys(v.kpis ?? {}).length || !v.chart).map(([k]) => k);
+  if (failed.length || Object.keys(now.c6.values).length !== C6_VALUE_CASES.length * 4) refuse(`--write-c6ref: not recording a pass with errors, a failed route or a missing case: ${failed.slice(0, 4).join(", ") || `${Object.keys(now.c6.values).length} states`}`);
+  const file = args.find((a) => a.startsWith("--write-c6ref="))?.slice(14) || BASELINE_FILE;
+  const out = JSON.parse(readFileSync(file, "utf8"));
+  out.c6ref = c6Record();
+  writeFileSync(file, JSON.stringify(out, null, 1) + "\n");
+  console.log(`• wrote the C6 record into ${file}: ${Object.keys(out.c6ref.states).length} states, measured on ${out.c6ref.recordedOn.commit.slice(0, 7)} (src ${out.c6ref.recordedOn.srcClean ? "clean" : "MODIFIED"}), build ${buildId}`);
+  rmSync(env.STORAGE_FAKE_DIR, { recursive: true, force: true });
+  process.exit(0);
+}
 if (WRITE) {
-  // The probes are checked, not pinned; the D-6 pass is pinned as its record. The C3 and C4 records were
-  // measured on C2's and C3's builds and cannot be re-measured here: they are carried over as they are.
+  // The probes are checked, not pinned; the D-6 pass is pinned as its record. The C3, C4 and C6 records were
+  // measured on C2's, C3's and C5's builds and cannot be re-measured here: they are carried over as they are.
   const measured = { frozenNow: now.frozenNow, chromium: now.chromium, states: now.states, staff: now.staff, sweep: now.sweep };
   const prev = existsSync(BASELINE_FILE) ? JSON.parse(readFileSync(BASELINE_FILE, "utf8")) : {};
-  writeFileSync(BASELINE_FILE, JSON.stringify({ ...measured, blockedRequests: blocked, d6: d6Record(), ...(prev.c3ref ? { c3ref: prev.c3ref } : {}), ...(prev.c4ref ? { c4ref: prev.c4ref } : {}) }, null, 1) + "\n");
+  writeFileSync(BASELINE_FILE, JSON.stringify({ ...measured, blockedRequests: blocked, d6: d6Record(), ...(prev.c3ref ? { c3ref: prev.c3ref } : {}), ...(prev.c4ref ? { c4ref: prev.c4ref } : {}), ...(prev.c6ref ? { c6ref: prev.c6ref } : {}) }, null, 1) + "\n");
   writeFileSync(ACTIONS_FILE, JSON.stringify(acts, null, 1) + "\n");
   console.log(`• wrote ${BASELINE_FILE} (${Object.keys(now.states).length} owner states, ${Object.keys(now.staff).length} staff, ${Object.keys(now.sweep).length} sweep, the D-6 record) and ${ACTIONS_FILE}`);
 }
@@ -2894,6 +3297,233 @@ const compBad = Object.entries(now.c5.compliance).filter(([run, r]) => {
 }).map(([run, r]) => `${run} ${JSON.stringify(r)}`);
 check("C5 Compliance (blocking; EN / AR at 1440, 768 and 390): every control inside the viewport — Export organization data, the customer select and Erase, the consent subject, Grant and Withdraw; the customer select opens its list and closes; at 390 a consent granted in this run's TEST-ONLY copy (deleted after) lists in a table inside its card, nothing past the viewport",
   (ONLY && !Object.keys(now.c5.compliance).length) || (compBad.length === 0 && (ONLY || Object.keys(now.c5.compliance).length === 6)), list(compBad));
+
+// ------------------------------------------------------------------------------------- C6 targets
+// The Dashboard, EN and AR at every width (8 states) and its three value cases at 1440 and 390 (12 more), held
+// to the targets and to what C5's build showed (c6ref); the breakpoints, the range selector, Customize Layout,
+// an org without ZATCA Phase 1 and the activity times.
+const c6Keys = keys.filter((k) => k.startsWith("dashboard|"));
+const c6Off = ONLY && !c6Keys.length; // an --only run without the Dashboard: nothing of C6's to hold
+const c6 = (pred) => c6Keys.filter((k) => !pred(now.states[k], k));
+const c6Dash = (k) => now.c6.dash[k.split("|").slice(1).join("|")] ?? null;
+const C6_TRACKS = { 1440: 12, 1101: 12, 1100: 2, 1024: 2, 768: 2, 641: 2, 640: 1, 390: 1 };
+/** The span each widget must have with `tracks` columns: its desktop span; on two, Financial Overview both, the rest one; on one, one. */
+const c6Span = (i, tracks) => (tracks === 12 ? C6_WIDGETS[i][1] : tracks === 2 ? (C6_WIDGETS[i][0] === "Financial Overview" ? 2 : 1) : 1);
+/** The widgets' names in the page's language: the KPI labels and the h2s — Cash Flow's carries the range. */
+const c6Names = (l, range = "This Month") => C6_WIDGETS.map(([en]) => (en === "Cash Flow" ? `${T(l, en)} · ${T(l, range)}` : T(l, en)));
+const finLabel = (l, range) => `${T(l, "Total Revenue")} · ${T(l, range)}`;
+const zatcaCard = (l) => JSON.stringify([[T(l, "ZATCA Phase 1 QR"), T(l, "On printed tax invoices")]]);
+check(`C6: the Dashboard was measured — EN / AR at every width (${c6Keys.length} states, ${Object.keys(now.c6.dash).length} with its grid); the seeded org: ${c6Seed?.country ?? "?"}`,
+  c6Off || (c6Keys.length === 8 && Object.keys(now.c6.dash).length === 8 && c6Seed?.country === "Saudi Arabia"), c6Keys.length);
+const c6Route = c6((s) => s.status === 200 && s.finalPath === "/dashboard");
+check("C6: /dashboard answers 200 where it is, EN and AR, every width", c6Route.length === 0, list(c6Route.map(show((s) => `${s.status} ${s.finalPath}`))));
+const c6Ph = c6((s, k) => {
+  const l = k.split("|")[1];
+  const h = c6Dash(k)?.header;
+  return s.pageHeader?.n === 1 && s.pageHeader.h1Inside && s.pageHeader.metaFirst && s.pageHeader.titleAtStart && s.pageHeader.trailing !== "misplaced" && !s.pageHeader.overlap
+    && s.pageHeader.title === T(l, "Dashboard") && s.pageHeader.meta === null && h?.range === T(l, "This Month") && h.customize === true && h.controlsOutside === 0;
+});
+check("C6 header: one PageHeader — the h1 Dashboard at the inline start (C5 had no h1); its actions the range selector (This Month, the owner's saved range) and Customize Layout, at the end of the title's line or wrapped below it at the start, never over the title; neither control anywhere else",
+  c6Ph.length === 0, list(c6Ph.map((k) => `${k} ${JSON.stringify(now.states[k].pageHeader)} ${JSON.stringify(c6Dash(k)?.header)}`)));
+const c6Out = c6((s, k) => JSON.stringify(s.outline) === JSON.stringify(c6Outline(k.split("|")[1])) && s.h1 === 1 && s.skips === 0);
+check("C6 headings: the outline exact, no level skipped — the h1 Dashboard; Financial Overview, Quick Actions, Recent Activities, Cash Flow · This Month, Invoices Overview, Project Overview and HR Snapshot its h2s (h4s under no h1 in C5), in the dictionary's words",
+  c6Out.length === 0, list(c6Out.map(show((s) => JSON.stringify(s.outline)))));
+const c6Ov = c6((s) => s.overflow === 0 && s.offenders === 0 && s.tablesBeyond === 0);
+check("C6: no page overflow and nothing past the viewport on the Dashboard at any width, EN / AR", c6Ov.length === 0, list(c6Ov.map(show((s) => `${s.overflow}px ${s.offenders} el ${s.tablesBeyond} tables`))));
+const c6Err = c6((s) => !s.consoleErrors && !s.pageErrors && !s.r418);
+check("C6: zero console errors, page errors and React #418 on every Dashboard state", c6Err.length === 0, list(c6Err.map(show((s) => JSON.stringify(s.errorSample)))));
+const c6Ind = c6((s) => s.indic === 0);
+check("C6: Western digits — no Arabic-Indic digit anywhere on the Dashboard (C5's activity times were ar-SA's)", c6Ind.length === 0, list(c6Ind.map(show((s) => s.indic))));
+
+// The grid (blocking): tracks, spans, the widgets' order, nothing clipped.
+/** Row sizing (§22): above 1100 px the 86 px unit and each widget's desktop row span; at or below it automatic rows, no span. */
+const rowsOk = (f, n) => (n === 12
+  ? f.autoRows === "86px" && f.widgets.every((x, i) => x.row?.[0] === `span ${C6_WIDGETS[i][2]}` && x.row[1] === "auto")
+  : f.autoRows === "auto" && f.widgets.every((x) => x.row?.[0] === "auto" && x.row[1] === "auto"));
+const gridOk = (f, w, l, range = "This Month") => {
+  const n = C6_TRACKS[w];
+  return Boolean(f) && f.tracks.length === n && JSON.stringify(f.widgets.map((x) => x.name)) === JSON.stringify(c6Names(l, range)) && rowsOk(f, n)
+    && f.widgets.every((x, i) => x.span === c6Span(i, n) && x.wide === (C6_WIDGETS[i][0] === "Financial Overview") && !x.clipX && !x.clipY && x.inGrid && x.inView && !x.inline
+      && x.vars[0].trim() === String(C6_WIDGETS[i][1]) && x.vars[1].trim() === String(C6_WIDGETS[i][2]));
+};
+const gridBad = Object.entries(now.c6.dash).filter(([k, f]) => !gridOk(f, k.split("|")[1], k.split("|")[0]))
+  .map(([k, f]) => `${k} ${JSON.stringify(f && { tracks: f.tracks.length, autoRows: f.autoRows, widgets: f.widgets.map(({ name, span, wide, clipX, clipY, inGrid, inView, inline, vars, row }) => [name, span, wide, clipX, clipY, inGrid, inView, inline, vars, row]) })}`);
+check("C6 grid (blocking; EN / AR, every width): 1440 — twelve shrink-safe tracks and 86 px rows, every widget its desktop spans (KPIs 3 × 2, Financial Overview 8 × 5, Quick Actions 4 × 4, Recent Activities 4 × 5, the four cards 3 × 3 / 3 × 4); 1024 and 768 — two tracks, Financial Overview across both, every other widget one, rows automatic and no row span (§22: natural rows); 390 — one track, every widget the full width, rows automatic; the widgets in the default order; none clipped across or down, none outside the grid or the viewport; the spans set as --dash-span / --dash-rows, no inline grid-column or grid-row",
+  c6Off || (gridBad.length === 0 && Object.keys(now.c6.dash).length === 8), list(gridBad));
+const geo = Object.entries(now.c6.dash).filter(([, f]) => {
+  if (!f) return true;
+  const n = f.tracks.length;
+  const t = f.tracks[0];
+  // A widget's width is its span's tracks and the gaps between them (to the pixel).
+  return !f.widgets.every((x) => Math.abs(x.width - (x.span * t + (x.span - 1) * f.gap)) <= 1) || (n === 1 && !f.widgets.every((x) => Math.abs(x.width - f.gridWidth) <= 1))
+    || (n === 2 && !f.widgets.every((x) => Math.abs(x.width - (x.wide ? f.gridWidth : t)) <= 1));
+}).map(([k, f]) => `${k} ${JSON.stringify(f && { tracks: f.tracks, gap: f.gap, grid: f.gridWidth, w: f.widgets.map((x) => [x.span, x.width]) })}`);
+check("C6 geometry: every widget as wide as its tracks and gaps — at 768 the two columns equal, Financial Overview the grid's width; at 390 every widget the grid's (the content's) width; no squeezed column",
+  c6Off || geo.length === 0, list(geo));
+console.log("• C6 grid (tracks · grid width · widget widths × heights):");
+for (const [k, f] of Object.entries(now.c6.dash)) console.log(`    ${k.padEnd(8)} ${f?.tracks.length} · ${f?.gridWidth} · ${f?.widgets.map((x) => `${x.width}×${x.height}`).join(" ")}`);
+
+// D-1 / D-4 / D-5 on every Dashboard state.
+const d1Bad = Object.entries(now.c6.dash).filter(([k, f]) => {
+  const l = k.split("|")[0];
+  const fin = f?.fin;
+  return !(f && f.gone.length === 0 && fin && fin.label === finLabel(l, "This Month") && fin.value && fin.pill === T(l, "This Month") && fin.svgs === 1 && fin.donuts === 0 && fin.legends === 0
+    && fin.chart && fin.chart.bars >= 3 && fin.chart.revenueLine === 1 && fin.chart.revenueDots === fin.chart.bars && fin.chart.labels === fin.chart.bars && fin.chart.expenseLine === 0 && fin.chart.expenseDots === 0);
+}).map(([k, f]) => `${k} ${JSON.stringify(f && { gone: f.gone, fin: f.fin })}`);
+check("C6 D-1 (EN / AR, every width): no Total Profit, Profit Margin, Total Expenses or Expenses anywhere — text or accessible name; Financial Overview the h2, the range pill, \"Total Revenue · This Month\" and its figure, and one drawing: the revenue chart — its bars, the revenue line and a point per bucket, a label per bucket — with no expense line or points, no donut, no legend",
+  c6Off || (d1Bad.length === 0 && Object.keys(now.c6.dash).length === 8), list(d1Bad));
+const d4Bad = Object.entries(now.c6.dash).filter(([k, f]) => !(f?.strip && JSON.stringify(f.strip.cards) === zatcaCard(k.split("|")[0]) && f.strip.inView && f.gone.length === 0))
+  .map(([k, f]) => `${k} ${JSON.stringify(f?.strip)} ${JSON.stringify(f?.gone)}`);
+check(`C6 D-4 (the seeded org — ${c6Seed?.country ?? "?"}: ZATCA Phase 1 applies; EN / AR, every width): the strip holds one card — ZATCA Phase 1 QR · On printed tax invoices — inside the viewport; no Secure & Reliable, Real-time Insights, Automated Processes, CRM Integration or Coming Soon`,
+  c6Off || (d4Bad.length === 0 && Object.keys(now.c6.dash).length === 8), list(d4Bad));
+const d5Ok = (f, l) => Boolean(f) && f.kpis.length === 4 && C6_KPIS.every(([en, trend, spark], i) => {
+  const x = f.kpis[i];
+  return x.label === T(l, en) && Boolean(x.value) && (x.trend !== null) === trend && (!trend || x.trend.endsWith(T(l, "vs prev. period"))) && (x.sparks > 0) === spark && x.sparkBox === (spark ? 1 : 0);
+}) && f.cash?.sparks === 0 && f.cash.rows.length === 3;
+const d5Bad = Object.entries(now.c6.dash).filter(([k, f]) => !d5Ok(f, k.split("|")[0])).map(([k, f]) => `${k} ${JSON.stringify(f && { kpis: f.kpis, cash: f.cash })}`);
+check("C6 D-5 (EN / AR, every width): Total Sales — its period-over-period trend and its revenue sparkline; Total Invoices — its trend, no sparkline (C5 borrowed the revenue one); Total Receivables and Total Payables — neither (C5: \"0%\" and a borrowed or flat line); Cash Flow — its three figures and no sparkline (C5 drew one through inflow, outflow and net)",
+  c6Off || (d5Bad.length === 0 && Object.keys(now.c6.dash).length === 8), list(d5Bad));
+
+// The value cases (this month, the last 30 days, this year at 1440 and 390): the same targets.
+const rangeBad = Object.entries(now.c6.ranges).filter(([k, r]) => {
+  const [id, l, w] = k.split("|");
+  const range = C6_RANGE_OF[id];
+  return !(r && JSON.stringify(r.outline) === JSON.stringify(c6Outline(l, range)) && r.h1 === 1 && r.skips === 0 && r.overflow === 0 && r.offenders === 0 && r.indic === 0
+    && r.pageHeader?.n === 1 && r.pageHeader.h1Inside && !r.pageHeader.overlap && r.header.range === T(l, range) && r.header.customize && r.header.controlsOutside === 0
+    && r.fin?.label === finLabel(l, range) && r.fin.pill === T(l, range) && r.fin.value && r.fin.svgs === 1 && r.fin.donuts === 0 && r.fin.legends === 0
+    && r.fin.chart?.bars >= 3 && r.fin.chart.revenueLine === 1 && r.fin.chart.expenseLine === 0 && r.fin.chart.expenseDots === 0 && r.gone.length === 0
+    && gridOk(r, w, l, range) && d5Ok(r, l) && r.strip && JSON.stringify(r.strip.cards) === zatcaCard(l) && !r.consoleErrors && !r.pageErrors && !r.r418);
+}).map(([k, r]) => `${k} ${JSON.stringify(r).slice(0, 400)}`);
+check(`C6 ranges (EN / AR at 1440 and 390 — This Month, Last 30 Days with day buckets, This Year with month buckets; ${Object.keys(now.c6.ranges).length} states): each its range in the header, the outline (Cash Flow · <range>), Financial Overview ("Total Revenue · <range>") and the pill; the grid, D-1, D-4 and D-5 as above; one h1, no skip, no overflow, Western digits, no error`,
+  c6Off || (rangeBad.length === 0 && Object.keys(now.c6.ranges).length === C6_VALUE_CASES.length * 4), list(rangeBad));
+
+// What C5's build said (c6ref): every factual value identical — only the misleading presentation gone.
+const c6Ref = (WRITE ? null : pinned.c6ref) ?? null;
+const c6ValKeys = Object.keys(now.c6.values);
+const INDIC = /[\u0660-\u0669\u06F0-\u06F9]/;
+const western = (v) => (typeof v === "string" ? v.replace(/[\u0660-\u0669]/g, (d) => String(d.charCodeAt(0) - 0x660)) : v);
+check(`C6 record: c6ref covers every state of the value pass (${c6ValKeys.length}; measured on ${c6Ref?.recordedOn?.commit?.slice(0, 7) ?? "—"}, src ${c6Ref?.recordedOn?.srcClean ? "clean" : "MODIFIED"}, build ${c6Ref?.recordedOn?.build ?? "—"})`,
+  c6Off || (c6Ref?.recordedOn?.srcClean === true && c6Ref.recordedOn.commit === "e8f629b66162143c40eceb78c0d7f56fa5c207ef" && c6ValKeys.length === C6_VALUE_CASES.length * 4
+    && c6ValKeys.every((k) => c6Ref.states[k]) && Object.keys(c6Ref.states).every((k) => now.c6.values[k])), list(c6ValKeys.filter((k) => !c6Ref?.states?.[k])));
+const c6Diff = [];
+const c6Removed = [];
+for (const k of c6ValKeys) {
+  const a = c6Ref?.states?.[k];
+  const b = now.c6.values[k];
+  if (!a) continue;
+  const l = k.split("|")[1];
+  const why = [];
+  const eq = (what, x, y) => JSON.stringify(x) !== JSON.stringify(y) && why.push(`${what}: ${JSON.stringify(x)?.slice(0, 160)} → ${JSON.stringify(y)?.slice(0, 160)}`);
+  eq("status / path", [a.status, a.finalPath], [b.status, b.finalPath]);
+  for (const [en] of C6_KPIS) eq(`${en}`, a.kpis[T(l, en)]?.value, b.kpis[T(l, en)]?.value);
+  eq("Total Sales trend and sparkline", [a.kpis[T(l, "Total Sales")]?.trend, a.kpis[T(l, "Total Sales")]?.spark], [b.kpis[T(l, "Total Sales")]?.trend, b.kpis[T(l, "Total Sales")]?.spark]);
+  eq("Total Invoices trend", a.kpis[T(l, "Total Invoices")]?.trend, b.kpis[T(l, "Total Invoices")]?.trend);
+  eq("revenue chart (viewBox, bars, line, points, labels)", a.chart, b.chart);
+  for (const f of ["totalRevenue", "cash", "invoices", "invoicesDonut", "projects", "projectsBig", "hr", "hrBig", "activity", "links", "banner", "zatca"]) eq(f, a[f], b[f]);
+  // The range label (and so Cash Flow's title): the same words; C5's Arabic "Last 7 Days" / "Last 30 Days" wrote
+  // their number in Arabic-Indic digits, C6's in Western ones (dict.ts) — nothing else may differ.
+  eq("range", western(a.range), b.range);
+  eq("Cash Flow title", western(a.cashTitle), b.cashTitle);
+  if (INDIC.test(`${b.range} ${b.cashTitle}`)) why.push(`an Arabic-Indic digit in the range label: ${b.range}`);
+  if (!a.totalRevenue || !a.chart?.bars?.length) why.push("the record has no revenue figure or chart");
+  if (why.length) c6Diff.push(`${k}: ${why.join(" · ")}`);
+  // The intended removals, each seen in the record and gone now.
+  const inv = [a.kpis[T(l, "Total Invoices")], b.kpis[T(l, "Total Invoices")]];
+  const rec = [a.kpis[T(l, "Total Receivables")], b.kpis[T(l, "Total Receivables")]];
+  const pay = [a.kpis[T(l, "Total Payables")], b.kpis[T(l, "Total Payables")]];
+  // (A sparkline is two paths, its area and its line.)
+  const removed = inv[0]?.spark.length === 2 && inv[1]?.spark.length === 0
+    && rec[0]?.trend?.startsWith("0%") && rec[0].spark.length === 2 && rec[1]?.trend === null && rec[1].spark.length === 0
+    && pay[0]?.trend?.startsWith("0%") && pay[0].spark.length === 2 && pay[1]?.trend === null && pay[1].spark.length === 0;
+  if (!removed) c6Removed.push(`${k}: ${JSON.stringify({ inv, rec, pay })}`);
+}
+check("C6 values (§54; EN / AR at 1440 and 390, the three cases): every factual value as C5's build showed it — the four KPI figures, Total Sales' trend and sparkline, Total Invoices' trend; the revenue buckets (the chart's viewBox, bars, line, points and labels, to the attribute); the total revenue (C5: its donut legend's row); the range (in Arabic its number now in Western digits — آخر 30 يوماً, C5 آخر ٣٠ يوماً); Cash Flow's title and three figures; the invoice statuses, counts and donut; Project Overview and HR Snapshot; the recent activities; every link; the data-quality notice; the ZATCA card",
+  c6Off || (c6Diff.length === 0 && c6ValKeys.length > 0), list(c6Diff));
+check("C6 values: …and what C6 removed was there in C5 — Total Invoices' borrowed sparkline; Total Receivables' and Total Payables' \"0%\" trends and their borrowed / flat sparklines",
+  c6Off || (c6Removed.length === 0 && c6ValKeys.length > 0), list(c6Removed));
+const ltrBad = C6_VALUE_CASES.flatMap(([id]) => [1440, 390].map((w) => [id, w])).filter(([id, w]) => {
+  const [en, ar] = ["en", "ar"].map((l) => now.c6.values[`${id}|${l}|${w}`]?.chart);
+  const xs = (c) => c?.bars.map((b) => Number(b.split(",")[0])) ?? [];
+  return !(en && ar && JSON.stringify(en.bars) === JSON.stringify(ar.bars) && en.revenue === ar.revenue && JSON.stringify(en.points) === JSON.stringify(ar.points)
+    && xs(ar).every((x, i, a) => i === 0 || x > a[i - 1]));
+}).map(([id, w]) => `${id}|${w}`);
+check("C6 chart (§26 / §52): in Arabic the revenue chart is the English one, bar for bar and point for point — time runs left to right, oldest bucket first, in either language",
+  c6Off || ltrBad.length === 0, list(ltrBad));
+console.log("• C6 recent-activity times, C5 (c6ref) → C6 (dash-this_month, 1440):");
+for (const l of ["en", "ar"]) console.log(`    ${l}  ${JSON.stringify(c6Ref?.states?.[`dash-this_month|${l}|1440`]?.activityTimes)} → ${JSON.stringify(now.c6.values[`dash-this_month|${l}|1440`]?.activityTimes)}`);
+
+// The probes.
+const bpBad = Object.entries(now.c6.bp).filter(([k, b]) => {
+  const [l, w] = k.split("|");
+  const n = C6_TRACKS[w];
+  return !(b && b.tracks === n && b.overflow === 0 && b.gone?.length === 0 && JSON.stringify(b.widgets.map((x) => x.name)) === JSON.stringify(c6Names(l)) && rowsOk(b, n)
+    && b.widgets.every((x, i) => x.span === c6Span(i, n) && !x.clipX && !x.clipY && x.inGrid && x.inView) && !b.consoleErrors && !b.pageErrors && !b.r418);
+}).map(([k, b]) => `${k} ${JSON.stringify(b)}`);
+check("C6 breakpoints (blocking; EN / AR): 1101 px — twelve tracks, 86 px rows, the desktop spans; 1100 px — two tracks, Financial Overview across both, every other widget one, rows automatic; 641 px — still two; 640 px — one; nothing clipped, nothing past the viewport, no overflow",
+  c6Off || (bpBad.length === 0 && Object.keys(now.c6.bp).length === 8), list(bpBad));
+const RANGE_ITEMS = (l) => Object.values(C6_RANGE_KEYS).map((en) => T(l, en));
+const rangeE2E = Object.entries(now.c6.range).filter(([l, r]) => {
+  const values = r.after?.values;
+  return !(r.before.range === T(l, "This Month") && r.before.url === "" && r.pick1.opened && JSON.stringify(r.pick1.items) === JSON.stringify(RANGE_ITEMS(l))
+    && !r.pick1.items.some((x) => INDIC.test(x)) && r.after.url === "?range=last_month" && r.after.saved === "last_month" && r.after.facts?.header.range === T(l, "Last Month") && values?.range === T(l, "Last Month")
+    && r.after.facts.fin?.label === finLabel(l, "Last Month") && JSON.stringify(r.after.outline) === JSON.stringify(c6Outline(l, "Last Month")) && r.after.h1 === 1
+    && JSON.stringify(values) === JSON.stringify(r.directValues) && JSON.stringify(values.chart) !== JSON.stringify(now.c6.values[`dash-this_month|${l}|1440`]?.chart)
+    && r.pick2.opened && r.back.url === "?range=this_month" && r.back.range === T(l, "This Month") && r.back.saved === "this_month" && !r.consoleErrors && !r.pageErrors && !r.r418);
+}).map(([l, r]) => `${l} ${JSON.stringify(r).slice(0, 600)}`);
+check("C6 range selector (E2E, owner, EN / AR at 1440): the trigger in the PageHeader's actions reads This Month; its menu — the seven ranges in order, their numbers in Western digits (آخر 7 أيام, آخر 30 يوماً) — opens; Last Month chosen: the URL ?range=last_month, the preference saved (setDashboardRangeAction), the header, the outline (Cash Flow · Last Month), Financial Overview and every value re-read — equal to a direct load of ?range=last_month and not this month's chart — one h1; then This Month again: ?range=this_month, saved back",
+  c6Off || (rangeE2E.length === 0 && Object.keys(now.c6.range).length === 2), list(rangeE2E));
+const layoutOf = (mut) => {
+  const keysNow = C6_LAYOUT_WIDGETS.map((w) => w.key);
+  if (mut) {
+    const [h, p] = [keysNow.indexOf("hr_snapshot"), keysNow.indexOf("project_overview")];
+    [keysNow[h], keysNow[p]] = [keysNow[p], keysNow[h]];
+  }
+  return keysNow.map((key) => ({ key, visible: !(mut && (key === "feature_strip" || key === "quick_actions")) }));
+};
+const custBad = Object.entries(now.c6.customize).filter(([l, c]) => {
+  const names = c6Names(l);
+  const custom = names.filter((x) => x !== T(l, "Quick Actions"));
+  const [h, p] = [custom.indexOf(T(l, "HR Snapshot")), custom.indexOf(T(l, "Project Overview"))];
+  [custom[h], custom[p]] = [custom[p], custom[h]];
+  return !(c.org === "Saudi Arabia" && JSON.stringify(c.before.names) === JSON.stringify(names) && JSON.stringify(c.before.strip?.cards) === zatcaCard(l)
+    && c.opened && JSON.stringify(c.labels) === JSON.stringify(C6_LAYOUT_WIDGETS.map((w) => T(l, w.label))) && c.saved
+    && JSON.stringify(c.customized.names) === JSON.stringify(custom) && c.customized.strip === null && JSON.stringify(c.customized.stored) === JSON.stringify(layoutOf(true))
+    && c.reopened && c.resetSaved && JSON.stringify(c.reset.names) === JSON.stringify(names) && JSON.stringify(c.reset.strip?.cards) === zatcaCard(l)
+    && JSON.stringify(c.reset.stored) === JSON.stringify(layoutOf(false)) && [c.before, c.customized, c.reset].every((x) => x.gone?.length === 0)
+    && !c.consoleErrors && !c.pageErrors && !c.r418);
+}).map(([l, c]) => `${l} ${JSON.stringify(c).slice(0, 700)}`);
+check("C6 Customize Layout (E2E; an org registered through the UI in this run's TEST-ONLY copy, Saudi Arabia; EN / AR at 1440): the trigger, a named button in the PageHeader's actions, opens the dialog — the twelve widgets by their labels (Feature Highlights the strip's, its key unchanged); Feature Highlights and Quick Actions unticked, HR Snapshot moved above Project Overview, saved: the Dashboard re-rendered so — no strip, no Quick Actions, HR Snapshot before Project Overview — and the preference stored under the same twelve keys, in that order, with those two hidden; Reset to default, saved: every widget back in order, the ZATCA card back, the default layout stored",
+  c6Off || (custBad.length === 0 && Object.keys(now.c6.customize).length === 2), list(custBad));
+const nzBad = Object.entries(now.c6.noZatca).filter(([k, z]) => {
+  const [l, w] = k.split("|");
+  return !(z.org === "United Arab Emirates" && z.strip === null && z.stripShell === 0 && z.zatcaText === false && JSON.stringify(z.outline) === JSON.stringify(c6Outline(l)) && z.h1 === 1 && z.skips === 0
+    && z.overflow === 0 && z.offenders === 0 && z.indic === 0 && z.gone?.length === 0 && JSON.stringify(z.widgets?.map((x) => x.name)) === JSON.stringify(c6Names(l))
+    && z.widgets.every((x) => !x.clipX && !x.clipY && x.inView) && (w !== "1440" || (z.pref && z.pref.strip === "checked" && z.pref.labels.includes(T(l, "Feature Highlights"))))
+    && !z.consoleErrors && !z.pageErrors && !z.r418);
+}).map(([k, z]) => `${k} ${JSON.stringify(z).slice(0, 500)}`);
+check("C6 D-4 without ZATCA (an org registered through the UI, the United Arab Emirates; EN / AR at 1440 and 390): no feature strip and nothing empty in its place — no .feature-strip, no card, no ZATCA text; its feature_strip preference still there, ticked (Feature Highlights in Customize Layout); the outline, the grid and nothing clipped or past the viewport as for the seeded org",
+  c6Off || (nzBad.length === 0 && Object.keys(now.c6.noZatca).length === 4), list(nzBad));
+const zoneBad = [];
+const stamp = now.c6.stamp;
+for (const [k, z] of Object.entries(now.c6.zones)) {
+  const l = k.split("|")[0];
+  if (z.rows.length < 2 || z.rows.length !== z.docs.length || z.consoleErrors || z.pageErrors || z.r418) zoneBad.push(`${k}: ${z.rows.length} rows / ${z.docs.length} documents ${JSON.stringify(z.errorSample ?? [])}`);
+  z.rows.forEach((r, i) => {
+    if (!z.docs[i]?.createdAt || r.time !== z.expected?.[i] || /[٠-٩۰-۹]/.test(r.time) || !r.time.includes("2026"))
+      zoneBad.push(`${k} ${r.text}: "${r.time}" — want "${z.expected?.[i]}" (created_at ${z.docs[i]?.createdAt})`);
+  });
+  // The deterministic one: the newest activity, created at 23:30Z on the 14th — the 14th, 11:30 PM in either language.
+  if (!(stamp && z.docs[0]?.number === stamp.number && z.docs[0].createdAt === `${C6_STAMP.replace(" ", "T")}.000Z` && (l !== "en" || z.rows[0]?.time === "Jun 14, 2026, 11:30 PM")
+    && (l !== "ar" || (z.rows[0]?.time.startsWith("14 ") && z.rows[0].time.includes("11:30")))))
+    zoneBad.push(`${k} the seeded activity: ${JSON.stringify([z.docs[0], z.rows[0]])}`);
+}
+for (const l of ["en", "ar"]) {
+  const runs = Object.entries(now.c6.zones).filter(([k]) => k.startsWith(`${l}|`)).map(([, z]) => JSON.stringify(z.rows));
+  if (runs.length !== 3 || new Set(runs).size !== 1) zoneBad.push(`${l}: the rows differ between the browser zones`);
+}
+if (!stamp || stamp.restored !== stamp.was) zoneBad.push(`the quotation's created_at not restored: ${JSON.stringify(stamp)}`);
+check(`C6 recent activity (owner, EN / AR, under each browser's zone, Pacific/Pago_Pago and Pacific/Kiritimati; one activity made deterministic — ${stamp?.number ?? "?"} at ${C6_STAMP}Z, restored after): every time formatDisplayDate(created_at, locale, "dateTime") of its document as the database holds it — the Gregorian calendar, Western digits, UTC (the deterministic one "Jun 14, 2026, 11:30 PM" — already the 15th in Riyadh and on Kiritimati); identical under every browser zone; no error, no #418`,
+  c6Off || (zoneBad.length === 0 && Object.keys(now.c6.zones).length === 6), list(zoneBad));
 
 // ------------------------------------------------------------------------------------- D-6
 // Every StatRow consumer is held to D-6's targets; all but C2's own strips also to C1's record.

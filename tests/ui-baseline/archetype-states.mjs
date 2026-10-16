@@ -54,9 +54,22 @@
  * width above the panel, in Arabic in the document's direction) and Compliance's controls at 390 (Tab to
  * the customer select — the erase and consent rows wrapped, every control inside the viewport). Each
  * fails the capture if the page does not do it.
+ *
+ * C6 (the Dashboard) adds the Dashboard states not above (a01 is the seeded Saudi org — ZATCA Phase 1 on —
+ * at every width, the default layout, this month): the representative alternate range — Last 30 Days, day
+ * buckets — EN + AR at 1440 and 390, light, full page (4). Two fixture states (8), full page, each made in
+ * the run's TEST-ONLY copy for that state only and restored straight after: an org without ZATCA Phase 1
+ * (the seeded org's country set to the United Arab Emirates — the ZATCA card must be gone) and a
+ * customized layout (the owner's saved layout: Quick Actions and the feature strip hidden, HR Snapshot
+ * above Project Overview — the page must render it so). Two interactions (8), viewport screenshots: the
+ * range selector by keyboard (Tab to it, Enter — its menu open on the seven ranges, the current one
+ * marked) and Customize Layout by keyboard (Tab, Enter — the dialog on the twelve widgets, all shown).
+ * Each fails the capture if the page does not do it. They assert what C5 and C6 share, so C5's build
+ * captures them too — the before / after pairs; what only C6 does (no empty strip, the PageHeader, the
+ * grid) the runtime verifier holds.
  */
 import pg from "pg";
-import { FROZEN_NOW, VIEWPORTS } from "./config.mjs";
+import { FROZEN_NOW, OWNER_EMAIL, VIEWPORTS } from "./config.mjs";
 import { DB_PREFIX, IsolationError, RUN_DB, dbUrl } from "./isolation.mjs";
 
 const vp = (name) => VIEWPORTS.find((v) => v.name === name);
@@ -112,6 +125,9 @@ export function archetypeMatrix() {
   for (const [id, path, action, viewports] of C4_INTERACTIONS) for (const locale of BOTH) for (const name of viewports) add(id, path, "Interaction (C4)", locale, "light", name, action, false);
   for (const [id, path, area, viewports] of C5_ROUTES) for (const locale of BOTH) for (const name of viewports) add(id, path, area, locale, "light", name, null, true);
   for (const [id, path, action, viewports] of C5_INTERACTIONS) for (const locale of BOTH) for (const name of viewports) add(id, path, "Interaction (C5)", locale, "light", name, action, false);
+  for (const [id, path, area, viewports] of C6_ROUTES) for (const locale of BOTH) for (const name of viewports) add(id, path, area, locale, "light", name, null, true);
+  for (const [id, path, action, viewports] of C6_FIXTURES) for (const locale of BOTH) for (const name of viewports) add(id, path, "Dashboard fixture (C6)", locale, "light", name, action, true);
+  for (const [id, path, action, viewports] of C6_INTERACTIONS) for (const locale of BOTH) for (const name of viewports) add(id, path, "Interaction (C6)", locale, "light", name, action, false);
   return out;
 }
 
@@ -174,6 +190,19 @@ const C5_INTERACTIONS = [
   ["i12-compliance-mobile-controls", "/settings/compliance", "compliance-mobile-controls", ["390"]],
 ];
 
+/** [id, path, area, viewports] — C6: the Dashboard's representative alternate range (a01 is this month). */
+const C6_ROUTES = [["c6-dashboard-last-30-days", "/dashboard?range=last_30_days", "Dashboard (Last 30 Days — day buckets)", EDGE]];
+/** [id, path, action, viewports] — C6 fixture states (full page). */
+const C6_FIXTURES = [
+  ["f02-dashboard-no-zatca", "/dashboard", "dashboard-no-zatca", EDGE],
+  ["f03-dashboard-customized", "/dashboard", "dashboard-customized", EDGE],
+];
+/** [id, path, action, viewports] — C6 interactions (viewport screenshots). */
+const C6_INTERACTIONS = [
+  ["i13-dashboard-range-menu", "/dashboard", "dashboard-range-menu", EDGE],
+  ["i14-dashboard-customize", "/dashboard", "dashboard-customize", EDGE],
+];
+
 /** [id, path, area] — C1: the master-data / entity-detail pages not in the set above (seed-stable ids; the seed's bins are empty). */
 const C1_ROUTES = [
   ["c1-vendors", "/purchasing/vendors", "Master-data list (vendors)"],
@@ -207,6 +236,44 @@ async function renameClient1(name) {
     await c.end();
   }
 }
+
+/** `fn(client)` on the run's TEST-ONLY copy — refused on any database that is not a devui010_test_only_* one. */
+async function onRunCopy(fn) {
+  const url = dbUrl(RUN_DB);
+  if (!new URL(url).pathname.startsWith(`/${DB_PREFIX}`)) throw new IsolationError(`refusing to edit '${new URL(url).pathname}': not a ${DB_PREFIX}* database`);
+  const c = new pg.Client({ connectionString: url });
+  await c.connect();
+  try {
+    return await fn(c);
+  } finally {
+    await c.end();
+  }
+}
+/** Set the owner's org's country in the run copy; returns the country it had. */
+const setOwnerCountry = (country) =>
+  onRunCopy(async (c) => {
+    const org = (await c.query("select org_id from users where email = $1", [OWNER_EMAIL])).rows[0]?.org_id;
+    const before = (await c.query("select country from orgs where id = $1", [org])).rows[0]?.country;
+    if (before === undefined) throw new Error("the owner's org is not in the run copy");
+    await c.query("update orgs set country = $1 where id = $2", [country, org]);
+    return before;
+  });
+/** C6: the customized layout — Quick Actions and the feature strip hidden, HR Snapshot above Project Overview. */
+const C6_LAYOUT = ["kpi_sales", "kpi_invoices", "kpi_receivables", "kpi_payables", "financial_overview", "quick_actions", "recent_activities", "cash_flow", "invoices_overview",
+  "hr_snapshot", "project_overview", "feature_strip"].map((key) => ({ key, visible: key !== "quick_actions" && key !== "feature_strip" }));
+/** Save `layout` as the owner's dashboard layout in the run copy; returns how to put the row back exactly. */
+const setOwnerLayout = (layout) =>
+  onRunCopy(async (c) => {
+    const row = (await c.query("select p.id, p.dashboard_layout, p.updated_at from user_preferences p join users u on u.id = p.user_id where u.email = $1", [OWNER_EMAIL])).rows[0] ?? null;
+    if (row) await c.query("update user_preferences set dashboard_layout = $1 where id = $2", [JSON.stringify(layout), row.id]);
+    else await c.query("insert into user_preferences (org_id, user_id, dashboard_layout) select org_id, id, $2 from users where email = $1", [OWNER_EMAIL, JSON.stringify(layout)]);
+    return () =>
+      onRunCopy((c2) =>
+        row
+          ? c2.query("update user_preferences set dashboard_layout = $1, updated_at = $2 where id = $3", [row.dashboard_layout === null ? null : JSON.stringify(row.dashboard_layout), row.updated_at, row.id])
+          : c2.query("delete from user_preferences where user_id = (select id from users where email = $1)", [OWNER_EMAIL]));
+  });
+const settled = (page) => page.evaluate(() => document.fonts.ready.then(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))));
 
 /** Reach a control with the keyboard (Tab), so :focus-visible matches as it would for a user. */
 async function tabTo(page, selector) {
@@ -360,6 +427,62 @@ export const ARCH_ACTIONS = {
       };
     });
     if (f.focus !== "erase-customer" || !f.focusVisible || f.overflow > 0 || f.controls !== 6 || f.outside !== 0) throw new Error(`Compliance controls at 390: ${JSON.stringify(f)}`);
+  },
+  // C6 fixture: an org without ZATCA Phase 1 — the owner's org set to the United Arab Emirates for this state.
+  // The ZATCA card (its Shield) must be gone; the rest is the seeded org's Dashboard.
+  "dashboard-no-zatca": async (page) => {
+    const before = await setOwnerCountry("United Arab Emirates");
+    try {
+      await page.reload({ waitUntil: "networkidle", timeout: 60000 });
+      await settled(page);
+      const f = await page.evaluate(() => ({ zatca: document.querySelectorAll("main .feature-card .lucide-shield").length, grid: document.querySelectorAll("main .dash-grid > .dash-widget").length }));
+      if (f.zatca !== 0 || f.grid !== 11) throw new Error(`Dashboard without ZATCA Phase 1: ${JSON.stringify(f)}`);
+    } finally {
+      await setOwnerCountry(before);
+    }
+  },
+  // C6 fixture: a customized layout saved for the owner. The page must render it — ten widgets, no Quick
+  // Actions, HR Snapshot before Project Overview, no feature strip.
+  "dashboard-customized": async (page) => {
+    const restore = await setOwnerLayout(C6_LAYOUT);
+    try {
+      await page.reload({ waitUntil: "networkidle", timeout: 60000 });
+      await settled(page);
+      const f = await page.evaluate(() => {
+        const ws = [...document.querySelectorAll("main .dash-grid > .dash-widget")];
+        const at = (sel) => ws.findIndex((w) => w.querySelector(sel));
+        return { widgets: ws.length, quick: document.querySelectorAll("main .quick-actions-grid").length, hr: at('[data-status-domain="attendance"]'), projects: at('[data-status-domain="project"]'), strip: document.querySelectorAll("main .feature-strip").length };
+      });
+      if (f.widgets !== 10 || f.quick !== 0 || f.hr < 0 || f.projects < 0 || f.hr > f.projects || f.strip !== 0) throw new Error(`Dashboard with a customized layout: ${JSON.stringify(f)}`);
+    } finally {
+      await restore();
+    }
+  },
+  // C6: the range selector by keyboard — Tab to it, Enter. Its menu must open on the seven ranges, the current
+  // one (This Month) marked, the focus inside it, the trigger expanded.
+  "dashboard-range-menu": async (page) => {
+    await tabTo(page, 'main .dash-toolbar [aria-haspopup="menu"]');
+    await page.keyboard.press("Enter");
+    await page.locator('[role="menu"]').waitFor({ state: "visible", timeout: 15000 });
+    await settled(page);
+    const f = await page.evaluate(() => {
+      const m = document.querySelector('[role="menu"]');
+      const items = [...m.querySelectorAll('[role="menuitem"]')];
+      return { items: items.length, marked: items.filter((i) => i.querySelector("svg")).length, focusIn: m.contains(document.activeElement), expanded: document.querySelector('main .dash-toolbar [aria-haspopup="menu"]').getAttribute("aria-expanded") };
+    });
+    if (f.items !== 7 || f.marked !== 1 || !f.focusIn || f.expanded !== "true") throw new Error(`Dashboard range menu by keyboard: ${JSON.stringify(f)}`);
+  },
+  // C6: Customize Layout by keyboard — Tab to it, Enter. The dialog must open on the twelve widgets, every one shown.
+  "dashboard-customize": async (page) => {
+    await tabTo(page, "main .dash-toolbar button.btn");
+    await page.keyboard.press("Enter");
+    await page.getByRole("dialog").waitFor({ state: "visible", timeout: 15000 });
+    await settled(page);
+    const f = await page.evaluate(() => {
+      const d = document.querySelector('[role="dialog"]');
+      return { rows: d.querySelectorAll('label[for^="w-"]').length, shown: d.querySelectorAll('button[role="checkbox"][data-state="checked"]').length, strip: d.querySelector("#w-feature_strip")?.getAttribute("data-state") };
+    });
+    if (f.rows !== 12 || f.shown !== 12 || f.strip !== "checked") throw new Error(`Customize Layout by keyboard: ${JSON.stringify(f)}`);
   },
   // C1 fixture: client 1 under LONG_NAME. The header must wrap — the h1 over several lines inside its
   // column, at the inline start; meta and actions at the end of the title's line or below it at the

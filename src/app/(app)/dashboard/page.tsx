@@ -1,17 +1,19 @@
 import { Fragment } from "react";
 import { STATUS_TONE_TOKENS, resolveStatus, statusLabel, statusTextClass } from "@/lib/status-registry";
-import { ShoppingCart, FileText, Wallet, CreditCard, BookOpen, ChevronRight, FileSignature, Building2, UserPlus, Shield, Lock, TrendingUp, RefreshCw, Link2 } from "lucide-react";
+import { ShoppingCart, FileText, Wallet, CreditCard, BookOpen, ChevronRight, FileSignature, Building2, UserPlus, Shield } from "lucide-react";
 import Link from "next/link";
 import { requireSession } from "@/lib/session";
 import { getProfileByCountryName, profileHasFeature } from "@/lib/geo/country-profiles";
 import { getLocale } from "@/lib/i18n/server";
 import { t } from "@/lib/i18n/dict";
+import { formatDisplayDate } from "@/lib/i18n/format-date";
+import { PageHeader } from "@/components/layout/page-header";
 import { getDashboardPrefs } from "@/lib/user-prefs";
 import { isDashboardRange, resolveRange, RANGE_LABELS, type DashboardRange } from "@/lib/dashboard-range";
 import type { DashboardWidgetKey } from "@/lib/dashboard-layout";
 import { Money } from "../sales/_shared/money";
 import { formatMoneyNumber } from "@/lib/currency/currencies";
-import { ComboChart, Donut, Sparkline } from "./_shared/charts";
+import { ComboChart, Donut } from "./_shared/charts";
 import { KpiCard } from "./_shared/kpi-card";
 import { DashboardToolbar } from "./dashboard-toolbar";
 import { BaseCurrencyNotice } from "./base-currency-notice";
@@ -20,9 +22,12 @@ import { getKpis, getRevenueSeries, getInvoicesOverview, getCashFlow, getRecentA
 import { fireEnsureFreshRates } from "@/lib/rates/fetch-rates";
 import { after } from "next/server";
 
-function DashWidget({ col, row, children }: { col: number; row: number; children: React.ReactNode }) {
+// DEV-UI-01.7 C6: a widget's desktop size is data — its column span and row span as custom properties
+// the stylesheet reads (.dash-grid / .dash-widget), so the narrower layouts can override them; `wide`
+// marks one that spans the whole row on a tablet.
+function DashWidget({ col, row, wide, children }: { col: number; row: number; wide?: boolean; children: React.ReactNode }) {
   return (
-    <div className="dash-widget" style={{ gridColumn: `span ${col}`, gridRow: `span ${row}` }}>
+    <div className="dash-widget" data-wide={wide ? "" : undefined} style={{ "--dash-span": col, "--dash-rows": row } as React.CSSProperties}>
       {children}
     </div>
   );
@@ -68,11 +73,9 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
 
   const revenueSeries = revenue.map((p) => p.total);
   const revenueLabels = revenue.map((p) => p.label);
-  const expenseSeries = revenue.map(() => 0);
-  const totalProfit = kpis.totalSalesThisMonth;
-  const profitMarginPct = kpis.totalSalesThisMonth > 0 ? 100 : 0;
   const invPct = (n: number) => (invoicesOverview.total > 0 ? Math.round((n / invoicesOverview.total) * 100) : 0);
-  const spark = revenueSeries.length > 1 ? revenueSeries : [0, 0];
+  // The selected range's revenue buckets, when there are enough to draw (every range has at least three).
+  const revenueSpark = revenueSeries.length > 1 ? revenueSeries : undefined;
 
   const quickActions: { icon: React.ReactNode; label: string; href?: string }[] = [
     { icon: <FileSignature className="size-4" />, label: "Create Invoice", href: "/sales/invoices/new" },
@@ -88,69 +91,47 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const widgets: Record<Exclude<DashboardWidgetKey, "feature_strip">, React.ReactNode> = {
     kpi_sales: (
       <DashWidget col={3} row={2}>
-        <KpiCard locale={locale} label="Total Sales" value={fmt(kpis.totalSalesThisMonth)} isCurrency trendPct={kpis.totalSalesTrend.pct} trendUp={kpis.totalSalesTrend.up} icon={ShoppingCart} accent="var(--brand-orange)" sparkValues={spark} />
+        <KpiCard locale={locale} label="Total Sales" value={fmt(kpis.totalSalesThisMonth)} isCurrency trendPct={kpis.totalSalesTrend.pct} trendUp={kpis.totalSalesTrend.up} icon={ShoppingCart} accent="var(--brand-orange)" sparkValues={revenueSpark} />
       </DashWidget>
     ),
     kpi_invoices: (
       <DashWidget col={3} row={2}>
-        <KpiCard locale={locale} label="Total Invoices" value={String(kpis.totalInvoices)} trendPct={kpis.totalInvoicesTrend.pct} trendUp={kpis.totalInvoicesTrend.up} icon={FileText} accent="var(--accent-purple)" sparkValues={spark} />
+        <KpiCard locale={locale} label="Total Invoices" value={String(kpis.totalInvoices)} trendPct={kpis.totalInvoicesTrend.pct} trendUp={kpis.totalInvoicesTrend.up} icon={FileText} accent="var(--accent-purple)" />
       </DashWidget>
     ),
     kpi_receivables: (
       <DashWidget col={3} row={2}>
-        <KpiCard locale={locale} label="Total Receivables" value={fmt(kpis.totalReceivables)} isCurrency trendPct="0%" trendUp icon={Wallet} accent="var(--accent-green)" sparkValues={spark} />
+        <KpiCard locale={locale} label="Total Receivables" value={fmt(kpis.totalReceivables)} isCurrency icon={Wallet} accent="var(--accent-green)" />
       </DashWidget>
     ),
     kpi_payables: (
       <DashWidget col={3} row={2}>
-        <KpiCard locale={locale} label="Total Payables" value={fmt(kpis.totalPayables)} isCurrency trendPct="0%" trendUp={false} icon={CreditCard} accent="var(--accent-red)" sparkValues={[0, 0]} />
+        <KpiCard locale={locale} label="Total Payables" value={fmt(kpis.totalPayables)} isCurrency icon={CreditCard} accent="var(--accent-red)" />
       </DashWidget>
     ),
     financial_overview: (
-      <DashWidget col={8} row={5}>
-        <div className="card fin-card" style={{ display: "grid", gridTemplateColumns: "1.9fr 1.1fr", gap: 24 }}>
-          <div>
-            <div className="fin-head">
-              <h4 style={{ fontSize: 14, fontWeight: 700 }}>{t(locale, "Financial Overview")}</h4>
-              <div className="select-pill" style={{ pointerEvents: "none" }}>{rangeLabel}</div>
-            </div>
-            <div className="fin-profit-label">{t(locale, "Total Profit")} · {rangeLabel}</div>
-            <div style={{ display: "flex", alignItems: "baseline", gap: 14 }}>
-              <div className="fin-profit-value"><Money amount={totalProfit} context="summary" /></div>
-            </div>
-            <div className="fin-legend" style={{ marginTop: 14 }}>
-              <span><span className="dot" style={{ background: "var(--brand-orange)" }} />{t(locale, "Revenue")}</span>
-              <span><span className="dot" style={{ background: "var(--chart-navy)" }} />{t(locale, "Expenses")}</span>
-            </div>
-            <div style={{ marginTop: 8 }}>
-              <ComboChart revenue={spark} expenses={expenseSeries.length > 1 ? expenseSeries : [0, 0]} labels={revenueLabels.length > 1 ? revenueLabels : ["", ""]} />
-            </div>
+      <DashWidget col={8} row={5} wide>
+        {/* DEV-UI-01.7 C6 (D-1): revenue only — the selected range's real total and its buckets. No profit,
+            margin or expenses: the dashboard has no expense data to compute them from. */}
+        <div className="card fin-card">
+          <div className="fin-head">
+            <h2 style={{ fontSize: 14, fontWeight: 700 }}>{t(locale, "Financial Overview")}</h2>
+            <div className="select-pill" style={{ pointerEvents: "none" }}>{rangeLabel}</div>
           </div>
-          <div style={{ borderLeft: "1px solid var(--line)", paddingLeft: 24, display: "flex", flexDirection: "column", alignItems: "center" }}>
-            <div style={{ alignSelf: "flex-start", fontSize: 12, fontWeight: 600, color: "var(--ink-muted)", marginBottom: 10 }}>{t(locale, "Profit Margin")}</div>
-            <Donut segments={[{ value: profitMarginPct, color: "var(--brand-orange)" }, { value: 100 - profitMarginPct, color: "var(--chart-navy)" }]} size={150} thickness={17} centerLabel={t(locale, "Profit Margin")} centerValue={`${profitMarginPct.toFixed(0)}%`} />
-            <div style={{ width: "100%", marginTop: 16 }}>
-              <div className="donut-legend-row">
-                <span className="lbl"><span className="dot" style={{ background: "var(--brand-orange)" }} />{t(locale, "Total Revenue")}</span>
-                <span className="val"><Money amount={kpis.totalSalesThisMonth} context="summary" /></span>
-              </div>
-              <div className="donut-legend-row">
-                <span className="lbl"><span className="dot" style={{ background: "var(--chart-navy)" }} />{t(locale, "Total Expenses")}</span>
-                <span className="val"><Money amount={0} context="summary" /></span>
-              </div>
-              <div className="donut-legend-row" style={{ borderTop: "1px solid var(--line)", marginTop: 4, paddingTop: 10 }}>
-                <span className="lbl" style={{ fontWeight: 600, color: "var(--ink)" }}>{t(locale, "Total Profit")}</span>
-                <span className="val" style={{ color: "var(--accent-green)" }}><Money amount={totalProfit} context="summary" /></span>
-              </div>
+          <div className="fin-total-label">{t(locale, "Total Revenue")} · {rangeLabel}</div>
+          <div className="fin-total-value"><Money amount={kpis.totalSalesThisMonth} context="summary" /></div>
+          {revenueSpark && (
+            <div style={{ marginTop: 14 }}>
+              <ComboChart revenue={revenueSpark} labels={revenueLabels} />
             </div>
-          </div>
+          )}
         </div>
       </DashWidget>
     ),
     quick_actions: (
       <DashWidget col={4} row={4}>
         <div className="card">
-          <div className="side-panel-head"><h4>{t(locale, "Quick Actions")}</h4></div>
+          <div className="side-panel-head"><h2>{t(locale, "Quick Actions")}</h2></div>
           <div style={{ padding: "14px 20px 20px" }}>
             <div className="quick-actions-grid">
               {quickActions.map((qa) =>
@@ -174,7 +155,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     recent_activities: (
       <DashWidget col={4} row={5}>
         <div className="card">
-          <div className="side-panel-head"><h4>{t(locale, "Recent Activities")}</h4></div>
+          <div className="side-panel-head"><h2>{t(locale, "Recent Activities")}</h2></div>
           <div style={{ padding: "6px 20px 8px" }}>
             {recentActivity.length === 0 && <p className="text-[12px] text-ink-faint py-4">{t(locale, "No activity yet.")}</p>}
             {recentActivity.map((a, i) => (
@@ -184,9 +165,9 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                 </div>
                 <div>
                   <div className="activity-text">{a.kind === "invoice" ? t(locale, "Invoice created") : t(locale, "Quotation created")}: {a.label}</div>
-                  <div className="activity-time">{a.time.toLocaleString(locale === "ar" ? "ar-SA" : "en-US")}</div>
+                  <div className="activity-time">{formatDisplayDate(a.time, locale, "dateTime")}</div>
                 </div>
-                <div className="activity-chev"><ChevronRight className="size-3.5" /></div>
+                <div className="activity-chev"><ChevronRight className="size-3.5 rtl:rotate-180" /></div>
               </div>
             ))}
           </div>
@@ -196,7 +177,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     cash_flow: (
       <DashWidget col={3} row={3}>
         <div className="card bottom-card">
-          <h4>{t(locale, "Cash Flow")} · {rangeLabel}</h4>
+          <h2>{t(locale, "Cash Flow")} · {rangeLabel}</h2>
           <div className="bc-stat-row">
             <span className="lbl">{t(locale, "Cash Inflow")}</span>
             <span className="val" style={{ color: "var(--accent-green)" }}><Money amount={cashFlow.inflow} context="summary" /></span>
@@ -209,16 +190,13 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
             <span className="lbl">{t(locale, "Net Cash Flow")}</span>
             <span className="val"><Money amount={cashFlow.net} context="summary" /></span>
           </div>
-          <div style={{ marginTop: 12 }}>
-            <Sparkline values={[cashFlow.inflow || 1, cashFlow.outflow || 1, Math.abs(cashFlow.net) || 1]} color="var(--accent-green)" w={180} h={46} />
-          </div>
         </div>
       </DashWidget>
     ),
     invoices_overview: (
       <DashWidget col={3} row={4}>
         <div className="card bottom-card" style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-          <h4 style={{ alignSelf: "flex-start" }}>{t(locale, "Invoices Overview")}</h4>
+          <h2 style={{ alignSelf: "flex-start" }}>{t(locale, "Invoices Overview")}</h2>
           <Donut
             segments={invoicesOverview.total > 0 ? [
               { value: invoicesOverview.paid, color: settlementColor("paid") },
@@ -234,14 +212,14 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
             <div className="bc-stat-row"><span className="lbl"><span className="dot" style={{ background: settlementColor("pending") }} />{statusLabel(locale, "invoice_settlement", "pending")}</span><span className="val">{invoicesOverview.pending} ({invPct(invoicesOverview.pending)}%)</span></div>
             <div className="bc-stat-row"><span className="lbl"><span className="dot" style={{ background: settlementColor("overdue") }} />{statusLabel(locale, "invoice_settlement", "overdue")}</span><span className="val">{invoicesOverview.overdue} ({invPct(invoicesOverview.overdue)}%)</span></div>
           </div>
-          <Link href="/sales/invoices" className="bc-link">{t(locale, "View All Invoices")} <ChevronRight className="size-3" style={{ color: "var(--brand-orange)" }} /></Link>
+          <Link href="/sales/invoices" className="bc-link">{t(locale, "View All Invoices")} <ChevronRight className="size-3 rtl:rotate-180" style={{ color: "var(--brand-orange)" }} /></Link>
         </div>
       </DashWidget>
     ),
     project_overview: (
       <DashWidget col={3} row={4}>
         <div className="card bottom-card">
-          <h4>{t(locale, "Project Overview")}</h4>
+          <h2>{t(locale, "Project Overview")}</h2>
           <div className="bc-bignum">{projectsOverview.active}</div>
           <div style={{ fontSize: 11, color: "var(--ink-faint)", marginBottom: 10 }}>{t(locale, "Active Projects")}</div>
           {([
@@ -255,14 +233,14 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
               <span className="val">{count}</span>
             </div>
           ))}
-          <Link href="/projects" className="bc-link">{t(locale, "Go to Projects")} <ChevronRight className="size-3" style={{ color: "var(--brand-orange)" }} /></Link>
+          <Link href="/projects" className="bc-link">{t(locale, "Go to Projects")} <ChevronRight className="size-3 rtl:rotate-180" style={{ color: "var(--brand-orange)" }} /></Link>
         </div>
       </DashWidget>
     ),
     hr_snapshot: (
       <DashWidget col={3} row={3}>
         <div className="card bottom-card">
-          <h4>{t(locale, "HR Snapshot")}</h4>
+          <h2>{t(locale, "HR Snapshot")}</h2>
           <div className="bc-bignum">{hrSnapshot.total}</div>
           <div style={{ fontSize: 11, color: "var(--ink-faint)", marginBottom: 10 }}>{t(locale, "Total Employees")}</div>
           {([
@@ -275,7 +253,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
               <span className="val">{count}</span>
             </div>
           ))}
-          <Link href="/hr/employees" className="bc-link">{t(locale, "Go to HRM")} <ChevronRight className="size-3" style={{ color: "var(--brand-orange)" }} /></Link>
+          <Link href="/hr/employees" className="bc-link">{t(locale, "Go to HRM")} <ChevronRight className="size-3 rtl:rotate-180" style={{ color: "var(--brand-orange)" }} /></Link>
         </div>
       </DashWidget>
     ),
@@ -315,7 +293,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           <span className="text-ink-muted">{t(locale, "Add the missing rates in Preset Management → Exchange Rates.")}</span>
         </div>
       )}
-      <DashboardToolbar locale={locale} range={rangeKey} layout={prefs.layout} />
+      <PageHeader title={t(locale, "Dashboard")} actions={<DashboardToolbar locale={locale} range={rangeKey} layout={prefs.layout} />} />
 
       <div className="dash-grid">
         {prefs.layout
@@ -325,32 +303,15 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           ))}
       </div>
 
-      {featureStripVisible && (
+      {/* DEV-UI-01.7 C6 (D-4): the strip holds one factual card — ZATCA Phase 1's printed QR, where the
+          country profile enables it — so it renders only then (and while the widget is shown): no
+          marketing cards, and no empty strip for an org it does not apply to. Phase 1 is a printed QR,
+          not a compliance certification and not a ZATCA connection. */}
+      {featureStripVisible && showZatca && (
         <div className="feature-strip">
-          {/* Phase 1 is a printed QR, not a compliance certification and not a ZATCA connection — and
-              the card is shown only where the country profile enables it, so a UAE org is not told
-              about a Saudi scheme. */}
-          {showZatca && (
-            <div className="feature-card">
-              <div className="f-icon"><Shield className="size-4.5" /></div>
-              <div><div className="f-title">{t(locale, "ZATCA Phase 1 QR")}</div><div className="f-sub">{t(locale, "On printed tax invoices")}</div></div>
-            </div>
-          )}
           <div className="feature-card">
-            <div className="f-icon"><Lock className="size-4.5" /></div>
-            <div><div className="f-title">{t(locale, "Secure & Reliable")}</div><div className="f-sub">{t(locale, "Encrypted connection, encrypted credentials")}</div></div>
-          </div>
-          <div className="feature-card">
-            <div className="f-icon"><TrendingUp className="size-4.5" /></div>
-            <div><div className="f-title">{t(locale, "Real-time Insights")}</div><div className="f-sub">{t(locale, "Data driven decisions")}</div></div>
-          </div>
-          <div className="feature-card">
-            <div className="f-icon"><RefreshCw className="size-4.5" /></div>
-            <div><div className="f-title">{t(locale, "Automated Processes")}</div><div className="f-sub">{t(locale, "Save time, work smarter")}</div></div>
-          </div>
-          <div className="feature-card highlight">
-            <div className="f-icon"><Link2 className="size-4.5" /></div>
-            <div><div className="f-title">{t(locale, "CRM Integration")} <span className="coming-soon-pill">{t(locale, "Coming Soon")}</span></div><div className="f-sub">{t(locale, "We will connect our existing CRM")}</div></div>
+            <div className="f-icon"><Shield className="size-4.5" /></div>
+            <div><div className="f-title">{t(locale, "ZATCA Phase 1 QR")}</div><div className="f-sub">{t(locale, "On printed tax invoices")}</div></div>
           </div>
         </div>
       )}

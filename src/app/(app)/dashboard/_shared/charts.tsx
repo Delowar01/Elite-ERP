@@ -78,6 +78,9 @@ export function Donut({
   );
 }
 
+// DEV-UI-01.7 C6 (D-1): `expenses` is optional. Without it the chart is the revenue series alone — its
+// bars, line and points, scaled to revenue — with no expense line, no expense points and no zero
+// series standing in for one. Time runs left to right in either language.
 export function ComboChart({
   revenue,
   expenses,
@@ -86,7 +89,7 @@ export function ComboChart({
   h = 230,
 }: {
   revenue: number[];
-  expenses: number[];
+  expenses?: number[];
   labels: string[];
   w?: number;
   h?: number;
@@ -96,14 +99,14 @@ export function ComboChart({
   const padB = 24;
   const plotW = w - padL * 2;
   const plotH = h - padB;
-  const hi = Math.max(...revenue, ...expenses) * 1.15 || 1;
+  const hi = Math.max(...revenue, ...(expenses ?? [])) * 1.15 || 1;
   const step = plotW / (n - 1);
   const y = (v: number) => plotH - (v / hi) * (plotH - 10);
   const revPts = revenue.map((v, i) => [padL + i * step, y(v)] as const);
-  const expPts = expenses.map((v, i) => [padL + i * step, y(v)] as const);
+  const expPts = expenses?.map((v, i) => [padL + i * step, y(v)] as const);
   const barW = step * 0.42;
   const revLine = revPts.map(([x, yy]) => `${x.toFixed(1)},${yy.toFixed(1)}`).join(" L ");
-  const expLine = expPts.map(([x, yy]) => `${x.toFixed(1)},${yy.toFixed(1)}`).join(" L ");
+  const expLine = expPts?.map(([x, yy]) => `${x.toFixed(1)},${yy.toFixed(1)}`).join(" L ");
   const gridYs = [plotH * 0.02, plotH * 0.26, plotH * 0.5, plotH * 0.74, plotH * 0.98];
 
   return (
@@ -122,9 +125,9 @@ export function ComboChart({
           <rect key={i} x={x - barW / 2} y={yy} width={barW} height={plotH - yy} rx={4} fill="url(#barGrad)" />
         ))}
       </g>
-      <path d={`M ${expLine}`} fill="none" stroke="var(--chart-navy)" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" />
+      {expPts && <path d={`M ${expLine}`} fill="none" stroke="var(--chart-navy)" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" />}
       <path d={`M ${revLine}`} fill="none" stroke="var(--brand-orange)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-      {expPts.map(([x, yy], i) => (
+      {expPts?.map(([x, yy], i) => (
         <circle key={`e${i}`} cx={x} cy={yy} r={3} fill="var(--chart-navy)" />
       ))}
       {revPts.map(([x, yy], i) => (
