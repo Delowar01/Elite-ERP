@@ -46,10 +46,20 @@
  * columns; D-2 held as it is (every figure, the health badge); and the proof that nothing else moved —
  * each Projects file is C2's plus C3's own hunks. Its pins re-baseline the consumer inventory only.
  *
+ * C4 (finance + reports) adds group 12: the seven finance routes on PageHeader (Financial Reports with
+ * its three exports as the actions, still out of print; Statements with its description; Ledger, Chart
+ * of Accounts, Payment Records, New Journal Entry, Bank Accounts); the report picker as pressed toggle
+ * buttons, the report search named, the selected report and the selected ledger account as h2s, the
+ * journal and bank secondary sections as h2s; Client / Vendor links marking the current page; EmptyState
+ * for the finance empty messages; .acct-grid on a minmax(0, 1fr) ledger track; D-2 (Gross Profit) held;
+ * every report body, date preset, export link and figure C3's — each finance file is C3's plus C4's own
+ * hunks — and the frozen P0 hydration verifiers byte-identical. Its pins re-baseline the consumer
+ * inventory only.
+ *
  * `--write-pins` recomputes verify/page-archetype-pins.json from the working tree. Only a stage that
  * deliberately re-baselines may run it, and the diff of that file is what its review reads.
  * docs/ui/dev-ui-01-7/c0-foundations-and-guardrails.md, docs/ui/dev-ui-01-7/c1-master-data-and-detail.md,
- * docs/ui/dev-ui-01-7/c3-projects-and-kanban.md
+ * docs/ui/dev-ui-01-7/c3-projects-and-kanban.md, docs/ui/dev-ui-01-7/c4-finance-and-reports.md
  */
 import { readFileSync, readdirSync, statSync, existsSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
@@ -106,6 +116,26 @@ const C3_FILES = [C3_LIST, C3_NEW, C3_DETAIL, C3_COST, C3_KANBAN];
 const C3_HEADERS = [C3_LIST, C3_NEW, C3_DETAIL];
 /** The project detail's two KPI rows: the summary (columns 2) and Cost & Profitability (columns 3). */
 const C3_STATROWS = [C3_COST, C3_DETAIL];
+// DEV-UI-01.7 C4: the seven finance routes, by the files that render their markup — the reports
+// workspace, the pages, the ledger view Ledger and Chart of Accounts share, the payments list.
+const FN = `${A}finance/`;
+const C4_REPORTS = `${FN}reports/reports-workspace.tsx`;
+const C4_STATEMENTS = `${FN}statements/page.tsx`;
+const C4_LEDGER = `${FN}ledger/page.tsx`;
+const C4_COA = `${FN}chart-of-accounts/page.tsx`;
+const C4_ACCOUNT_VIEW = `${FN}_shared/account-ledger-view.tsx`;
+const C4_PAYMENTS = `${FN}payments/payments-list-client.tsx`;
+const C4_JOURNAL = `${FN}journal/page.tsx`;
+const C4_BANK = `${FN}bank-accounts/page.tsx`;
+const C4_FILES = [C4_REPORTS, C4_STATEMENTS, C4_LEDGER, C4_COA, C4_ACCOUNT_VIEW, C4_PAYMENTS, C4_JOURNAL, C4_BANK];
+/** The file holding each finance route's PageHeader. */
+const C4_HEADERS = [C4_REPORTS, C4_STATEMENTS, C4_LEDGER, C4_COA, C4_PAYMENTS, C4_JOURNAL, C4_BANK];
+/** C4's two stylesheet edits, [C3 rule, C4 rule]: the ledger track and its ≤1100px form on minmax(0, 1fr). */
+const C4_CSS_HUNKS: [string, string][] = [
+  [".acct-grid { display: grid; grid-template-columns: 280px 1fr; gap: 16px; }", ".acct-grid { display: grid; grid-template-columns: 280px minmax(0, 1fr); gap: 16px; }"],
+  ["@media (max-width: 1100px) { .two-col { grid-template-columns: minmax(0, 1fr); } .acct-grid { grid-template-columns: 1fr; } }",
+    "@media (max-width: 1100px) { .two-col { grid-template-columns: minmax(0, 1fr); } .acct-grid { grid-template-columns: minmax(0, 1fr); } }"],
+];
 
 let pass = 0;
 let fail = 0;
@@ -502,7 +532,7 @@ function delta(want: string[], got: string[]) {
   return [...w.map((x) => `- ${x}`), ...extra.map((x) => `+ ${x}`)].slice(0, 8).join("\n          ");
 }
 
-console.log("Page archetypes — C0 foundations and guardrails (baseline 1bfdbbf) + C1 master data and entity detail + C2 HR + C3 Projects");
+console.log("Page archetypes — C0 foundations and guardrails (baseline 1bfdbbf) + C1 master data and entity detail + C2 HR + C3 Projects + C4 finance and reports");
 
 // ---------- 1. routes ----------
 section("1. routes");
@@ -835,11 +865,11 @@ check("consumers: formatDisplayDate on exactly the two C2 date surfaces — Atte
   same(now.consumers.formatDisplayDate, pins.consumers.formatDisplayDate) && same(now.consumers.formatDisplayDate, [`${HR}attendance/page.tsx`, `${HR}payroll/page.tsx`]),
   now.consumers.formatDisplayDate.join(" "));
 const fileOf = (u: string) => u.slice(0, u.indexOf(": <"));
-check("consumers: SectionHeader on the client / vendor Statement of Account (C1), Salary Structure / Past payroll runs (C2) and the project detail's six sections (C3); EmptyState in the three master-data bins (C1), the five HR empty states (C2) and the project detail's three (C3)",
+check("consumers: SectionHeader on the client / vendor Statement of Account (C1), Salary Structure / Past payroll runs (C2), the project detail's six sections (C3) and the selected report, the selected ledger account and the journal / bank secondary sections (C4); EmptyState in the three master-data bins (C1), the five HR empty states (C2), the project detail's three (C3) and the six finance empty messages (C4)",
   same(now.consumers.SectionHeader, pins.consumers.SectionHeader) && same(now.consumers.EmptyState, pins.consumers.EmptyState) &&
     same(now.consumers.SectionHeader.map(fileOf), [`${A}clients/[id]/page.tsx`, `${HR}employees/[id]/page.tsx`, `${HR}payroll/page.tsx`, `${A}purchasing/vendors/[id]/page.tsx`,
-      C3_COST, C3_COST, C3_COST, C3_KANBAN, C3_DETAIL, C3_DETAIL].sort()) &&
-    same(now.consumers.EmptyState.map(fileOf), [...C1_BINS, ...C2_EMPTY, C3_KANBAN, C3_DETAIL, C3_DETAIL].sort()),
+      C3_COST, C3_COST, C3_COST, C3_KANBAN, C3_DETAIL, C3_DETAIL, C4_REPORTS, C4_ACCOUNT_VIEW, C4_JOURNAL, C4_BANK].sort()) &&
+    same(now.consumers.EmptyState.map(fileOf), [...C1_BINS, ...C2_EMPTY, C3_KANBAN, C3_DETAIL, C3_DETAIL, C4_ACCOUNT_VIEW, C4_ACCOUNT_VIEW, C4_PAYMENTS, C4_JOURNAL, C4_BANK, C4_BANK].sort()),
   [...now.consumers.SectionHeader, ...now.consumers.EmptyState].join(" "));
 
 // ---------- 7. no abstraction creep ----------
@@ -922,9 +952,10 @@ check("PageHeader: a text-page / 600 title (no font-extrabold, no text-2xl) that
   phCode.includes(PH_H1.replace("class=", "className=")) && phLayout.length === 0 && physical(PHF).length === 0, [...phLayout.map(String), ...physical(PHF)].join(" "));
 check("PageHeader: imports only react and the cn helper", same(imports(PHF), ["react", "@/lib/utils"]), imports(PHF).join(" "));
 const phUses = now.consumers.PageHeader;
-check(`PageHeader consumers: the 12 C1 pages, the 7 HR routes (C2) and the 3 Projects routes (C3) — one header each, none patching it with a className (${phUses.length})`,
-  same(phUses, pins.consumers.PageHeader) && same(phUses.map(fileOf).sort(), [...C1_PAGES, ...C2_HEADERS, ...C3_HEADERS].sort()) && !phUses.some((u) => / className\b/.test(u)),
-  delta([...C1_PAGES, ...C2_HEADERS, ...C3_HEADERS].sort(), phUses.map(fileOf).sort()));
+check(`PageHeader consumers: the 12 C1 pages, the 7 HR routes (C2), the 3 Projects routes (C3) and the 7 finance routes (C4) — one header each, none patching it with a className (${phUses.length})`,
+  same(phUses, pins.consumers.PageHeader) && same(phUses.map(fileOf).sort(), [...C1_PAGES, ...C2_HEADERS, ...C3_HEADERS, ...C4_HEADERS].sort()) && phUses.length === 29 &&
+    !phUses.some((u) => / className\b/.test(u)),
+  delta([...C1_PAGES, ...C2_HEADERS, ...C3_HEADERS, ...C4_HEADERS].sort(), phUses.map(fileOf).sort()));
 
 // D-9: the layout pin narrowed — every other layout file byte-pinned, one by one
 const dfPins = JSON.parse(read("verify/document-form-pins.json")) as Record<string, string>;
@@ -1135,11 +1166,10 @@ const PCF = `${HR}payroll/payroll-client.tsx`;
 check("C2 payroll layout: PayrollClient no longer overrides .two-col (no inline display / gridTemplateColumns; only its 18px gap)",
   !/gridTemplateColumns|display: "grid"/.test(codeOnly(read(PCF))) && /<div className="two-col" style=\{\{ gap: 18 \}\}>/.test(read(PCF)));
 const twoCol = cssRules(".two-col");
-const acctGrid = cssRules(".acct-grid ").concat(cssRules(".acct-grid").filter((r) => / \.acct-grid \{|^[^:]+: \.acct-grid \{|> \.acct-grid \{/.test(r)));
-check(".two-col on minmax(0, 1fr) tracks — two on desktop, one at ≤1100px (C2); .acct-grid's rules unchanged (280px 1fr; 1fr at ≤1100px) until C4",
-  same(twoCol, [`${A}mockup-parity.css: .two-col { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }`, `${A}mockup-parity.css: @media (max-width: 1100px) > .two-col { grid-template-columns: minmax(0, 1fr); }`]) &&
-    same([...new Set(acctGrid)], [`${A}mockup-parity.css: .acct-grid { display: grid; grid-template-columns: 280px 1fr; gap: 16px; }`, `${A}mockup-parity.css: @media (max-width: 1100px) > .acct-grid { grid-template-columns: 1fr; }`]),
-  [...twoCol, ...new Set(acctGrid)].join(" | "));
+// .acct-grid was held here at C2's rules until C4 converged it; group 12 holds C4's two rules.
+check(".two-col on minmax(0, 1fr) tracks — two on desktop, one at ≤1100px (C2), exactly those rules; .acct-grid is C4's from here (group 12)",
+  same(twoCol, [`${A}mockup-parity.css: .two-col { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }`, `${A}mockup-parity.css: @media (max-width: 1100px) > .two-col { grid-template-columns: minmax(0, 1fr); }`]),
+  twoCol.join(" | "));
 
 // D-6 reaches other pages through CSS and the component only
 const D6_SOURCES: Record<string, string> = {
@@ -1436,8 +1466,10 @@ const C3_CSS = `.kanban-col-head h3 { font: inherit; text-wrap: inherit; }
   .cost-breakdown-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-bottom: 16px; }
   @media (max-width: 900px) { .cost-breakdown-grid { grid-template-columns: minmax(0, 1fr); } }`;
 const cssNow = cssFlat(read(CSSF));
-check("mockup-parity.css is C2's plus C3's two additions and nothing else (.stat-row-2, .two-col, .acct-grid, the dashboard, Settings, document and print rules untouched)",
-  cssNow.split(cssFlat(C3_CSS)).length === 2 && h16(cssNow.replace(cssFlat(C3_CSS), "")) === "198cad6c7e2da464", h16(cssNow.replace(cssFlat(C3_CSS), "")));
+// C4's two .acct-grid edits undone first (group 12 proves they are its only ones).
+const cssC3 = C4_CSS_HUNKS.reduce((s, [was, is]) => s.replace(cssFlat(is), () => cssFlat(was)), cssNow);
+check("mockup-parity.css is C2's plus C3's two additions and nothing else (.stat-row-2, .two-col, .acct-grid, the dashboard, Settings, document and print rules untouched) — C4's two .acct-grid edits aside (group 12)",
+  cssC3.split(cssFlat(C3_CSS)).length === 2 && h16(cssC3.replace(cssFlat(C3_CSS), "")) === "198cad6c7e2da464", h16(cssC3.replace(cssFlat(C3_CSS), "")));
 
 // Task cards
 const cards = findAll(parse(C3_KANBAN), (n) => isEl(n) && /kanban-card/.test(attrCode(n, "className"))) as El[];
@@ -1537,6 +1569,343 @@ for (const f of C3_FILES) {
 const c3NoArabic = [...c3Keys].filter((k) => !/[؀-ۿ]/.test(translate("ar", k)));
 check(`C3: status only through StatusBadge in the Projects files — the same 3 badges, domains and raw values as C2 — and every t() key they use (${c3Keys.size}) has an Arabic entry`,
   same(c3Badges, C2_PROJECT_BADGES) && c3NoArabic.length === 0, `${JSON.stringify(c3Badges)} ${c3NoArabic.join(" | ")}`);
+
+// ---------- 12. C4 — Finance and reports ----------
+section("12. C4 — Finance and reports");
+
+// Nothing moved but C4's own changes: each finance file is C3's (65e12d6) with exactly these hunks
+// applied — [C3 code, C4 code], compared without comments or whitespace. Undo them all and the file
+// must be C3's again, so a report body or figure, a date preset, an export link, the drill-down, a
+// query, the ledger table, a dialog or its trigger cannot change unseen.
+const C4_HUNKS: Record<string, [string, string][]> = {
+  [C4_REPORTS]: [
+    ["", `import { PageHeader } from "@/components/layout/page-header"; import { SectionHeader } from "@/components/ui/section-header";`],
+    [`<div className="main-head no-print"><h3>{t(locale, "Financial Reports")}</h3><div className="flex items-center gap-2">
+        <div className="doc-pill-btn-group flex items-center gap-1">`,
+      `<div className="no-print"><PageHeader title={t(locale, "Financial Reports")} actions={
+        <div className="doc-pill-btn-group flex items-center gap-1">`],
+    [`<Download className="size-3.5" /> PDF</a></div></div></div>`, `<Download className="size-3.5" /> PDF</a></div>} /></div>`],
+    [`className={r.kind === report ? "tab active" : "tab"} onClick=`, `className={r.kind === report ? "tab active" : "tab"} aria-pressed={r.kind === report} onClick=`],
+    [`placeholder={t(locale, "Search…")} className=`, `placeholder={t(locale, "Search…")} aria-label={t(locale, "Search…")} className=`],
+    [`<div className="mb-3"><h3 className="text-[16px] font-bold">{title}</h3><div className="text-[12px] text-ink-faint">{range.from} → {range.to}</div></div>`,
+      `<SectionHeader level={2} title={title} description={\`\${range.from} → \${range.to}\`} className="mb-3" />`],
+  ],
+  [C4_STATEMENTS]: [
+    ["", `import { PageHeader } from "@/components/layout/page-header";`],
+    [`<div className="main-head"><h3>{t(locale, "Client & Vendor Statements")}</h3></div>
+      <p className="text-[12.5px] text-ink-muted mb-3">{t(locale, "Statement of account built from posted ledger entries — opening balance, every transaction in the period, and the closing balance.")}</p>`,
+      `<PageHeader title={t(locale, "Client & Vendor Statements")}
+        description={t(locale, "Statement of account built from posted ledger entries — opening balance, every transaction in the period, and the closing balance.")} />`],
+    [`href="/finance/statements?kind=client">`, `href="/finance/statements?kind=client" aria-current={kind === "client" ? "page" : undefined}>`],
+    [`href="/finance/statements?kind=vendor">`, `href="/finance/statements?kind=vendor" aria-current={kind === "vendor" ? "page" : undefined}>`],
+  ],
+  [C4_LEDGER]: [
+    ["", `import { PageHeader } from "@/components/layout/page-header";`],
+    [`<div className="main-head"><h3>{t(locale, "Account Ledger")}</h3></div>`, `<PageHeader title={t(locale, "Account Ledger")} />`],
+  ],
+  [C4_COA]: [
+    ["", `import { PageHeader } from "@/components/layout/page-header";`],
+    [`<div className="main-head"><h3>{t(locale, "Chart of Accounts")}</h3></div>`, `<PageHeader title={t(locale, "Chart of Accounts")} />`],
+  ],
+  [C4_ACCOUNT_VIEW]: [
+    ["", `import { SectionHeader } from "@/components/ui/section-header"; import { EmptyState } from "@/components/ui/empty-state";`],
+    [`<div className="card p-8 text-center text-ink-muted text-sm">{t(locale, "Select an account to view its ledger.")}</div>`,
+      `<EmptyState message={t(locale, "Select an account to view its ledger.")} />`],
+    [`<div className="flex items-center justify-between mb-4"><div>
+        <div className="mono" style={{ fontWeight: 700, fontSize: 15 }}>{selectedAccount.code} · {accountName(locale, selectedAccount)}</div>
+        <div className="text-[11.5px] text-ink-muted mt-0.5">{t(locale, NORMAL_BALANCE_CAPTION[selectedAccount.type as (typeof TYPE_ORDER)[number]])}</div></div>
+        <span className="org-pill">{t(locale, "Balance")}: <Money amount={balances.get(selectedAccount.id) ?? 0} context="summary" /></span></div>`,
+      `<SectionHeader level={2} title={<span className="mono">{selectedAccount.code} · {accountName(locale, selectedAccount)}</span>}
+        description={t(locale, NORMAL_BALANCE_CAPTION[selectedAccount.type as (typeof TYPE_ORDER)[number]])}
+        meta={<span className="org-pill">{t(locale, "Balance")}: <Money amount={balances.get(selectedAccount.id) ?? 0} context="summary" /></span>}
+        className="mb-4" />`],
+    [`<p className="text-ink-muted text-sm py-6 text-center">{t(locale, "No transactions yet.")}</p>`, `<EmptyState message={t(locale, "No transactions yet.")} />`],
+  ],
+  [C4_PAYMENTS]: [
+    ["", `import { PageHeader } from "@/components/layout/page-header"; import { EmptyState } from "@/components/ui/empty-state";`],
+    [`<div className="main-head"><h3>{t(locale, "Payment Records")}</h3><RecordPaymentDialog`, `<PageHeader title={t(locale, "Payment Records")} actions={<RecordPaymentDialog`],
+    [`{t(locale, "Record Payment")}</Button>} /></div>`, `{t(locale, "Record Payment")}</Button>} />} />`],
+    [`<p className="text-ink-muted text-sm">{t(locale, "No payment records yet.")}</p>`, `<EmptyState message={t(locale, "No payment records yet.")} />`],
+  ],
+  [C4_JOURNAL]: [
+    ["", `import { PageHeader } from "@/components/layout/page-header"; import { SectionHeader } from "@/components/ui/section-header";
+      import { EmptyState } from "@/components/ui/empty-state";`],
+    [`<div className="main-head"><h3>{t(locale, "New Journal Entry")}</h3><span className="org-pill">{t(locale, "Manual")}</span></div>`,
+      `<PageHeader title={t(locale, "New Journal Entry")} meta={<span className="org-pill">{t(locale, "Manual")}</span>} />`],
+    [`<div className="main-head" style={{ marginTop: 40 }}><h3 style={{ fontSize: 15 }}>{t(locale, "Recent journal entries")}</h3></div>`,
+      `<SectionHeader level={2} title={t(locale, "Recent journal entries")} className="mt-10 mb-[22px]" />`],
+    [`<p className="text-ink-muted text-sm">{t(locale, "No journal entries yet.")}</p>`, `<EmptyState message={t(locale, "No journal entries yet.")} />`],
+  ],
+  [C4_BANK]: [
+    ["", `import { PageHeader } from "@/components/layout/page-header"; import { SectionHeader } from "@/components/ui/section-header";
+      import { EmptyState } from "@/components/ui/empty-state";`],
+    [`<div className="main-head"><h3>{t(locale, "Bank Accounts")}</h3><BankAccountFormDialog`, `<PageHeader title={t(locale, "Bank Accounts")} actions={<BankAccountFormDialog`],
+    [`{t(locale, "New Account")}</Button>} /></div>`, `{t(locale, "New Account")}</Button>} />} />`],
+    [`<p className="text-ink-muted text-sm mb-6">{t(locale, "No bank accounts yet.")}</p>`, `<EmptyState message={t(locale, "No bank accounts yet.")} className="mb-6" />`],
+    [`<div className="main-head" style={{ marginTop: 4 }}><h3 style={{ fontSize: 15 }}>{t(locale, "Recent payment records")}</h3></div>`,
+      `<SectionHeader level={2} title={t(locale, "Recent payment records")} className="mt-1 mb-[22px]" />`],
+    [`<p className="text-ink-muted text-sm">{t(locale, "No payment records yet.")}</p>`, `<EmptyState message={t(locale, "No payment records yet.")} />`],
+  ],
+};
+/** Each file at C3 (65e12d6), without comments or whitespace. */
+const C3_FLAT: Record<string, string> = {
+  [C4_REPORTS]: "9946c303e75623c5", [C4_STATEMENTS]: "7ef5a6c85d73cdd8", [C4_LEDGER]: "79071e80c15da606", [C4_COA]: "6211116fd0b433c2",
+  [C4_ACCOUNT_VIEW]: "1d1018174ed5a9e0", [C4_PAYMENTS]: "3c011f016799cc8e", [C4_JOURNAL]: "defe59b72f776bbb", [C4_BANK]: "ffe227e2e1e2b32f",
+};
+const c4HunkBad: string[] = [];
+for (const f of C4_FILES) {
+  let s = flat(read(f));
+  for (const [was, is] of C4_HUNKS[f]) {
+    const n = s.split(squash(is)).length - 1;
+    if (n !== 1) c4HunkBad.push(`${rel(f)}: ${n}× ${squash(is).slice(0, 60)}…`);
+    s = s.replace(squash(is), () => squash(was));
+  }
+  if (h16(s) !== C3_FLAT[f]) c4HunkBad.push(`${rel(f)}: not C3's once C4's hunks are undone (${h16(s)})`);
+}
+const nC4Hunks = Object.values(C4_HUNKS).flat().length;
+check(`C4 changed nothing in the eight finance files but its own ${nC4Hunks} hunks: undo them and each is C3's code to the character (comments and whitespace aside) — the report bodies and their figures, the date presets, the export links, the compare toggle, the drill-down, the statement and ledger queries, the ledger table, the payments table, the journal form, the bank cards, every dialog and its trigger`,
+  c4HunkBad.length === 0 && nC4Hunks === 32, c4HunkBad.join(" | "));
+const c4CssCount = C4_CSS_HUNKS.map(([, is]) => cssNow.split(cssFlat(is)).length - 1);
+check("mockup-parity.css is C3's plus C4's two .acct-grid edits and nothing else: undo them and it is C3's to the character (comments and whitespace aside) — .two-col, .stat-row-2 (D-6), .cost-breakdown-grid, .kanban, the dashboard, Settings, document and print rules untouched",
+  same(c4CssCount, [1, 1]) && h16(cssC3) === "b8892a533a3a2524", `${c4CssCount.join(" ")} ${h16(cssC3)}`);
+
+// Byte pins: the finance files C4 does not touch, the dictionary, and the frozen P0 / P0.1 / P0.2
+// verifiers — verify-ar-locale-hydration.mjs is C3's approved widening plus C4's approved one-line
+// Payments-trigger selector (.main-head button → [data-slot="page-header-actions"] button), frozen.
+const C4_UNTOUCHED: Record<string, string> = {
+  [`${FN}statements/statement-view.tsx`]: "d333b90a10042c10", [`${FN}journal/journal-form.tsx`]: "a80361a3a3d58e75",
+  [`${FN}_shared/add-account-dialog.tsx`]: "bd674a1d8ded9d63", [`${FN}_shared/record-payment-dialog.tsx`]: "9337514ddd040e10",
+  [`${FN}bank-accounts/bank-account-form-dialog.tsx`]: "91ced63e0f389b4d", [`${FN}reports/page.tsx`]: "58adc82f91280778",
+  [`${FN}payments/page.tsx`]: "e36a5e0d1caec1d8", [`${FN}_shared/delete-payment-button.tsx`]: "c83c3dcdff242919",
+  [`${FN}_shared/payment-history.tsx`]: "1d7f705ada10387e", [`${FN}_shared/refund-advance-button.tsx`]: "caf71486da9f55c6",
+  [`${FN}_shared/reverse-payment-button.tsx`]: "c3e6427df5913577", [`${FN}bank-accounts/loading.tsx`]: "421b17671041acda",
+  [`${FN}journal/loading.tsx`]: "421b17671041acda", [`${FN}payments/loading.tsx`]: "3ad88d818d694245",
+};
+const C4_FROZEN: Record<string, string> = {
+  "src/lib/i18n/dict.ts": "796829703fc96bf4",
+  "verify/verify-ar-locale-hydration.mjs": "a226b47188ddf478", "verify/verify-settings-timezone-hydration.mjs": "a43b9d9f7b521da6",
+  "verify/verify-business-date-hydration.mjs": "02ef92b957d4d719", "verify/verify-number-locale.mts": "1e1937186eb24bb3",
+  "verify/verify-date-timezone.mts": "e6be633c8a2af74d", "verify/verify-business-dates.mts": "ad9171672e94ddd6",
+};
+const c4Untouched = Object.entries(C4_UNTOUCHED).filter(([f, hsh]) => !exists(f) || sha(f) !== hsh).map(([f]) => rel(f));
+const c4BizFiles = Object.keys(pins.business).filter((k) => k.startsWith(FN)).sort();
+const c4FinanceFiles = walk(`${A}finance`);
+const c4Unaccounted = c4FinanceFiles.filter((f) => !C4_FILES.includes(f) && !(f in C4_UNTOUCHED) && !c4BizFiles.includes(f));
+check(`C4: the other ${Object.keys(C4_UNTOUCHED).length} finance files byte-identical to C3 — StatementView (its Search / Document type copy deferred), JournalForm (its Add line and inputs deferred to DEV-UI-01.8), the account, payment and bank-account dialogs, the payment history and its buttons, the reports and payments pages, the loading boundaries; every finance file is one of C4's eight, one of these or a business pin`,
+  c4Untouched.length === 0 && c4Unaccounted.length === 0 && c4FinanceFiles.length === C4_FILES.length + Object.keys(C4_UNTOUCHED).length + c4BizFiles.length, [...c4Untouched, ...c4Unaccounted.map((f) => `unaccounted: ${f}`)].join(" "));
+const c4Frozen = Object.entries(C4_FROZEN).filter(([f, hsh]) => !exists(f) || sha(f) !== hsh).map(([f]) => f);
+check("C4: the P0 / P0.1 / P0.2 verifiers byte-pinned — the Arabic-locale hydration suite as C3's approved reconstruction left it plus C4's approved Payments-trigger selector (frozen), the settings time-zone and business-date hydration suites, number-locale, date-timezone, business-dates — and dict.ts byte-identical (C4 needed no new entry)",
+  c4Frozen.length === 0, c4Frozen.join(" "));
+const C4_BIZ = ["src/lib/finance-reports.ts", "src/lib/statements.ts", "src/lib/accounting.ts", "src/lib/settlement.ts", "src/lib/currency/**", "src/db/**", "drizzle/**"];
+const c4BizWant = [`${FN}_shared/actions.ts`, `${FN}bank-accounts/actions.ts`, `${FN}journal/actions.ts`, `${FN}payments/actions.ts`, `${FN}reports/actions.ts`, `${FN}reports/export/route.ts`,
+  `${FN}statements/actions.ts`, `${FN}statements/export/route.ts`];
+const c4BizDrift = [...C4_BIZ, ...c4BizWant].filter((k) => !pins.business[k] || now.business[k] !== pins.business[k]);
+check("C4: the finance libraries (finance-reports, statements, accounting, settlement), src/lib/currency/**, src/db/**, drizzle/**, the six finance server-action modules and both export routes still their business pins — no calculation, query, posting or export changed",
+  c4BizDrift.length === 0 && same(c4BizFiles, c4BizWant), [...c4BizDrift, ...c4BizFiles].join(" "));
+const C4_PAGES = ["bank-accounts", "chart-of-accounts", "journal", "ledger", "payments", "reports", "statements"].map((r) => `(app)/finance/${r}/page.tsx`);
+check(`C4: the seven finance pages' server data sections (${C4_PAGES.map((p) => pins.data[p].length).join(" / ")} statements — the report loaders and payload, the statement parties and opening statement, the selected account and its ledger rows, the payments, journal entries, bank balances and opening entries), guards and action inventories (${C4_PAGES.map((p) => pins.actions[p].length).join(" / ")}) are the pinned ones`,
+  C4_PAGES.every((p) => same(now.data[p], pins.data[p]) && same(now.guards[p], pins.guards[p]) && same(now.actions[p], pins.actions[p])),
+  C4_PAGES.filter((p) => !same(now.data[p], pins.data[p]) || !same(now.guards[p], pins.guards[p]) || !same(now.actions[p], pins.actions[p])).join(" "));
+
+// Page headers: one h1 per route
+const c4Count = C4_FILES.map((f) => jsxEls(f, "PageHeader").length);
+const c4Hand = C4_FILES.flatMap((f) => findAll(parse(f), (n) => isEl(n) && /^h[1-6]$/.test(n.tagName.getText())).map((n) => `${rel(f)}: <${(n as El).tagName.getText()}>`));
+check("C4: each of the seven finance routes renders one PageHeader — its page's one h1 (Ledger and Chart of Accounts in their own pages, none in the shared ledger view); no .main-head and no hand-written heading left in any C4 file (the old h3 titles are gone)",
+  same(c4Count, [1, 1, 1, 1, 0, 1, 1, 1]) && c4Hand.length === 0 && C4_FILES.every((f) => !codeOnly(read(f)).includes("main-head")), `${c4Count.join(" ")} ${c4Hand.join(" ")}`);
+const C4_HEADER_SLOTS: [string, Record<"title" | "description" | "meta" | "actions" | "className", string>][] = [
+  [C4_REPORTS, { title: '{t(locale,"FinancialReports")}', description: "", meta: "", className: "",
+    actions: '{<divclassName="doc-pill-btn-groupflexitems-centergap-1"><ahref={exportUrl("csv")}className="doc-pill-btn"style={{height:32,fontSize:12}}><DownloadclassName="size-3.5"/>CSV</a>' +
+      '<ahref={exportUrl("xlsx")}className="doc-pill-btn"style={{height:32,fontSize:12}}>Excel</a><ahref={exportUrl("pdf")}className="doc-pill-btn"style={{height:32,fontSize:12}}><DownloadclassName="size-3.5"/>PDF</a></div>}' }],
+  [C4_STATEMENTS, { title: '{t(locale,"Client&VendorStatements")}', meta: "", actions: "", className: "",
+    description: '{t(locale,"Statementofaccountbuiltfrompostedledgerentries—openingbalance,everytransactionintheperiod,andtheclosingbalance.")}' }],
+  [C4_LEDGER, { title: '{t(locale,"AccountLedger")}', description: "", meta: "", actions: "", className: "" }],
+  [C4_COA, { title: '{t(locale,"ChartofAccounts")}', description: "", meta: "", actions: "", className: "" }],
+  [C4_PAYMENTS, { title: '{t(locale,"PaymentRecords")}', description: "", meta: "", className: "",
+    actions: '{<RecordPaymentDialoglocale={locale}currency={currency}baseCurrency={currency}bankAccounts={bankAccounts}invoices={outstandingInvoices}purchaseOrders={outstandingPos}trigger={<Button><PlusclassName="size-4"/>{t(locale,"RecordPayment")}</Button>}/>}' }],
+  [C4_JOURNAL, { title: '{t(locale,"NewJournalEntry")}', description: "", meta: '{<spanclassName="org-pill">{t(locale,"Manual")}</span>}', actions: "", className: "" }],
+  [C4_BANK, { title: '{t(locale,"BankAccounts")}', description: "", meta: "", className: "",
+    actions: '{<BankAccountFormDialoglocale={locale}glAccounts={glOptions}trigger={<Button><LandmarkclassName="size-4"/>{t(locale,"NewAccount")}</Button>}/>}' }],
+];
+const c4HeaderBad = C4_HEADER_SLOTS.flatMap(([f, want]) => {
+  const el = jsxEls(f, "PageHeader")[0];
+  return (Object.keys(want) as (keyof typeof want)[]).filter((k) => attrCode(el, k) !== want[k]).map((k) => `${rel(f)} ${k}: ${attrCode(el, k)}`);
+});
+check("C4 headers: Financial Reports, Client & Vendor Statements (its description as the PageHeader's), Account Ledger, Chart of Accounts, Payment Records, New Journal Entry (the Manual pill as meta, outside the h1) and Bank Accounts — the titles each page had, through t(); Record Payment and New Account the actions with the same dialog props; no className on any",
+  c4HeaderBad.length === 0, c4HeaderBad.slice(0, 4).join(" | "));
+/** The className of each JSX element enclosing `el`, innermost first. */
+const enclosing = (el: El) => {
+  const out: string[] = [];
+  for (let p: ts.Node | undefined = ts.isJsxOpeningElement(el) ? el.parent.parent : el.parent; p; p = p.parent) if (ts.isJsxElement(p)) out.push(attrCode(p.openingElement, "className"));
+  return out;
+};
+const repHeader = jsxEls(C4_REPORTS, "PageHeader")[0];
+const repWrap = repHeader && ts.isJsxElement(repHeader.parent) ? repHeader.parent : undefined;
+const repWrapKids = repWrap ? repWrap.children.filter((c) => !(ts.isJsxText(c) && !c.text.trim())) : [];
+check('C4 Financial Reports header: the h1 reads "Financial Reports" (the page title, not the shell\'s "Account Reporting"); CSV, Excel and PDF are its actions — the same three exportUrl(…) links, labels and pill styling (above); it sits alone in a div.no-print, so print leaves it out exactly as the old .main-head.no-print did',
+  repWrap !== undefined && repWrap.openingElement.tagName.getText() === "div" && repWrap.openingElement.attributes.properties.length === 1 &&
+    strAttr(repWrap.openingElement, "className") === "no-print" && repWrapKids.length === 1 && repWrapKids[0] === repHeader, repWrap?.getText().slice(0, 80));
+
+// Reports: data, links, date presets and bodies held to C3
+const declsOf = (f: string, name: string) => findAll(parse(f), varNamed(name)).map(canon);
+const C4_REPORT_DECLS: Record<string, string> = {
+  REPORTS: 'const REPORTS: { kind: ReportKind; label: string; }[] = [ { kind: "pl", label: "Profit & Loss" }, { kind: "bs", label: "Balance Sheet" }, { kind: "cf", label: "Cash Flow" }, { kind: "tb", label: "Trial Balance" }, { kind: "gl", label: "General Ledger" }, { kind: "ar", label: "AR Aging" }, { kind: "ap", label: "AP Aging" }, { kind: "vat", label: "VAT Summary" }];',
+  exportUrl: 'const exportUrl = (format: string) => { const p = new URLSearchParams({ report, from: range.from, to: range.to, format }); if (accountId) p.set("account", String(accountId)); return `/finance/reports/export?${p.toString()}`; };',
+  title: "const title = t(locale, REPORTS.find((r) => r.kind === report)!.label);",
+  BUCKET_LABELS: 'const BUCKET_LABELS: Record<AgingBucketKey, string> = { current: "Current", d1_30: "1–30 Days", d31_60: "31–60 Days", d61_90: "61–90 Days", d90p: "90+ Days" };',
+};
+const repDeclBad = Object.entries(C4_REPORT_DECLS).filter(([n, want]) => !same(declsOf(C4_REPORTS, n), [want])).map(([n]) => `${n}: ${declsOf(C4_REPORTS, n).join(" ")}`);
+check("C4 report data and links: REPORTS — the eight kinds pl, bs, cf, tb, gl, ar, ap, vat, their labels, in that order (the picker and the h2 read it); exportUrl builds /finance/reports/export?report, from, to, format (+ account) as in C3; the h2 title is the selected report's label through t(); the aging bucket labels unchanged",
+  repDeclBad.length === 0, repDeclBad.join(" | "));
+/** Canonical-code hashes at C3 (65e12d6). */
+const fnHash = (f: string, name: string) => findAll(parse(f), fnNamed(name)).map((n) => h16(canon(n)));
+const varHash = (f: string, name: string) => findAll(parse(f), varNamed(name)).map((n) => h16(canon(n)));
+const C3_DATES: Record<string, [string, "fn" | "var"]> = {
+  fyRange: ["e80b6ed9f268a9b9", "fn"], monthRange: ["dad5422daaf8a262", "fn"], quarterRange: ["785976b06e8e97a3", "fn"], presets: ["3319fc8f096ab116", "var"],
+};
+const datesBad = Object.entries(C3_DATES).filter(([n, [hsh, kind]]) => !same(kind === "fn" ? fnHash(C4_REPORTS, n) : varHash(C4_REPORTS, n), [hsh])).map(([n]) => n);
+check("C4 date presets (§9): ymd, fyRange, monthRange, quarterRange and the six presets (This Month, This Quarter, This Financial Year, Last Month, Last Financial Year, All Time) are C3's to the canonical character",
+  datesBad.length === 0 && same(declsOf(C4_REPORTS, "ymd"), ["const ymd = (d: Date) => d.toISOString().slice(0, 10);"]), [...datesBad, ...declsOf(C4_REPORTS, "ymd")].join(" "));
+const C3_BODIES: Record<string, [string, "fn" | "var"]> = {
+  PnlView: ["6951f2e2324be073", "fn"], BsView: ["ad9b2a2214238fb5", "fn"], CfView: ["fb07d232a21ebebd", "fn"], TbView: ["7afa9b0467d119c0", "fn"], GlView: ["06a746bf02bbf1a2", "fn"],
+  AgingView: ["f483c9d6b0a5ac45", "fn"], VatView: ["7f1b6af9594feb0d", "fn"], Cards: ["d5052bdb5366f508", "fn"], Row: ["f8b3eaf8c4fda4d7", "fn"], Num: ["3ed462c8197aa846", "fn"],
+  GroupLabel: ["9414622ee36ca219", "fn"], ExcludedNote: ["033b876382d5f32a", "fn"], sourceLabel: ["901ee66337096f1a", "fn"], DrillDrawer: ["70bfb6f4332438a0", "fn"],
+  PrintStyles: ["00382a60892f6a6a", "fn"], setParams: ["9c432ade6f0235f5", "fn"], openDrill: ["c5f85bdd5dfdee5a", "fn"], inSearch: ["e0a8fda3364e8beb", "var"], cell: ["feb5605265549717", "var"],
+};
+const bodiesBad = Object.entries(C3_BODIES).filter(([n, [hsh, kind]]) => !same(kind === "fn" ? fnHash(C4_REPORTS, n) : varHash(C4_REPORTS, n), [hsh])).map(([n]) => n);
+check("C4 report bodies (§13): PnlView, BsView, CfView, TbView, GlView, AgingView, VatView, the summary Cards, Row, Num (the drill-down), GroupLabel, ExcludedNote, sourceLabel, the drill drawer, the print styles, inSearch and cell — and setParams / openDrill — each C3's to the canonical character: filters, compare-period, drill targets and number rendering unchanged",
+  bodiesBad.length === 0, bodiesBad.join(" "));
+const pnl = findAll(parse(C4_REPORTS), fnNamed("PnlView"))[0];
+const pnlCode = pnl ? flat(pnl.getText()) : "";
+check("D-2 (still undecided — held, not resolved): the P&L shows Gross Profit as the engine computes it — its summary card (d.grossProfit, delta against the previous period) and its final row between Cost of Sales and Operating Expenses — and finance-reports.ts still computes grossProfit = revenueTotal - costOfSalesTotal (byte-pinned); no arithmetic added to the workspace (PnlView is C3's, above)",
+  pnlCode.includes('{label:t(locale,"GrossProfit"),value:d.grossProfit,delta:prev?d.grossProfit-prev.grossProfit:undefined}') &&
+    pnlCode.includes('{d.costOfSales.map(line)}<Rowlabel={t(locale,"GrossProfit")}value={d.grossProfit}final/><GroupLabel>{t(locale,"OperatingExpenses")}</GroupLabel>') &&
+    read("src/lib/finance-reports.ts").includes("const grossProfit = revenueTotal - costOfSalesTotal;") && now.business["src/lib/finance-reports.ts"] === pins.business["src/lib/finance-reports.ts"]);
+
+// The report picker, the search, the report h2
+const pickerMaps = findAll(parse(C4_REPORTS), (n) => ts.isCallExpression(n) && flat(n.expression.getText()) === "REPORTS.map") as ts.CallExpression[];
+const pickerBtns = pickerMaps.flatMap((c) => inside(c, (n) => isEl(n) && n.tagName.getText() === "button")) as El[];
+const pick = pickerBtns[0];
+check('C4 report picker: one REPORTS.map of real <button type="button"> toggles — key, type, className and onClick as in C3, plus aria-pressed={r.kind === report}: exactly the condition that shows the tab active, so exactly one is pressed; nothing else on them (no tabIndex, role or key handler — the button\'s own Tab / Enter / Space); onClick still setParams({ report: r.kind, account: undefined })',
+  pickerMaps.length === 1 && pickerBtns.length === 1 && strAttr(pick, "type") === "button" && attrNames(pick) === "aria-pressed className onClick type" &&
+    attrCode(pick, "aria-pressed") === "{r.kind===report}" && attrCode(pick, "className") === `{${attrCode(pick, "aria-pressed").slice(1, -1)}?"tabactive":"tab"}` &&
+    attrCode(pick, "key") === "{r.kind}" && attrCode(pick, "onClick") === "{()=>setParams({report:r.kind,account:undefined})}", pick?.getText().slice(0, 160));
+const searchBoxes = jsxEls(C4_REPORTS, "input").filter((el) => attrCode(el, "value") === "{search}");
+check('C4 report search: the one search input is named — aria-label={t(locale, "Search…")}, the wording of its own placeholder (Arabic بحث…); value, onChange and the filtering as in C3',
+  searchBoxes.length === 1 && attrCode(searchBoxes[0], "aria-label") === '{t(locale,"Search…")}' && attrCode(searchBoxes[0], "placeholder") === '{t(locale,"Search…")}' &&
+    attrCode(searchBoxes[0], "onChange") === "{(e)=>setSearch(e.target.value)}" && translate("ar", "Search…") === "بحث…", searchBoxes.map((el) => el.getText()).join(" "));
+const repSecs = jsxEls(C4_REPORTS, "SectionHeader");
+check("C4 report title: the selected report is the page's h2 — one SectionHeader, level={2}, title={title}, the range as its description (`${range.from} → ${range.to}`), mb-3, no meta or actions — outside every .no-print, so it still prints as the old title block did; the report body card follows it",
+  repSecs.length === 1 && attrCode(repSecs[0], "level") === "{2}" && attrCode(repSecs[0], "title") === "{title}" && attrCode(repSecs[0], "description") === "{`${range.from}→${range.to}`}" &&
+    strAttr(repSecs[0], "className") === "mb-3" && !attr(repSecs[0], "meta") && !attr(repSecs[0], "actions") && !enclosing(repSecs[0]).some((c) => c.includes("no-print")) &&
+    repHeader !== undefined && enclosing(repHeader).some((c) => c.includes("no-print")), repSecs.map((el) => el.getText()).join(" "));
+
+// Statements: Client / Vendor links
+const stLinks = jsxEls(C4_STATEMENTS, "a");
+const stWant = (k: string) => [`{\`tab\${kind==="${k}"?"active":""}\`}`, `"/finance/statements?kind=${k}"`, `{kind==="${k}"?"page":undefined}`];
+const stGot = stLinks.map((el) => [attrCode(el, "className"), attrCode(el, "href"), attrCode(el, "aria-current")]);
+const stLabels = stLinks.map((el) => (ts.isJsxElement(el.parent) ? flat(el.parent.children.map((c) => c.getText()).join("")) : ""));
+check('C4 statement tabs: Client and Vendor stay <a> links — href /finance/statements?kind=client / ?kind=vendor unchanged — each aria-current="page" exactly when it is the one shown active (the kind === … condition of its .active class), undefined otherwise; labels through t(); StatementView handed the same props',
+  same(stGot, [stWant("client"), stWant("vendor")]) && same(stLabels, ['{t(locale,"Client")}', '{t(locale,"Vendor")}']) &&
+    same(jsxEls(C4_STATEMENTS, "StatementView").map((el) => flat(el.getText())), ["<StatementViewlocale={locale}kind={kind}partyId={partyId}parties={parties}initial={initial}/>"]),
+  JSON.stringify(stGot));
+
+// Ledger / Chart of Accounts: the grid, the selected account, the empty states
+const ACCT_GRID_RULES = [
+  `${CSSF}: .acct-grid { display: grid; grid-template-columns: 280px minmax(0, 1fr); gap: 16px; }`,
+  `${CSSF}: @media (max-width: 1100px) > .acct-grid { grid-template-columns: minmax(0, 1fr); }`,
+];
+const acctEls = C4_FILES.flatMap((f) => findAll(parse(f), (n) => isEl(n) && /acct-grid/.test(attrCode(n, "className"))).map((n) => [f, n as El] as const));
+const c4InlineGrids = C4_FILES.flatMap((f) => (codeOnly(read(f)).match(/gridTemplateColumns\s*:\s*("[^"]*"|'[^']*'|`[^`]*`|[^,}]*)/g) ?? []).map((m) => `${rel(f)}: ${m.trim()}`));
+check(".acct-grid (Ledger, Chart of Accounts): the account list keeps its 280px and the ledger track is minmax(0, 1fr) — the ledger table scrolls inside it, it cannot widen the page; one minmax(0, 1fr) track at ≤1100px — exactly those two rules; the shared view's grid carries the class and nothing inline, and the only inline grids in a C4 file are the report Cards' own auto-fit rows, as in C3",
+  same(cssRules(".acct-grid"), ACCT_GRID_RULES) && acctEls.length === 1 && acctEls[0][0] === C4_ACCOUNT_VIEW && acctEls[0][1].attributes.properties.length === 1 &&
+    strAttr(acctEls[0][1], "className") === "acct-grid" &&
+    same(c4InlineGrids, ['finance/reports/reports-workspace.tsx: gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))"', 'finance/reports/reports-workspace.tsx: gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))"']),
+  [...cssRules(".acct-grid"), ...c4InlineGrids].join(" | "));
+const avSecs = jsxEls(C4_ACCOUNT_VIEW, "SectionHeader");
+check("C4 selected account: the ledger card's heading is the page's h2 — one SectionHeader, level={2}: code · name as the title (monospace, as before), the normal-balance caption as the description, the Balance org-pill (<Money> of the same balance) as the meta, outside the h2; mb-4; no actions",
+  avSecs.length === 1 && attrCode(avSecs[0], "level") === "{2}" && attrCode(avSecs[0], "title") === '{<spanclassName="mono">{selectedAccount.code}·{accountName(locale,selectedAccount)}</span>}' &&
+    attrCode(avSecs[0], "description") === "{t(locale,NORMAL_BALANCE_CAPTION[selectedAccount.typeas(typeofTYPE_ORDER)[number]])}" &&
+    attrCode(avSecs[0], "meta") === '{<spanclassName="org-pill">{t(locale,"Balance")}:<Moneyamount={balances.get(selectedAccount.id)??0}context="summary"/></span>}' &&
+    strAttr(avSecs[0], "className") === "mb-4" && !attr(avSecs[0], "actions"), avSecs.map((el) => el.getText()).join(" "));
+check("C4 ledger view maps unchanged: TYPE_ORDER, TYPE_LABEL, NORMAL_BALANCE_CAPTION and SOURCE_BADGE are C3's (the groups, captions and source badges), and the list rows still link to <basePath>?account=<id>",
+  same(declsOf(C4_ACCOUNT_VIEW, "TYPE_ORDER"), ['const TYPE_ORDER = ["asset", "liability", "equity", "revenue", "expense"] as const;']) &&
+    same(declsOf(C4_ACCOUNT_VIEW, "TYPE_LABEL"), ['const TYPE_LABEL: Record<(typeof TYPE_ORDER)[number], string> = { asset: "Assets", liability: "Liabilities", equity: "Equity", revenue: "Revenue", expense: "Expenses" };']) &&
+    same(declsOf(C4_ACCOUNT_VIEW, "NORMAL_BALANCE_CAPTION"), ['const NORMAL_BALANCE_CAPTION: Record<(typeof TYPE_ORDER)[number], string> = { asset: "Asset · Normal balance: Debit", liability: "Liability · Normal balance: Credit", equity: "Equity · Normal balance: Credit", revenue: "Revenue · Normal balance: Credit", expense: "Expense · Normal balance: Debit" };']) &&
+    same(declsOf(C4_ACCOUNT_VIEW, "SOURCE_BADGE"), ['const SOURCE_BADGE: Record<string, { label: string; variant: "info" | "success" | "neutral"; }> = { manual: { label: "Manual", variant: "neutral" }, sales_invoice: { label: "Sales", variant: "info" }, credit_note: { label: "Sales", variant: "info" }, purchase_order: { label: "Purchasing", variant: "neutral" }, debit_note: { label: "Purchasing", variant: "neutral" }, payment: { label: "Payment", variant: "success" }, payroll_run: { label: "Payroll", variant: "neutral" }, expense: { label: "Expense", variant: "neutral" } };']) &&
+    same(jsxEls(C4_ACCOUNT_VIEW, "Link").map((el) => attrCode(el, "href")), ["{`${basePath}?account=${a.id}`}"]));
+
+// Secondary sections and empty states
+const C4_SECTIONS: Record<string, string[]> = {
+  [C4_REPORTS]: ["{2} {title}"], [C4_STATEMENTS]: [], [C4_LEDGER]: [], [C4_COA]: [], [C4_PAYMENTS]: [],
+  [C4_ACCOUNT_VIEW]: ['{2} {<spanclassName="mono">{selectedAccount.code}·{accountName(locale,selectedAccount)}</span>}'],
+  [C4_JOURNAL]: ['{2} {t(locale,"Recentjournalentries")}'], [C4_BANK]: ['{2} {t(locale,"Recentpaymentrecords")}'],
+};
+const c4SecBad = Object.entries(C4_SECTIONS).filter(([f, want]) => !same(sectionsIn(f), want)).map(([f]) => `${rel(f)}: ${sectionsIn(f).join(", ")}`);
+const jSec = jsxEls(C4_JOURNAL, "SectionHeader")[0];
+const bSec = jsxEls(C4_BANK, "SectionHeader")[0];
+check("C4 outline: h1 → h2 on every finance route — the selected report, the selected ledger account, Recent journal entries and Recent payment records (Bank Accounts) are SectionHeader h2s (were h3s under no h1); the journal and bank secondaries keep their spacing (mt-10 / mt-1, 22px below), no meta or actions; no h3 anywhere",
+  c4SecBad.length === 0 && strAttr(jSec, "className") === "mt-10 mb-[22px]" && strAttr(bSec, "className") === "mt-1 mb-[22px]" &&
+    [jSec, bSec].every((el) => el && !attr(el, "meta") && !attr(el, "actions") && !attr(el, "description")), c4SecBad.join(" | "));
+const C4_EMPTY_WANT: Record<string, string[]> = {
+  [C4_REPORTS]: [], [C4_STATEMENTS]: [], [C4_LEDGER]: [], [C4_COA]: [],
+  [C4_ACCOUNT_VIEW]: ['message {t(locale,"Selectanaccounttoviewitsledger.")}', 'message {t(locale,"Notransactionsyet.")}'],
+  [C4_PAYMENTS]: ['message {t(locale,"Nopaymentrecordsyet.")}'],
+  [C4_JOURNAL]: ['message {t(locale,"Nojournalentriesyet.")}'],
+  [C4_BANK]: ['className message {t(locale,"Nobankaccountsyet.")}', 'message {t(locale,"Nopaymentrecordsyet.")}'],
+};
+const c4EmptyBad = Object.entries(C4_EMPTY_WANT).filter(([f, want]) => !same(emptyOf(f), want)).map(([f]) => `${rel(f)}: ${emptyOf(f).join(", ")}`);
+const c4OldEmpty = C4_FILES.filter((f) => /text-ink-muted text-sm|card p-8 text-center/.test(codeOnly(read(f)))).map(rel);
+check("C4 empty states: EmptyState for no ledger account selected, no transactions, no payment records (Payments and Bank Accounts), no journal entries and no bank accounts (mb-6 kept) — the same messages, no hint or action; the old muted <p> / card recipes are gone; the report body's zero rows, its skeleton and the statement's own empty rows are not EmptyState (unchanged)",
+  c4EmptyBad.length === 0 && c4OldEmpty.length === 0 && strAttr(jsxEls(C4_BANK, "EmptyState")[0], "className") === "mb-6" && jsxEls(C4_REPORTS, "ReportBodySkeleton").length === 1,
+  [...c4EmptyBad, ...c4OldEmpty].join(" | "));
+
+// Journal, bank cards, status, copy, direction, abstraction
+check("C4 journal: <JournalForm locale accounts currency projects> as in C3 (journal-form.tsx byte-identical — its div[role=button] Add line and unnamed inputs are DEV-UI-01.8's); the recent-entries table unchanged",
+  same(jsxEls(C4_JOURNAL, "JournalForm").map((el) => flat(el.getText())), ["<JournalFormlocale={locale}accounts={accounts}currency={session.orgCurrency}projects={projects}/>"]));
+const bankFlat = flat(read(C4_BANK));
+check("C4 bank accounts: the account cards as they were — one kpi-chip icon, the balance in the display face at weight 800 (the weight-800 sweep is deferred), the per-card edit dialog with its named icon trigger",
+  (bankFlat.match(/className="kpi-chip"/g) ?? []).length === 1 && bankFlat.includes('fontFamily:"var(--font-display)",fontWeight:800,fontSize:22') &&
+    bankFlat.includes('title={t(locale,"Edit")}aria-label={t(locale,"Edit")}'));
+const c4Badges = Object.fromEntries(C4_FILES.map((f) => [rel(f), jsxEls(f, "StatusBadge").map((el) => el.attributes.properties.map((p) => p.getText()).join(" "))]).filter(([, v]) => v.length));
+check("C4: status only through StatusBadge — the bank account's active_flag badge, as in C3; no other status badge or tone map added to a finance file",
+  same(c4Badges, { "finance/bank-accounts/page.tsx": ['domain="active_flag" status={ba.isActive ? "active" : "inactive"} locale={locale}'] }), JSON.stringify(c4Badges));
+const c4Keys = new Set<string>();
+for (const f of C4_FILES) {
+  const visit = (n: ts.Node) => {
+    if (ts.isCallExpression(n) && n.expression.getText() === "t" && n.arguments.length === 2) for (const k of textLits(n.arguments[1])) c4Keys.add(k);
+    ts.forEachChild(n, visit);
+  };
+  visit(parse(f));
+}
+/** The string values of a declaration's object literals (only `prop`'s, when given). */
+const litsOf = (f: string, name: string, prop?: string) =>
+  findAll(parse(f), varNamed(name)).flatMap((v) => inside(v, (n) => ts.isPropertyAssignment(n) && (!prop || n.name.getText() === prop) && ts.isStringLiteral(n.initializer)))
+    .map((n) => ((n as ts.PropertyAssignment).initializer as ts.StringLiteral).text);
+const c4Labels = [...litsOf(C4_REPORTS, "REPORTS", "label"), ...litsOf(C4_REPORTS, "presets", "label"), ...litsOf(C4_REPORTS, "BUCKET_LABELS"),
+  ...litsOf(C4_ACCOUNT_VIEW, "TYPE_LABEL"), ...litsOf(C4_ACCOUNT_VIEW, "NORMAL_BALANCE_CAPTION"), ...litsOf(C4_PAYMENTS, "METHOD_LABELS")];
+const hasArabic = (k: string) => /[؀-ۿ]/.test(translate("ar", k));
+const c4NoArabic = [...c4Keys, ...c4Labels].filter((k) => !hasArabic(k));
+const badgeNoArabic = litsOf(C4_ACCOUNT_VIEW, "SOURCE_BADGE", "label").filter((k) => !hasArabic(k));
+const postsExpense = walk("src").filter((f) => /\.tsx?$/.test(f) && /sourceType:\s*["']expense["']/.test(read(f)));
+check(`C4 copy: every t() key in the eight files (${c4Keys.size}) and every label they show through a map (${c4Labels.length}: the eight report names — picker and h2 — the six presets, the aging buckets, the account groups and normal-balance captions — the account h2 — and the payment methods) has an Arabic entry; so do the ledger source badges but "Expense", C3's untranslated label for a source nothing posts (no sourceType "expense" in src)`,
+  c4NoArabic.length === 0 && c4Labels.length === 33 && same(badgeNoArabic, ["Expense"]) && postsExpense.length === 0, [...c4NoArabic, ...badgeNoArabic, ...postsExpense].join(" | "));
+const c4Phys = C4_FILES.flatMap((f) => physical(f).map((x) => `${rel(f)}: ${x}`));
+check("C4: no physical left / right in the eight finance files (none in C3 either; the report search sits at ms-auto, logical)", c4Phys.length === 0, c4Phys.join(" "));
+const C4_BANNED = ["FinancePageLayout", "FinanceLayout", "FinanceShell", "ReportLayout", "ReportHeader", "AccountPageShell"];
+const C4_BANNED_FILES = C4_BANNED.map((b) => b.replace(/[A-Z]/g, (c, i) => (i ? "-" : "") + c.toLowerCase()));
+const c4Creep: string[] = [];
+for (const f of walk("src").filter((f) => /\.(tsx?|css)$/.test(f))) {
+  if (C4_BANNED_FILES.includes(path.posix.basename(f).replace(/\.[^.]+$/, ""))) c4Creep.push(`${f} (file)`);
+  if (!/\.tsx?$/.test(f) || !C4_BANNED.some((b) => read(f).includes(b))) continue;
+  const visit = (n: ts.Node) => {
+    if (ts.isIdentifier(n) && C4_BANNED.includes(n.text)) c4Creep.push(`${f}: ${n.text}`);
+    ts.forEachChild(n, visit);
+  };
+  visit(parse(f));
+}
+const financeLayouts = c4FinanceFiles.filter((f) => /(^|\/)(layout|template)\.tsx?$/.test(f));
+check(`C4: no finance page abstraction — none of ${C4_BANNED.join(", ")} (identifier or file), no layout or template under /finance; each route composes PageHeader, SectionHeader and EmptyState itself`,
+  c4Creep.length === 0 && financeLayouts.length === 0, [...c4Creep, ...financeLayouts].join(" "));
 
 console.log("\nGroups:");
 for (const [g, [p, f]] of Object.entries(counts)) console.log(`  ${g}: ${p}/${p + f}`);

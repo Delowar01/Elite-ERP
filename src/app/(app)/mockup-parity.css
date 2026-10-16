@@ -617,7 +617,9 @@ table.data-table.line-table .cellval { font-family: var(--font-numeric); font-va
 
 table.data-table.line-table td { padding: 9px 14px; }
 
-.acct-grid { display: grid; grid-template-columns: 280px 1fr; gap: 16px; }
+/* DEV-UI-01.7 C4: the account list keeps its 280px; the ledger track is minmax(0, 1fr), so the ledger
+   table scrolls inside it instead of widening the page. */
+.acct-grid { display: grid; grid-template-columns: 280px minmax(0, 1fr); gap: 16px; }
 
 .acct-list-card { padding: 8px; }
 
@@ -650,10 +652,10 @@ table.data-table.line-table td { padding: 9px 14px; }
 .payslip-line.final { font-weight: 700; border-bottom: none; border-top: 1px solid var(--line); margin-top: 4px; padding-top: 12px; font-size: 15px; font-family: var(--font-display); }
 
 /* C2: .two-col collapses to one minmax(0, 1fr) track — no child's min-content can widen it past the
-   page; .acct-grid keeps its rule until C4. */
+   page; C4: .acct-grid the same. */
 @media (max-width: 1100px) {
   .two-col { grid-template-columns: minmax(0, 1fr); }
-  .acct-grid { grid-template-columns: 1fr; }
+  .acct-grid { grid-template-columns: minmax(0, 1fr); }
 }
 
 /* ---- Dashboard, verbatim from dash_toolbar/kpi_card_v4/fin_overview/quick_actions/etc. ---- */

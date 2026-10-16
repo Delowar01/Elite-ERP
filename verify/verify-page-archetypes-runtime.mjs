@@ -1,17 +1,41 @@
 /**
  * DEV-UI-01.7 C0 — page-archetype runtime baseline (C1: master-data and entity-detail targets; C2: HR
- * targets and the D-6 StatRow gate).
+ * targets and the D-6 StatRow gate; C3: Projects and the kanban; C4: finance and reports).
  *
  *   node verify/verify-page-archetypes-runtime.mjs                   measure, compare with the baseline
  *   node verify/verify-page-archetypes-runtime.mjs --write-baseline  measure, write the baseline files
  *   node verify/verify-page-archetypes-runtime.mjs --rebaseline=<route id,…>
- *                                                   measure every route; re-record only those routes
+ *                                                   measure every route; re-record only those routes (a
+ *                                                   named route the baseline does not have yet is added)
  *   node verify/verify-page-archetypes-runtime.mjs --write-d6        measure the D-6 pass alone; write it as
  *                                                   the baseline's `d6` record (C2 recorded it on C1's build)
  *   node verify/verify-page-archetypes-runtime.mjs --write-c3ref     measure the C3 project pass alone; write it as
  *                                                   the baseline's `c3ref` record (C3 recorded it on C2's build)
- *   flags: --skip-build (reuse .next — only when it was built from the current tree), --only=<route id>,
+ *   node verify/verify-page-archetypes-runtime.mjs --write-c4ref     measure the C4 value pass alone; write it as
+ *                                                   the baseline's `c4ref` record (C4 recorded it on C3's build)
+ *   flags: --skip-build (reuse .next — only when it was built from the current tree), --only=<route id>[,<route id>…],
  *          --measure-out=<file> (also write what this run measured, for review evidence)
+ *
+ * C4 (finance + reports) re-recorded its 14 finance routes and holds them to targets: one PageHeader
+ * holding the only h1 (Financial Reports, Client & Vendor Statements, Account Ledger, Chart of Accounts,
+ * Payment Records, New Journal Entry, Bank Accounts); the selected report, the selected ledger account
+ * and the journal / bank secondary sections as h2s; no overflow and no table past the viewport (Ledger
+ * and Chart of Accounts were 139 / 122 px at 390); no error; Western digits; the report search named.
+ * Three of those routes are new (reports-vat, statements-vendor, statement-vendor1 — 47 routes): their
+ * entries were first recorded on C3's build, so C4's re-record compares them like the rest. A value
+ * pass of its own reads what every report and statement says — the eight reports, four of them with
+ * the previous period, an account-filtered General Ledger and a custom-range Trial Balance; the client
+ * and vendor statements with and without a party; EN and AR at 1440 and 390; and a search, a drill-
+ * down and a statement filter — and holds it to the baseline's `c4ref` record, measured on C3's build
+ * (65e12d6, --write-c4ref): a figure, row, card, label, export link or drill target that moves fails.
+ * The ledger / chart gate measures the account grid at every width: two panes at 1440, one track at
+ * ≤1100 px, both panes inside the viewport, the ledger table scrolling inside its card with its last
+ * column reachable, Add Account reachable. Three probes use the pages as a person would: the report
+ * picker by keyboard (one toggle pressed; Enter and Space switch the report — the URL, the h2, the
+ * exports and the body follow — and the search has its name); the Client / Vendor links (aria-current
+ * on the one shown, the URL); and the empty states — no account selected, and, in an org registered
+ * through the UI in this run's TEST-ONLY copy, no transactions, no payments, no journal entries, no
+ * bank accounts.
  *
  * C2 (HR) re-recorded its seven routes with --rebaseline and holds them to targets: one PageHeader
  * holding the only h1 — C1's titles, now h1s — with Salary Structure and Past payroll runs as h2s; no
@@ -52,8 +76,8 @@
  * still compares those routes with the baseline it replaces — route behaviour, direction, Staff
  * permissions and every never-worse measure — and prints their outline and action changes for review.
  *
- * The 36 DEV-UI-01.7 pages, through 44 routes (detail, tab and report variants, an empty project, an
- * unknown id), served by a production build. For every route it records what the page is TODAY:
+ * The 36 DEV-UI-01.7 pages, through 47 routes (detail, tab, report and statement variants, an empty
+ * project, an unknown id), served by a production build. For every route it records what the page is TODAY:
  *
  *   - status and final path (route behaviour), lang and dir;
  *   - the heading outline inside <main>, the number of h1s and heading-level skips;
@@ -98,6 +122,8 @@ import { STAFF_EMAIL } from "../tests/ui-baseline/shell-states.mjs";
 import { DB_PREFIX, TEMPLATE_DB, adminUrl, dbUrl, describe, serverEnv } from "../tests/ui-baseline/isolation.mjs";
 import { alignDatabaseTimestamps } from "../tests/ui-baseline/archetype-states.mjs";
 import { assertFreshBuild } from "./assert-fresh-build.mjs";
+import { pickCountry } from "./register-org.mjs";
+import { randomUUID } from "node:crypto";
 
 const ROOT = resolve(new URL("..", import.meta.url).pathname);
 process.chdir(ROOT);
@@ -115,8 +141,11 @@ const REBASE = args.find((a) => a.startsWith("--rebaseline="))?.slice(13).split(
 const MEASURE_OUT = args.find((a) => a.startsWith("--measure-out="))?.slice(14);
 const WRITE_D6 = args.some((a) => a === "--write-d6" || a.startsWith("--write-d6="));
 const WRITE_C3REF = args.some((a) => a === "--write-c3ref" || a.startsWith("--write-c3ref="));
+const WRITE_C4REF = args.some((a) => a === "--write-c4ref" || a.startsWith("--write-c4ref="));
 /** A pass that records one thing alone: no owner / Staff / sweep passes, no probes. */
-const RECORD_ONLY = WRITE_D6 || WRITE_C3REF;
+const RECORD_ONLY = WRITE_D6 || WRITE_C3REF || WRITE_C4REF;
+/** --only=<id>[,<id>…]: a route (or pass) id containing any of them. */
+const onlyId = (id) => !ONLY || ONLY.split(",").some((o) => o && id.includes(o));
 
 // DEV-UI-01.7 C1: the routes of the 12 master-data and entity-detail pages. (nf-client renders the
 // not-found page for clients/[id]; it is not C1's and stays at its baseline.)
@@ -150,8 +179,9 @@ const ROUTES = [
   ["bank-accounts", "/finance/bank-accounts", "finance/bank-accounts"], ["coa", "/finance/chart-of-accounts", "finance/chart-of-accounts"], ["journal", "/finance/journal", "finance/journal"],
   ["ledger", "/finance/ledger", "finance/ledger"], ["payments", "/finance/payments", "finance/payments"],
   ["reports-pl", "/finance/reports", "finance/reports"], ["reports-tb", "/finance/reports?report=tb", "finance/reports"], ["reports-ar", "/finance/reports?report=ar", "finance/reports"],
-  ["reports-gl", "/finance/reports?report=gl", "finance/reports"],
+  ["reports-gl", "/finance/reports?report=gl", "finance/reports"], ["reports-vat", "/finance/reports?report=vat", "finance/reports"],
   ["statements", "/finance/statements", "finance/statements"], ["statement-client1", "/finance/statements?kind=client&party=1", "finance/statements"],
+  ["statements-vendor", "/finance/statements?kind=vendor", "finance/statements"], ["statement-vendor1", "/finance/statements?kind=vendor&party=1", "finance/statements"],
   ["hr-attendance", "/hr/attendance", "hr/attendance"], ["hr-departments", "/hr/departments", "hr/departments"], ["hr-employees", "/hr/employees", "hr/employees"],
   ["hr-employee-detail", "/hr/employees/1", "hr/employees/[id]"], ["hr-employee-new", "/hr/employees/new", "hr/employees/new"], ["hr-leave", "/hr/leave", "hr/leave"], ["hr-payroll", "/hr/payroll", "hr/payroll"],
   ["projects", "/projects", "projects"], ["project-detail", "/projects/1", "projects/[id]"], ["project-empty", "/projects/2", "projects/[id]"], ["project-new", "/projects/new", "projects/new"],
@@ -161,7 +191,7 @@ const ROUTES = [
   ["settings-presets", "/settings/presets", "settings/presets"], ["settings-security", "/settings/security", "settings/security"], ["settings-compliance", "/settings/compliance", "settings/compliance"],
   ["settings-team", "/settings/team", "settings/team"],
   ["nf-client", "/clients/999999", "clients/[id]"],
-].filter(([id]) => !ONLY || id.includes(ONLY));
+].filter(([id]) => onlyId(id));
 const WIDTHS = [[1440, 900], [1024, 768], [768, 1024], [390, 844]];
 // Realistic, adversarial browsers: the client renders in the user's zone and locale, the server in UTC.
 const BROWSERS = { en: { locale: "en-US", timezoneId: "America/New_York" }, ar: { locale: "ar-SA", timezoneId: "Asia/Riyadh" } };
@@ -196,7 +226,7 @@ const D6_ROUTES = [
   ["quotations", "/sales/quotations"], ["sales-orders", "/sales/orders"], ["proforma", "/sales/proforma"], ["sales-invoices", "/sales/invoices"],
   ["delivery-challans", "/sales/delivery-challans"], ["purchase-orders", "/purchasing/orders"], ["credit-notes", "/sales/credit-notes"], ["debit-notes", "/purchasing/debit-notes"],
   ["projects", "/projects"], ["settings-security", "/settings/security"], ["hr-employees", "/hr/employees"], ["hr-payroll", "/hr/payroll"],
-].filter(([id]) => !ONLY || id.includes(ONLY));
+].filter(([id]) => onlyId(id));
 // C2's own strips are held to targets; every other consumer to the record C1's build left (`d6`).
 const D6_C2 = ["hr-employees", "hr-payroll"];
 
@@ -253,6 +283,59 @@ const CARD_PROPS = [
 const INNER_PROPS = ["display", "font-family", "font-size", "font-weight", "line-height", "letter-spacing", "text-align", "text-transform", "color", "background-color", "margin-bottom"];
 const HEAD_PROPS = ["font-family", "font-size", "font-weight", "line-height", "letter-spacing", "text-transform", "color", "margin-top", "margin-bottom", "text-wrap-mode", "text-wrap-style"];
 
+// DEV-UI-01.7 C4: the 14 finance routes (three of them new in C4), the words they must show — from the
+// dictionary, Arabic included — and the outline each must have: its title as the page's one h1 (an h3
+// before); the selected report, the selected ledger account and the journal / bank secondary sections as
+// h2s (h3s, or a styled div, before).
+const C4_ROUTES = ["reports-pl", "reports-tb", "reports-ar", "reports-gl", "reports-vat", "statements", "statement-client1", "statements-vendor", "statement-vendor1",
+  "ledger", "coa", "payments", "journal", "bank-accounts"];
+const C4_NEW = ["reports-vat", "statements-vendor", "statement-vendor1"];
+const REPORT_KINDS = ["pl", "bs", "cf", "tb", "gl", "ar", "ap", "vat"];
+const C4_WORDS = {
+  en: {
+    reports: "Financial Reports", statements: "Client & Vendor Statements", ledger: "Account Ledger", coa: "Chart of Accounts", payments: "Payment Records",
+    journal: "New Journal Entry", recentJournal: "Recent journal entries", bank: "Bank Accounts", recentPayments: "Recent payment records", client: "Client", vendor: "Vendor",
+    search: "Search…", addAccount: "Add Account", recordPayment: "Record Payment", newAccount: "New Account",
+    kinds: { pl: "Profit & Loss", bs: "Balance Sheet", cf: "Cash Flow", tb: "Trial Balance", gl: "General Ledger", ar: "AR Aging", ap: "AP Aging", vat: "VAT Summary" },
+    select: "Select an account to view its ledger.", noTx: "No transactions yet.", noPayments: "No payment records yet.", noJournal: "No journal entries yet.", noBanks: "No bank accounts yet.",
+  },
+  ar: {
+    reports: "التقارير المالية", statements: "كشوف حساب العملاء والموردين", ledger: "دفتر الأستاذ", coa: "دليل الحسابات", payments: "سجلات الدفع",
+    journal: "قيد يومية جديد", recentJournal: "أحدث قيود اليومية", bank: "الحسابات البنكية", recentPayments: "أحدث سجلات الدفع", client: "العميل", vendor: "المورّد",
+    search: "بحث…", addAccount: "إضافة حساب", recordPayment: "تسجيل دفعة", newAccount: "إضافة حساب",
+    kinds: { pl: "الأرباح والخسائر", bs: "الميزانية العمومية", cf: "التدفق النقدي", tb: "ميزان المراجعة", gl: "دفتر الأستاذ العام", ar: "أعمار الذمم المدينة", ap: "أعمار الذمم الدائنة", vat: "ملخص ضريبة القيمة المضافة" },
+    select: "اختر حسابًا لعرض دفتر أستاذه.", noTx: "لا توجد معاملات بعد.", noPayments: "لا توجد سجلات دفع بعد.", noJournal: "لا توجد قيود يومية بعد.", noBanks: "لا توجد حسابات بنكية بعد.",
+  },
+};
+/** The report a reports-* route shows (reports-pl is /finance/reports: P&L by default). */
+const reportOf = (id) => (id === "reports-pl" ? "pl" : id.slice("reports-".length));
+/** The outline a finance route must have; `selected` is the ledger's selected row as the page lists it. */
+function c4Outline(id, l, selected) {
+  const W = C4_WORDS[l];
+  if (id.startsWith("reports-")) return [`h1 ${W.reports}`, `h2 ${W.kinds[reportOf(id)]}`];
+  if (id.startsWith("statement")) return [`h1 ${W.statements}`];
+  if (id === "ledger" || id === "coa") return [`h1 ${W[id]}`, ...(selected ? [`h2 ${`${selected.code} · ${selected.name}`.slice(0, 48)}`] : [])];
+  if (id === "payments") return [`h1 ${W.payments}`];
+  if (id === "journal") return [`h1 ${W.journal}`, `h2 ${W.recentJournal}`];
+  return [`h1 ${W.bank}`, `h2 ${W.recentPayments}`];
+}
+// The value pass (§47 / §48): every report — the default route, the eight kinds, P&L / Balance Sheet / Cash
+// Flow / VAT against the previous period, the General Ledger of one account (the seed's Cash, id 1) and a
+// custom-range Trial Balance — and the client and vendor statements with and without a party; read at
+// 1440 and 390, EN / AR, and held to the c4ref record C3's build left. At 1440 also: a search (by account
+// code, the same in both languages), the first drill-down, a statement's from-date filter.
+const C4_VALUE_CASES = [
+  ["report-default", "/finance/reports"], ...REPORT_KINDS.map((k) => [`report-${k}`, `/finance/reports?report=${k}`]),
+  ...["pl", "bs", "cf", "vat"].map((k) => [`report-${k}-compare`, `/finance/reports?report=${k}&compare=1`]),
+  ["report-gl-cash", "/finance/reports?report=gl&account=1"], ["report-tb-q2", "/finance/reports?report=tb&from=2026-04-01&to=2026-06-30"],
+  ["statement-client", "/finance/statements?kind=client"], ["statement-client1", "/finance/statements?kind=client&party=1"],
+  ["statement-vendor", "/finance/statements?kind=vendor"], ["statement-vendor1", "/finance/statements?kind=vendor&party=1"],
+];
+const C4_SEARCH = { "report-pl": "4000", "report-tb": "1100" };
+/** What opens the drill-down: a P&L figure (a button), a Trial Balance row (the row itself). */
+const C4_DRILL = { "report-pl": "button", "report-tb": "tbody tr.cursor-pointer" };
+const C4_FROM = { "statement-client1": "2026-04-01", "statement-vendor1": "2026-04-01" };
+
 // ------------------------------------------------------------------------------------- isolation
 function refuse(why) {
   console.error(`✗ refusing: ${why}`);
@@ -262,6 +345,7 @@ if (existsSync(join(ROOT, ".env"))) refuse("a .env exists in this tree — run i
 if (!existsSync(PASSWORD_FILE)) refuse("no synthetic seed password (.ui-baseline-work/owner-password) — run `node tests/ui-baseline/run.mjs prepare` first");
 if (WRITE_D6 && (WRITE || REBASE || ONLY)) refuse("--write-d6 records the D-6 pass alone, every consumer: not with --write-baseline, --rebaseline or --only");
 if (WRITE_C3REF && (WRITE || REBASE || ONLY || WRITE_D6)) refuse("--write-c3ref records the C3 project pass alone, both projects: not with --write-baseline, --rebaseline, --only or --write-d6");
+if (WRITE_C4REF && (WRITE || REBASE || ONLY || WRITE_D6 || WRITE_C3REF)) refuse("--write-c4ref records the C4 value pass alone, every case: not with --write-baseline, --rebaseline, --only, --write-d6 or --write-c3ref");
 if (REBASE) {
   // A partial re-record must still see every route: the routes it keeps are compared, not copied blind.
   if (ONLY || WRITE) refuse("--rebaseline measures every route and re-records only the ones it names: not with --only or --write-baseline");
@@ -460,6 +544,8 @@ const ACTIONS = () => {
       (role === "checkbox" || role === "switch" || el.type === "checkbox") && (el.checked || el.getAttribute("aria-checked") === "true") ? "checked" : "",
       // C2: a toggle button says so, pressed or not (the department filters).
       el.hasAttribute("aria-pressed") ? `pressed=${el.getAttribute("aria-pressed")}` : "",
+      // C4: a link marked as the current page (the statement's Client / Vendor links).
+      el.getAttribute("aria-current") ? `current=${el.getAttribute("aria-current")}` : "",
     ].filter(Boolean).join(",");
     out.push([kind, nameOf(el), href, type, state].join("|"));
   }
@@ -783,6 +869,150 @@ const EMPTY_FACTS = (W) => {
   };
 };
 
+/**
+ * C4: Ledger / Chart of Accounts' account grid — its tracks, the two panes and whether they sit side by side
+ * or stacked, inside the viewport; the selected row; the ledger table's own scroll container and, scrolled
+ * to its end, whether its last column shows inside it; Add Account inside the viewport and hit-testable.
+ */
+const LEDGER_FACTS = (addLabel) => {
+  const vw = document.documentElement.clientWidth;
+  const rtl = document.documentElement.dir === "rtl";
+  const grid = document.querySelector("main .acct-grid");
+  if (!grid) return null;
+  const box = (e) => {
+    if (!e) return null;
+    const r = e.getBoundingClientRect();
+    return { left: Math.round(r.left), right: Math.round(r.right), top: Math.round(r.top), bottom: Math.round(r.bottom) };
+  };
+  const inView = (b) => Boolean(b) && b.left >= -1 && b.right <= vw + 1;
+  const tracks = getComputedStyle(grid).gridTemplateColumns.split(" ").filter(Boolean);
+  const [list, detail] = grid.children;
+  const lb = box(list);
+  const db = box(detail);
+  const sel = list?.querySelector(".acct-row.selected");
+  const table = detail?.querySelector("table");
+  let scroller = null;
+  for (let p = table?.parentElement; p && p !== detail; p = p.parentElement) if (/(auto|scroll)/.test(getComputedStyle(p).overflowX)) { scroller = p; break; }
+  let scroll = null;
+  if (scroller) {
+    const sb = box(scroller);
+    const sizes = { scrollWidth: scroller.scrollWidth, clientWidth: scroller.clientWidth };
+    scroller.scrollLeft = rtl ? -scroller.scrollWidth : scroller.scrollWidth;
+    const heads = table.querySelectorAll("thead th");
+    const last = box(heads[heads.length - 1]);
+    scroll = { ...sizes, inView: inView(sb), lastReachable: Boolean(last) && last.left >= sb.left - 1 && last.right <= sb.right + 1 };
+    scroller.scrollLeft = 0;
+  }
+  const add = [...(list?.querySelectorAll("button") ?? [])].find((b) => b.textContent.replace(/\s+/g, " ").trim() === addLabel);
+  let addFacts = null;
+  if (add) {
+    add.scrollIntoView({ block: "center", inline: "nearest" });
+    const ab = box(add);
+    const hit = document.elementFromPoint((ab.left + ab.right) / 2, (ab.top + ab.bottom) / 2);
+    addFacts = { inView: inView(ab), hit: Boolean(hit && (hit === add || add.contains(hit))), disabled: add.disabled };
+    window.scrollTo(0, 0);
+  }
+  return {
+    tracks: tracks.length, first: tracks[0] ?? null, listIn: inView(lb), detailIn: inView(db),
+    sideBySide: Boolean(lb && db) && Math.abs(lb.top - db.top) <= 1 && (rtl ? db.right <= lb.left + 1 : db.left >= lb.right - 1),
+    stacked: Boolean(lb && db) && db.top >= lb.bottom - 1,
+    selected: sel ? { code: sel.querySelector(".code")?.textContent.trim(), name: sel.querySelector(".nm")?.textContent.replace(/\s+/g, " ").trim() } : null,
+    table: Boolean(table), scroll, add: addFacts,
+  };
+};
+
+/**
+ * C4: what a report says — the picker (labels, the one shown active), the presets, the range and the compare
+ * toggle; the title block above the body; the body itself: every line, every figure, its rows, its summary
+ * cards and its drill targets (each with its row's label); the export links. Read the same on C3's build.
+ */
+const REPORT_FACTS = () => {
+  const main = document.querySelector("main");
+  const area = main?.querySelector(".reports-print-area");
+  if (!area) return null;
+  const norm = (s) => (s ?? "").replace(/\s+/g, " ").trim();
+  const lines = (el) => (el?.innerText ?? "").split("\n").map(norm).filter(Boolean);
+  const body = area.querySelector(":scope > .card:not(.no-print)");
+  const filter = area.querySelector(":scope > .card.no-print");
+  return {
+    picker: [...area.querySelectorAll(":scope > .tab-row button")].map((b) => `${norm(b.textContent)}${b.classList.contains("active") ? " (active)" : ""}`),
+    presets: [...(filter?.querySelectorAll("button.doc-pill-btn") ?? [])].map((b) => `${norm(b.textContent)}${b.classList.contains("active") ? " (active)" : ""}`),
+    dates: [...(filter?.querySelectorAll('input[type="date"]') ?? [])].map((i) => i.value),
+    compare: filter?.querySelector('[role="checkbox"]')?.getAttribute("aria-checked") ?? null,
+    title: lines(body?.previousElementSibling),
+    body: lines(body),
+    figures: (body?.innerText ?? "").match(/[-−]?\(?\d[\d,]*(?:\.\d+)?\)?%?/g) ?? [],
+    rows: body ? [body.querySelectorAll(".payslip-line").length, body.querySelectorAll("tbody tr").length, body.querySelectorAll("table").length] : null,
+    cards: [...(body?.querySelectorAll(".card") ?? [])].map((c) => lines(c).join(" / ")),
+    drills: [...(body?.querySelectorAll("button") ?? [])].map((b) => `${norm(b.closest(".payslip-line, tr")?.firstElementChild?.textContent)} → ${norm(b.textContent)}`),
+    exports: [...main.querySelectorAll('a[href^="/finance/reports/export"]')].map((a) => `${norm(a.textContent)} ${a.getAttribute("href")}`),
+  };
+};
+
+/** C4: what a statement says — the Client / Vendor links; every line, input, select and table row of the statement view under them. */
+const STATEMENT_FACTS = () => {
+  const main = document.querySelector("main");
+  const norm = (s) => (s ?? "").replace(/\s+/g, " ").trim();
+  const row = [...(main?.querySelectorAll(".tab-row") ?? [])].find((r) => r.querySelector(":scope > a.tab"));
+  if (!row) return null;
+  const view = row.nextElementSibling;
+  return {
+    tabs: [...row.querySelectorAll(":scope > a")].map((a) => `${norm(a.textContent)} ${a.getAttribute("href")}${a.classList.contains("active") ? " (active)" : ""}`),
+    lines: (view?.innerText ?? "").split("\n").map(norm).filter(Boolean),
+    tables: [...(view?.querySelectorAll("table") ?? [])].map((t) => [...t.querySelectorAll("tr")].map((tr) => [...tr.children].map((c) => norm(c.textContent)).join(" | "))),
+    inputs: [...(view?.querySelectorAll("input") ?? [])].map((i) => `${i.type}=${i.value}`),
+    selects: [...(view?.querySelectorAll('[role="combobox"]') ?? [])].map((b) => norm(b.textContent)),
+  };
+};
+
+/** C4: the report picker as a keyboard user meets it — each toggle's label, aria-pressed and .active; focus; the h2; the exports; the URL. */
+const PICKER_STATE = () => {
+  const main = document.querySelector("main");
+  const norm = (s) => (s ?? "").replace(/\s+/g, " ").trim();
+  const buttons = [...(main?.querySelectorAll(".reports-print-area > .tab-row button") ?? [])];
+  const a = document.activeElement;
+  return {
+    url: location.pathname + location.search,
+    buttons: buttons.map((b) => ({ label: norm(b.textContent), pressed: b.getAttribute("aria-pressed"), active: b.classList.contains("active"), type: b.getAttribute("type") })),
+    focus: buttons.indexOf(a), focusVisible: Boolean(a && a.matches(":focus-visible")),
+    h2: norm(main?.querySelector(".reports-print-area h2")?.textContent), h2s: main ? main.querySelectorAll("h2").length : 0,
+    exports: [...(main?.querySelectorAll('a[href^="/finance/reports/export"]') ?? [])].map((x) => x.getAttribute("href")),
+  };
+};
+
+/** C4: the statement's Client / Vendor links — label, target, aria-current, .active; focus; the h1; the URL. */
+const STMT_LINKS = () => {
+  const main = document.querySelector("main");
+  const norm = (s) => (s ?? "").replace(/\s+/g, " ").trim();
+  const row = [...(main?.querySelectorAll(".tab-row") ?? [])].find((r) => r.querySelector(":scope > a.tab"));
+  const links = row ? [...row.querySelectorAll(":scope > a")] : [];
+  const a = document.activeElement;
+  return {
+    url: location.pathname + location.search,
+    links: links.map((l) => ({ label: norm(l.textContent), href: l.getAttribute("href"), current: l.getAttribute("aria-current"), active: l.classList.contains("active") })),
+    focus: links.indexOf(a), focusVisible: Boolean(a && a.matches(":focus-visible")),
+    h1: norm(main?.querySelector("h1")?.textContent),
+  };
+};
+
+/** C4: every EmptyState in <main> — its text, whether it shows and sits inside the viewport, and the heading it follows. */
+const FIN_EMPTY = () => {
+  const vw = document.documentElement.clientWidth;
+  const main = document.querySelector("main");
+  const norm = (s) => (s ?? "").replace(/\s+/g, " ").trim();
+  const heads = [...(main?.querySelectorAll("h1, h2, h3") ?? [])];
+  return [...(main?.querySelectorAll('[data-slot="empty-state"]') ?? [])].map((e) => {
+    const r = e.getBoundingClientRect();
+    const cs = getComputedStyle(e);
+    const before = heads.filter((h) => h.compareDocumentPosition(e) & Node.DOCUMENT_POSITION_FOLLOWING).pop();
+    return {
+      text: norm(e.textContent), visible: cs.display !== "none" && cs.visibility !== "hidden" && r.width > 0 && r.height > 0, inView: r.left >= -1 && r.right <= vw + 1,
+      after: before ? `${before.tagName.toLowerCase()} ${norm(before.textContent)}` : null,
+      controls: e.querySelectorAll("a, button, [role=button]").length,
+    };
+  });
+};
+
 // ------------------------------------------------------------------------------------- run
 const pinned = WRITE ? null : JSON.parse(readFileSync(BASELINE_FILE, "utf8"));
 const pinnedActions = WRITE ? null : JSON.parse(readFileSync(ACTIONS_FILE, "utf8"));
@@ -795,6 +1025,7 @@ await admin(async (c) => {
 });
 let deptDb = null;
 let projDb = null;
+let finDb = null;
 {
   // A Staff member for the permission pass (this run's copy only, never the template).
   const c = new pg.Client({ connectionString: env.DATABASE_URL });
@@ -814,6 +1045,12 @@ let projDb = null;
     names: Object.fromEntries((await c.query("select id, name from projects where org_id = $1 and id in (1, 2)", [org])).rows.map((r) => [r.id === 1 ? "project-detail" : "project-empty", r.name])),
     tasks: (await c.query("select t.id, t.title, t.status, t.priority, e.name as assignee from tasks t left join employees e on e.id = t.assignee_id where t.org_id = $1 and t.project_id = 1 order by t.id", [org])).rows,
     emptyTasks: (await c.query("select count(*)::int as n from tasks where org_id = $1 and project_id = 2", [org])).rows[0].n,
+  };
+  // C4: the seed's first account by code (the ledger opens on it) and account 1 — the Cash account whose
+  // General Ledger the value pass reads.
+  finDb = {
+    first: (await c.query("select id, code, name from accounts where org_id = $1 order by code limit 1", [org])).rows[0],
+    account1: (await c.query("select code, name from accounts where org_id = $1 and id = 1", [org])).rows[0] ?? null,
   };
   await c.end();
 }
@@ -912,7 +1149,10 @@ async function login(email) {
 }
 const is418 = (s) => /#418\b|errors\/418|hydrat/i.test(s);
 
-const now = { frozenNow: FROZEN_NOW, chromium: browser.version(), states: {}, staff: {}, sweep: {}, d6: {}, c2: { dept: {}, payroll: {}, dates: {} }, c3: { layout: {}, kanban: {}, empty: {}, hours: {} } };
+const now = {
+  frozenNow: FROZEN_NOW, chromium: browser.version(), states: {}, staff: {}, sweep: {}, d6: {}, c2: { dept: {}, payroll: {}, dates: {} }, c3: { layout: {}, kanban: {}, empty: {}, hours: {} },
+  c4: { ledger: {}, values: {}, picker: {}, links: {}, empty: {} },
+};
 const prompts = {};
 let fdNode = {};
 const fdBrowsers = [];
@@ -965,6 +1205,8 @@ try {
       await pass(`owner ${locale}`, ownerState, locale, null, WIDTHS, async ({ id, w, page, status, finalPath, errors }) => {
         now.states[`${id}|${locale}|${w}`] = { status, finalPath, ...(await page.evaluate(MEASURE, C1_LITERALS)), ...errFacts(errors) };
         if (w === 1440 || (w === 390 && locale === "en")) acts.owner[`${id}|${locale}|${w}`] = await page.evaluate(ACTIONS);
+        // C4: the ledger / chart gate, last (it scrolls the table and the page).
+        if (id === "ledger" || id === "coa") now.c4.ledger[`${id}|${locale}|${w}`] = await page.evaluate(LEDGER_FACTS, C4_WORDS[locale].addAccount);
       });
       await pass(`staff ${locale}`, staffState, locale, null, [[1440, 900]], async ({ id, page, status, finalPath, errors }) => {
         now.staff[`${id}|${locale}`] = { status, finalPath, ...errFacts(errors) };
@@ -976,7 +1218,7 @@ try {
     }
   // D-6: every StatRow consumer at every width, EN and AR; actions at 1440 and 390. (--write-d6 records
   // the consumers C2 must leave as they were — not C2's own HR strips.)
-  if (!WRITE_C3REF)
+  if (!WRITE_C3REF && !WRITE_C4REF)
     for (const locale of ["en", "ar"])
       await pass(`D-6 ${locale}`, ownerState, locale, null, WIDTHS, async ({ id, w, page, status, finalPath, errors }) => {
         now.d6[`${id}|${locale}|${w}`] = { status, finalPath, ...(await page.evaluate(D6M)), ...(w === 1440 || w === 390 ? { actions: await page.evaluate(ACTIONS) } : {}), ...errFacts(errors) };
@@ -985,7 +1227,7 @@ try {
   // C3: the populated and the empty project at every width, EN and AR — the composition (C3M) and, at 1440
   // and 390 on the populated one, the kanban's heads and cards at rest and each card hovered (CSS
   // transitions finished). --write-c3ref records this pass on C2's build.
-  if (!WRITE_D6)
+  if (!WRITE_D6 && !WRITE_C4REF)
     for (const locale of ["en", "ar"])
       await pass(`C3 ${locale}`, ownerState, locale, null, WIDTHS, async ({ id, w, page, status, finalPath, errors }) => {
         const layout = await page.evaluate(C3M, C3_NUMERIC);
@@ -1005,9 +1247,64 @@ try {
         now.c3.layout[`${id}|${locale}|${w}`] = { status, finalPath, ...layout, ...(kanbanFacts ? { kanbanFacts } : {}), ...errFacts(errors) };
       }, ROUTES.filter(([id]) => C3_DETAIL.includes(id)));
 
-  // C2 probes, EN and AR, as a person would use the pages. One page each, the frozen clock, the owner.
-  async function probePage(locale, [w, h], path) {
-    const ctx = await context({ storageState: ownerState, locale: BROWSERS[locale].locale, timezoneId: BROWSERS[locale].timezoneId });
+  // C4: the value pass — every report and statement case at 1440 and 390, EN / AR (REPORT_FACTS /
+  // STATEMENT_FACTS); at 1440 also a search, the first drill-down and a statement's from-date filter, read
+  // the same way. --write-c4ref records this pass on C3's build; every other run holds it to that record.
+  const C4_ON = ROUTES.some(([id]) => C4_ROUTES.includes(id));
+  if (!WRITE_D6 && !WRITE_C3REF && (C4_ON || WRITE_C4REF)) {
+    const settle = async (page) => {
+      await page.waitForLoadState("networkidle");
+      await page.evaluate(() => { document.getAnimations().forEach((a) => a.finish()); return new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))); });
+    };
+    for (const locale of ["en", "ar"])
+      await pass(`C4 values ${locale}`, ownerState, locale, null, [[1440, 900], [390, 844]], async ({ id, w, page, status, finalPath, errors }) => {
+        now.c4.values[`${id}|${locale}|${w}`] = { status, finalPath, ...(await page.evaluate(id.startsWith("report-") ? REPORT_FACTS : STATEMENT_FACTS)), ...errFacts(errors) };
+        if (w !== 1440) return;
+        const more = [];
+        const onConsole = (m) => m.type() === "error" && more.push(`console: ${m.text().slice(0, 160)}`);
+        const onError = (e) => more.push(`pageerror: ${String(e.message).slice(0, 160)}`);
+        page.on("console", onConsole);
+        page.on("pageerror", onError);
+        try {
+          if (C4_SEARCH[id]) {
+            const box = page.locator(".reports-print-area > .card.no-print input:not([type])");
+            await box.fill(C4_SEARCH[id]);
+            await settle(page);
+            now.c4.values[`${id}+search|${locale}|${w}`] = { term: C4_SEARCH[id], ...(await page.evaluate(REPORT_FACTS)), ...errFacts(more) };
+            await box.fill("");
+            await settle(page);
+          }
+          const drillTarget = C4_DRILL[id] ? page.locator(`.reports-print-area > .card:not(.no-print) ${C4_DRILL[id]}`).first() : null;
+          if (drillTarget && !(await drillTarget.count())) now.c4.values[`${id}+drill|${locale}|${w}`] = { target: null, opened: false, closed: false, drawer: null, ...errFacts(more) };
+          else if (drillTarget) {
+            const target = (await drillTarget.innerText())?.replace(/\s+/g, " ").trim() ?? null;
+            await drillTarget.click();
+            const dialog = page.locator('[role="dialog"]');
+            const opened = await dialog.waitFor({ state: "visible", timeout: 15000 }).then(() => true, () => false);
+            await page.waitForFunction(() => !document.querySelector('[role="dialog"] .animate-spin'), null, { timeout: 15000 }).catch(() => {});
+            await settle(page);
+            const drawer = opened ? await page.evaluate(() => (document.querySelector('[role="dialog"]')?.innerText ?? "").split("\n").map((s) => s.replace(/\s+/g, " ").trim()).filter(Boolean)) : null;
+            await page.keyboard.press("Escape");
+            const closed = await dialog.waitFor({ state: "detached", timeout: 15000 }).then(() => true, () => false);
+            now.c4.values[`${id}+drill|${locale}|${w}`] = { target, opened, closed, drawer, ...errFacts(more) };
+          }
+          if (C4_FROM[id]) {
+            await page.locator('main input[type="date"]').first().fill(C4_FROM[id]);
+            await page.waitForTimeout(500);
+            await settle(page);
+            now.c4.values[`${id}+from|${locale}|${w}`] = { from: C4_FROM[id], ...(await page.evaluate(STATEMENT_FACTS)), ...errFacts(more) };
+          }
+        } finally {
+          page.off("console", onConsole);
+          page.off("pageerror", onError);
+        }
+      }, C4_VALUE_CASES);
+  }
+
+  // C2 probes, EN and AR, as a person would use the pages. One page each, the frozen clock, the owner
+  // (C4: or the org a probe registered).
+  async function probePage(locale, [w, h], path, storageState = ownerState) {
+    const ctx = await context({ storageState, locale: BROWSERS[locale].locale, timezoneId: BROWSERS[locale].timezoneId });
     await ctx.addCookies([{ name: "locale", value: locale, url: BASE }, { name: "theme", value: "light", url: BASE }]);
     const page = await ctx.newPage();
     await page.clock.setFixedTime(new Date(FROZEN_NOW));
@@ -1222,6 +1519,126 @@ try {
       });
     console.log("  C3 probes done");
   }
+
+  // C4 probes, EN and AR at 1440 and 390, the owner. Keys are pressed only once Tab has reached what they are
+  // meant for; a step that cannot be reached is recorded as such and fails below.
+  // The report picker: Tab to it (Profit & Loss, pressed); Tab ×3, Enter — Trial Balance; Tab ×4, Space — VAT
+  // Summary; Shift+Tab ×7, Enter — Profit & Loss again. After each: the URL, the toggles, the h2, the exports
+  // and what the report says (held to c4ref below). Then the search box's name.
+  async function reportProbe(locale, size) {
+    const W = C4_WORDS[locale];
+    const { ctx, page, errors } = await probePage(locale, size, "/finance/reports");
+    const steps = [];
+    const shown = async (kind) => {
+      await page.waitForFunction((label) => {
+        const h = document.querySelector("main .reports-print-area h2");
+        return Boolean(h && h.textContent.trim() === label && !document.querySelector("main .reports-print-area .animate-spin, main .reports-print-area [aria-busy='true']"));
+      }, W.kinds[kind], { timeout: 30000 }).catch(() => {});
+      await page.waitForLoadState("networkidle");
+      await twoFrames(page);
+    };
+    const push = async (step, kind, extra = {}) => steps.push({ step, kind, ...extra, ...(await page.evaluate(PICKER_STATE)), facts: await page.evaluate(REPORT_FACTS) });
+    await push("loaded", "pl");
+    const tabs = await tabUntil(page, "main .reports-print-area > .tab-row button");
+    await push(`Tab ×${tabs} to the picker`, "pl", { tabs, keyboard: true });
+    if (tabs !== null)
+      for (const [n, key, kind, back] of [[3, "Enter", "tb", false], [4, " ", "vat", false], [7, "Enter", "pl", true]]) {
+        for (let i = 0; i < n; i++) await page.keyboard.press(back ? "Shift+Tab" : "Tab");
+        await page.keyboard.press(key);
+        await shown(kind);
+        await push(`${back ? "Shift+Tab" : "Tab"} ×${n}, ${key === " " ? "Space" : key} (${kind})`, kind, { keyboard: true });
+      }
+    const box = page.locator(".reports-print-area > .card.no-print input:not([type])");
+    const search = { label: await box.getAttribute("aria-label"), placeholder: await box.getAttribute("placeholder"), named: await page.getByRole("textbox", { name: W.search, exact: true }).count() };
+    await ctx.close();
+    return { steps, errors, search };
+  }
+  // The statement's Client / Vendor links: loaded on Client; Tab to Vendor, Enter — the vendor page; Tab to
+  // Client, Enter — back. After each: aria-current, .active, focus, the h1 and the URL.
+  async function linksProbe(locale, size) {
+    const { ctx, page, errors } = await probePage(locale, size, "/finance/statements?kind=client");
+    const state = async () => ({ ...(await page.evaluate(STMT_LINKS)), facts: await page.evaluate(STATEMENT_FACTS) });
+    const steps = [{ step: "loaded", kind: "client", ...(await state()) }];
+    for (const kind of ["vendor", "client"]) {
+      const tabs = await tabUntil(page, `main .tab-row > a[href="/finance/statements?kind=${kind}"]`);
+      steps.push({ step: `Tab ×${tabs} to ${kind}`, kind: kind === "vendor" ? "client" : "vendor", to: kind, tabs, keyboard: true, ...(await state()) });
+      if (tabs === null) break;
+      await Promise.all([page.waitForURL(new RegExp(`kind=${kind}$`), { timeout: 30000 }).catch(() => {}), page.keyboard.press("Enter")]);
+      await page.waitForLoadState("networkidle");
+      await twoFrames(page);
+      steps.push({ step: "Enter", kind, ...(await state()) });
+    }
+    await ctx.close();
+    return { steps, errors };
+  }
+  // The empty states: no account selected — the seeded org, an id no account has, on Ledger and Chart of
+  // Accounts; then an org registered through the UI in this run's TEST-ONLY copy, which has its chart of
+  // accounts and a starter bank account but no transaction, payment or journal entry — Ledger (on its first
+  // account), Payments, New Journal Entry, Bank Accounts — and Bank Accounts again once that one bank
+  // account is deleted (nothing references it: the org has no payment).
+  async function finEmptyState(locale, size, path, storageState) {
+    const { ctx, page, errors } = await probePage(locale, size, path, storageState);
+    const out = { path, ...(await page.evaluate(MEASURE, C1_LITERALS)), empty: await page.evaluate(FIN_EMPTY), actions: await page.evaluate(ACTIONS), ...errFacts(errors) };
+    await ctx.close();
+    return out;
+  }
+  async function registerFinanceOrg() {
+    const email = "c4-empty-finance@visual-baseline.test";
+    const password = `Aa1!${randomUUID()}`;
+    const ctx = await context({ locale: "en-US", timezoneId: "UTC" });
+    const p = await ctx.newPage();
+    await p.setViewportSize({ width: 1440, height: 900 });
+    await p.goto(`${BASE}/register`, { waitUntil: "networkidle", timeout: 60000 });
+    await p.fill('input[name="orgName"]', "TEST-ONLY Empty Finance Co. (Fictional)");
+    await p.fill('input[name="name"]', "Empty Finance Owner");
+    await p.fill('input[name="email"]', email);
+    await p.fill('input[name="password"]', password);
+    const confirm = p.locator('input[name="confirmPassword"]');
+    if (await confirm.count()) await confirm.fill(password);
+    await pickCountry(p);
+    await Promise.all([p.waitForURL(`${BASE}/dashboard`, { timeout: 60000 }), p.getByRole("button", { name: /register|create|sign up/i }).first().click()]);
+    const state = await ctx.storageState();
+    await ctx.close();
+    const c = new pg.Client({ connectionString: env.DATABASE_URL });
+    await c.connect();
+    try {
+      const org = (await c.query("select org_id from users where email = $1", [email])).rows[0].org_id;
+      const count = async (table) => (await c.query(`select count(*)::int as n from ${table} where org_id = $1`, [org])).rows[0].n;
+      return {
+        state, org, first: (await c.query("select code, name from accounts where org_id = $1 order by code limit 1", [org])).rows[0],
+        banks: await count("bank_accounts"), payments: await count("payments"), journal: await count("journal_entries"),
+      };
+    } finally {
+      await c.end();
+    }
+  }
+  if (!RECORD_ONLY) {
+    const EDGE_SIZES = [[1440, 900], [390, 844]];
+    for (const locale of ["en", "ar"])
+      for (const size of EDGE_SIZES) {
+        if (ROUTES.some(([id]) => id.startsWith("reports-"))) now.c4.picker[`${locale}|${size[0]}`] = await reportProbe(locale, size);
+        if (ROUTES.some(([id]) => id.startsWith("statement"))) now.c4.links[`${locale}|${size[0]}`] = await linksProbe(locale, size);
+      }
+    if (ROUTES.some(([id]) => ["ledger", "coa", "payments", "journal", "bank-accounts"].includes(id))) {
+      const fresh = await registerFinanceOrg();
+      now.c4.emptyOrg = { first: fresh.first, banks: fresh.banks, payments: fresh.payments, journal: fresh.journal };
+      const run = async (name, path, state) => {
+        for (const locale of ["en", "ar"]) for (const size of EDGE_SIZES) now.c4.empty[`${name}|${locale}|${size[0]}`] = await finEmptyState(locale, size, path, state);
+      };
+      await run("no-account-ledger", "/finance/ledger?account=999999", ownerState);
+      await run("no-account-coa", "/finance/chart-of-accounts?account=999999", ownerState);
+      await run("no-transactions", "/finance/ledger", fresh.state);
+      await run("no-payments", "/finance/payments", fresh.state);
+      await run("no-journal", "/finance/journal", fresh.state);
+      await run("no-recent-payments", "/finance/bank-accounts", fresh.state);
+      const c = new pg.Client({ connectionString: env.DATABASE_URL });
+      await c.connect();
+      now.c4.emptyOrg.deleted = (await c.query("delete from bank_accounts where org_id = $1", [fresh.org])).rowCount;
+      await c.end();
+      await run("no-bank-accounts", "/finance/bank-accounts", fresh.state);
+    }
+    console.log("  C4 probes done");
+  }
   // formatDisplayDate in the browser: identical to Node whatever the browser's locale and zone. (A
   // tree without the helper — main before C0 — has nothing to compare; the check below says so.)
   const fdSource = existsSync("src/lib/i18n/format-date.ts") ? readFileSync("src/lib/i18n/format-date.ts", "utf8") : "exports.formatDisplayDate = () => undefined;";
@@ -1277,6 +1694,12 @@ const c3Record = () => ({
     badge: v.badge, kanban: v.kanban, kanbanFacts: v.kanbanFacts ?? null,
   }])),
 });
+// The C4 record: what C3's build said for every report and statement case — and for the search, the drill-down
+// and the statement filter — with the commit and build it was measured on.
+const c4Record = () => ({
+  recordedOn: { commit: git("rev-parse", "HEAD"), srcClean: git("status", "--porcelain", "--", "src") === "", build: buildId, chromium: now.chromium },
+  states: now.c4.values,
+});
 if (MEASURE_OUT) writeFileSync(MEASURE_OUT, JSON.stringify({ ...now, blockedRequests: blocked, actions: acts }, null, 1) + "\n");
 if (WRITE_D6) {
   const failed = Object.entries(now.d6).filter(([, v]) => v.status !== 200 || v.consoleErrors || v.pageErrors || v.r418).map(([k]) => k);
@@ -1300,25 +1723,42 @@ if (WRITE_C3REF) {
   rmSync(env.STORAGE_FAKE_DIR, { recursive: true, force: true });
   process.exit(0);
 }
+if (WRITE_C4REF) {
+  const failed = Object.entries(now.c4.values).filter(([k, v]) => (!k.includes("+") && v.status !== 200) || v.consoleErrors || v.pageErrors || v.r418 || v.opened === false || v.closed === false).map(([k]) => k);
+  if (failed.length || !Object.keys(now.c4.values).length) refuse(`--write-c4ref: not recording a pass with errors or a failed route: ${failed.slice(0, 4).join(", ") || "(nothing measured)"}`);
+  const file = args.find((a) => a.startsWith("--write-c4ref="))?.slice(14) || BASELINE_FILE;
+  const out = JSON.parse(readFileSync(file, "utf8"));
+  out.c4ref = c4Record();
+  writeFileSync(file, JSON.stringify(out, null, 1) + "\n");
+  console.log(`• wrote the C4 record into ${file}: ${Object.keys(out.c4ref.states).length} states, measured on ${out.c4ref.recordedOn.commit.slice(0, 7)} (src ${out.c4ref.recordedOn.srcClean ? "clean" : "MODIFIED"}), build ${buildId}`);
+  rmSync(env.STORAGE_FAKE_DIR, { recursive: true, force: true });
+  process.exit(0);
+}
 if (WRITE) {
-  // The probes are checked, not pinned; the D-6 pass is pinned as its record. The C3 record was measured
-  // on C2's build and cannot be re-measured here: it is carried over as it is.
+  // The probes are checked, not pinned; the D-6 pass is pinned as its record. The C3 and C4 records were
+  // measured on C2's and C3's builds and cannot be re-measured here: they are carried over as they are.
   const measured = { frozenNow: now.frozenNow, chromium: now.chromium, states: now.states, staff: now.staff, sweep: now.sweep };
-  const c3ref = existsSync(BASELINE_FILE) ? JSON.parse(readFileSync(BASELINE_FILE, "utf8")).c3ref : undefined;
-  writeFileSync(BASELINE_FILE, JSON.stringify({ ...measured, blockedRequests: blocked, d6: d6Record(), ...(c3ref ? { c3ref } : {}) }, null, 1) + "\n");
+  const prev = existsSync(BASELINE_FILE) ? JSON.parse(readFileSync(BASELINE_FILE, "utf8")) : {};
+  writeFileSync(BASELINE_FILE, JSON.stringify({ ...measured, blockedRequests: blocked, d6: d6Record(), ...(prev.c3ref ? { c3ref: prev.c3ref } : {}), ...(prev.c4ref ? { c4ref: prev.c4ref } : {}) }, null, 1) + "\n");
   writeFileSync(ACTIONS_FILE, JSON.stringify(acts, null, 1) + "\n");
   console.log(`• wrote ${BASELINE_FILE} (${Object.keys(now.states).length} owner states, ${Object.keys(now.staff).length} staff, ${Object.keys(now.sweep).length} sweep, the D-6 record) and ${ACTIONS_FILE}`);
 }
 const rebased = (k) => Boolean(REBASE?.includes(k.split("|")[0]));
 if (REBASE) {
   // The named routes' entries are replaced by this run's; every other entry is kept exactly as pinned
-  // (same keys, same order), so the diff of the two files is those routes and nothing else.
+  // (same keys, same order), so the diff of the two files is those routes and nothing else. A named route
+  // the baseline does not have yet (C4's three new finance routes) is added after the others; an entry of
+  // a route that is not named and not in the baseline is refused.
   const merge = (old, cur, what) => {
     const lost = Object.keys(old).filter((k) => !(k in cur));
     if (lost.length) refuse(`--rebaseline: ${what} in the baseline were not measured: ${lost.slice(0, 4).join(", ")}`);
     const out = {};
     for (const k of Object.keys(old)) out[k] = rebased(k) ? cur[k] : old[k];
-    for (const k of Object.keys(cur)) if (!(k in out)) refuse(`--rebaseline: ${what}: ${k} is not in the baseline`);
+    for (const k of Object.keys(cur)) {
+      if (k in out) continue;
+      if (!rebased(k)) refuse(`--rebaseline: ${what}: ${k} is not in the baseline`);
+      out[k] = cur[k];
+    }
     return out;
   };
   const nextBase = { ...pinned, states: merge(pinned.states, now.states, "owner states"), staff: merge(pinned.staff, now.staff, "staff states"), sweep: merge(pinned.sweep, now.sweep, "sweep states") };
@@ -1337,12 +1777,12 @@ const results = [];
 const check = (name, cond, extra = "") => results.push([Boolean(cond), name, extra]);
 const keys = Object.keys(now.states);
 const list = (xs) => (xs.length ? `${xs.length}: ${xs.slice(0, 6).join(" · ")}${xs.length > 6 ? " …" : ""}` : "");
-const scoped = (o) => Object.fromEntries(Object.entries(o).filter(([k]) => !ONLY || k.split("|")[0].includes(ONLY)));
+const scoped = (o) => Object.fromEntries(Object.entries(o).filter(([k]) => onlyId(k.split("|")[0])));
 
 check(`isolation: TEST-ONLY loopback database, no .env, server on 127.0.0.1, browser confined to loopback (${blocked} other requests refused)`, target.pathname === `/${DB}` && !existsSync(join(ROOT, ".env")));
 check(`pinned Chromium (${now.chromium})`, now.chromium === base.chromium, `baseline ${base.chromium}`);
 const pages = new Set(ROUTES.map((r) => r[2]));
-check(`the routes exercise all 36 DEV-UI-01.7 pages (${ROUTES.length} routes)`, ONLY || (pages.size === 36 && ROUTES.length === 44), [...pages].length);
+check(`the routes exercise all 36 DEV-UI-01.7 pages (${ROUTES.length} routes; C4 added the VAT report and the vendor statement, with and without a party)`, ONLY || (pages.size === 36 && ROUTES.length === 47), [...pages].length);
 check(`measured ${keys.length} owner states (${ROUTES.length} routes × EN/AR × 4 widths), ${Object.keys(now.staff).length} staff, ${Object.keys(now.sweep).length} sweep`,
   keys.length === ROUTES.length * 8 && Object.keys(now.staff).length === ROUTES.length * 2 && Object.keys(now.sweep).length === ROUTES.length * 2);
 const B = scoped(base.states);
@@ -1426,12 +1866,33 @@ if (REBASE) {
   const problems = [];
   const renamed = [];
   const added = [];
+  const stated = [];
+  const fresh = [];
   const deptNames = (deptDb?.depts ?? []).map((d) => d.name);
+  // C4 adds no control; it has two intended state changes: the report picker's buttons say whether they are
+  // pressed — pressed=true on the report shown, pressed=false on the other seven — and the statement's
+  // Client / Vendor links say which is the current page (current=page on the kind shown). The baseline's
+  // lists are read with exactly those states applied; everything else must match as before.
+  const c4Intended = (k, a) => {
+    const [id, l] = k.split("|");
+    const [kind, name, href, type, state] = a.split("|");
+    if (id.startsWith("reports-") && kind === "button" && type === "type=button" && !state && Object.values(C4_WORDS[l].kinds).includes(name))
+      return [kind, name, href, type, `pressed=${name === C4_WORDS[l].kinds[reportOf(id)]}`].join("|");
+    if (id.startsWith("statement") && kind === "link" && /^\/finance\/statements\?kind=(client|vendor)$/.test(href) && !state)
+      return [kind, name, href, type, href.endsWith(`kind=${id.includes("vendor") ? "vendor" : "client"}`) ? "current=page" : ""].join("|");
+    return a;
+  };
   for (const group of ["owner", "staff"])
     for (const k of Object.keys(acts[group]).filter(rebased)) {
       const split = (a) => { const [kind, name, ...rest] = a.split("|"); return [[kind, ...rest].join("|"), name]; };
       const groups = (xs) => xs.map(split).reduce((m, [r, n]) => m.set(r, [...(m.get(r) ?? []), n].sort()), new Map());
-      const was = groups(baseActs[group][k] ?? []);
+      // A route the baseline does not have yet is recorded, not compared (C4 records its three new routes on
+      // C3's build first, so its own re-record compares them like the rest).
+      if (!baseActs[group][k]) { fresh.push(`${group} ${k}: ${acts[group][k].length} actions`); continue; }
+      const applied = baseActs[group][k].map((a) => c4Intended(k, a));
+      const changed = applied.filter((a, i) => a !== baseActs[group][k][i]);
+      if (changed.length) stated.push(`${group} ${k}: ${changed.length} × ${[...new Set(changed.map((a) => a.split("|").pop().replace(/=.*/, "")))].join(", ")} (${changed.map((a) => `${a.split("|")[1]}: ${a.split("|").pop()}`).join(", ")})`);
+      const was = groups(applied);
       const is = groups(acts[group][k]);
       const intended = new Map(k.startsWith("hr-employees|") ? [["button||type=button|pressed=true", [ALL_DEPARTMENTS[k.split("|")[1]]]], ["button||type=button|pressed=false", [...deptNames].sort()]] :
         // C3: the populated project's task cards, buttons now (they were divs with onClick, not actions) —
@@ -1458,7 +1919,13 @@ if (REBASE) {
   for (const x of renamed) console.log(`    ${x}`);
   console.log(`• actions added in the re-recorded routes (${added.length}):`);
   for (const x of added) console.log(`    ${x}`);
-  check(`re-recorded routes: actions equivalent to the baseline — same kinds, targets, types and states; English names unchanged; Arabic names changed only from C1 page copy to Arabic (${renamed.length} lists); added only the intended controls — C2's department filters, C3's task-card buttons (${added.length} groups)`,
+  console.log(`• C4 intended state changes in the re-recorded routes (${stated.length} lists):`);
+  for (const x of stated) console.log(`    ${x}`);
+  if (fresh.length) {
+    console.log(`• routes recorded for the first time (${fresh.length} lists; nothing to compare them with):`);
+    for (const x of fresh) console.log(`    ${x}`);
+  }
+  check(`re-recorded routes: actions equivalent to the baseline — same kinds, targets, types and states; English names unchanged; Arabic names changed only from C1 page copy to Arabic (${renamed.length} lists); added only the intended controls — C2's department filters, C3's task-card buttons (${added.length} groups); C4's intended states only — the report picker's pressed=true / false, the statement links' current=page (${stated.length} lists)`,
     problems.length === 0, list(problems));
 }
 
@@ -1742,6 +2209,190 @@ for (const [run, r] of eRuns) {
 }
 check(`C3 empty kanban (EN / AR at 1440 and 390; the seeded project with ${projDb?.emptyTasks} tasks): the Tasks h2 with Add Task beside it, the EmptyState after it, no column or card; Tab reaches Add Task, Enter opens New Task, Escape returns to it; no error, no overflow`,
   (ONLY && !eRuns.length) || ((ONLY || eRuns.length === 4) && projDb?.emptyTasks === 0 && eBad.length === 0), list(eBad));
+
+// ------------------------------------------------------------------------------------- C4 targets
+// The 14 finance routes, EN and AR at every width (112 states); the ledger / chart gate; the value pass held
+// to c4ref; the three probes.
+const c4Keys = keys.filter((k) => C4_ROUTES.includes(k.split("|")[0]));
+const c4 = (pred) => c4Keys.filter((k) => !pred(now.states[k], k));
+const pathOf = (k) => ROUTES.find((r) => r[0] === k.split("|")[0])?.[1];
+check(`C4: the ${C4_ROUTES.length} finance routes were measured (${c4Keys.length} states; ${C4_NEW.join(", ")} new in C4)`, ONLY || c4Keys.length === C4_ROUTES.length * 8, c4Keys.length);
+const c4Route = c4((s, k) => s.status === 200 && s.finalPath === pathOf(k));
+check("C4: every finance route answers 200 where it is — each report, statement and party variant included", c4Route.length === 0, list(c4Route.map(show((s) => `${s.status} ${s.finalPath}`))));
+const c4Ph = c4((s) => s.pageHeader?.n === 1 && s.pageHeader.h1Inside && s.pageHeader.metaFirst && s.pageHeader.titleAtStart && s.pageHeader.trailing !== "misplaced" && !s.pageHeader.overlap);
+check("C4: one PageHeader per finance page, holding its only h1 (Financial Reports with CSV / Excel / PDF, Payment Records with Record Payment, New Journal Entry with its Manual pill, Bank Accounts with New Account); meta before actions; the title at the inline start; meta / actions at the end of its line or below it, never over it",
+  c4Ph.length === 0, list(c4Ph.map(show((s) => JSON.stringify(s.pageHeader)))));
+const c4Out = c4((s, k) => {
+  const [id, l] = k.split("|");
+  return JSON.stringify(s.outline) === JSON.stringify(c4Outline(id, l, now.c4.ledger[k]?.selected)) && s.h1 === 1 && s.skips === 0;
+});
+check("C4: every finance outline exact — the page title the h1 (an h3 in C3); the selected report (Profit & Loss, Trial Balance, AR Aging, General Ledger, VAT Summary) the h2; on Ledger and Chart of Accounts the selected account (code · name, as its row lists it) the h2; Recent journal entries and Recent payment records h2s; the statements and Payment Records their h1 alone; no skip (EN / AR, all widths)",
+  c4Out.length === 0, list(c4Out.map(show((s) => JSON.stringify(s.outline)))));
+const c4Ov = c4((s) => s.overflow === 0 && s.offenders === 0 && s.tablesBeyond === 0);
+check("C4: no page overflow, nothing past the viewport and no table beyond it on any finance page at any width — Ledger and Chart of Accounts at 390 were 139 px (EN) / 122 px (AR), 2 elements, 1 table",
+  c4Ov.length === 0, list(c4Ov.map(show((s) => `${s.overflow}px ${s.offenders} el ${s.tablesBeyond} tables`))));
+const c4Err = c4((s) => !s.consoleErrors && !s.pageErrors && !s.r418);
+check("C4: zero console errors, page errors and React #418 on every finance state", c4Err.length === 0, list(c4Err.map(show((s) => JSON.stringify(s.errorSample)))));
+const c4Ind = c4((s) => s.indic === 0);
+check("C4: Western digits — no Arabic-Indic digit on any finance page", c4Ind.length === 0, list(c4Ind.map(show((s) => s.indic))));
+// New Journal Entry's form is not C4's (journal-form.tsx is byte-pinned; its controls are DEV-UI-01.8's).
+const JOURNAL_FORM = { unnamed: 6, pointerOnly: 1 };
+const c4Ctl = c4((s, k) => s.unnamed === (k.startsWith("journal|") ? JOURNAL_FORM.unnamed : 0) && s.pointerOnly === (k.startsWith("journal|") ? JOURNAL_FORM.pointerOnly : 0));
+check("C4: every control named and nothing pointer-only on the finance pages — the report search (unnamed in C3) now named; New Journal Entry keeps exactly its form's 6 unnamed line inputs and pointer-only Add line (JournalForm untouched, deferred to DEV-UI-01.8)",
+  c4Ctl.length === 0, list(c4Ctl.map(show((s) => `unnamed ${s.unnamed}, pointer-only ${s.pointerOnly}`))));
+const c4Staff = Object.entries(now.staff).filter(([k]) => C4_ROUTES.includes(k.split("|")[0]));
+check("C4: permissions — Staff open the 14 finance routes where they are, as the baseline says (as in C3)",
+  (ONLY && !c4Staff.length) || ((ONLY || c4Staff.length === 28) && c4Staff.every(([k, v]) => v.status === 200 && v.finalPath === pathOf(k) && BS[k]?.finalPath === v.finalPath)),
+  list(c4Staff.filter(([k, v]) => v.status !== 200 || v.finalPath !== pathOf(k) || BS[k]?.finalPath !== v.finalPath).map(([k, v]) => `${k} ${v.status} ${v.finalPath}`)));
+
+// §42: the ledger / chart gate (blocking).
+const lg = Object.entries(now.c4.ledger);
+const lgBad = lg.filter(([k, f]) => {
+  const [, l, w] = k.split("|");
+  const wide = Number(w) > 1100;
+  const sel = f?.selected;
+  return !(f && f.tracks === (wide ? 2 : 1) && (!wide || f.first === "280px") && (wide ? f.sideBySide : f.stacked) && f.listIn && f.detailIn &&
+    sel && sel.code === finDb.first.code && (l === "en" ? sel.name === finDb.first.name : /[؀-ۿ]/.test(sel.name)) &&
+    f.table && f.scroll && f.scroll.inView && f.scroll.lastReachable && (w !== "390" || f.scroll.scrollWidth > f.scroll.clientWidth) &&
+    f.add && f.add.inView && f.add.hit && !f.add.disabled);
+}).map(([k, f]) => `${k} ${JSON.stringify(f)}`);
+check(`C4 ledger / chart gate (blocking; Ledger and Chart of Accounts, EN / AR, every width — ${lg.length} states): two panes at 1440 (the 280px account list beside the ledger), one track at 1024 / 768 / 390 (the ledger below the list); both panes inside the viewport; the first account (${finDb?.first?.code} · ${finDb?.first?.name}) selected; the ledger table scrolling inside its own container (wider than it at 390) with its last column reachable; Add Account inside the viewport and hit-testable`,
+  (ONLY && !lg.length) || ((ONLY || lg.length === 16) && lgBad.length === 0), list(lgBad));
+
+// §47 / §48: what every report and statement says, against what C3's build said (c4ref).
+const c4Ref = (WRITE ? null : pinned.c4ref) ?? null;
+const C4R = c4Ref?.states ?? {};
+const vals = Object.entries(now.c4.values);
+const ERR_FIELDS = ["consoleErrors", "pageErrors", "r418", "errorSample"];
+const valErr = vals.filter(([k, v]) => (!k.includes("+") && v.status !== 200) || v.consoleErrors || v.pageErrors || v.r418 || v.opened === false || v.closed === false)
+  .map(([k, v]) => `${k} ${v.status ?? ""} ${JSON.stringify(v.errorSample ?? "")}`);
+const nValues = C4_VALUE_CASES.length * 4 + (Object.keys(C4_SEARCH).length + Object.keys(C4_DRILL).length + Object.keys(C4_FROM).length) * 2;
+check(`C4 value pass: ${C4_VALUE_CASES.length} report and statement cases × EN / AR × 1440 / 390 (${vals.filter(([k]) => !k.includes("+")).length} states) and ${vals.filter(([k]) => k.includes("+")).length} interactions (a search, a drill-down, a statement filter) measured, each answering 200 with no error`,
+  (ONLY && !vals.length) || ((ONLY || vals.length === nValues) && valErr.length === 0), list(valErr));
+check(`C4 record: c4ref covers every state of the pass (measured on ${c4Ref?.recordedOn?.commit?.slice(0, 7) ?? "—"}, src ${c4Ref?.recordedOn?.srcClean ? "clean" : "MODIFIED"}, build ${c4Ref?.recordedOn?.build ?? "—"})`,
+  (ONLY && !vals.length) || (c4Ref?.recordedOn?.srcClean === true && vals.every(([k]) => C4R[k]) && (ONLY || Object.keys(C4R).every((k) => now.c4.values[k]))), list(vals.filter(([k]) => !C4R[k]).map(([k]) => k)));
+const valueDiff = (pred) => vals.filter(([k]) => pred(k) && C4R[k]).flatMap(([k, v]) =>
+  [...new Set([...Object.keys(C4R[k]), ...Object.keys(v)])].filter((f) => !ERR_FIELDS.includes(f) && JSON.stringify(v[f]) !== JSON.stringify(C4R[k][f]))
+    .map((f) => `${k} ${f}: ${JSON.stringify(C4R[k][f]).slice(0, 90)} → ${JSON.stringify(v[f]).slice(0, 90)}`));
+const reportDiff = valueDiff((k) => k.startsWith("report-"));
+check("C4 report value equality (§47, blocking): the eight reports — and P&L / Balance Sheet / Cash Flow / VAT against the previous period, an account's General Ledger, a custom-range Trial Balance — say exactly what C3's build said: every line, figure and row count, every summary card (value, delta, balance badge), every drill target, the title and range, the picker, presets, dates and compare toggle, the CSV / Excel / PDF links; the search's result and the drill-down's drawer the same (EN / AR, 1440 and 390)",
+  reportDiff.length === 0, list(reportDiff));
+const statementDiff = valueDiff((k) => k.startsWith("statement-"));
+check("C4 statement value equality (§48, blocking): the client and vendor statements, with a party and without, say exactly what C3's build said — the Client / Vendor links, the party, every line, filter and date, every table row (opening, transactions, debit / credit, running balance, closing); after the from-date filter the same (EN / AR, 1440 and 390)",
+  statementDiff.length === 0, list(statementDiff));
+const GROSS = { en: "Gross Profit", ar: "إجمالي الربح" };
+const plVals = vals.filter(([k]) => /^report-(default|pl|pl-compare)\|/.test(k));
+const d2Bad = plVals.filter(([k, v]) => {
+  const l = k.split("|")[1];
+  return !(v.body?.includes(GROSS[l]) && v.cards?.some((c) => c.toLowerCase().startsWith(GROSS[l].toLowerCase())));
+}).map(([k]) => k);
+check("D-2 (held, not resolved): the P&L still shows Gross Profit — its summary card and its row — on every P&L state (the default route, ?report=pl, against the previous period), its figures C3's (above)",
+  (ONLY && !vals.length) || (plVals.length === 12 && d2Bad.length === 0), list(d2Bad));
+
+// §43: the report picker by keyboard (blocking).
+const pRuns = Object.entries(now.c4.picker);
+const pBad = [];
+const STEP_URLS = ["/finance/reports", "/finance/reports", "/finance/reports?report=tb", "/finance/reports?report=vat", "/finance/reports?report=pl"];
+for (const [run, r] of pRuns) {
+  const [l, w] = run.split("|");
+  const W = C4_WORDS[l];
+  if (r.errors.length) pBad.push(`${run}: ${r.errors[0]}`);
+  const kinds = r.steps.map((s) => s.kind).join(",");
+  if (kinds !== "pl,pl,tb,vat,pl") pBad.push(`${run}: steps ${kinds} (a step was never reached)`);
+  r.steps.forEach((s, i) => {
+    const why = [];
+    const want = W.kinds[s.kind];
+    const pressed = s.buttons.filter((b) => b.pressed === "true");
+    if (JSON.stringify(s.buttons.map((b) => b.label)) !== JSON.stringify(REPORT_KINDS.map((k) => W.kinds[k]))) why.push(`toggles ${JSON.stringify(s.buttons.map((b) => b.label))}`);
+    if (pressed.length !== 1 || pressed[0].label !== want) why.push(`pressed ${JSON.stringify(pressed.map((b) => b.label))}`);
+    if (!s.buttons.every((b) => ["true", "false"].includes(b.pressed) && (b.pressed === "true") === b.active && b.type === "button")) why.push("aria-pressed is not the shown-active state on every toggle");
+    if (s.url !== STEP_URLS[i]) why.push(`URL ${s.url}`);
+    if (s.h2 !== want || s.h2s !== 1) why.push(`h2 "${s.h2}" (${s.h2s} h2s)`);
+    const ref = C4R[`report-${i < 2 ? "default" : s.kind}|${l}|${w}`];
+    if (!ref) why.push("no c4ref state to compare with");
+    else {
+      if (JSON.stringify(s.exports) !== JSON.stringify(ref.exports.map((e) => e.slice(e.indexOf(" ") + 1)))) why.push(`exports ${JSON.stringify(s.exports)}`);
+      const drift = ["title", "body", "figures", "rows", "cards", "drills", "dates", "compare"].filter((f) => JSON.stringify(s.facts?.[f]) !== JSON.stringify(ref[f]));
+      if (drift.length) why.push(`the report drifted: ${drift.join(", ")}`);
+    }
+    if (s.keyboard && !(s.focus === REPORT_KINDS.indexOf(s.kind) && s.focusVisible)) why.push(`focus ${s.focus} (visible ${s.focusVisible})`);
+    if (s.tabs === null) why.push("Tab never reached the picker");
+    if (why.length) pBad.push(`${run} ${s.step}: ${why.join("; ")}`);
+  });
+  if (!(r.search.label === W.search && r.search.placeholder === W.search && r.search.named === 1)) pBad.push(`${run}: search ${JSON.stringify(r.search)}`);
+}
+check(`C4 report picker by keyboard (blocking; EN / AR at 1440 and 390): eight toggle buttons, exactly one pressed — the report shown — and aria-pressed equal to .active on each; Tab reaches the picker (Profit & Loss), Tab ×3 + Enter shows Trial Balance, Tab ×4 + Space VAT Summary, Shift+Tab ×7 + Enter Profit & Loss again — each time the URL, the pressed toggle, the h2, the CSV / Excel / PDF links and the report itself (as C3's build said it) follow and focus stays on the toggle; the search box named "${C4_WORDS.en.search}" / "${C4_WORDS.ar.search}" (its placeholder's words)`,
+  (ONLY && !pRuns.length) || ((ONLY || pRuns.length === 4) && pBad.length === 0), list(pBad));
+
+// §44: the statement's Client / Vendor links (blocking).
+const lRuns = Object.entries(now.c4.links);
+const lBad = [];
+for (const [run, r] of lRuns) {
+  const [l, w] = run.split("|");
+  const W = C4_WORDS[l];
+  if (r.errors.length) lBad.push(`${run}: ${r.errors[0]}`);
+  const kinds = r.steps.map((s) => s.kind).join(",");
+  if (kinds !== "client,client,vendor,vendor,client") lBad.push(`${run}: steps ${kinds} (a step was never reached)`);
+  for (const s of r.steps) {
+    const why = [];
+    if (JSON.stringify(s.links.map((x) => [x.label, x.href])) !== JSON.stringify([[W.client, "/finance/statements?kind=client"], [W.vendor, "/finance/statements?kind=vendor"]])) why.push(`links ${JSON.stringify(s.links)}`);
+    const cur = s.links.filter((x) => x.current === "page");
+    if (cur.length !== 1 || !cur[0].href.endsWith(`kind=${s.kind}`) || s.links.some((x) => (x.current === "page") !== x.active || (x.current !== null && x.current !== "page")))
+      why.push(`current ${JSON.stringify(s.links.map((x) => [x.label, x.current, x.active]))}`);
+    if (s.url !== `/finance/statements?kind=${s.kind}`) why.push(`URL ${s.url}`);
+    if (s.h1 !== W.statements) why.push(`h1 "${s.h1}"`);
+    if (s.keyboard && !(s.focus === (s.to === "vendor" ? 1 : 0) && s.focusVisible)) why.push(`focus ${s.focus} (visible ${s.focusVisible})`);
+    if (s.tabs === null) why.push("Tab never reached the link");
+    // The statement itself renders as C3's build rendered that page (c4ref).
+    const ref = C4R[`statement-${s.kind}|${l}|${w}`];
+    if (!ref || ["tabs", "lines", "tables", "inputs", "selects"].some((f) => JSON.stringify(s.facts?.[f]) !== JSON.stringify(ref[f]))) why.push("the statement drifted from C3's");
+    if (why.length) lBad.push(`${run} ${s.step}: ${why.join("; ")}`);
+  }
+}
+check(`C4 statement links (blocking; EN / AR at 1440 and 390): Client and Vendor stay links to ?kind=client / ?kind=vendor; the one shown — and only it — is aria-current="page", exactly its .active; Tab to Vendor and Enter: the URL is ?kind=vendor, Vendor current, Client not; Tab to Client and Enter: back; the h1 stays and the statement renders as C3's build rendered it`,
+  (ONLY && !lRuns.length) || ((ONLY || lRuns.length === 4) && lBad.length === 0), list(lBad));
+
+// §45: the empty states (blocking).
+const EMPTY_WANT = (name, l) => {
+  const W = C4_WORDS[l];
+  return {
+    "no-account-ledger": { outline: [`h1 ${W.ledger}`], empty: [[W.select, `h1 ${W.ledger}`]] },
+    "no-account-coa": { outline: [`h1 ${W.coa}`], empty: [[W.select, `h1 ${W.coa}`]] },
+    "no-transactions": { outline: null, empty: [[W.noTx, null]] },
+    "no-payments": { outline: [`h1 ${W.payments}`], empty: [[W.noPayments, `h1 ${W.payments}`]] },
+    "no-journal": { outline: [`h1 ${W.journal}`, `h2 ${W.recentJournal}`], empty: [[W.noJournal, `h2 ${W.recentJournal}`]] },
+    "no-recent-payments": { outline: [`h1 ${W.bank}`, `h2 ${W.recentPayments}`], empty: [[W.noPayments, `h2 ${W.recentPayments}`]] },
+    "no-bank-accounts": { outline: [`h1 ${W.bank}`, `h2 ${W.recentPayments}`], empty: [[W.noBanks, `h1 ${W.bank}`], [W.noPayments, `h2 ${W.recentPayments}`]] },
+  }[name];
+};
+const org4 = now.c4.emptyOrg;
+const e4Runs = Object.entries(now.c4.empty);
+const e4Bad = [];
+for (const [k, s] of e4Runs) {
+  const [name, l] = k.split("|");
+  const W = C4_WORDS[l];
+  const want = EMPTY_WANT(name, l);
+  const why = [];
+  // The page's own action survives its empty state (and none moves into the EmptyState: no invented CTA).
+  const act = { "no-account-ledger": W.addAccount, "no-account-coa": W.addAccount, "no-transactions": W.addAccount, "no-payments": W.recordPayment, "no-recent-payments": W.newAccount, "no-bank-accounts": W.newAccount }[name];
+  if (act && !(s.actions ?? []).some((a) => a.startsWith(`button|${act}|`))) why.push(`no "${act}" action`);
+  if ((s.empty ?? []).some((e) => e.controls !== 0)) why.push("a control inside an EmptyState (an invented CTA)");
+  if (s.consoleErrors || s.pageErrors || s.r418) why.push(JSON.stringify(s.errorSample));
+  if (s.overflow !== 0 || s.offenders !== 0) why.push(`overflow ${s.overflow}px ${s.offenders} el`);
+  if (s.h1 !== 1 || s.skips !== 0) why.push(`h1 ${s.h1}, skips ${s.skips}`);
+  if (name === "no-transactions") {
+    // The fresh org's first account, as the ledger lists it: its code and English name; in Arabic its Arabic name.
+    const h2 = s.outline?.[1] ?? "";
+    const first = org4?.first;
+    if (!(s.outline?.length === 2 && s.outline[0] === `h1 ${C4_WORDS[l].ledger}` && first && h2.startsWith(`h2 ${first.code} · `) && (l === "en" ? h2 === `h2 ${first.code} · ${first.name}` : /[؀-ۿ]/.test(h2))))
+      why.push(`outline ${JSON.stringify(s.outline)}`);
+    want.empty[0][1] = h2;
+  } else if (JSON.stringify(s.outline) !== JSON.stringify(want.outline)) why.push(`outline ${JSON.stringify(s.outline)}`);
+  if (JSON.stringify((s.empty ?? []).map((e) => [e.text, e.after])) !== JSON.stringify(want.empty) || !(s.empty ?? []).every((e) => e.visible && e.inView)) why.push(`empty states ${JSON.stringify(s.empty)}`);
+  if (why.length) e4Bad.push(`${k}: ${why.join("; ")}`);
+}
+check(`C4 empty states (blocking; EN / AR at 1440 and 390 — ${e4Runs.length} states): an EmptyState after the heading it belongs to — no account selected (Ledger, Chart of Accounts); and, in an org registered through the UI in this TEST-ONLY copy (${org4 ? `${org4.banks} starter bank account, ${org4.payments} payments, ${org4.journal} journal entries` : "—"}): no transactions (its first account's ledger), no payment records (Payments; Bank Accounts' recent records), no journal entries, and — its bank account deleted (${org4?.deleted ?? "—"} row) — no bank accounts; each visible and inside the viewport; the page's outline exact; no overflow, no error`,
+  (ONLY && !e4Runs.length) || ((ONLY || e4Runs.length === 28) && org4?.banks === 1 && org4.payments === 0 && org4.journal === 0 && org4.deleted === 1 && e4Bad.length === 0), list(e4Bad));
 
 // ------------------------------------------------------------------------------------- D-6
 // Every StatRow consumer is held to D-6's targets; all but C2's own strips also to C1's record.

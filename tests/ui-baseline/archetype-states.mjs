@@ -37,6 +37,14 @@
  * focused by keyboard (Tab to it — a button now, with the focus ring), Edit Task opened by keyboard
  * (Tab, Enter — the dialog for that card's task), and the empty project's Tasks section with Add Task
  * reached by keyboard beside its EmptyState. Each fails the capture if the page does not do it.
+ *
+ * C4 (finance + reports) adds the finance states not above — the Profit & Loss report, the vendor
+ * statement with a party, Chart of Accounts and the ledger with no account selected (its EmptyState) —
+ * EN + AR at 1440 and 390, light, full page (16); the Trial Balance, the client statement, the ledger and
+ * Bank Accounts are above at every width (Payments and New Journal Entry are in the lists set). Two
+ * interactions (8), viewport screenshots: the report picker by keyboard (Tab to it, Tab ×3, Enter —
+ * Trial Balance pressed, its h2, the focus kept on it) and the statement's Vendor link by keyboard (Tab
+ * to it, Enter — the vendor page, Vendor the current page). Each fails the capture if the page does not do it.
  */
 import pg from "pg";
 import { FROZEN_NOW, VIEWPORTS } from "./config.mjs";
@@ -91,6 +99,8 @@ export function archetypeMatrix() {
   for (const [id, path, action, viewports] of C2_INTERACTIONS) for (const locale of BOTH) for (const name of viewports) add(id, path, "Interaction (C2)", locale, "light", name, action, false);
   for (const [id, path, area, viewports] of C3_ROUTES) for (const locale of BOTH) for (const name of viewports) add(id, path, area, locale, "light", name, null, true);
   for (const [id, path, action, viewports] of C3_INTERACTIONS) for (const locale of BOTH) for (const name of viewports) add(id, path, "Interaction (C3)", locale, "light", name, action, false);
+  for (const [id, path, area, viewports] of C4_ROUTES) for (const locale of BOTH) for (const name of viewports) add(id, path, area, locale, "light", name, null, true);
+  for (const [id, path, action, viewports] of C4_INTERACTIONS) for (const locale of BOTH) for (const name of viewports) add(id, path, "Interaction (C4)", locale, "light", name, action, false);
   return out;
 }
 
@@ -123,6 +133,19 @@ const C3_INTERACTIONS = [
   ["i06-kanban-card-focus", "/projects/1", "kanban-card-focus", EDGE],
   ["i07-kanban-keyboard-edit", "/projects/1", "kanban-keyboard-edit", EDGE],
   ["i08-kanban-empty", "/projects/2", "kanban-empty", EDGE],
+];
+
+/** [id, path, area, viewports] — C4: the finance states not in the set above (seed-stable: vendor 1; no account 999999). */
+const C4_ROUTES = [
+  ["c4-profit-loss", "/finance/reports", "Financial report (Profit & Loss)", EDGE],
+  ["c4-statement-vendor", "/finance/statements?kind=vendor&party=1", "Statement (vendor, with a party)", EDGE],
+  ["c4-chart-of-accounts", "/finance/chart-of-accounts", "Chart of Accounts", EDGE],
+  ["c4-ledger-no-account", "/finance/ledger?account=999999", "Ledger (no account selected)", EDGE],
+];
+/** [id, path, action, viewports] — C4 interactions (viewport screenshots). */
+const C4_INTERACTIONS = [
+  ["i09-report-picker-keyboard", "/finance/reports", "report-keyboard", EDGE],
+  ["i10-statement-vendor-link", "/finance/statements?kind=client", "statement-vendor-keyboard", EDGE],
 ];
 
 /** [id, path, area] — C1: the master-data / entity-detail pages not in the set above (seed-stable ids; the seed's bins are empty). */
@@ -233,6 +256,39 @@ export const ARCH_ACTIONS = {
       board: document.querySelectorAll("main .kanban, main .kanban-card").length,
     }));
     if (!f.focusVisible || f.empty < 1 || f.board !== 0) throw new Error(`empty kanban: ${JSON.stringify(f)}`);
+  },
+  // C4: the report picker by keyboard — Tab to it (Profit & Loss), Tab ×3 to Trial Balance, Enter. Trial
+  // Balance must be the one toggle pressed, the URL ?report=tb, the h2 its name, the focus still on it.
+  "report-keyboard": async (page) => {
+    await tabTo(page, "main .reports-print-area > .tab-row button");
+    for (let i = 0; i < 3; i++) await page.keyboard.press("Tab");
+    await page.keyboard.press("Enter");
+    await page.waitForURL(/report=tb$/, { timeout: 30000 });
+    await page.waitForFunction(() => {
+      const h2 = document.querySelector("main .reports-print-area h2")?.textContent.trim();
+      const on = document.querySelector('main .tab-row button[aria-pressed="true"]')?.textContent.trim();
+      return Boolean(h2 && h2 === on && !document.querySelector("main .reports-print-area [aria-busy='true'], main .reports-print-area .animate-spin"));
+    }, null, { timeout: 30000 });
+    await page.waitForLoadState("networkidle");
+    const f = await page.evaluate(() => {
+      const a = document.activeElement;
+      return {
+        pressed: [...document.querySelectorAll('main .tab-row button[aria-pressed="true"]')].map((b) => b.textContent.trim()),
+        focus: a?.textContent.trim(), focusPressed: a?.getAttribute("aria-pressed"), focusVisible: a?.matches(":focus-visible"),
+        h2: document.querySelector("main .reports-print-area h2")?.textContent.trim(),
+      };
+    });
+    if (f.pressed.length !== 1 || f.focus !== f.pressed[0] || f.focusPressed !== "true" || !f.focusVisible || f.h2 !== f.pressed[0]) throw new Error(`report picker by keyboard: ${JSON.stringify(f)}`);
+  },
+  // C4: the statement's Vendor link by keyboard — Tab to it, Enter. The vendor page must load with Vendor the
+  // current page (aria-current="page") and Client not.
+  "statement-vendor-keyboard": async (page) => {
+    await tabTo(page, 'main .tab-row > a[href="/finance/statements?kind=vendor"]');
+    await Promise.all([page.waitForURL(/kind=vendor$/, { timeout: 30000 }), page.keyboard.press("Enter")]);
+    await page.waitForLoadState("networkidle");
+    await page.evaluate(() => document.fonts.ready.then(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))));
+    const f = await page.evaluate(() => [...document.querySelectorAll("main .tab-row > a")].map((a) => [a.getAttribute("href"), a.getAttribute("aria-current")]));
+    if (JSON.stringify(f) !== JSON.stringify([["/finance/statements?kind=client", null], ["/finance/statements?kind=vendor", "page"]])) throw new Error(`statement Vendor link by keyboard: ${JSON.stringify(f)}`);
   },
   // C1 fixture: client 1 under LONG_NAME. The header must wrap — the h1 over several lines inside its
   // column, at the inline start; meta and actions at the end of the title's line or below it at the

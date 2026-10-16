@@ -8,6 +8,8 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { PageHeader } from "@/components/layout/page-header";
+import { SectionHeader } from "@/components/ui/section-header";
 import { t, type Locale } from "@/lib/i18n/dict";
 import { Money } from "../../sales/_shared/money";
 import { getAccountDrilldownAction } from "./actions";
@@ -127,21 +129,24 @@ export function ReportsWorkspace({
   return (
     <div className="reports-print-area max-w-6xl mx-auto">
       <PrintStyles />
-      <div className="main-head no-print">
-        <h3>{t(locale, "Financial Reports")}</h3>
-        <div className="flex items-center gap-2">
-          <div className="doc-pill-btn-group flex items-center gap-1">
-            <a href={exportUrl("csv")} className="doc-pill-btn" style={{ height: 32, fontSize: 12 }}><Download className="size-3.5" /> CSV</a>
-            <a href={exportUrl("xlsx")} className="doc-pill-btn" style={{ height: 32, fontSize: 12 }}>Excel</a>
-            <a href={exportUrl("pdf")} className="doc-pill-btn" style={{ height: 32, fontSize: 12 }}><Download className="size-3.5" /> PDF</a>
-          </div>
-        </div>
+      {/* The page's one h1, the three exports as its actions; the wrapper keeps it out of print, as before. */}
+      <div className="no-print">
+        <PageHeader
+          title={t(locale, "Financial Reports")}
+          actions={
+            <div className="doc-pill-btn-group flex items-center gap-1">
+              <a href={exportUrl("csv")} className="doc-pill-btn" style={{ height: 32, fontSize: 12 }}><Download className="size-3.5" /> CSV</a>
+              <a href={exportUrl("xlsx")} className="doc-pill-btn" style={{ height: 32, fontSize: 12 }}>Excel</a>
+              <a href={exportUrl("pdf")} className="doc-pill-btn" style={{ height: 32, fontSize: 12 }}><Download className="size-3.5" /> PDF</a>
+            </div>
+          }
+        />
       </div>
 
-      {/* Report selector */}
+      {/* Report selector: toggle buttons — pressed exactly when shown active. */}
       <div className="tab-row no-print" style={{ marginBottom: 14 }}>
         {REPORTS.map((r) => (
-          <button key={r.kind} type="button" className={r.kind === report ? "tab active" : "tab"} onClick={() => setParams({ report: r.kind, account: undefined })}>
+          <button key={r.kind} type="button" className={r.kind === report ? "tab active" : "tab"} aria-pressed={r.kind === report} onClick={() => setParams({ report: r.kind, account: undefined })}>
             {t(locale, r.label)}
           </button>
         ))}
@@ -185,17 +190,14 @@ export function ReportsWorkspace({
           )}
           <div className="flex items-center gap-1.5 ms-auto">
             <Search className="size-3.5 text-ink-faint" />
-            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t(locale, "Search…")} className="input plain h-8 w-40 text-xs" />
+            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t(locale, "Search…")} aria-label={t(locale, "Search…")} className="input plain h-8 w-40 text-xs" />
           </div>
           {pending && <Loader2 className="size-4 animate-spin text-brand-orange" />}
         </div>
       </div>
 
-      {/* Report title (shown in print) */}
-      <div className="mb-3">
-        <h3 className="text-[16px] font-bold">{title}</h3>
-        <div className="text-[12px] text-ink-faint">{range.from} → {range.to}</div>
-      </div>
+      {/* Report title (shown in print): the selected report, the page's h2, its range beneath. */}
+      <SectionHeader level={2} title={title} description={`${range.from} → ${range.to}`} className="mb-3" />
 
       {/* Only the report BODY is replaced during a transition. The report picker, date range,
           compare toggle and search above stay live and interactive — the most common move is to

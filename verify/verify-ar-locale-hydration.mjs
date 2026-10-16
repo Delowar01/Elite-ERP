@@ -242,7 +242,7 @@ for (const combo of COMBOS) {
   // Record Payment: the document balances in this dialog are formatted in the browser only.
   errors.length = 0;
   await page.goto(`${BASE}/finance/payments`, { waitUntil: "networkidle" });
-  await page.locator(".main-head button").first().click();
+  await page.locator('[data-slot="page-header-actions"] button').first().click();
   await page.locator("#pay-source").click();
   await page.waitForTimeout(300);
   const options = await page.locator("[role=option]").allInnerTexts();

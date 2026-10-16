@@ -3,6 +3,7 @@ import { db, accountsTable } from "@/db";
 import { requireSession } from "@/lib/session";
 import { getLocale } from "@/lib/i18n/server";
 import { t } from "@/lib/i18n/dict";
+import { PageHeader } from "@/components/layout/page-header";
 import { getAccountBalances, getAccountLedger } from "@/lib/accounting";
 import { AccountLedgerView } from "../_shared/account-ledger-view";
 
@@ -23,9 +24,7 @@ export default async function ChartOfAccountsPage({ searchParams }: { searchPara
 
   return (
     <div className="max-w-6xl mx-auto">
-      <div className="main-head">
-        <h3>{t(locale, "Chart of Accounts")}</h3>
-      </div>
+      <PageHeader title={t(locale, "Chart of Accounts")} />
       <AccountLedgerView
         locale={locale}
         basePath="/finance/chart-of-accounts"

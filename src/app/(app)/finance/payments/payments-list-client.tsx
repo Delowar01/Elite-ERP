@@ -7,6 +7,8 @@ import { Plus, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
+import { PageHeader } from "@/components/layout/page-header";
+import { EmptyState } from "@/components/ui/empty-state";
 import { RecordPaymentDialog, type OutstandingInvoice, type OutstandingPo, type BankAccountOption } from "../_shared/record-payment-dialog";
 import { Money } from "../../sales/_shared/money";
 import { downloadDocumentPdf } from "../../sales/_shared/download-pdf-button";
@@ -77,25 +79,27 @@ export function PaymentsListClient({
 }) {
   return (
     <div className="max-w-6xl mx-auto">
-      <div className="main-head">
-        <h3>{t(locale, "Payment Records")}</h3>
-        <RecordPaymentDialog
-          locale={locale}
-          currency={currency}
-          baseCurrency={currency}
-          bankAccounts={bankAccounts}
-          invoices={outstandingInvoices}
-          purchaseOrders={outstandingPos}
-          trigger={
-            <Button>
-              <Plus className="size-4" /> {t(locale, "Record Payment")}
-            </Button>
-          }
-        />
-      </div>
+      <PageHeader
+        title={t(locale, "Payment Records")}
+        actions={
+          <RecordPaymentDialog
+            locale={locale}
+            currency={currency}
+            baseCurrency={currency}
+            bankAccounts={bankAccounts}
+            invoices={outstandingInvoices}
+            purchaseOrders={outstandingPos}
+            trigger={
+              <Button>
+                <Plus className="size-4" /> {t(locale, "Record Payment")}
+              </Button>
+            }
+          />
+        }
+      />
 
       {rows.length === 0 ? (
-        <p className="text-ink-muted text-sm">{t(locale, "No payment records yet.")}</p>
+        <EmptyState message={t(locale, "No payment records yet.")} />
       ) : (
         <Table list>
           <TableHeader>

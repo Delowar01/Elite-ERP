@@ -1,6 +1,7 @@
 import { requireSession } from "@/lib/session";
 import { getLocale } from "@/lib/i18n/server";
 import { t } from "@/lib/i18n/dict";
+import { PageHeader } from "@/components/layout/page-header";
 import { listStatementParties, getStatement, presetRange, type PartyKind } from "@/lib/statements";
 import { StatementView } from "./statement-view";
 
@@ -29,16 +30,15 @@ export default async function StatementsPage({
 
   return (
     <div className="max-w-6xl mx-auto">
-      <div className="main-head">
-        <h3>{t(locale, "Client & Vendor Statements")}</h3>
-      </div>
-      <p className="text-[12.5px] text-ink-muted mb-3">
-        {t(locale, "Statement of account built from posted ledger entries — opening balance, every transaction in the period, and the closing balance.")}
-      </p>
+      <PageHeader
+        title={t(locale, "Client & Vendor Statements")}
+        description={t(locale, "Statement of account built from posted ledger entries — opening balance, every transaction in the period, and the closing balance.")}
+      />
 
+      {/* Client / Vendor stay links; the one shown active is the current page. */}
       <div className="tab-row mb-3">
-        <a className={`tab ${kind === "client" ? "active" : ""}`} href="/finance/statements?kind=client">{t(locale, "Client")}</a>
-        <a className={`tab ${kind === "vendor" ? "active" : ""}`} href="/finance/statements?kind=vendor">{t(locale, "Vendor")}</a>
+        <a className={`tab ${kind === "client" ? "active" : ""}`} href="/finance/statements?kind=client" aria-current={kind === "client" ? "page" : undefined}>{t(locale, "Client")}</a>
+        <a className={`tab ${kind === "vendor" ? "active" : ""}`} href="/finance/statements?kind=vendor" aria-current={kind === "vendor" ? "page" : undefined}>{t(locale, "Vendor")}</a>
       </div>
 
       <StatementView locale={locale} kind={kind} partyId={partyId} parties={parties} initial={initial} />
