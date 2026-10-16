@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { FormField } from "@/components/ui/form-field";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { SectionHeader } from "@/components/ui/section-header";
 import { t, type Locale } from "@/lib/i18n/dict";
 import type { Org, BankAccount } from "@/db";
 import { updateDefaultBankAccountAction, updateFiscalYearAction } from "./actions";
@@ -32,7 +33,7 @@ export function DefaultBankAccountPanel({ locale, org, bankAccounts }: { locale:
   return (
     <div className="flex flex-col gap-4 max-w-lg">
       <div>
-        <h3 className="text-[17px] font-bold">{t(locale, "Default Bank Account")}</h3>
+        <SectionHeader level={2} title={t(locale, "Default Bank Account")} />
         <p className="text-[12px] text-ink-muted mt-1">
           {t(locale, "Pre-selected automatically on every new Payment Record and Purchase Order.")}
         </p>
@@ -74,7 +75,7 @@ export function FiscalYearPanel({ locale, org }: { locale: Locale; org: Org }) {
 
   return (
     <div className="flex flex-col gap-4 max-w-sm">
-      <h3 className="text-[17px] font-bold">{t(locale, "Fiscal Year")}</h3>
+      <SectionHeader level={2} title={t(locale, "Fiscal Year")} />
       <FormField label={t(locale, "Fiscal Year Start")} htmlFor="fiscal-month">
         <Select value={fiscalMonth} onValueChange={setFiscalMonth}>
           <SelectTrigger id="fiscal-month">

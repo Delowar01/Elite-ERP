@@ -768,7 +768,25 @@
       "src/app/(app)/projects/[id]/kanban-board.tsx: <SectionHeader actions className level title>",
       "src/app/(app)/projects/[id]/page.tsx: <SectionHeader actions className level title>",
       "src/app/(app)/projects/[id]/page.tsx: <SectionHeader className level title>",
-      "src/app/(app)/purchasing/vendors/[id]/page.tsx: <SectionHeader className level title>"
+      "src/app/(app)/purchasing/vendors/[id]/page.tsx: <SectionHeader className level title>",
+      "src/app/(app)/settings/compliance/compliance-client.tsx: <SectionHeader className level title>",
+      "src/app/(app)/settings/compliance/compliance-client.tsx: <SectionHeader className level title>",
+      "src/app/(app)/settings/compliance/compliance-client.tsx: <SectionHeader className level title>",
+      "src/app/(app)/settings/organization/company-panels.tsx: <SectionHeader level title>",
+      "src/app/(app)/settings/organization/company-panels.tsx: <SectionHeader level title>",
+      "src/app/(app)/settings/organization/company-panels.tsx: <SectionHeader level title>",
+      "src/app/(app)/settings/organization/finance-panel.tsx: <SectionHeader level title>",
+      "src/app/(app)/settings/organization/finance-panel.tsx: <SectionHeader level title>",
+      "src/app/(app)/settings/organization/number-format-form.tsx: <SectionHeader level title>",
+      "src/app/(app)/settings/organization/reference-panels.tsx: <SectionHeader level title>",
+      "src/app/(app)/settings/organization/vat-settings-form.tsx: <SectionHeader level title>",
+      "src/app/(app)/settings/organization/zatca-panel.tsx: <SectionHeader className level title>",
+      "src/app/(app)/settings/presets/default-bank-accounts-panel.tsx: <SectionHeader level title>",
+      "src/app/(app)/settings/presets/print-layout-panel.tsx: <SectionHeader level title>",
+      "src/app/(app)/settings/presets/seal-signature-panel.tsx: <SectionHeader level title>",
+      "src/app/(app)/settings/security/security-client.tsx: <SectionHeader actions className level title>",
+      "src/app/(app)/settings/security/security-client.tsx: <SectionHeader className level title>",
+      "src/app/(app)/settings/team/team-panel.tsx: <SectionHeader level title>"
     ],
     "EmptyState": [
       "src/app/(app)/clients/recycle-bin/page.tsx: <EmptyState message>",
@@ -787,7 +805,8 @@
       "src/app/(app)/projects/[id]/kanban-board.tsx: <EmptyState message>",
       "src/app/(app)/projects/[id]/page.tsx: <EmptyState message>",
       "src/app/(app)/projects/[id]/page.tsx: <EmptyState message>",
-      "src/app/(app)/purchasing/vendors/recycle-bin/page.tsx: <EmptyState message>"
+      "src/app/(app)/purchasing/vendors/recycle-bin/page.tsx: <EmptyState message>",
+      "src/app/(app)/settings/security/security-client.tsx: <EmptyState message>"
     ],
     "formatDisplayDate": [
       "src/app/(app)/hr/attendance/page.tsx",
@@ -822,7 +841,11 @@
       "src/app/(app)/purchasing/vendors/[id]/page.tsx: <PageHeader actions description meta title>",
       "src/app/(app)/purchasing/vendors/new/page.tsx: <PageHeader description title>",
       "src/app/(app)/purchasing/vendors/page.tsx: <PageHeader actions description title>",
-      "src/app/(app)/purchasing/vendors/recycle-bin/page.tsx: <PageHeader actions description title>"
+      "src/app/(app)/purchasing/vendors/recycle-bin/page.tsx: <PageHeader actions description title>",
+      "src/app/(app)/settings/compliance/compliance-client.tsx: <PageHeader description title>",
+      "src/app/(app)/settings/organization/page.tsx: <PageHeader title>",
+      "src/app/(app)/settings/presets/page.tsx: <PageHeader title>",
+      "src/app/(app)/settings/security/security-client.tsx: <PageHeader meta title>"
     ]
   },
   "listEmptyState": "de3bd579f4f6fbdd",

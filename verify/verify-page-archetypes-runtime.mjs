@@ -1,6 +1,6 @@
 /**
  * DEV-UI-01.7 C0 — page-archetype runtime baseline (C1: master-data and entity-detail targets; C2: HR
- * targets and the D-6 StatRow gate; C3: Projects and the kanban; C4: finance and reports).
+ * targets and the D-6 StatRow gate; C3: Projects and the kanban; C4: finance and reports; C5: Settings).
  *
  *   node verify/verify-page-archetypes-runtime.mjs                   measure, compare with the baseline
  *   node verify/verify-page-archetypes-runtime.mjs --write-baseline  measure, write the baseline files
@@ -15,6 +15,28 @@
  *                                                   the baseline's `c4ref` record (C4 recorded it on C3's build)
  *   flags: --skip-build (reuse .next — only when it was built from the current tree), --only=<route id>[,<route id>…],
  *          --measure-out=<file> (also write what this run measured, for review evidence)
+ *
+ * C5 (Settings) re-recorded its 14 Settings routes — Business Settings on each of its ten tabs (seven of
+ * them new routes, first recorded on C4's build — 54 routes), /settings/team (its redirect to the Team
+ * tab), Presets, the Security Center and Security & Compliance Readiness — and holds them to targets: one
+ * PageHeader holding the only h1 (Business Settings above its navigation, whichever tab; Presets; Security
+ * Center, the owner's risk pill its meta; Security & Compliance Readiness, its disclaimer the
+ * description); every outline exact, in the dictionary's words (each panel title an h2; Security's four
+ * h2s; Compliance's readiness h2 over the three group h3s, then its two h2s); no overflow and nothing past
+ * the viewport at any width (at 390 Business Settings was 92 px on Color Theme, Compliance 32 px); no
+ * error; Western digits. SettingsNav is held at every width, EN and AR: Radix's root dir the document's
+ * (left to itself Radix wrote ltr in Arabic), the list at the inline start beside the panel from 768 px
+ * and full width above it below (D-7), the items start-aligned, the ten tabs and four groups in
+ * SETTINGS_TABS order with their labels — Fiscal Year, VAT Configuration, Users and Integrations in Arabic
+ * too. Probes, EN and AR: the D-7 breakpoint at 767 / 768 px; the navigation by keyboard (Tab to the active
+ * tab, the only tabbable one; ArrowDown, ArrowUp, End and Home move the focus and the panel; ArrowRight and
+ * ArrowLeft nothing — a vertical list — in Arabic too; the URL unchanged); Presets' 14 tabs and its three
+ * titled panels; the Security Center as Staff (no Timeline, no risk pill); the Timeline's EmptyState (no
+ * event in the page's 30-day window — a database count says so); an alert — five failed logins for an org
+ * registered through the UI in this run's TEST-ONLY copy (security_events is append-only) — its stripe on
+ * the inline-start side, the risk Elevated in the meta; Compliance at 1440 / 768 / 390, every control
+ * inside the viewport, the customer select's list, and at 390 a consent granted (deleted after) listed
+ * inside its card.
  *
  * C4 (finance + reports) re-recorded its 14 finance routes and holds them to targets: one PageHeader
  * holding the only h1 (Financial Reports, Client & Vendor Statements, Account Ledger, Chart of Accounts,
@@ -76,7 +98,7 @@
  * still compares those routes with the baseline it replaces — route behaviour, direction, Staff
  * permissions and every never-worse measure — and prints their outline and action changes for review.
  *
- * The 36 DEV-UI-01.7 pages, through 47 routes (detail, tab, report and statement variants, an empty
+ * The 36 DEV-UI-01.7 pages, through 54 routes (detail, tab, report and statement variants, an empty
  * project, an unknown id), served by a production build. For every route it records what the page is TODAY:
  *
  *   - status and final path (route behaviour), lang and dir;
@@ -188,6 +210,11 @@ const ROUTES = [
   ["recycle-bin", "/recycle-bin", "recycle-bin"],
   ["settings-org", "/settings/organization", "settings/organization"], ["settings-org-business", "/settings/organization?tab=business-details", "settings/organization"],
   ["settings-org-team", "/settings/organization?tab=team", "settings/organization"],
+  // C5: Business Settings' other tabs (ZATCA shows for the seed's Saudi profile).
+  ["settings-org-logo", "/settings/organization?tab=logo", "settings/organization"], ["settings-org-bank", "/settings/organization?tab=default-bank", "settings/organization"],
+  ["settings-org-fiscal", "/settings/organization?tab=fiscal-year", "settings/organization"], ["settings-org-vat", "/settings/organization?tab=vat-config", "settings/organization"],
+  ["settings-org-numbers", "/settings/organization?tab=number-format", "settings/organization"],
+  ["settings-org-roles", "/settings/organization?tab=roles-permissions", "settings/organization"], ["settings-org-zatca", "/settings/organization?tab=zatca", "settings/organization"],
   ["settings-presets", "/settings/presets", "settings/presets"], ["settings-security", "/settings/security", "settings/security"], ["settings-compliance", "/settings/compliance", "settings/compliance"],
   ["settings-team", "/settings/team", "settings/team"],
   ["nf-client", "/clients/999999", "clients/[id]"],
@@ -335,6 +362,49 @@ const C4_SEARCH = { "report-pl": "4000", "report-tb": "1100" };
 /** What opens the drill-down: a P&L figure (a button), a Trial Balance row (the row itself). */
 const C4_DRILL = { "report-pl": "button", "report-tb": "tbody tr.cursor-pointer" };
 const C4_FROM = { "statement-client1": "2026-04-01", "statement-vendor1": "2026-04-01" };
+
+// DEV-UI-01.7 C5: the Settings family — Business Settings (its ten tabs; /settings/team redirects to the Team
+// tab), Presets, the Security Center and Compliance. The words are the dictionary's own (dict.ts has no
+// imports: transpiled and asked, as formatDisplayDate is below), so an Arabic page is held to exactly what
+// the dictionary says; the static group 13 pins the five entries C5 added.
+const C5_ROUTES = ["settings-org", "settings-org-business", "settings-org-team", "settings-org-logo", "settings-org-bank", "settings-org-fiscal", "settings-org-vat",
+  "settings-org-numbers", "settings-org-roles", "settings-org-zatca", "settings-presets", "settings-security", "settings-compliance", "settings-team"];
+const C5_NEW = ["settings-org-logo", "settings-org-bank", "settings-org-fiscal", "settings-org-vat", "settings-org-numbers", "settings-org-roles", "settings-org-zatca"];
+/** Business Settings: the tab each route shows (color-theme is the page's default; /settings/team → team). */
+const C5_TABS = {
+  "settings-org": "color-theme", "settings-org-business": "business-details", "settings-org-team": "team", "settings-team": "team", "settings-org-logo": "logo",
+  "settings-org-bank": "default-bank", "settings-org-fiscal": "fiscal-year", "settings-org-vat": "vat-config", "settings-org-numbers": "number-format",
+  "settings-org-roles": "roles-permissions", "settings-org-zatca": "zatca",
+};
+/** SETTINGS_TABS in navigation order: each tab's value and its label — which is also its panel's title (the h2). */
+const C5_NAV = [["business-details", "Business Details"], ["logo", "Logo"], ["color-theme", "Color Theme"], ["default-bank", "Default Bank Account"],
+  ["fiscal-year", "Fiscal Year"], ["vat-config", "VAT Configuration"], ["number-format", "Number Format"], ["team", "Team"], ["roles-permissions", "Roles & Permissions"],
+  ["zatca", "ZATCA Phase 1"]];
+const C5_GROUPS = ["Company", "Finance", "Users", "Integrations"];
+/** The 14 Presets tabs, in order (the page's own values). */
+const C5_PRESET_TABS = ["tax-rates", "payment-terms", "units", "note-templates", "terms-groups", "bundles", "numbering", "exchange-rates", "print-layout", "seal-signature",
+  "default-bank-accounts", "departments", "product-categories", "leave-types"];
+/** The three Presets panels with a title of their own: its words (the h2). */
+const C5_PRESET_PANELS = { "print-layout": "Print Layout", "seal-signature": "Seal & Signature", "default-bank-accounts": "Default Bank Accounts" };
+const dictMod = { exports: {} };
+new Function("module", "exports", "require", ts.transpileModule(readFileSync("src/lib/i18n/dict.ts", "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 } }).outputText)(
+  dictMod, dictMod.exports, (spec) => { throw new Error(`dict.ts imports ${spec}`); });
+/** What the page says for `en` in locale `l` — the dictionary's t(). */
+const T = (l, en) => dictMod.exports.t(l, en);
+const C5_SECURITY = ["Two-Factor Authentication", "Password", "Active Sessions", "Security Timeline"];
+const C5_READINESS = ["GDPR", "ISO 27001 — roadmap", "Platform security"];
+/** The outline a Settings route must have (headings are measured to 48 characters). */
+function c5Outline(id, l, admin = true) {
+  const h = (lv, en) => `h${lv} ${T(l, en)}`.slice(0, 51);
+  const tab = C5_TABS[id];
+  if (tab) {
+    const panel = C5_NAV.find(([v]) => v === tab)[1];
+    return [h(1, "Business Settings"), h(2, panel), ...(tab === "roles-permissions" ? [h(3, "Actions restricted beyond their module")] : [])];
+  }
+  if (id === "settings-presets") return [h(1, "Presets")];
+  if (id === "settings-security") return [h(1, "Security Center"), ...C5_SECURITY.filter((w) => admin || w !== "Security Timeline").map((w) => h(2, w))];
+  return [h(1, "Security & Compliance Readiness"), h(2, "Readiness checklist"), ...C5_READINESS.map((w) => h(3, w)), h(2, "Data Subject Rights"), h(2, "Consent Management")];
+}
 
 // ------------------------------------------------------------------------------------- isolation
 function refuse(why) {
@@ -1013,6 +1083,133 @@ const FIN_EMPTY = () => {
   });
 };
 
+/**
+ * C5: Business Settings' navigation and the panel beside or below it — the Radix root's dir and flex
+ * direction, the boxes (navigation at the inline start; the panel after it, or below it), the items'
+ * alignment and direction, the tabs in order with their labels and the group labels, which is active.
+ */
+const SETTINGS_FACTS = () => {
+  const main = document.querySelector("main");
+  const list = main?.querySelector('[role="tablist"].settings-nav');
+  if (!list) return null;
+  const root = list.parentElement;
+  // Radix keeps every panel's element, the inactive ones hidden: the one shown is the active one.
+  const panel = main.querySelector('[role="tabpanel"][data-state="active"]');
+  const vw = document.documentElement.clientWidth;
+  const rtl = document.documentElement.dir === "rtl";
+  const r1 = (n) => Math.round(n * 10) / 10;
+  const lr = list.getBoundingClientRect();
+  const pr = panel?.getBoundingClientRect() ?? null;
+  const rr = root.getBoundingClientRect();
+  const items = [...list.querySelectorAll('[role="tab"]')];
+  const value = (e) => e?.id?.split("-trigger-")[1] ?? null;
+  return {
+    rootDir: root.getAttribute("dir"), flexDirection: getComputedStyle(root).flexDirection, orientation: list.getAttribute("aria-orientation"),
+    rootWidth: r1(rr.width), navWidth: r1(lr.width), panelWidth: pr ? r1(pr.width) : null,
+    stacked: pr ? lr.bottom <= pr.top + 0.5 : null,
+    beside: pr ? lr.top < pr.bottom && pr.top < lr.bottom : null,
+    navAtStart: rtl ? Math.abs(rr.right - lr.right) <= 1 : Math.abs(lr.left - rr.left) <= 1,
+    panelAfter: pr ? (rtl ? pr.right <= lr.left + 1 : pr.left >= lr.right - 1) : null,
+    navInView: lr.left >= -1 && lr.right <= vw + 1, panelInView: pr ? pr.left >= -1 && pr.right <= vw + 1 : null,
+    align: [...new Set(items.map((i) => getComputedStyle(i).textAlign))], itemDir: [...new Set(items.map((i) => getComputedStyle(i).direction))],
+    order: items.map(value), labels: items.map((i) => i.textContent.replace(/\s+/g, " ").trim()),
+    groups: [...list.querySelectorAll(".settings-nav-group-label")].map((e) => e.textContent.replace(/\s+/g, " ").trim()),
+    active: items.filter((i) => i.getAttribute("data-state") === "active").map(value), panel: panel?.id?.split("-content-")[1] ?? null,
+  };
+};
+/** C5: the Security Center's alerts (each one's stripe — the inline-start border — by its title) and the risk pill. */
+const SECURITY_FACTS = () => {
+  const main = document.querySelector("main");
+  const ph = main?.querySelector('[data-slot="page-header"]');
+  const meta = ph?.querySelector('[data-slot="page-header-meta"]');
+  const alerts = [...(main?.querySelectorAll("div.rounded-xl") ?? [])].filter((e) => e.querySelector("svg") && (e.style.borderInlineStart || e.style.borderLeft || e.style.borderRight)).map((e) => {
+    const cs = getComputedStyle(e);
+    return {
+      title: e.querySelector(".font-semibold")?.textContent.trim() ?? null, dir: cs.direction,
+      left: `${cs.borderLeftWidth} ${cs.borderLeftColor}`, right: `${cs.borderRightWidth} ${cs.borderRightColor}`,
+      inline: e.style.borderInlineStart, physical: e.style.borderLeft || e.style.borderRight || null,
+    };
+  });
+  const h1 = main?.querySelector("h1");
+  const root = getComputedStyle(document.documentElement);
+  return {
+    alerts, risk: meta ? meta.textContent.replace(/\s+/g, " ").trim() : null, riskInH1: Boolean(h1 && meta && h1.contains(meta)),
+    tokens: { warn: root.getPropertyValue("--warn").trim(), crit: root.getPropertyValue("--crit").trim() },
+    line: (() => {
+      // The card's own border (border border-line), on a probe with the same classes.
+      const probe = document.createElement("div");
+      probe.className = "border border-line";
+      main.append(probe);
+      const c = getComputedStyle(probe).borderTopColor;
+      probe.remove();
+      return c;
+    })(),
+    warn: (() => {
+      const probe = document.createElement("div");
+      probe.style.color = "var(--warn)";
+      document.body.append(probe);
+      const c = getComputedStyle(probe).color;
+      probe.remove();
+      return c;
+    })(),
+  };
+};
+/**
+ * C5: the Security Center at one width — the PageHeader and its risk meta, the Two-Factor Authentication and
+ * Password cards (the first two h2s) with their controls and the two password fields, the tables (inside the
+ * viewport, or scrolling inside their own box) and the Timeline's EmptyState: each inside the viewport. And
+ * the current-password field takes the focus.
+ */
+const SECURITY_LAYOUT = () => {
+  const main = document.querySelector("main");
+  const vw = document.documentElement.clientWidth;
+  const inView = (e) => {
+    if (!e) return null;
+    const r = e.getBoundingClientRect();
+    return r.width > 0 && r.height > 0 && r.left >= -1 && r.right <= vw + 1;
+  };
+  const boxOf = (t) => {
+    for (let p = t.parentElement; p && p !== main; p = p.parentElement) if (/(auto|scroll)/.test(getComputedStyle(p).overflowX)) return p;
+    return t;
+  };
+  const h2s = [...main.querySelectorAll("h2")];
+  const mfa = h2s[0]?.closest(".card") ?? null;
+  const pw = h2s[1]?.closest(".card") ?? null;
+  const ph = main.querySelector('[data-slot="page-header"]');
+  const cur = main.querySelector("#cur-pw");
+  cur?.focus();
+  return {
+    h2: h2s.map((h) => h.textContent.replace(/\s+/g, " ").trim()), header: inView(ph), meta: inView(ph?.querySelector('[data-slot="page-header-meta"]')),
+    mfa: inView(mfa), mfaControls: [...(mfa?.querySelectorAll("button") ?? [])].map(inView), password: inView(pw), passwordControls: [...(pw?.querySelectorAll("button") ?? [])].map(inView),
+    fields: [inView(cur), inView(main.querySelector("#new-pw"))], focus: document.activeElement?.id ?? null,
+    tables: [...main.querySelectorAll("table")].map((t) => inView(boxOf(t))), timeline: inView(main.querySelector('[data-slot="empty-state"]')),
+  };
+};
+/**
+ * C5: Compliance's controls — each inside the viewport (Export, the customer select and Erase, the consent
+ * subject, Grant, Withdraw) — and its tables: inside the viewport, or scrolling inside their own box.
+ */
+const COMPLIANCE_FACTS = (W) => {
+  const main = document.querySelector("main");
+  const vw = document.documentElement.clientWidth;
+  const inView = (e) => {
+    if (!e) return null;
+    const r = e.getBoundingClientRect();
+    return r.width > 0 && r.height > 0 && r.left >= -1 && r.right <= vw + 1;
+  };
+  const byText = (txt) => [...main.querySelectorAll("button")].find((b) => b.textContent.replace(/\s+/g, " ").trim() === txt) ?? null;
+  const tables = [...main.querySelectorAll("table")].map((t) => {
+    let box = null;
+    for (let p = t.parentElement; p && p !== main; p = p.parentElement) if (/(auto|scroll)/.test(getComputedStyle(p).overflowX)) { box = p; break; }
+    const r = (box ?? t).getBoundingClientRect();
+    return { rows: t.tBodies[0]?.rows.length ?? 0, scrolls: Boolean(box && box.scrollWidth > box.clientWidth + 1), contained: r.left >= -1 && r.right <= vw + 1 };
+  });
+  return {
+    exportBtn: inView(byText(W.export)), customer: inView(main.querySelector("#erase-customer")), erase: inView(byText(W.erase)),
+    subject: inView(main.querySelector("#consent-subject")), grant: inView(byText(W.grant)), withdraw: inView(byText(W.withdraw)), tables,
+  };
+};
+
 // ------------------------------------------------------------------------------------- run
 const pinned = WRITE ? null : JSON.parse(readFileSync(BASELINE_FILE, "utf8"));
 const pinnedActions = WRITE ? null : JSON.parse(readFileSync(ACTIONS_FILE, "utf8"));
@@ -1152,6 +1349,7 @@ const is418 = (s) => /#418\b|errors\/418|hydrat/i.test(s);
 const now = {
   frozenNow: FROZEN_NOW, chromium: browser.version(), states: {}, staff: {}, sweep: {}, d6: {}, c2: { dept: {}, payroll: {}, dates: {} }, c3: { layout: {}, kanban: {}, empty: {}, hours: {} },
   c4: { ledger: {}, values: {}, picker: {}, links: {}, empty: {} },
+  c5: { nav: {}, d7: {}, keys: {}, presets: {}, staff: {}, timeline: {}, security: {}, alert: {}, compliance: {} },
 };
 const prompts = {};
 let fdNode = {};
@@ -1207,6 +1405,8 @@ try {
         if (w === 1440 || (w === 390 && locale === "en")) acts.owner[`${id}|${locale}|${w}`] = await page.evaluate(ACTIONS);
         // C4: the ledger / chart gate, last (it scrolls the table and the page).
         if (id === "ledger" || id === "coa") now.c4.ledger[`${id}|${locale}|${w}`] = await page.evaluate(LEDGER_FACTS, C4_WORDS[locale].addAccount);
+        // C5: Business Settings' navigation beside or above its panel (D-7), its direction and its tabs.
+        if (C5_TABS[id]) now.c5.nav[`${id}|${locale}|${w}`] = await page.evaluate(SETTINGS_FACTS);
       });
       await pass(`staff ${locale}`, staffState, locale, null, [[1440, 900]], async ({ id, page, status, finalPath, errors }) => {
         now.staff[`${id}|${locale}`] = { status, finalPath, ...errFacts(errors) };
@@ -1639,6 +1839,166 @@ try {
     }
     console.log("  C4 probes done");
   }
+  // C5 probes, EN and AR. The D-7 breakpoint: Business Settings at 767 and 768 px — a column below md, a row
+  // from it. The navigation by keyboard (1440 and 390): Tab to the active tab, the only tabbable one; then
+  // ArrowDown, ArrowDown, ArrowUp, End, Home — focus and the panel shown follow — and ArrowRight, ArrowLeft —
+  // nothing: the list is vertical. Presets (1440 and 390): the 14 tabs, and each panel with a title of its own
+  // opened. The Security Center as Staff (1440): no risk pill, no Timeline. The Timeline's EmptyState (the
+  // owner; no event in the page's 30-day window). The Security Center's layout (1440, 768, 390): the header
+  // and risk meta, both cards, their controls and fields, the tables and the Timeline inside the viewport.
+  // Compliance (1440, 768, 390): every control inside the
+  // viewport, the customer select's list, and at 390 — a consent granted in this run's TEST-ONLY copy and
+  // deleted after — its table inside the card. Last, the Security alert: five failed logins at the frozen
+  // instant, for an org of their own registered in this run's TEST-ONLY copy, raise "Repeated failed logins" —
+  // its stripe on the inline-start side, the risk Elevated in the PageHeader meta.
+  if (!RECORD_ONLY && ROUTES.some(([id]) => C5_ROUTES.includes(id))) {
+    const settingsState = (page) => page.evaluate(() => {
+      const a = document.activeElement;
+      const list = document.querySelector('main [role="tablist"]');
+      const value = (e) => e?.id?.split("-trigger-")[1] ?? null;
+      const items = [...(list?.querySelectorAll('[role="tab"]') ?? [])];
+      return {
+        focus: list?.contains(a) ? value(a) : (a?.tagName ?? null),
+        active: items.filter((i) => i.getAttribute("data-state") === "active").map(value),
+        selected: items.filter((i) => i.getAttribute("aria-selected") === "true").map(value),
+        tabbable: items.filter((i) => i.tabIndex === 0).map(value),
+        panel: document.querySelector('main [role="tabpanel"][data-state="active"]')?.id?.split("-content-")[1] ?? null,
+        h2: [...document.querySelectorAll("main h2")].map((h) => h.textContent.replace(/\s+/g, " ").trim()),
+        focusVisible: a?.matches(":focus-visible") ?? false, outline: a ? getComputedStyle(a).outlineStyle : null,
+        url: location.pathname + location.search,
+      };
+    });
+    const dbq = async (fn) => {
+      const c = new pg.Client({ connectionString: env.DATABASE_URL });
+      await c.connect();
+      try {
+        return await fn(c);
+      } finally {
+        await c.end();
+      }
+    };
+    // The Timeline's oracle: events in the page's own window (SQL now() − 30 days, the database's clock).
+    now.c5.timelineWindow = await dbq(async (c) =>
+      (await c.query("select count(*)::int as n from security_events where org_id = (select org_id from users where email = $1) and created_at >= now() - interval '30 days'", [OWNER_EMAIL])).rows[0].n);
+    for (const locale of ["en", "ar"]) {
+      for (const w of [767, 768]) {
+        const { ctx, page, errors } = await probePage(locale, [w, 1024], "/settings/organization?tab=business-details");
+        now.c5.d7[`${locale}|${w}`] = { ...(await page.evaluate(SETTINGS_FACTS)), overflow: (await page.evaluate(MEASURE, C1_LITERALS)).overflow, ...errFacts(errors) };
+        await ctx.close();
+      }
+      for (const size of [[1440, 900], [390, 844]]) {
+        const { ctx, page, errors } = await probePage(locale, size, "/settings/organization?tab=business-details");
+        await twoFrames(page);
+        const steps = [{ step: "loaded", ...(await settingsState(page)) }];
+        const tabs = await tabUntil(page, 'main [role="tablist"].settings-nav [role="tab"][data-state="active"]');
+        await twoFrames(page);
+        steps.push({ step: `Tab ×${tabs} to the active tab`, tabs, ...(await settingsState(page)) });
+        if (tabs !== null)
+          for (const key of ["ArrowDown", "ArrowDown", "ArrowUp", "End", "Home", "ArrowRight", "ArrowLeft"]) {
+            await page.keyboard.press(key);
+            await page.waitForLoadState("networkidle");
+            await twoFrames(page);
+            steps.push({ step: key, key, ...(await settingsState(page)) });
+          }
+        now.c5.keys[`${locale}|${size[0]}`] = { steps, ...errFacts(errors) };
+        await ctx.close();
+      }
+      for (const size of [[1440, 900], [390, 844]]) {
+        const { ctx, page, errors } = await probePage(locale, size, "/settings/presets");
+        const tabs = await page.evaluate(() => {
+          const list = document.querySelector('main [role="tablist"]');
+          const items = [...list.querySelectorAll('[role="tab"]')];
+          return { dir: list.parentElement.getAttribute("dir"), order: items.map((i) => i.id.split("-trigger-")[1]), labels: items.map((i) => i.textContent.replace(/\s+/g, " ").trim()) };
+        });
+        const panels = {};
+        for (const v of Object.keys(C5_PRESET_PANELS)) {
+          await page.locator(`main [role="tab"][id$="-trigger-${v}"]`).click();
+          await page.waitForLoadState("networkidle");
+          await twoFrames(page);
+          const m = await page.evaluate(MEASURE, C1_LITERALS);
+          panels[v] = { outline: m.outline, h1: m.h1, skips: m.skips, overflow: m.overflow, offenders: m.offenders, panel: (await settingsState(page)).panel };
+        }
+        now.c5.presets[`${locale}|${size[0]}`] = { ...tabs, panels, ...errFacts(errors) };
+        await ctx.close();
+      }
+      {
+        const { ctx, page, errors } = await probePage(locale, [1440, 900], "/settings/security", staffState);
+        const m = await page.evaluate(MEASURE, C1_LITERALS);
+        now.c5.staff[locale] = { outline: m.outline, h1: m.h1, skips: m.skips, pageHeader: m.pageHeader, ...(await page.evaluate(SECURITY_FACTS)), ...errFacts(errors) };
+        await ctx.close();
+      }
+      for (const size of [[1440, 900], [390, 844]]) {
+        const { ctx, page, errors } = await probePage(locale, size, "/settings/security");
+        now.c5.timeline[`${locale}|${size[0]}`] = { empty: await page.evaluate(FIN_EMPTY), tables: await page.evaluate(() => document.querySelectorAll("main table").length), ...errFacts(errors) };
+        await ctx.close();
+      }
+      for (const size of [[1440, 900], [768, 1024], [390, 844]]) {
+        const { ctx, page, errors } = await probePage(locale, size, "/settings/security");
+        const m = await page.evaluate(MEASURE, C1_LITERALS);
+        now.c5.security[`${locale}|${size[0]}`] = { ...(await page.evaluate(SECURITY_LAYOUT)), overflow: m.overflow, offenders: m.offenders, tablesBeyond: m.tablesBeyond, pageHeader: m.pageHeader, ...errFacts(errors) };
+        await ctx.close();
+      }
+      const CW = { export: T(locale, "Export organization data"), erase: T(locale, "Erase"), grant: T(locale, "Grant"), withdraw: T(locale, "Withdraw") };
+      for (const size of [[1440, 900], [768, 1024], [390, 844]]) {
+        const { ctx, page, errors } = await probePage(locale, size, "/settings/compliance");
+        const facts = await page.evaluate(COMPLIANCE_FACTS, CW);
+        await page.locator("#erase-customer").click();
+        const listOpen = await page.locator('[role="listbox"]').waitFor({ state: "visible", timeout: 15000 }).then(() => true, () => false);
+        const options = listOpen ? await page.locator('[role="listbox"] [role="option"]').count() : 0;
+        await page.keyboard.press("Escape");
+        const listClosed = await page.locator('[role="listbox"]').waitFor({ state: "detached", timeout: 15000 }).then(() => true, () => false);
+        let consent = null;
+        if (size[0] === 390) {
+          const before = await dbq(async (c) => (await c.query("select coalesce(max(id), 0)::int as n from consent_records")).rows[0].n);
+          await page.getByRole("button", { name: CW.grant, exact: true }).click();
+          await page.locator("main table").first().waitFor({ state: "visible", timeout: 30000 }).catch(() => {});
+          await page.waitForLoadState("networkidle");
+          await twoFrames(page);
+          consent = { ...(await page.evaluate(COMPLIANCE_FACTS, CW)), overflow: (await page.evaluate(MEASURE, C1_LITERALS)).overflow };
+          consent.removed = await dbq(async (c) => (await c.query("delete from consent_records where id > $1", [before])).rowCount);
+        }
+        now.c5.compliance[`${locale}|${size[0]}`] = { ...facts, listOpen, options, listClosed, consent, ...errFacts(errors) };
+        await ctx.close();
+      }
+    }
+    // The alert: security_events is append-only (its trigger refuses DELETE), so the five failed logins go to
+    // an org of their own, registered through the UI in this run's TEST-ONLY copy — the seeded org is untouched.
+    const email = "c5-security-alert@visual-baseline.test";
+    const password = `Aa1!${randomUUID()}`;
+    {
+      const ctx = await context({ locale: "en-US", timezoneId: "UTC" });
+      const p = await ctx.newPage();
+      await p.setViewportSize({ width: 1440, height: 900 });
+      await p.goto(`${BASE}/register`, { waitUntil: "networkidle", timeout: 60000 });
+      await p.fill('input[name="orgName"]', "TEST-ONLY Security Alert Co. (Fictional)");
+      await p.fill('input[name="name"]', "Security Alert Owner");
+      await p.fill('input[name="email"]', email);
+      await p.fill('input[name="password"]', password);
+      const confirm = p.locator('input[name="confirmPassword"]');
+      if (await confirm.count()) await confirm.fill(password);
+      await pickCountry(p);
+      await Promise.all([p.waitForURL(`${BASE}/dashboard`, { timeout: 60000 }), p.getByRole("button", { name: /register|create|sign up/i }).first().click()]);
+      now.c5.alertOrgState = await ctx.storageState();
+      await ctx.close();
+    }
+    now.c5.alertFixture = await dbq(async (c) => {
+      const { org_id: org, role } = (await c.query("select org_id, role from users where email = $1", [email])).rows[0];
+      for (let i = 0; i < 5; i++)
+        await c.query(
+          "insert into security_events (org_id, email, type, severity, ip_address, browser, detail, created_at) values ($1, $2, 'login.failed', 'medium', '203.0.113.7', 'C5 fixture', 'TEST-ONLY fixture', $3)",
+          [org, email, FROZEN_NOW],
+        );
+      return { org, role, failed: (await c.query("select count(*)::int as n from security_events where org_id = $1 and type = 'login.failed'", [org])).rows[0].n };
+    });
+    for (const locale of ["en", "ar"])
+      for (const size of [[1440, 900], [390, 844]]) {
+        const { ctx, page, errors } = await probePage(locale, size, "/settings/security", now.c5.alertOrgState);
+        now.c5.alert[`${locale}|${size[0]}`] = { ...(await page.evaluate(SECURITY_FACTS)), overflow: (await page.evaluate(MEASURE, C1_LITERALS)).overflow, ...errFacts(errors) };
+        await ctx.close();
+      }
+    delete now.c5.alertOrgState;
+    console.log("  C5 probes done");
+  }
   // formatDisplayDate in the browser: identical to Node whatever the browser's locale and zone. (A
   // tree without the helper — main before C0 — has nothing to compare; the check below says so.)
   const fdSource = existsSync("src/lib/i18n/format-date.ts") ? readFileSync("src/lib/i18n/format-date.ts", "utf8") : "exports.formatDisplayDate = () => undefined;";
@@ -1782,7 +2142,7 @@ const scoped = (o) => Object.fromEntries(Object.entries(o).filter(([k]) => onlyI
 check(`isolation: TEST-ONLY loopback database, no .env, server on 127.0.0.1, browser confined to loopback (${blocked} other requests refused)`, target.pathname === `/${DB}` && !existsSync(join(ROOT, ".env")));
 check(`pinned Chromium (${now.chromium})`, now.chromium === base.chromium, `baseline ${base.chromium}`);
 const pages = new Set(ROUTES.map((r) => r[2]));
-check(`the routes exercise all 36 DEV-UI-01.7 pages (${ROUTES.length} routes; C4 added the VAT report and the vendor statement, with and without a party)`, ONLY || (pages.size === 36 && ROUTES.length === 47), [...pages].length);
+check(`the routes exercise all 36 DEV-UI-01.7 pages (${ROUTES.length} routes; C4 added the VAT report and the vendor statement, with and without a party; C5 the seven other Business Settings tabs)`, ONLY || (pages.size === 36 && ROUTES.length === 54), [...pages].length);
 check(`measured ${keys.length} owner states (${ROUTES.length} routes × EN/AR × 4 widths), ${Object.keys(now.staff).length} staff, ${Object.keys(now.sweep).length} sweep`,
   keys.length === ROUTES.length * 8 && Object.keys(now.staff).length === ROUTES.length * 2 && Object.keys(now.sweep).length === ROUTES.length * 2);
 const B = scoped(base.states);
@@ -1826,7 +2186,8 @@ check(`zero React #418 across all ${keys.length + Object.keys(now.staff).length 
 const BS = scoped(base.staff);
 const perm = Object.keys(now.staff).filter((k) => !BS[k] || BS[k].status !== now.staff[k].status || BS[k].finalPath !== now.staff[k].finalPath).map((k) => `${k} ${BS[k]?.finalPath}→${now.staff[k].finalPath}`);
 check("permissions: where Staff land on every route, as the baseline", perm.length === 0, list(perm));
-const ownerOnly = ["hr-payroll", "settings-org", "settings-org-business", "settings-org-team", "settings-presets", "settings-compliance", "settings-team"];
+const ownerOnly = ["hr-payroll", "settings-org", "settings-org-business", "settings-org-team", "settings-org-logo", "settings-org-bank", "settings-org-fiscal", "settings-org-vat",
+  "settings-org-numbers", "settings-org-roles", "settings-org-zatca", "settings-presets", "settings-compliance", "settings-team"];
 const staffRedirects = Object.entries(now.staff).filter(([k]) => ownerOnly.includes(k.split("|")[0]));
 check("Staff are sent to /dashboard from Payroll, Business Settings, Presets and Compliance (and /settings/team)",
   staffRedirects.every(([, v]) => v.finalPath === "/dashboard") && (ONLY || staffRedirects.length === ownerOnly.length * 2), list(staffRedirects.filter(([, v]) => v.finalPath !== "/dashboard").map(([k, v]) => `${k}→${v.finalPath}`)));
@@ -1869,6 +2230,14 @@ if (REBASE) {
   const stated = [];
   const fresh = [];
   const deptNames = (deptDb?.depts ?? []).map((d) => d.name);
+  // C5 renames two actions on purpose: the Business Settings tabs Fiscal Year and VAT Configuration had no
+  // Arabic (the dictionary entries C5 added; Users and Integrations are group labels, not actions). In Arabic
+  // each may change from exactly its English key to exactly its new Arabic, on the Business Settings routes
+  // only — nothing else, and never in English.
+  const C5_RENAMES = new Map([["Fiscal Year", "السنة المالية"], ["VAT Configuration", "إعدادات ضريبة القيمة المضافة"]]);
+  const c5Renamed = (k, gone, came) => /^settings-(org|team)[|-]/.test(k) && k.includes("|ar|") && gone.length === came.length && gone.every((g) => C5_RENAMES.has(g))
+    && JSON.stringify([...came].sort()) === JSON.stringify(gone.map((g) => C5_RENAMES.get(g)).sort());
+  const c5renamed = [];
   // C4 adds no control; it has two intended state changes: the report picker's buttons say whether they are
   // pressed — pressed=true on the report shown, pressed=false on the other seven — and the statement's
   // Client / Vendor links say which is the current page (current=page on the kind shown). The baseline's
@@ -1911,12 +2280,15 @@ if (REBASE) {
         const gone = a.filter((x) => !b.includes(x));
         const came = b.filter((x) => !a.includes(x));
         if (!gone.length) continue;
-        if (k.includes("|en|") || !gone.every(isC1Literal) || !came.every((x) => /[\u0600-\u06FF]/.test(x))) problems.push(`${group} ${k}: ${gone.join(", ")} → ${came.join(", ")} (${r})`);
-        else renamed.push(`${group} ${k}: "${gone.join('", "')}" → "${came.join('", "')}"`);
+        if (!k.includes("|en|") && gone.every(isC1Literal) && came.every((x) => /[\u0600-\u06FF]/.test(x))) renamed.push(`${group} ${k}: "${gone.join('", "')}" → "${came.join('", "')}"`);
+        else if (c5Renamed(k, gone, came)) c5renamed.push(`${group} ${k}: "${gone.join('", "')}" → "${came.join('", "')}" (${r})`);
+        else problems.push(`${group} ${k}: ${gone.join(", ")} → ${came.join(", ")} (${r})`);
       }
     }
   console.log(`• action names translated in the re-recorded routes (${renamed.length}):`);
   for (const x of renamed) console.log(`    ${x}`);
+  console.log(`• C5's two Settings tab labels, now in Arabic (${c5renamed.length} groups):`);
+  for (const x of c5renamed) console.log(`    ${x}`);
   console.log(`• actions added in the re-recorded routes (${added.length}):`);
   for (const x of added) console.log(`    ${x}`);
   console.log(`• C4 intended state changes in the re-recorded routes (${stated.length} lists):`);
@@ -1925,7 +2297,7 @@ if (REBASE) {
     console.log(`• routes recorded for the first time (${fresh.length} lists; nothing to compare them with):`);
     for (const x of fresh) console.log(`    ${x}`);
   }
-  check(`re-recorded routes: actions equivalent to the baseline — same kinds, targets, types and states; English names unchanged; Arabic names changed only from C1 page copy to Arabic (${renamed.length} lists); added only the intended controls — C2's department filters, C3's task-card buttons (${added.length} groups); C4's intended states only — the report picker's pressed=true / false, the statement links' current=page (${stated.length} lists)`,
+  check(`re-recorded routes: actions equivalent to the baseline — same kinds, targets, types and states; English names unchanged; Arabic names changed only from C1 page copy to Arabic (${renamed.length} lists) or, C5's two Business Settings tab labels, from Fiscal Year / VAT Configuration to السنة المالية / إعدادات ضريبة القيمة المضافة (${c5renamed.length} groups); added only the intended controls — C2's department filters, C3's task-card buttons (${added.length} groups); C4's intended states only — the report picker's pressed=true / false, the statement links' current=page (${stated.length} lists)`,
     problems.length === 0, list(problems));
 }
 
@@ -2393,6 +2765,135 @@ for (const [k, s] of e4Runs) {
 }
 check(`C4 empty states (blocking; EN / AR at 1440 and 390 — ${e4Runs.length} states): an EmptyState after the heading it belongs to — no account selected (Ledger, Chart of Accounts); and, in an org registered through the UI in this TEST-ONLY copy (${org4 ? `${org4.banks} starter bank account, ${org4.payments} payments, ${org4.journal} journal entries` : "—"}): no transactions (its first account's ledger), no payment records (Payments; Bank Accounts' recent records), no journal entries, and — its bank account deleted (${org4?.deleted ?? "—"} row) — no bank accounts; each visible and inside the viewport; the page's outline exact; no overflow, no error`,
   (ONLY && !e4Runs.length) || ((ONLY || e4Runs.length === 28) && org4?.banks === 1 && org4.payments === 0 && org4.journal === 0 && org4.deleted === 1 && e4Bad.length === 0), list(e4Bad));
+
+// ------------------------------------------------------------------------------------- C5 targets
+// The 14 Settings routes, EN and AR at every width (112 states; seven of them new in C5); SettingsNav and D-7
+// on every Business Settings state; the probes.
+const c5Keys = keys.filter((k) => C5_ROUTES.includes(k.split("|")[0]));
+const c5 = (pred) => c5Keys.filter((k) => !pred(now.states[k], k));
+const c5Final = (k) => (k.startsWith("settings-team|") ? "/settings/organization?tab=team" : pathOf(k));
+const dirOf = (l) => (l === "ar" ? "rtl" : "ltr");
+check(`C5: the ${C5_ROUTES.length} Settings routes were measured (${c5Keys.length} states; ${C5_NEW.join(", ")} new in C5)`, ONLY || c5Keys.length === C5_ROUTES.length * 8, c5Keys.length);
+const c5Route = c5((s, k) => s.status === 200 && s.finalPath === c5Final(k));
+check("C5: every Settings route answers 200 where it is — each Business Settings tab; /settings/team still redirects to its Team tab (/settings/organization?tab=team)",
+  c5Route.length === 0, list(c5Route.map(show((s) => `${s.status} ${s.finalPath}`))));
+const c5Ph = c5((s) => s.pageHeader?.n === 1 && s.pageHeader.h1Inside && s.pageHeader.metaFirst && s.pageHeader.titleAtStart && s.pageHeader.trailing !== "misplaced" && !s.pageHeader.overlap);
+check("C5: one PageHeader per Settings page, holding its only h1 — Business Settings (above its navigation, whichever tab), Presets, Security Center (the owner's risk pill as meta, outside the h1), Security & Compliance Readiness (its disclaimer the description); the title at the inline start, nothing overlapping it",
+  c5Ph.length === 0, list(c5Ph.map(show((s) => JSON.stringify(s.pageHeader)))));
+const c5Out = c5((s, k) => {
+  const [id, l] = k.split("|");
+  return JSON.stringify(s.outline) === JSON.stringify(c5Outline(id, l)) && s.h1 === 1 && s.skips === 0;
+});
+check("C5: every Settings outline exact, no level skipped — Business Settings the h1 with the shown panel's title its h2 (Roles & Permissions keeps its subsection, now an h3); Presets the h1; Security Center the h1 with Two-Factor Authentication, Password, Active Sessions and Security Timeline as h2s; Security & Compliance Readiness the h1 › Readiness checklist (h2) › GDPR, ISO 27001 — roadmap, Platform security (h3s), Data Subject Rights and Consent Management (h2s) — in the dictionary's words",
+  c5Out.length === 0, list(c5Out.map(show((s) => JSON.stringify(s.outline)))));
+const c5Ov = c5((s) => s.overflow === 0 && s.offenders === 0 && s.tablesBeyond === 0);
+check("C5: no page overflow, nothing past the viewport and no table beyond it on any Settings page at any width — at 390 Business Settings was 92 px (Color Theme), 80 px (Business Details), 44 px (Team), Compliance 32 px",
+  c5Ov.length === 0, list(c5Ov.map(show((s) => `${s.overflow}px ${s.offenders} el ${s.tablesBeyond} tables`))));
+const c5Err = c5((s) => !s.consoleErrors && !s.pageErrors && !s.r418);
+check("C5: zero console errors, page errors and React #418 on every Settings state", c5Err.length === 0, list(c5Err.map(show((s) => JSON.stringify(s.errorSample)))));
+const c5Ind = c5((s) => s.indic === 0);
+check("C5: Western digits — no Arabic-Indic digit on any Settings page", c5Ind.length === 0, list(c5Ind.map(show((s) => s.indic))));
+const c5Risk = c5((s, k) => !k.startsWith("settings-security|") || s.pageHeader?.meta === `${T(k.split("|")[1], "Risk")}: ${T(k.split("|")[1], "Low")}` && s.pageHeader.title === T(k.split("|")[1], "Security Center"));
+check("C5 Security Center (owner): the risk pill is the PageHeader's meta — Risk: Low (no alert) — and not in the h1, which reads Security Center alone", c5Risk.length === 0,
+  list(c5Risk.map(show((s) => JSON.stringify(s.pageHeader)))));
+
+// SettingsNav on every Business Settings state (the ten tabs and /settings/team: 88).
+const NAV_ORDER = C5_NAV.map(([v]) => v);
+const navBad = Object.entries(now.c5.nav).filter(([k, f]) => {
+  const [id, l, w] = k.split("|");
+  const tab = C5_TABS[id];
+  const wide = Number(w) >= 768;
+  return !(f && f.rootDir === dirOf(l) && f.orientation === "vertical" && f.navAtStart && f.navInView && f.panelInView
+    && f.align.length === 1 && f.align[0] === "start" && f.itemDir.length === 1 && f.itemDir[0] === dirOf(l)
+    && JSON.stringify(f.order) === JSON.stringify(NAV_ORDER) && JSON.stringify(f.labels) === JSON.stringify(C5_NAV.map(([, en]) => T(l, en)))
+    && JSON.stringify(f.groups) === JSON.stringify(C5_GROUPS.map((g) => T(l, g))) && JSON.stringify(f.active) === JSON.stringify([tab]) && f.panel === tab
+    && (wide
+      ? f.flexDirection === "row" && f.beside && !f.stacked && f.panelAfter && f.navWidth === 224
+      : f.flexDirection === "column" && f.stacked && !f.beside && f.navWidth === f.rootWidth && f.panelWidth === f.rootWidth));
+}).map(([k, f]) => `${k} ${JSON.stringify(f)}`);
+check("C5 SettingsNav (blocking; Business Settings, EN / AR, every width — 88 states): the Radix root's dir is the document's (rtl in Arabic; left to itself Radix wrote ltr); a vertical list at the inline start with the panel after it from 768 px (1440 / 1024 / 768: side by side, the list 224 px), full width above the panel below (390: stacked, both the root's width — D-7); the items aligned to the start, in the document's direction; the ten tabs in SETTINGS_TABS order with their labels and the four groups — Fiscal Year, VAT Configuration, Users and Integrations in Arabic too; the tab asked for active (color-theme by default)",
+  (ONLY && !Object.keys(now.c5.nav).length) || (navBad.length === 0 && (ONLY || Object.keys(now.c5.nav).length === 88)), list(navBad));
+const d7Bad = Object.entries(now.c5.d7).filter(([k, f]) => {
+  const [l, w] = k.split("|");
+  return !(f && f.rootDir === dirOf(l) && f.overflow === 0 && !f.consoleErrors && !f.pageErrors && !f.r418 && f.navAtStart
+    && (w === "767" ? f.flexDirection === "column" && f.stacked && f.navWidth === f.rootWidth && f.panelWidth === f.rootWidth : f.flexDirection === "row" && f.beside && f.panelAfter && f.navWidth === 224));
+}).map(([k, f]) => `${k} ${JSON.stringify(f)}`);
+check("C5 D-7 breakpoint (blocking; EN / AR): 767 px — a column, the navigation full width above the panel; 768 px (md) — a row, the 224 px navigation at the inline start and the panel after it; no overflow either side",
+  (ONLY && !Object.keys(now.c5.d7).length) || (d7Bad.length === 0 && (ONLY || Object.keys(now.c5.d7).length === 4)), list(d7Bad));
+const KEY_WANT = ["business-details", "business-details", "logo", "color-theme", "logo", "zatca", "business-details", "business-details", "business-details"];
+const keyBad = [];
+for (const [run, r] of Object.entries(now.c5.keys)) {
+  const l = run.split("|")[0];
+  if (r.steps.length !== KEY_WANT.length || r.consoleErrors || r.pageErrors || r.r418) keyBad.push(`${run}: ${r.steps.length} steps ${JSON.stringify(r.errorSample ?? [])}`);
+  r.steps.forEach((st, i) => {
+    const want = KEY_WANT[i];
+    const title = T(l, C5_NAV.find(([v]) => v === want)?.[1] ?? "");
+    const ok = st.panel === want && JSON.stringify(st.active) === JSON.stringify([want]) && JSON.stringify(st.selected) === JSON.stringify([want]) && st.h2.includes(title)
+      && st.url === "/settings/organization?tab=business-details" && (i === 0 || (st.focus === want && JSON.stringify(st.tabbable) === JSON.stringify([want]) && st.focusVisible && st.outline !== "none"));
+    if (!ok) keyBad.push(`${run} ${st.step}: ${JSON.stringify(st)}`);
+  });
+}
+check("C5 SettingsNav by keyboard (blocking; EN / AR at 1440 and 390): Tab reaches the active tab, the only tabbable one; ArrowDown, ArrowDown, ArrowUp move the focus to Logo, Color Theme, Logo and show each panel (its h2); End — the last tab (ZATCA), Home — the first; ArrowRight and ArrowLeft move nothing (a vertical list), in Arabic as in English; the focused tab the only selected one, its focus visible; the URL unchanged (no URL state)",
+  (ONLY && !Object.keys(now.c5.keys).length) || (keyBad.length === 0 && (ONLY || Object.keys(now.c5.keys).length === 4)), list(keyBad));
+const PRESET_LABELS = ["Tax Rates", "Payment Terms", "Units", "Note Templates", "Terms & Conditions Groups", "Bundles", "Numbering", "Exchange Rates", "Print Layout", "Seal & Signature",
+  "Default Bank Accounts", "Departments", "Product Categories", "Leave Types"];
+const presetBad = [];
+for (const [run, r] of Object.entries(now.c5.presets)) {
+  const l = run.split("|")[0];
+  if (r.dir !== dirOf(l) || JSON.stringify(r.order) !== JSON.stringify(C5_PRESET_TABS) || JSON.stringify(r.labels) !== JSON.stringify(PRESET_LABELS.map((w) => T(l, w))) || r.consoleErrors || r.pageErrors || r.r418)
+    presetBad.push(`${run} tabs: ${JSON.stringify([r.dir, r.order, r.labels, r.errorSample ?? []])}`);
+  for (const [v, en] of Object.entries(C5_PRESET_PANELS)) {
+    const pn = r.panels[v];
+    if (!(pn && pn.panel === v && JSON.stringify(pn.outline) === JSON.stringify([`h1 ${T(l, "Presets")}`, `h2 ${T(l, en)}`]) && pn.h1 === 1 && pn.skips === 0 && pn.overflow === 0 && pn.offenders === 0))
+      presetBad.push(`${run} ${v}: ${JSON.stringify(pn)}`);
+  }
+}
+check("C5 Presets (EN / AR at 1440 and 390): the h1 Presets; the 14 tabs in their order, with their labels, the shared Tabs in the document's direction; Print Layout, Seal & Signature and Default Bank Accounts each the h2 under it when opened, nothing past the viewport",
+  (ONLY && !Object.keys(now.c5.presets).length) || (presetBad.length === 0 && (ONLY || Object.keys(now.c5.presets).length === 4)), list(presetBad));
+const staffSecBad = Object.entries(now.c5.staff).filter(([l, f]) => !(f && JSON.stringify(f.outline) === JSON.stringify(c5Outline("settings-security", l, false)) && f.h1 === 1 && f.skips === 0
+  && f.pageHeader?.h1Inside && f.risk === null && f.alerts.length === 0 && !f.consoleErrors && !f.pageErrors && !f.r418)).map(([l, f]) => `${l} ${JSON.stringify(f)}`);
+check("C5 Security Center as Staff (EN / AR at 1440): the h1 Security Center with Two-Factor Authentication, Password and Active Sessions as h2s — no Security Timeline, no risk pill, no alert (admin only, as before)",
+  (ONLY && !Object.keys(now.c5.staff).length) || (staffSecBad.length === 0 && (ONLY || Object.keys(now.c5.staff).length === 2)), list(staffSecBad));
+const tlBad = Object.entries(now.c5.timeline).filter(([run, r]) => {
+  const l = run.split("|")[0];
+  const e = r.empty;
+  return !(e.length === 1 && e[0].text === T(l, "No security events yet.") && e[0].visible && e[0].inView && e[0].after === `h2 ${T(l, "Security Timeline")}` && e[0].controls === 0
+    && r.tables === 1 && !r.consoleErrors && !r.pageErrors && !r.r418);
+}).map(([run, r]) => `${run} ${JSON.stringify(r)}`);
+check(`C5 Security Timeline (owner, EN / AR at 1440 and 390; ${now.c5.timelineWindow ?? "?"} events in the page's 30-day window): the EmptyState "No security events yet." under the Timeline's h2 — no control in it, no table but Active Sessions`,
+  (ONLY && !Object.keys(now.c5.timeline).length) || (now.c5.timelineWindow === 0 && tlBad.length === 0 && (ONLY || Object.keys(now.c5.timeline).length === 4)), list(tlBad));
+const secLayoutBad = Object.entries(now.c5.security).filter(([run, r]) => {
+  const l = run.split("|")[0];
+  const all = (xs) => xs.length > 0 && xs.every((x) => x === true);
+  return !(r.header && r.meta && r.mfa && all(r.mfaControls) && r.password && all(r.passwordControls) && all(r.fields) && r.focus === "cur-pw" && all(r.tables) && r.timeline
+    && JSON.stringify(r.h2) === JSON.stringify(C5_SECURITY.map((w) => T(l, w))) && r.overflow === 0 && r.offenders === 0 && r.tablesBeyond === 0
+    && r.pageHeader?.h1Inside && !r.pageHeader.overlap && r.pageHeader.trailing !== "misplaced" && !r.consoleErrors && !r.pageErrors && !r.r418);
+}).map(([run, r]) => `${run} ${JSON.stringify(r)}`);
+check("C5 Security Center layout (blocking; owner, EN / AR at 1440, 768 and 390): the PageHeader wraps rather than overflows, its risk meta inside the viewport; the Two-Factor Authentication card and its control, the Password card, both password fields (the current one takes the focus) and Change password, the Active Sessions table (or its scroll box) and the Timeline all inside the viewport; no page overflow",
+  (ONLY && !Object.keys(now.c5.security).length) || (secLayoutBad.length === 0 && (ONLY || Object.keys(now.c5.security).length === 6)), list(secLayoutBad));
+const alertBad = Object.entries(now.c5.alert).filter(([run, r]) => {
+  const l = run.split("|")[0];
+  const a = r.alerts.find((x) => x.title === "Repeated failed logins");
+  // The side the declaration governs: the inline start — left in English, right in Arabic; the card's own
+  // 1px line stays on the other side. With --warn defined that side is the 3px stripe in its colour; it is
+  // not defined in any stylesheet (nor RISK_STYLE's tokens — deferred), so the declaration is invalid at
+  // computed-value time and that side unset: no stripe paints, in C4 (border-left) as in C5 — recorded, not fixed.
+  const [start, end] = l === "ar" ? [a?.right, a?.left] : [a?.left, a?.right];
+  const startOk = r.tokens.warn ? start === `3px ${r.warn}` : Boolean(start) && start.startsWith("0px ");
+  return !(a && r.alerts.length === 1 && a.inline === "3px solid var(--warn)" && !a.physical && a.dir === dirOf(l) && startOk && end === `1px ${r.line}`
+    && r.risk === `${T(l, "Risk")}: ${T(l, "Elevated")}` && !r.riskInH1 && r.overflow === 0 && !r.consoleErrors && !r.pageErrors && !r.r418);
+}).map(([run, r]) => `${run} ${JSON.stringify(r)}`);
+const tokensNow = Object.values(now.c5.alert)[0]?.tokens ?? {};
+check(`C5 Security alert (fixture, EN / AR at 1440 and 390): an org registered through the UI in this run's TEST-ONLY copy (its owner: ${now.c5.alertFixture?.role ?? "?"}), five failed logins written for it at the frozen instant (security_events is append-only: the fixture is its own org's, the seeded org untouched) — "Repeated failed logins"; its severity stripe declared on border-inline-start (3px solid var(--warn)), no physical border, the side it governs the inline start — left in English, right in Arabic — the card's 1px line on the other side (--warn ${tokensNow.warn ? "defined: the stripe paints" : "is defined in no stylesheet, so no stripe paints — as in C4; deferred with RISK_STYLE"}); the risk Elevated in the PageHeader's meta, outside the h1; no overflow`,
+  (ONLY && !Object.keys(now.c5.alert).length) || (alertBad.length === 0 && now.c5.alertFixture?.role === "owner" && now.c5.alertFixture?.failed === 5 && (ONLY || Object.keys(now.c5.alert).length === 4)), list(alertBad));
+const compBad = Object.entries(now.c5.compliance).filter(([run, r]) => {
+  const w = run.split("|")[1];
+  const reach = (f) => f && f.exportBtn && f.customer && f.erase && f.subject && f.grant && f.withdraw;
+  return !(reach(r) && r.listOpen && r.options > 0 && r.listClosed && r.tables.every((t) => t.contained) && !r.consoleErrors && !r.pageErrors && !r.r418
+    && (w !== "390" || (r.consent && reach(r.consent) && r.consent.tables.length === 1 && r.consent.tables[0].rows === 1 && r.consent.tables[0].contained && r.consent.overflow === 0 && r.consent.removed === 1)));
+}).map(([run, r]) => `${run} ${JSON.stringify(r)}`);
+check("C5 Compliance (blocking; EN / AR at 1440, 768 and 390): every control inside the viewport — Export organization data, the customer select and Erase, the consent subject, Grant and Withdraw; the customer select opens its list and closes; at 390 a consent granted in this run's TEST-ONLY copy (deleted after) lists in a table inside its card, nothing past the viewport",
+  (ONLY && !Object.keys(now.c5.compliance).length) || (compBad.length === 0 && (ONLY || Object.keys(now.c5.compliance).length === 6)), list(compBad));
 
 // ------------------------------------------------------------------------------------- D-6
 // Every StatRow consumer is held to D-6's targets; all but C2's own strips also to C1's record.

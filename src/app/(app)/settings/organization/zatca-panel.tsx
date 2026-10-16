@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { ShieldCheck, Lock } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { SectionHeader } from "@/components/ui/section-header";
 import { t, type Locale } from "@/lib/i18n/dict";
 import type { Org } from "@/db";
 import { enableZatcaPhase1Action } from "./actions";
@@ -61,7 +62,7 @@ export function ZatcaPanel({ locale, org }: { locale: Locale; org: Org }) {
 
   return (
     <div className="max-w-xl">
-      <h3 className="text-[17px] font-bold mb-1">{t(locale, "ZATCA Phase 1")}</h3>
+      <SectionHeader level={2} title={t(locale, "ZATCA Phase 1")} className="mb-1" />
       <p className="text-[12.5px] text-ink-muted mb-4">
         {t(locale, "Records that this organization operates under ZATCA Phase 1. A Phase 1 QR code is printed on tax invoice PDFs. There is no connection to ZATCA systems: no XML, no cryptographic stamping, no clearance or reporting.")}
       </p>

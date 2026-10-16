@@ -136,6 +136,44 @@ const C4_CSS_HUNKS: [string, string][] = [
   ["@media (max-width: 1100px) { .two-col { grid-template-columns: minmax(0, 1fr); } .acct-grid { grid-template-columns: 1fr; } }",
     "@media (max-width: 1100px) { .two-col { grid-template-columns: minmax(0, 1fr); } .acct-grid { grid-template-columns: minmax(0, 1fr); } }"],
 ];
+// DEV-UI-01.7 C5: the Settings family — the SettingsNav primitive, Business Settings and its panels (Team's
+// among them), Presets and its three titled panels, the Security Center, Compliance — by the files that
+// render their markup.
+const ST = `${A}settings/`;
+const C5_NAV = "src/components/ui/settings-nav.tsx";
+const C5_ORG = `${ST}organization/page.tsx`;
+const C5_COMPANY = `${ST}organization/company-panels.tsx`;
+const C5_FINANCE = `${ST}organization/finance-panel.tsx`;
+const C5_VAT = `${ST}organization/vat-settings-form.tsx`;
+const C5_NUMBERS = `${ST}organization/number-format-form.tsx`;
+const C5_ROLES = `${ST}organization/reference-panels.tsx`;
+const C5_ZATCA = `${ST}organization/zatca-panel.tsx`;
+const C5_TEAM = `${ST}team/team-panel.tsx`;
+const C5_PRESETS = `${ST}presets/page.tsx`;
+const C5_PRESET_BANK = `${ST}presets/default-bank-accounts-panel.tsx`;
+const C5_PRINT = `${ST}presets/print-layout-panel.tsx`;
+const C5_SEAL = `${ST}presets/seal-signature-panel.tsx`;
+const C5_SECURITY = `${ST}security/security-client.tsx`;
+const C5_COMPLIANCE = `${ST}compliance/compliance-client.tsx`;
+const C5_FILES = [C5_NAV, C5_ORG, C5_COMPANY, C5_FINANCE, C5_VAT, C5_NUMBERS, C5_ROLES, C5_ZATCA, C5_TEAM, C5_PRESETS, C5_PRESET_BANK, C5_PRINT, C5_SEAL, C5_SECURITY, C5_COMPLIANCE];
+/** The file holding each Settings page's PageHeader (/settings/team only redirects). */
+const C5_HEADERS = [C5_ORG, C5_PRESETS, C5_SECURITY, C5_COMPLIANCE];
+/** The 13 top-level panel titles C5 made h2s: [file, the title's dictionary key]. */
+const C5_PANELS: [string, string][] = [
+  [C5_COMPANY, "Business Details"], [C5_COMPANY, "Logo"], [C5_COMPANY, "Color Theme"], [C5_FINANCE, "Default Bank Account"], [C5_FINANCE, "Fiscal Year"],
+  [C5_VAT, "VAT Configuration"], [C5_NUMBERS, "Number Format"], [C5_TEAM, "Team"], [C5_ROLES, "Roles & Permissions"], [C5_ZATCA, "ZATCA Phase 1"],
+  [C5_PRESET_BANK, "Default Bank Accounts"], [C5_PRINT, "Print Layout"], [C5_SEAL, "Seal & Signature"],
+];
+/**
+ * C5's two dictionary additions, byte for byte: the four Settings navigation labels the audit found without
+ * Arabic, and the one structural heading Compliance's readiness groups needed. Group 12 undoes them to hold
+ * dict.ts at C4's bytes; group 13 proves they are C5's only dictionary change.
+ */
+const C5_DICT_BLOCKS = [
+  '  // DEV-UI-01.7 C5: the four Settings navigation labels that had no Arabic.\n  "Fiscal Year": "السنة المالية",\n  "VAT Configuration": "إعدادات ضريبة القيمة المضافة",\n  Users: "المستخدمون",\n  Integrations: "التكاملات",\n',
+  "  // DEV-UI-01.7 C5: the readiness groups' h2 — a structural label, no certification claim.\n  \"Readiness checklist\": \"قائمة التحقق من الجاهزية\",\n",
+];
+const undoC5Dict = (s: string) => C5_DICT_BLOCKS.reduce((t, b) => t.replace(b, ""), s);
 
 let pass = 0;
 let fail = 0;
@@ -865,11 +903,13 @@ check("consumers: formatDisplayDate on exactly the two C2 date surfaces — Atte
   same(now.consumers.formatDisplayDate, pins.consumers.formatDisplayDate) && same(now.consumers.formatDisplayDate, [`${HR}attendance/page.tsx`, `${HR}payroll/page.tsx`]),
   now.consumers.formatDisplayDate.join(" "));
 const fileOf = (u: string) => u.slice(0, u.indexOf(": <"));
-check("consumers: SectionHeader on the client / vendor Statement of Account (C1), Salary Structure / Past payroll runs (C2), the project detail's six sections (C3) and the selected report, the selected ledger account and the journal / bank secondary sections (C4); EmptyState in the three master-data bins (C1), the five HR empty states (C2), the project detail's three (C3) and the six finance empty messages (C4)",
+check("consumers: SectionHeader on the client / vendor Statement of Account (C1), Salary Structure / Past payroll runs (C2), the project detail's six sections (C3) and the selected report, the selected ledger account and the journal / bank secondary sections (C4), the 13 Settings panel titles, Security's Active Sessions / Security Timeline and Compliance's three sections (C5); EmptyState in the three master-data bins (C1), the five HR empty states (C2), the project detail's three (C3), the six finance empty messages (C4) and the Security Timeline's (C5)",
   same(now.consumers.SectionHeader, pins.consumers.SectionHeader) && same(now.consumers.EmptyState, pins.consumers.EmptyState) &&
     same(now.consumers.SectionHeader.map(fileOf), [`${A}clients/[id]/page.tsx`, `${HR}employees/[id]/page.tsx`, `${HR}payroll/page.tsx`, `${A}purchasing/vendors/[id]/page.tsx`,
-      C3_COST, C3_COST, C3_COST, C3_KANBAN, C3_DETAIL, C3_DETAIL, C4_REPORTS, C4_ACCOUNT_VIEW, C4_JOURNAL, C4_BANK].sort()) &&
-    same(now.consumers.EmptyState.map(fileOf), [...C1_BINS, ...C2_EMPTY, C3_KANBAN, C3_DETAIL, C3_DETAIL, C4_ACCOUNT_VIEW, C4_ACCOUNT_VIEW, C4_PAYMENTS, C4_JOURNAL, C4_BANK, C4_BANK].sort()),
+      C3_COST, C3_COST, C3_COST, C3_KANBAN, C3_DETAIL, C3_DETAIL, C4_REPORTS, C4_ACCOUNT_VIEW, C4_JOURNAL, C4_BANK,
+      ...C5_PANELS.map(([f]) => f), C5_SECURITY, C5_SECURITY, C5_COMPLIANCE, C5_COMPLIANCE, C5_COMPLIANCE].sort()) &&
+    same(now.consumers.EmptyState.map(fileOf), [...C1_BINS, ...C2_EMPTY, C3_KANBAN, C3_DETAIL, C3_DETAIL, C4_ACCOUNT_VIEW, C4_ACCOUNT_VIEW, C4_PAYMENTS, C4_JOURNAL, C4_BANK, C4_BANK,
+      C5_SECURITY].sort()),
   [...now.consumers.SectionHeader, ...now.consumers.EmptyState].join(" "));
 
 // ---------- 7. no abstraction creep ----------
@@ -952,10 +992,10 @@ check("PageHeader: a text-page / 600 title (no font-extrabold, no text-2xl) that
   phCode.includes(PH_H1.replace("class=", "className=")) && phLayout.length === 0 && physical(PHF).length === 0, [...phLayout.map(String), ...physical(PHF)].join(" "));
 check("PageHeader: imports only react and the cn helper", same(imports(PHF), ["react", "@/lib/utils"]), imports(PHF).join(" "));
 const phUses = now.consumers.PageHeader;
-check(`PageHeader consumers: the 12 C1 pages, the 7 HR routes (C2), the 3 Projects routes (C3) and the 7 finance routes (C4) — one header each, none patching it with a className (${phUses.length})`,
-  same(phUses, pins.consumers.PageHeader) && same(phUses.map(fileOf).sort(), [...C1_PAGES, ...C2_HEADERS, ...C3_HEADERS, ...C4_HEADERS].sort()) && phUses.length === 29 &&
+check(`PageHeader consumers: the 12 C1 pages, the 7 HR routes (C2), the 3 Projects routes (C3), the 7 finance routes (C4) and the 4 Settings pages (C5) — one header each, none patching it with a className (${phUses.length})`,
+  same(phUses, pins.consumers.PageHeader) && same(phUses.map(fileOf).sort(), [...C1_PAGES, ...C2_HEADERS, ...C3_HEADERS, ...C4_HEADERS, ...C5_HEADERS].sort()) && phUses.length === 33 &&
     !phUses.some((u) => / className\b/.test(u)),
-  delta([...C1_PAGES, ...C2_HEADERS, ...C3_HEADERS, ...C4_HEADERS].sort(), phUses.map(fileOf).sort()));
+  delta([...C1_PAGES, ...C2_HEADERS, ...C3_HEADERS, ...C4_HEADERS, ...C5_HEADERS].sort(), phUses.map(fileOf).sort()));
 
 // D-9: the layout pin narrowed — every other layout file byte-pinned, one by one
 const dfPins = JSON.parse(read("verify/document-form-pins.json")) as Record<string, string>;
@@ -1187,11 +1227,13 @@ const D6_SOURCES: Record<string, string> = {
   "settings/security/security-client.tsx": "97d7c211bd24e412",
 };
 // C3 converged Projects' three files (list, detail, cost control) on purpose: group 11 holds them from
-// here — C2's code plus C3's own hunks, nothing else. The other nine stay byte-identical to C1.
-const d6Held = Object.entries(D6_SOURCES).filter(([f]) => !C3_FILES.includes(A + f));
+// here — C2's code plus C3's own hunks, nothing else. C5 did the same with Security's client: group 13
+// holds it — C4's code (C1's bytes) plus C5's own hunks, its stat row untouched. The other eight stay
+// byte-identical to C1.
+const d6Held = Object.entries(D6_SOURCES).filter(([f]) => !C3_FILES.includes(A + f) && !C5_FILES.includes(A + f));
 const d6Drift = d6Held.filter(([f, hsh]) => !exists(A + f) || sha(A + f) !== hsh).map(([f]) => f);
-check(`D-6 reaches every other KPI row through the CSS and the StatRow component only — the eight document lists and Security byte-identical to C1 (${d6Held.length} files; Projects' three are C3's, group 11)`,
-  d6Held.length === 9 && d6Drift.length === 0, d6Drift.join(" "));
+check(`D-6 reaches every other KPI row through the CSS and the StatRow component only — the eight document lists byte-identical to C1 (${d6Held.length} files; Projects' three are C3's, group 11; Security is C5's, group 13)`,
+  d6Held.length === 8 && d6Drift.length === 0, d6Drift.join(" "));
 
 // Status and direction
 const C1_HR_BADGES: Record<string, string[]> = {
@@ -1693,8 +1735,9 @@ const c4FinanceFiles = walk(`${A}finance`);
 const c4Unaccounted = c4FinanceFiles.filter((f) => !C4_FILES.includes(f) && !(f in C4_UNTOUCHED) && !c4BizFiles.includes(f));
 check(`C4: the other ${Object.keys(C4_UNTOUCHED).length} finance files byte-identical to C3 — StatementView (its Search / Document type copy deferred), JournalForm (its Add line and inputs deferred to DEV-UI-01.8), the account, payment and bank-account dialogs, the payment history and its buttons, the reports and payments pages, the loading boundaries; every finance file is one of C4's eight, one of these or a business pin`,
   c4Untouched.length === 0 && c4Unaccounted.length === 0 && c4FinanceFiles.length === C4_FILES.length + Object.keys(C4_UNTOUCHED).length + c4BizFiles.length, [...c4Untouched, ...c4Unaccounted.map((f) => `unaccounted: ${f}`)].join(" "));
-const c4Frozen = Object.entries(C4_FROZEN).filter(([f, hsh]) => !exists(f) || sha(f) !== hsh).map(([f]) => f);
-check("C4: the P0 / P0.1 / P0.2 verifiers byte-pinned — the Arabic-locale hydration suite as C3's approved reconstruction left it plus C4's approved Payments-trigger selector (frozen), the settings time-zone and business-date hydration suites, number-locale, date-timezone, business-dates — and dict.ts byte-identical (C4 needed no new entry)",
+// dict.ts: C4's bytes once C5's two additions (C5_DICT_BLOCKS — group 13 proves they are its only edit) are undone.
+const c4Frozen = Object.entries(C4_FROZEN).filter(([f, hsh]) => !exists(f) || (f === "src/lib/i18n/dict.ts" ? h16(undoC5Dict(read(f))) : sha(f)) !== hsh).map(([f]) => f);
+check("C4: the P0 / P0.1 / P0.2 verifiers byte-pinned — the Arabic-locale hydration suite as C3's approved reconstruction left it plus C4's approved Payments-trigger selector (frozen), the settings time-zone and business-date hydration suites, number-locale, date-timezone, business-dates — and dict.ts byte-identical (C4 needed no new entry; C5's two additions aside, group 13)",
   c4Frozen.length === 0, c4Frozen.join(" "));
 const C4_BIZ = ["src/lib/finance-reports.ts", "src/lib/statements.ts", "src/lib/accounting.ts", "src/lib/settlement.ts", "src/lib/currency/**", "src/db/**", "drizzle/**"];
 const c4BizWant = [`${FN}_shared/actions.ts`, `${FN}bank-accounts/actions.ts`, `${FN}journal/actions.ts`, `${FN}payments/actions.ts`, `${FN}reports/actions.ts`, `${FN}reports/export/route.ts`,
@@ -1906,6 +1949,239 @@ for (const f of walk("src").filter((f) => /\.(tsx?|css)$/.test(f))) {
 const financeLayouts = c4FinanceFiles.filter((f) => /(^|\/)(layout|template)\.tsx?$/.test(f));
 check(`C4: no finance page abstraction — none of ${C4_BANNED.join(", ")} (identifier or file), no layout or template under /finance; each route composes PageHeader, SectionHeader and EmptyState itself`,
   c4Creep.length === 0 && financeLayouts.length === 0, [...c4Creep, ...financeLayouts].join(" "));
+
+// ---------- 13. C5 — Settings ----------
+section("13. C5 — Settings");
+
+// Nothing moved but C5's own changes: each Settings file is C4's (a1dbc6e) with exactly these hunks applied
+// — [C4 code, C5 code], compared without comments or whitespace. Undo them all and the file must be C4's
+// again, so a form, a field, a query, a save action, a permission, a tab value, MFA, the sessions, the
+// readiness claims or a consent cannot change unseen.
+const SH_IMPORT = `import { SectionHeader } from "@/components/ui/section-header";`;
+const PH_IMPORT = `import { PageHeader } from "@/components/layout/page-header";`;
+const panelHunk = (cls: string, key: string, extra = ""): [string, string] => [`<h3 className="${cls}">{t(locale, "${key}")}</h3>`, `<SectionHeader level={2} title={t(locale, "${key}")}${extra} />`];
+const C5_HUNKS: Record<string, [string, string][]> = {
+  [C5_NAV]: [
+    ["", `import { useDocumentDir } from "./use-document-dir";`],
+    ["const SettingsNav = TabsPrimitive.Root;",
+      "function SettingsNav({ dir, ...props }: React.ComponentProps<typeof TabsPrimitive.Root>) { const docDir = useDocumentDir(); return <TabsPrimitive.Root dir={dir ?? docDir} {...props} />; }"],
+    [`cn("settings-nav w-56 shrink-0", className)`, `cn("settings-nav w-full md:w-56 shrink-0", className)`],
+    [`cn("settings-nav-item text-left rtl:text-right", className)`, `cn("settings-nav-item text-start", className)`],
+    [`cn("flex-1 min-w-0", className)`, `cn("w-full min-w-0 md:flex-1", className)`],
+  ],
+  [C5_ORG]: [
+    ["", PH_IMPORT],
+    [`<div className="max-w-5xl mx-auto"><SettingsNav defaultValue={defaultTab} orientation="vertical" className="flex gap-8 items-start">`,
+      `<div className="max-w-5xl mx-auto"><PageHeader title={t(locale, "Business Settings")} /><SettingsNav defaultValue={defaultTab} orientation="vertical" className="flex flex-col md:flex-row gap-8 items-start">`],
+  ],
+  [C5_COMPANY]: [["", SH_IMPORT], panelHunk("text-[17px] font-bold", "Business Details"), panelHunk("text-[17px] font-bold", "Logo"), panelHunk("text-[17px] font-bold", "Color Theme")],
+  [C5_FINANCE]: [["", SH_IMPORT], panelHunk("text-[17px] font-bold", "Default Bank Account"), panelHunk("text-[17px] font-bold", "Fiscal Year")],
+  [C5_VAT]: [["", SH_IMPORT], panelHunk("text-[17px] font-bold", "VAT Configuration")],
+  [C5_NUMBERS]: [["", SH_IMPORT], panelHunk("text-[17px] font-bold", "Number Format")],
+  [C5_ROLES]: [
+    ["", SH_IMPORT], panelHunk("text-[17px] font-bold", "Roles & Permissions"),
+    [`<h4 className="text-[13.5px] font-bold mb-1">{t(locale, "Actions restricted beyond their module")}</h4>`,
+      `<h3 className="text-[13.5px] font-bold mb-1">{t(locale, "Actions restricted beyond their module")}</h3>`],
+  ],
+  [C5_ZATCA]: [["", SH_IMPORT], panelHunk("text-[17px] font-bold mb-1", "ZATCA Phase 1", ` className="mb-1"`)],
+  [C5_TEAM]: [["", SH_IMPORT], panelHunk("text-[17px] font-bold", "Team")],
+  [C5_PRESETS]: [["", PH_IMPORT], [`<div className="main-head"><h3>{t(locale, "Presets")}</h3></div>`, `<PageHeader title={t(locale, "Presets")} />`]],
+  [C5_PRESET_BANK]: [["", SH_IMPORT], panelHunk("text-[15px] font-bold", "Default Bank Accounts")],
+  [C5_PRINT]: [["", SH_IMPORT], panelHunk("text-[17px] font-bold", "Print Layout")],
+  [C5_SEAL]: [["", SH_IMPORT], panelHunk("text-[17px] font-bold", "Seal & Signature")],
+  [C5_SECURITY]: [
+    ["", `${PH_IMPORT} ${SH_IMPORT} import { EmptyState } from "@/components/ui/empty-state";`],
+    [`<div className="main-head"><h3>{t(locale, "Security Center")}</h3>{props.isAdmin && (<span className="pill"`,
+      `<PageHeader title={t(locale, "Security Center")} meta={props.isAdmin && (<span className="pill"`],
+    [`{t(locale, "Risk")}: {t(locale, risk.label)}</span>)}</div>`, `{t(locale, "Risk")}: {t(locale, risk.label)}</span>)} />`],
+    ["style={{ borderLeft: `3px solid", "style={{ borderInlineStart: `3px solid"],
+    [`<div className="text-[14px] font-bold">{t(locale, "Two-Factor Authentication")}</div>`, `<h2 className="text-[14px] font-bold">{t(locale, "Two-Factor Authentication")}</h2>`],
+    [`<div className="text-[14px] font-bold">{t(locale, "Password")}</div>`, `<h2 className="text-[14px] font-bold">{t(locale, "Password")}</h2>`],
+    [`<div className="main-head" style={{ marginTop: 8 }}><h3 style={{ fontSize: 15 }}>{t(locale, "Active Sessions")}</h3>{props.sessions.length > 1 && (`,
+      `<SectionHeader level={2} title={t(locale, "Active Sessions")} actions={props.sessions.length > 1 && (`],
+    [`{t(locale, "Log out all other devices")}</Button>)}</div>`, `{t(locale, "Log out all other devices")}</Button>)} className="mt-2 mb-[22px]" />`],
+    [`<div className="main-head" style={{ marginTop: 26 }}><h3 style={{ fontSize: 15 }}>{t(locale, "Security Timeline")}</h3></div>`,
+      `<SectionHeader level={2} title={t(locale, "Security Timeline")} className="mt-[26px] mb-[22px]" />`],
+    [`<div className="rounded-2xl border border-line bg-surface shadow-elevated py-8 text-center text-ink-muted text-sm">{t(locale, "No security events yet.")}</div>`,
+      `<EmptyState message={t(locale, "No security events yet.")} />`],
+  ],
+  [C5_COMPLIANCE]: [
+    ["", `${PH_IMPORT} ${SH_IMPORT}`],
+    [`<div className="main-head"><h3>{t(locale, "Security & Compliance Readiness")}</h3></div>`,
+      `<PageHeader title={t(locale, "Security & Compliance Readiness")} description={t(locale, "An internal checklist of what this build implements. It is not a certification: no external audit has been carried out, and no framework compliance is claimed.")} />`],
+    [`<p className="text-[12.5px] text-ink-muted mb-4">{t(locale, "An internal checklist of what this build implements. It is not a certification: no external audit has been carried out, and no framework compliance is claimed.")}</p>`,
+      `<SectionHeader level={2} title={t(locale, "Readiness checklist")} className="mb-3" />`],
+    [`<span className="text-[14px] font-bold">{t(locale, g.name)}</span>`, `<h3 className="text-[14px] font-bold">{t(locale, g.name)}</h3>`],
+    [`<div className="text-[14px] font-bold mb-1">{t(locale, "Data Subject Rights")}</div>`, `<SectionHeader level={2} title={t(locale, "Data Subject Rights")} className="mb-1" />`],
+    [`<div className="flex items-end gap-2"><div className="flex flex-col gap-1.5"><label htmlFor="erase-customer"`,
+      `<div className="flex flex-wrap items-end gap-2"><div className="flex flex-col gap-1.5"><label htmlFor="erase-customer"`],
+    [`<div className="text-[14px] font-bold mb-1">{t(locale, "Consent Management")}</div>`, `<SectionHeader level={2} title={t(locale, "Consent Management")} className="mb-1" />`],
+    [`<div className="flex items-end gap-2 mb-4">`, `<div className="flex flex-wrap items-end gap-2 mb-4">`],
+  ],
+};
+/** Each file at C4 (a1dbc6e), without comments or whitespace. */
+const C4_FLAT: Record<string, string> = {
+  [C5_NAV]: "d42e39989f7a332a", [C5_ORG]: "f0798b8a1486c4b4", [C5_COMPANY]: "ab8051f35529655c", [C5_FINANCE]: "2ba54fa5ad492b20", [C5_VAT]: "c911008175ccbd55",
+  [C5_NUMBERS]: "f20afbc934d37b44", [C5_ROLES]: "7ae66eef76e88406", [C5_ZATCA]: "a82918c05d4ce20a", [C5_TEAM]: "01e032a9ba69d64e", [C5_PRESETS]: "c4cecd97733e5e58",
+  [C5_PRESET_BANK]: "68260881f93f4cc4", [C5_PRINT]: "995f5e268b68dd44", [C5_SEAL]: "abd51251a2e6df44", [C5_SECURITY]: "0fa2f7494db3cd93", [C5_COMPLIANCE]: "ecf76892d0a7532b",
+};
+const c5HunkBad: string[] = [];
+for (const f of C5_FILES) {
+  let s = flat(read(f));
+  for (const [was, is] of C5_HUNKS[f]) {
+    const n = s.split(squash(is)).length - 1;
+    if (n !== 1) c5HunkBad.push(`${rel(f)}: ${n}× ${squash(is).slice(0, 60)}…`);
+    s = s.replace(squash(is), () => squash(was));
+  }
+  if (h16(s) !== C4_FLAT[f]) c5HunkBad.push(`${rel(f)}: not C4's once C5's hunks are undone (${h16(s)})`);
+}
+const nC5Hunks = Object.values(C5_HUNKS).flat().length;
+check(`C5 changed nothing in the 15 Settings files but its own ${nC5Hunks} hunks: undo them and each is C4's code to the character (comments and whitespace aside) — every form, field, query, save action, permission, tab value, panel mapping, MFA / password / session control, readiness claim and consent control as it was`,
+  c5HunkBad.length === 0 && nC5Hunks === 51 && C5_FILES.every((f) => f in C5_HUNKS && f in C4_FLAT), c5HunkBad.join(" | "));
+const dictNow = read("src/lib/i18n/dict.ts");
+check("C5's dictionary change is exactly its two additions — the four Settings navigation labels, and one structural heading — and nothing else (undone, dict.ts is C4's to the byte: group 12)",
+  C5_DICT_BLOCKS.every((b) => dictNow.split(b).length === 2) && h16(undoC5Dict(dictNow)) === "796829703fc96bf4", h16(undoC5Dict(dictNow)));
+const C5_AR: Record<string, string> = {
+  "Fiscal Year": "السنة المالية", "VAT Configuration": "إعدادات ضريبة القيمة المضافة", Users: "المستخدمون", Integrations: "التكاملات", "Readiness checklist": "قائمة التحقق من الجاهزية",
+};
+const arBad = Object.entries(C5_AR).filter(([en, ar]) => translate("ar", en) !== ar || translate("en", en) !== en).map(([en]) => `${en} → ${translate("ar", en)}`);
+check("C5 Arabic: Fiscal Year → السنة المالية, VAT Configuration → إعدادات ضريبة القيمة المضافة, Users → المستخدمون, Integrations → التكاملات (the four navigation labels the audit found in English); Readiness checklist → قائمة التحقق من الجاهزية (the one structural label); English unchanged",
+  arBad.length === 0, arBad.join(" | "));
+
+// SettingsNav: the Tabs contract (DEV-UI-01.4) — Radix told the document's direction
+const navCode = strip(read(C5_NAV));
+const navFns = findAll(parse(C5_NAV), (n) => ts.isFunctionDeclaration(n)).map((n) => (n as ts.FunctionDeclaration).name?.text);
+check("C5 SettingsNav: a function wrapping TabsPrimitive.Root — not the raw alias — that takes the document's direction from useDocumentDir (the existing hook, imported from ./use-document-dir) and passes dir={dir ?? docDir}, a caller's dir still winning; no other direction source (no document.documentElement, navigator, locale or hard-coded rtl / ltr)",
+  !/const SettingsNav\s*=/.test(navCode) && same(navFns, ["SettingsNav", "SettingsNavList", "SettingsNavGroupLabel", "SettingsNavItem", "SettingsNavContent"])
+    && flat(navCode).includes(squash("function SettingsNav({ dir, ...props }: React.ComponentProps<typeof TabsPrimitive.Root>) { const docDir = useDocumentDir(); return <TabsPrimitive.Root dir={dir ?? docDir} {...props} />; }"))
+    && same(imports(C5_NAV), ["react", "@radix-ui/react-tabs", "@/lib/utils", "./use-document-dir"])
+    && !/documentElement|navigator|locale|["'`](rtl|ltr)["'`]/.test(navCode),
+  imports(C5_NAV).join(" "));
+check("C5 SettingsNav: items align to the start (text-start; no text-left / text-right, no rtl: variant); the list full width below md and 14rem (w-56) from md, shrink-0; the panel full width and min-w-0, growing beside the list from md (md:flex-1); no physical left / right anywhere in the file",
+  navCode.includes(`"settings-nav-item text-start"`) && !/text-(left|right)|rtl:/.test(navCode) && navCode.includes(`"settings-nav w-full md:w-56 shrink-0"`) && navCode.includes(`"w-full min-w-0 md:flex-1"`) && physical(C5_NAV).length === 0,
+  physical(C5_NAV).join(" "));
+check("C5: Tabs (the shared primitive Presets uses) and useDocumentDir are byte-identical — no direction code changed, no second direction hook; useDocumentDir is defined once in src",
+  sha("src/components/ui/tabs.tsx") === "7c8265b2e3e96f33" && sha("src/components/ui/use-document-dir.ts") === "c6d2a8f0c5bdcc8e"
+    && walk("src").filter((f) => /\.tsx?$/.test(f) && /function useDocumentDir|const useDocumentDir\s*=/.test(read(f))).length === 1);
+
+// Business Settings
+const orgCode = flat(read(C5_ORG));
+const orgPh = jsxEls(C5_ORG, "PageHeader");
+const navRoot = jsxEls(C5_ORG, "SettingsNav")[0];
+const navItems = jsxEls(C5_ORG, "SettingsNavItem").map((el) => `${attrCode(el, "value")}`);
+const navContents = jsxEls(C5_ORG, "SettingsNavContent").map((el) => attrCode(el, "value"));
+check("C5 Business Settings: one PageHeader — title t(locale, \"Business Settings\") and nothing else — right before SettingsNav, outside every tab panel, so the page has its one h1 whichever tab shows; the root a column below md and a row from md (flex flex-col md:flex-row gap-8 items-start), vertical, defaultValue={defaultTab}",
+  orgPh.length === 1 && orgPh[0].attributes.properties.length === 1 && attrCode(orgPh[0], "title") === `{t(locale,"BusinessSettings")}`
+    && orgCode.includes(squash(`<PageHeader title={t(locale, "Business Settings")} /><SettingsNav`)) && attrCode(navRoot, "className") === `"flexflex-colmd:flex-rowgap-8items-start"`
+    && attrCode(navRoot, "orientation") === `"vertical"` && attrCode(navRoot, "defaultValue") === "{defaultTab}",
+  orgPh.map((el) => el.getText()).join(" "));
+check("C5 Business Settings tabs: SETTINGS_TABS, the default color-theme, the ?tab= reading and its fallback, the ZATCA gating and its fallback as in C4 (canonical); the ten SettingsNavItems in order, each panel mapped to its tab as before, ZATCA only for the profiles that enable it",
+  same(varHash(C5_ORG, "SETTINGS_TABS"), ["d073437943550e16"]) && orgCode.includes(squash(`const requestedTab = tab && SETTINGS_TABS.has(tab) ? tab : "color-theme";`))
+    && orgCode.includes(squash(`const defaultTab = requestedTab === "zatca" && !showZatca ? "color-theme" : requestedTab;`))
+    && same(navItems, ['"business-details"', '"logo"', '"color-theme"', '"default-bank"', '"fiscal-year"', '"vat-config"', '"number-format"', '"team"', '"roles-permissions"', '"zatca"'])
+    && same(navContents, navItems) && orgCode.includes(squash(`{showZatca && (<><SettingsNavGroupLabel>{t(locale, "Integrations")}</SettingsNavGroupLabel><SettingsNavItem value="zatca">`)),
+  navItems.join(" "));
+
+// Panel titles: the 13 top-level ones are h2s, nested subsections one level below their panel
+const panelBad = C5_PANELS.filter(([f, key]) => {
+  const els = jsxEls(f, "SectionHeader").filter((el) => attrCode(el, "title") === squash(`{t(locale, "${key}")}`));
+  return els.length !== 1 || attrCode(els[0], "level") !== "{2}";
+}).map(([f, key]) => `${rel(f)} ${key}`);
+const oldTitles = [...C5_FILES].filter((f) => /<h3 className="text-\[1[57]px\] font-bold/.test(read(f)) || /className="main-head"/.test(read(f))).map(rel);
+check("C5 panel titles: the 13 top-level Settings panel titles — Business Details, Logo, Color Theme, Default Bank Account, Fiscal Year, VAT Configuration, Number Format, Team, Roles & Permissions, ZATCA Phase 1; Presets' Default Bank Accounts, Print Layout, Seal & Signature — each one SectionHeader level={2} with its own words (h3s before); no old h3 title or .main-head left in a C5 file",
+  panelBad.length === 0 && oldTitles.length === 0, [...panelBad, ...oldTitles].join(" | "));
+check("C5 nested headings stay nested: Roles & Permissions' \"Actions restricted beyond their module\" is now an h3 — one level below its panel's h2, as the h4 was below the h3 (left an h4 it would skip a level); VAT Configuration and Number Format keep their title behind `heading`, which the two document pill dialogs (byte-identical) turn off",
+  read(C5_ROLES).includes(`<h3 className="text-[13.5px] font-bold mb-1">{t(locale, "Actions restricted beyond their module")}</h3>`) && !/<h4/.test(read(C5_ROLES))
+    && read(C5_VAT).includes(`{heading && <SectionHeader level={2} title={t(locale, "VAT Configuration")} />}`) && flat(read(C5_NUMBERS)).includes(squash(`{heading && (<div><SectionHeader level={2} title={t(locale, "Number Format")} />`))
+    && sha(`${A}sales/_shared/vat-settings-pill-dialog.tsx`) === "55dae906efd9f1e3" && sha(`${A}sales/_shared/number-format-pill-dialog.tsx`) === "fd428ae359fd7540");
+
+// Presets
+const prCode = flat(read(C5_PRESETS));
+const prTabs = jsxEls(C5_PRESETS, "TabsTrigger").map((el) => attrCode(el, "value"));
+const prContents = jsxEls(C5_PRESETS, "TabsContent").map((el) => attrCode(el, "value"));
+const PRESET_TABS = ["tax-rates", "payment-terms", "units", "note-templates", "terms-groups", "bundles", "numbering", "exchange-rates", "print-layout", "seal-signature", "default-bank-accounts", "departments", "product-categories", "leave-types"];
+check("C5 Presets: the PageHeader titled Presets (not Preset Management — deferred) and nothing else; the shared Tabs (direction-aware since DEV-UI-01.4), defaultValue tax-rates; the 14 tabs in their order with their labels, and their 14 panels",
+  same(jsxEls(C5_PRESETS, "PageHeader").map((el) => el.getText()), [`<PageHeader title={t(locale, "Presets")} />`]) && same(prTabs, PRESET_TABS.map((v) => `"${v}"`)) && same([...prContents].sort(), PRESET_TABS.map((v) => `"${v}"`).sort())
+    && prCode.includes(squash(`<Tabs defaultValue="tax-rates">`)) && imports(C5_PRESETS).includes("@/components/ui/tabs"),
+  prTabs.join(" "));
+
+// Security
+const secCode = flat(read(C5_SECURITY));
+const secPh = jsxEls(C5_SECURITY, "PageHeader");
+check("C5 Security Center: one PageHeader — Security Center as the title, the admin-only risk pill (its colours, weight and words as before) as the meta, outside the h1",
+  secPh.length === 1 && attrCode(secPh[0], "title") === `{t(locale,"SecurityCenter")}`
+    && attrCode(secPh[0], "meta") === squash(`{props.isAdmin && (<span className="pill" style={{ background: risk.bg, color: risk.color, fontWeight: 700 }}>{t(locale, "Risk")}: {t(locale, risk.label)}</span>)}`),
+  secPh.map((el) => el.getText()).join(" "));
+const secH2 = jsxEls(C5_SECURITY, "SectionHeader").map((el) => [attrCode(el, "title"), attrCode(el, "level"), attrCode(el, "actions"), attrCode(el, "className")]);
+check("C5 Security outline: Two-Factor Authentication and Password real h2s in their cards (icon, text, Enable / Disable and Change password as they were); Active Sessions an h2 (SectionHeader) with Log out all other devices as its action, only when there is another session; Security Timeline an h2 (SectionHeader), no action",
+  secCode.includes(squash(`<h2 className="text-[14px] font-bold">{t(locale, "Two-Factor Authentication")}</h2>`)) && secCode.includes(squash(`<h2 className="text-[14px] font-bold">{t(locale, "Password")}</h2>`))
+    && same(secH2, [
+      [`{t(locale,"ActiveSessions")}`, "{2}", squash(`{props.sessions.length > 1 && (<Button variant="secondary" size="sm" disabled={pending} onClick={logoutAll}><LogOut className="size-3.5" /> {t(locale, "Log out all other devices")}</Button>)}`), `"mt-2mb-[22px]"`],
+      [`{t(locale,"SecurityTimeline")}`, "{2}", "", `"mt-[26px]mb-[22px]"`],
+    ]),
+  JSON.stringify(secH2));
+check("C5 Security Timeline: no event → the EmptyState \"No security events yet.\" (no hint, no action); events → the same table as before",
+  secCode.includes(squash(`{props.events.length === 0 ? (<EmptyState message={t(locale, "No security events yet.")} />) : (<Table density="compact">`)) && jsxEls(C5_SECURITY, "EmptyState").length === 1);
+check("C5 Security frozen: fmtDateTime (P0.1's explicit UTC — sessions, events, the password date), RISK_STYLE (deferred) canonical as in C4; the alerts' 3px severity stripe declared on border-inline-start with C4's severity expression, no borderLeft / borderRight in the file; the admin attack-stat row (D-6's bare .stat-row-2) untouched",
+  same(fnHash(C5_SECURITY, "fmtDateTime"), ["436a504b4f04dfdb"]) && same(varHash(C5_SECURITY, "RISK_STYLE"), ["e98103a242541402"])
+    && secCode.includes(squash("style={{ borderInlineStart: `3px solid ${a.severity === \"high\" || a.severity === \"critical\" ? \"var(--crit)\" : \"var(--warn)\"}` }}")) && !/border(Left|Right)/.test(secCode)
+    && secCode.includes(squash(`<div className="stat-row-2 mb-6">`)) && physical(C5_SECURITY).length === 0,
+  [...fnHash(C5_SECURITY, "fmtDateTime"), ...varHash(C5_SECURITY, "RISK_STYLE"), ...physical(C5_SECURITY)].join(" "));
+
+// Compliance
+const cmpCode = flat(read(C5_COMPLIANCE));
+const cmpPh = jsxEls(C5_COMPLIANCE, "PageHeader");
+const DISCLAIMER = "An internal checklist of what this build implements. It is not a certification: no external audit has been carried out, and no framework compliance is claimed.";
+check("C5 Compliance: one PageHeader — the existing title Security & Compliance Readiness (not Compliance Center — deferred), its disclaimer, word for word, as the description",
+  cmpPh.length === 1 && attrCode(cmpPh[0], "title") === `{t(locale,"Security&ComplianceReadiness")}` && attrCode(cmpPh[0], "description") === squash(`{t(locale, "${DISCLAIMER}")}`)
+    && read(C5_COMPLIANCE).split(DISCLAIMER).length === 2,
+  cmpPh.map((el) => el.getText()).join(" "));
+const cmpSh = jsxEls(C5_COMPLIANCE, "SectionHeader").map((el) => [attrCode(el, "title"), attrCode(el, "level")]);
+check("C5 Compliance outline: Readiness checklist (h2 — the one structural label C5 added) › GDPR, ISO 27001 — roadmap, Platform security (the group names, real h3s; their notes outside); Data Subject Rights and Consent Management h2s (SectionHeader), their descriptions and controls as they were",
+  same(cmpSh, [[`{t(locale,"Readinesschecklist")}`, "{2}"], [`{t(locale,"DataSubjectRights")}`, "{2}"], [`{t(locale,"ConsentManagement")}`, "{2}"]])
+    && cmpCode.includes(squash(`<h3 className="text-[14px] font-bold">{t(locale, g.name)}</h3></div><p className="text-[11.5px] text-ink-faint mb-3">{t(locale, g.note)}</p>`)),
+  JSON.stringify(cmpSh));
+check("C5 Compliance at 390: the erase row and the consent row wrap (flex-wrap) — the customer select, Erase, the consent subject, Grant and Withdraw stay in reach; the same controls, handlers and states",
+  cmpCode.includes(squash(`<div className="flex flex-wrap items-end gap-2"><div className="flex flex-col gap-1.5"><label htmlFor="erase-customer"`)) && cmpCode.includes(squash(`<div className="flex flex-wrap items-end gap-2 mb-4">`))
+    && physical(C5_COMPLIANCE).length === 0);
+check("C5 Compliance frozen: fmtDate (P0.1's explicit UTC), groupsFor (the groups, notes, controls and their states, the live encryption / audit-trigger detection), STATE_LABEL and the consent subjects canonical as in C4",
+  same(fnHash(C5_COMPLIANCE, "fmtDate"), ["fb4fd835f7357655"]) && same(fnHash(C5_COMPLIANCE, "groupsFor"), ["349c4f69b8428605"]) && same(varHash(C5_COMPLIANCE, "STATE_LABEL"), ["f5dc655ee0f5c9de"])
+    && same(varHash(C5_COMPLIANCE, "CONSENT_SUBJECTS"), ["288d203f69389eee"]),
+  [...fnHash(C5_COMPLIANCE, "fmtDate"), ...fnHash(C5_COMPLIANCE, "groupsFor"), ...varHash(C5_COMPLIANCE, "STATE_LABEL"), ...varHash(C5_COMPLIANCE, "CONSENT_SUBJECTS")].join(" "));
+
+// Data, guards, actions; the rest of Settings
+const C5_UNTOUCHED: Record<string, string> = {
+  [`${ST}compliance/page.tsx`]: "1574d57340edbe48", [`${ST}organization/number-format-panel.tsx`]: "59e2635c8aa1a139", [`${ST}presets/bundles-panel.tsx`]: "cee5b52fd8db98db",
+  [`${ST}presets/exchange-rates-panel.tsx`]: "9954aab1deb2c1f7", [`${ST}presets/note-templates-panel.tsx`]: "686f0110f2d8af35", [`${ST}presets/numbering-panel.tsx`]: "169fb5f21bd173ae",
+  [`${ST}presets/simple-preset-panel.tsx`]: "4b0a75c8a9d77526", [`${ST}presets/terms-groups-panel.tsx`]: "a0265883da6a8aa8", [`${ST}security/page.tsx`]: "79c35b566dc7bf81",
+  [`${ST}team/page.tsx`]: "a90a8a2e94cf42d1",
+};
+const stBiz = Object.keys(pins.business).filter((k) => k.startsWith(ST)).sort();
+const stFiles = walk(`${A}settings`);
+const stUnaccounted = stFiles.filter((f) => !C5_FILES.includes(f) && !(f in C5_UNTOUCHED) && !stBiz.includes(f));
+const stDrift = Object.entries(C5_UNTOUCHED).filter(([f, hsh]) => !exists(f) || sha(f) !== hsh).map(([f]) => rel(f));
+check(`C5: the other ${Object.keys(C5_UNTOUCHED).length} Settings files byte-identical to C4 — the Security and Compliance pages (their server props), /settings/team (the redirect), Presets' other panels (SimplePresetPanel and its Add controls, deferred), the Number Format wrapper; every Settings file is C5's, one of these, or one of the ${stBiz.length} action modules (business pins, group 4)`,
+  stDrift.length === 0 && stUnaccounted.length === 0 && stBiz.length === 7 && stFiles.length === C5_FILES.length - 1 + Object.keys(C5_UNTOUCHED).length + stBiz.length,
+  [...stDrift, ...stUnaccounted.map((f) => `unaccounted: ${f}`)].join(" "));
+const C5_PAGES = ["organization", "presets", "security", "compliance", "team"].map((p) => `(app)/settings/${p}/page.tsx`);
+check("C5: the Settings pages' guards (owner / admin for Business Settings, Presets and Compliance; any session for Security, its admin view as before; the /settings/team redirect), server data sections (the organization, posted-journal count, country profile, bank accounts, members, presets and rates, security and compliance props) and static action inventories are the pinned ones; the seven Settings action modules their business pins",
+  C5_PAGES.every((p) => same(now.guards[p], pins.guards[p]) && same(now.data[p], pins.data[p]) && same(now.actions[p], pins.actions[p]))
+    && stBiz.every((f) => now.business[f] === pins.business[f]) && same(pins.guards["(app)/settings/team/page.tsx"], ['redirect("/settings/organization?tab=team")']),
+  C5_PAGES.filter((p) => !same(now.guards[p], pins.guards[p]) || !same(now.data[p], pins.data[p]) || !same(now.actions[p], pins.actions[p])).join(" "));
+check("C5: the P0 / P0.1 / P0.2 verifiers as C4 left them — the Arabic-locale hydration suite with C4's approved Payments selector (a226b47188ddf478), the settings time-zone and business-date hydration suites, number-locale, date-timezone, business-dates",
+  sha("verify/verify-ar-locale-hydration.mjs") === "a226b47188ddf478" && sha("verify/verify-settings-timezone-hydration.mjs") === "a43b9d9f7b521da6" && sha("verify/verify-business-date-hydration.mjs") === "02ef92b957d4d719"
+    && sha("verify/verify-number-locale.mts") === "1e1937186eb24bb3" && sha("verify/verify-date-timezone.mts") === "e6be633c8a2af74d" && sha("verify/verify-business-dates.mts") === "ad9171672e94ddd6");
+const C5_BANNED = ["SettingsLayout", "SettingsShell", "SettingsPageLayout", "SettingsPanel", "SettingsSection", "SettingsHeader", "SettingsContainer"];
+const c5Creep = walk("src").filter((f) => /\.(tsx?|css)$/.test(f) && C5_BANNED.some((b) => new RegExp(`\\b${b}\\b`).test(strip(read(f))) || f.toLowerCase().includes(b.replace(/[A-Z]/g, (c, i) => (i ? "-" : "") + c.toLowerCase()))));
+const settingsLayouts = stFiles.filter((f) => /(^|\/)(layout|template)\.tsx?$/.test(f));
+check(`C5: no Settings abstraction — none of ${C5_BANNED.join(", ")} (identifier or file), no layout or template under /settings; each page composes PageHeader, SectionHeader, EmptyState and SettingsNav itself`,
+  c5Creep.length === 0 && settingsLayouts.length === 0, [...c5Creep, ...settingsLayouts].join(" "));
+// C5 adds no physical left / right. Two Settings panels carry C4's own (deferred; their code is C4's per the hunk
+// check above): the Color Theme cards' text-left and the checkmark at right-3, the Print Layout options' text-left.
+const C5_PHYS_C4: Record<string, string[]> = { [C5_COMPANY]: ["text-left", "right-3"], [C5_PRINT]: ["text-left", "text-left"] };
+const c5Phys = C5_FILES.filter((f) => !same(physical(f), C5_PHYS_C4[f] ?? [])).map((f) => `${rel(f)}: ${physical(f).join(" ")}`);
+check("C5: no physical left / right added — none in SettingsNav, Security or Compliance (the alert stripe now border-inline-start); the only ones left in a C5 file are C4's own, deferred: Color Theme's text-left / right-3 and Print Layout's two text-left",
+  c5Phys.length === 0 && [C5_NAV, C5_SECURITY, C5_COMPLIANCE, C5_ORG, C5_PRESETS].every((f) => physical(f).length === 0), c5Phys.join(" | "));
 
 console.log("\nGroups:");
 for (const [g, [p, f]] of Object.entries(counts)) console.log(`  ${g}: ${p}/${p + f}`);

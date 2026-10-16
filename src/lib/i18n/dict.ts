@@ -244,6 +244,11 @@ const DICT: Record<string, string> = {
   "Print Layout": "تنسيق الطباعة",
   "Roles & Permissions": "الأدوار والصلاحيات",
   "ZATCA E-Invoicing": "الفوترة الإلكترونية زاتكا",
+  // DEV-UI-01.7 C5: the four Settings navigation labels that had no Arabic.
+  "Fiscal Year": "السنة المالية",
+  "VAT Configuration": "إعدادات ضريبة القيمة المضافة",
+  Users: "المستخدمون",
+  Integrations: "التكاملات",
 
   "Business Name": "اسم الشركة",
   Industry: "القطاع",
@@ -1136,6 +1141,8 @@ const DICT: Record<string, string> = {
   // ---- Compliance Center (Stage 11 Part 5) ----
   "Compliance Center": "مركز الامتثال",
   "Security & Compliance Readiness": "جاهزية الأمان والامتثال",
+  // DEV-UI-01.7 C5: the readiness groups' h2 — a structural label, no certification claim.
+  "Readiness checklist": "قائمة التحقق من الجاهزية",
   GDPR: "اللائحة العامة لحماية البيانات (GDPR)",
   "An internal checklist of what this build implements. It is not a certification: no external audit has been carried out, and no framework compliance is claimed.":
     "قائمة داخلية لما تنفّذه هذه النسخة. ليست شهادة اعتماد: لم يُجرَ أي تدقيق خارجي، ولا يُدّعى الامتثال لأي إطار.",

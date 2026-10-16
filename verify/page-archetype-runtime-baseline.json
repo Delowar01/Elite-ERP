@@ -5055,9 +5055,10 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 Color Theme"
+    "h1 Business Settings",
+    "h2 Color Theme"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 0,
    "tablesBeyond": 0,
@@ -5065,6 +5066,17 @@
    "unnamed": 12,
    "pointerOnly": 0,
    "navAtStart": true,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "Business Settings",
+    "meta": null
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -5078,9 +5090,10 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 Color Theme"
+    "h1 Business Settings",
+    "h2 Color Theme"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 0,
    "tablesBeyond": 0,
@@ -5088,6 +5101,17 @@
    "unnamed": 12,
    "pointerOnly": 0,
    "navAtStart": true,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "Business Settings",
+    "meta": null
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -5101,9 +5125,10 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 Color Theme"
+    "h1 Business Settings",
+    "h2 Color Theme"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 0,
    "tablesBeyond": 0,
@@ -5111,6 +5136,17 @@
    "unnamed": 12,
    "pointerOnly": 0,
    "navAtStart": true,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "Business Settings",
+    "meta": null
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -5121,12 +5157,13 @@
    "vw": 390,
    "dir": "ltr",
    "lang": "en",
-   "overflow": 92,
-   "offenders": 14,
+   "overflow": 0,
+   "offenders": 0,
    "outline": [
-    "h3 Color Theme"
+    "h1 Business Settings",
+    "h2 Color Theme"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 0,
    "tablesBeyond": 0,
@@ -5134,6 +5171,17 @@
    "unnamed": 12,
    "pointerOnly": 0,
    "navAtStart": true,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "Business Settings",
+    "meta": null
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -5147,9 +5195,10 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 Business Details"
+    "h1 Business Settings",
+    "h2 Business Details"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 0,
    "tablesBeyond": 0,
@@ -5157,6 +5206,19 @@
    "unnamed": 2,
    "pointerOnly": 0,
    "navAtStart": true,
+   "c1Literals": [
+    "Save changes"
+   ],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "Business Settings",
+    "meta": null
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -5170,9 +5232,10 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 Business Details"
+    "h1 Business Settings",
+    "h2 Business Details"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 0,
    "tablesBeyond": 0,
@@ -5180,6 +5243,19 @@
    "unnamed": 2,
    "pointerOnly": 0,
    "navAtStart": true,
+   "c1Literals": [
+    "Save changes"
+   ],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "Business Settings",
+    "meta": null
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -5193,9 +5269,10 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 Business Details"
+    "h1 Business Settings",
+    "h2 Business Details"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 0,
    "tablesBeyond": 0,
@@ -5203,6 +5280,19 @@
    "unnamed": 2,
    "pointerOnly": 0,
    "navAtStart": true,
+   "c1Literals": [
+    "Save changes"
+   ],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "Business Settings",
+    "meta": null
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -5213,12 +5303,13 @@
    "vw": 390,
    "dir": "ltr",
    "lang": "en",
-   "overflow": 80,
-   "offenders": 6,
+   "overflow": 0,
+   "offenders": 0,
    "outline": [
-    "h3 Business Details"
+    "h1 Business Settings",
+    "h2 Business Details"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 0,
    "tablesBeyond": 0,
@@ -5226,6 +5317,19 @@
    "unnamed": 2,
    "pointerOnly": 0,
    "navAtStart": true,
+   "c1Literals": [
+    "Save changes"
+   ],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "Business Settings",
+    "meta": null
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -5239,9 +5343,10 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 Team"
+    "h1 Business Settings",
+    "h2 Team"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 1,
    "tablesBeyond": 0,
@@ -5249,6 +5354,17 @@
    "unnamed": 0,
    "pointerOnly": 0,
    "navAtStart": true,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "Business Settings",
+    "meta": null
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -5262,9 +5378,10 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 Team"
+    "h1 Business Settings",
+    "h2 Team"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 1,
    "tablesBeyond": 0,
@@ -5272,6 +5389,17 @@
    "unnamed": 0,
    "pointerOnly": 0,
    "navAtStart": true,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "Business Settings",
+    "meta": null
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -5285,9 +5413,10 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 Team"
+    "h1 Business Settings",
+    "h2 Team"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 1,
    "tablesBeyond": 0,
@@ -5295,6 +5424,17 @@
    "unnamed": 0,
    "pointerOnly": 0,
    "navAtStart": true,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "Business Settings",
+    "meta": null
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -5305,12 +5445,13 @@
    "vw": 390,
    "dir": "ltr",
    "lang": "en",
-   "overflow": 44,
-   "offenders": 1,
+   "overflow": 0,
+   "offenders": 0,
    "outline": [
-    "h3 Team"
+    "h1 Business Settings",
+    "h2 Team"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 1,
    "tablesBeyond": 0,
@@ -5318,6 +5459,17 @@
    "unnamed": 0,
    "pointerOnly": 0,
    "navAtStart": true,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "Business Settings",
+    "meta": null
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -5331,9 +5483,9 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 Presets"
+    "h1 Presets"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 1,
    "tablesBeyond": 0,
@@ -5341,6 +5493,17 @@
    "unnamed": 0,
    "pointerOnly": 1,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "Presets",
+    "meta": null
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -5354,9 +5517,9 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 Presets"
+    "h1 Presets"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 1,
    "tablesBeyond": 0,
@@ -5364,6 +5527,17 @@
    "unnamed": 0,
    "pointerOnly": 1,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "Presets",
+    "meta": null
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -5377,9 +5551,9 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 Presets"
+    "h1 Presets"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 1,
    "tablesBeyond": 0,
@@ -5387,6 +5561,17 @@
    "unnamed": 0,
    "pointerOnly": 1,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "Presets",
+    "meta": null
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -5400,9 +5585,9 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 Presets"
+    "h1 Presets"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 1,
    "tablesBeyond": 0,
@@ -5410,6 +5595,17 @@
    "unnamed": 0,
    "pointerOnly": 1,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "Presets",
+    "meta": null
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -5423,11 +5619,13 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 Security Center",
-    "h3 Active Sessions",
-    "h3 Security Timeline"
+    "h1 Security Center",
+    "h2 Two-Factor Authentication",
+    "h2 Password",
+    "h2 Active Sessions",
+    "h2 Security Timeline"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 1,
    "tablesBeyond": 0,
@@ -5435,6 +5633,17 @@
    "unnamed": 0,
    "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "end",
+    "overlap": false,
+    "title": "Security Center",
+    "meta": "Risk: Low"
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -5448,11 +5657,13 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 Security Center",
-    "h3 Active Sessions",
-    "h3 Security Timeline"
+    "h1 Security Center",
+    "h2 Two-Factor Authentication",
+    "h2 Password",
+    "h2 Active Sessions",
+    "h2 Security Timeline"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 1,
    "tablesBeyond": 0,
@@ -5460,6 +5671,17 @@
    "unnamed": 0,
    "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "end",
+    "overlap": false,
+    "title": "Security Center",
+    "meta": "Risk: Low"
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -5473,11 +5695,13 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 Security Center",
-    "h3 Active Sessions",
-    "h3 Security Timeline"
+    "h1 Security Center",
+    "h2 Two-Factor Authentication",
+    "h2 Password",
+    "h2 Active Sessions",
+    "h2 Security Timeline"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 1,
    "tablesBeyond": 0,
@@ -5485,6 +5709,17 @@
    "unnamed": 0,
    "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "end",
+    "overlap": false,
+    "title": "Security Center",
+    "meta": "Risk: Low"
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -5498,11 +5733,13 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 Security Center",
-    "h3 Active Sessions",
-    "h3 Security Timeline"
+    "h1 Security Center",
+    "h2 Two-Factor Authentication",
+    "h2 Password",
+    "h2 Active Sessions",
+    "h2 Security Timeline"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 1,
    "tablesBeyond": 0,
@@ -5510,6 +5747,17 @@
    "unnamed": 0,
    "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "end",
+    "overlap": false,
+    "title": "Security Center",
+    "meta": "Risk: Low"
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -5523,9 +5771,15 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 Security & Compliance Readiness"
+    "h1 Security & Compliance Readiness",
+    "h2 Readiness checklist",
+    "h3 GDPR",
+    "h3 ISO 27001 — roadmap",
+    "h3 Platform security",
+    "h2 Data Subject Rights",
+    "h2 Consent Management"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 0,
    "tablesBeyond": 0,
@@ -5533,6 +5787,17 @@
    "unnamed": 0,
    "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "Security & Compliance Readiness",
+    "meta": null
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -5546,9 +5811,15 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 Security & Compliance Readiness"
+    "h1 Security & Compliance Readiness",
+    "h2 Readiness checklist",
+    "h3 GDPR",
+    "h3 ISO 27001 — roadmap",
+    "h3 Platform security",
+    "h2 Data Subject Rights",
+    "h2 Consent Management"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 0,
    "tablesBeyond": 0,
@@ -5556,6 +5827,17 @@
    "unnamed": 0,
    "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "Security & Compliance Readiness",
+    "meta": null
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -5569,9 +5851,15 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 Security & Compliance Readiness"
+    "h1 Security & Compliance Readiness",
+    "h2 Readiness checklist",
+    "h3 GDPR",
+    "h3 ISO 27001 — roadmap",
+    "h3 Platform security",
+    "h2 Data Subject Rights",
+    "h2 Consent Management"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 0,
    "tablesBeyond": 0,
@@ -5579,6 +5867,17 @@
    "unnamed": 0,
    "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "Security & Compliance Readiness",
+    "meta": null
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -5589,12 +5888,18 @@
    "vw": 390,
    "dir": "ltr",
    "lang": "en",
-   "overflow": 32,
-   "offenders": 1,
+   "overflow": 0,
+   "offenders": 0,
    "outline": [
-    "h3 Security & Compliance Readiness"
+    "h1 Security & Compliance Readiness",
+    "h2 Readiness checklist",
+    "h3 GDPR",
+    "h3 ISO 27001 — roadmap",
+    "h3 Platform security",
+    "h2 Data Subject Rights",
+    "h2 Consent Management"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 0,
    "tablesBeyond": 0,
@@ -5602,6 +5907,17 @@
    "unnamed": 0,
    "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "Security & Compliance Readiness",
+    "meta": null
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -5615,9 +5931,10 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 Team"
+    "h1 Business Settings",
+    "h2 Team"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 1,
    "tablesBeyond": 0,
@@ -5625,6 +5942,17 @@
    "unnamed": 0,
    "pointerOnly": 0,
    "navAtStart": true,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "Business Settings",
+    "meta": null
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -5638,9 +5966,10 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 Team"
+    "h1 Business Settings",
+    "h2 Team"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 1,
    "tablesBeyond": 0,
@@ -5648,6 +5977,17 @@
    "unnamed": 0,
    "pointerOnly": 0,
    "navAtStart": true,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "Business Settings",
+    "meta": null
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -5661,9 +6001,10 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 Team"
+    "h1 Business Settings",
+    "h2 Team"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 1,
    "tablesBeyond": 0,
@@ -5671,6 +6012,17 @@
    "unnamed": 0,
    "pointerOnly": 0,
    "navAtStart": true,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "Business Settings",
+    "meta": null
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -5681,12 +6033,13 @@
    "vw": 390,
    "dir": "ltr",
    "lang": "en",
-   "overflow": 44,
-   "offenders": 1,
+   "overflow": 0,
+   "offenders": 0,
    "outline": [
-    "h3 Team"
+    "h1 Business Settings",
+    "h2 Team"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 1,
    "tablesBeyond": 0,
@@ -5694,6 +6047,17 @@
    "unnamed": 0,
    "pointerOnly": 0,
    "navAtStart": true,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "Business Settings",
+    "meta": null
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -10687,16 +11051,28 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 نمط الألوان"
+    "h1 إعدادات الشركة",
+    "h2 نمط الألوان"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 0,
    "tablesBeyond": 0,
    "indic": 0,
    "unnamed": 12,
    "pointerOnly": 0,
-   "navAtStart": false,
+   "navAtStart": true,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "إعدادات الشركة",
+    "meta": null
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -10710,16 +11086,28 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 نمط الألوان"
+    "h1 إعدادات الشركة",
+    "h2 نمط الألوان"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 0,
    "tablesBeyond": 0,
    "indic": 0,
    "unnamed": 12,
    "pointerOnly": 0,
-   "navAtStart": false,
+   "navAtStart": true,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "إعدادات الشركة",
+    "meta": null
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -10733,16 +11121,28 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 نمط الألوان"
+    "h1 إعدادات الشركة",
+    "h2 نمط الألوان"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 0,
    "tablesBeyond": 0,
    "indic": 0,
    "unnamed": 12,
    "pointerOnly": 0,
-   "navAtStart": false,
+   "navAtStart": true,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "إعدادات الشركة",
+    "meta": null
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -10754,18 +11154,30 @@
    "dir": "rtl",
    "lang": "ar",
    "overflow": 0,
-   "offenders": 16,
+   "offenders": 0,
    "outline": [
-    "h3 نمط الألوان"
+    "h1 إعدادات الشركة",
+    "h2 نمط الألوان"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 0,
    "tablesBeyond": 0,
    "indic": 0,
    "unnamed": 12,
    "pointerOnly": 0,
-   "navAtStart": false,
+   "navAtStart": true,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "إعدادات الشركة",
+    "meta": null
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -10779,16 +11191,28 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 بيانات الشركة"
+    "h1 إعدادات الشركة",
+    "h2 بيانات الشركة"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 0,
    "tablesBeyond": 0,
    "indic": 0,
    "unnamed": 2,
    "pointerOnly": 0,
-   "navAtStart": false,
+   "navAtStart": true,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "إعدادات الشركة",
+    "meta": null
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -10802,16 +11226,28 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 بيانات الشركة"
+    "h1 إعدادات الشركة",
+    "h2 بيانات الشركة"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 0,
    "tablesBeyond": 0,
    "indic": 0,
    "unnamed": 2,
    "pointerOnly": 0,
-   "navAtStart": false,
+   "navAtStart": true,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "إعدادات الشركة",
+    "meta": null
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -10825,16 +11261,28 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 بيانات الشركة"
+    "h1 إعدادات الشركة",
+    "h2 بيانات الشركة"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 0,
    "tablesBeyond": 0,
    "indic": 0,
    "unnamed": 2,
    "pointerOnly": 0,
-   "navAtStart": false,
+   "navAtStart": true,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "إعدادات الشركة",
+    "meta": null
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -10846,18 +11294,30 @@
    "dir": "rtl",
    "lang": "ar",
    "overflow": 0,
-   "offenders": 3,
+   "offenders": 0,
    "outline": [
-    "h3 بيانات الشركة"
+    "h1 إعدادات الشركة",
+    "h2 بيانات الشركة"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 0,
    "tablesBeyond": 0,
    "indic": 0,
    "unnamed": 2,
    "pointerOnly": 0,
-   "navAtStart": false,
+   "navAtStart": true,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "إعدادات الشركة",
+    "meta": null
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -10871,16 +11331,28 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 الفريق"
+    "h1 إعدادات الشركة",
+    "h2 الفريق"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 1,
    "tablesBeyond": 0,
    "indic": 0,
    "unnamed": 0,
    "pointerOnly": 0,
-   "navAtStart": false,
+   "navAtStart": true,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "إعدادات الشركة",
+    "meta": null
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -10894,16 +11366,28 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 الفريق"
+    "h1 إعدادات الشركة",
+    "h2 الفريق"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 1,
    "tablesBeyond": 0,
    "indic": 0,
    "unnamed": 0,
    "pointerOnly": 0,
-   "navAtStart": false,
+   "navAtStart": true,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "إعدادات الشركة",
+    "meta": null
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -10917,16 +11401,28 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 الفريق"
+    "h1 إعدادات الشركة",
+    "h2 الفريق"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 1,
    "tablesBeyond": 0,
    "indic": 0,
    "unnamed": 0,
    "pointerOnly": 0,
-   "navAtStart": false,
+   "navAtStart": true,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "إعدادات الشركة",
+    "meta": null
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -10938,18 +11434,30 @@
    "dir": "rtl",
    "lang": "ar",
    "overflow": 0,
-   "offenders": 1,
+   "offenders": 0,
    "outline": [
-    "h3 الفريق"
+    "h1 إعدادات الشركة",
+    "h2 الفريق"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 1,
    "tablesBeyond": 0,
    "indic": 0,
    "unnamed": 0,
    "pointerOnly": 0,
-   "navAtStart": false,
+   "navAtStart": true,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "إعدادات الشركة",
+    "meta": null
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -10963,9 +11471,9 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 الإعدادات المسبقة"
+    "h1 الإعدادات المسبقة"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 1,
    "tablesBeyond": 0,
@@ -10973,6 +11481,17 @@
    "unnamed": 0,
    "pointerOnly": 1,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "الإعدادات المسبقة",
+    "meta": null
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -10986,9 +11505,9 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 الإعدادات المسبقة"
+    "h1 الإعدادات المسبقة"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 1,
    "tablesBeyond": 0,
@@ -10996,6 +11515,17 @@
    "unnamed": 0,
    "pointerOnly": 1,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "الإعدادات المسبقة",
+    "meta": null
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -11009,9 +11539,9 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 الإعدادات المسبقة"
+    "h1 الإعدادات المسبقة"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 1,
    "tablesBeyond": 0,
@@ -11019,6 +11549,17 @@
    "unnamed": 0,
    "pointerOnly": 1,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "الإعدادات المسبقة",
+    "meta": null
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -11032,9 +11573,9 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 الإعدادات المسبقة"
+    "h1 الإعدادات المسبقة"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 1,
    "tablesBeyond": 0,
@@ -11042,6 +11583,17 @@
    "unnamed": 0,
    "pointerOnly": 1,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "الإعدادات المسبقة",
+    "meta": null
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -11055,11 +11607,13 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 مركز الأمان",
-    "h3 الجلسات النشطة",
-    "h3 سجل الأحداث الأمنية"
+    "h1 مركز الأمان",
+    "h2 المصادقة الثنائية",
+    "h2 كلمة المرور",
+    "h2 الجلسات النشطة",
+    "h2 سجل الأحداث الأمنية"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 1,
    "tablesBeyond": 0,
@@ -11067,6 +11621,17 @@
    "unnamed": 0,
    "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "end",
+    "overlap": false,
+    "title": "مركز الأمان",
+    "meta": "المخاطر: منخفض"
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -11080,11 +11645,13 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 مركز الأمان",
-    "h3 الجلسات النشطة",
-    "h3 سجل الأحداث الأمنية"
+    "h1 مركز الأمان",
+    "h2 المصادقة الثنائية",
+    "h2 كلمة المرور",
+    "h2 الجلسات النشطة",
+    "h2 سجل الأحداث الأمنية"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 1,
    "tablesBeyond": 0,
@@ -11092,6 +11659,17 @@
    "unnamed": 0,
    "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "end",
+    "overlap": false,
+    "title": "مركز الأمان",
+    "meta": "المخاطر: منخفض"
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -11105,11 +11683,13 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 مركز الأمان",
-    "h3 الجلسات النشطة",
-    "h3 سجل الأحداث الأمنية"
+    "h1 مركز الأمان",
+    "h2 المصادقة الثنائية",
+    "h2 كلمة المرور",
+    "h2 الجلسات النشطة",
+    "h2 سجل الأحداث الأمنية"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 1,
    "tablesBeyond": 0,
@@ -11117,6 +11697,17 @@
    "unnamed": 0,
    "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "end",
+    "overlap": false,
+    "title": "مركز الأمان",
+    "meta": "المخاطر: منخفض"
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -11130,11 +11721,13 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 مركز الأمان",
-    "h3 الجلسات النشطة",
-    "h3 سجل الأحداث الأمنية"
+    "h1 مركز الأمان",
+    "h2 المصادقة الثنائية",
+    "h2 كلمة المرور",
+    "h2 الجلسات النشطة",
+    "h2 سجل الأحداث الأمنية"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 1,
    "tablesBeyond": 0,
@@ -11142,6 +11735,17 @@
    "unnamed": 0,
    "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "end",
+    "overlap": false,
+    "title": "مركز الأمان",
+    "meta": "المخاطر: منخفض"
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -11155,9 +11759,15 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 جاهزية الأمان والامتثال"
+    "h1 جاهزية الأمان والامتثال",
+    "h2 قائمة التحقق من الجاهزية",
+    "h3 اللائحة العامة لحماية البيانات (GDPR)",
+    "h3 أيزو 27001 — ضمن خطة التطوير",
+    "h3 أمان المنصة",
+    "h2 حقوق صاحب البيانات",
+    "h2 إدارة الموافقات"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 0,
    "tablesBeyond": 0,
@@ -11165,6 +11775,17 @@
    "unnamed": 0,
    "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "جاهزية الأمان والامتثال",
+    "meta": null
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -11178,9 +11799,15 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 جاهزية الأمان والامتثال"
+    "h1 جاهزية الأمان والامتثال",
+    "h2 قائمة التحقق من الجاهزية",
+    "h3 اللائحة العامة لحماية البيانات (GDPR)",
+    "h3 أيزو 27001 — ضمن خطة التطوير",
+    "h3 أمان المنصة",
+    "h2 حقوق صاحب البيانات",
+    "h2 إدارة الموافقات"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 0,
    "tablesBeyond": 0,
@@ -11188,6 +11815,17 @@
    "unnamed": 0,
    "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "جاهزية الأمان والامتثال",
+    "meta": null
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -11201,9 +11839,15 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 جاهزية الأمان والامتثال"
+    "h1 جاهزية الأمان والامتثال",
+    "h2 قائمة التحقق من الجاهزية",
+    "h3 اللائحة العامة لحماية البيانات (GDPR)",
+    "h3 أيزو 27001 — ضمن خطة التطوير",
+    "h3 أمان المنصة",
+    "h2 حقوق صاحب البيانات",
+    "h2 إدارة الموافقات"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 0,
    "tablesBeyond": 0,
@@ -11211,6 +11855,17 @@
    "unnamed": 0,
    "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "جاهزية الأمان والامتثال",
+    "meta": null
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -11224,9 +11879,15 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 جاهزية الأمان والامتثال"
+    "h1 جاهزية الأمان والامتثال",
+    "h2 قائمة التحقق من الجاهزية",
+    "h3 اللائحة العامة لحماية البيانات (GDPR)",
+    "h3 أيزو 27001 — ضمن خطة التطوير",
+    "h3 أمان المنصة",
+    "h2 حقوق صاحب البيانات",
+    "h2 إدارة الموافقات"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 0,
    "tablesBeyond": 0,
@@ -11234,6 +11895,17 @@
    "unnamed": 0,
    "pointerOnly": 0,
    "navAtStart": null,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "جاهزية الأمان والامتثال",
+    "meta": null
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -11247,16 +11919,28 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 الفريق"
+    "h1 إعدادات الشركة",
+    "h2 الفريق"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 1,
    "tablesBeyond": 0,
    "indic": 0,
    "unnamed": 0,
    "pointerOnly": 0,
-   "navAtStart": false,
+   "navAtStart": true,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "إعدادات الشركة",
+    "meta": null
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -11270,16 +11954,28 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 الفريق"
+    "h1 إعدادات الشركة",
+    "h2 الفريق"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 1,
    "tablesBeyond": 0,
    "indic": 0,
    "unnamed": 0,
    "pointerOnly": 0,
-   "navAtStart": false,
+   "navAtStart": true,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "إعدادات الشركة",
+    "meta": null
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -11293,16 +11989,28 @@
    "overflow": 0,
    "offenders": 0,
    "outline": [
-    "h3 الفريق"
+    "h1 إعدادات الشركة",
+    "h2 الفريق"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 1,
    "tablesBeyond": 0,
    "indic": 0,
    "unnamed": 0,
    "pointerOnly": 0,
-   "navAtStart": false,
+   "navAtStart": true,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "إعدادات الشركة",
+    "meta": null
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -11314,18 +12022,30 @@
    "dir": "rtl",
    "lang": "ar",
    "overflow": 0,
-   "offenders": 1,
+   "offenders": 0,
    "outline": [
-    "h3 الفريق"
+    "h1 إعدادات الشركة",
+    "h2 الفريق"
    ],
-   "h1": 0,
+   "h1": 1,
    "skips": 0,
    "tables": 1,
    "tablesBeyond": 0,
    "indic": 0,
    "unnamed": 0,
    "pointerOnly": 0,
-   "navAtStart": false,
+   "navAtStart": true,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "إعدادات الشركة",
+    "meta": null
+   },
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
@@ -12245,6 +12965,1974 @@
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
+  },
+  "settings-org-logo|en|1440": {
+   "status": 200,
+   "finalPath": "/settings/organization?tab=logo",
+   "vw": 1440,
+   "dir": "ltr",
+   "lang": "en",
+   "overflow": 0,
+   "offenders": 0,
+   "outline": [
+    "h1 Business Settings",
+    "h2 Logo"
+   ],
+   "h1": 1,
+   "skips": 0,
+   "tables": 0,
+   "tablesBeyond": 0,
+   "indic": 0,
+   "unnamed": 0,
+   "pointerOnly": 0,
+   "navAtStart": true,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "Business Settings",
+    "meta": null
+   },
+   "consoleErrors": 0,
+   "pageErrors": 0,
+   "r418": 0
+  },
+  "settings-org-logo|en|1024": {
+   "status": 200,
+   "finalPath": "/settings/organization?tab=logo",
+   "vw": 1024,
+   "dir": "ltr",
+   "lang": "en",
+   "overflow": 0,
+   "offenders": 0,
+   "outline": [
+    "h1 Business Settings",
+    "h2 Logo"
+   ],
+   "h1": 1,
+   "skips": 0,
+   "tables": 0,
+   "tablesBeyond": 0,
+   "indic": 0,
+   "unnamed": 0,
+   "pointerOnly": 0,
+   "navAtStart": true,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "Business Settings",
+    "meta": null
+   },
+   "consoleErrors": 0,
+   "pageErrors": 0,
+   "r418": 0
+  },
+  "settings-org-logo|en|768": {
+   "status": 200,
+   "finalPath": "/settings/organization?tab=logo",
+   "vw": 768,
+   "dir": "ltr",
+   "lang": "en",
+   "overflow": 0,
+   "offenders": 0,
+   "outline": [
+    "h1 Business Settings",
+    "h2 Logo"
+   ],
+   "h1": 1,
+   "skips": 0,
+   "tables": 0,
+   "tablesBeyond": 0,
+   "indic": 0,
+   "unnamed": 0,
+   "pointerOnly": 0,
+   "navAtStart": true,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "Business Settings",
+    "meta": null
+   },
+   "consoleErrors": 0,
+   "pageErrors": 0,
+   "r418": 0
+  },
+  "settings-org-logo|en|390": {
+   "status": 200,
+   "finalPath": "/settings/organization?tab=logo",
+   "vw": 390,
+   "dir": "ltr",
+   "lang": "en",
+   "overflow": 0,
+   "offenders": 0,
+   "outline": [
+    "h1 Business Settings",
+    "h2 Logo"
+   ],
+   "h1": 1,
+   "skips": 0,
+   "tables": 0,
+   "tablesBeyond": 0,
+   "indic": 0,
+   "unnamed": 0,
+   "pointerOnly": 0,
+   "navAtStart": true,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "Business Settings",
+    "meta": null
+   },
+   "consoleErrors": 0,
+   "pageErrors": 0,
+   "r418": 0
+  },
+  "settings-org-bank|en|1440": {
+   "status": 200,
+   "finalPath": "/settings/organization?tab=default-bank",
+   "vw": 1440,
+   "dir": "ltr",
+   "lang": "en",
+   "overflow": 0,
+   "offenders": 0,
+   "outline": [
+    "h1 Business Settings",
+    "h2 Default Bank Account"
+   ],
+   "h1": 1,
+   "skips": 0,
+   "tables": 0,
+   "tablesBeyond": 0,
+   "indic": 0,
+   "unnamed": 0,
+   "pointerOnly": 0,
+   "navAtStart": true,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "Business Settings",
+    "meta": null
+   },
+   "consoleErrors": 0,
+   "pageErrors": 0,
+   "r418": 0
+  },
+  "settings-org-bank|en|1024": {
+   "status": 200,
+   "finalPath": "/settings/organization?tab=default-bank",
+   "vw": 1024,
+   "dir": "ltr",
+   "lang": "en",
+   "overflow": 0,
+   "offenders": 0,
+   "outline": [
+    "h1 Business Settings",
+    "h2 Default Bank Account"
+   ],
+   "h1": 1,
+   "skips": 0,
+   "tables": 0,
+   "tablesBeyond": 0,
+   "indic": 0,
+   "unnamed": 0,
+   "pointerOnly": 0,
+   "navAtStart": true,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "Business Settings",
+    "meta": null
+   },
+   "consoleErrors": 0,
+   "pageErrors": 0,
+   "r418": 0
+  },
+  "settings-org-bank|en|768": {
+   "status": 200,
+   "finalPath": "/settings/organization?tab=default-bank",
+   "vw": 768,
+   "dir": "ltr",
+   "lang": "en",
+   "overflow": 0,
+   "offenders": 0,
+   "outline": [
+    "h1 Business Settings",
+    "h2 Default Bank Account"
+   ],
+   "h1": 1,
+   "skips": 0,
+   "tables": 0,
+   "tablesBeyond": 0,
+   "indic": 0,
+   "unnamed": 0,
+   "pointerOnly": 0,
+   "navAtStart": true,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "Business Settings",
+    "meta": null
+   },
+   "consoleErrors": 0,
+   "pageErrors": 0,
+   "r418": 0
+  },
+  "settings-org-bank|en|390": {
+   "status": 200,
+   "finalPath": "/settings/organization?tab=default-bank",
+   "vw": 390,
+   "dir": "ltr",
+   "lang": "en",
+   "overflow": 0,
+   "offenders": 0,
+   "outline": [
+    "h1 Business Settings",
+    "h2 Default Bank Account"
+   ],
+   "h1": 1,
+   "skips": 0,
+   "tables": 0,
+   "tablesBeyond": 0,
+   "indic": 0,
+   "unnamed": 0,
+   "pointerOnly": 0,
+   "navAtStart": true,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "Business Settings",
+    "meta": null
+   },
+   "consoleErrors": 0,
+   "pageErrors": 0,
+   "r418": 0
+  },
+  "settings-org-fiscal|en|1440": {
+   "status": 200,
+   "finalPath": "/settings/organization?tab=fiscal-year",
+   "vw": 1440,
+   "dir": "ltr",
+   "lang": "en",
+   "overflow": 0,
+   "offenders": 0,
+   "outline": [
+    "h1 Business Settings",
+    "h2 Fiscal Year"
+   ],
+   "h1": 1,
+   "skips": 0,
+   "tables": 0,
+   "tablesBeyond": 0,
+   "indic": 0,
+   "unnamed": 0,
+   "pointerOnly": 0,
+   "navAtStart": true,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "Business Settings",
+    "meta": null
+   },
+   "consoleErrors": 0,
+   "pageErrors": 0,
+   "r418": 0
+  },
+  "settings-org-fiscal|en|1024": {
+   "status": 200,
+   "finalPath": "/settings/organization?tab=fiscal-year",
+   "vw": 1024,
+   "dir": "ltr",
+   "lang": "en",
+   "overflow": 0,
+   "offenders": 0,
+   "outline": [
+    "h1 Business Settings",
+    "h2 Fiscal Year"
+   ],
+   "h1": 1,
+   "skips": 0,
+   "tables": 0,
+   "tablesBeyond": 0,
+   "indic": 0,
+   "unnamed": 0,
+   "pointerOnly": 0,
+   "navAtStart": true,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "Business Settings",
+    "meta": null
+   },
+   "consoleErrors": 0,
+   "pageErrors": 0,
+   "r418": 0
+  },
+  "settings-org-fiscal|en|768": {
+   "status": 200,
+   "finalPath": "/settings/organization?tab=fiscal-year",
+   "vw": 768,
+   "dir": "ltr",
+   "lang": "en",
+   "overflow": 0,
+   "offenders": 0,
+   "outline": [
+    "h1 Business Settings",
+    "h2 Fiscal Year"
+   ],
+   "h1": 1,
+   "skips": 0,
+   "tables": 0,
+   "tablesBeyond": 0,
+   "indic": 0,
+   "unnamed": 0,
+   "pointerOnly": 0,
+   "navAtStart": true,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "Business Settings",
+    "meta": null
+   },
+   "consoleErrors": 0,
+   "pageErrors": 0,
+   "r418": 0
+  },
+  "settings-org-fiscal|en|390": {
+   "status": 200,
+   "finalPath": "/settings/organization?tab=fiscal-year",
+   "vw": 390,
+   "dir": "ltr",
+   "lang": "en",
+   "overflow": 0,
+   "offenders": 0,
+   "outline": [
+    "h1 Business Settings",
+    "h2 Fiscal Year"
+   ],
+   "h1": 1,
+   "skips": 0,
+   "tables": 0,
+   "tablesBeyond": 0,
+   "indic": 0,
+   "unnamed": 0,
+   "pointerOnly": 0,
+   "navAtStart": true,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "Business Settings",
+    "meta": null
+   },
+   "consoleErrors": 0,
+   "pageErrors": 0,
+   "r418": 0
+  },
+  "settings-org-vat|en|1440": {
+   "status": 200,
+   "finalPath": "/settings/organization?tab=vat-config",
+   "vw": 1440,
+   "dir": "ltr",
+   "lang": "en",
+   "overflow": 0,
+   "offenders": 0,
+   "outline": [
+    "h1 Business Settings",
+    "h2 VAT Configuration"
+   ],
+   "h1": 1,
+   "skips": 0,
+   "tables": 0,
+   "tablesBeyond": 0,
+   "indic": 0,
+   "unnamed": 0,
+   "pointerOnly": 0,
+   "navAtStart": true,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "Business Settings",
+    "meta": null
+   },
+   "consoleErrors": 0,
+   "pageErrors": 0,
+   "r418": 0
+  },
+  "settings-org-vat|en|1024": {
+   "status": 200,
+   "finalPath": "/settings/organization?tab=vat-config",
+   "vw": 1024,
+   "dir": "ltr",
+   "lang": "en",
+   "overflow": 0,
+   "offenders": 0,
+   "outline": [
+    "h1 Business Settings",
+    "h2 VAT Configuration"
+   ],
+   "h1": 1,
+   "skips": 0,
+   "tables": 0,
+   "tablesBeyond": 0,
+   "indic": 0,
+   "unnamed": 0,
+   "pointerOnly": 0,
+   "navAtStart": true,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "Business Settings",
+    "meta": null
+   },
+   "consoleErrors": 0,
+   "pageErrors": 0,
+   "r418": 0
+  },
+  "settings-org-vat|en|768": {
+   "status": 200,
+   "finalPath": "/settings/organization?tab=vat-config",
+   "vw": 768,
+   "dir": "ltr",
+   "lang": "en",
+   "overflow": 0,
+   "offenders": 0,
+   "outline": [
+    "h1 Business Settings",
+    "h2 VAT Configuration"
+   ],
+   "h1": 1,
+   "skips": 0,
+   "tables": 0,
+   "tablesBeyond": 0,
+   "indic": 0,
+   "unnamed": 0,
+   "pointerOnly": 0,
+   "navAtStart": true,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "Business Settings",
+    "meta": null
+   },
+   "consoleErrors": 0,
+   "pageErrors": 0,
+   "r418": 0
+  },
+  "settings-org-vat|en|390": {
+   "status": 200,
+   "finalPath": "/settings/organization?tab=vat-config",
+   "vw": 390,
+   "dir": "ltr",
+   "lang": "en",
+   "overflow": 0,
+   "offenders": 0,
+   "outline": [
+    "h1 Business Settings",
+    "h2 VAT Configuration"
+   ],
+   "h1": 1,
+   "skips": 0,
+   "tables": 0,
+   "tablesBeyond": 0,
+   "indic": 0,
+   "unnamed": 0,
+   "pointerOnly": 0,
+   "navAtStart": true,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "Business Settings",
+    "meta": null
+   },
+   "consoleErrors": 0,
+   "pageErrors": 0,
+   "r418": 0
+  },
+  "settings-org-numbers|en|1440": {
+   "status": 200,
+   "finalPath": "/settings/organization?tab=number-format",
+   "vw": 1440,
+   "dir": "ltr",
+   "lang": "en",
+   "overflow": 0,
+   "offenders": 0,
+   "outline": [
+    "h1 Business Settings",
+    "h2 Number Format"
+   ],
+   "h1": 1,
+   "skips": 0,
+   "tables": 0,
+   "tablesBeyond": 0,
+   "indic": 0,
+   "unnamed": 0,
+   "pointerOnly": 0,
+   "navAtStart": true,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "Business Settings",
+    "meta": null
+   },
+   "consoleErrors": 0,
+   "pageErrors": 0,
+   "r418": 0
+  },
+  "settings-org-numbers|en|1024": {
+   "status": 200,
+   "finalPath": "/settings/organization?tab=number-format",
+   "vw": 1024,
+   "dir": "ltr",
+   "lang": "en",
+   "overflow": 0,
+   "offenders": 0,
+   "outline": [
+    "h1 Business Settings",
+    "h2 Number Format"
+   ],
+   "h1": 1,
+   "skips": 0,
+   "tables": 0,
+   "tablesBeyond": 0,
+   "indic": 0,
+   "unnamed": 0,
+   "pointerOnly": 0,
+   "navAtStart": true,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "Business Settings",
+    "meta": null
+   },
+   "consoleErrors": 0,
+   "pageErrors": 0,
+   "r418": 0
+  },
+  "settings-org-numbers|en|768": {
+   "status": 200,
+   "finalPath": "/settings/organization?tab=number-format",
+   "vw": 768,
+   "dir": "ltr",
+   "lang": "en",
+   "overflow": 0,
+   "offenders": 0,
+   "outline": [
+    "h1 Business Settings",
+    "h2 Number Format"
+   ],
+   "h1": 1,
+   "skips": 0,
+   "tables": 0,
+   "tablesBeyond": 0,
+   "indic": 0,
+   "unnamed": 0,
+   "pointerOnly": 0,
+   "navAtStart": true,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "Business Settings",
+    "meta": null
+   },
+   "consoleErrors": 0,
+   "pageErrors": 0,
+   "r418": 0
+  },
+  "settings-org-numbers|en|390": {
+   "status": 200,
+   "finalPath": "/settings/organization?tab=number-format",
+   "vw": 390,
+   "dir": "ltr",
+   "lang": "en",
+   "overflow": 0,
+   "offenders": 0,
+   "outline": [
+    "h1 Business Settings",
+    "h2 Number Format"
+   ],
+   "h1": 1,
+   "skips": 0,
+   "tables": 0,
+   "tablesBeyond": 0,
+   "indic": 0,
+   "unnamed": 0,
+   "pointerOnly": 0,
+   "navAtStart": true,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "Business Settings",
+    "meta": null
+   },
+   "consoleErrors": 0,
+   "pageErrors": 0,
+   "r418": 0
+  },
+  "settings-org-roles|en|1440": {
+   "status": 200,
+   "finalPath": "/settings/organization?tab=roles-permissions",
+   "vw": 1440,
+   "dir": "ltr",
+   "lang": "en",
+   "overflow": 0,
+   "offenders": 0,
+   "outline": [
+    "h1 Business Settings",
+    "h2 Roles & Permissions",
+    "h3 Actions restricted beyond their module"
+   ],
+   "h1": 1,
+   "skips": 0,
+   "tables": 2,
+   "tablesBeyond": 0,
+   "indic": 0,
+   "unnamed": 0,
+   "pointerOnly": 0,
+   "navAtStart": true,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "Business Settings",
+    "meta": null
+   },
+   "consoleErrors": 0,
+   "pageErrors": 0,
+   "r418": 0
+  },
+  "settings-org-roles|en|1024": {
+   "status": 200,
+   "finalPath": "/settings/organization?tab=roles-permissions",
+   "vw": 1024,
+   "dir": "ltr",
+   "lang": "en",
+   "overflow": 0,
+   "offenders": 0,
+   "outline": [
+    "h1 Business Settings",
+    "h2 Roles & Permissions",
+    "h3 Actions restricted beyond their module"
+   ],
+   "h1": 1,
+   "skips": 0,
+   "tables": 2,
+   "tablesBeyond": 0,
+   "indic": 0,
+   "unnamed": 0,
+   "pointerOnly": 0,
+   "navAtStart": true,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "Business Settings",
+    "meta": null
+   },
+   "consoleErrors": 0,
+   "pageErrors": 0,
+   "r418": 0
+  },
+  "settings-org-roles|en|768": {
+   "status": 200,
+   "finalPath": "/settings/organization?tab=roles-permissions",
+   "vw": 768,
+   "dir": "ltr",
+   "lang": "en",
+   "overflow": 0,
+   "offenders": 0,
+   "outline": [
+    "h1 Business Settings",
+    "h2 Roles & Permissions",
+    "h3 Actions restricted beyond their module"
+   ],
+   "h1": 1,
+   "skips": 0,
+   "tables": 2,
+   "tablesBeyond": 0,
+   "indic": 0,
+   "unnamed": 0,
+   "pointerOnly": 0,
+   "navAtStart": true,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "Business Settings",
+    "meta": null
+   },
+   "consoleErrors": 0,
+   "pageErrors": 0,
+   "r418": 0
+  },
+  "settings-org-roles|en|390": {
+   "status": 200,
+   "finalPath": "/settings/organization?tab=roles-permissions",
+   "vw": 390,
+   "dir": "ltr",
+   "lang": "en",
+   "overflow": 0,
+   "offenders": 0,
+   "outline": [
+    "h1 Business Settings",
+    "h2 Roles & Permissions",
+    "h3 Actions restricted beyond their module"
+   ],
+   "h1": 1,
+   "skips": 0,
+   "tables": 2,
+   "tablesBeyond": 0,
+   "indic": 0,
+   "unnamed": 0,
+   "pointerOnly": 0,
+   "navAtStart": true,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "Business Settings",
+    "meta": null
+   },
+   "consoleErrors": 0,
+   "pageErrors": 0,
+   "r418": 0
+  },
+  "settings-org-zatca|en|1440": {
+   "status": 200,
+   "finalPath": "/settings/organization?tab=zatca",
+   "vw": 1440,
+   "dir": "ltr",
+   "lang": "en",
+   "overflow": 0,
+   "offenders": 0,
+   "outline": [
+    "h1 Business Settings",
+    "h2 ZATCA Phase 1"
+   ],
+   "h1": 1,
+   "skips": 0,
+   "tables": 0,
+   "tablesBeyond": 0,
+   "indic": 0,
+   "unnamed": 0,
+   "pointerOnly": 0,
+   "navAtStart": true,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "Business Settings",
+    "meta": null
+   },
+   "consoleErrors": 0,
+   "pageErrors": 0,
+   "r418": 0
+  },
+  "settings-org-zatca|en|1024": {
+   "status": 200,
+   "finalPath": "/settings/organization?tab=zatca",
+   "vw": 1024,
+   "dir": "ltr",
+   "lang": "en",
+   "overflow": 0,
+   "offenders": 0,
+   "outline": [
+    "h1 Business Settings",
+    "h2 ZATCA Phase 1"
+   ],
+   "h1": 1,
+   "skips": 0,
+   "tables": 0,
+   "tablesBeyond": 0,
+   "indic": 0,
+   "unnamed": 0,
+   "pointerOnly": 0,
+   "navAtStart": true,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "Business Settings",
+    "meta": null
+   },
+   "consoleErrors": 0,
+   "pageErrors": 0,
+   "r418": 0
+  },
+  "settings-org-zatca|en|768": {
+   "status": 200,
+   "finalPath": "/settings/organization?tab=zatca",
+   "vw": 768,
+   "dir": "ltr",
+   "lang": "en",
+   "overflow": 0,
+   "offenders": 0,
+   "outline": [
+    "h1 Business Settings",
+    "h2 ZATCA Phase 1"
+   ],
+   "h1": 1,
+   "skips": 0,
+   "tables": 0,
+   "tablesBeyond": 0,
+   "indic": 0,
+   "unnamed": 0,
+   "pointerOnly": 0,
+   "navAtStart": true,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "Business Settings",
+    "meta": null
+   },
+   "consoleErrors": 0,
+   "pageErrors": 0,
+   "r418": 0
+  },
+  "settings-org-zatca|en|390": {
+   "status": 200,
+   "finalPath": "/settings/organization?tab=zatca",
+   "vw": 390,
+   "dir": "ltr",
+   "lang": "en",
+   "overflow": 0,
+   "offenders": 0,
+   "outline": [
+    "h1 Business Settings",
+    "h2 ZATCA Phase 1"
+   ],
+   "h1": 1,
+   "skips": 0,
+   "tables": 0,
+   "tablesBeyond": 0,
+   "indic": 0,
+   "unnamed": 0,
+   "pointerOnly": 0,
+   "navAtStart": true,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "Business Settings",
+    "meta": null
+   },
+   "consoleErrors": 0,
+   "pageErrors": 0,
+   "r418": 0
+  },
+  "settings-org-logo|ar|1440": {
+   "status": 200,
+   "finalPath": "/settings/organization?tab=logo",
+   "vw": 1440,
+   "dir": "rtl",
+   "lang": "ar",
+   "overflow": 0,
+   "offenders": 0,
+   "outline": [
+    "h1 إعدادات الشركة",
+    "h2 الشعار"
+   ],
+   "h1": 1,
+   "skips": 0,
+   "tables": 0,
+   "tablesBeyond": 0,
+   "indic": 0,
+   "unnamed": 0,
+   "pointerOnly": 0,
+   "navAtStart": true,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "إعدادات الشركة",
+    "meta": null
+   },
+   "consoleErrors": 0,
+   "pageErrors": 0,
+   "r418": 0
+  },
+  "settings-org-logo|ar|1024": {
+   "status": 200,
+   "finalPath": "/settings/organization?tab=logo",
+   "vw": 1024,
+   "dir": "rtl",
+   "lang": "ar",
+   "overflow": 0,
+   "offenders": 0,
+   "outline": [
+    "h1 إعدادات الشركة",
+    "h2 الشعار"
+   ],
+   "h1": 1,
+   "skips": 0,
+   "tables": 0,
+   "tablesBeyond": 0,
+   "indic": 0,
+   "unnamed": 0,
+   "pointerOnly": 0,
+   "navAtStart": true,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "إعدادات الشركة",
+    "meta": null
+   },
+   "consoleErrors": 0,
+   "pageErrors": 0,
+   "r418": 0
+  },
+  "settings-org-logo|ar|768": {
+   "status": 200,
+   "finalPath": "/settings/organization?tab=logo",
+   "vw": 768,
+   "dir": "rtl",
+   "lang": "ar",
+   "overflow": 0,
+   "offenders": 0,
+   "outline": [
+    "h1 إعدادات الشركة",
+    "h2 الشعار"
+   ],
+   "h1": 1,
+   "skips": 0,
+   "tables": 0,
+   "tablesBeyond": 0,
+   "indic": 0,
+   "unnamed": 0,
+   "pointerOnly": 0,
+   "navAtStart": true,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "إعدادات الشركة",
+    "meta": null
+   },
+   "consoleErrors": 0,
+   "pageErrors": 0,
+   "r418": 0
+  },
+  "settings-org-logo|ar|390": {
+   "status": 200,
+   "finalPath": "/settings/organization?tab=logo",
+   "vw": 390,
+   "dir": "rtl",
+   "lang": "ar",
+   "overflow": 0,
+   "offenders": 0,
+   "outline": [
+    "h1 إعدادات الشركة",
+    "h2 الشعار"
+   ],
+   "h1": 1,
+   "skips": 0,
+   "tables": 0,
+   "tablesBeyond": 0,
+   "indic": 0,
+   "unnamed": 0,
+   "pointerOnly": 0,
+   "navAtStart": true,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "إعدادات الشركة",
+    "meta": null
+   },
+   "consoleErrors": 0,
+   "pageErrors": 0,
+   "r418": 0
+  },
+  "settings-org-bank|ar|1440": {
+   "status": 200,
+   "finalPath": "/settings/organization?tab=default-bank",
+   "vw": 1440,
+   "dir": "rtl",
+   "lang": "ar",
+   "overflow": 0,
+   "offenders": 0,
+   "outline": [
+    "h1 إعدادات الشركة",
+    "h2 الحساب البنكي الافتراضي"
+   ],
+   "h1": 1,
+   "skips": 0,
+   "tables": 0,
+   "tablesBeyond": 0,
+   "indic": 0,
+   "unnamed": 0,
+   "pointerOnly": 0,
+   "navAtStart": true,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "إعدادات الشركة",
+    "meta": null
+   },
+   "consoleErrors": 0,
+   "pageErrors": 0,
+   "r418": 0
+  },
+  "settings-org-bank|ar|1024": {
+   "status": 200,
+   "finalPath": "/settings/organization?tab=default-bank",
+   "vw": 1024,
+   "dir": "rtl",
+   "lang": "ar",
+   "overflow": 0,
+   "offenders": 0,
+   "outline": [
+    "h1 إعدادات الشركة",
+    "h2 الحساب البنكي الافتراضي"
+   ],
+   "h1": 1,
+   "skips": 0,
+   "tables": 0,
+   "tablesBeyond": 0,
+   "indic": 0,
+   "unnamed": 0,
+   "pointerOnly": 0,
+   "navAtStart": true,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "إعدادات الشركة",
+    "meta": null
+   },
+   "consoleErrors": 0,
+   "pageErrors": 0,
+   "r418": 0
+  },
+  "settings-org-bank|ar|768": {
+   "status": 200,
+   "finalPath": "/settings/organization?tab=default-bank",
+   "vw": 768,
+   "dir": "rtl",
+   "lang": "ar",
+   "overflow": 0,
+   "offenders": 0,
+   "outline": [
+    "h1 إعدادات الشركة",
+    "h2 الحساب البنكي الافتراضي"
+   ],
+   "h1": 1,
+   "skips": 0,
+   "tables": 0,
+   "tablesBeyond": 0,
+   "indic": 0,
+   "unnamed": 0,
+   "pointerOnly": 0,
+   "navAtStart": true,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "إعدادات الشركة",
+    "meta": null
+   },
+   "consoleErrors": 0,
+   "pageErrors": 0,
+   "r418": 0
+  },
+  "settings-org-bank|ar|390": {
+   "status": 200,
+   "finalPath": "/settings/organization?tab=default-bank",
+   "vw": 390,
+   "dir": "rtl",
+   "lang": "ar",
+   "overflow": 0,
+   "offenders": 0,
+   "outline": [
+    "h1 إعدادات الشركة",
+    "h2 الحساب البنكي الافتراضي"
+   ],
+   "h1": 1,
+   "skips": 0,
+   "tables": 0,
+   "tablesBeyond": 0,
+   "indic": 0,
+   "unnamed": 0,
+   "pointerOnly": 0,
+   "navAtStart": true,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "إعدادات الشركة",
+    "meta": null
+   },
+   "consoleErrors": 0,
+   "pageErrors": 0,
+   "r418": 0
+  },
+  "settings-org-fiscal|ar|1440": {
+   "status": 200,
+   "finalPath": "/settings/organization?tab=fiscal-year",
+   "vw": 1440,
+   "dir": "rtl",
+   "lang": "ar",
+   "overflow": 0,
+   "offenders": 0,
+   "outline": [
+    "h1 إعدادات الشركة",
+    "h2 السنة المالية"
+   ],
+   "h1": 1,
+   "skips": 0,
+   "tables": 0,
+   "tablesBeyond": 0,
+   "indic": 0,
+   "unnamed": 0,
+   "pointerOnly": 0,
+   "navAtStart": true,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "إعدادات الشركة",
+    "meta": null
+   },
+   "consoleErrors": 0,
+   "pageErrors": 0,
+   "r418": 0
+  },
+  "settings-org-fiscal|ar|1024": {
+   "status": 200,
+   "finalPath": "/settings/organization?tab=fiscal-year",
+   "vw": 1024,
+   "dir": "rtl",
+   "lang": "ar",
+   "overflow": 0,
+   "offenders": 0,
+   "outline": [
+    "h1 إعدادات الشركة",
+    "h2 السنة المالية"
+   ],
+   "h1": 1,
+   "skips": 0,
+   "tables": 0,
+   "tablesBeyond": 0,
+   "indic": 0,
+   "unnamed": 0,
+   "pointerOnly": 0,
+   "navAtStart": true,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "إعدادات الشركة",
+    "meta": null
+   },
+   "consoleErrors": 0,
+   "pageErrors": 0,
+   "r418": 0
+  },
+  "settings-org-fiscal|ar|768": {
+   "status": 200,
+   "finalPath": "/settings/organization?tab=fiscal-year",
+   "vw": 768,
+   "dir": "rtl",
+   "lang": "ar",
+   "overflow": 0,
+   "offenders": 0,
+   "outline": [
+    "h1 إعدادات الشركة",
+    "h2 السنة المالية"
+   ],
+   "h1": 1,
+   "skips": 0,
+   "tables": 0,
+   "tablesBeyond": 0,
+   "indic": 0,
+   "unnamed": 0,
+   "pointerOnly": 0,
+   "navAtStart": true,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "إعدادات الشركة",
+    "meta": null
+   },
+   "consoleErrors": 0,
+   "pageErrors": 0,
+   "r418": 0
+  },
+  "settings-org-fiscal|ar|390": {
+   "status": 200,
+   "finalPath": "/settings/organization?tab=fiscal-year",
+   "vw": 390,
+   "dir": "rtl",
+   "lang": "ar",
+   "overflow": 0,
+   "offenders": 0,
+   "outline": [
+    "h1 إعدادات الشركة",
+    "h2 السنة المالية"
+   ],
+   "h1": 1,
+   "skips": 0,
+   "tables": 0,
+   "tablesBeyond": 0,
+   "indic": 0,
+   "unnamed": 0,
+   "pointerOnly": 0,
+   "navAtStart": true,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "إعدادات الشركة",
+    "meta": null
+   },
+   "consoleErrors": 0,
+   "pageErrors": 0,
+   "r418": 0
+  },
+  "settings-org-vat|ar|1440": {
+   "status": 200,
+   "finalPath": "/settings/organization?tab=vat-config",
+   "vw": 1440,
+   "dir": "rtl",
+   "lang": "ar",
+   "overflow": 0,
+   "offenders": 0,
+   "outline": [
+    "h1 إعدادات الشركة",
+    "h2 إعدادات ضريبة القيمة المضافة"
+   ],
+   "h1": 1,
+   "skips": 0,
+   "tables": 0,
+   "tablesBeyond": 0,
+   "indic": 0,
+   "unnamed": 0,
+   "pointerOnly": 0,
+   "navAtStart": true,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "إعدادات الشركة",
+    "meta": null
+   },
+   "consoleErrors": 0,
+   "pageErrors": 0,
+   "r418": 0
+  },
+  "settings-org-vat|ar|1024": {
+   "status": 200,
+   "finalPath": "/settings/organization?tab=vat-config",
+   "vw": 1024,
+   "dir": "rtl",
+   "lang": "ar",
+   "overflow": 0,
+   "offenders": 0,
+   "outline": [
+    "h1 إعدادات الشركة",
+    "h2 إعدادات ضريبة القيمة المضافة"
+   ],
+   "h1": 1,
+   "skips": 0,
+   "tables": 0,
+   "tablesBeyond": 0,
+   "indic": 0,
+   "unnamed": 0,
+   "pointerOnly": 0,
+   "navAtStart": true,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "إعدادات الشركة",
+    "meta": null
+   },
+   "consoleErrors": 0,
+   "pageErrors": 0,
+   "r418": 0
+  },
+  "settings-org-vat|ar|768": {
+   "status": 200,
+   "finalPath": "/settings/organization?tab=vat-config",
+   "vw": 768,
+   "dir": "rtl",
+   "lang": "ar",
+   "overflow": 0,
+   "offenders": 0,
+   "outline": [
+    "h1 إعدادات الشركة",
+    "h2 إعدادات ضريبة القيمة المضافة"
+   ],
+   "h1": 1,
+   "skips": 0,
+   "tables": 0,
+   "tablesBeyond": 0,
+   "indic": 0,
+   "unnamed": 0,
+   "pointerOnly": 0,
+   "navAtStart": true,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "إعدادات الشركة",
+    "meta": null
+   },
+   "consoleErrors": 0,
+   "pageErrors": 0,
+   "r418": 0
+  },
+  "settings-org-vat|ar|390": {
+   "status": 200,
+   "finalPath": "/settings/organization?tab=vat-config",
+   "vw": 390,
+   "dir": "rtl",
+   "lang": "ar",
+   "overflow": 0,
+   "offenders": 0,
+   "outline": [
+    "h1 إعدادات الشركة",
+    "h2 إعدادات ضريبة القيمة المضافة"
+   ],
+   "h1": 1,
+   "skips": 0,
+   "tables": 0,
+   "tablesBeyond": 0,
+   "indic": 0,
+   "unnamed": 0,
+   "pointerOnly": 0,
+   "navAtStart": true,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "إعدادات الشركة",
+    "meta": null
+   },
+   "consoleErrors": 0,
+   "pageErrors": 0,
+   "r418": 0
+  },
+  "settings-org-numbers|ar|1440": {
+   "status": 200,
+   "finalPath": "/settings/organization?tab=number-format",
+   "vw": 1440,
+   "dir": "rtl",
+   "lang": "ar",
+   "overflow": 0,
+   "offenders": 0,
+   "outline": [
+    "h1 إعدادات الشركة",
+    "h2 تنسيق الأرقام"
+   ],
+   "h1": 1,
+   "skips": 0,
+   "tables": 0,
+   "tablesBeyond": 0,
+   "indic": 0,
+   "unnamed": 0,
+   "pointerOnly": 0,
+   "navAtStart": true,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "إعدادات الشركة",
+    "meta": null
+   },
+   "consoleErrors": 0,
+   "pageErrors": 0,
+   "r418": 0
+  },
+  "settings-org-numbers|ar|1024": {
+   "status": 200,
+   "finalPath": "/settings/organization?tab=number-format",
+   "vw": 1024,
+   "dir": "rtl",
+   "lang": "ar",
+   "overflow": 0,
+   "offenders": 0,
+   "outline": [
+    "h1 إعدادات الشركة",
+    "h2 تنسيق الأرقام"
+   ],
+   "h1": 1,
+   "skips": 0,
+   "tables": 0,
+   "tablesBeyond": 0,
+   "indic": 0,
+   "unnamed": 0,
+   "pointerOnly": 0,
+   "navAtStart": true,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "إعدادات الشركة",
+    "meta": null
+   },
+   "consoleErrors": 0,
+   "pageErrors": 0,
+   "r418": 0
+  },
+  "settings-org-numbers|ar|768": {
+   "status": 200,
+   "finalPath": "/settings/organization?tab=number-format",
+   "vw": 768,
+   "dir": "rtl",
+   "lang": "ar",
+   "overflow": 0,
+   "offenders": 0,
+   "outline": [
+    "h1 إعدادات الشركة",
+    "h2 تنسيق الأرقام"
+   ],
+   "h1": 1,
+   "skips": 0,
+   "tables": 0,
+   "tablesBeyond": 0,
+   "indic": 0,
+   "unnamed": 0,
+   "pointerOnly": 0,
+   "navAtStart": true,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "إعدادات الشركة",
+    "meta": null
+   },
+   "consoleErrors": 0,
+   "pageErrors": 0,
+   "r418": 0
+  },
+  "settings-org-numbers|ar|390": {
+   "status": 200,
+   "finalPath": "/settings/organization?tab=number-format",
+   "vw": 390,
+   "dir": "rtl",
+   "lang": "ar",
+   "overflow": 0,
+   "offenders": 0,
+   "outline": [
+    "h1 إعدادات الشركة",
+    "h2 تنسيق الأرقام"
+   ],
+   "h1": 1,
+   "skips": 0,
+   "tables": 0,
+   "tablesBeyond": 0,
+   "indic": 0,
+   "unnamed": 0,
+   "pointerOnly": 0,
+   "navAtStart": true,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "إعدادات الشركة",
+    "meta": null
+   },
+   "consoleErrors": 0,
+   "pageErrors": 0,
+   "r418": 0
+  },
+  "settings-org-roles|ar|1440": {
+   "status": 200,
+   "finalPath": "/settings/organization?tab=roles-permissions",
+   "vw": 1440,
+   "dir": "rtl",
+   "lang": "ar",
+   "overflow": 0,
+   "offenders": 0,
+   "outline": [
+    "h1 إعدادات الشركة",
+    "h2 الأدوار والصلاحيات",
+    "h3 Actions restricted beyond their module"
+   ],
+   "h1": 1,
+   "skips": 0,
+   "tables": 2,
+   "tablesBeyond": 0,
+   "indic": 0,
+   "unnamed": 0,
+   "pointerOnly": 0,
+   "navAtStart": true,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "إعدادات الشركة",
+    "meta": null
+   },
+   "consoleErrors": 0,
+   "pageErrors": 0,
+   "r418": 0
+  },
+  "settings-org-roles|ar|1024": {
+   "status": 200,
+   "finalPath": "/settings/organization?tab=roles-permissions",
+   "vw": 1024,
+   "dir": "rtl",
+   "lang": "ar",
+   "overflow": 0,
+   "offenders": 0,
+   "outline": [
+    "h1 إعدادات الشركة",
+    "h2 الأدوار والصلاحيات",
+    "h3 Actions restricted beyond their module"
+   ],
+   "h1": 1,
+   "skips": 0,
+   "tables": 2,
+   "tablesBeyond": 0,
+   "indic": 0,
+   "unnamed": 0,
+   "pointerOnly": 0,
+   "navAtStart": true,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "إعدادات الشركة",
+    "meta": null
+   },
+   "consoleErrors": 0,
+   "pageErrors": 0,
+   "r418": 0
+  },
+  "settings-org-roles|ar|768": {
+   "status": 200,
+   "finalPath": "/settings/organization?tab=roles-permissions",
+   "vw": 768,
+   "dir": "rtl",
+   "lang": "ar",
+   "overflow": 0,
+   "offenders": 0,
+   "outline": [
+    "h1 إعدادات الشركة",
+    "h2 الأدوار والصلاحيات",
+    "h3 Actions restricted beyond their module"
+   ],
+   "h1": 1,
+   "skips": 0,
+   "tables": 2,
+   "tablesBeyond": 0,
+   "indic": 0,
+   "unnamed": 0,
+   "pointerOnly": 0,
+   "navAtStart": true,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "إعدادات الشركة",
+    "meta": null
+   },
+   "consoleErrors": 0,
+   "pageErrors": 0,
+   "r418": 0
+  },
+  "settings-org-roles|ar|390": {
+   "status": 200,
+   "finalPath": "/settings/organization?tab=roles-permissions",
+   "vw": 390,
+   "dir": "rtl",
+   "lang": "ar",
+   "overflow": 0,
+   "offenders": 0,
+   "outline": [
+    "h1 إعدادات الشركة",
+    "h2 الأدوار والصلاحيات",
+    "h3 Actions restricted beyond their module"
+   ],
+   "h1": 1,
+   "skips": 0,
+   "tables": 2,
+   "tablesBeyond": 0,
+   "indic": 0,
+   "unnamed": 0,
+   "pointerOnly": 0,
+   "navAtStart": true,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "إعدادات الشركة",
+    "meta": null
+   },
+   "consoleErrors": 0,
+   "pageErrors": 0,
+   "r418": 0
+  },
+  "settings-org-zatca|ar|1440": {
+   "status": 200,
+   "finalPath": "/settings/organization?tab=zatca",
+   "vw": 1440,
+   "dir": "rtl",
+   "lang": "ar",
+   "overflow": 0,
+   "offenders": 0,
+   "outline": [
+    "h1 إعدادات الشركة",
+    "h2 هيئة الزكاة والضريبة — المرحلة الأولى"
+   ],
+   "h1": 1,
+   "skips": 0,
+   "tables": 0,
+   "tablesBeyond": 0,
+   "indic": 0,
+   "unnamed": 0,
+   "pointerOnly": 0,
+   "navAtStart": true,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "إعدادات الشركة",
+    "meta": null
+   },
+   "consoleErrors": 0,
+   "pageErrors": 0,
+   "r418": 0
+  },
+  "settings-org-zatca|ar|1024": {
+   "status": 200,
+   "finalPath": "/settings/organization?tab=zatca",
+   "vw": 1024,
+   "dir": "rtl",
+   "lang": "ar",
+   "overflow": 0,
+   "offenders": 0,
+   "outline": [
+    "h1 إعدادات الشركة",
+    "h2 هيئة الزكاة والضريبة — المرحلة الأولى"
+   ],
+   "h1": 1,
+   "skips": 0,
+   "tables": 0,
+   "tablesBeyond": 0,
+   "indic": 0,
+   "unnamed": 0,
+   "pointerOnly": 0,
+   "navAtStart": true,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "إعدادات الشركة",
+    "meta": null
+   },
+   "consoleErrors": 0,
+   "pageErrors": 0,
+   "r418": 0
+  },
+  "settings-org-zatca|ar|768": {
+   "status": 200,
+   "finalPath": "/settings/organization?tab=zatca",
+   "vw": 768,
+   "dir": "rtl",
+   "lang": "ar",
+   "overflow": 0,
+   "offenders": 0,
+   "outline": [
+    "h1 إعدادات الشركة",
+    "h2 هيئة الزكاة والضريبة — المرحلة الأولى"
+   ],
+   "h1": 1,
+   "skips": 0,
+   "tables": 0,
+   "tablesBeyond": 0,
+   "indic": 0,
+   "unnamed": 0,
+   "pointerOnly": 0,
+   "navAtStart": true,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "إعدادات الشركة",
+    "meta": null
+   },
+   "consoleErrors": 0,
+   "pageErrors": 0,
+   "r418": 0
+  },
+  "settings-org-zatca|ar|390": {
+   "status": 200,
+   "finalPath": "/settings/organization?tab=zatca",
+   "vw": 390,
+   "dir": "rtl",
+   "lang": "ar",
+   "overflow": 0,
+   "offenders": 0,
+   "outline": [
+    "h1 إعدادات الشركة",
+    "h2 هيئة الزكاة والضريبة — المرحلة الأولى"
+   ],
+   "h1": 1,
+   "skips": 0,
+   "tables": 0,
+   "tablesBeyond": 0,
+   "indic": 0,
+   "unnamed": 0,
+   "pointerOnly": 0,
+   "navAtStart": true,
+   "c1Literals": [],
+   "pageHeader": {
+    "n": 1,
+    "h1Inside": true,
+    "metaFirst": true,
+    "titleAtStart": true,
+    "trailing": "none",
+    "overlap": false,
+    "title": "إعدادات الشركة",
+    "meta": null
+   },
+   "consoleErrors": 0,
+   "pageErrors": 0,
+   "r418": 0
   }
  },
  "staff": {
@@ -12905,6 +15593,104 @@
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0
+  },
+  "settings-org-logo|en": {
+   "status": 200,
+   "finalPath": "/dashboard",
+   "consoleErrors": 0,
+   "pageErrors": 0,
+   "r418": 0
+  },
+  "settings-org-bank|en": {
+   "status": 200,
+   "finalPath": "/dashboard",
+   "consoleErrors": 0,
+   "pageErrors": 0,
+   "r418": 0
+  },
+  "settings-org-fiscal|en": {
+   "status": 200,
+   "finalPath": "/dashboard",
+   "consoleErrors": 0,
+   "pageErrors": 0,
+   "r418": 0
+  },
+  "settings-org-vat|en": {
+   "status": 200,
+   "finalPath": "/dashboard",
+   "consoleErrors": 0,
+   "pageErrors": 0,
+   "r418": 0
+  },
+  "settings-org-numbers|en": {
+   "status": 200,
+   "finalPath": "/dashboard",
+   "consoleErrors": 0,
+   "pageErrors": 0,
+   "r418": 0
+  },
+  "settings-org-roles|en": {
+   "status": 200,
+   "finalPath": "/dashboard",
+   "consoleErrors": 0,
+   "pageErrors": 0,
+   "r418": 0
+  },
+  "settings-org-zatca|en": {
+   "status": 200,
+   "finalPath": "/dashboard",
+   "consoleErrors": 0,
+   "pageErrors": 0,
+   "r418": 0
+  },
+  "settings-org-logo|ar": {
+   "status": 200,
+   "finalPath": "/dashboard",
+   "consoleErrors": 0,
+   "pageErrors": 0,
+   "r418": 0
+  },
+  "settings-org-bank|ar": {
+   "status": 200,
+   "finalPath": "/dashboard",
+   "consoleErrors": 0,
+   "pageErrors": 0,
+   "r418": 0
+  },
+  "settings-org-fiscal|ar": {
+   "status": 200,
+   "finalPath": "/dashboard",
+   "consoleErrors": 0,
+   "pageErrors": 0,
+   "r418": 0
+  },
+  "settings-org-vat|ar": {
+   "status": 200,
+   "finalPath": "/dashboard",
+   "consoleErrors": 0,
+   "pageErrors": 0,
+   "r418": 0
+  },
+  "settings-org-numbers|ar": {
+   "status": 200,
+   "finalPath": "/dashboard",
+   "consoleErrors": 0,
+   "pageErrors": 0,
+   "r418": 0
+  },
+  "settings-org-roles|ar": {
+   "status": 200,
+   "finalPath": "/dashboard",
+   "consoleErrors": 0,
+   "pageErrors": 0,
+   "r418": 0
+  },
+  "settings-org-zatca|ar": {
+   "status": 200,
+   "finalPath": "/dashboard",
+   "consoleErrors": 0,
+   "pageErrors": 0,
+   "r418": 0
   }
  },
  "sweep": {
@@ -13562,6 +16348,104 @@
   "statement-vendor1|ar": {
    "status": 200,
    "finalPath": "/finance/statements?kind=vendor&party=1",
+   "consoleErrors": 0,
+   "pageErrors": 0,
+   "r418": 0
+  },
+  "settings-org-logo|en": {
+   "status": 200,
+   "finalPath": "/settings/organization?tab=logo",
+   "consoleErrors": 0,
+   "pageErrors": 0,
+   "r418": 0
+  },
+  "settings-org-bank|en": {
+   "status": 200,
+   "finalPath": "/settings/organization?tab=default-bank",
+   "consoleErrors": 0,
+   "pageErrors": 0,
+   "r418": 0
+  },
+  "settings-org-fiscal|en": {
+   "status": 200,
+   "finalPath": "/settings/organization?tab=fiscal-year",
+   "consoleErrors": 0,
+   "pageErrors": 0,
+   "r418": 0
+  },
+  "settings-org-vat|en": {
+   "status": 200,
+   "finalPath": "/settings/organization?tab=vat-config",
+   "consoleErrors": 0,
+   "pageErrors": 0,
+   "r418": 0
+  },
+  "settings-org-numbers|en": {
+   "status": 200,
+   "finalPath": "/settings/organization?tab=number-format",
+   "consoleErrors": 0,
+   "pageErrors": 0,
+   "r418": 0
+  },
+  "settings-org-roles|en": {
+   "status": 200,
+   "finalPath": "/settings/organization?tab=roles-permissions",
+   "consoleErrors": 0,
+   "pageErrors": 0,
+   "r418": 0
+  },
+  "settings-org-zatca|en": {
+   "status": 200,
+   "finalPath": "/settings/organization?tab=zatca",
+   "consoleErrors": 0,
+   "pageErrors": 0,
+   "r418": 0
+  },
+  "settings-org-logo|ar": {
+   "status": 200,
+   "finalPath": "/settings/organization?tab=logo",
+   "consoleErrors": 0,
+   "pageErrors": 0,
+   "r418": 0
+  },
+  "settings-org-bank|ar": {
+   "status": 200,
+   "finalPath": "/settings/organization?tab=default-bank",
+   "consoleErrors": 0,
+   "pageErrors": 0,
+   "r418": 0
+  },
+  "settings-org-fiscal|ar": {
+   "status": 200,
+   "finalPath": "/settings/organization?tab=fiscal-year",
+   "consoleErrors": 0,
+   "pageErrors": 0,
+   "r418": 0
+  },
+  "settings-org-vat|ar": {
+   "status": 200,
+   "finalPath": "/settings/organization?tab=vat-config",
+   "consoleErrors": 0,
+   "pageErrors": 0,
+   "r418": 0
+  },
+  "settings-org-numbers|ar": {
+   "status": 200,
+   "finalPath": "/settings/organization?tab=number-format",
+   "consoleErrors": 0,
+   "pageErrors": 0,
+   "r418": 0
+  },
+  "settings-org-roles|ar": {
+   "status": 200,
+   "finalPath": "/settings/organization?tab=roles-permissions",
+   "consoleErrors": 0,
+   "pageErrors": 0,
+   "r418": 0
+  },
+  "settings-org-zatca|ar": {
+   "status": 200,
+   "finalPath": "/settings/organization?tab=zatca",
    "consoleErrors": 0,
    "pageErrors": 0,
    "r418": 0

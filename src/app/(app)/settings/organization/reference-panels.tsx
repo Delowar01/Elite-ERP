@@ -1,5 +1,6 @@
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { SectionHeader } from "@/components/ui/section-header";
 import { t, type Locale } from "@/lib/i18n/dict";
 import { MODULE_ACCESS, RESTRICTED_ACTIONS, type Access, type RoleKey } from "@/lib/role-matrix";
 
@@ -21,7 +22,7 @@ const ROLE_LABEL: Record<RoleKey, string> = { owner: "Owner", admin: "Admin", st
 export function RolesPermissionsPanel({ locale }: { locale: Locale }) {
   return (
     <div className="flex flex-col gap-5 max-w-3xl">
-      <h3 className="text-[17px] font-bold">{t(locale, "Roles & Permissions")}</h3>
+      <SectionHeader level={2} title={t(locale, "Roles & Permissions")} />
       <p className="text-[12.5px] text-ink-muted -mt-3">
         {t(
           locale,
@@ -56,7 +57,7 @@ export function RolesPermissionsPanel({ locale }: { locale: Locale }) {
       </div>
 
       <div>
-        <h4 className="text-[13.5px] font-bold mb-1">{t(locale, "Actions restricted beyond their module")}</h4>
+        <h3 className="text-[13.5px] font-bold mb-1">{t(locale, "Actions restricted beyond their module")}</h3>
         <p className="text-[11.5px] text-ink-muted mb-2">
           {t(locale, "These are refused by the server, not merely hidden.")}
         </p>

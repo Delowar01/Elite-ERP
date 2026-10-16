@@ -45,6 +45,15 @@
  * interactions (8), viewport screenshots: the report picker by keyboard (Tab to it, Tab ×3, Enter —
  * Trial Balance pressed, its h2, the focus kept on it) and the statement's Vendor link by keyboard (Tab
  * to it, Enter — the vendor page, Vendor the current page). Each fails the capture if the page does not do it.
+ *
+ * C5 (Settings) adds the Settings states not above — Business Settings on Color Theme (its default tab),
+ * Team, Fiscal Year and VAT Configuration, Presets and Security & Compliance Readiness — EN + AR at 1440
+ * and 390, light, full page (24); Business Details and the Security Center are above at every width. Two
+ * interactions (6), viewport screenshots: the Settings navigation by keyboard (Tab to the active tab,
+ * ArrowDown — Logo focused, selected and shown, the focus ring on it; at 390 the navigation stacked full
+ * width above the panel, in Arabic in the document's direction) and Compliance's controls at 390 (Tab to
+ * the customer select — the erase and consent rows wrapped, every control inside the viewport). Each
+ * fails the capture if the page does not do it.
  */
 import pg from "pg";
 import { FROZEN_NOW, VIEWPORTS } from "./config.mjs";
@@ -101,6 +110,8 @@ export function archetypeMatrix() {
   for (const [id, path, action, viewports] of C3_INTERACTIONS) for (const locale of BOTH) for (const name of viewports) add(id, path, "Interaction (C3)", locale, "light", name, action, false);
   for (const [id, path, area, viewports] of C4_ROUTES) for (const locale of BOTH) for (const name of viewports) add(id, path, area, locale, "light", name, null, true);
   for (const [id, path, action, viewports] of C4_INTERACTIONS) for (const locale of BOTH) for (const name of viewports) add(id, path, "Interaction (C4)", locale, "light", name, action, false);
+  for (const [id, path, area, viewports] of C5_ROUTES) for (const locale of BOTH) for (const name of viewports) add(id, path, area, locale, "light", name, null, true);
+  for (const [id, path, action, viewports] of C5_INTERACTIONS) for (const locale of BOTH) for (const name of viewports) add(id, path, "Interaction (C5)", locale, "light", name, action, false);
   return out;
 }
 
@@ -146,6 +157,21 @@ const C4_ROUTES = [
 const C4_INTERACTIONS = [
   ["i09-report-picker-keyboard", "/finance/reports", "report-keyboard", EDGE],
   ["i10-statement-vendor-link", "/finance/statements?kind=client", "statement-vendor-keyboard", EDGE],
+];
+
+/** [id, path, area, viewports] — C5: the Settings states not in the set above. */
+const C5_ROUTES = [
+  ["c5-settings-color-theme", "/settings/organization", "Settings (Business Settings, Color Theme — the default tab)", EDGE],
+  ["c5-settings-team", "/settings/organization?tab=team", "Settings (Business Settings, Team)", EDGE],
+  ["c5-settings-fiscal-year", "/settings/organization?tab=fiscal-year", "Settings (Business Settings, Fiscal Year)", EDGE],
+  ["c5-settings-vat", "/settings/organization?tab=vat-config", "Settings (Business Settings, VAT Configuration)", EDGE],
+  ["c5-settings-presets", "/settings/presets", "Settings (Presets)", EDGE],
+  ["c5-settings-compliance", "/settings/compliance", "Settings (Security & Compliance Readiness)", EDGE],
+];
+/** [id, path, action, viewports] — C5 interactions (viewport screenshots). */
+const C5_INTERACTIONS = [
+  ["i11-settings-nav-keyboard", "/settings/organization?tab=business-details", "settings-nav-keyboard", EDGE],
+  ["i12-compliance-mobile-controls", "/settings/compliance", "compliance-mobile-controls", ["390"]],
 ];
 
 /** [id, path, area] — C1: the master-data / entity-detail pages not in the set above (seed-stable ids; the seed's bins are empty). */
@@ -289,6 +315,51 @@ export const ARCH_ACTIONS = {
     await page.evaluate(() => document.fonts.ready.then(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))));
     const f = await page.evaluate(() => [...document.querySelectorAll("main .tab-row > a")].map((a) => [a.getAttribute("href"), a.getAttribute("aria-current")]));
     if (JSON.stringify(f) !== JSON.stringify([["/finance/statements?kind=client", null], ["/finance/statements?kind=vendor", "page"]])) throw new Error(`statement Vendor link by keyboard: ${JSON.stringify(f)}`);
+  },
+  // C5: the Settings navigation by keyboard — Tab to the active tab (Business Details), ArrowDown. Logo must be
+  // the focused tab — the one selected, the only tabbable one, its panel shown, the focus ring on it; the list
+  // in the document's direction (Radix's root dir = <html dir>), stacked above the panel below 768 px, beside
+  // it from there; the URL unchanged.
+  "settings-nav-keyboard": async (page) => {
+    await tabTo(page, 'main [role="tablist"].settings-nav [role="tab"][data-state="active"]');
+    await page.keyboard.press("ArrowDown");
+    await page.waitForLoadState("networkidle");
+    await page.evaluate(() => document.fonts.ready.then(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))));
+    const f = await page.evaluate(() => {
+      const a = document.activeElement;
+      const list = document.querySelector('main [role="tablist"].settings-nav');
+      const tabs = [...list.querySelectorAll('[role="tab"]')];
+      const panel = document.querySelector('main [role="tabpanel"][data-state="active"]');
+      const value = (e) => e?.id?.split("-trigger-")[1] ?? null;
+      const l = list.getBoundingClientRect();
+      const p = panel.getBoundingClientRect();
+      return {
+        focus: value(a), selected: tabs.filter((t) => t.getAttribute("aria-selected") === "true").map(value), tabbable: tabs.filter((t) => t.tabIndex === 0).map(value),
+        panel: panel.id.split("-content-")[1], focusVisible: a.matches(":focus-visible"), ring: getComputedStyle(a).outlineStyle,
+        dir: list.parentElement.getAttribute("dir"), docDir: document.documentElement.dir, stacked: p.top >= l.bottom - 1, url: location.pathname + location.search,
+      };
+    });
+    const narrow = page.viewportSize().width < 768;
+    const ok = f.focus === "logo" && f.selected.join() === "logo" && f.tabbable.join() === "logo" && f.panel === "logo" && f.focusVisible && f.ring !== "none"
+      && f.dir === f.docDir && f.stacked === narrow && f.url === "/settings/organization?tab=business-details";
+    if (!ok) throw new Error(`Settings navigation by keyboard: ${JSON.stringify(f)}`);
+  },
+  // C5: Compliance at 390 — Tab to the customer select. The erase and consent rows wrap: the six controls of
+  // the two cards — Export organization data, the customer select, Erase, the consent subject, Grant and
+  // Withdraw — all inside the viewport, nothing past it.
+  "compliance-mobile-controls": async (page) => {
+    await tabTo(page, "#erase-customer");
+    await page.evaluate(() => document.fonts.ready.then(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))));
+    const f = await page.evaluate(() => {
+      const de = document.documentElement;
+      const cards = ["#erase-customer", "#consent-subject"].map((sel) => document.querySelector(sel).closest(".card"));
+      const controls = cards.flatMap((c) => [...c.querySelectorAll("button")]).filter((e) => e.getClientRects().length);
+      return {
+        focus: document.activeElement.id, focusVisible: document.activeElement.matches(":focus-visible"), overflow: de.scrollWidth - de.clientWidth,
+        controls: controls.length, outside: controls.filter((e) => { const r = e.getBoundingClientRect(); return r.left < -1 || r.right > de.clientWidth + 1; }).length,
+      };
+    });
+    if (f.focus !== "erase-customer" || !f.focusVisible || f.overflow > 0 || f.controls !== 6 || f.outside !== 0) throw new Error(`Compliance controls at 390: ${JSON.stringify(f)}`);
   },
   // C1 fixture: client 1 under LONG_NAME. The header must wrap — the h1 over several lines inside its
   // column, at the inline start; meta and actions at the end of the title's line or below it at the
