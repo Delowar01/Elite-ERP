@@ -90,7 +90,7 @@ export default async function PurchaseOrderDetailPage({ params }: { params: Prom
     <div className="max-w-4xl mx-auto">
       <div className="inv-head">
         <div>
-          <h3 className="mono">{po.poNumber}</h3>
+          <h1 className="mono">{po.poNumber}</h1>
           <div className="inv-sub">
             {t(locale, "Vendor:")} {po.vendorName} · {t(locale, "Order Date")} {po.orderDate}
             {po.title ? ` · ${po.title}` : ""}

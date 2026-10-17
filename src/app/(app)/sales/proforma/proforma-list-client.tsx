@@ -76,7 +76,7 @@ export function ProformaListClient({
   return (
     <div className="max-w-6xl mx-auto">
       <div className="flex items-center justify-between mb-[22px]">
-        <h3 className="text-[19px] font-bold">{t(locale, "Proforma Invoices")}</h3>
+        <h1 className="text-[19px] font-bold">{t(locale, "Proforma Invoices")}</h1>
       </div>
 
       <StatRow

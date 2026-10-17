@@ -208,9 +208,9 @@ export function InvoiceForm({
     <div className="max-w-6xl mx-auto">
       <div className="doc-titlebar">
         <div>
-          <h3>
+          <h1>
             <Receipt className="size-5" style={{ color: "var(--brand-orange)" }} /> {t(locale, isEdit ? "Edit Invoice" : "Create Invoice")}
-          </h3>
+          </h1>
           <div className="sub">{t(locale, isEdit ? "Edit this draft document." : "Issue a tax invoice — posts to the ledger and decrements stock on send.")}</div>
         </div>
         <DocTopActions locale={locale} busy={pendingDraft || pendingPrimary} onSaveDraft={() => submit(false)} onPreview={() => setPreviewOpen(true)} dirty={dirtyForm.dirty} />

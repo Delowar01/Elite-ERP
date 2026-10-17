@@ -16,8 +16,22 @@
  *                                                   the baseline's `c4ref` record (C4 recorded it on C3's build)
  *   node verify/verify-page-archetypes-runtime.mjs --write-c6ref     measure the C6 Dashboard value pass alone; write
  *                                                   it as the baseline's `c6ref` record (C6 recorded it on C5's build)
+ *   node verify/verify-page-archetypes-runtime.mjs --write-c7ref     measure the C7 heading pass alone; write it as the
+ *                                                   baseline's `c7ref` record (C7 recorded it on C6's build)
  *   flags: --skip-build (reuse .next — only when it was built from the current tree), --only=<route id>[,<route id>…],
  *          --measure-out=<file> (also write what this run measured, for review evidence)
+ *
+ * C7 (document and app-state heading semantics, D-3 — tags only, zero pixel difference) re-recorded the document
+ * Recycle Bin and the not-found page (their titles h3 → h1) and adds a heading pass, run first — before any probe
+ * writes to this copy: each of the eight document families' list, detail, create and edit page, the Recycle Bin and
+ * the not-found page (a client, an invoice), EN / AR at 1440 and 390. The five families the seed has no document for
+ * open TEST-ONLY drafts written for the pass and removed after (writeC7Drafts). Every page has exactly one h1, its
+ * title in the dictionary's words (the family, the document number in the code face, Create / Edit …); the lists no
+ * level skipped; and against the baseline's `c7ref` record, measured on C6's build (20eff7d, --write-c7ref), the
+ * outline is C6's but for the title h3 → h1 and the Tax Invoice QR panel h4 → h2, the accessibility tree (Playwright's
+ * aria snapshot) likewise level 3 → 1 and 4 → 2 with every name unchanged, each title's (and the QR heading's)
+ * computed style and box identical, and each page's text and action inventory identical. The error boundary has no
+ * route: its markup is rendered into <main> with the title as C6's h3 and as C7's h1 — identical style, box and pixels.
  *
  * C6 (the Dashboard) re-recorded its route and holds it to targets: one PageHeader holding the only h1
  * (Dashboard, the range selector and Customize Layout its actions); the seven widget titles as h2s; no
@@ -167,10 +181,10 @@ import ts from "typescript";
 import { FROZEN_NOW, OWNER_EMAIL } from "../tests/ui-baseline/config.mjs";
 import { STAFF_EMAIL } from "../tests/ui-baseline/shell-states.mjs";
 import { DB_PREFIX, TEMPLATE_DB, adminUrl, dbUrl, describe, serverEnv } from "../tests/ui-baseline/isolation.mjs";
-import { alignDatabaseTimestamps } from "../tests/ui-baseline/archetype-states.mjs";
+import { alignDatabaseTimestamps, removeC7Drafts, writeC7Drafts } from "../tests/ui-baseline/archetype-states.mjs";
 import { assertFreshBuild } from "./assert-fresh-build.mjs";
 import { pickCountry } from "./register-org.mjs";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 
 const ROOT = resolve(new URL("..", import.meta.url).pathname);
 process.chdir(ROOT);
@@ -190,8 +204,9 @@ const WRITE_D6 = args.some((a) => a === "--write-d6" || a.startsWith("--write-d6
 const WRITE_C3REF = args.some((a) => a === "--write-c3ref" || a.startsWith("--write-c3ref="));
 const WRITE_C4REF = args.some((a) => a === "--write-c4ref" || a.startsWith("--write-c4ref="));
 const WRITE_C6REF = args.some((a) => a === "--write-c6ref" || a.startsWith("--write-c6ref="));
+const WRITE_C7REF = args.some((a) => a === "--write-c7ref" || a.startsWith("--write-c7ref="));
 /** A pass that records one thing alone: no owner / Staff / sweep passes, no probes. */
-const RECORD_ONLY = WRITE_D6 || WRITE_C3REF || WRITE_C4REF || WRITE_C6REF;
+const RECORD_ONLY = WRITE_D6 || WRITE_C3REF || WRITE_C4REF || WRITE_C6REF || WRITE_C7REF;
 /** --only=<id>[,<id>…]: a route (or pass) id containing any of them. */
 const onlyId = (id) => !ONLY || ONLY.split(",").some((o) => o && id.includes(o));
 
@@ -456,6 +471,30 @@ const C6_RANGE_OF = { "dash-this_month": "This Month", "dash-last_30_days": "Las
 /** The deterministic activity instant the probe gives one quotation (UTC, as the column holds it). */
 const C6_STAMP = "2026-06-14 23:30:00";
 const C6_RANGE_KEYS = { this_month: "This Month", last_month: "Last Month", last_7_days: "Last 7 Days", last_30_days: "Last 30 Days", this_quarter: "This Quarter", this_year: "This Year", all_time: "All Time" };
+
+// DEV-UI-01.7 C7 (D-3): the document families' pages and the app states. [key, path, the detail it opens and its
+// number, the draft its editor opens, the list title, the type in the Create / Edit keys]. The detail and edit pages
+// of the five families the seed has none of open the TEST-ONLY drafts (id 1) writeC7Drafts writes for the pass.
+const C7_DOCS = [
+  ["qtn", "/sales/quotations", 1, "QTN-0001", 3, "Quotations", "Quotation"], ["so", "/sales/orders", 1, "SO-0001", 1, "Sales Orders", "Sales Order"],
+  ["pf", "/sales/proforma", 1, "PF-0001", 1, "Proforma Invoices", "Proforma Invoice"], ["inv", "/sales/invoices", 3, "INV-0003", 6, "Invoices", "Invoice"],
+  ["dc", "/sales/delivery-challans", 1, "DC-0001", 1, "Delivery Challans", "Delivery Challan"], ["cn", "/sales/credit-notes", 1, "CN-0001", 1, "Credit Notes", "Credit Note"],
+  ["po", "/purchasing/orders", 1, "PO-0001", 3, "Purchase Orders", "Purchase Order"], ["dn", "/purchasing/debit-notes", 1, "DN-0001", 1, "Debit Notes", "Debit Note"],
+];
+/** [route id, path, kind, the page title in a locale] */
+const C7_PAGES = [
+  ...C7_DOCS.flatMap(([k, path, detail, number, edit, title, type]) => [
+    [`c7-${k}-list`, path, "list", (l) => T(l, title)], [`c7-${k}-detail`, `${path}/${detail}`, "detail", () => number],
+    [`c7-${k}-new`, `${path}/new`, "new", (l) => T(l, `Create ${type}`)], [`c7-${k}-edit`, `${path}/${edit}/edit`, "edit", (l) => T(l, `Edit ${type}`)],
+  ]),
+  ["c7-bin", "/recycle-bin", "state", (l) => T(l, "Recycle Bin")], ["c7-nf", "/clients/999999", "state", (l) => T(l, "Page not found")],
+  ["c7-nf-doc", "/sales/invoices/999999", "state", (l) => T(l, "Page not found")],
+];
+const C7_ROUTES = C7_PAGES.map(([id, path]) => [id, path]);
+/** The error boundary's markup (error.tsx rendered by react-dom/server — group 15 renders it so), its title as TAG. */
+const C7_ERROR_HTML = '<div class="max-w-md mx-auto text-center py-20"><div class="mx-auto mb-5 flex items-center justify-center rounded-2xl" style="width:56px;height:56px;background:var(--danger-bg);border:1px solid var(--line)"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-triangle-alert size-7" aria-hidden="true" style="color:var(--danger)"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></svg></div><TAG class="text-[19px] font-bold mb-2">Something went wrong</TAG><p class="text-ink-muted text-sm mb-6">An unexpected error occurred. You can try again, or head back to your dashboard.</p><div class="flex items-center justify-center gap-2.5"><button type="button" class="btn btn-primary" style="width:auto;padding:0 18px">Try again</button><a class="btn btn-glass" style="width:auto;padding:0 18px;display:inline-flex" href="/dashboard">Back to Dashboard</a></div></div>';
+/** Playwright's aria snapshot → its headings, "<level> <name>". */
+const ariaHeadings = (yaml) => [...String(yaml).matchAll(/- heading (?:"((?:[^"\\]|\\.)*)"|([^\n[]+?)) \[level=(\d)\]/g)].map((m) => `${m[3]} ${(m[1] ?? m[2]).replace(/\\"/g, '"').trim()}`);
 /** The outline the Dashboard must have for a range label (headings are measured to 48 characters). */
 const c6Outline = (l, range = "This Month") => [`h1 ${T(l, "Dashboard")}`, ...C6_H2.map((w) => `h2 ${w === "Cash Flow" ? `${T(l, w)} · ${T(l, range)}` : T(l, w)}`.slice(0, 51))];
 /** The words the in-page C6 measures look for, in the page's language. */
@@ -475,6 +514,7 @@ if (WRITE_D6 && (WRITE || REBASE || ONLY)) refuse("--write-d6 records the D-6 pa
 if (WRITE_C3REF && (WRITE || REBASE || ONLY || WRITE_D6)) refuse("--write-c3ref records the C3 project pass alone, both projects: not with --write-baseline, --rebaseline, --only or --write-d6");
 if (WRITE_C4REF && (WRITE || REBASE || ONLY || WRITE_D6 || WRITE_C3REF)) refuse("--write-c4ref records the C4 value pass alone, every case: not with --write-baseline, --rebaseline, --only, --write-d6 or --write-c3ref");
 if (WRITE_C6REF && (WRITE || REBASE || ONLY || WRITE_D6 || WRITE_C3REF || WRITE_C4REF)) refuse("--write-c6ref records the C6 Dashboard value pass alone, every case: not with --write-baseline, --rebaseline, --only, --write-d6, --write-c3ref or --write-c4ref");
+if (WRITE_C7REF && (WRITE || REBASE || ONLY || WRITE_D6 || WRITE_C3REF || WRITE_C4REF || WRITE_C6REF)) refuse("--write-c7ref records the C7 heading pass alone, every page: not with --write-baseline, --rebaseline, --only or another --write-*");
 if (REBASE) {
   // A partial re-record must still see every route: the routes it keeps are compared, not copied blind.
   if (ONLY || WRITE) refuse("--rebaseline measures every route and re-records only the ones it names: not with --only or --write-baseline");
@@ -679,6 +719,48 @@ const ACTIONS = () => {
     out.push([kind, nameOf(el), href, type, state].join("|"));
   }
   return out.sort();
+};
+
+/**
+ * C7: what the heading semantics touch — every visible heading in <main> (tag and level, words), the page title (the
+ * first one) and the Tax Invoice QR panel's title with their computed style and box, the number's and the money's
+ * faces, the page's text — and whether a level is skipped.
+ */
+const C7M = () => {
+  const main = document.querySelector("main");
+  if (!main) return { noMain: true };
+  const visible = (e) => {
+    const cs = getComputedStyle(e);
+    if (cs.visibility === "hidden" || cs.display === "none") return false;
+    const r = e.getBoundingClientRect();
+    return r.width > 0 && r.height > 0;
+  };
+  const norm = (s) => (s ?? "").replace(/\s+/g, " ").trim();
+  const PROPS = ["fontFamily", "fontSize", "fontWeight", "fontStyle", "lineHeight", "letterSpacing", "color", "textAlign", "textWrap", "whiteSpace", "fontVariantNumeric",
+    "marginTop", "marginRight", "marginBottom", "marginLeft", "paddingTop", "paddingRight", "paddingBottom", "paddingLeft", "display", "alignItems",
+    "justifyContent", "flexDirection", "columnGap", "rowGap", "width", "height", "boxSizing", "borderTopWidth", "borderBottomWidth"];
+  const facts = (el) => {
+    if (!el) return null;
+    const cs = getComputedStyle(el);
+    const r = el.getBoundingClientRect();
+    return { tag: el.tagName.toLowerCase(), text: norm(el.textContent), cls: el.getAttribute("class") ?? "", style: Object.fromEntries(PROPS.map((p) => [p, cs[p]])),
+      box: [r.x, r.y, r.width, r.height].map((v) => Math.round(v * 100) / 100) };
+  };
+  const heads = [...main.querySelectorAll("h1,h2,h3,h4,h5,h6,[role=heading]")].filter(visible);
+  const lv = (h) => (h.getAttribute("aria-level") ? Number(h.getAttribute("aria-level")) : Number(h.tagName[1]));
+  let skips = 0;
+  for (let i = 1; i < heads.length; i++) if (lv(heads[i]) > lv(heads[i - 1]) + 1) skips++;
+  const money = [...main.querySelectorAll(".num-tabular")].find(visible) ?? null;
+  return {
+    heads: heads.map((h) => `${h.tagName.toLowerCase()} ${norm(h.textContent).slice(0, 60)}`),
+    h1: heads.filter((h) => h.tagName === "H1").length,
+    skips,
+    title: facts(heads[0] ?? null),
+    qr: facts(main.querySelector(".einvoice-panel .eh > *")),
+    moneyFont: money ? getComputedStyle(money).fontFamily : null,
+    text: norm(main.innerText),
+    overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  };
 };
 
 /**
@@ -1526,6 +1608,7 @@ const now = {
   c4: { ledger: {}, values: {}, picker: {}, links: {}, empty: {} },
   c5: { nav: {}, d7: {}, keys: {}, presets: {}, staff: {}, timeline: {}, security: {}, alert: {}, compliance: {} },
   c6: { dash: {}, values: {}, ranges: {}, bp: {}, range: {}, customize: {}, noZatca: {}, zones: {} },
+  c7: { states: {}, error: {}, drafts: null, removed: null },
 };
 const prompts = {};
 let fdNode = {};
@@ -1574,6 +1657,53 @@ try {
     ...(errors.length ? { errorSample: [...new Set(errors)].slice(0, 3) } : {}),
   });
 
+  // C7: the heading pass — first, before any probe writes to this copy, so C6's build (--write-c7ref) and this run read
+  // the same database: the five families' TEST-ONLY drafts written for it and removed after. EN / AR at 1440 and 390;
+  // then the error boundary's markup rendered into <main> with its title as an h3 (C6) and as an h1 (C7).
+  const C7_ON = WRITE_C7REF || (!WRITE_D6 && !WRITE_C3REF && !WRITE_C4REF && !WRITE_C6REF && (!ONLY || ONLY.split(",").includes("c7")));
+  if (C7_ON) {
+    const dbq7 = async (fn) => {
+      const c = new pg.Client({ connectionString: env.DATABASE_URL });
+      await c.connect();
+      try {
+        return await fn(c);
+      } finally {
+        await c.end();
+      }
+    };
+    now.c7.drafts = await dbq7((c) => writeC7Drafts(c));
+    try {
+      for (const locale of ["en", "ar"])
+        await pass(`C7 ${locale}`, ownerState, locale, null, [[1440, 900], [390, 844]], async ({ id, w, page, status, finalPath, errors }) => {
+          const m = await page.evaluate(C7M);
+          const aria = await page.locator("main").ariaSnapshot().catch((e) => `aria snapshot failed: ${e.message}`);
+          now.c7.states[`${id}|${locale}|${w}`] = { status, finalPath, ...m, aria: ariaHeadings(aria), actions: await page.evaluate(ACTIONS), ...errFacts(errors) };
+        }, C7_ROUTES);
+      const ctx = await context({ storageState: ownerState, locale: BROWSERS.en.locale, timezoneId: BROWSERS.en.timezoneId });
+      await ctx.addCookies([{ name: "locale", value: "en", url: BASE }, { name: "theme", value: "light", url: BASE }]);
+      const page = await ctx.newPage();
+      await page.clock.setFixedTime(new Date(FROZEN_NOW));
+      for (const [w, h] of [[1440, 900], [390, 844]]) {
+        await page.setViewportSize({ width: w, height: h });
+        await page.goto(`${BASE}/recycle-bin`, { waitUntil: "networkidle", timeout: 60000 });
+        // A first render settles first (its first paint of the replaced <main> differs from every later one by a few
+        // antialiased pixels at the icon's edge, whatever the title's tag); then C6's h3 and C7's h1, each measured.
+        for (const tag of ["warm-up", "h3", "h1"]) {
+          await page.evaluate((markup) => { document.querySelector("main").innerHTML = markup; }, C7_ERROR_HTML.replace("<TAG", `<${tag === "h1" ? "h1" : "h3"}`).replace("</TAG>", `</${tag === "h1" ? "h1" : "h3"}>`));
+          await page.evaluate(() => document.fonts.ready.then(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))));
+          await page.waitForTimeout(300);
+          const m = await page.evaluate(C7M);
+          const png = await page.locator("main").screenshot({ animations: "disabled", caret: "hide" });
+          if (tag !== "warm-up") now.c7.error[`${tag}|${w}`] = { heads: m.heads, h1: m.h1, title: m.title, png: createHash("sha256").update(png).digest("hex").slice(0, 16), bytes: png.length };
+        }
+      }
+      await ctx.close();
+    } finally {
+      await dbq7((c) => removeC7Drafts(c));
+      now.c7.removed = await dbq7(async (c) => Number((await c.query("select (select count(*) from sales_orders) + (select count(*) from proforma_invoices) + (select count(*) from delivery_challans) + (select count(*) from credit_notes) + (select count(*) from debit_notes) as n")).rows[0].n) === 0);
+    }
+  }
+
   if (!RECORD_ONLY)
     for (const locale of ["en", "ar"]) {
       await pass(`owner ${locale}`, ownerState, locale, null, WIDTHS, async ({ id, w, page, status, finalPath, errors }) => {
@@ -1596,7 +1726,7 @@ try {
     }
   // D-6: every StatRow consumer at every width, EN and AR; actions at 1440 and 390. (--write-d6 records
   // the consumers C2 must leave as they were — not C2's own HR strips.)
-  if (!WRITE_C3REF && !WRITE_C4REF && !WRITE_C6REF)
+  if (!WRITE_C3REF && !WRITE_C4REF && !WRITE_C6REF && !WRITE_C7REF)
     for (const locale of ["en", "ar"])
       await pass(`D-6 ${locale}`, ownerState, locale, null, WIDTHS, async ({ id, w, page, status, finalPath, errors }) => {
         now.d6[`${id}|${locale}|${w}`] = { status, finalPath, ...(await page.evaluate(D6M)), ...(w === 1440 || w === 390 ? { actions: await page.evaluate(ACTIONS) } : {}), ...errFacts(errors) };
@@ -1605,7 +1735,7 @@ try {
   // C3: the populated and the empty project at every width, EN and AR — the composition (C3M) and, at 1440
   // and 390 on the populated one, the kanban's heads and cards at rest and each card hovered (CSS
   // transitions finished). --write-c3ref records this pass on C2's build.
-  if (!WRITE_D6 && !WRITE_C4REF && !WRITE_C6REF)
+  if (!WRITE_D6 && !WRITE_C4REF && !WRITE_C6REF && !WRITE_C7REF)
     for (const locale of ["en", "ar"])
       await pass(`C3 ${locale}`, ownerState, locale, null, WIDTHS, async ({ id, w, page, status, finalPath, errors }) => {
         const layout = await page.evaluate(C3M, C3_NUMERIC);
@@ -1629,7 +1759,7 @@ try {
   // STATEMENT_FACTS); at 1440 also a search, the first drill-down and a statement's from-date filter, read
   // the same way. --write-c4ref records this pass on C3's build; every other run holds it to that record.
   const C4_ON = ROUTES.some(([id]) => C4_ROUTES.includes(id));
-  if (!WRITE_D6 && !WRITE_C3REF && !WRITE_C6REF && (C4_ON || WRITE_C4REF)) {
+  if (!WRITE_D6 && !WRITE_C3REF && !WRITE_C6REF && !WRITE_C7REF && (C4_ON || WRITE_C4REF)) {
     const settle = async (page) => {
       await page.waitForLoadState("networkidle");
       await page.evaluate(() => { document.getAnimations().forEach((a) => a.finish()); return new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))); });
@@ -1683,7 +1813,7 @@ try {
   // factual value (DASH_VALUES), and on C6's build also the C6 facts of those states. --write-c6ref records
   // it on C5's build; every other run holds it to that record.
   const C6_ON = ROUTES.some(([id]) => id === "dashboard");
-  if (!WRITE_D6 && !WRITE_C3REF && !WRITE_C4REF && (C6_ON || WRITE_C6REF))
+  if (!WRITE_D6 && !WRITE_C3REF && !WRITE_C4REF && !WRITE_C7REF && (C6_ON || WRITE_C6REF))
     for (const locale of ["en", "ar"])
       await pass(`C6 values ${locale}`, ownerState, locale, null, [[1440, 900], [390, 844]], async ({ id, w, page, status, finalPath, errors }) => {
         now.c6.values[`${id}|${locale}|${w}`] = { status, finalPath, ...(await page.evaluate(DASH_VALUES, c6W(locale))), ...errFacts(errors) };
@@ -2452,6 +2582,12 @@ const c6Record = () => ({
   recordedOn: { commit: git("rev-parse", "HEAD"), srcClean: git("status", "--porcelain", "--", "src") === "", build: buildId, chromium: now.chromium },
   states: now.c6.values,
 });
+// The C7 record: every heading-pass state on C6's build — and the error boundary's two renders — with the commit and
+// build it was measured on.
+const c7Record = () => ({
+  recordedOn: { commit: git("rev-parse", "HEAD"), srcClean: git("status", "--porcelain", "--", "src") === "", build: buildId, chromium: now.chromium },
+  states: now.c7.states, error: now.c7.error,
+});
 if (MEASURE_OUT) writeFileSync(MEASURE_OUT, JSON.stringify({ ...now, blockedRequests: blocked, actions: acts }, null, 1) + "\n");
 if (WRITE_D6) {
   const failed = Object.entries(now.d6).filter(([, v]) => v.status !== 200 || v.consoleErrors || v.pageErrors || v.r418).map(([k]) => k);
@@ -2497,12 +2633,24 @@ if (WRITE_C6REF) {
   rmSync(env.STORAGE_FAKE_DIR, { recursive: true, force: true });
   process.exit(0);
 }
+if (WRITE_C7REF) {
+  const failed = Object.entries(now.c7.states).filter(([k, v]) => v.status !== 200 || v.finalPath !== Object.fromEntries(C7_ROUTES)[k.split("|")[0]] || v.consoleErrors || v.pageErrors || v.r418 || !v.title).map(([k]) => k);
+  if (failed.length || Object.keys(now.c7.states).length !== C7_ROUTES.length * 4 || Object.keys(now.c7.error).length !== 4 || now.c7.removed !== true)
+    refuse(`--write-c7ref: not recording a pass with errors, a failed route, a missing state or drafts left behind: ${failed.slice(0, 4).join(", ") || `${Object.keys(now.c7.states).length} states, removed ${now.c7.removed}`}`);
+  const file = args.find((a) => a.startsWith("--write-c7ref="))?.slice(14) || BASELINE_FILE;
+  const out = JSON.parse(readFileSync(file, "utf8"));
+  out.c7ref = c7Record();
+  writeFileSync(file, JSON.stringify(out, null, 1) + "\n");
+  console.log(`• wrote the C7 record into ${file}: ${Object.keys(out.c7ref.states).length} states, measured on ${out.c7ref.recordedOn.commit.slice(0, 7)} (src ${out.c7ref.recordedOn.srcClean ? "clean" : "MODIFIED"}), build ${buildId}`);
+  rmSync(env.STORAGE_FAKE_DIR, { recursive: true, force: true });
+  process.exit(0);
+}
 if (WRITE) {
-  // The probes are checked, not pinned; the D-6 pass is pinned as its record. The C3, C4 and C6 records were
-  // measured on C2's, C3's and C5's builds and cannot be re-measured here: they are carried over as they are.
+  // The probes are checked, not pinned; the D-6 pass is pinned as its record. The C3, C4, C6 and C7 records were
+  // measured on C2's, C3's, C5's and C6's builds and cannot be re-measured here: they are carried over as they are.
   const measured = { frozenNow: now.frozenNow, chromium: now.chromium, states: now.states, staff: now.staff, sweep: now.sweep };
   const prev = existsSync(BASELINE_FILE) ? JSON.parse(readFileSync(BASELINE_FILE, "utf8")) : {};
-  writeFileSync(BASELINE_FILE, JSON.stringify({ ...measured, blockedRequests: blocked, d6: d6Record(), ...(prev.c3ref ? { c3ref: prev.c3ref } : {}), ...(prev.c4ref ? { c4ref: prev.c4ref } : {}), ...(prev.c6ref ? { c6ref: prev.c6ref } : {}) }, null, 1) + "\n");
+  writeFileSync(BASELINE_FILE, JSON.stringify({ ...measured, blockedRequests: blocked, d6: d6Record(), ...(prev.c3ref ? { c3ref: prev.c3ref } : {}), ...(prev.c4ref ? { c4ref: prev.c4ref } : {}), ...(prev.c6ref ? { c6ref: prev.c6ref } : {}), ...(prev.c7ref ? { c7ref: prev.c7ref } : {}) }, null, 1) + "\n");
   writeFileSync(ACTIONS_FILE, JSON.stringify(acts, null, 1) + "\n");
   console.log(`• wrote ${BASELINE_FILE} (${Object.keys(now.states).length} owner states, ${Object.keys(now.staff).length} staff, ${Object.keys(now.sweep).length} sweep, the D-6 record) and ${ACTIONS_FILE}`);
 }
@@ -3580,6 +3728,80 @@ check("C2: the Employees strip — Headcount, Present today (attendance/present:
 check(`formatDisplayDate: Chromium writes exactly the server's (Node's) strings — ${Object.keys(fdNode).length} per browser — under ${fdBrowsers.map((b) => `${b.locale}/${b.timezoneId}`).join(", ")}`,
   Object.keys(fdNode).length === 36 && Object.values(fdNode).every((v) => typeof v === "string" && v) && fdBrowsers.length === 4 && fdBrowsers.every((b) => b.diff.length === 0),
   fdBrowsers.flatMap((b) => b.diff).slice(0, 4).join(" · ") || "no formatDisplayDate in this tree");
+
+// ------------------------------------------------------------------------------------- C7 (D-3)
+// The heading pass against what C6's build said (c7ref): the same pages, words, styles, boxes, text and actions —
+// the page title h3 → h1 and the Tax Invoice QR panel h4 → h2 the only changes.
+if (!ONLY || ONLY.split(",").includes("c7")) {
+  const c7Ref = (WRITE ? null : pinned.c7ref) ?? null;
+  const S7 = now.c7.states;
+  const R7 = c7Ref?.states ?? {};
+  const page7 = Object.fromEntries(C7_PAGES.map((pg7) => [pg7[0], pg7]));
+  const k7 = C7_PAGES.flatMap(([id]) => ["en", "ar"].flatMap((l) => [1440, 390].map((w) => `${id}|${l}|${w}`)));
+  const kind7 = (k) => page7[k.split("|")[0]][2];
+  check(`C7 record: c7ref covers every state of the heading pass (${k7.length} — ${C7_PAGES.length} pages × EN / AR × 1440 / 390 — and the error boundary's 4 renders; measured on ${c7Ref?.recordedOn?.commit?.slice(0, 7) ?? "—"}, src ${c7Ref?.recordedOn?.srcClean ? "clean" : "MODIFIED"}, build ${c7Ref?.recordedOn?.build ?? "—"})`,
+    k7.every((k) => R7[k]) && c7Ref?.recordedOn?.srcClean === true && Object.keys(c7Ref?.error ?? {}).length === 4, list(k7.filter((k) => !R7[k])));
+  check(`C7 fixtures: the five families' TEST-ONLY drafts (${(now.c7.drafts ?? []).join(", ") || "none"}) written into this run's copy for the pass and removed after, the numbering sequences restored`,
+    JSON.stringify(now.c7.drafts) === JSON.stringify(["SO-0001", "PF-0001", "DC-0001", "CN-0001", "DN-0001"]) && now.c7.removed === true);
+  const bad1 = k7.filter((k) => {
+    const v = S7[k];
+    const [id, l] = k.split("|");
+    const [, path, , title] = page7[id];
+    return !v || v.status !== 200 || v.finalPath !== path || v.h1 !== 1 || v.title?.tag !== "h1" || v.title?.text !== title(l);
+  });
+  check("C7 heading matrix (EN / AR at 1440 and 390): each of the 8 document families' list, detail, create and edit page, the document Recycle Bin and the not-found page (a client, an invoice) answers 200 where it is, with exactly one h1 — its title in the dictionary's words: the family, the document number, Create … / Edit …, Recycle Bin, Page not found",
+    bad1.length === 0, list(bad1.map((k) => `${k} ${JSON.stringify({ s: S7[k]?.status, p: S7[k]?.finalPath, h1: S7[k]?.h1, tag: S7[k]?.title?.tag, t: S7[k]?.title?.text })}`)));
+  const bad2 = k7.filter((k) => !S7[k] || (kind7(k) === "list" && S7[k].skips !== 0) || (R7[k] && S7[k].skips > R7[k].skips));
+  check("C7 levels: the eight lists skip no heading level; no C7 page skips more levels than it did in C6",
+    bad2.length === 0, list(bad2.map((k) => `${k} ${R7[k]?.skips}→${S7[k]?.skips} ${JSON.stringify(S7[k]?.heads)}`)));
+  // C6's outline with the page title h3 → h1 and the QR panel h4 → h2 — nothing else.
+  const qrHead = (R) => (R?.qr ? `h4 ${R.qr.text.slice(0, 60)}` : null);
+  const want7 = (R) => R.heads.map((hd, i) => (i === 0 ? hd.replace(/^h3 /, "h1 ") : hd === qrHead(R) ? hd.replace(/^h4 /, "h2 ") : hd));
+  const bad3 = k7.filter((k) => !R7[k] || !S7[k] || !/^h3 /.test(R7[k].heads[0] ?? "") || JSON.stringify(S7[k].heads) !== JSON.stringify(want7(R7[k])));
+  check("C7 outline against C6 (c7ref): every heading as C6's — same order, same words — but the page title, h3 in C6, now the h1, and the Tax Invoice QR panel's title, h4 in C6, now an h2",
+    bad3.length === 0, list(bad3.map((k) => `${k} ${JSON.stringify(R7[k]?.heads)}→${JSON.stringify(S7[k]?.heads)}`)));
+  const qrAria = (R) => (R?.qr ? `4 ${R.qr.text}` : null);
+  const wantAria = (R) => R.aria.map((a, i) => (i === 0 ? a.replace(/^3 /, "1 ") : a === qrAria(R) ? a.replace(/^4 /, "2 ") : a));
+  const bad4 = k7.filter((k) => !R7[k] || !S7[k] || !/^3 /.test(R7[k].aria?.[0] ?? "") || JSON.stringify(S7[k].aria) !== JSON.stringify(wantAria(R7[k])));
+  check("C7 accessibility tree (Playwright's aria snapshot of <main>): each page title heading level 3 → 1 and the Tax Invoice QR heading level 4 → 2, every heading's name unchanged, no other level changed",
+    bad4.length === 0, list(bad4.map((k) => `${k} ${JSON.stringify(R7[k]?.aria)}→${JSON.stringify(S7[k]?.aria)}`)));
+  const sameFacts = (a, b) => Boolean(a) === Boolean(b) && (!a || (a.text === b.text && a.cls === b.cls && JSON.stringify(a.style) === JSON.stringify(b.style) && JSON.stringify(a.box) === JSON.stringify(b.box)));
+  const bad5 = k7.filter((k) => !R7[k] || !S7[k] || !sameFacts(S7[k].title, R7[k].title) || !sameFacts(S7[k].qr, R7[k].qr));
+  check("C7 computed style and box: each page title's — and the Tax Invoice QR heading's — font family, size, weight, line height, letter spacing, colour, alignment, wrapping, margins, padding, display, alignment, gaps, width, height, x and y identical to C6's, words and classes too (EN / AR, 1440 / 390)",
+    bad5.length === 0, list(bad5.map((k) => `${k} ${JSON.stringify([R7[k]?.title?.style?.fontWeight, R7[k]?.title?.box])}→${JSON.stringify([S7[k]?.title?.style?.fontWeight, S7[k]?.title?.box])}`)));
+  const bad6 = k7.filter((k) => kind7(k) === "detail" && (!S7[k] || !/mono/i.test(S7[k].title?.style?.fontFamily ?? "") || !/mono/i.test(R7[k]?.title?.style?.fontFamily ?? "") || /mono/i.test(S7[k].moneyFont ?? "")));
+  check("C7 Mono: the 8 document numbers (h1.mono) set in the code face, as in C6 — and the money on those pages not",
+    bad6.length === 0, list(bad6.map((k) => `${k} ${S7[k]?.title?.style?.fontFamily} / ${S7[k]?.moneyFont}`)));
+  const bad7 = k7.filter((k) => !R7[k] || !S7[k] || S7[k].text !== R7[k].text || JSON.stringify(S7[k].actions) !== JSON.stringify(R7[k].actions) || S7[k].overflow !== R7[k].overflow);
+  check("C7 nothing else moved: every C7 page's text in <main> and its action inventory identical to C6's — rows, filters, search, saved views, export / import, statuses, row and document actions, relationships, notes, amounts; overflow as C6",
+    bad7.length === 0, list(bad7.map((k) => `${k} text ${S7[k]?.text === R7[k]?.text} actions ${JSON.stringify(S7[k]?.actions) === JSON.stringify(R7[k]?.actions)}`)));
+  const bad8 = k7.filter((k) => !S7[k] || S7[k].consoleErrors || S7[k].pageErrors || S7[k].r418);
+  check("C7: zero console errors, page errors and React #418 on every C7 state", bad8.length === 0, list(bad8.map((k) => `${k} ${JSON.stringify(S7[k]?.errorSample ?? null)}`)));
+  const E = now.c7.error;
+  const ER = c7Ref?.error ?? {};
+  const errBad = [1440, 390].filter((w) => {
+    const [a, b] = [E[`h3|${w}`], E[`h1|${w}`]];
+    return !a || !b || a.title?.tag !== "h3" || b.title?.tag !== "h1" || b.h1 !== 1 || a.title.text !== "Something went wrong" ||
+      JSON.stringify(a.title.style) !== JSON.stringify(b.title.style) || JSON.stringify(a.title.box) !== JSON.stringify(b.title.box) || a.png !== b.png ||
+      ER[`h3|${w}`]?.png !== a.png || ER[`h1|${w}`]?.png !== b.png;
+  });
+  check("C7 error boundary (no route raises it; its markup rendered into <main>, EN at 1440 and 390): the title as C6's h3 and as C7's h1 — identical computed style and box, and the two renders pixel-identical (and identical to C6's build's)",
+    errBad.length === 0, list(errBad.map((w) => `${w}: ${E[`h3|${w}`]?.png}/${E[`h1|${w}`]?.png} (C6 ${ER[`h3|${w}`]?.png}/${ER[`h1|${w}`]?.png})`)));
+  // The two app-state routes the baseline holds, re-recorded: their outline is the h1 alone now.
+  const appStates = ["recycle-bin", "nf-client"].filter((id) => ROUTES.some((r) => r[0] === id));
+  const badApp = keys.filter((k) => appStates.includes(k.split("|")[0])).filter((k) => {
+    const [id, l] = k.split("|");
+    return JSON.stringify(now.states[k].outline) !== JSON.stringify([`h1 ${T(l, id === "recycle-bin" ? "Recycle Bin" : "Page not found")}`]) || now.states[k].h1 !== 1;
+  });
+  check("C7 app states in the baseline: the document Recycle Bin and the not-found page (re-recorded) — the outline the title's h1 alone (h3 in C6), every width, EN / AR",
+    ONLY || (appStates.length === 2 && badApp.length === 0), list(badApp.map((k) => `${k} ${JSON.stringify(now.states[k].outline)}`)));
+  console.log("• C7 page titles, C6 (c7ref) → C7, EN 1440 — tag / level, weight, size, box:");
+  for (const id of ["c7-inv-list", "c7-qtn-list", "c7-inv-detail", "c7-inv-new", "c7-inv-edit", "c7-bin", "c7-nf"]) {
+    const [r, v] = [R7[`${id}|en|1440`], S7[`${id}|en|1440`]];
+    // Null-safe: a page whose title heading is gone (a regression the checks above report) must not crash the print.
+    if (r && v) console.log(`    ${id.padEnd(14)} ${r.title?.tag ?? "none"}/${r.aria?.[0]?.split(" ")[0]} → ${v.title?.tag ?? "none"}/${v.aria?.[0]?.split(" ")[0]}  ${v.title?.style?.fontWeight ?? "-"} ${v.title?.style?.fontSize ?? "-"}  ${JSON.stringify(r.title?.box ?? null)} → ${JSON.stringify(v.title?.box ?? null)}${v.qr || r.qr ? `  QR ${r.qr?.tag ?? "none"} → ${v.qr?.tag ?? "none"} ${JSON.stringify(v.qr?.box ?? null)}` : ""}`);
+  }
+}
 check("server log has no unhandled error", !/unhandledRejection|Error: (?!connect ECONNREFUSED 127\.0\.0\.1:12750)/.test(serverLog), serverLog.match(/.*Error.*/)?.[0]?.slice(0, 200));
 
 let ok = true;

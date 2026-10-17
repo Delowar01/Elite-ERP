@@ -74,6 +74,10 @@
 
 .main-head h3 { font-size: 19px; font-weight: 700; }
 
+/* DEV-UI-01.7 C7 (D-3): the Quotations list and Recycle Bin titles are their pages' h1s now. This exact twin of the
+   h3 rule keeps them 19px / 700 — the global heading rule (unlayered, weight 600) outranks their font-bold utility. */
+.main-head h1 { font-size: 19px; font-weight: 700; }
+
 .inv-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 22px; gap: 12px 16px; flex-wrap: wrap; }
 
 /* DEV-UI-01.6: the detail-page action group wraps (every lifecycle action stays its own button). */
@@ -84,6 +88,9 @@
 .inv-head-actions > div { display: contents; }
 
 .inv-head h3 { font-size: 22px; font-weight: 700; }
+
+/* DEV-UI-01.7 C7 (D-3): the document number is the detail page's h1 now; the exact twin of the h3 rule. */
+.inv-head h1 { font-size: 22px; font-weight: 700; }
 
 .inv-sub { font-size: 12.5px; color: var(--ink-muted); margin-top: 5px; }
 
@@ -169,6 +176,9 @@ table.data-table tbody tr[data-empty-row]:hover > td { background: var(--surface
 
 .einvoice-panel h4 { font-size: 13.5px; font-weight: 700; }
 
+/* DEV-UI-01.7 C7 (D-3): the panel title is an h2 under the page's h1 now; the exact twin of the h4 rule. */
+.einvoice-panel h2 { font-size: 13.5px; font-weight: 700; }
+
 .einvoice-panel .badge-zatca { font-family: var(--font-code-family); font-size: 10px; letter-spacing: 0.04em; background: var(--info-bg); color: var(--info); padding: 3px 8px; border-radius: 6px; }
 
 .einvoice-panel .desc { font-size: 12px; color: var(--ink-muted); margin: 8px 0 16px; line-height: 1.6; }
@@ -218,6 +228,9 @@ table.data-table tbody tr[data-empty-row]:hover > td { background: var(--surface
 .doc-titlebar { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 22px; gap: 12px 16px; flex-wrap: wrap; }
 
 .doc-titlebar h3 { font-size: 22px; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+
+/* DEV-UI-01.7 C7 (D-3): the editor title is the page's h1 now; the exact twin of the h3 rule. */
+.doc-titlebar h1 { font-size: 22px; font-weight: 700; display: flex; align-items: center; gap: 10px; }
 
 .doc-titlebar .sub { font-size: 12.5px; color: var(--ink-muted); margin-top: 5px; }
 

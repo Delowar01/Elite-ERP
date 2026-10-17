@@ -13,7 +13,7 @@ export default async function AppNotFound() {
       >
         <FileQuestion className="size-7" style={{ color: "var(--brand-orange)" }} />
       </div>
-      <h3 className="text-[19px] font-bold mb-2">{t(locale, "Page not found")}</h3>
+      <h1 className="text-[19px] font-bold mb-2">{t(locale, "Page not found")}</h1>
       <p className="text-ink-muted text-sm mb-6">{t(locale, "The page you're looking for doesn't exist or may have moved.")}</p>
       <Link href="/dashboard" className="btn btn-primary" style={{ width: "auto", padding: "0 18px", display: "inline-flex" }}>
         {t(locale, "Back to Dashboard")}

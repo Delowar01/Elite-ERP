@@ -71,11 +71,20 @@
  * Its pins re-baseline the consumer inventory and the Dashboard's data section (the four D-1 / D-5 statements
  * removed, revenueSpark in spark's place) only.
  *
+ * C7 (document and app-state heading semantics, D-3) adds group 15: tags only, pixel for pixel — each of the eight
+ * document families' list title, detail document number (className mono) and editor title from h3 to the page's one
+ * h1, the shared e-invoice panel's title from h4 to h2, and the error, not-found and document Recycle Bin titles from
+ * h3 to h1; four exact CSS twins (.main-head h1, .inv-head h1, .einvoice-panel h2, .doc-titlebar h1) carry the h3 /
+ * h4 rules' declarations, which stay. Every C7 file is C6's plus those hunks (group 10 undoes the eight lists' first),
+ * the stylesheet C6's once the twins are undone (groups 11, 12 and 14 undo them first), no PageHeader on any C7
+ * surface, the typography and document-form verifiers' deliberate C7 updates, and everything C6 froze still C6's.
+ * Its pins change nothing.
+ *
  * `--write-pins` recomputes verify/page-archetype-pins.json from the working tree. Only a stage that
  * deliberately re-baselines may run it, and the diff of that file is what its review reads.
  * docs/ui/dev-ui-01-7/c0-foundations-and-guardrails.md, docs/ui/dev-ui-01-7/c1-master-data-and-detail.md,
  * docs/ui/dev-ui-01-7/c3-projects-and-kanban.md, docs/ui/dev-ui-01-7/c4-finance-and-reports.md,
- * docs/ui/dev-ui-01-7/c6-dashboard-archetype.md
+ * docs/ui/dev-ui-01-7/c6-dashboard-archetype.md, docs/ui/dev-ui-01-7/c7-heading-semantics.md
  */
 import { readFileSync, readdirSync, statSync, existsSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
@@ -236,6 +245,66 @@ const C6_CSS_HUNKS: [string, string][] = [
     "@media (max-width: 1100px) { .kpi-grid-v4, .fin-overview-grid { grid-template-columns: repeat(2, 1fr); } } " +
     "@media (max-width: 1100px) { .dash-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: auto; } .dash-widget { grid-column: auto; grid-row: auto; } .dash-widget[data-wide] { grid-column: 1 / -1; } .dash-widget > *:not(.dash-widget-chrome):not(.dash-resize-handle) { overflow: visible; } } " +
     "@media (max-width: 640px) { .dash-grid { grid-template-columns: minmax(0, 1fr); } }"],
+];
+
+/**
+ * DEV-UI-01.7 C7 (D-3): every C7 source hunk, [C6, C7] byte for byte — tags only. The eight document families' list
+ * titles, detail document numbers and editor titles h3 → h1; the shared e-invoice panel's title h4 → h2; the error,
+ * not-found and document Recycle Bin titles h3 → h1. Group 10 undoes the eight lists' hunk before holding them at C1's
+ * bytes; group 15 proves each file is C6's plus exactly its hunks.
+ */
+const C7_LISTS: [string, string][] = [
+  ["sales/quotations/quotations-list-client.tsx", "Quotations"], ["sales/orders/orders-list-client.tsx", "Sales Orders"],
+  ["sales/proforma/proforma-list-client.tsx", "Proforma Invoices"], ["sales/invoices/invoices-list-client.tsx", "Invoices"],
+  ["sales/delivery-challans/dc-list-client.tsx", "Delivery Challans"], ["sales/credit-notes/cn-list-client.tsx", "Credit Notes"],
+  ["purchasing/orders/po-list-client.tsx", "Purchase Orders"], ["purchasing/debit-notes/dn-list-client.tsx", "Debit Notes"],
+];
+const C7_DETAILS: [string, string][] = [
+  ["sales/quotations/[id]/page.tsx", "quotation.quotationNumber"], ["sales/orders/[id]/page.tsx", "order.soNumber"],
+  ["sales/proforma/[id]/page.tsx", "pf.proformaNumber"], ["sales/invoices/[id]/page.tsx", "invoice.invoiceNumber"],
+  ["sales/delivery-challans/[id]/page.tsx", "dc.dcNumber"], ["sales/credit-notes/[id]/page.tsx", "cn.creditNoteNumber"],
+  ["purchasing/orders/[id]/page.tsx", "po.poNumber"], ["purchasing/debit-notes/[id]/page.tsx", "dn.debitNoteNumber"],
+];
+// [form, its titlebar icon, the type in its Create / Edit dictionary keys]
+const C7_FORMS: [string, string, string][] = [
+  ["sales/quotations/quotation-form.tsx", "FileText", "Quotation"], ["sales/orders/order-form.tsx", "ClipboardList", "Sales Order"],
+  ["sales/proforma/proforma-form.tsx", "FileCheck2", "Proforma Invoice"], ["sales/invoices/invoice-form.tsx", "Receipt", "Invoice"],
+  ["sales/delivery-challans/dc-form.tsx", "Truck", "Delivery Challan"], ["sales/credit-notes/cn-form.tsx", "FileMinus2", "Credit Note"],
+  ["purchasing/orders/po-form.tsx", "ShoppingCart", "Purchase Order"], ["purchasing/debit-notes/dn-form.tsx", "FileMinus2", "Debit Note"],
+];
+const C7_EINVOICE = `${A}sales/_shared/einvoice-preview-panel.tsx`;
+const C7_ERROR = `${A}error.tsx`;
+const C7_NOT_FOUND = `${A}not-found.tsx`;
+const C7_BIN = `${A}recycle-bin/recycle-bin-client.tsx`;
+const C7_EDITS: Record<string, [string, string][]> = {
+  ...Object.fromEntries(C7_LISTS.map(([f, title]) => [`${A}${f}`, [[`<h3 className="text-[19px] font-bold">{t(locale, "${title}")}</h3>`, `<h1 className="text-[19px] font-bold">{t(locale, "${title}")}</h1>`]]])),
+  ...Object.fromEntries(C7_DETAILS.map(([f, num]) => [`${A}${f}`, [[`<h3 className="mono">{${num}}</h3>`, `<h1 className="mono">{${num}}</h1>`]]])),
+  ...Object.fromEntries(C7_FORMS.map(([f]) => [`${A}${f}`, [
+    ['      <div className="doc-titlebar">\n        <div>\n          <h3>\n', '      <div className="doc-titlebar">\n        <div>\n          <h1>\n'],
+    ['\n          </h3>\n          <div className="sub">', '\n          </h1>\n          <div className="sub">'],
+  ]])),
+  [C7_EINVOICE]: [['<h4>{variant === "create" ? t(locale, "Tax Invoice QR preview") : t(locale, "Tax Invoice QR")}</h4>', '<h2>{variant === "create" ? t(locale, "Tax Invoice QR preview") : t(locale, "Tax Invoice QR")}</h2>']],
+  [C7_ERROR]: [['<h3 className="text-[19px] font-bold mb-2">Something went wrong</h3>', '<h1 className="text-[19px] font-bold mb-2">Something went wrong</h1>']],
+  [C7_NOT_FOUND]: [['<h3 className="text-[19px] font-bold mb-2">{t(locale, "Page not found")}</h3>', '<h1 className="text-[19px] font-bold mb-2">{t(locale, "Page not found")}</h1>']],
+  [C7_BIN]: [
+    ['        <h3 className="text-[19px] font-bold flex items-center gap-2">\n', '        <h1 className="text-[19px] font-bold flex items-center gap-2">\n'],
+    ['{t(locale, "Recycle Bin")}\n        </h3>\n', '{t(locale, "Recycle Bin")}\n        </h1>\n'],
+  ],
+};
+/** A C7 file with its C7 hunks undone — C6's bytes, when they are its only change (group 15). */
+const undoC7 = (f: string, s: string) => (C7_EDITS[f] ?? []).reduce((acc, [was, is]) => acc.replace(is, () => was), s);
+/**
+ * C7's four CSS twins, [the rule each twins, the twin]: each added straight after its rule, with exactly its
+ * declarations. .main-head h1 is needed because the global h1–h6 rule (unlayered, weight 600) outranks the
+ * title's font-bold utility — without it the Quotations and Recycle Bin titles would lose their 700. Groups 11,
+ * 12 and 14 undo the twins before holding the stylesheet; group 15 proves they are C7's only CSS change.
+ */
+const C7_CSS_TWINS: [string, string][] = [
+  [".main-head h3 { font-size: 19px; font-weight: 700; }", ".main-head h1 { font-size: 19px; font-weight: 700; }"],
+  [".inv-head h3 { font-size: 22px; font-weight: 700; }", ".inv-head h1 { font-size: 22px; font-weight: 700; }"],
+  [".einvoice-panel h4 { font-size: 13.5px; font-weight: 700; }", ".einvoice-panel h2 { font-size: 13.5px; font-weight: 700; }"],
+  [".doc-titlebar h3 { font-size: 22px; font-weight: 700; display: flex; align-items: center; gap: 10px; }",
+    ".doc-titlebar h1 { font-size: 22px; font-weight: 700; display: flex; align-items: center; gap: 10px; }"],
 ];
 
 let pass = 0;
@@ -1294,8 +1363,9 @@ const D6_SOURCES: Record<string, string> = {
 // holds it — C4's code (C1's bytes) plus C5's own hunks, its stat row untouched. The other eight stay
 // byte-identical to C1.
 const d6Held = Object.entries(D6_SOURCES).filter(([f]) => !C3_FILES.includes(A + f) && !C5_FILES.includes(A + f));
-const d6Drift = d6Held.filter(([f, hsh]) => !exists(A + f) || sha(A + f) !== hsh).map(([f]) => f);
-check(`D-6 reaches every other KPI row through the CSS and the StatRow component only — the eight document lists byte-identical to C1 (${d6Held.length} files; Projects' three are C3's, group 11; Security is C5's, group 13)`,
+// C7 retagged each document list's title (h3 → h1, D-3): undone first — group 15 proves it is C7's only change there.
+const d6Drift = d6Held.filter(([f, hsh]) => !exists(A + f) || h16(undoC7(A + f, read(A + f))) !== hsh).map(([f]) => f);
+check(`D-6 reaches every other KPI row through the CSS and the StatRow component only — the eight document lists byte-identical to C1 (${d6Held.length} files; Projects' three are C3's, group 11; Security is C5's, group 13; C7's title tag undone, group 15)`,
   d6Held.length === 8 && d6Drift.length === 0, d6Drift.join(" "));
 
 // Status and direction
@@ -1570,7 +1640,10 @@ const cssFlat = (s: string) => s.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\s+/g
 const C3_CSS = `.kanban-col-head h3 { font: inherit; text-wrap: inherit; }
   .cost-breakdown-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-bottom: 16px; }
   @media (max-width: 900px) { .cost-breakdown-grid { grid-template-columns: minmax(0, 1fr); } }`;
-const cssNow = cssFlat(read(CSSF));
+/** The stylesheet as it is, and with C7's four twins undone — C6's, when they are C7's only CSS change (group 15). */
+const cssWithC7 = cssFlat(read(CSSF));
+const undoC7Css = (flatCss: string) => C7_CSS_TWINS.reduce((s, [rule, twin]) => s.replace(cssFlat(rule) + cssFlat(twin), () => cssFlat(rule)), flatCss);
+const cssNow = undoC7Css(cssWithC7);
 /** The stylesheet with C6's Dashboard hunks undone — C5's (and C4's), when they are C6's only change (group 14). */
 const undoC6Css = (flatCss: string) => C6_CSS_HUNKS.reduce((s, [was, is]) => s.replace(cssFlat(is), () => cssFlat(was)), flatCss);
 // C6's Dashboard hunks, then C4's two .acct-grid edits, undone first (groups 14 and 12 prove they are their only ones).
@@ -2498,6 +2571,118 @@ check("C6's approved verifier maintenance: verify-compliance-claims.mjs changes 
 const C6_BANNED = ["DashboardSection", "DashboardCard", "DashboardHeader", "DashboardLayout", "DashboardShell", "WidgetFrame", "ChartCard"];
 const c6Creep = walk("src").filter((f) => /\.(tsx?|css)$/.test(f) && C6_BANNED.some((b) => new RegExp(`\\b${b}\\b`).test(strip(read(f)))));
 check(`C6: no Dashboard abstraction — none of ${C6_BANNED.join(", ")}; the page composes PageHeader, DashWidget, KpiCard and the charts itself`, c6Creep.length === 0, c6Creep.join(" "));
+
+section("15. C7 — document and app-state heading semantics (D-3)");
+// C6's bytes (20eff7d) of every file C7 touches; each is C6's plus exactly its C7_EDITS hunks.
+const C7_C6_SHA: Record<string, string> = {
+  [`${A}error.tsx`]: "11e5a596d3eac422", [`${A}not-found.tsx`]: "9123cd265a23833f", [C7_BIN]: "5f99842ecb5f2443", [C7_EINVOICE]: "88ce3011493ce5b1",
+  [`${A}sales/quotations/quotations-list-client.tsx`]: "370f5b3d84d2c8a5", [`${A}sales/orders/orders-list-client.tsx`]: "c3f158801b7afc05",
+  [`${A}sales/proforma/proforma-list-client.tsx`]: "b183ef64e1f23f75", [`${A}sales/invoices/invoices-list-client.tsx`]: "df9124a4c3c54d3c",
+  [`${A}sales/delivery-challans/dc-list-client.tsx`]: "c837d62b68edfe78", [`${A}sales/credit-notes/cn-list-client.tsx`]: "32532d3b1813b82f",
+  [`${A}purchasing/orders/po-list-client.tsx`]: "5df02b6f339170af", [`${A}purchasing/debit-notes/dn-list-client.tsx`]: "ccfc2e25e738df80",
+  [`${A}sales/quotations/[id]/page.tsx`]: "ff6249ecc366ad55", [`${A}sales/orders/[id]/page.tsx`]: "347aac4ee6037f58",
+  [`${A}sales/proforma/[id]/page.tsx`]: "644e8f58a6e13a62", [`${A}sales/invoices/[id]/page.tsx`]: "51539640065462cc",
+  [`${A}sales/delivery-challans/[id]/page.tsx`]: "18a6ca58bf1156b1", [`${A}sales/credit-notes/[id]/page.tsx`]: "577d3c6f8f1fd061",
+  [`${A}purchasing/orders/[id]/page.tsx`]: "0366f74e8b7ab96b", [`${A}purchasing/debit-notes/[id]/page.tsx`]: "1be75da30ec28dad",
+  [`${A}sales/quotations/quotation-form.tsx`]: "416e1b6cc2163b64", [`${A}sales/orders/order-form.tsx`]: "f02b6e43fd4db8f4",
+  [`${A}sales/proforma/proforma-form.tsx`]: "81715f1598056b94", [`${A}sales/invoices/invoice-form.tsx`]: "34694e8df6caa057",
+  [`${A}sales/delivery-challans/dc-form.tsx`]: "b051fd7c86f10fc6", [`${A}sales/credit-notes/cn-form.tsx`]: "28cc8236eaed196f",
+  [`${A}purchasing/orders/po-form.tsx`]: "212dd39e35d7241e", [`${A}purchasing/debit-notes/dn-form.tsx`]: "a325401081bbb468",
+};
+const C7_SRC = Object.keys(C7_EDITS);
+const c7Drift = C7_SRC.filter((f) => {
+  const src = read(f);
+  return !C7_EDITS[f].every(([was, is]) => src.split(is).length === 2 && !src.includes(was)) || h16(undoC7(f, src)) !== C7_C6_SHA[f];
+});
+check(`C7 changed nothing in its ${C7_SRC.length} source files but the heading tags: each hunk once (its C6 form nowhere), and undone every file is C6's to the byte — the 8 document lists, 8 details, 8 editors, the e-invoice panel, the error / not-found boundaries and the document Recycle Bin (wrappers, classes, titles, icons, StatRow, toolbars, tables, row menus, actions, queries, submit and dirty logic all C6's)`,
+  C7_SRC.length === 28 && same(Object.keys(C7_C6_SHA).sort(), [...C7_SRC].sort()) && c7Drift.length === 0, c7Drift.map(rel).join(" "));
+const c7Headings = (src: string) => src.match(/<h[1-6][\s>]/g) ?? [];
+const c7NoPh = (f: string) => !/\bPageHeader\b/.test(read(f));
+const listBad = C7_LISTS.filter(([f, title]) => {
+  const src = read(A + f);
+  return src.split(`<h1 className="text-[19px] font-bold">{t(locale, "${title}")}</h1>`).length !== 2 || c7Headings(src).length !== 1 || !c7NoPh(A + f);
+});
+check("C7 lists: each of the 8 document lists' title is the page's one heading — an h1 with the C6 classes (text-[19px] font-bold) and its C6 dictionary key, in its C6 wrapper; no h2–h6, no PageHeader",
+  listBad.length === 0, listBad.map(([f]) => f).join(" "));
+const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const detailBad = C7_DETAILS.filter(([f, num]) => {
+  const src = read(A + f);
+  return !new RegExp(`<div className="inv-head">\\s*<div>\\s*<h1 className="mono">\\{${esc(num)}\\}</h1>\\s*<div className="inv-sub">`).test(src)
+    || !src.includes('<div className="inv-head-actions">') || c7Headings(src).length !== 1 || !c7NoPh(A + f);
+});
+check("C7 details: each of the 8 document numbers is the page's one heading — an h1 className mono (its C6 expression), first in .inv-head's title column, .inv-sub after it and the .inv-head-actions group as C6; no other heading, no PageHeader",
+  detailBad.length === 0, detailBad.map(([f]) => f).join(" "));
+const formBad = C7_FORMS.filter(([f, icon, type]) => {
+  const src = read(A + f);
+  return !new RegExp(`<div className="doc-titlebar">\\s*<div>\\s*<h1>\\s*<${icon} className="size-5" style=\\{\\{ color: "var\\(--brand-orange\\)" \\}\\} /> \\{t\\(locale, isEdit \\? "Edit ${type}" : "Create ${type}"\\)\\}\\s*</h1>\\s*<div className="sub">`).test(src)
+    || c7Headings(src).length !== 1 || !c7NoPh(A + f);
+});
+check("C7 editors: each of the 8 editor titles is the page's one heading — an h1 first in .doc-titlebar, its C6 icon and Create / Edit dictionary keys inside, the .sub after it; no other heading, no PageHeader",
+  formBad.length === 0, formBad.map(([f]) => f).join(" "));
+const einv = read(C7_EINVOICE);
+check("C7 e-invoice: the shared panel's title is an h2 (h4 in C6) first in .eh — the same variant expression (Tax Invoice QR preview / Tax Invoice QR); no other heading",
+  /<div className="eh">\s*<h2>\{variant === "create" \? t\(locale, "Tax Invoice QR preview"\) : t\(locale, "Tax Invoice QR"\)\}<\/h2>/.test(einv) && c7Headings(einv).length === 1);
+const errSrc = read(C7_ERROR);
+const nfSrc = read(C7_NOT_FOUND);
+const binSrc = read(C7_BIN);
+check("C7 app states: Error's title an h1 'Something went wrong' (English, as C6), Not Found's an h1 t('Page not found'), the document Recycle Bin's an h1 with its Trash2 icon and t('Recycle Bin') — each the page's one heading, classes as C6, no PageHeader",
+  errSrc.includes('<h1 className="text-[19px] font-bold mb-2">Something went wrong</h1>') && c7Headings(errSrc).length === 1 && c7NoPh(C7_ERROR) &&
+  nfSrc.includes('<h1 className="text-[19px] font-bold mb-2">{t(locale, "Page not found")}</h1>') && c7Headings(nfSrc).length === 1 && c7NoPh(C7_NOT_FOUND) &&
+  /<div className="main-head flex items-center justify-between mb-\[22px\]">\s*<h1 className="text-\[19px\] font-bold flex items-center gap-2">\s*<Trash2 className="size-5" style=\{\{ color: "var\(--brand-orange\)" \}\} \/> \{t\(locale, "Recycle Bin"\)\}\s*<\/h1>/.test(binSrc) &&
+  c7Headings(binSrc).length === 1 && c7NoPh(C7_BIN));
+// error.tsx has no route and no existing deterministic error fixture: rendered in isolation instead (react-dom/server).
+const { default: AppError } = await import("../src/app/(app)/error");
+const errHtml = html(h(AppError, { error: Object.assign(new Error("C7 isolated render"), { digest: "c7" }), reset: () => {} }));
+check("C7 error boundary rendered in isolation (react-dom/server — no route or fixture can raise it): exactly one heading, <h1 class=\"text-[19px] font-bold mb-2\">Something went wrong</h1>; the copy, Try again and Back to Dashboard as C6",
+  (errHtml.match(/<h[1-6][\s>]/g) ?? []).length === 1 && errHtml.includes('<h1 class="text-[19px] font-bold mb-2">Something went wrong</h1>') &&
+  errHtml.includes("An unexpected error occurred. You can try again, or head back to your dashboard.") && errHtml.includes('<button type="button" class="btn btn-primary"') &&
+  errHtml.includes('href="/dashboard">Back to Dashboard</a>'), errHtml.slice(0, 160));
+const twinBad = C7_CSS_TWINS.filter(([rule, twin]) => {
+  const [rf, tf] = [cssFlat(rule), cssFlat(twin)];
+  return cssWithC7.split(rf + tf).length !== 2 || cssWithC7.split(tf).length !== 2 || rf.slice(rf.indexOf("{")) !== tf.slice(tf.indexOf("{"));
+});
+check("C7 stylesheet: its only change is four exact twins — .main-head h1, .inv-head h1, .einvoice-panel h2, .doc-titlebar h1 — each once, straight after the rule it twins, with exactly its declarations; the h3 / h4 rules byte-identical; undone, mockup-parity.css is C6's to the character",
+  twinBad.length === 0 && h16(undoC7Css(cssWithC7)) === "2d06b07ba2e73e3d", `${twinBad.map(([, t]) => t.split("{")[0].trim()).join(" ")} ${h16(undoC7Css(cssWithC7))}`);
+check("C7 Mono document numbers: all 8 detail h1s are className mono, and .mono — var(--font-mono), unlayered, more specific than the global h1–h6 rule — is C6's, so each number keeps the code face",
+  detailBad.length === 0 && read(CSSF).split(".mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }").length === 2);
+const C7_SURFACES = [...C7_SRC, `${A}recycle-bin/page.tsx`];
+const c7Ph = C7_SURFACES.filter((f) => !c7NoPh(f));
+check("C7: no PageHeader on any C7 surface — the 8 lists, 8 details, 8 editors, the Recycle Bin, error and not-found keep their 01.5 / 01.6 structures (zero pixel difference is why C7 is tags only)",
+  c7Ph.length === 0, c7Ph.map(rel).join(" "));
+// The two deliberate verifier updates C7 owns — each undone, its verifier is C6's to the byte.
+const C7_TYPO_EDITS: [string, string][] = [
+  ['/<h3 className="mono">\\{invoice\\.invoiceNumber\\}<\\/h3>/', '/<h1 className="mono">\\{invoice\\.invoiceNumber\\}<\\/h1>/'],
+  ['/<h3 className="mono">\\{po\\.poNumber\\}<\\/h3>/', '/<h1 className="mono">\\{po\\.poNumber\\}<\\/h1>/'],
+];
+const typoSrc = read("verify/verify-typography.mts");
+check("C7 typography verifier: its two representative document-number CODE_SITES (invoice, PO) expect h1.mono — no h3.mono expectation left; undone, verify-typography.mts is C6's to the byte (the employee code and every other site unchanged)",
+  C7_TYPO_EDITS.every(([was, is]) => typoSrc.split(is).length === 2 && !typoSrc.includes(was)) &&
+  h16(C7_TYPO_EDITS.reduce((acc, [was, is]) => acc.replace(is, () => was), typoSrc)) === "02b422d53822fc4a");
+const dfSrc = read("verify/verify-document-form.mts");
+const dfOld = 'check("document headings left for DEV-UI-01.7 (editor titles stay h3)", FORMS.every((f) => /<h3>/.test(formSrc[f])));\n';
+const dfStart = dfSrc.indexOf("// DEV-UI-01.7 C7 (D-3): the hand-off above");
+const dfEnd = dfSrc.indexOf("\n", dfSrc.indexOf('[".einvoice-panel h2", ".einvoice-panel h4"]')) + 1;
+const dfUndone = dfStart > 0 && dfEnd > dfStart ? dfSrc.slice(0, dfStart) + dfOld + dfSrc.slice(dfEnd) : "";
+// The C7 block is held byte for byte too: undoing it alone would let a weakened C7 assertion (h1 | h3) through.
+check("C7 document-form verifier: the planned DEV-UI-01.7 hand-off ('editor titles stay h3') replaced by the stronger C7 assertions — a real h1 in each editor's .doc-titlebar (exactly one, no h3 title left) and the twins' declarations equal to the h3 / h4 rules' — that block exactly as written; undone, verify-document-form.mts is C6's to the byte (SUBMIT / DIRTY pins, byte pins and every other check unchanged)",
+  !dfSrc.includes(dfOld) && dfSrc.includes('check("document headings (DEV-UI-01.7 C7): every editor\'s title is a real h1 in .doc-titlebar') &&
+  h16(dfSrc.slice(dfStart, dfEnd)) === "31abd69fc9ff1552" && h16(dfUndone) === "0321011771832fc1", `${h16(dfSrc.slice(dfStart, dfEnd))} ${h16(dfUndone)}`);
+const C7_FROZEN: Record<string, string> = {
+  "src/lib/i18n/dict.ts": "ad171858a8128535", [`${A}dashboard/page.tsx`]: "53625edf205565af", [`${A}dashboard/dashboard-toolbar.tsx`]: "a671e3cafadb0e65",
+  [`${A}dashboard/_shared/kpi-card.tsx`]: "a8d4f36b81024663", [`${A}dashboard/_shared/charts.tsx`]: "f56b54ecd25ab615",
+  "verify/verify-compliance-claims.mjs": "98bd1c9f967d9fa3", "verify/verify-ar-locale-hydration.mjs": "a226b47188ddf478",
+  "verify/verify-settings-timezone-hydration.mjs": "a43b9d9f7b521da6", "verify/verify-business-date-hydration.mjs": "02ef92b957d4d719",
+  "verify/verify-datatable-runtime.mjs": "7dd991ed407faf91", [`${A}documents/_workspace/list-workspace-toolbar.tsx`]: "2bd2a430e47a76f5",
+  [`${A}documents/_workspace/use-list-filters.ts`]: "e9bc8477a32c2877", [`${A}documents/_workspace/saved-view-actions.ts`]: "4e2a260f754684b0",
+  "src/components/layout/page-header.tsx": "f54789d9a9de8073",
+};
+const c7Frozen = Object.entries(C7_FROZEN).filter(([f, hsh]) => !exists(f) || sha(f) !== hsh).map(([f]) => f);
+check("C7 freezes C6: dict.ts (no dictionary change), the four Dashboard files, verify-compliance-claims.mjs, the P0 / P0.1 / P0.2 verifiers, the DataTable runtime suite and the list workspace (toolbar, filters, saved views), PageHeader — each byte-identical to C6 (20eff7d)",
+  c7Frozen.length === 0, c7Frozen.join(" "));
+const c7Census = walk("src").filter((f) => f.endsWith(".tsx") && !C7_SRC.includes(f))
+  .map((f) => [f, c7Headings(read(f)).map((tg) => tg.slice(1, 3)).join(",")]).filter(([, tags]) => tags).map(([f, tags]) => `${f}:${tags}`);
+check(`C7: no blanket heading replacement — outside its 28 files every .tsx holds exactly the headings it held in C6 (${c7Census.length} files, file by file)`,
+  h16(c7Census.join("\n")) === "8f201e6e6c7a0ed9", h16(c7Census.join("\n")));
 
 console.log("\nGroups:");
 for (const [g, [p, f]] of Object.entries(counts)) console.log(`  ${g}: ${p}/${p + f}`);

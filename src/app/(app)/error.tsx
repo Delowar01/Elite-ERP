@@ -19,7 +19,7 @@ export default function AppError({ error, reset }: { error: Error & { digest?: s
       >
         <AlertTriangle className="size-7" style={{ color: "var(--danger)" }} />
       </div>
-      <h3 className="text-[19px] font-bold mb-2">Something went wrong</h3>
+      <h1 className="text-[19px] font-bold mb-2">Something went wrong</h1>
       <p className="text-ink-muted text-sm mb-6">An unexpected error occurred. You can try again, or head back to your dashboard.</p>
       <div className="flex items-center justify-center gap-2.5">
         <button type="button" onClick={reset} className="btn btn-primary" style={{ width: "auto", padding: "0 18px" }}>

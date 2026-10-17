@@ -67,6 +67,17 @@
  * Each fails the capture if the page does not do it. They assert what C5 and C6 share, so C5's build
  * captures them too — the before / after pairs; what only C6 does (no empty strip, the PageHeader, the
  * grid) the runtime verifier holds.
+ *
+ * C7 (document and app-state heading semantics, D-3 — tags only, zero pixel difference) adds every document
+ * page not above: each of the eight families' detail, create and edit page (the lists are the d6-* states),
+ * the document Recycle Bin and the not-found page (a client and an invoice that do not exist) — EN + AR at
+ * 1440 and 390, light, full page (108). The seed has documents for three families (quotations, sales
+ * invoices, purchase orders: their detail pages open QTN-0001, INV-0003 — its Tax Invoice QR panel — and
+ * PO-0001, their editors the drafts QTN-0003, INV-0006, PO-0003); for the other five each detail and edit
+ * state is a fixture: a TEST-ONLY draft (writeC7Drafts — SO-0001, PF-0001, DC-0001, CN-0001 against
+ * INV-0003, DN-0001 against PO-0002) written into the run's copy for that state only and removed straight
+ * after. A capture fails if the page is not the document. C6's build captures every one of them too — the
+ * before / after pairs, which must be byte-identical.
  */
 import pg from "pg";
 import { FROZEN_NOW, OWNER_EMAIL, VIEWPORTS } from "./config.mjs";
@@ -128,6 +139,7 @@ export function archetypeMatrix() {
   for (const [id, path, area, viewports] of C6_ROUTES) for (const locale of BOTH) for (const name of viewports) add(id, path, area, locale, "light", name, null, true);
   for (const [id, path, action, viewports] of C6_FIXTURES) for (const locale of BOTH) for (const name of viewports) add(id, path, "Dashboard fixture (C6)", locale, "light", name, action, true);
   for (const [id, path, action, viewports] of C6_INTERACTIONS) for (const locale of BOTH) for (const name of viewports) add(id, path, "Interaction (C6)", locale, "light", name, action, false);
+  for (const [id, path, area, action] of C7_STATES) for (const locale of BOTH) for (const name of EDGE) add(id, path, area, locale, "light", name, action, true);
   return out;
 }
 
@@ -203,6 +215,29 @@ const C6_INTERACTIONS = [
   ["i14-dashboard-customize", "/dashboard", "dashboard-customize", EDGE],
 ];
 
+/**
+ * [id, path, area, action] — C7: each document family's detail, create and edit page (the lists are the d6-*
+ * states above), the document Recycle Bin and the not-found page. The detail and edit pages of the five families
+ * the seed has no document for open a TEST-ONLY draft written for that state (action "c7-draft").
+ */
+const C7_DOCS = [
+  // [key, path, the seeded detail id or null (a C7 draft, id 1), the draft to edit or null (the C7 draft), the family]
+  ["qtn", "/sales/quotations", 1, 3, "quotation"], ["so", "/sales/orders", null, null, "sales order"],
+  ["pf", "/sales/proforma", null, null, "proforma invoice"], ["inv", "/sales/invoices", 3, 6, "sales invoice"],
+  ["dc", "/sales/delivery-challans", null, null, "delivery challan"], ["cn", "/sales/credit-notes", null, null, "credit note"],
+  ["po", "/purchasing/orders", 1, 3, "purchase order"], ["dn", "/purchasing/debit-notes", null, null, "debit note"],
+];
+const C7_STATES = [
+  ...C7_DOCS.flatMap(([key, path, detail, edit, family]) => [
+    [`c7-${key}-detail`, `${path}/${detail ?? 1}`, `Document detail (${family}${detail ? "" : ", TEST-only draft"})`, detail ? null : "c7-draft"],
+    [`c7-${key}-new`, `${path}/new`, `Document editor — create (${family})`, null],
+    [`c7-${key}-edit`, `${path}/${edit ?? 1}/edit`, `Document editor — edit (${family} draft${edit ? "" : ", TEST-only"})`, edit ? null : "c7-draft"],
+  ]),
+  ["c7-recycle-bin", "/recycle-bin", "Document Recycle Bin", null],
+  ["c7-not-found", "/clients/999999", "Not found (a client that does not exist)", null],
+  ["c7-not-found-document", "/sales/invoices/999999", "Not found (an invoice that does not exist)", null],
+];
+
 /** [id, path, area] — C1: the master-data / entity-detail pages not in the set above (seed-stable ids; the seed's bins are empty). */
 const C1_ROUTES = [
   ["c1-vendors", "/purchasing/vendors", "Master-data list (vendors)"],
@@ -273,6 +308,85 @@ const setOwnerLayout = (layout) =>
           ? c2.query("update user_preferences set dashboard_layout = $1, updated_at = $2 where id = $3", [row.dashboard_layout === null ? null : JSON.stringify(row.dashboard_layout), row.updated_at, row.id])
           : c2.query("delete from user_preferences where user_id = (select id from users where email = $1)", [OWNER_EMAIL]));
   });
+/**
+ * DEV-UI-01.7 C7: TEST-ONLY drafts for the five document families the seed has none of — one each, id 1, one
+ * line from the document it stands beside: Sales Order SO-0001, Proforma Invoice PF-0001 and Delivery Challan
+ * DC-0001 for INV-0003's client and first line, Credit Note CN-0001 against INV-0003, Debit Note DN-0001 against
+ * PO-0002 (its vendor and first line). Drafts are the only state an editor may open; the numbering sequences
+ * advance as a draft's would. `c` is a client on a devui010_test_only_* copy (the caller's isolation); the
+ * harness writes them for one state (removeC7Drafts straight after), the runtime verifier for its C7 pass.
+ */
+const C7_DRAFT_TYPES = ["sales_order", "proforma_invoice", "delivery_challan", "credit_note", "debit_note"];
+export async function writeC7Drafts(c) {
+  const db = (await c.query("select current_database() as d")).rows[0].d;
+  if (!db.startsWith(DB_PREFIX)) throw new IsolationError(`refusing to write C7 drafts into '${db}': not a ${DB_PREFIX}* database`);
+  const { org_id: org, id: user } = (await c.query("select org_id, id from users where email = $1", [OWNER_EMAIL])).rows[0];
+  const inv = (await c.query("select id, customer_id from sales_invoices where org_id = $1 and invoice_number = 'INV-0003'", [org])).rows[0];
+  const po = (await c.query("select id, vendor_id from purchase_orders where org_id = $1 and po_number = 'PO-0002'", [org])).rows[0];
+  const il = (await c.query("select product_id, unit, description, unit_price from sales_invoice_items where invoice_id = $1 order by id limit 1", [inv.id])).rows[0];
+  const pl = (await c.query("select product_id, unit, description, unit_cost from purchase_order_items where purchase_order_id = $1 order by id limit 1", [po.id])).rows[0];
+  const taken = (await c.query("select (select count(*) from sales_orders) + (select count(*) from proforma_invoices) + (select count(*) from delivery_challans) + (select count(*) from credit_notes) + (select count(*) from debit_notes) as n")).rows[0].n;
+  if (Number(taken) !== 0) throw new Error(`writeC7Drafts: the copy already holds ${taken} documents of the five families`);
+  const money = (price) => {
+    const sub = Math.round(Number(price) * 100) / 100;
+    const tax = Math.round(sub * 0.15 * 100) / 100;
+    return [sub, tax, Math.round((sub + tax) * 100) / 100];
+  };
+  const [sSub, sTax, sTot] = money(il.unit_price);
+  const [pSub, pTax, pTot] = money(pl.unit_cost);
+  const at = "2026-06-10 10:00:00";
+  await c.query("begin");
+  try {
+    await c.query(`insert into sales_orders (id,org_id,so_number,customer_id,status,issue_date,subtotal,tax_total,total,currency,exchange_rate,base_total,base_tax_amount,created_by_id,created_at,updated_at)
+      values (1,$1,'SO-0001',$2,'draft','2026-06-10',$3,$4,$5,'SAR',1,$5,$4,$6,$7,$7)`, [org, inv.customer_id, sSub, sTax, sTot, user, at]);
+    await c.query("insert into sales_order_items (id,sales_order_id,product_id,unit,description,quantity,unit_price,tax_rate_percent,line_total) values (1,1,$1,$2,$3,1,$4,15,$4)", [il.product_id, il.unit, il.description, sSub]);
+    await c.query(`insert into proforma_invoices (id,org_id,proforma_number,customer_id,status,issue_date,subtotal,tax_total,total,currency,exchange_rate,base_total,base_tax_amount,created_by_id,created_at,updated_at)
+      values (1,$1,'PF-0001',$2,'draft','2026-06-10',$3,$4,$5,'SAR',1,$5,$4,$6,$7,$7)`, [org, inv.customer_id, sSub, sTax, sTot, user, at]);
+    await c.query("insert into proforma_invoice_items (id,proforma_invoice_id,product_id,unit,description,quantity,unit_price,tax_rate_percent,line_total) values (1,1,$1,$2,$3,1,$4,15,$4)", [il.product_id, il.unit, il.description, sSub]);
+    await c.query(`insert into delivery_challans (id,org_id,dc_number,customer_id,status,currency,created_by_id,created_at,updated_at)
+      values (1,$1,'DC-0001',$2,'draft','SAR',$3,$4,$4)`, [org, inv.customer_id, user, at]);
+    await c.query("insert into delivery_challan_items (id,delivery_challan_id,product_id,unit,description,quantity) values (1,1,$1,$2,$3,1)", [il.product_id, il.unit, il.description]);
+    await c.query(`insert into credit_notes (id,org_id,credit_note_number,customer_id,source_invoice_id,currency,exchange_rate,base_total,base_tax_amount,status,issue_date,subtotal,tax_total,total,created_by_id,created_at)
+      values (1,$1,'CN-0001',$2,$3,'SAR',1,$6,$5,'draft','2026-06-10',$4,$5,$6,$7,$8)`, [org, inv.customer_id, inv.id, sSub, sTax, sTot, user, at]);
+    await c.query("insert into credit_note_items (id,credit_note_id,product_id,unit,description,quantity,unit_price,tax_rate_percent,line_total) values (1,1,$1,$2,$3,1,$4,15,$4)", [il.product_id, il.unit, il.description, sSub]);
+    await c.query(`insert into debit_notes (id,org_id,debit_note_number,vendor_id,source_purchase_order_id,currency,exchange_rate,base_total,base_tax_amount,status,issue_date,subtotal,tax_total,total,created_by_id,created_at)
+      values (1,$1,'DN-0001',$2,$3,'SAR',1,$6,$5,'draft','2026-06-10',$4,$5,$6,$7,$8)`, [org, po.vendor_id, po.id, pSub, pTax, pTot, user, at]);
+    await c.query("insert into debit_note_items (id,debit_note_id,product_id,unit,description,quantity,unit_cost,tax_rate_percent,line_total) values (1,1,$1,$2,$3,1,$4,15,$4)", [pl.product_id, pl.unit, pl.description, pSub]);
+    await c.query("update document_sequences set next_number = next_number + 1 where org_id = $1 and document_type = any($2)", [org, C7_DRAFT_TYPES]);
+    await c.query("commit");
+  } catch (e) {
+    await c.query("rollback");
+    throw e;
+  }
+  return ["SO-0001", "PF-0001", "DC-0001", "CN-0001", "DN-0001"];
+}
+/** Remove writeC7Drafts' five drafts (only them) and put the numbering sequences back. */
+export async function removeC7Drafts(c) {
+  const db = (await c.query("select current_database() as d")).rows[0].d;
+  if (!db.startsWith(DB_PREFIX)) throw new IsolationError(`refusing to edit '${db}': not a ${DB_PREFIX}* database`);
+  const org = (await c.query("select org_id from users where email = $1", [OWNER_EMAIL])).rows[0].org_id;
+  await c.query("begin");
+  try {
+    const gone = [
+      await c.query("delete from sales_order_items where sales_order_id in (select id from sales_orders where id = 1 and so_number = 'SO-0001')"),
+      await c.query("delete from sales_orders where id = 1 and so_number = 'SO-0001'"),
+      await c.query("delete from proforma_invoice_items where proforma_invoice_id in (select id from proforma_invoices where id = 1 and proforma_number = 'PF-0001')"),
+      await c.query("delete from proforma_invoices where id = 1 and proforma_number = 'PF-0001'"),
+      await c.query("delete from delivery_challan_items where delivery_challan_id in (select id from delivery_challans where id = 1 and dc_number = 'DC-0001')"),
+      await c.query("delete from delivery_challans where id = 1 and dc_number = 'DC-0001'"),
+      await c.query("delete from credit_note_items where credit_note_id in (select id from credit_notes where id = 1 and credit_note_number = 'CN-0001')"),
+      await c.query("delete from credit_notes where id = 1 and credit_note_number = 'CN-0001'"),
+      await c.query("delete from debit_note_items where debit_note_id in (select id from debit_notes where id = 1 and debit_note_number = 'DN-0001')"),
+      await c.query("delete from debit_notes where id = 1 and debit_note_number = 'DN-0001'"),
+    ].map((r) => r.rowCount);
+    if (gone.some((n) => n !== 1)) throw new Error(`removeC7Drafts: expected one row each, removed ${gone.join(" ")}`);
+    await c.query("update document_sequences set next_number = next_number - 1 where org_id = $1 and document_type = any($2)", [org, C7_DRAFT_TYPES]);
+    await c.query("commit");
+  } catch (e) {
+    await c.query("rollback");
+    throw e;
+  }
+}
 const settled = (page) => page.evaluate(() => document.fonts.ready.then(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))));
 
 /** Reach a control with the keyboard (Tab), so :focus-visible matches as it would for a user. */
@@ -456,6 +570,21 @@ export const ARCH_ACTIONS = {
       if (f.widgets !== 10 || f.quick !== 0 || f.hr < 0 || f.projects < 0 || f.hr > f.projects || f.strip !== 0) throw new Error(`Dashboard with a customized layout: ${JSON.stringify(f)}`);
     } finally {
       await restore();
+    }
+  },
+  // C7 fixture: the five families' TEST-ONLY drafts, written for this state and removed straight after (the page
+  // stays as rendered). The page must be the document, where it was asked for — its number in .inv-head, or its
+  // editor: the titlebar with its DocTopActions (the editors have no <form> element; they save from those buttons).
+  "c7-draft": async (page, s) => {
+    await onRunCopy((c) => writeC7Drafts(c));
+    try {
+      await page.reload({ waitUntil: "networkidle", timeout: 60000 });
+      await settled(page);
+      const f = await page.evaluate(() => ({ path: location.pathname, number: document.querySelector("main .inv-head .mono")?.textContent?.trim() ?? null, editor: Boolean(document.querySelector("main .doc-titlebar .doc-titlebar-actions")) }));
+      const want = { "/sales/orders": "SO-0001", "/sales/proforma": "PF-0001", "/sales/delivery-challans": "DC-0001", "/sales/credit-notes": "CN-0001", "/purchasing/debit-notes": "DN-0001" }[s.route.path.replace(/\/1(\/edit)?$/, "")];
+      if (f.path !== s.route.path || (s.route.path.endsWith("/edit") ? !f.editor : f.number !== want)) throw new Error(`C7 draft page ${s.route.path}: ${JSON.stringify(f)} (expected ${s.route.path.endsWith("/edit") ? "its editor" : want})`);
+    } finally {
+      await onRunCopy((c) => removeC7Drafts(c));
     }
   },
   // C6: the range selector by keyboard — Tab to it, Enter. Its menu must open on the seven ranges, the current
