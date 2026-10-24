@@ -80,11 +80,23 @@
  * surface, the typography and document-form verifiers' deliberate C7 updates, and everything C6 froze still C6's.
  * Its pins change nothing.
  *
+ * C8 (the remediation) adds group 16. D-2 — the P0 decision "hide Profit / Margin until COGS is trustworthy", held
+ * unimplemented through C3 – C7 — applied as presentation only: the project's Cost & Profitability shows four factual
+ * figures (StatRow columns={4}: Sales Value, Invoiced, Collected, Total Cost) with no Actual Profit, Profit Margin,
+ * project_health badge or health colour; the P&L screen shows no Gross Profit card or row. Every other application file
+ * is C7's to the byte; the engines, the status registry, the dictionary and the P&L export route (which still lists Gross
+ * Profit — an open decision) untouched. Groups 6, 11 and 12 undo the seven D-2 hunks (D2_EDITS) before holding these two
+ * files to C7's / C3's / C4's code, so every older pin keeps its strength; their "D-2 held" checks are replaced by checks
+ * that require the suppression. And the DataTable runtime suite's test-only synchronization (the Filters popover's Escape
+ * contract — closed and focus back on its trigger — waited for and asserted before Views is used) with its failure
+ * diagnostics: group 15 undoes those hunks (DT_EDITS) before holding the suite at C6's bytes. Its pins change nothing.
+ *
  * `--write-pins` recomputes verify/page-archetype-pins.json from the working tree. Only a stage that
  * deliberately re-baselines may run it, and the diff of that file is what its review reads.
  * docs/ui/dev-ui-01-7/c0-foundations-and-guardrails.md, docs/ui/dev-ui-01-7/c1-master-data-and-detail.md,
  * docs/ui/dev-ui-01-7/c3-projects-and-kanban.md, docs/ui/dev-ui-01-7/c4-finance-and-reports.md,
- * docs/ui/dev-ui-01-7/c6-dashboard-archetype.md, docs/ui/dev-ui-01-7/c7-heading-semantics.md
+ * docs/ui/dev-ui-01-7/c6-dashboard-archetype.md, docs/ui/dev-ui-01-7/c7-heading-semantics.md,
+ * docs/ui/dev-ui-01-7/c8-remediation.md
  */
 import { readFileSync, readdirSync, statSync, existsSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
@@ -306,6 +318,77 @@ const C7_CSS_TWINS: [string, string][] = [
   [".doc-titlebar h3 { font-size: 22px; font-weight: 700; display: flex; align-items: center; gap: 10px; }",
     ".doc-titlebar h1 { font-size: 22px; font-weight: 700; display: flex; align-items: center; gap: 10px; }"],
 ];
+
+/**
+ * DEV-UI-01.7 C8 (D-2, the recorded P0 decision): no profit, margin or profitability badge on a project's Cost &
+ * Profitability, and no Gross Profit card or row on the P&L screen, until COGS is trustworthy — presentation only.
+ * Every C8 source hunk, [C7, C8] byte for byte. Groups 6, 11 and 12 undo them before holding these two files to C7's
+ * (and so C3's / C4's) code; group 16 proves each file is C7's plus exactly these hunks and asserts the suppression.
+ */
+const D2_EDITS: Record<string, [string, string][]> = {
+  [C3_COST]: [
+    ['import { statusLabel, statusTextClass, type StatusDomain } from "@/lib/status-registry";\nimport { StatusBadge } from "@/components/ui/status-badge";\n',
+      'import { statusLabel, type StatusDomain } from "@/lib/status-registry";\n'],
+    ["  const { revenue, cost, profit, marginPercent, health, rows, labourEstimate, excludedUnconverted } = data;\n" +
+      "  // Actual Profit and Profit Margin keep the project's health colour — the status registry's\n" +
+      "  // (project_health), the same tone as the badge beside the heading. No other figure is coloured.\n" +
+      '  const healthText = statusTextClass("project_health", health);\n',
+    "  // D-2 (DEV-UI-01.7 C8): no profit, margin or profitability badge until COGS is trustworthy — the engine\n" +
+      "  // still computes them (project-costing.ts unchanged); this section shows the factual figures only.\n" +
+      "  const { revenue, cost, rows, labourEstimate, excludedUnconverted } = data;\n"],
+    ['        title={t(locale, "Cost & Profitability")}\n        meta={<StatusBadge domain="project_health" status={health} locale={locale} />}\n        className="mb-[22px]"\n',
+      '        title={t(locale, "Cost & Profitability")}\n        className="mb-[22px]"\n'],
+    ["      {/* Six figures, three across (two at ≤640px, D-6): plain values, Collected and Total Cost included. */}\n      <StatRow\n        columns={3}\n",
+      "      {/* Four factual figures, four across (two at ≤640px, D-6): plain values. */}\n      <StatRow\n        columns={4}\n"],
+    ['          { label: t(locale, "Total Cost"), value: <Money amount={cost.total} context="summary" /> },\n' +
+      '          { label: t(locale, "Actual Profit"), value: <span className={healthText}><Money amount={profit} context="summary" /></span> },\n' +
+      '          { label: t(locale, "Profit Margin"), value: <span className={healthText}>{marginPercent === null ? "—" : `${marginPercent.toFixed(1)}%`}</span> },\n        ]}\n',
+    '          { label: t(locale, "Total Cost"), value: <Money amount={cost.total} context="summary" /> },\n        ]}\n'],
+  ],
+  [C4_REPORTS]: [
+    ["  return (\n    <>\n      <Cards items={[\n" +
+      '        { label: t(locale, "Revenue"), value: d.revenueTotal, delta: prev ? d.revenueTotal - prev.revenueTotal : undefined },\n' +
+      '        { label: t(locale, "Gross Profit"), value: d.grossProfit, delta: prev ? d.grossProfit - prev.grossProfit : undefined },\n',
+    "  // D-2 (DEV-UI-01.7 C8): no Gross Profit card or row on screen until COGS is trustworthy. finance-reports.ts still\n" +
+      "  // computes grossProfit, and the export route still lists it (an open decision, not part of this change).\n" +
+      "  return (\n    <>\n      <Cards items={[\n" +
+      '        { label: t(locale, "Revenue"), value: d.revenueTotal, delta: prev ? d.revenueTotal - prev.revenueTotal : undefined },\n'],
+    ['      {d.costOfSales.map(line)}\n      <Row label={t(locale, "Gross Profit")} value={d.grossProfit} final />\n      <GroupLabel>{t(locale, "Operating Expenses")}</GroupLabel>\n',
+      '      {d.costOfSales.map(line)}\n      <GroupLabel>{t(locale, "Operating Expenses")}</GroupLabel>\n'],
+  ],
+};
+/** A D-2 file with its C8 hunks undone — C7's bytes, when they are its only change (group 16). */
+const undoD2 = (f: string, s: string) => (D2_EDITS[f] ?? []).reduce((acc, [was, is]) => acc.replace(is, () => was), s);
+/**
+ * DEV-UI-01.7 C8 (DataTable verification, test-only): every hunk of verify/verify-datatable-runtime.mjs, [C7, C8] byte for byte —
+ * the Filters popover's Escape contract (popover closed AND focus back on its trigger) waited for and asserted at the two
+ * Filters → Views transitions, and failure diagnostics (the Filters trigger named apart from the Views trigger, the active
+ * element and focus() stacks in a failing check's detail). Group 15 undoes them before holding the suite at C6's / C7's
+ * bytes; group 16 proves they are its only change. Generated from the diff, so each is exact and unique in both files.
+ */
+const DT_EDITS: [string, string][] = [
+  [" *      current / manage → rename (no limit: 69 chars, persisted, reloaded, applied) / delete\n",
+    " *      current / manage → rename (no limit: 69 chars, persisted, reloaded, applied) / delete; before Views is used\n *      after the Filters popover, its Escape must have returned focus to the Filters trigger (DEV-UI-01.7 C8)\n"],
+  ["// Focus recorder for the menu → Dialog handoff. focusin is logged as trigger / menu / dialog:<kind> / tag, and\n// focusout as \"out:<from>><to>\" with its relatedTarget. The regression (measured): ~100 ms after the Dialog\n// focuses its control, the closing menu moves focus to the Views trigger — the control blurs with\n// relatedTarget = trigger and the Dialog's focus trap pulls focus straight back, so the trigger never even\n// logs a focusin. Keystrokes in that gap are lost. Hence focusout is what must be watched.\nconst startFocusLog = () => page.evaluate(() => {\n  window.__focusLog = [];\n",
+    "// Focus recorder for the menu → Dialog handoff. focusin is logged as trigger / filters / menu / dialog:<kind> / tag, and\n// focusout as \"out:<from>><to>\" with its relatedTarget. The regression (measured): ~100 ms after the Dialog\n// focuses its control, the closing menu moves focus to the Views trigger — the control blurs with\n// relatedTarget = trigger and the Dialog's focus trap pulls focus straight back, so the trigger never even\n// logs a focusin. Keystrokes in that gap are lost. Hence focusout is what must be watched.\n// DEV-UI-01.7 C8 (diagnostics only): the Filters trigger is named apart from the Views trigger (\"filters\"), and every\n// programmatic focus() while the recorder is installed is kept with its call stack — printed only when a check fails.\nconst startFocusLog = () => page.evaluate(() => {\n  window.__focusLog = [];\n  window.__focusCalls = [];\n"],
+  ["      return t.closest?.(\"[data-list-views]\") ? \"trigger\" : d ? `dialog:${d.dataset.savedViewDialog}` : t.closest?.('[role=\"menu\"]') ? \"menu\" : String(t.tagName).toLowerCase();\n    };\n    document.addEventListener(\"focusin\", (e) => window.__focusLog.push(name(e.target)), true);\n    document.addEventListener(\"focusout\", (e) => window.__focusLog.push(`out:${name(e.target)}>${name(e.relatedTarget)}`), true);\n  }\n});\nconst focusLog = () => page.evaluate(() => window.__focusLog ?? []);\n",
+    "      return t.closest?.(\"[data-list-views]\") ? \"trigger\" : t.closest?.(\"[data-list-filters]\") ? \"filters\" : d ? `dialog:${d.dataset.savedViewDialog}` : t.closest?.('[role=\"menu\"]') ? \"menu\" : String(t.tagName).toLowerCase();\n    };\n    window.__focusName = name;\n    document.addEventListener(\"focusin\", (e) => window.__focusLog.push(name(e.target)), true);\n    document.addEventListener(\"focusout\", (e) => window.__focusLog.push(`out:${name(e.target)}>${name(e.relatedTarget)}`), true);\n    const focus = HTMLElement.prototype.focus;\n    HTMLElement.prototype.focus = function (...args) {\n      window.__focusCalls.push(`${name(this)} ← ${(new Error().stack ?? \"\").split(\"\\n\").slice(2, 6).map((s) => s.trim()).join(\" ← \")}`);\n      return focus.apply(this, args);\n    };\n  }\n});\nconst focusLog = () => page.evaluate(() => window.__focusLog ?? []);\n/** For a failure's detail only: where keyboard focus is now, and the last focus() calls the recorder saw (with stacks). */\nconst focusState = () => page.evaluate(() => ({ active: window.__focusName ? window.__focusName(document.activeElement) : String(document.activeElement?.tagName), calls: (window.__focusCalls ?? []).slice(-8) }));\n"],
+  ["const triggerFocused = () => page.waitForFunction(() => document.activeElement?.matches?.(\"[data-list-views]\"), null, { timeout: 3000 }).then(() => true).catch(() => false);\n// Ordinary close: open by keyboard, Escape → focus back on the Views trigger (Radix default, not suppressed).\n",
+    "const triggerFocused = () => page.waitForFunction(() => document.activeElement?.matches?.(\"[data-list-views]\"), null, { timeout: 3000 }).then(() => true).catch(() => false);\n// DEV-UI-01.7 C8 — the Filters popover's Escape contract, waited for and asserted at both Filters → Views transitions.\n// Escape closes it in two steps: Radix removes the popover from the DOM, then — in FocusScope's unmount timer, measured\n// 6–16 ms later — Popover's onCloseAutoFocus returns keyboard focus to its trigger. layersClosed() sees only the first,\n// so the suite used to move on to Views in between, and a late return could take focus from the Views trigger (Enter\n// then opened the Filters popover, not the menu) or from the Save dialog's input. Wait for both: a condition with a\n// bound, never a sleep. A return that never comes is a FAIL (and stops the saved-view block), not a skipped step.\nasync function closeFiltersByEscape(step) {\n  await startFocusLog();\n  await page.keyboard.press(\"Escape\");\n  await layersClosed();\n  const returned = await page.waitForFunction(() => !document.querySelector(\"[data-radix-popper-content-wrapper]\") && !!document.activeElement?.matches?.(\"main [data-list-filters]\"), null, { timeout: 5000 })\n    .then(() => true, () => false);\n  check(`Filters popover (${step}): Escape closes it and keyboard focus is back on the Filters trigger before the suite moves on to Views`,\n    returned, returned ? \"\" : JSON.stringify({ ...(await focusState()), log: await focusLog() }));\n  if (!returned) throw new Error(`the Filters popover never returned focus to its trigger (${step})`);\n}\n// Ordinary close: open by keyboard, Escape → focus back on the Views trigger (Radix default, not suppressed).\n"],
+  ["await page.locator('[role=\"option\"]').filter({ hasText: /^Sent$/ }).click();\nawait page.keyboard.press(\"Escape\");\nawait layersClosed();\n",
+    "await page.locator('[role=\"option\"]').filter({ hasText: /^Sent$/ }).click();\nawait closeFiltersByEscape(\"status Sent chosen, before Save current view\");\n"],
+  ["check(\"save handoff: the Dialog input takes focus, the Views trigger never regains it, and immediate typing keeps the full name\",\n  saveState.value === viewName && saveState.focused && !triggerStoleFocus(saveLog), JSON.stringify({ value: saveState.value, focused: saveState.focused, log: saveLog }));\n",
+    "const saveOk = saveState.value === viewName && saveState.focused && !triggerStoleFocus(saveLog);\ncheck(\"save handoff: the Dialog input takes focus, the Views trigger never regains it, and immediate typing keeps the full name\",\n  saveOk, JSON.stringify({ value: saveState.value, focused: saveState.focused, log: saveLog, ...(saveOk ? {} : await focusState()) }));\n"],
+  ["await page.locator(\"[data-radix-popper-content-wrapper] button\", { hasText: /Clear filters/ }).click();\nawait page.keyboard.press(\"Escape\");\nawait layersClosed();\n",
+    "await page.locator(\"[data-radix-popper-content-wrapper] button\", { hasText: /Clear filters/ }).click();\nawait closeFiltersByEscape(\"filters cleared, before applying the saved view\");\n"],
+  ["check(\"manage handoff: focus moves into the Manage dialog and the Views trigger does not take it back\", manageInside && !triggerStoleFocus(manageLog), JSON.stringify({ manageInside, log: manageLog }));\n",
+    "const manageOk = manageInside && !triggerStoleFocus(manageLog);\ncheck(\"manage handoff: focus moves into the Manage dialog and the Views trigger does not take it back\", manageOk, JSON.stringify({ manageInside, log: manageLog, ...(manageOk ? {} : await focusState()) }));\n"],
+  ["  check(\"saved-view flow ran to completion (no step stuck)\", false, String(e?.message ?? e).split(\"\\n\").filter((l) => /Timeout|waiting for/.test(l)).join(\" \").slice(0, 300));\n",
+    "  const stuck = String(e?.message ?? e).split(\"\\n\").filter((l) => /Timeout|waiting for|returned focus/.test(l)).join(\" \").slice(0, 300);\n  check(\"saved-view flow ran to completion (no step stuck)\", false, `${stuck} ${JSON.stringify(await focusState().catch(() => null))}`);\n"],
+];
+const DT_SUITE = "verify/verify-datatable-runtime.mjs";
+/** The DataTable runtime suite with its C8 hunks undone — C7's bytes, when they are its only change (group 16). */
+const undoDT = (s: string) => DT_EDITS.reduce((acc, [was, is]) => acc.replace(is, () => was), s);
 
 let pass = 0;
 let fail = 0;
@@ -1035,8 +1118,17 @@ check("consumers: formatDisplayDate on exactly the three planned date surfaces �
   same(now.consumers.formatDisplayDate, pins.consumers.formatDisplayDate) && same(now.consumers.formatDisplayDate, [C6_PAGE, `${HR}attendance/page.tsx`, `${HR}payroll/page.tsx`]),
   now.consumers.formatDisplayDate.join(" "));
 const fileOf = (u: string) => u.slice(0, u.indexOf(": <"));
-check("consumers: SectionHeader on the client / vendor Statement of Account (C1), Salary Structure / Past payroll runs (C2), the project detail's six sections (C3) and the selected report, the selected ledger account and the journal / bank secondary sections (C4), the 13 Settings panel titles, Security's Active Sessions / Security Timeline and Compliance's three sections (C5); EmptyState in the three master-data bins (C1), the five HR empty states (C2), the project detail's three (C3), the six finance empty messages (C4) and the Security Timeline's (C5)",
-  same(now.consumers.SectionHeader, pins.consumers.SectionHeader) && same(now.consumers.EmptyState, pins.consumers.EmptyState) &&
+// C8 (D-2) took the project_health badge out of Cost & Profitability's SectionHeader (its meta): that one entry is undone
+// before the pinned inventory is compared — group 16 proves it is C8's only SectionHeader change.
+const D2_SECTION_HEADER: [string, string] = [`${C3_COST}: <SectionHeader className level meta title>`, `${C3_COST}: <SectionHeader className level title>`];
+const sectionHeadersC7 = (() => {
+  const l = [...now.consumers.SectionHeader];
+  const i = l.indexOf(D2_SECTION_HEADER[1]);
+  if (i >= 0) l[i] = D2_SECTION_HEADER[0];
+  return l.sort();
+})();
+check("consumers: SectionHeader on the client / vendor Statement of Account (C1), Salary Structure / Past payroll runs (C2), the project detail's six sections (C3) and the selected report, the selected ledger account and the journal / bank secondary sections (C4), the 13 Settings panel titles, Security's Active Sessions / Security Timeline and Compliance's three sections (C5) — C8's D-2 meta removal undone (group 16); EmptyState in the three master-data bins (C1), the five HR empty states (C2), the project detail's three (C3), the six finance empty messages (C4) and the Security Timeline's (C5)",
+  same(sectionHeadersC7, pins.consumers.SectionHeader) && same(now.consumers.EmptyState, pins.consumers.EmptyState) &&
     same(now.consumers.SectionHeader.map(fileOf), [`${A}clients/[id]/page.tsx`, `${HR}employees/[id]/page.tsx`, `${HR}payroll/page.tsx`, `${A}purchasing/vendors/[id]/page.tsx`,
       C3_COST, C3_COST, C3_COST, C3_KANBAN, C3_DETAIL, C3_DETAIL, C4_REPORTS, C4_ACCOUNT_VIEW, C4_JOURNAL, C4_BANK,
       ...C5_PANELS.map(([f]) => f), C5_SECURITY, C5_SECURITY, C5_COMPLIANCE, C5_COMPLIANCE, C5_COMPLIANCE].sort()) &&
@@ -1522,7 +1614,8 @@ const C2_FLAT: Record<string, string> = {
 };
 const hunkBad: string[] = [];
 for (const f of C3_FILES) {
-  let s = flat(read(f));
+  // C8's D-2 hunks (cost-control.tsx) undone first: group 16 proves they are its only change since C7.
+  let s = flat(undoD2(f, read(f)));
   for (const [was, is] of C3_HUNKS[f]) {
     const n = s.split(squash(is)).length - 1;
     if (n !== 1) hunkBad.push(`${rel(f)}: ${n}× ${squash(is).slice(0, 60)}…`);
@@ -1531,7 +1624,7 @@ for (const f of C3_FILES) {
   if (h16(s) !== C2_FLAT[f]) hunkBad.push(`${rel(f)}: not C2's once C3's hunks are undone (${h16(s)})`);
 }
 const nHunks = Object.values(C3_HUNKS).flat().length;
-check(`C3 changed nothing in the five Projects files but its own ${nHunks} hunks: undo them and each is C2's code to the character (comments and whitespace aside) — the queries, FigureRow, the drill tables, the warning, the dialog; the list's search, stats, table, RowMenu, ListEmptyState and live region`,
+check(`C3 changed nothing in the five Projects files but its own ${nHunks} hunks: undo them (C8's D-2 hunks first, group 16) and each is C2's code to the character (comments and whitespace aside) — the queries, FigureRow, the drill tables, the warning, the dialog; the list's search, stats, table, RowMenu, ListEmptyState and live region`,
   hunkBad.length === 0 && nHunks === 39, hunkBad.join(" | "));
 // Projects files C3 must not touch, byte for byte (actions.ts and project-costing.ts are group 4's business pins).
 const C3_UNTOUCHED: Record<string, string> = {
@@ -1578,8 +1671,9 @@ const sec = (f: string, key: string) => jsxEls(f, "SectionHeader").find((el) => 
 const [costHead, tasksHead, timeHead, docsHead] = [sec(C3_COST, "Cost&Profitability"), sec(C3_KANBAN, "Tasks"), sec(C3_DETAIL, "Timeloggedthisweek"), sec(C3_DETAIL, "LinkedDocuments")];
 check("C3 sections: Cost & Profitability, Tasks, Time logged this week and Linked Documents are SectionHeader h2s; Revenue and Costs SectionHeader h3s in the breakdown cards",
   secBad.length === 0, secBad.join(" | "));
-check("C3 section slots: the project_health StatusBadge is Cost & Profitability's meta (outside the h2; domain and raw status as before); Add Task — label, variant, the create dialog — the Tasks action; LogTimeDialog the Time-logged action under the same condition (employees and tasks); Linked Documents none",
-  attrCode(costHead, "meta") === '{<StatusBadgedomain="project_health"status={health}locale={locale}/>}' && attrCode(costHead, "actions") === "" &&
+// C8 (D-2): Cost & Profitability lost its meta — C3's project_health StatusBadge (group 16 holds the hunk).
+check("C3 section slots, C8's D-2 applied: Cost & Profitability has no meta and no actions (the project_health badge C3 put there is gone, group 16); Add Task — label, variant, the create dialog — the Tasks action; LogTimeDialog the Time-logged action under the same condition (employees and tasks); Linked Documents none",
+  costHead !== undefined && attr(costHead, "meta") === undefined && attrCode(costHead, "actions") === "" &&
     attrCode(tasksHead, "actions") === '{<Buttonvariant="secondary"onClick={(e)=>openNew(e.currentTarget)}><PlusclassName="size-3.5"/>{t(locale,"AddTask")}</Button>}' && attrCode(tasksHead, "meta") === "" &&
     attrCode(timeHead, "actions") === '{employees.length>0&&tasks.length>0?(<LogTimeDialoglocale={locale}tasks={tasks.map((task)=>({id:task.id,title:task.title}))}employees={employees}/>):null}' &&
     attrCode(docsHead, "actions") === "" && attrCode(docsHead, "meta") === "");
@@ -1595,19 +1689,18 @@ check("C3 kanban: COLUMNS unchanged — todo, in_progress, blocked, done, in tha
 const SUMMARY_ITEMS =
   '{[{label:t(locale,"Budget"),value:project.budget?<Moneyamount={project.budget}context="summary"/>:"—"},' +
   '{label:`${t(locale,"Tasks")}·${costControl.labourEstimate.hours.toFixed(1)}${t(locale,"Hourslogged").toLowerCase()}`,value:tasks.length,},]}';
+// C8 (D-2): the four factual figures, as C3 wrote them; Actual Profit and Profit Margin (C3's last two) are gone.
 const COST_ITEMS =
   '{[{label:t(locale,"SalesValue"),value:<Moneyamount={revenue.confirmed}context="summary"/>},{label:t(locale,"Invoiced"),value:<Moneyamount={revenue.invoiced}context="summary"/>},' +
-  '{label:t(locale,"Collected"),value:<Moneyamount={revenue.received}context="summary"/>},{label:t(locale,"TotalCost"),value:<Moneyamount={cost.total}context="summary"/>},' +
-  '{label:t(locale,"ActualProfit"),value:<spanclassName={healthText}><Moneyamount={profit}context="summary"/></span>},' +
-  '{label:t(locale,"ProfitMargin"),value:<spanclassName={healthText}>{marginPercent===null?"—":`${marginPercent.toFixed(1)}%`}</span>},]}';
+  '{label:t(locale,"Collected"),value:<Moneyamount={revenue.received}context="summary"/>},{label:t(locale,"TotalCost"),value:<Moneyamount={cost.total}context="summary"/>},]}';
 const rowsOf = (f: string) => jsxEls(f, "StatRow").map((el) => [attrCode(el, "columns"), attrCode(el, "items")]);
 const summaryRow = jsxEls(C3_DETAIL, "StatRow")[0];
 const summaryBox = summaryRow && ts.isJsxElement(summaryRow.parent) ? summaryRow.parent.openingElement : undefined;
 check("C3 project summary: one StatRow, columns={2} — Budget (its Money, or —) and Tasks · <hours> hours logged (labourEstimate.hours, tasks.length), the labels as they were — in a max-w-[520px] box (the 520px composition), no inline style",
   same(rowsOf(C3_DETAIL), [["{2}", SUMMARY_ITEMS]]) && summaryBox !== undefined && strAttr(summaryBox, "className") === "max-w-[520px]" && summaryBox.attributes.properties.length === 1,
   JSON.stringify(rowsOf(C3_DETAIL)));
-check("C3 Cost & Profitability KPIs: one StatRow, columns={3} — Sales Value, Invoiced, Collected, Total Cost, Actual Profit, Profit Margin, in that order, the engine's figures as handed in; Collected and Total Cost plain (their green / warning was decoration); no colorClass on any item",
-  same(rowsOf(C3_COST), [["{3}", COST_ITEMS]]), JSON.stringify(rowsOf(C3_COST)));
+check("Cost & Profitability KPIs (C3, D-2 applied in C8): one StatRow, columns={4} — exactly Sales Value, Invoiced, Collected, Total Cost, in that order, the engine's figures as handed in, all plain (no colorClass, no health class); no Actual Profit or Profit Margin item",
+  same(rowsOf(C3_COST), [["{4}", COST_ITEMS]]), JSON.stringify(rowsOf(C3_COST)));
 const inlineGrid = C3_FILES.filter((f) => /gridTemplateColumns|display:\s*"grid"|stat-row-2|repeat\(/.test(codeOnly(read(f)))).map(rel);
 const gridTokens = C3_FILES.flatMap((f) => classTokens(f).filter((c) => /^(grid-cols-\d+|col-span-\d+)$/.test(c)).map((c) => `${rel(f)}: ${c}`));
 check("C3: no inline grid in a Projects file — no gridTemplateColumns, no inline display: grid, no hand-built .stat-row-2 (StatRow and mockup-parity.css own the grids); the one grid utility is the task dialog's two-field row, as in C2",
@@ -1709,32 +1802,33 @@ const numCells = jsxEls(C3_DETAIL, "TableCell").filter((el) => attr(el, "numeric
 check("C3 RTL: no physical left / right in the five Projects files (the four text-right sites are gone); Hours and Amount — header and cell — on the table's logical numeric API (TableHead / TableCell numeric: the inline end, either direction), num-tabular kept",
   c3Phys.length === 0 && same(numHeads, ['{t(locale,"Hours")}', '{t(locale,"Amount")}']) && same(numCells, ["num-tabular", "num-tabular"]), [...c3Phys, ...numHeads, ...numCells].join(" "));
 
-// D-2: held exactly as it is
+// D-2: decided at P0 and held unimplemented through C3 – C7; C8 applies it (presentation only — group 16 holds the hunks)
 const costSrc = read(C3_COST);
 const recompute = C3_FILES.flatMap((f) =>
   findAll(parse(f), (n) => ts.isBinaryExpression(n) && [ts.SyntaxKind.PlusToken, ts.SyntaxKind.MinusToken, ts.SyntaxKind.AsteriskToken, ts.SyntaxKind.SlashToken, ts.SyntaxKind.PercentToken].includes(n.operatorToken.kind))
     .map((n) => `${rel(f)}: ${squash(n.getText())}`));
-const figureRefs = findAll(parse(C3_COST), (n) => ts.isIdentifier(n) && (n.text === "profit" || n.text === "marginPercent")).length;
-check("D-2 (still undecided — held, not resolved): Actual Profit and Profit Margin are shown, from the engine's result as handed in (the destructure of data unchanged: profit / marginPercent read nowhere else), the project_health badge beside the heading; no arithmetic in a Projects file but C2's own (the task-avatar colour index, the 7-day window, the list's status counts) — nothing recomputed in the page; the detail still hands getProjectCostControl's result to the section",
-  costSrc.includes("const { revenue, cost, profit, marginPercent, health, rows, labourEstimate, excludedUnconverted } = data;") && figureRefs === 5 &&
-    COST_ITEMS.includes('{label:t(locale,"ActualProfit"),value:<spanclassName={healthText}><Moneyamount={profit}context="summary"/></span>}') &&
-    COST_ITEMS.includes('{label:t(locale,"ProfitMargin"),value:<spanclassName={healthText}>{marginPercent===null?"—":`${marginPercent.toFixed(1)}%`}</span>}') &&
-    attrCode(costHead, "meta") === '{<StatusBadgedomain="project_health"status={health}locale={locale}/>}' &&
+/** Identifiers the cost control may no longer read: the engine's profitability fields and C3's health class. */
+const profitRefs = findAll(parse(C3_COST), (n) => ts.isIdentifier(n) && ["profit", "marginPercent", "health", "healthText", "statusTextClass", "StatusBadge"].includes(n.text)).map((n) => n.getText());
+const costingSrc = read("src/lib/project-costing.ts");
+check("D-2 applied (C8, presentation only): the cost control shows no Actual Profit, no Profit Margin and no project_health badge — the destructure of data takes revenue, cost, rows, labourEstimate and excludedUnconverted only (no profit, marginPercent, health, healthText, statusTextClass or StatusBadge in the file); project-costing.ts still computes and returns profit, marginPercent and health, byte-pinned (group 4); no arithmetic in a Projects file but C2's own (the task-avatar colour index, the 7-day window, the list's status counts) — nothing recomputed in the page; the detail still hands getProjectCostControl's result to the section",
+  costSrc.includes("const { revenue, cost, rows, labourEstimate, excludedUnconverted } = data;") && profitRefs.length === 0 &&
+    !/"(Actual Profit|Profit Margin)"/.test(costSrc) && costHead !== undefined && attr(costHead, "meta") === undefined &&
+    costingSrc.includes("marginPercent: invoiced > 0 ? (profit / invoiced) * 100 : null,") && costingSrc.includes('health: invoiced <= 0 ? "no_revenue" : profit >= 0 ? "profitable" : "loss",') &&
+    now.business["src/lib/project-costing.ts"] === pins.business["src/lib/project-costing.ts"] &&
     same(recompute, ["projects/projects-list-client.tsx: (counts[r.status]??0)+1", "projects/[id]/page.tsx: Date.now()-7*24*60*60*1000", "projects/[id]/page.tsx: 7*24*60*60*1000",
       "projects/[id]/page.tsx: 7*24*60*60", "projects/[id]/page.tsx: 7*24*60", "projects/[id]/page.tsx: 7*24", "projects/[id]/kanban-board.tsx: task.assigneeId%AVATAR_GRADIENTS.length"]) &&
     jsxEls(C3_DETAIL, "ProjectCostControlSection").map((el) => flat(el.getText())).join() === "<ProjectCostControlSectionlocale={locale}data={costControl}/>",
-  `${figureRefs} ${recompute.join(" | ")}`);
+  `${profitRefs.join(" ")} ${recompute.join(" | ")}`);
 const accents = (codeOnly(costSrc).match(/var\(--(accent-red|accent-green|warning|success|danger)\)/g) ?? []).sort();
-check('C3 project-health colour: Actual Profit and Profit Margin take the registry\'s class — statusTextClass("project_health", health) around the value — and nothing else picks it: no profitTone, no health → colour map or comparison of health in a Projects file; the only accent colours left in the cost control are the lower detail\'s, as in C2 (Received Payments green, Total Project Cost warning, a negative drill row red)',
-  costSrc.includes('const healthText = statusTextClass("project_health", health);') && C3_FILES.every((f) => !/profitTone|\bhealth\s*[!=]==|\b(loss|profitable|no_revenue)\s*:/.test(codeOnly(read(f)))) &&
+check("Project health colour (C3's, removed by C8's D-2): nothing in a Projects file picks a profitability colour — no statusTextClass, no healthText, no profitTone, no health → colour map or comparison of health; the only accent colours left in the cost control are the lower detail's, as in C2 (Received Payments green, Total Project Cost warning, a negative drill row red)",
+  !/statusTextClass|healthText|project_health/.test(codeOnly(costSrc)) && C3_FILES.every((f) => !/profitTone|\bhealth\s*[!=]==|\b(loss|profitable|no_revenue)\s*:/.test(codeOnly(read(f)))) &&
     same(accents, ["var(--accent-green)", "var(--accent-red)", "var(--warning)"]) &&
     (costSrc.match(/tone="var\(--accent-green\)"/g) ?? []).length === 1 && (costSrc.match(/strong tone="var\(--warning\)"/g) ?? []).length === 1 && /r\.negative \? "var\(--accent-red\)"/.test(costSrc),
   accents.join(" "));
 
-// Status and copy
+// Status and copy (C8's D-2 removed the cost control's project_health badge; the list's and the board's are C2's)
 const C2_PROJECT_BADGES: Record<string, string[]> = {
   "projects/projects-list-client.tsx": ['domain="project" status={r.status} locale={locale}'],
-  "projects/[id]/cost-control.tsx": ['domain="project_health" status={health} locale={locale}'],
   "projects/[id]/kanban-board.tsx": ['domain="task" status="done" locale={locale}'],
 };
 const c3Badges = Object.fromEntries(C3_FILES.map((f) => [rel(f), jsxEls(f, "StatusBadge").map((el) => el.attributes.properties.map((p) => p.getText()).join(" "))]).filter(([, v]) => v.length));
@@ -1747,7 +1841,7 @@ for (const f of C3_FILES) {
   visit(parse(f));
 }
 const c3NoArabic = [...c3Keys].filter((k) => !/[؀-ۿ]/.test(translate("ar", k)));
-check(`C3: status only through StatusBadge in the Projects files — the same 3 badges, domains and raw values as C2 — and every t() key they use (${c3Keys.size}) has an Arabic entry`,
+check(`C3: status only through StatusBadge in the Projects files — C2's badges, domains and raw values but the cost control's project_health one (C8, D-2): the list's project and the board's task — and every t() key they use (${c3Keys.size}) has an Arabic entry`,
   same(c3Badges, C2_PROJECT_BADGES) && c3NoArabic.length === 0, `${JSON.stringify(c3Badges)} ${c3NoArabic.join(" | ")}`);
 
 // ---------- 12. C4 — Finance and reports ----------
@@ -1834,7 +1928,8 @@ const C3_FLAT: Record<string, string> = {
 };
 const c4HunkBad: string[] = [];
 for (const f of C4_FILES) {
-  let s = flat(read(f));
+  // C8's D-2 hunks (reports-workspace.tsx) undone first: group 16 proves they are its only change since C7.
+  let s = flat(undoD2(f, read(f)));
   for (const [was, is] of C4_HUNKS[f]) {
     const n = s.split(squash(is)).length - 1;
     if (n !== 1) c4HunkBad.push(`${rel(f)}: ${n}× ${squash(is).slice(0, 60)}…`);
@@ -1843,7 +1938,7 @@ for (const f of C4_FILES) {
   if (h16(s) !== C3_FLAT[f]) c4HunkBad.push(`${rel(f)}: not C3's once C4's hunks are undone (${h16(s)})`);
 }
 const nC4Hunks = Object.values(C4_HUNKS).flat().length;
-check(`C4 changed nothing in the eight finance files but its own ${nC4Hunks} hunks: undo them and each is C3's code to the character (comments and whitespace aside) — the report bodies and their figures, the date presets, the export links, the compare toggle, the drill-down, the statement and ledger queries, the ledger table, the payments table, the journal form, the bank cards, every dialog and its trigger`,
+check(`C4 changed nothing in the eight finance files but its own ${nC4Hunks} hunks: undo them (C8's D-2 hunks first, group 16) and each is C3's code to the character (comments and whitespace aside) — the report bodies and their figures, the date presets, the export links, the compare toggle, the drill-down, the statement and ledger queries, the ledger table, the payments table, the journal form, the bank cards, every dialog and its trigger`,
   c4HunkBad.length === 0 && nC4Hunks === 32, c4HunkBad.join(" | "));
 const c4CssCount = C4_CSS_HUNKS.map(([, is]) => cssNow.split(cssFlat(is)).length - 1);
 check("mockup-parity.css is C3's plus C4's two .acct-grid edits and nothing else: undo them and it is C3's to the character (comments and whitespace aside) — .two-col, .stat-row-2 (D-6), .cost-breakdown-grid, .kanban, the dashboard, Settings, document and print rules untouched (C6's Dashboard hunks aside, group 14)",
@@ -1953,15 +2048,22 @@ const C3_BODIES: Record<string, [string, "fn" | "var"]> = {
   GroupLabel: ["9414622ee36ca219", "fn"], ExcludedNote: ["033b876382d5f32a", "fn"], sourceLabel: ["901ee66337096f1a", "fn"], DrillDrawer: ["70bfb6f4332438a0", "fn"],
   PrintStyles: ["00382a60892f6a6a", "fn"], setParams: ["9c432ade6f0235f5", "fn"], openDrill: ["c5f85bdd5dfdee5a", "fn"], inSearch: ["e0a8fda3364e8beb", "var"], cell: ["feb5605265549717", "var"],
 };
-const bodiesBad = Object.entries(C3_BODIES).filter(([n, [hsh, kind]]) => !same(kind === "fn" ? fnHash(C4_REPORTS, n) : varHash(C4_REPORTS, n), [hsh])).map(([n]) => n);
-check("C4 report bodies (§13): PnlView, BsView, CfView, TbView, GlView, AgingView, VatView, the summary Cards, Row, Num (the drill-down), GroupLabel, ExcludedNote, sourceLabel, the drill drawer, the print styles, inSearch and cell — and setParams / openDrill — each C3's to the canonical character: filters, compare-period, drill targets and number rendering unchanged",
+// Hashed on the workspace with C8's D-2 hunks undone (group 16 proves they are its only change since C7): PnlView is C3's
+// but for exactly them, and every other body is C3's as it stands.
+const repC7 = ts.createSourceFile(C4_REPORTS, undoD2(C4_REPORTS, read(C4_REPORTS)), ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+const bodyHashC7 = (name: string, kind: "fn" | "var") => findAll(repC7, kind === "fn" ? fnNamed(name) : varNamed(name)).map((n) => h16(canon(n)));
+const bodiesBad = Object.entries(C3_BODIES).filter(([n, [hsh, kind]]) => !same(bodyHashC7(n, kind), [hsh]) || (n !== "PnlView" && !same(kind === "fn" ? fnHash(C4_REPORTS, n) : varHash(C4_REPORTS, n), [hsh]))).map(([n]) => n);
+check("C4 report bodies (§13): PnlView (C8's D-2 hunks undone, group 16), BsView, CfView, TbView, GlView, AgingView, VatView, the summary Cards, Row, Num (the drill-down), GroupLabel, ExcludedNote, sourceLabel, the drill drawer, the print styles, inSearch and cell — and setParams / openDrill — each C3's to the canonical character: filters, compare-period, drill targets and number rendering unchanged",
   bodiesBad.length === 0, bodiesBad.join(" "));
 const pnl = findAll(parse(C4_REPORTS), fnNamed("PnlView"))[0];
 const pnlCode = pnl ? flat(pnl.getText()) : "";
-check("D-2 (still undecided — held, not resolved): the P&L shows Gross Profit as the engine computes it — its summary card (d.grossProfit, delta against the previous period) and its final row between Cost of Sales and Operating Expenses — and finance-reports.ts still computes grossProfit = revenueTotal - costOfSalesTotal (byte-pinned); no arithmetic added to the workspace (PnlView is C3's, above)",
-  pnlCode.includes('{label:t(locale,"GrossProfit"),value:d.grossProfit,delta:prev?d.grossProfit-prev.grossProfit:undefined}') &&
-    pnlCode.includes('{d.costOfSales.map(line)}<Rowlabel={t(locale,"GrossProfit")}value={d.grossProfit}final/><GroupLabel>{t(locale,"OperatingExpenses")}</GroupLabel>') &&
-    read("src/lib/finance-reports.ts").includes("const grossProfit = revenueTotal - costOfSalesTotal;") && now.business["src/lib/finance-reports.ts"] === pins.business["src/lib/finance-reports.ts"]);
+const repCode = flat(read(C4_REPORTS));
+check("D-2 applied (C8, presentation only): the P&L shows no Gross Profit — its summary cards are exactly Revenue and Net Profit (their values and deltas against the previous period as before), and Cost of Sales' lines are followed directly by Operating Expenses (no Gross Profit row); no grossProfit read and no \"Gross Profit\" key anywhere in the workspace; finance-reports.ts still computes grossProfit = revenueTotal - costOfSalesTotal and the export route still lists it (both business-pinned, group 4 — the export is an open decision)",
+  pnlCode.includes('<Cardsitems={[{label:t(locale,"Revenue"),value:d.revenueTotal,delta:prev?d.revenueTotal-prev.revenueTotal:undefined},{label:t(locale,"NetProfit"),value:d.netProfit,delta:prev?d.netProfit-prev.netProfit:undefined},]}/>') &&
+    pnlCode.includes('{d.costOfSales.map(line)}<GroupLabel>{t(locale,"OperatingExpenses")}</GroupLabel>') &&
+    !repCode.includes("grossProfit") && !repCode.includes('"GrossProfit"') &&
+    read("src/lib/finance-reports.ts").includes("const grossProfit = revenueTotal - costOfSalesTotal;") && now.business["src/lib/finance-reports.ts"] === pins.business["src/lib/finance-reports.ts"] &&
+    read(`${FN}reports/export/route.ts`).includes('{ section: "", account: "Gross Profit", amount: money(d.grossProfit) }') && now.business[`${FN}reports/export/route.ts`] === pins.business[`${FN}reports/export/route.ts`]);
 
 // The report picker, the search, the report h2
 const pickerMaps = findAll(parse(C4_REPORTS), (n) => ts.isCallExpression(n) && flat(n.expression.getText()) === "REPORTS.map") as ts.CallExpression[];
@@ -2676,13 +2778,68 @@ const C7_FROZEN: Record<string, string> = {
   [`${A}documents/_workspace/use-list-filters.ts`]: "e9bc8477a32c2877", [`${A}documents/_workspace/saved-view-actions.ts`]: "4e2a260f754684b0",
   "src/components/layout/page-header.tsx": "f54789d9a9de8073",
 };
-const c7Frozen = Object.entries(C7_FROZEN).filter(([f, hsh]) => !exists(f) || sha(f) !== hsh).map(([f]) => f);
-check("C7 freezes C6: dict.ts (no dictionary change), the four Dashboard files, verify-compliance-claims.mjs, the P0 / P0.1 / P0.2 verifiers, the DataTable runtime suite and the list workspace (toolbar, filters, saved views), PageHeader — each byte-identical to C6 (20eff7d)",
+// The DataTable runtime suite is held with C8's synchronization hunks undone (group 16 proves they are its only change).
+const c7Frozen = Object.entries(C7_FROZEN).filter(([f, hsh]) => !exists(f) || (f === DT_SUITE ? h16(undoDT(read(f))) : sha(f)) !== hsh).map(([f]) => f);
+check("C7 freezes C6: dict.ts (no dictionary change), the four Dashboard files, verify-compliance-claims.mjs, the P0 / P0.1 / P0.2 verifiers, the DataTable runtime suite (C8's synchronization hunks undone, group 16) and the list workspace (toolbar, filters, saved views), PageHeader — each byte-identical to C6 (20eff7d)",
   c7Frozen.length === 0, c7Frozen.join(" "));
 const c7Census = walk("src").filter((f) => f.endsWith(".tsx") && !C7_SRC.includes(f))
   .map((f) => [f, c7Headings(read(f)).map((tg) => tg.slice(1, 3)).join(",")]).filter(([, tags]) => tags).map(([f, tags]) => `${f}:${tags}`);
 check(`C7: no blanket heading replacement — outside its 28 files every .tsx holds exactly the headings it held in C6 (${c7Census.length} files, file by file)`,
   h16(c7Census.join("\n")) === "8f201e6e6c7a0ed9", h16(c7Census.join("\n")));
+
+// ---------- 16. C8 — the remediation: D-2 applied, the DataTable suite synchronized ----------
+section("16. C8 — D-2 presentation suppression and DataTable focus synchronization");
+// C7's bytes (004cd35) of the two files D-2 touches; each is C7's plus exactly its D2_EDITS hunks.
+const D2_C7_SHA: Record<string, string> = { [C3_COST]: "10827a6bbbada948", [C4_REPORTS]: "a3a43b8521157483" };
+const d2Drift = Object.keys(D2_EDITS).filter((f) => {
+  const src = read(f);
+  return !D2_EDITS[f].every(([was, is]) => src.split(is).length === 2 && !src.includes(was)) || h16(undoD2(f, src)) !== D2_C7_SHA[f];
+});
+check("C8 D-2 changed nothing in its two source files but its own 7 hunks — cost-control.tsx: the profitability imports, the destructure (with its comment), the badge meta, the StatRow to columns={4}, Actual Profit and Profit Margin; reports-workspace.tsx: PnlView's Gross Profit card (with its comment) and row — each once, its C7 form nowhere; undone, each file is C7's to the byte",
+  same(Object.keys(D2_C7_SHA).sort(), Object.keys(D2_EDITS).sort()) && Object.values(D2_EDITS).flat().length === 7 && d2Drift.length === 0, d2Drift.map(rel).join(" "));
+// Every other application file, byte for byte: C7's src tree without the two D-2 files (497 files at 004cd35).
+const d2Others = walk("src").filter((f) => !(f in D2_EDITS));
+const srcRestHash = createHash("sha256");
+for (const f of d2Others) {
+  srcRestHash.update(f + "\0");
+  srcRestHash.update(readFileSync(path.join(ROOT, f)));
+}
+const srcRest = `${srcRestHash.digest("hex").slice(0, 16)} (${d2Others.length} files)`;
+check(`C8 changed no other application file: every file under src/ but the two is C7's to the byte (${d2Others.length}) — the engines, the export route, the status registry, the dictionary, the list workspace and its saved-view toolbar among them (the DataTable correction is test-only)`,
+  srcRest === "fcf68a21ad67fc8a (497 files)", srcRest);
+// Nowhere else on screen: outside src/lib (the engines, the registry, the dictionary) no file names or reads what D-2 hides.
+const REPORT_EXPORT = `${FN}reports/export/route.ts`;
+const D2_HIDDEN = /"(Actual Profit|Profit Margin|Gross Profit)"|\b(grossProfit|marginPercent)\b|project_health/;
+const d2Seen = walk("src").filter((f) => /\.tsx?$/.test(f) && !f.startsWith("src/lib/") && f !== REPORT_EXPORT && D2_HIDDEN.test(codeOnly(read(f)))).map(rel);
+check('D-2 on screen: no application file outside src/lib names or reads what D-2 hides — no "Actual Profit", "Profit Margin" or "Gross Profit" label, no grossProfit / marginPercent read, no project_health status (so no profitability badge or health colour anywhere) — but the P&L export route, whose Gross Profit row is an open decision outside this on-screen correction (business-pinned, unchanged)',
+  d2Seen.length === 0 && D2_HIDDEN.test(codeOnly(read(REPORT_EXPORT))), d2Seen.join(" "));
+check("D-2 is presentation only: project-costing.ts (profit, marginPercent, health), finance-reports.ts (grossProfit), the status registry (project_health and its mappings) and the P&L export route (its Gross Profit row) are still their business pins (group 4); dict.ts is C7's to the byte — Actual Profit, Profit Margin and Gross Profit kept with their Arabic; project_health still a registry domain",
+  [ "src/lib/project-costing.ts", "src/lib/finance-reports.ts", "src/lib/status-registry.ts", REPORT_EXPORT].every((f) => !!pins.business[f] && now.business[f] === pins.business[f]) &&
+    sha("src/lib/i18n/dict.ts") === "ad171858a8128535" && ["Actual Profit", "Profit Margin", "Gross Profit"].every(hasArabic) && /\nconst project_health: Domain = \{/.test(read("src/lib/status-registry.ts")));
+// The DataTable runtime suite (test-only): C7's plus exactly DT_EDITS.
+const dtSrc = read(DT_SUITE);
+const dtC7 = undoDT(dtSrc);
+const dtDrift = DT_EDITS.filter(([was, is]) => dtSrc.split(is).length !== 2 || dtSrc.includes(was)).length;
+check(`C8 DataTable suite: its only change is the ${DT_EDITS.length} synchronization and diagnostic hunks — each once, its C7 form nowhere; undone, verify-datatable-runtime.mjs is C7's to the byte (and so C6's, group 15)`,
+  DT_EDITS.length === 9 && dtDrift === 0 && h16(dtC7) === "7dd991ed407faf91", `${dtDrift} ${h16(dtC7)}`);
+const blockOf = (s: string, start: string, end: string) => {
+  const i = s.indexOf(start);
+  return i < 0 ? null : s.slice(i, s.indexOf(end, i) + end.length);
+};
+const closeFn = blockOf(dtSrc, "async function closeFiltersByEscape(step) {", "\n}\n") ?? "";
+const dtCode = codeOnly(dtSrc);
+const count = (s: string, re: RegExp) => (s.match(re) ?? []).length;
+check("C8 DataTable synchronization: both Filters → Views transitions (status Sent chosen → Save current view; filters cleared → apply the saved view) close the popover through closeFiltersByEscape — Escape, the layers gone, then a bounded wait for the popover removed AND keyboard focus on main [data-list-filters] (Radix's documented return to the trigger); a recorded check, and a throw when the return never comes (no silent catch); no bare Escape + layersClosed() left before a Views step; no sleep added (settle / waitForTimeout as in C7)",
+  count(dtCode, /await closeFiltersByEscape\("/g) === 2 && closeFn.includes('document.activeElement?.matches?.("main [data-list-filters]")') &&
+    closeFn.includes('!document.querySelector("[data-radix-popper-content-wrapper]")') && closeFn.includes("check(`Filters popover (${step}): ") &&
+    closeFn.includes("if (!returned) throw new Error(") && !/waitForTimeout|settle\(/.test(closeFn) &&
+    !/keyboard\.press\("Escape"\);\s*await layersClosed\(\);\s*\/\/ (Save current view|apply an existing view)/.test(dtSrc) &&
+    count(dtCode, /\bsettle\(/g) === count(codeOnly(dtC7), /\bsettle\(/g) && count(dtCode, /waitForTimeout/g) === count(codeOnly(dtC7), /waitForTimeout/g));
+const KEEP: [string, string][] = [["async function openViews() {", "\n}\n"], ["async function escapeRestoresTrigger() {", "\n}\n"], ["const triggerStoleFocus = (log) => {", "\n};\n"],
+  ["const observe = () =>", "\n"], ["const triggerFocused = () =>", "\n"], ["await page.waitForFunction(() => document.activeElement?.matches?.('[data-saved-view-dialog=\"save\"] input')", "await observe();\n"]];
+const keepBad = KEEP.filter(([start, end]) => !blockOf(dtSrc, start, end) || blockOf(dtSrc, start, end) !== blockOf(dtC7, start, end)).map(([start]) => start);
+check("C8 DataTable assertions intact: openViews() (its pointer-click retry is recorded test debt, not refactored), escapeRestoresTrigger(), the excursion rule triggerStoleFocus(), the 400 ms observe() window, triggerFocused() and the immediate typing (keyboard.type straight after the Save input holds focus) are C7's to the character",
+  keepBad.length === 0, keepBad.join(" | "));
 
 console.log("\nGroups:");
 for (const [g, [p, f]] of Object.entries(counts)) console.log(`  ${g}: ${p}/${p + f}`);

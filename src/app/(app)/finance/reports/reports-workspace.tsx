@@ -258,11 +258,12 @@ const inSearch = (s: string, ...fields: string[]) => !s.trim() || fields.some((f
 function PnlView({ locale, d, prev, search, onDrill }: { locale: Locale; d: ProfitAndLoss; prev?: ProfitAndLoss; search: string; onDrill: (x: { id: number; name: string }) => void }) {
   const line = (l: { id: number; code: string; name: string; amount: number }) =>
     inSearch(search, l.code, l.name) ? <Row key={l.id} label={`${l.code} ${accountName(locale, l)}`} value={l.amount} onDrill={() => onDrill({ id: l.id, name: accountName(locale, l) })} /> : null;
+  // D-2 (DEV-UI-01.7 C8): no Gross Profit card or row on screen until COGS is trustworthy. finance-reports.ts still
+  // computes grossProfit, and the export route still lists it (an open decision, not part of this change).
   return (
     <>
       <Cards items={[
         { label: t(locale, "Revenue"), value: d.revenueTotal, delta: prev ? d.revenueTotal - prev.revenueTotal : undefined },
-        { label: t(locale, "Gross Profit"), value: d.grossProfit, delta: prev ? d.grossProfit - prev.grossProfit : undefined },
         { label: t(locale, "Net Profit"), value: d.netProfit, delta: prev ? d.netProfit - prev.netProfit : undefined },
       ]} />
       <GroupLabel>{t(locale, "Revenue")}</GroupLabel>
@@ -270,7 +271,6 @@ function PnlView({ locale, d, prev, search, onDrill }: { locale: Locale; d: Prof
       <Row label={t(locale, "Total Revenue")} value={d.revenueTotal} final />
       <GroupLabel>{t(locale, "Cost of Sales")}</GroupLabel>
       {d.costOfSales.map(line)}
-      <Row label={t(locale, "Gross Profit")} value={d.grossProfit} final />
       <GroupLabel>{t(locale, "Operating Expenses")}</GroupLabel>
       {d.operatingExpenses.map(line)}
       <Row label={t(locale, "Operating Profit")} value={d.operatingProfit} final />

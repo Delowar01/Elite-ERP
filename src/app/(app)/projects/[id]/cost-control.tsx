@@ -1,6 +1,5 @@
 import Link from "next/link";
-import { statusLabel, statusTextClass, type StatusDomain } from "@/lib/status-registry";
-import { StatusBadge } from "@/components/ui/status-badge";
+import { statusLabel, type StatusDomain } from "@/lib/status-registry";
 import { SectionHeader } from "@/components/ui/section-header";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { t, type Locale } from "@/lib/i18n/dict";
@@ -92,30 +91,26 @@ const ROW_TYPE_DOMAIN: Record<string, StatusDomain> = {
   "Debit Note": "debit_note",
 };
 export function ProjectCostControlSection({ locale, data }: { locale: Locale; data: ProjectCostControl }) {
-  const { revenue, cost, profit, marginPercent, health, rows, labourEstimate, excludedUnconverted } = data;
-  // Actual Profit and Profit Margin keep the project's health colour — the status registry's
-  // (project_health), the same tone as the badge beside the heading. No other figure is coloured.
-  const healthText = statusTextClass("project_health", health);
+  // D-2 (DEV-UI-01.7 C8): no profit, margin or profitability badge until COGS is trustworthy — the engine
+  // still computes them (project-costing.ts unchanged); this section shows the factual figures only.
+  const { revenue, cost, rows, labourEstimate, excludedUnconverted } = data;
 
   return (
     <section>
       <SectionHeader
         level={2}
         title={t(locale, "Cost & Profitability")}
-        meta={<StatusBadge domain="project_health" status={health} locale={locale} />}
         className="mb-[22px]"
       />
 
-      {/* Six figures, three across (two at ≤640px, D-6): plain values, Collected and Total Cost included. */}
+      {/* Four factual figures, four across (two at ≤640px, D-6): plain values. */}
       <StatRow
-        columns={3}
+        columns={4}
         items={[
           { label: t(locale, "Sales Value"), value: <Money amount={revenue.confirmed} context="summary" /> },
           { label: t(locale, "Invoiced"), value: <Money amount={revenue.invoiced} context="summary" /> },
           { label: t(locale, "Collected"), value: <Money amount={revenue.received} context="summary" /> },
           { label: t(locale, "Total Cost"), value: <Money amount={cost.total} context="summary" /> },
-          { label: t(locale, "Actual Profit"), value: <span className={healthText}><Money amount={profit} context="summary" /></span> },
-          { label: t(locale, "Profit Margin"), value: <span className={healthText}>{marginPercent === null ? "—" : `${marginPercent.toFixed(1)}%`}</span> },
         ]}
       />
 

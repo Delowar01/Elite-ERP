@@ -21,6 +21,14 @@
  *   flags: --skip-build (reuse .next — only when it was built from the current tree), --only=<route id>[,<route id>…],
  *          --measure-out=<file> (also write what this run measured, for review evidence)
  *
+ * C8 (the remediation — D-2 applied, presentation only) re-records nothing. The project pass now holds Cost &
+ * Profitability to four factual cards (Sales Value, Invoiced, Collected, Total Cost — four across above 640 px, two at
+ * 390, all in the plain value colour), no project_health badge and no Actual Profit or Profit Margin in the text or an
+ * accessible name; the figures are still the c3ref record's (its first four cost figures — derived, not re-recorded).
+ * The value pass holds every P&L state (the default route, ?report=pl, against the previous period, the P&L search) to
+ * the c4ref record without the Gross Profit card and row — derived from it, not re-recorded — and asserts that neither is
+ * shown; every other report and statement state is held to c4ref as it stands.
+ *
  * C7 (document and app-state heading semantics, D-3 — tags only, zero pixel difference) re-recorded the document
  * Recycle Bin and the not-found page (their titles h3 → h1) and adds a heading pass, run first — before any probe
  * writes to this copy: each of the eight document families' list, detail, create and edit page, the Recycle Bin and
@@ -315,14 +323,17 @@ const C3_WORDS = {
     docs: "Linked Documents", priority: "Priority", assignee: "Assignee", unassigned: "Unassigned", low: "Low", medium: "Medium", high: "High", sep: ", ",
     editTask: "Edit Task", newTask: "New Task", addTask: "Add Task", save: "Save", noTasks: "No tasks yet. Add the first task to this project.",
     amount: "Amount", hours: "Hours", budget: "Budget", hoursLogged: "hours logged",
-    kpis: ["Sales Value", "Invoiced", "Collected", "Total Cost", "Actual Profit", "Profit Margin"],
+    // C8 (D-2): the four factual figures; what Cost & Profitability may no longer say (or name) is `hidden`.
+    kpis: ["Sales Value", "Invoiced", "Collected", "Total Cost"],
+    hidden: ["Actual Profit", "Profit Margin"],
   },
   ar: {
     projects: "المشاريع", newProject: "مشروع جديد", cost: "التكلفة والربحية", revenue: "الإيرادات", costs: "التكاليف", tasks: "المهام", time: "الساعات المسجلة هذا الأسبوع",
     docs: "المستندات المرتبطة", priority: "الأولوية", assignee: "المكلَّف", unassigned: "غير مكلَّف", low: "منخفض", medium: "متوسط", high: "مرتفع", sep: "، ",
     editTask: "تعديل المهمة", newTask: "مهمة جديدة", addTask: "إضافة مهمة", save: "حفظ", noTasks: "لا توجد مهام بعد. أضف المهمة الأولى لهذا المشروع.",
     amount: "المبلغ", hours: "الساعات", budget: "الميزانية", hoursLogged: "الساعات المسجَّلة",
-    kpis: ["قيمة المبيعات", "المفوتر", "المُحصَّل", "إجمالي التكلفة", "الربح الفعلي", "هامش الربح"],
+    kpis: ["قيمة المبيعات", "المفوتر", "المُحصَّل", "إجمالي التكلفة"],
+    hidden: ["الربح الفعلي", "هامش الربح"],
   },
 };
 const C3_NUMERIC = [C3_WORDS.en.amount, C3_WORDS.en.hours, C3_WORDS.ar.amount, C3_WORDS.ar.hours];
@@ -992,6 +1003,17 @@ const C3M = (numericWords) => {
       for (const c of [th, ...[...t.querySelectorAll("tbody tr")].map((tr) => tr.children[i]).filter(Boolean)]) numeric.push({ col, tag: c.tagName.toLowerCase(), text: norm(c.textContent), ...align(c) });
     });
   return { vw, overflow: Math.max(0, document.documentElement.scrollWidth - vw), summary, cost, breakdown, kanban, badge, tones, numeric };
+};
+/**
+ * C8 (D-2): which of `words` the page's <main> still says — in its text (as written and as rendered) or in an accessible
+ * name or tooltip (aria-label, title, alt) — compared without case (a label may be drawn in capitals).
+ */
+const SAYS = (words) => {
+  const main = document.querySelector("main");
+  if (!main) return words;
+  const names = [...main.querySelectorAll("[aria-label], [title], [alt]")].flatMap((el) => [el.getAttribute("aria-label"), el.getAttribute("title"), el.getAttribute("alt")]);
+  const said = [main.textContent, main.innerText, ...names].filter(Boolean).join("\n").toLowerCase();
+  return words.filter((w) => said.includes(w.toLowerCase()));
 };
 
 /**
@@ -1739,6 +1761,7 @@ try {
     for (const locale of ["en", "ar"])
       await pass(`C3 ${locale}`, ownerState, locale, null, WIDTHS, async ({ id, w, page, status, finalPath, errors }) => {
         const layout = await page.evaluate(C3M, C3_NUMERIC);
+        layout.d2Says = await page.evaluate(SAYS, C3_WORDS[locale].hidden); // C8 (D-2)
         let kanbanFacts = null;
         if (id === "project-detail" && (w === 1440 || w === 390)) {
           kanbanFacts = await page.evaluate(KANBAN_FACTS, [CARD_PROPS, INNER_PROPS, HEAD_PROPS, null]);
@@ -3004,30 +3027,31 @@ const summaryBad = c3Lbad((v, k) => {
 });
 check("C3 project summary: two across at every width (StatRow columns 2) inside its 520px — Budget, then Tasks · <hours> hours logged — nothing clipped",
   summaryBad.length === 0, list(summaryBad.map(lshow((s) => JSON.stringify(s.summary && [s.summary.tracks, s.summary.perRow, s.summary.width, s.summary.facts.map((f) => f.label)])))));
+// C8 (D-2): Cost & Profitability is four factual cards — StatRow columns={4}, two across at ≤640 px (D-6).
 const costBad = c3Lbad((v, k) => {
   const c = v.cost;
   const phone = k.endsWith("|390");
-  return c && c.cards === 6 && c.tracks === (phone ? 2 : 3) && c.perRow === (phone ? 2 : 3) && c.lines === (phone ? 3 : 2) && !c.clipped && !c.outside &&
+  return c && c.cards === 4 && c.tracks === (phone ? 2 : 4) && c.perRow === (phone ? 2 : 4) && c.lines === (phone ? 2 : 1) && !c.clipped && !c.outside &&
     JSON.stringify(c.facts.map((f) => f.label)) === JSON.stringify(W_(k).kpis);
 });
-check("C3 Cost & Profitability: six cards — Sales Value, Invoiced, Collected, Total Cost, Actual Profit, Profit Margin — three across above 640 px (1440 / 1024 / 768) and two across at 390 (D-6); nothing clipped or past the viewport",
+check("C3 Cost & Profitability, C8's D-2 applied: exactly four cards — Sales Value, Invoiced, Collected, Total Cost — four across above 640 px (1440 / 1024 / 768) and two across at 390 (D-6); nothing clipped or past the viewport",
   costBad.length === 0, list(costBad.map(lshow((s) => JSON.stringify(s.cost && [s.cost.tracks, s.cost.perRow, s.cost.lines, s.cost.clipped, s.cost.facts.map((f) => f.label)])))));
 const colourBad = c3Lbad((v) => {
   const f = v.cost?.facts ?? [];
   const plain = f[0]?.ink;
-  const tone = v.badge?.tone;
-  return f.length === 6 && plain && [1, 2, 3].every((i) => f[i].ink === plain) && v.tones[tone] && f[4].ink === v.tones[tone] && f[5].ink === v.tones[tone] && (tone === "neutral" || f[4].ink !== plain);
+  return f.length === 4 && plain && f.every((x) => x.ink === plain);
 });
-check("C3 D-6 colour: Sales Value, Invoiced, Collected and Total Cost drawn in the one plain value colour (Collected's green and Total Cost's warning gone); Actual Profit and Profit Margin in the registry colour of the project's health — the badge's tone",
-  colourBad.length === 0, list(colourBad.map(lshow((s) => JSON.stringify([s.cost?.facts.map((f) => f.ink), s.badge?.tone, s.tones])))));
+check("C3 D-6 colour, C8's D-2 applied: all four figures drawn in the one plain value colour — no health colour anywhere in the row (Collected's green and Total Cost's warning gone since C3)",
+  colourBad.length === 0, list(colourBad.map(lshow((s) => JSON.stringify(s.cost?.facts.map((f) => f.ink))))));
+// The c3ref record (C2's build) is kept, not re-recorded: what must be shown now is derived from it — the summary as
+// recorded, and the cost row's first four figures (Actual Profit and Profit Margin, its last two, are D-2's).
 const sameFigures = c3Lbad((v, k) => C3R[k] && JSON.stringify(v.summary?.facts.map(({ label, value }) => ({ label, value }))) === JSON.stringify(C3R[k].summary) &&
-  JSON.stringify(v.cost?.facts.map(({ label, value }) => ({ label, value }))) === JSON.stringify(C3R[k].cost));
-check("D-2 held: every figure C2 showed is shown, to the character — Budget, Tasks · hours, Sales Value, Invoiced, Collected, Total Cost, Actual Profit, Profit Margin — on both projects, every width, EN / AR (the c3ref record)",
-  sameFigures.length === 0, list(sameFigures.map((k) => `${k} ${JSON.stringify(C3R[k]?.cost)} → ${JSON.stringify(now.c3.layout[k].cost?.facts.map((f) => f.value))}`)));
-const badgeBad = c3Lbad((v, k) => v.badge && !v.badge.inHeading && v.badge.beside === W_(k).cost && C3R[k] && JSON.stringify(v.badge) .length > 0 &&
-  ["status", "tone", "text", "color", "background"].every((f) => v.badge[f] === C3R[k].badge?.[f]));
-check("D-2 held: the project_health badge as C2 drew it — status, tone, label, colours — now the meta of the Cost & Profitability h2, outside the heading",
-  badgeBad.length === 0, list(badgeBad.map(lshow((s) => JSON.stringify(s.badge)))));
+  Array.isArray(C3R[k].cost) && C3R[k].cost.length === 6 && JSON.stringify(v.cost?.facts.map(({ label, value }) => ({ label, value }))) === JSON.stringify(C3R[k].cost.slice(0, 4)));
+check("D-2 applied, values held: every factual figure C2 showed is shown, to the character — Budget, Tasks · hours, Sales Value, Invoiced, Collected, Total Cost — on both projects, every width, EN / AR (derived from the c3ref record, not re-recorded: its first four cost figures)",
+  sameFigures.length === 0, list(sameFigures.map((k) => `${k} ${JSON.stringify(C3R[k]?.cost?.slice(0, 4))} → ${JSON.stringify(now.c3.layout[k].cost?.facts.map((f) => f.value))}`)));
+const hiddenBad = c3Lbad((v, k) => v.badge === null && Array.isArray(v.d2Says) && v.d2Says.length === 0 && C3R[k]?.badge && W_(k).hidden.length === 2);
+check("D-2 applied: no project_health badge on the page (C2 drew one beside Cost & Profitability, c3ref) and no Actual Profit or Profit Margin — not in the text, not in an accessible name or tooltip — on both projects, every width, EN / AR",
+  hiddenBad.length === 0, list(hiddenBad.map(lshow((s) => JSON.stringify({ badge: s.badge, says: s.d2Says })))));
 const bdBad = c3Lbad((v, k) => {
   const b = v.breakdown;
   const wide = Number(k.split("|")[2]) > 900;
@@ -3194,23 +3218,47 @@ check(`C4 value pass: ${C4_VALUE_CASES.length} report and statement cases × EN 
   (ONLY && !vals.length) || ((ONLY || vals.length === nValues) && valErr.length === 0), list(valErr));
 check(`C4 record: c4ref covers every state of the pass (measured on ${c4Ref?.recordedOn?.commit?.slice(0, 7) ?? "—"}, src ${c4Ref?.recordedOn?.srcClean ? "clean" : "MODIFIED"}, build ${c4Ref?.recordedOn?.build ?? "—"})`,
   (ONLY && !vals.length) || (c4Ref?.recordedOn?.srcClean === true && vals.every(([k]) => C4R[k]) && (ONLY || Object.keys(C4R).every((k) => now.c4.values[k]))), list(vals.filter(([k]) => !C4R[k]).map(([k]) => k)));
-const valueDiff = (pred) => vals.filter(([k]) => pred(k) && C4R[k]).flatMap(([k, v]) =>
-  [...new Set([...Object.keys(C4R[k]), ...Object.keys(v)])].filter((f) => !ERR_FIELDS.includes(f) && JSON.stringify(v[f]) !== JSON.stringify(C4R[k][f]))
-    .map((f) => `${k} ${f}: ${JSON.stringify(C4R[k][f]).slice(0, 90)} → ${JSON.stringify(v[f]).slice(0, 90)}`));
+// C8 (D-2): a P&L state (the default route, ?report=pl, against the previous period, the P&L search) must say exactly what
+// C3's build said without the Gross Profit card and row — derived from the c4ref record, not re-recorded: the card's
+// lines (label, value and, against the previous period, its delta) and the row's two lines leave the body, the card
+// leaves the cards and the row the line count, and the figures are re-read from what is left (in c4ref they are exactly
+// the body's numbers, in order). Every other state is held to its record as it stands.
+const GROSS = { en: "Gross Profit", ar: "إجمالي الربح" };
+const NUMBERS = /[-−]?\(?\d[\d,]*(?:\.\d+)?\)?%?/g;
+const isPnl = (k) => /^report-(default|pl|pl-compare|pl\+search)\|/.test(k);
+function withoutGrossProfit(ref, l) {
+  if (!ref?.body || !ref.cards || !ref.rows) return null;
+  const card = ref.cards.find((c) => c.split(" / ")[0].toLowerCase() === GROSS[l].toLowerCase());
+  const lines = card?.split(" / ") ?? [];
+  const body = [...ref.body];
+  const at = card ? body.findIndex((_, i) => lines.every((x, j) => body[i + j] === x)) : -1;
+  if (at < 0) return null;
+  body.splice(at, lines.length);
+  const row = body.indexOf(GROSS[l]);
+  if (row < 0) return null;
+  body.splice(row, 2);
+  return { ...ref, body, figures: body.join("\n").match(NUMBERS) ?? [], rows: [ref.rows[0] - 1, ...ref.rows.slice(1)], cards: ref.cards.filter((c) => c !== card) };
+}
+const c4Expect = (k) => (isPnl(k) ? withoutGrossProfit(C4R[k], k.split("|")[1]) : C4R[k]);
+const valueDiff = (pred) => vals.filter(([k]) => pred(k) && C4R[k]).flatMap(([k, v]) => {
+  const ref = c4Expect(k);
+  if (!ref) return [`${k}: no Gross Profit card and row in its c4ref state to derive D-2's expectation from`];
+  return [...new Set([...Object.keys(ref), ...Object.keys(v)])].filter((f) => !ERR_FIELDS.includes(f) && JSON.stringify(v[f]) !== JSON.stringify(ref[f]))
+    .map((f) => `${k} ${f}: ${JSON.stringify(ref[f]).slice(0, 90)} → ${JSON.stringify(v[f]).slice(0, 90)}`);
+});
 const reportDiff = valueDiff((k) => k.startsWith("report-"));
-check("C4 report value equality (§47, blocking): the eight reports — and P&L / Balance Sheet / Cash Flow / VAT against the previous period, an account's General Ledger, a custom-range Trial Balance — say exactly what C3's build said: every line, figure and row count, every summary card (value, delta, balance badge), every drill target, the title and range, the picker, presets, dates and compare toggle, the CSV / Excel / PDF links; the search's result and the drill-down's drawer the same (EN / AR, 1440 and 390)",
+check("C4 report value equality (§47, blocking; C8's D-2 applied): the eight reports — and P&L / Balance Sheet / Cash Flow / VAT against the previous period, an account's General Ledger, a custom-range Trial Balance — say exactly what C3's build said (the P&L states without the Gross Profit card and row, derived from c4ref): every line, figure and row count, every summary card (value, delta, balance badge), every drill target, the title and range, the picker, presets, dates and compare toggle, the CSV / Excel / PDF links; the search's result and the drill-down's drawer the same (EN / AR, 1440 and 390)",
   reportDiff.length === 0, list(reportDiff));
 const statementDiff = valueDiff((k) => k.startsWith("statement-"));
 check("C4 statement value equality (§48, blocking): the client and vendor statements, with a party and without, say exactly what C3's build said — the Client / Vendor links, the party, every line, filter and date, every table row (opening, transactions, debit / credit, running balance, closing); after the from-date filter the same (EN / AR, 1440 and 390)",
   statementDiff.length === 0, list(statementDiff));
-const GROSS = { en: "Gross Profit", ar: "إجمالي الربح" };
-const plVals = vals.filter(([k]) => /^report-(default|pl|pl-compare)\|/.test(k));
+const plVals = vals.filter(([k]) => isPnl(k));
 const d2Bad = plVals.filter(([k, v]) => {
-  const l = k.split("|")[1];
-  return !(v.body?.includes(GROSS[l]) && v.cards?.some((c) => c.toLowerCase().startsWith(GROSS[l].toLowerCase())));
+  const g = GROSS[k.split("|")[1]].toLowerCase();
+  return !(v.body && v.cards && v.cards.length === 2 && !v.body.some((x) => x.toLowerCase().includes(g)) && !v.cards.some((c) => c.toLowerCase().includes(g)));
 }).map(([k]) => k);
-check("D-2 (held, not resolved): the P&L still shows Gross Profit — its summary card and its row — on every P&L state (the default route, ?report=pl, against the previous period), its figures C3's (above)",
-  (ONLY && !vals.length) || (plVals.length === 12 && d2Bad.length === 0), list(d2Bad));
+check("D-2 applied (C8): no Gross Profit on any P&L state — the default route, ?report=pl, against the previous period and the P&L search (EN / AR, 1440 / 390): the summary is Revenue and Net Profit, no Gross Profit card, no Gross Profit row; every other line, card, figure, drill target and delta as C3's build said (above)",
+  (ONLY && !vals.length) || (plVals.length === 14 && d2Bad.length === 0), list(d2Bad));
 
 // §43: the report picker by keyboard (blocking).
 const pRuns = Object.entries(now.c4.picker);
@@ -3231,8 +3279,8 @@ for (const [run, r] of pRuns) {
     if (!s.buttons.every((b) => ["true", "false"].includes(b.pressed) && (b.pressed === "true") === b.active && b.type === "button")) why.push("aria-pressed is not the shown-active state on every toggle");
     if (s.url !== STEP_URLS[i]) why.push(`URL ${s.url}`);
     if (s.h2 !== want || s.h2s !== 1) why.push(`h2 "${s.h2}" (${s.h2s} h2s)`);
-    const ref = C4R[`report-${i < 2 ? "default" : s.kind}|${l}|${w}`];
-    if (!ref) why.push("no c4ref state to compare with");
+    const ref = c4Expect(`report-${i < 2 ? "default" : s.kind}|${l}|${w}`); // C8: a P&L step without D-2's Gross Profit
+    if (!ref) why.push("no c4ref state to compare with (or none to derive D-2's P&L expectation from)");
     else {
       if (JSON.stringify(s.exports) !== JSON.stringify(ref.exports.map((e) => e.slice(e.indexOf(" ") + 1)))) why.push(`exports ${JSON.stringify(s.exports)}`);
       const drift = ["title", "body", "figures", "rows", "cards", "drills", "dates", "compare"].filter((f) => JSON.stringify(s.facts?.[f]) !== JSON.stringify(ref[f]));
