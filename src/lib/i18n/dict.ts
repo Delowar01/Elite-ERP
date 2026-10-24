@@ -2010,6 +2010,12 @@ const DICT: Record<string, string> = {
   "No columns configured.": "لا توجد أعمدة مهيأة.",
   "The Actions column is required.": "عمود الإجراءات مطلوب.",
   "The Actions column must stay at the end.": "يجب أن يبقى عمود الإجراءات في النهاية.",
+  // DEV-UI-01.7 C8 (product owner): the financial display policy while Cost of Sales and inventory valuation are
+  // incomplete — the project section's name, the P&L notice, the Balance Sheet's preliminary current-period result.
+  "Project Revenue & Costs": "إيرادات وتكاليف المشروع",
+  "Profit figures are temporarily hidden because Cost of Sales and inventory valuation are not yet complete.": "تم إخفاء مؤشرات الربح مؤقتًا لأن احتساب تكلفة المبيعات وتقييم المخزون لم يكتمل بعد.",
+  Preliminary: "مبدئي",
+  "Preliminary — Cost of Sales and inventory valuation are incomplete. The current-period result may change.": "مبدئي — احتساب تكلفة المبيعات وتقييم المخزون غير مكتمل، وقد تتغير نتيجة الفترة الحالية.",
 };
 
 export function t(locale: Locale, en: string): string {

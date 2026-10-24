@@ -7,7 +7,7 @@ import type { CostDrillRow, ProjectCostControl } from "@/lib/project-costing";
 import { Money } from "../../sales/_shared/money";
 import { StatRow } from "../../sales/_shared/stat-row";
 
-// Cost & Profitability for one project. Every number arrives already computed by
+// Project Revenue & Costs for one project. Every number arrives already computed by
 // src/lib/project-costing.ts — this file only lays it out, so the figures on screen and the figures
 // in the engine can never drift apart.
 
@@ -97,9 +97,10 @@ export function ProjectCostControlSection({ locale, data }: { locale: Locale; da
 
   return (
     <section>
+      {/* DEV-UI-01.7 C8 (product owner): the section is named for what it shows — it was "Cost & Profitability". */}
       <SectionHeader
         level={2}
-        title={t(locale, "Cost & Profitability")}
+        title={t(locale, "Project Revenue & Costs")}
         className="mb-[22px]"
       />
 

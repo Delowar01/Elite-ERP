@@ -29,6 +29,17 @@
  * the c4ref record without the Gross Profit card and row — derived from it, not re-recorded — and asserts that neither is
  * shown; every other report and statement state is held to c4ref as it stands.
  *
+ * C8 final (the product owner's financial display policy) adds one record, c8ref — the Financial Reports exports (the
+ * eight kinds × CSV / Excel / PDF, an EN and an AR session; the PDF read back through pdf-lib's own text operators) and
+ * the export URL without a session and as Staff — measured on the approved remediation's build (c47c65a,
+ * --write-c8ref); it re-records nothing else. The value pass holds every P&L state to c4ref without its three profit
+ * figures (the Gross Profit card and row, the Net Profit card, the Operating Profit and Net Profit / (Loss) rows) and
+ * with the notice after its one card, and every Balance Sheet state to c4ref with its current-period line marked
+ * Preliminary and the disclosure at its end — derived, not re-recorded; the export pass holds the P&L and the Balance
+ * Sheet exports to c8ref with exactly those changes (the notice in the header block) and the six other kinds to it
+ * unchanged; a print pass reads the P&L and the Balance Sheet in print media (the report's lines, its notes, no app
+ * chrome). The project section is Project Revenue & Costs: the recorded outlines are read with that one h2 renamed.
+ *
  * C7 (document and app-state heading semantics, D-3 — tags only, zero pixel difference) re-recorded the document
  * Recycle Bin and the not-found page (their titles h3 → h1) and adds a heading pass, run first — before any probe
  * writes to this copy: each of the eight document families' list, detail, create and edit page, the Recycle Bin and
@@ -185,6 +196,7 @@ import { join, resolve } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 import pg from "pg";
 import { chromium } from "playwright";
+import { PDFArray, PDFDocument, PDFRawStream, StandardFonts, decodePDFRawStream } from "pdf-lib";
 import ts from "typescript";
 import { FROZEN_NOW, OWNER_EMAIL } from "../tests/ui-baseline/config.mjs";
 import { STAFF_EMAIL } from "../tests/ui-baseline/shell-states.mjs";
@@ -213,8 +225,9 @@ const WRITE_C3REF = args.some((a) => a === "--write-c3ref" || a.startsWith("--wr
 const WRITE_C4REF = args.some((a) => a === "--write-c4ref" || a.startsWith("--write-c4ref="));
 const WRITE_C6REF = args.some((a) => a === "--write-c6ref" || a.startsWith("--write-c6ref="));
 const WRITE_C7REF = args.some((a) => a === "--write-c7ref" || a.startsWith("--write-c7ref="));
+const WRITE_C8REF = args.some((a) => a === "--write-c8ref" || a.startsWith("--write-c8ref="));
 /** A pass that records one thing alone: no owner / Staff / sweep passes, no probes. */
-const RECORD_ONLY = WRITE_D6 || WRITE_C3REF || WRITE_C4REF || WRITE_C6REF || WRITE_C7REF;
+const RECORD_ONLY = WRITE_D6 || WRITE_C3REF || WRITE_C4REF || WRITE_C6REF || WRITE_C7REF || WRITE_C8REF;
 /** --only=<id>[,<id>…]: a route (or pass) id containing any of them. */
 const onlyId = (id) => !ONLY || ONLY.split(",").some((o) => o && id.includes(o));
 
@@ -319,7 +332,8 @@ const TASK_STATUS = {
 };
 const C3_WORDS = {
   en: {
-    projects: "Projects", newProject: "New Project", cost: "Cost & Profitability", revenue: "Revenue", costs: "Costs", tasks: "Tasks", time: "Time logged this week",
+    // C8 final: the section's name (cost) — and its name in the records (costC3), read as renamed.
+    projects: "Projects", newProject: "New Project", cost: "Project Revenue & Costs", costC3: "Cost & Profitability", revenue: "Revenue", costs: "Costs", tasks: "Tasks", time: "Time logged this week",
     docs: "Linked Documents", priority: "Priority", assignee: "Assignee", unassigned: "Unassigned", low: "Low", medium: "Medium", high: "High", sep: ", ",
     editTask: "Edit Task", newTask: "New Task", addTask: "Add Task", save: "Save", noTasks: "No tasks yet. Add the first task to this project.",
     amount: "Amount", hours: "Hours", budget: "Budget", hoursLogged: "hours logged",
@@ -328,7 +342,7 @@ const C3_WORDS = {
     hidden: ["Actual Profit", "Profit Margin"],
   },
   ar: {
-    projects: "المشاريع", newProject: "مشروع جديد", cost: "التكلفة والربحية", revenue: "الإيرادات", costs: "التكاليف", tasks: "المهام", time: "الساعات المسجلة هذا الأسبوع",
+    projects: "المشاريع", newProject: "مشروع جديد", cost: "إيرادات وتكاليف المشروع", costC3: "التكلفة والربحية", revenue: "الإيرادات", costs: "التكاليف", tasks: "المهام", time: "الساعات المسجلة هذا الأسبوع",
     docs: "المستندات المرتبطة", priority: "الأولوية", assignee: "المكلَّف", unassigned: "غير مكلَّف", low: "منخفض", medium: "متوسط", high: "مرتفع", sep: "، ",
     editTask: "تعديل المهمة", newTask: "مهمة جديدة", addTask: "إضافة مهمة", save: "حفظ", noTasks: "لا توجد مهام بعد. أضف المهمة الأولى لهذا المشروع.",
     amount: "المبلغ", hours: "الساعات", budget: "الميزانية", hoursLogged: "الساعات المسجَّلة",
@@ -526,6 +540,7 @@ if (WRITE_C3REF && (WRITE || REBASE || ONLY || WRITE_D6)) refuse("--write-c3ref 
 if (WRITE_C4REF && (WRITE || REBASE || ONLY || WRITE_D6 || WRITE_C3REF)) refuse("--write-c4ref records the C4 value pass alone, every case: not with --write-baseline, --rebaseline, --only, --write-d6 or --write-c3ref");
 if (WRITE_C6REF && (WRITE || REBASE || ONLY || WRITE_D6 || WRITE_C3REF || WRITE_C4REF)) refuse("--write-c6ref records the C6 Dashboard value pass alone, every case: not with --write-baseline, --rebaseline, --only, --write-d6, --write-c3ref or --write-c4ref");
 if (WRITE_C7REF && (WRITE || REBASE || ONLY || WRITE_D6 || WRITE_C3REF || WRITE_C4REF || WRITE_C6REF)) refuse("--write-c7ref records the C7 heading pass alone, every page: not with --write-baseline, --rebaseline, --only or another --write-*");
+if (WRITE_C8REF && (WRITE || REBASE || ONLY || WRITE_D6 || WRITE_C3REF || WRITE_C4REF || WRITE_C6REF || WRITE_C7REF)) refuse("--write-c8ref records the C8 final export pass alone, every kind and format: not with --write-baseline, --rebaseline, --only or another --write-*");
 if (REBASE) {
   // A partial re-record must still see every route: the routes it keeps are compared, not copied blind.
   if (ONLY || WRITE) refuse("--rebaseline measures every route and re-records only the ones it names: not with --only or --write-baseline");
@@ -1182,6 +1197,72 @@ const REPORT_FACTS = () => {
   };
 };
 
+/**
+ * C8 final: what the report shows in print media — the report card's lines as the printed page carries them (innerText
+ * leaves out what CSS hides), its title, its notes and whether any app chrome or workspace control still shows.
+ */
+const PRINT_FACTS = () => {
+  const area = document.querySelector("main .reports-print-area");
+  const norm = (s) => (s ?? "").replace(/\s+/g, " ").trim();
+  const lines = (el) => (el?.innerText ?? "").split("\n").map(norm).filter(Boolean);
+  const shown = (el) => {
+    if (!el || getComputedStyle(el).visibility !== "visible") return false;
+    for (let e = el; e; e = e.parentElement) if (getComputedStyle(e).display === "none") return false;
+    return true;
+  };
+  const body = area?.querySelector(":scope > .card:not(.no-print)");
+  // An element with text of its own that the printed page would carry from outside the report area (the app shell) or
+  // from the workspace controls inside it (.no-print): there must be none.
+  const stray = [...document.querySelectorAll("body *")].filter((e) => (!area || !area.contains(e) || e.closest(".no-print")) && shown(e) &&
+    [...e.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim()));
+  return {
+    area: shown(area), title: lines(body?.previousElementSibling), body: lines(body),
+    notes: [...(body?.querySelectorAll('[role="note"]') ?? [])].map((n) => ({ shown: shown(n), text: norm(n.innerText) })),
+    stray: stray.length, straySample: stray.slice(0, 3).map((e) => `${e.tagName.toLowerCase()} ${norm(e.textContent).slice(0, 40)}`),
+  };
+};
+
+/**
+ * C8 final: an export as text — CSV and Excel (HTML) as sent; the PDF read back through pdf-lib (its own text operators):
+ * per page its text runs, each at its position and size, as lines top to bottom and cells left to right ("a | b | c");
+ * which run would pass the right margin, and which carries the exporter's clip mark ("...").
+ */
+const exportFonts = (async () => {
+  const d = await PDFDocument.create();
+  return { regular: await d.embedFont(StandardFonts.Helvetica), bold: await d.embedFont(StandardFonts.HelveticaBold) };
+})();
+async function exportFacts(format, bytes) {
+  if (format !== "pdf") return { text: bytes.toString("utf8") };
+  const fonts = await exportFonts;
+  let doc;
+  try {
+    doc = await PDFDocument.load(bytes);
+  } catch {
+    return { pages: null, lines: [], overflow: [], clipped: [] };
+  }
+  const lines = [], overflow = [], clipped = [];
+  doc.getPages().forEach((page) => {
+    const c = page.node.Contents();
+    const streams = c instanceof PDFArray ? c.asArray().map((r) => doc.context.lookup(r)) : [c];
+    const ops = streams.map((st) => Buffer.from(st instanceof PDFRawStream ? decodePDFRawStream(st).decode() : st.getContents()).toString("latin1")).join("\n");
+    const runs = [];
+    let size = 0, bold = false, x = 0, y = 0;
+    for (const m of ops.matchAll(/\/(\S+) ([\d.]+) Tf|1 0 0 1 ([\d.-]+) ([\d.-]+) Tm|<([0-9A-Fa-f]*)> Tj/g)) {
+      if (m[1]) [bold, size] = [/Bold/.test(m[1]), Number(m[2])];
+      else if (m[3]) [x, y] = [Number(m[3]), Number(m[4])];
+      else runs.push({ x, y, size, bold, text: Buffer.from(m[5], "hex").toString("latin1") });
+    }
+    const byY = new Map();
+    for (const r of runs) byY.set(r.y, [...(byY.get(r.y) ?? []), r]);
+    for (const yy of [...byY.keys()].sort((a, b) => b - a)) lines.push(byY.get(yy).sort((a, b) => a.x - b.x).map((r) => r.text).join(" | "));
+    for (const r of runs) {
+      if (r.x + (r.bold ? fonts.bold : fonts.regular).widthOfTextAtSize(r.text, r.size) > page.getWidth() - 36 + 0.01) overflow.push(r.text);
+      if (r.text.endsWith("...")) clipped.push(r.text);
+    }
+  });
+  return { pages: doc.getPageCount(), lines, overflow, clipped };
+}
+
 /** C4: what a statement says — the Client / Vendor links; every line, input, select and table row of the statement view under them. */
 const STATEMENT_FACTS = () => {
   const main = document.querySelector("main");
@@ -1631,6 +1712,7 @@ const now = {
   c5: { nav: {}, d7: {}, keys: {}, presets: {}, staff: {}, timeline: {}, security: {}, alert: {}, compliance: {} },
   c6: { dash: {}, values: {}, ranges: {}, bp: {}, range: {}, customize: {}, noZatca: {}, zones: {} },
   c7: { states: {}, error: {}, drafts: null, removed: null },
+  c8: { exports: {}, access: {}, print: {}, tenant: {} },
 };
 const prompts = {};
 let fdNode = {};
@@ -1638,7 +1720,7 @@ const fdBrowsers = [];
 const acts = { owner: {}, staff: {} };
 try {
   const ownerState = await login(OWNER_EMAIL);
-  const staffState = RECORD_ONLY ? null : await login(STAFF_EMAIL);
+  const staffState = RECORD_ONLY && !WRITE_C8REF ? null : await login(STAFF_EMAIL);
   // Audit stamps the database wrote with its own clock (these logins' sessions and events, the
   // seeded defaults, the owner's password date): moved to the frozen instant in this TEST-ONLY copy
   // (archetype-states.mjs), as the archetype screenshots do.
@@ -1682,7 +1764,7 @@ try {
   // C7: the heading pass — first, before any probe writes to this copy, so C6's build (--write-c7ref) and this run read
   // the same database: the five families' TEST-ONLY drafts written for it and removed after. EN / AR at 1440 and 390;
   // then the error boundary's markup rendered into <main> with its title as an h3 (C6) and as an h1 (C7).
-  const C7_ON = WRITE_C7REF || (!WRITE_D6 && !WRITE_C3REF && !WRITE_C4REF && !WRITE_C6REF && (!ONLY || ONLY.split(",").includes("c7")));
+  const C7_ON = WRITE_C7REF || (!WRITE_D6 && !WRITE_C3REF && !WRITE_C4REF && !WRITE_C6REF && !WRITE_C8REF && (!ONLY || ONLY.split(",").includes("c7")));
   if (C7_ON) {
     const dbq7 = async (fn) => {
       const c = new pg.Client({ connectionString: env.DATABASE_URL });
@@ -1748,7 +1830,7 @@ try {
     }
   // D-6: every StatRow consumer at every width, EN and AR; actions at 1440 and 390. (--write-d6 records
   // the consumers C2 must leave as they were — not C2's own HR strips.)
-  if (!WRITE_C3REF && !WRITE_C4REF && !WRITE_C6REF && !WRITE_C7REF)
+  if (!WRITE_C3REF && !WRITE_C4REF && !WRITE_C6REF && !WRITE_C7REF && !WRITE_C8REF)
     for (const locale of ["en", "ar"])
       await pass(`D-6 ${locale}`, ownerState, locale, null, WIDTHS, async ({ id, w, page, status, finalPath, errors }) => {
         now.d6[`${id}|${locale}|${w}`] = { status, finalPath, ...(await page.evaluate(D6M)), ...(w === 1440 || w === 390 ? { actions: await page.evaluate(ACTIONS) } : {}), ...errFacts(errors) };
@@ -1757,7 +1839,7 @@ try {
   // C3: the populated and the empty project at every width, EN and AR — the composition (C3M) and, at 1440
   // and 390 on the populated one, the kanban's heads and cards at rest and each card hovered (CSS
   // transitions finished). --write-c3ref records this pass on C2's build.
-  if (!WRITE_D6 && !WRITE_C4REF && !WRITE_C6REF && !WRITE_C7REF)
+  if (!WRITE_D6 && !WRITE_C4REF && !WRITE_C6REF && !WRITE_C7REF && !WRITE_C8REF)
     for (const locale of ["en", "ar"])
       await pass(`C3 ${locale}`, ownerState, locale, null, WIDTHS, async ({ id, w, page, status, finalPath, errors }) => {
         const layout = await page.evaluate(C3M, C3_NUMERIC);
@@ -1782,7 +1864,7 @@ try {
   // STATEMENT_FACTS); at 1440 also a search, the first drill-down and a statement's from-date filter, read
   // the same way. --write-c4ref records this pass on C3's build; every other run holds it to that record.
   const C4_ON = ROUTES.some(([id]) => C4_ROUTES.includes(id));
-  if (!WRITE_D6 && !WRITE_C3REF && !WRITE_C6REF && !WRITE_C7REF && (C4_ON || WRITE_C4REF)) {
+  if (!WRITE_D6 && !WRITE_C3REF && !WRITE_C6REF && !WRITE_C7REF && !WRITE_C8REF && (C4_ON || WRITE_C4REF)) {
     const settle = async (page) => {
       await page.waitForLoadState("networkidle");
       await page.evaluate(() => { document.getAnimations().forEach((a) => a.finish()); return new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))); });
@@ -1832,11 +1914,83 @@ try {
       }, C4_VALUE_CASES);
   }
 
+  // C8 final: the Financial Reports exports — the eight kinds × CSV / Excel / PDF for an EN and an AR session over the
+  // 2026 range, the PDF read back through its own text operators (exportFacts) — and the export URL without a session
+  // and as Staff; then, in print media, the P&L and the Balance Sheet (EN / AR at 1440). --write-c8ref records the
+  // exports on the approved remediation's build (c47c65a); every other run holds them to that record.
+  const C8_ON = WRITE_C8REF || (!RECORD_ONLY && ROUTES.some(([id]) => C4_ROUTES.includes(id)));
+  if (C8_ON) {
+    console.log("  C8 exports …");
+    const cookieOf = (state) => state.cookies.filter((c) => c.name !== "locale" && c.name !== "theme").map((c) => `${c.name}=${c.value}`).join("; ");
+    const exportUrl = (kind, format) => `${BASE}/finance/reports/export?report=${kind}&from=2026-01-01&to=2026-12-31&format=${format}`;
+    for (const locale of ["en", "ar"])
+      for (const kind of REPORT_KINDS)
+        for (const format of ["csv", "xlsx", "pdf"]) {
+          const res = await fetch(exportUrl(kind, format), { redirect: "manual", headers: { Cookie: `${cookieOf(ownerState)}; locale=${locale}; theme=light` } });
+          const bytes = Buffer.from(await res.arrayBuffer());
+          now.c8.exports[`${kind}|${format}|${locale}`] = { status: res.status, type: res.headers.get("content-type"), file: res.headers.get("content-disposition"), ...(await exportFacts(format, bytes)) };
+        }
+    const anon = await fetch(exportUrl("pl", "csv"), { redirect: "manual" });
+    now.c8.access.anonymous = { status: anon.status, location: anon.headers.get("location") };
+    if (staffState) {
+      const st = await fetch(exportUrl("pl", "csv"), { redirect: "manual", headers: { Cookie: `${cookieOf(staffState)}; locale=en; theme=light` } });
+      now.c8.access.staff = { status: st.status, location: st.headers.get("location"), type: st.headers.get("content-type") };
+    }
+    // Tenant scope, observed: the proxy turns away a request without a valid session before the route runs, so only a
+    // second tenant shows that the route itself scopes every query to the session's org. An org registered through the
+    // UI in this run's TEST-ONLY copy (no ledger yet) asks for the eight CSV exports; none may carry the seeded org's.
+    if (!WRITE_C8REF) {
+      const email = "c8-tenant@visual-baseline.test";
+      const password = `Aa1!${randomUUID()}`;
+      const ctx = await context({ locale: "en-US", timezoneId: "UTC" });
+      const p = await ctx.newPage();
+      await p.setViewportSize({ width: 1440, height: 900 });
+      await p.goto(`${BASE}/register`, { waitUntil: "networkidle", timeout: 60000 });
+      await p.fill('input[name="orgName"]', "TEST-ONLY Tenant Scope Co. (Fictional)");
+      await p.fill('input[name="name"]', "Tenant Scope Owner");
+      await p.fill('input[name="email"]', email);
+      await p.fill('input[name="password"]', password);
+      const confirm = p.locator('input[name="confirmPassword"]');
+      if (await confirm.count()) await confirm.fill(password);
+      await pickCountry(p);
+      await Promise.all([p.waitForURL(`${BASE}/dashboard`, { timeout: 60000 }), p.getByRole("button", { name: /register|create|sign up/i }).first().click()]);
+      const tenantState = await ctx.storageState();
+      await ctx.close();
+      for (const kind of REPORT_KINDS) {
+        const res = await fetch(exportUrl(kind, "csv"), { redirect: "manual", headers: { Cookie: `${cookieOf(tenantState)}; locale=en; theme=light` } });
+        now.c8.tenant[kind] = { status: res.status, text: Buffer.from(await res.arrayBuffer()).toString("utf8") };
+      }
+    }
+    if (!WRITE_C8REF) {
+      console.log("  C8 print …");
+      for (const locale of ["en", "ar"]) {
+        const ctx = await context({ storageState: ownerState, locale: BROWSERS[locale].locale, timezoneId: BROWSERS[locale].timezoneId, viewport: { width: 1440, height: 900 } });
+        await ctx.addCookies([{ name: "locale", value: locale, url: BASE }, { name: "theme", value: "light", url: BASE }]);
+        const page = await ctx.newPage();
+        await page.clock.setFixedTime(new Date(FROZEN_NOW));
+        for (const kind of ["pl", "bs"]) {
+          await page.goto(`${BASE}/finance/reports?report=${kind}`, { waitUntil: "networkidle" });
+          const screen = (await page.evaluate(REPORT_FACTS))?.body ?? null;
+          await page.emulateMedia({ media: "print" });
+          // The media switch is a style change like any other: under reduced motion every element carries a 0.01 ms
+          // transition and visibility is transitionable, so a read straight after it can still see the old value.
+          await page.evaluate(() => {
+            document.getAnimations().forEach((a) => a.finish());
+            return new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+          });
+          now.c8.print[`${kind}|${locale}`] = { screen, ...(await page.evaluate(PRINT_FACTS)) };
+          await page.emulateMedia({ media: "screen" });
+        }
+        await ctx.close();
+      }
+    }
+  }
+
   // C6: the Dashboard value pass — this month, the last 30 days, this year at 1440 and 390, EN / AR: every
   // factual value (DASH_VALUES), and on C6's build also the C6 facts of those states. --write-c6ref records
   // it on C5's build; every other run holds it to that record.
   const C6_ON = ROUTES.some(([id]) => id === "dashboard");
-  if (!WRITE_D6 && !WRITE_C3REF && !WRITE_C4REF && !WRITE_C7REF && (C6_ON || WRITE_C6REF))
+  if (!WRITE_D6 && !WRITE_C3REF && !WRITE_C4REF && !WRITE_C7REF && !WRITE_C8REF && (C6_ON || WRITE_C6REF))
     for (const locale of ["en", "ar"])
       await pass(`C6 values ${locale}`, ownerState, locale, null, [[1440, 900], [390, 844]], async ({ id, w, page, status, finalPath, errors }) => {
         now.c6.values[`${id}|${locale}|${w}`] = { status, finalPath, ...(await page.evaluate(DASH_VALUES, c6W(locale))), ...errFacts(errors) };
@@ -2668,12 +2822,27 @@ if (WRITE_C7REF) {
   rmSync(env.STORAGE_FAKE_DIR, { recursive: true, force: true });
   process.exit(0);
 }
+if (WRITE_C8REF) {
+  const failed = Object.entries(now.c8.exports).filter(([, v]) => v.status !== 200 || (v.pages === null)).map(([k]) => k);
+  if (failed.length || Object.keys(now.c8.exports).length !== REPORT_KINDS.length * 3 * 2 || !now.c8.access.anonymous || !now.c8.access.staff)
+    refuse(`--write-c8ref: not recording an export pass with a failed or unreadable export, or a missing one: ${failed.slice(0, 4).join(", ") || `${Object.keys(now.c8.exports).length} exports`}`);
+  const file = args.find((a) => a.startsWith("--write-c8ref="))?.slice(14) || BASELINE_FILE;
+  const out = JSON.parse(readFileSync(file, "utf8"));
+  out.c8ref = {
+    recordedOn: { commit: git("rev-parse", "HEAD"), srcClean: git("status", "--porcelain", "--", "src") === "", build: buildId, chromium: now.chromium },
+    exports: now.c8.exports, access: now.c8.access,
+  };
+  writeFileSync(file, JSON.stringify(out, null, 1) + "\n");
+  console.log(`• wrote the C8 record into ${file}: ${Object.keys(out.c8ref.exports).length} exports, measured on ${out.c8ref.recordedOn.commit.slice(0, 7)} (src ${out.c8ref.recordedOn.srcClean ? "clean" : "MODIFIED"}), build ${buildId}`);
+  rmSync(env.STORAGE_FAKE_DIR, { recursive: true, force: true });
+  process.exit(0);
+}
 if (WRITE) {
   // The probes are checked, not pinned; the D-6 pass is pinned as its record. The C3, C4, C6 and C7 records were
   // measured on C2's, C3's, C5's and C6's builds and cannot be re-measured here: they are carried over as they are.
   const measured = { frozenNow: now.frozenNow, chromium: now.chromium, states: now.states, staff: now.staff, sweep: now.sweep };
   const prev = existsSync(BASELINE_FILE) ? JSON.parse(readFileSync(BASELINE_FILE, "utf8")) : {};
-  writeFileSync(BASELINE_FILE, JSON.stringify({ ...measured, blockedRequests: blocked, d6: d6Record(), ...(prev.c3ref ? { c3ref: prev.c3ref } : {}), ...(prev.c4ref ? { c4ref: prev.c4ref } : {}), ...(prev.c6ref ? { c6ref: prev.c6ref } : {}), ...(prev.c7ref ? { c7ref: prev.c7ref } : {}) }, null, 1) + "\n");
+  writeFileSync(BASELINE_FILE, JSON.stringify({ ...measured, blockedRequests: blocked, d6: d6Record(), ...(prev.c3ref ? { c3ref: prev.c3ref } : {}), ...(prev.c4ref ? { c4ref: prev.c4ref } : {}), ...(prev.c6ref ? { c6ref: prev.c6ref } : {}), ...(prev.c7ref ? { c7ref: prev.c7ref } : {}), ...(prev.c8ref ? { c8ref: prev.c8ref } : {}) }, null, 1) + "\n");
   writeFileSync(ACTIONS_FILE, JSON.stringify(acts, null, 1) + "\n");
   console.log(`• wrote ${BASELINE_FILE} (${Object.keys(now.states).length} owner states, ${Object.keys(now.staff).length} staff, ${Object.keys(now.sweep).length} sweep, the D-6 record) and ${ACTIONS_FILE}`);
 }
@@ -2727,7 +2896,14 @@ check("route behaviour: status and final path as the baseline", exact("status").
 check("direction: lang / dir as the baseline (ar → rtl, en → ltr)", exact("lang").length + exact("dir").length === 0 && keys.every((k) => now.states[k].dir === (k.includes("|ar|") ? "rtl" : "ltr")), list([...exact("lang"), ...exact("dir")]));
 // A --rebaseline run re-records the outline and actions of its routes on purpose: those are listed
 // for review below instead of failing; everything else about them is still compared.
-const outlineDrift = exact("outline").filter((d) => !rebased(d));
+// C8 final: the project section's h2 was renamed (Cost & Profitability → Project Revenue & Costs) — the one authorized
+// difference from the recorded outlines, applied to the record before comparing; the C3 outline check asserts the name.
+const renamedOutline = (k) => {
+  const W = C3_WORDS[k.split("|")[1]];
+  return /^project-(detail|empty)\|/.test(k) ? B[k].outline.map((h) => (h === `h2 ${W.costC3}` ? `h2 ${W.cost}` : h)) : B[k].outline;
+};
+const outlineDrift = keys.filter((k) => B[k] && JSON.stringify(now.states[k].outline) !== JSON.stringify(renamedOutline(k)))
+  .map((k) => `${k} ${JSON.stringify(renamedOutline(k))}→${JSON.stringify(now.states[k].outline)}`).filter((d) => !rebased(d));
 check(`heading outline inside <main> as the baseline${REBASE ? " (re-recorded routes: changes listed below)" : ""}`, outlineDrift.length === 0, list(outlineDrift));
 if (REBASE) {
   const byRoute = new Map();
@@ -2994,7 +3170,7 @@ const c3Out = c3((s, k) => {
   const [id, l] = k.split("|");
   return JSON.stringify(s.outline) === JSON.stringify(c3Outline(id, l, projDb.names)) && s.h1 === 1 && s.skips === 0;
 });
-check("C3: every Projects outline exact — the list and New Project their h1; a project its name (h1), Cost & Profitability (h2) › Revenue, Costs (h3), Tasks (h2) › To do, In progress, Blocked, Done (h3, the registry's labels; populated project only), Time logged this week, Linked Documents (h2); no skip (EN / AR, all widths)",
+check("C3: every Projects outline exact — the list and New Project their h1; a project its name (h1), Project Revenue & Costs (h2; C8 final — it was Cost & Profitability) › Revenue, Costs (h3), Tasks (h2) › To do, In progress, Blocked, Done (h3, the registry's labels; populated project only), Time logged this week, Linked Documents (h2); no skip (EN / AR, all widths)",
   c3Out.length === 0, list(c3Out.map(show((s) => JSON.stringify(s.outline)))));
 const c3Ov = c3((s) => s.overflow === 0 && s.offenders === 0 && s.tablesBeyond === 0);
 check("C3: no page overflow, nothing past the viewport, no table beyond it, on any Projects page at any width", c3Ov.length === 0, list(c3Ov.map(show((s) => `${s.overflow}px ${s.offenders} el ${s.tablesBeyond} tables`))));
@@ -3218,47 +3394,146 @@ check(`C4 value pass: ${C4_VALUE_CASES.length} report and statement cases × EN 
   (ONLY && !vals.length) || ((ONLY || vals.length === nValues) && valErr.length === 0), list(valErr));
 check(`C4 record: c4ref covers every state of the pass (measured on ${c4Ref?.recordedOn?.commit?.slice(0, 7) ?? "—"}, src ${c4Ref?.recordedOn?.srcClean ? "clean" : "MODIFIED"}, build ${c4Ref?.recordedOn?.build ?? "—"})`,
   (ONLY && !vals.length) || (c4Ref?.recordedOn?.srcClean === true && vals.every(([k]) => C4R[k]) && (ONLY || Object.keys(C4R).every((k) => now.c4.values[k]))), list(vals.filter(([k]) => !C4R[k]).map(([k]) => k)));
-// C8 (D-2): a P&L state (the default route, ?report=pl, against the previous period, the P&L search) must say exactly what
-// C3's build said without the Gross Profit card and row — derived from the c4ref record, not re-recorded: the card's
-// lines (label, value and, against the previous period, its delta) and the row's two lines leave the body, the card
-// leaves the cards and the row the line count, and the figures are re-read from what is left (in c4ref they are exactly
-// the body's numbers, in order). Every other state is held to its record as it stands.
-const GROSS = { en: "Gross Profit", ar: "إجمالي الربح" };
+// C8 final (the product owner's policy): a P&L state (the default route, ?report=pl, against the previous period, the P&L
+// search) must say exactly what C3's build said without its three profit figures — the Gross Profit card and row (the
+// remediation's), the Net Profit card, the Operating Profit and Net Profit / (Loss) rows — and with the notice right after
+// its one card; a Balance Sheet state exactly what C3's build said with its current-period line marked Preliminary and
+// the disclosure closing it. Derived from the c4ref record, not re-recorded: a card's lines (label, value and, against
+// the previous period, its delta) and a row's two lines leave the body, the cards and the line count follow, and the
+// figures are re-read from what is left (in c4ref they are exactly the body's numbers, in order). Every other state is
+// held to its record as it stands.
 const NUMBERS = /[-−]?\(?\d[\d,]*(?:\.\d+)?\)?%?/g;
+const P_NOTICE = "Profit figures are temporarily hidden because Cost of Sales and inventory valuation are not yet complete.";
+const B_NOTICE = "Preliminary — Cost of Sales and inventory valuation are incomplete. The current-period result may change.";
+const CP_LINE = "Current-period Profit / (Loss)";
 const isPnl = (k) => /^report-(default|pl|pl-compare|pl\+search)\|/.test(k);
-function withoutGrossProfit(ref, l) {
+const isBs = (k) => /^report-bs(-compare)?\|/.test(k);
+function withoutProfit(ref, l) {
   if (!ref?.body || !ref.cards || !ref.rows) return null;
-  const card = ref.cards.find((c) => c.split(" / ")[0].toLowerCase() === GROSS[l].toLowerCase());
-  const lines = card?.split(" / ") ?? [];
   const body = [...ref.body];
-  const at = card ? body.findIndex((_, i) => lines.every((x, j) => body[i + j] === x)) : -1;
-  if (at < 0) return null;
-  body.splice(at, lines.length);
-  const row = body.indexOf(GROSS[l]);
-  if (row < 0) return null;
-  body.splice(row, 2);
-  return { ...ref, body, figures: body.join("\n").match(NUMBERS) ?? [], rows: [ref.rows[0] - 1, ...ref.rows.slice(1)], cards: ref.cards.filter((c) => c !== card) };
+  let cards = [...ref.cards];
+  for (const label of ["Gross Profit", "Net Profit"]) {
+    const card = cards.find((c) => c.split(" / ")[0].toLowerCase() === T(l, label).toLowerCase());
+    const lines = card?.split(" / ") ?? [];
+    const at = card ? body.findIndex((_, i) => lines.every((x, j) => body[i + j] === x)) : -1;
+    if (at < 0) return null;
+    body.splice(at, lines.length);
+    cards = cards.filter((c) => c !== card);
+  }
+  for (const label of ["Gross Profit", "Operating Profit", "Net Profit / (Loss)"]) {
+    const row = body.indexOf(T(l, label));
+    if (row < 0) return null;
+    body.splice(row, 2);
+  }
+  if (cards.length !== 1) return null;
+  body.splice(cards[0].split(" / ").length, 0, T(l, P_NOTICE));
+  return { ...ref, body, figures: body.join("\n").match(NUMBERS) ?? [], rows: [ref.rows[0] - 3, ...ref.rows.slice(1)], cards };
 }
-const c4Expect = (k) => (isPnl(k) ? withoutGrossProfit(C4R[k], k.split("|")[1]) : C4R[k]);
+function preliminary(ref, l) {
+  const at = ref?.body ? ref.body.indexOf(T(l, CP_LINE)) : -1;
+  if (at < 0) return null;
+  const body = [...ref.body];
+  body[at] = `${body[at]} ${T(l, "Preliminary")}`;
+  return { ...ref, body: [...body, T(l, B_NOTICE)] };
+}
+const c4Expect = (k) => (isPnl(k) ? withoutProfit(C4R[k], k.split("|")[1]) : isBs(k) ? preliminary(C4R[k], k.split("|")[1]) : C4R[k]);
 const valueDiff = (pred) => vals.filter(([k]) => pred(k) && C4R[k]).flatMap(([k, v]) => {
   const ref = c4Expect(k);
-  if (!ref) return [`${k}: no Gross Profit card and row in its c4ref state to derive D-2's expectation from`];
+  if (!ref) return [`${k}: its c4ref state lacks what C8 final's expectation is derived from`];
   return [...new Set([...Object.keys(ref), ...Object.keys(v)])].filter((f) => !ERR_FIELDS.includes(f) && JSON.stringify(v[f]) !== JSON.stringify(ref[f]))
     .map((f) => `${k} ${f}: ${JSON.stringify(ref[f]).slice(0, 90)} → ${JSON.stringify(v[f]).slice(0, 90)}`);
 });
 const reportDiff = valueDiff((k) => k.startsWith("report-"));
-check("C4 report value equality (§47, blocking; C8's D-2 applied): the eight reports — and P&L / Balance Sheet / Cash Flow / VAT against the previous period, an account's General Ledger, a custom-range Trial Balance — say exactly what C3's build said (the P&L states without the Gross Profit card and row, derived from c4ref): every line, figure and row count, every summary card (value, delta, balance badge), every drill target, the title and range, the picker, presets, dates and compare toggle, the CSV / Excel / PDF links; the search's result and the drill-down's drawer the same (EN / AR, 1440 and 390)",
+check("C4 report value equality (§47, blocking; C8 final's policy applied): the eight reports — and P&L / Balance Sheet / Cash Flow / VAT against the previous period, an account's General Ledger, a custom-range Trial Balance — say exactly what C3's build said (the P&L states without their three profit figures and with the notice, the Balance Sheet states with the Preliminary line and the disclosure — derived from c4ref): every line, figure and row count, every summary card (value, delta, balance badge), every drill target, the title and range, the picker, presets, dates and compare toggle, the CSV / Excel / PDF links; the search's result and the drill-down's drawer the same (EN / AR, 1440 and 390)",
   reportDiff.length === 0, list(reportDiff));
 const statementDiff = valueDiff((k) => k.startsWith("statement-"));
 check("C4 statement value equality (§48, blocking): the client and vendor statements, with a party and without, say exactly what C3's build said — the Client / Vendor links, the party, every line, filter and date, every table row (opening, transactions, debit / credit, running balance, closing); after the from-date filter the same (EN / AR, 1440 and 390)",
   statementDiff.length === 0, list(statementDiff));
+// The policy on its own, too.
 const plVals = vals.filter(([k]) => isPnl(k));
-const d2Bad = plVals.filter(([k, v]) => {
-  const g = GROSS[k.split("|")[1]].toLowerCase();
-  return !(v.body && v.cards && v.cards.length === 2 && !v.body.some((x) => x.toLowerCase().includes(g)) && !v.cards.some((c) => c.toLowerCase().includes(g)));
+const profitWords = (l) => ["Gross Profit", "Net Profit", "Operating Profit"].map((w) => T(l, w).toLowerCase());
+const finPlBad = plVals.filter(([k, v]) => {
+  const l = k.split("|")[1];
+  return !(v.body && v.cards && v.cards.length === 1 && v.cards[0].split(" / ")[0].toLowerCase() === T(l, "Revenue").toLowerCase() &&
+    !v.body.some((x) => profitWords(l).some((w) => x.toLowerCase().includes(w))) && v.body.filter((x) => x === T(l, P_NOTICE)).length === 1);
 }).map(([k]) => k);
-check("D-2 applied (C8): no Gross Profit on any P&L state — the default route, ?report=pl, against the previous period and the P&L search (EN / AR, 1440 / 390): the summary is Revenue and Net Profit, no Gross Profit card, no Gross Profit row; every other line, card, figure, drill target and delta as C3's build said (above)",
-  (ONLY && !vals.length) || (plVals.length === 14 && d2Bad.length === 0), list(d2Bad));
+check("C8 final P&L (blocking; the default route, ?report=pl, against the previous period and the P&L search — EN / AR, 1440 / 390): Revenue is the one summary card; no Gross Profit, Operating Profit or Net Profit card, row or word anywhere in the report; the notice once, in the page's language — every line, figure, drill target and delta as C3's build said (above)",
+  (ONLY && !vals.length) || (plVals.length === 14 && finPlBad.length === 0), list(finPlBad));
+const bsVals = vals.filter(([k]) => isBs(k));
+const finBsBad = bsVals.filter(([k, v]) => {
+  const l = k.split("|")[1], ref = C4R[k];
+  const at = ref?.body ? ref.body.indexOf(T(l, CP_LINE)) : -1;
+  return !(at >= 0 && v.body?.[at] === `${T(l, CP_LINE)} ${T(l, "Preliminary")}` && v.body[at + 1] === ref.body[at + 1] && v.body[v.body.length - 1] === T(l, B_NOTICE) &&
+    JSON.stringify(v.cards) === JSON.stringify(ref.cards) && JSON.stringify(v.figures) === JSON.stringify(ref.figures) && JSON.stringify(v.rows) === JSON.stringify(ref.rows));
+}).map(([k]) => k);
+check("C8 final Balance Sheet (blocking; ?report=bs and against the previous period — EN / AR, 1440 / 390): Current-period Profit / (Loss) keeps its line and its amount (c4ref's) and reads Preliminary; the disclosure closes the statement in the page's language; every figure — the assets, liabilities and equity lines, Retained Earnings, the current-period amount, Total Assets, Total Liabilities, Total Equity, Total Liabilities + Equity — and the four cards, the balance check Balanced among them, as C3's build said",
+  (ONLY && !vals.length) || (bsVals.length === 8 && finBsBad.length === 0), list(finBsBad));
+// Print: the P&L and the Balance Sheet as a printed page carries them.
+const prRuns = Object.entries(now.c8.print);
+const prBad = prRuns.filter(([k, r]) => {
+  const [kind, l] = k.split("|");
+  return !(r.area && r.stray === 0 && r.title.length >= 2 && r.body.length > 0 && JSON.stringify(r.body) === JSON.stringify(r.screen) &&
+    r.notes.length === 1 && r.notes[0].shown && r.notes[0].text === T(l, kind === "pl" ? P_NOTICE : B_NOTICE));
+}).map(([k, r]) => `${k} ${JSON.stringify({ area: r.area, stray: r.stray, sample: r.straySample, title: r.title, notes: r.notes, lines: r.body.length, screen: r.screen?.length })}`);
+check("C8 final print (blocking; EN / AR at 1440): in print media the P&L and the Balance Sheet carry the report — its title and range, every line the screen shows, the notice or the disclosure (shown, in the page's language) — and nothing of the app shell or the workspace controls (before C8 final a printed report was blank: the shell's preview-print rule hid it)",
+  (ONLY && !prRuns.length) || ((ONLY || prRuns.length === 4) && prBad.length === 0), list(prBad));
+// Exports: held to c8ref, the approved remediation's build — the P&L and the Balance Sheet with the policy's changes only.
+const C8R = (WRITE ? null : pinned.c8ref) ?? null;
+const DROPPED = ["Gross Profit", "Operating Profit", "Net Profit / (Loss)"];
+const htmlEsc = (x) => x.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+const reEsc = (x) => x.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+function c8Export(key, ref) {
+  const [kind, format] = key.split("|");
+  if (!ref || (kind !== "pl" && kind !== "bs")) return ref;
+  const note = kind === "pl" ? P_NOTICE : B_NOTICE;
+  if (format === "csv") {
+    const lines = ref.text.replace(/^﻿/, "").split("\r\n");
+    const rows = kind === "pl" ? lines.filter((l) => !DROPPED.some((x) => l.startsWith(`,${x},`))) : lines.map((l) => (l.startsWith(`Equity,${CP_LINE},`) ? l.replace(`Equity,${CP_LINE},`, `Equity,${CP_LINE} (Preliminary),`) : l));
+    return { ...ref, text: "﻿" + [`Note,${note}`, "", ...rows].join("\r\n") };
+  }
+  if (format === "xlsx") {
+    let html = ref.text.replace("</h3>", `</h3><table style="margin-bottom:10px"><tbody><tr><td style="border:none;font-weight:bold">Note</td><td style="border:none">${htmlEsc(note)}</td></tr></tbody></table>`);
+    if (kind === "pl") for (const x of DROPPED) html = html.replace(new RegExp(`<tr><td></td><td>${reEsc(htmlEsc(x))}</td><td>[^<]*</td></tr>`), "");
+    else html = html.replace(`<td>${CP_LINE}</td>`, `<td>${CP_LINE} (Preliminary)</td>`);
+    return { ...ref, text: html };
+  }
+  const [title, ...rest] = ref.lines;
+  const rows = kind === "pl" ? rest.filter((l) => !DROPPED.some((x) => l.startsWith(` | ${x} | `)))
+    : rest.map((l) => (l.startsWith(`Equity | ${CP_LINE} | `) ? l.replace(`Equity | ${CP_LINE} | `, `Equity | ${CP_LINE} (Preliminary) | `) : l));
+  return { ...ref, lines: [title, `Note: ${note.replace(/[–—]/g, "-")}`, ...rows] };
+}
+const exRuns = Object.entries(now.c8.exports);
+const exDiff = exRuns.flatMap(([k, v]) => {
+  const want = c8Export(k, C8R?.exports?.[k]);
+  if (!want) return [`${k}: not in the c8ref record`];
+  return [...new Set([...Object.keys(want), ...Object.keys(v)])].filter((f) => JSON.stringify(v[f]) !== JSON.stringify(want[f]))
+    .map((f) => `${k} ${f}: ${JSON.stringify(want[f]).slice(0, 90)} → ${JSON.stringify(v[f]).slice(0, 90)}`);
+});
+check(`C8 final exports (blocking; the eight kinds × CSV / Excel / PDF, an EN and an AR session — held to c8ref, measured on ${C8R?.recordedOn?.commit?.slice(0, 7) ?? "—"}, src ${C8R?.recordedOn?.srcClean ? "clean" : "MODIFIED"}, build ${C8R?.recordedOn?.build ?? "—"}): the P&L says exactly what the approved remediation's build said without its Gross Profit, Operating Profit and Net Profit / (Loss) rows and with the notice in its header block; the Balance Sheet with its current-period line marked (Preliminary) — its amount unchanged — and the disclosure in its header block; Cash Flow, Trial Balance, General Ledger, AR / AP Aging and VAT Summary to the byte (CSV, Excel) and to the text (PDF); every status, content type and file name as recorded`,
+  (ONLY && !exRuns.length) || (!!C8R?.recordedOn?.srcClean && exRuns.length === REPORT_KINDS.length * 6 && exDiff.length === 0), list(exDiff));
+// The shared exporter (report-export.ts, unchanged) clips a cell at its column's width ("..."): the eight- and nine-column
+// Trial Balance, General Ledger and AR Aging have always clipped long names and memos, and c8ref holds those PDFs to their
+// recorded text (above). What C8 final writes must not be clipped: the P&L's and the Balance Sheet's every cell and note.
+const exFit = exRuns.filter(([k]) => k.includes("|pdf|")).filter(([k, v]) => v.pages === null || v.overflow.length || (/^(pl|bs)\|/.test(k) && v.clipped.length))
+  .map(([k, v]) => `${k} ${JSON.stringify({ pages: v.pages, overflow: v.overflow, clipped: v.clipped })}`);
+const exClipped = exRuns.filter(([k, v]) => k.includes("|pdf|") && v.clipped?.length).map(([k, v]) => `${k.replace("|pdf", "")} ${v.clipped.length}`);
+check(`C8 final PDF exports readable and whole (blocking): every PDF loads and no text runs past the right margin; nothing in the P&L or the Balance Sheet is clipped ("...") — each note one whole header line, the marked line inside its column (the exporter's own clipping of long names in the wider reports, as c8ref recorded it: ${exClipped.join(", ") || "none"})`,
+  (ONLY && !exRuns.length) || (exRuns.some(([k]) => /^(pl|bs)\|pdf\|/.test(k)) && exFit.length === 0), list(exFit));
+const acc = now.c8.access, accRef = C8R?.access ?? null;
+check("C8 final export authorization unchanged (blocking): without a session the export URL answers as recorded — a redirect to /login, no report — and as Staff as recorded",
+  (ONLY && !exRuns.length) || (!!accRef && JSON.stringify(acc.anonymous) === JSON.stringify(accRef.anonymous) && acc.anonymous?.status !== 200 && acc.anonymous?.location === "/login" &&
+    JSON.stringify(acc.staff) === JSON.stringify(accRef.staff)), JSON.stringify({ acc, accRef }));
+
+const tenantRuns = Object.entries(now.c8.tenant);
+const amounts = (text) => new Set((text ?? "").match(/-?\d+\.\d{2}\b/g)?.filter((x) => Number(x) !== 0) ?? []);
+const tenantBad = tenantRuns.flatMap(([kind, t]) => {
+  const leaked = [...amounts(t.text)].filter((x) => amounts(now.c8.exports[`${kind}|csv|en`]?.text).has(x));
+  return t.status !== 200 || leaked.length ? [`${kind} ${t.status}: the seeded org's ${leaked.slice(0, 4).join(", ")}`] : [];
+});
+// The kinds where the seeded org has an amount to recognise (its AP Aging has no open payable at the range's end).
+const tenantCompared = tenantRuns.filter(([kind]) => amounts(now.c8.exports[`${kind}|csv|en`]?.text).size).map(([kind]) => kind);
+check(`C8 final export tenant scope (blocking): an org registered in this run asks for the eight CSV exports — each answers 200 and carries none of the seeded org's amounts (compared on the ${tenantCompared.length} kinds that have one: ${tenantCompared.join(", ") || "none"}) — the route scopes every query to the session's org; the proxy alone would not show it`,
+  (ONLY && !exRuns.length) || ((ONLY || tenantRuns.length === REPORT_KINDS.length) && tenantCompared.length >= 7 && tenantBad.length === 0), list(tenantBad));
 
 // §43: the report picker by keyboard (blocking).
 const pRuns = Object.entries(now.c4.picker);
@@ -3279,8 +3554,8 @@ for (const [run, r] of pRuns) {
     if (!s.buttons.every((b) => ["true", "false"].includes(b.pressed) && (b.pressed === "true") === b.active && b.type === "button")) why.push("aria-pressed is not the shown-active state on every toggle");
     if (s.url !== STEP_URLS[i]) why.push(`URL ${s.url}`);
     if (s.h2 !== want || s.h2s !== 1) why.push(`h2 "${s.h2}" (${s.h2s} h2s)`);
-    const ref = c4Expect(`report-${i < 2 ? "default" : s.kind}|${l}|${w}`); // C8: a P&L step without D-2's Gross Profit
-    if (!ref) why.push("no c4ref state to compare with (or none to derive D-2's P&L expectation from)");
+    const ref = c4Expect(`report-${i < 2 ? "default" : s.kind}|${l}|${w}`); // C8 final: a P&L step without its profit figures, with the notice
+    if (!ref) why.push("no c4ref state to compare with (or none to derive C8 final's P&L expectation from)");
     else {
       if (JSON.stringify(s.exports) !== JSON.stringify(ref.exports.map((e) => e.slice(e.indexOf(" ") + 1)))) why.push(`exports ${JSON.stringify(s.exports)}`);
       const drift = ["title", "body", "figures", "rows", "cards", "drills", "dates", "compare"].filter((f) => JSON.stringify(s.facts?.[f]) !== JSON.stringify(ref[f]));

@@ -78,6 +78,16 @@
  * INV-0003, DN-0001 against PO-0002) written into the run's copy for that state only and removed straight
  * after. A capture fails if the page is not the document. C6's build captures every one of them too — the
  * before / after pairs, which must be byte-identical.
+ *
+ * C8 final (the product owner's financial display policy while Cost of Sales and inventory valuation are incomplete)
+ * adds the financial states not above: the Profit & Loss against the previous period and searched ("4000"), EN + AR at
+ * 1440 and 390; the Balance Sheet at every width and dark at 1440, and against the previous period at 1440 and 390 —
+ * light, full page (22); and the P&L and the Balance Sheet in print media, what the browser prints, EN + AR at 1440,
+ * full page (4). Each fails the capture if the page is not that report in that state — its toggle the one pressed, the
+ * comparison on or off as asked, the search applied, print media. They assert what the approved remediation's build
+ * (c47c65a) and C8 final share, so c47c65a captures them too — the before / after pairs; what only C8 final does (no
+ * profit figure on the P&L, the notice, the Preliminary line and the disclosure, the report printed rather than blank)
+ * the runtime verifier holds. The P&L itself (c4-profit-loss) and Project Revenue & Costs (a09, a10) are above.
  */
 import pg from "pg";
 import { FROZEN_NOW, OWNER_EMAIL, VIEWPORTS } from "./config.mjs";
@@ -140,6 +150,11 @@ export function archetypeMatrix() {
   for (const [id, path, action, viewports] of C6_FIXTURES) for (const locale of BOTH) for (const name of viewports) add(id, path, "Dashboard fixture (C6)", locale, "light", name, action, true);
   for (const [id, path, action, viewports] of C6_INTERACTIONS) for (const locale of BOTH) for (const name of viewports) add(id, path, "Interaction (C6)", locale, "light", name, action, false);
   for (const [id, path, area, action] of C7_STATES) for (const locale of BOTH) for (const name of EDGE) add(id, path, area, locale, "light", name, action, true);
+  for (const [id, path, area, action, viewports, dark] of C8_STATES)
+    for (const locale of BOTH) {
+      for (const name of viewports) add(id, path, area, locale, "light", name, action, true);
+      if (dark) add(id, path, area, locale, "dark", "1440", action, true);
+    }
   return out;
 }
 
@@ -237,6 +252,38 @@ const C7_STATES = [
   ["c7-not-found", "/clients/999999", "Not found (a client that does not exist)", null],
   ["c7-not-found-document", "/sales/invoices/999999", "Not found (an invoice that does not exist)", null],
 ];
+
+/** [id, path, area, action, viewports, dark at 1440] — C8 final: the financial display policy's states (full page). */
+const C8_STATES = [
+  ["c8-pl-compare", "/finance/reports?report=pl&compare=1", "Financial report (Profit & Loss against the previous period)", "c8-pl", EDGE, false],
+  ["c8-pl-search", "/finance/reports?report=pl", "Financial report (Profit & Loss searched — 4000)", "c8-pl-search", EDGE, false],
+  ["c8-balance-sheet", "/finance/reports?report=bs", "Financial report (Balance Sheet)", "c8-bs", ALLW, true],
+  ["c8-bs-compare", "/finance/reports?report=bs&compare=1", "Financial report (Balance Sheet against the previous period)", "c8-bs", EDGE, false],
+  ["c8-pl-print", "/finance/reports?report=pl", "Financial report printed (Profit & Loss in print media)", "c8-pl-print", ["1440"], false],
+  ["c8-bs-print", "/finance/reports?report=bs", "Financial report printed (Balance Sheet in print media)", "c8-bs-print", ["1440"], false],
+];
+/**
+ * C8 final: the page is the report asked for, in the state asked for — the toggle pressed (Profit & Loss first, Balance
+ * Sheet second), the comparison on or off, the search box holding the term with the report filtered to it, print media.
+ * Read from the DOM's text (textContent), which print media does not change.
+ */
+async function c8Report(page, s, { kind, term = null, print = false }) {
+  const f = await page.evaluate(() => {
+    const area = document.querySelector("main .reports-print-area");
+    const filter = area?.querySelector(":scope > .card.no-print");
+    const body = area?.querySelector(":scope > .card:not(.no-print)");
+    return {
+      pressed: [...(area?.querySelectorAll(":scope > .tab-row button") ?? [])].map((b) => b.getAttribute("aria-pressed")).indexOf("true"),
+      compare: filter?.querySelector('[role="checkbox"]')?.getAttribute("aria-checked") ?? null,
+      search: filter?.querySelector("input:not([type])")?.value ?? null,
+      text: (body?.textContent ?? "").replace(/\s+/g, " ").trim(),
+      print: matchMedia("print").matches,
+    };
+  });
+  const ok = f.pressed === (kind === "pl" ? 0 : 1) && f.compare === (s.route.path.includes("compare=1") ? "true" : "false") && f.text.length > 0 &&
+    (term === null ? f.search === "" : f.search === term && f.text.includes(term)) && f.print === print;
+  if (!ok) throw new Error(`C8 final ${s.route.path}${term ? ` searched "${term}"` : ""}${print ? " in print media" : ""}: ${JSON.stringify({ ...f, text: f.text.slice(0, 120) })}`);
+}
 
 /** [id, path, area] — C1: the master-data / entity-detail pages not in the set above (seed-stable ids; the seed's bins are empty). */
 const C1_ROUTES = [
@@ -612,6 +659,27 @@ export const ARCH_ACTIONS = {
       return { rows: d.querySelectorAll('label[for^="w-"]').length, shown: d.querySelectorAll('button[role="checkbox"][data-state="checked"]').length, strip: d.querySelector("#w-feature_strip")?.getAttribute("data-state") };
     });
     if (f.rows !== 12 || f.shown !== 12 || f.strip !== "checked") throw new Error(`Customize Layout by keyboard: ${JSON.stringify(f)}`);
+  },
+  // C8 final: the P&L (here against the previous period) and the Balance Sheet, as asked for.
+  "c8-pl": (page, s) => c8Report(page, s, { kind: "pl" }),
+  "c8-bs": (page, s) => c8Report(page, s, { kind: "bs" }),
+  // C8 final: the P&L searched for an account ("4000").
+  "c8-pl-search": async (page, s) => {
+    await page.locator("main .reports-print-area > .card.no-print input:not([type])").fill("4000");
+    await page.waitForLoadState("networkidle");
+    await settled(page);
+    await c8Report(page, s, { kind: "pl", term: "4000" });
+  },
+  // C8 final: the P&L and the Balance Sheet in print media — what the browser prints.
+  "c8-pl-print": async (page, s) => {
+    await page.emulateMedia({ media: "print" });
+    await settled(page);
+    await c8Report(page, s, { kind: "pl", print: true });
+  },
+  "c8-bs-print": async (page, s) => {
+    await page.emulateMedia({ media: "print" });
+    await settled(page);
+    await c8Report(page, s, { kind: "bs", print: true });
   },
   // C1 fixture: client 1 under LONG_NAME. The header must wrap — the h1 over several lines inside its
   // column, at the inline start; meta and actions at the end of the title's line or below it at the

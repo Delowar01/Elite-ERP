@@ -91,12 +91,22 @@
  * contract — closed and focus back on its trigger — waited for and asserted before Views is used) with its failure
  * diagnostics: group 15 undoes those hunks (DT_EDITS) before holding the suite at C6's bytes. Its pins change nothing.
  *
+ * C8 final (the product owner's financial display policy, on the approved remediation c47c65a) adds group 17. The P&L
+ * shows Revenue as its one summary card and no Gross Profit, Operating Profit or Net Profit card or row, with a localized
+ * notice; its CSV / Excel / PDF export the same, the notice in the exporter's header block; the Balance Sheet keeps its
+ * Current-period Profit / (Loss) line and amount, marked Preliminary, with a disclosure on screen, in print and in its
+ * exports; the project section is Project Revenue & Costs; four dictionary entries; and the reports' print styles show the
+ * report area again (the shell's preview-print rule hid it — a printed report was blank). Every other group reads these
+ * four files through `read` with their 16 FIN_EDITS hunks undone — the remediation's bytes — so every older pin, the P&L
+ * export route's business pin and the dictionary's included, keeps its strength; group 17 proves those hunks are the
+ * files' only change and holds the files as they are to the policy. Its pins change nothing.
+ *
  * `--write-pins` recomputes verify/page-archetype-pins.json from the working tree. Only a stage that
  * deliberately re-baselines may run it, and the diff of that file is what its review reads.
  * docs/ui/dev-ui-01-7/c0-foundations-and-guardrails.md, docs/ui/dev-ui-01-7/c1-master-data-and-detail.md,
  * docs/ui/dev-ui-01-7/c3-projects-and-kanban.md, docs/ui/dev-ui-01-7/c4-finance-and-reports.md,
  * docs/ui/dev-ui-01-7/c6-dashboard-archetype.md, docs/ui/dev-ui-01-7/c7-heading-semantics.md,
- * docs/ui/dev-ui-01-7/c8-remediation.md
+ * docs/ui/dev-ui-01-7/c8-remediation.md, docs/ui/dev-ui-01-7/c8-final-release-gate.md
  */
 import { readFileSync, readdirSync, statSync, existsSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
@@ -109,7 +119,11 @@ import { renderToStaticMarkup } from "react-dom/server";
 const ROOT = path.resolve(import.meta.dirname, "..");
 const PINS_FILE = "verify/page-archetype-pins.json";
 const WRITE = process.argv.includes("--write-pins");
-const read = (p: string) => readFileSync(path.join(ROOT, p), "utf8");
+const rawRead = (p: string) => readFileSync(path.join(ROOT, p), "utf8");
+// DEV-UI-01.7 C8 final: every group but 17 reads the four files the final batch changed as the approved remediation
+// (c47c65a) left them — their FIN_EDITS hunks undone — so each older pin keeps its strength; group 17 proves those hunks
+// are each file's only change and holds the files as they are to the product owner's financial display policy.
+const read = (p: string) => undoFin(p, rawRead(p));
 const h16 = (s: string | Buffer) => createHash("sha256").update(s).digest("hex").slice(0, 16);
 const A = "src/app/(app)/";
 // DEV-UI-01.7 C1: the 12 master-data and entity-detail pages, and the shared header they sit on.
@@ -390,6 +404,67 @@ const DT_SUITE = "verify/verify-datatable-runtime.mjs";
 /** The DataTable runtime suite with its C8 hunks undone — C7's bytes, when they are its only change (group 16). */
 const undoDT = (s: string) => DT_EDITS.reduce((acc, [was, is]) => acc.replace(is, () => was), s);
 
+/**
+ * DEV-UI-01.7 C8 final (the product owner's financial display policy): every hunk of the four files the final batch
+ * changed, [c47c65a, final] byte for byte — generated from the diff, so each is exact and unique in both texts. `read`
+ * undoes them for every group but 17 (the approved remediation's view); group 17 proves they are each file's only change.
+ *   reports-workspace.tsx (8): the Info icon; ReportNote and PreliminaryMark; PnlView's comment, its Revenue-only cards
+ *     and notice, its rows without Operating Profit and Net Profit / (Loss); the Balance Sheet's Preliminary line and
+ *     disclosure; the print styles' comment and the report area shown again in print.
+ *   cost-control.tsx (2): the header comment; the section's title, Project Revenue & Costs.
+ *   finance/reports/export/route.ts (5): ExportMeta; `meta`; the P&L rows without the three profit rows, and its note;
+ *     the Balance Sheet's Preliminary line, and its note; `meta` handed to exportResponse.
+ *   dict.ts (1): the four entries.
+ */
+const C8F_EXPORT = `${A}finance/reports/export/route.ts`;
+const C8F_DICT = "src/lib/i18n/dict.ts";
+const FIN_EDITS: Record<string, [string, string][]> = {
+  [C4_REPORTS]: [
+    ["import { Download, Search, Loader2, ChevronRight } from \"lucide-react\";\n",
+      "import { Download, Search, Loader2, ChevronRight, Info } from \"lucide-react\";\n"],
+    ["const inSearch = (s: string, ...fields: string[]) => !s.trim() || fields.some((f) => f.toLowerCase().includes(s.trim().toLowerCase()));\n\n",
+      "const inSearch = (s: string, ...fields: string[]) => !s.trim() || fields.some((f) => f.toLowerCase().includes(s.trim().toLowerCase()));\n// DEV-UI-01.7 C8 (product owner): a disclosure that belongs to the report — inside the report card, so it prints with\n// it; read in place (a note, not a live region); no figure of its own.\nfunction ReportNote({ children }: { children: React.ReactNode }) {\n  return (\n    <p role=\"note\" className=\"my-3 flex items-start gap-2 rounded-[10px] border border-line bg-surface-subtle px-3 py-2 text-[13px] text-ink\">\n      <Info className=\"mt-0.5 size-3.5 shrink-0 text-ink-muted\" aria-hidden=\"true\" />\n      <span>{children}</span>\n    </p>\n  );\n}\n// DEV-UI-01.7 C8: the Balance Sheet's current-period result is preliminary while COGS is incomplete — a word read with\n// the line it qualifies, not a colour alone.\nfunction PreliminaryMark({ locale }: { locale: Locale }) {\n  return <span className=\"ms-1.5 inline-flex items-center rounded-full border border-warning/40 bg-warning-bg px-1.5 align-middle text-[11px] font-semibold text-warning\">{t(locale, \"Preliminary\")}</span>;\n}\n\n"],
+    ["  // D-2 (DEV-UI-01.7 C8): no Gross Profit card or row on screen until COGS is trustworthy. finance-reports.ts still\n  // computes grossProfit, and the export route still lists it (an open decision, not part of this change).\n",
+      "  // DEV-UI-01.7 C8 (product owner): no profit figure on screen until Cost of Sales and inventory valuation are complete —\n  // no Gross Profit, Operating Profit or Net Profit card or row, Revenue the one summary card. finance-reports.ts still\n  // computes all three; the export route leaves them out the same way.\n"],
+    ["        { label: t(locale, \"Net Profit\"), value: d.netProfit, delta: prev ? d.netProfit - prev.netProfit : undefined },\n      ]} />\n",
+      "      ]} />\n      <ReportNote>{t(locale, \"Profit figures are temporarily hidden because Cost of Sales and inventory valuation are not yet complete.\")}</ReportNote>\n"],
+    ["      {d.operatingExpenses.map(line)}\n      <Row label={t(locale, \"Operating Profit\")} value={d.operatingProfit} final />\n      {(d.otherIncome.length > 0 || d.otherExpenses.length > 0) && <GroupLabel>{t(locale, \"Other Income & Expenses\")}</GroupLabel>}\n      {d.otherIncome.map(line)}\n      {d.otherExpenses.map(line)}\n      <Row label={t(locale, \"Net Profit / (Loss)\")} value={d.netProfit} final />\n",
+      "      {d.operatingExpenses.map(line)}\n      {(d.otherIncome.length > 0 || d.otherExpenses.length > 0) && <GroupLabel>{t(locale, \"Other Income & Expenses\")}</GroupLabel>}\n      {d.otherIncome.map(line)}\n      {d.otherExpenses.map(line)}\n"],
+    ["      <Row label={t(locale, \"Current-period Profit / (Loss)\")} value={d.currentPeriodProfit} />\n      <Row label={t(locale, \"Total Equity\")} value={d.totalEquity} final />\n      <Row label={t(locale, \"Total Liabilities + Equity\")} value={d.totalLiabilitiesAndEquity} final />\n",
+      "      {/* DEV-UI-01.7 C8: the line and its amount stay (Equity, the balance identity); it is marked Preliminary. */}\n      <Row label={<>{t(locale, \"Current-period Profit / (Loss)\")} <PreliminaryMark locale={locale} /></>} value={d.currentPeriodProfit} />\n      <Row label={t(locale, \"Total Equity\")} value={d.totalEquity} final />\n      <Row label={t(locale, \"Total Liabilities + Equity\")} value={d.totalLiabilitiesAndEquity} final />\n      <ReportNote>{t(locale, \"Preliminary — Cost of Sales and inventory valuation are incomplete. The current-period result may change.\")}</ReportNote>\n"],
+    ["// Print: hide app chrome + workspace controls, show only the report area full-width.\nfunction PrintStyles() {\n",
+      "// Print: hide app chrome + workspace controls, show only the report area full-width.\n// DEV-UI-01.7 C8: the shell's print rule for the document preview (mockup-parity.css hides `body *`) hid the report\n// too — a printed report came out blank, its disclosures with it — so the report area shows itself again.\nfunction PrintStyles() {\n"],
+    ["      a { color: inherit !important; text-decoration: none !important; }\n    }`}</style>\n",
+      "      a { color: inherit !important; text-decoration: none !important; }\n      .reports-print-area, .reports-print-area * { visibility: visible !important; }\n    }`}</style>\n"],
+  ],
+  [C3_COST]: [
+    ["// Cost & Profitability for one project. Every number arrives already computed by\n",
+      "// Project Revenue & Costs for one project. Every number arrives already computed by\n"],
+    ["      <SectionHeader\n        level={2}\n        title={t(locale, \"Cost & Profitability\")}\n",
+      "      {/* DEV-UI-01.7 C8 (product owner): the section is named for what it shows — it was \"Cost & Profitability\". */}\n      <SectionHeader\n        level={2}\n        title={t(locale, \"Project Revenue & Costs\")}\n"],
+  ],
+  [C8F_EXPORT]: [
+    ["import { exportResponse, type ExportColumn } from \"@/lib/report-export\";\n",
+      "import { exportResponse, type ExportColumn, type ExportMeta } from \"@/lib/report-export\";\n"],
+    ["  let title = \"\", columns: ExportColumn[] = [], rows: Record<string, string>[] = [];\n\n",
+      "  let title = \"\", columns: ExportColumn[] = [], rows: Record<string, string>[] = [];\n  // DEV-UI-01.7 C8 (product owner): the P&L's and the Balance Sheet's disclosure, printed above the table in all three\n  // formats (the exporter's header block); every other report has none, so its output is unchanged.\n  let meta: ExportMeta | undefined;\n\n"],
+    ["    rows = [\n      ...grp(\"Revenue\", d.revenue), { section: \"Revenue\", account: \"Total Revenue\", amount: money(d.revenueTotal) },\n      ...grp(\"Cost of Sales\", d.costOfSales), { section: \"\", account: \"Gross Profit\", amount: money(d.grossProfit) },\n      ...grp(\"Operating Expenses\", d.operatingExpenses), { section: \"\", account: \"Operating Profit\", amount: money(d.operatingProfit) },\n      ...grp(\"Other Income\", d.otherIncome), ...grp(\"Other Expenses\", d.otherExpenses),\n      { section: \"\", account: \"Net Profit / (Loss)\", amount: money(d.netProfit) },\n    ];\n",
+      "    // No Gross Profit, Operating Profit or Net Profit / (Loss) row until Cost of Sales and inventory valuation are\n    // complete — as on screen; every account line and Total Revenue stay, and finance-reports.ts still computes all three.\n    rows = [\n      ...grp(\"Revenue\", d.revenue), { section: \"Revenue\", account: \"Total Revenue\", amount: money(d.revenueTotal) },\n      ...grp(\"Cost of Sales\", d.costOfSales),\n      ...grp(\"Operating Expenses\", d.operatingExpenses),\n      ...grp(\"Other Income\", d.otherIncome), ...grp(\"Other Expenses\", d.otherExpenses),\n    ];\n    meta = [{ label: \"Note\", value: \"Profit figures are temporarily hidden because Cost of Sales and inventory valuation are not yet complete.\" }];\n"],
+    ["      { section: \"Equity\", account: \"Current-period Profit / (Loss)\", amount: money(d.currentPeriodProfit) },\n      { section: \"\", account: \"Total Equity\", amount: money(d.totalEquity) },\n      { section: \"\", account: \"Total Liabilities + Equity\", amount: money(d.totalLiabilitiesAndEquity) },\n    ];\n",
+      "      // The line and its amount stay (Equity, the balance identity), marked Preliminary — short enough for the PDF's column.\n      { section: \"Equity\", account: \"Current-period Profit / (Loss) (Preliminary)\", amount: money(d.currentPeriodProfit) },\n      { section: \"\", account: \"Total Equity\", amount: money(d.totalEquity) },\n      { section: \"\", account: \"Total Liabilities + Equity\", amount: money(d.totalLiabilitiesAndEquity) },\n    ];\n    meta = [{ label: \"Note\", value: \"Preliminary — Cost of Sales and inventory valuation are incomplete. The current-period result may change.\" }];\n"],
+    ["  return exportResponse(format, `${title} (${range.from} → ${range.to})`, `${report}-${stamp}`, columns, rows);\n",
+      "  return exportResponse(format, `${title} (${range.from} → ${range.to})`, `${report}-${stamp}`, columns, rows, meta);\n"],
+  ],
+  [C8F_DICT]: [
+    ["  \"The Actions column must stay at the end.\": \"يجب أن يبقى عمود الإجراءات في النهاية.\",\n};\n",
+      "  \"The Actions column must stay at the end.\": \"يجب أن يبقى عمود الإجراءات في النهاية.\",\n  // DEV-UI-01.7 C8 (product owner): the financial display policy while Cost of Sales and inventory valuation are\n  // incomplete — the project section's name, the P&L notice, the Balance Sheet's preliminary current-period result.\n  \"Project Revenue & Costs\": \"إيرادات وتكاليف المشروع\",\n  \"Profit figures are temporarily hidden because Cost of Sales and inventory valuation are not yet complete.\": \"تم إخفاء مؤشرات الربح مؤقتًا لأن احتساب تكلفة المبيعات وتقييم المخزون لم يكتمل بعد.\",\n  Preliminary: \"مبدئي\",\n  \"Preliminary — Cost of Sales and inventory valuation are incomplete. The current-period result may change.\": \"مبدئي — احتساب تكلفة المبيعات وتقييم المخزون غير مكتمل، وقد تتغير نتيجة الفترة الحالية.\",\n};\n"],
+  ],
+};
+/** A C8-final file with its hunks undone — the approved remediation's (c47c65a's) bytes, when they are its only change. */
+function undoFin(f: string, s: string): string {
+  return (FIN_EDITS[f] ?? []).reduce((acc, [was, is]) => acc.replace(is, () => was), s);
+}
+
 let pass = 0;
 let fail = 0;
 let group = "";
@@ -615,7 +690,9 @@ function dirHash(dir: string) {
   }
   return `${hh.digest("hex").slice(0, 16)} (${files.length} files)`;
 }
-const sha = (p: string) => h16(readFileSync(path.join(ROOT, p)));
+// C8 final: the P&L export route (and dict.ts) hashed with their FIN_EDITS hunks undone — their pins hold the
+// remediation's bytes; group 17 proves the hunks are their only change.
+const sha = (p: string) => (p in FIN_EDITS ? h16(read(p)) : h16(readFileSync(path.join(ROOT, p))));
 function business(): Record<string, string> {
   const out: Record<string, string> = {};
   for (const f of [...BUSINESS_FILES, ...actionFiles()].sort()) out[f] = existsSync(path.join(ROOT, f)) ? sha(f) : "(missing)";
@@ -2802,7 +2879,7 @@ const d2Others = walk("src").filter((f) => !(f in D2_EDITS));
 const srcRestHash = createHash("sha256");
 for (const f of d2Others) {
   srcRestHash.update(f + "\0");
-  srcRestHash.update(readFileSync(path.join(ROOT, f)));
+  srcRestHash.update(f in FIN_EDITS ? read(f) : readFileSync(path.join(ROOT, f))); // C8 final's hunks undone (group 17)
 }
 const srcRest = `${srcRestHash.digest("hex").slice(0, 16)} (${d2Others.length} files)`;
 check(`C8 changed no other application file: every file under src/ but the two is C7's to the byte (${d2Others.length}) — the engines, the export route, the status registry, the dictionary, the list workspace and its saved-view toolbar among them (the DataTable correction is test-only)`,
@@ -2840,6 +2917,151 @@ const KEEP: [string, string][] = [["async function openViews() {", "\n}\n"], ["a
 const keepBad = KEEP.filter(([start, end]) => !blockOf(dtSrc, start, end) || blockOf(dtSrc, start, end) !== blockOf(dtC7, start, end)).map(([start]) => start);
 check("C8 DataTable assertions intact: openViews() (its pointer-click retry is recorded test debt, not refactored), escapeRestoresTrigger(), the excursion rule triggerStoleFocus(), the 400 ms observe() window, triggerFocused() and the immediate typing (keyboard.type straight after the Save input holds focus) are C7's to the character",
   keepBad.length === 0, keepBad.join(" | "));
+
+// ---------- 17. C8 final — the product owner's financial display policy ----------
+section("17. C8 final — financial display policy (P&L, Balance Sheet, exports, project section)");
+// These checks read the four files as they are (rawRead); every other group reads them with FIN_EDITS undone.
+const rawParse = (f: string) => ts.createSourceFile(f, rawRead(f), ts.ScriptTarget.Latest, true, /x$/.test(f) ? ts.ScriptKind.TSX : ts.ScriptKind.TS);
+// The approved remediation's bytes (c47c65a) of the four files; each is that plus exactly its FIN_EDITS hunks.
+const FIN_C8R_SHA: Record<string, string> = { [C4_REPORTS]: "f3eff79b5f4a060c", [C3_COST]: "4c7a9c36d184733f", [C8F_EXPORT]: "1533168860eddde6", [C8F_DICT]: "ad171858a8128535" };
+const finDrift = Object.keys(FIN_EDITS).filter((f) => {
+  const src = rawRead(f);
+  return !FIN_EDITS[f].every(([was, is]) => src.split(is).length === 2 && !src.includes(was)) || h16(undoFin(f, src)) !== FIN_C8R_SHA[f];
+});
+const finCounts = Object.entries(FIN_EDITS).map(([f, e]) => `${rel(f)} ${e.length}`).join(", ");
+check(`C8 final changed nothing in its four files but its own 16 hunks (${finCounts}) — each once, its approved-remediation form nowhere; undone, each is c47c65a's to the byte (the reports workspace f3eff79b5f4a060c, the cost control 4c7a9c36d184733f, the P&L export route 1533168860eddde6 — its business pin, dict.ts ad171858a8128535)`,
+  same(Object.keys(FIN_C8R_SHA).sort(), Object.keys(FIN_EDITS).sort()) && Object.values(FIN_EDITS).flat().length === 16 &&
+    same(Object.values(FIN_EDITS).map((e) => e.length), [8, 2, 5, 1]) && finDrift.length === 0, finDrift.map(rel).join(" "));
+// Every other application file, byte for byte: c47c65a's src tree without the four (495 files).
+const finOthers = walk("src").filter((f) => !(f in FIN_EDITS));
+const finRestHash = createHash("sha256");
+for (const f of finOthers) {
+  finRestHash.update(f + "\0");
+  finRestHash.update(readFileSync(path.join(ROOT, f)));
+}
+const finRest = `${finRestHash.digest("hex").slice(0, 16)} (${finOthers.length} files)`;
+check(`C8 final changed no other application file: every file under src/ but the four is c47c65a's to the byte (${finOthers.length}) — the engines (project-costing, finance-reports, accounting, settlement), the status registry, the shared exporter report-export.ts, every finance, posting, inventory, purchase, payroll, Dashboard and document module, the session / tenant / role code, src/db and the list workspace among them`,
+  finRest === "c05dcaf4283af501 (495 files)", finRest);
+check("C8 final is presentation only: project-costing.ts, finance-reports.ts (grossProfit, operatingProfit, netProfit still computed), accounting.ts, settlement.ts, the status registry and the shared exporter report-export.ts are their business pins, read as they are",
+  ["src/lib/project-costing.ts", "src/lib/finance-reports.ts", "src/lib/accounting.ts", "src/lib/settlement.ts", "src/lib/status-registry.ts", "src/lib/report-export.ts"]
+    .every((f) => !!pins.business[f] && h16(readFileSync(path.join(ROOT, f))) === pins.business[f]) &&
+    ["const grossProfit = revenueTotal - costOfSalesTotal;", "operatingProfit", "netProfit"].every((s) => rawRead("src/lib/finance-reports.ts").includes(s)));
+
+const P_NOTICE = "Profit figures are temporarily hidden because Cost of Sales and inventory valuation are not yet complete.";
+const B_NOTICE = "Preliminary — Cost of Sales and inventory valuation are incomplete. The current-period result may change.";
+const finRep = rawParse(C4_REPORTS);
+const finFn = (name: string) => findAll(finRep, fnNamed(name))[0];
+const elsIn = (root: ts.Node | undefined, tag: string) => (root ? (inside(root, (n) => isEl(n) && n.tagName.getText() === tag) as El[]) : []);
+const kidsText = (el: El) => (ts.isJsxOpeningElement(el) && ts.isJsxElement(el.parent) ? flat(el.parent.children.map((c) => c.getText()).join("")) : "");
+const pnlF = finFn("PnlView"), bsF = finFn("BsView");
+const finPnlCode = codeOnly(pnlF?.getText() ?? "");
+const PROFIT_READ = /\b(grossProfit|operatingProfit|netProfit)\b/;
+const PROFIT_LABEL = /"(Gross Profit|Operating Profit|Net Profit|Net Profit \/ \(Loss\))"/;
+// P&L: Revenue the one summary card; the notice right after it; the factual groups, lines and Total Revenue; no profit.
+const pnlCards = elsIn(pnlF, "Cards");
+const pnlItems = pnlCards[0] ? attr(pnlCards[0], "items")?.initializer : undefined;
+const pnlItemList = pnlItems && ts.isJsxExpression(pnlItems) && pnlItems.expression && ts.isArrayLiteralExpression(pnlItems.expression) ? pnlItems.expression.elements.map((e) => flat(e.getText())) : [];
+const pnlNotes = elsIn(pnlF, "ReportNote");
+const pnlGroups = elsIn(pnlF, "GroupLabel").map((el) => kidsText(el));
+const pnlRows = elsIn(pnlF, "Row").map((el) => `${attrCode(el, "label")}|${attrCode(el, "value")}|${attr(el, "final") ? "final" : ""}`);
+const pnlOrder = [pnlCards[0], pnlNotes[0], elsIn(pnlF, "GroupLabel")[0]].map((el) => el?.getStart() ?? -1);
+check("C8 final P&L screen: Revenue is the one summary card (its value and, against the previous period, its delta); no Gross Profit, Operating Profit or Net Profit card or row — PnlView reads no grossProfit / operatingProfit / netProfit and names none of them",
+  pnlCards.length === 1 && same(pnlItemList, ['{label:t(locale,"Revenue"),value:d.revenueTotal,delta:prev?d.revenueTotal-prev.revenueTotal:undefined}']) &&
+    !PROFIT_READ.test(finPnlCode) && !PROFIT_LABEL.test(finPnlCode), JSON.stringify({ pnlItemList, read: finPnlCode.match(PROFIT_READ)?.[0], label: finPnlCode.match(PROFIT_LABEL)?.[0] }));
+check(`C8 final P&L notice: one ReportNote, right after the Revenue card and before the first group — t(locale, "${P_NOTICE}"), with its Arabic in the dictionary`,
+  pnlNotes.length === 1 && kidsText(pnlNotes[0]) === flat(`{t(locale, ${JSON.stringify(P_NOTICE)})}`) && pnlOrder.every((p, i) => p >= 0 && (i === 0 || p > pnlOrder[i - 1])) &&
+    translate("ar", P_NOTICE) === "تم إخفاء مؤشرات الربح مؤقتًا لأن احتساب تكلفة المبيعات وتقييم المخزون لم يكتمل بعد.", JSON.stringify({ notes: pnlNotes.length, pnlOrder }));
+check("C8 final P&L keeps every factual part: the Revenue, Cost of Sales, Operating Expenses and (when there are any) Other Income & Expenses groups, their account lines with the drill-down, and Total Revenue — the only rows a line and Total Revenue",
+  same(pnlGroups, ['{t(locale,"Revenue")}', '{t(locale,"CostofSales")}', '{t(locale,"OperatingExpenses")}', '{t(locale,"OtherIncome&Expenses")}']) &&
+    same(pnlRows, ["{`${l.code}${accountName(locale,l)}`}|{l.amount}|", '{t(locale,"TotalRevenue")}|{d.revenueTotal}|final']) &&
+    ["d.revenue.map(line)", "d.costOfSales.map(line)", "d.operatingExpenses.map(line)", "d.otherIncome.map(line)", "d.otherExpenses.map(line)", "onDrill={()=>onDrill({id:l.id,name:accountName(locale,l)})}"]
+      .every((s) => flat(finPnlCode).split(s).length === 2), JSON.stringify({ pnlGroups, pnlRows }));
+// Balance Sheet: the current-period line and amount stay, marked Preliminary; the disclosure closes the statement.
+const bsRows = elsIn(bsF, "Row");
+const cpRows = bsRows.filter((el) => attrCode(el, "label").includes("Current-periodProfit/(Loss)"));
+const bsNotes = elsIn(bsF, "ReportNote");
+const lastRow = bsRows[bsRows.length - 1];
+check("C8 final Balance Sheet: Current-period Profit / (Loss) keeps its line, its amount (d.currentPeriodProfit) and its place in Equity, marked Preliminary (PreliminaryMark beside the label) — every other line, total and card as the remediation left them (the delta above)",
+  cpRows.length === 1 && attrCode(cpRows[0], "label") === '{<>{t(locale,"Current-periodProfit/(Loss)")}<PreliminaryMarklocale={locale}/></>}' &&
+    attrCode(cpRows[0], "value") === "{d.currentPeriodProfit}" && !attr(cpRows[0], "final") &&
+    bsRows.indexOf(cpRows[0]) === bsRows.findIndex((el) => attrCode(el, "label") === '{t(locale,"RetainedEarnings")}') + 1 &&
+    attrCode(bsRows[bsRows.indexOf(cpRows[0]) + 1], "label") === '{t(locale,"TotalEquity")}', cpRows.map((el) => attrCode(el, "label")).join(" "));
+check(`C8 final Balance Sheet disclosure: one ReportNote after Total Liabilities + Equity — t(locale, "${B_NOTICE}"), with its Arabic; "Preliminary" too`,
+  bsNotes.length === 1 && kidsText(bsNotes[0]) === flat(`{t(locale, ${JSON.stringify(B_NOTICE)})}`) && !!lastRow && attrCode(lastRow, "label") === '{t(locale,"TotalLiabilities+Equity")}' &&
+    bsNotes[0].getStart() > lastRow.getStart() && translate("ar", B_NOTICE) === "مبدئي — احتساب تكلفة المبيعات وتقييم المخزون غير مكتمل، وقد تتغير نتيجة الفترة الحالية." &&
+    translate("ar", "Preliminary") === "مبدئي", JSON.stringify({ notes: bsNotes.length }));
+// The two pieces: a note (not a live region) in a contrast-verified pair; a word, not a colour alone, in a verified pair.
+const noteFn = finFn("ReportNote"), markFn = finFn("PreliminaryMark");
+const noteP = elsIn(noteFn, "p")[0], markSpan = elsIn(markFn, "span")[0];
+const noteCls = (strAttr(noteP, "className") ?? "").split(/\s+/);
+const markCls = (strAttr(markSpan, "className") ?? "").split(/\s+/);
+check("C8 final ReportNote: a <p role=\"note\"> (read in place, not a live region) — ink on surface-subtle (verify:contrast's \"text on surface-subtle\" pair, light and dark), its Info icon aria-hidden; PreliminaryMark: the word t(locale, \"Preliminary\") in warning on its tint (the \"warning text on its tint\" pair), a logical margin, no handler",
+  !!noteP && strAttr(noteP, "role") === "note" && ["text-ink", "bg-surface-subtle", "border-line"].every((c) => noteCls.includes(c)) && !noteCls.includes("text-ink-muted") &&
+    elsIn(noteFn, "Info").length === 1 && strAttr(elsIn(noteFn, "Info")[0], "aria-hidden") === "true" &&
+    !!markSpan && ["text-warning", "bg-warning-bg", "ms-1.5"].every((c) => markCls.includes(c)) && !markCls.some((c) => /^(ml|mr|pl|pr)-/.test(c)) &&
+    kidsText(markSpan) === '{t(locale,"Preliminary")}' && !/onClick|onKeyDown|tabIndex|<button/.test(markFn?.getText() ?? ""), JSON.stringify({ noteCls, markCls }));
+// Print: the report area shows itself again, so the notices print with the report (the shell's preview rule hid it).
+const printFn = codeOnly(finFn("PrintStyles")?.getText() ?? "");
+check("C8 final print: the reports' print styles keep hiding the app chrome and the workspace controls and show the report area again (.reports-print-area, .reports-print-area * { visibility: visible !important }) — mockup-parity.css's preview rule (body * hidden) is unchanged; the notices are inside the report card, so they print",
+  [".sidebar, .topbar, .no-print { display: none !important; }", ".reports-print-area { max-width: none !important; margin: 0 !important; }",
+    ".reports-print-area, .reports-print-area * { visibility: visible !important; }"].every((s) => printFn.includes(s)) &&
+    /body \* \{ visibility: hidden !important; \}/.test(read(CSSF)) && pnlNotes.length === 1 && bsNotes.length === 1, printFn.slice(0, 200));
+// The project section: renamed, an h2, the four factual cards, nothing profit-derived.
+const costRaw = rawParse(C3_COST);
+const costHeads = (inside(costRaw, (n) => isEl(n) && n.tagName.getText() === "SectionHeader") as El[]).map((el) => `${attrCode(el, "level")} ${attrCode(el, "title")}`);
+const costRowsRaw = (inside(costRaw, (n) => isEl(n) && n.tagName.getText() === "StatRow") as El[]).map((el) => [attrCode(el, "columns"), attrCode(el, "items")]);
+const oldTitleSeen = walk("src").filter((f) => /\.tsx?$/.test(f) && !f.startsWith("src/lib/") && /"Cost & Profitability"/.test(codeOnly(rawRead(f)))).map(rel);
+check("C8 final project section: an h2 SectionHeader titled t(locale, \"Project Revenue & Costs\") (إيرادات وتكاليف المشروع), Revenue and Costs its h3s; \"Cost & Profitability\" in no application code; still one StatRow, columns={4} — Sales Value, Invoiced, Collected, Total Cost — and no profit, margin or health",
+  same(costHeads, ['{2} {t(locale,"ProjectRevenue&Costs")}', '{3} {t(locale,"Revenue")}', '{3} {t(locale,"Costs")}']) && oldTitleSeen.length === 0 &&
+    translate("ar", "Project Revenue & Costs") === "إيرادات وتكاليف المشروع" && same(costRowsRaw, [["{4}", COST_ITEMS]]) &&
+    !/\b(profit|marginPercent|health|healthText|statusTextClass|StatusBadge)\b/.test(codeOnly(rawRead(C3_COST))), JSON.stringify({ costHeads, oldTitleSeen }));
+// The export route: the P&L and the Balance Sheet only; the session, the tenant, the range, the eight kinds as they were.
+const exRaw = rawRead(C8F_EXPORT), exFlat = flat(exRaw), exCode = codeOnly(exRaw);
+const plBranch = flat(exRaw.slice(exRaw.indexOf('if (report === "pl") {'), exRaw.indexOf('} else if (report === "bs") {')));
+const bsBranch = flat(exRaw.slice(exRaw.indexOf('} else if (report === "bs") {'), exRaw.indexOf('} else if (report === "cf") {')));
+check("C8 final P&L export (CSV / Excel / PDF): its rows are the Revenue lines, Total Revenue, the Cost of Sales, Operating Expenses, Other Income and Other Expenses lines — no Gross Profit, Operating Profit or Net Profit / (Loss) row, no grossProfit / operatingProfit / netProfit read anywhere in the route — and its one header line the notice",
+  plBranch.includes(flat('rows = [ ...grp("Revenue", d.revenue), { section: "Revenue", account: "Total Revenue", amount: money(d.revenueTotal) }, ...grp("Cost of Sales", d.costOfSales), ...grp("Operating Expenses", d.operatingExpenses), ...grp("Other Income", d.otherIncome), ...grp("Other Expenses", d.otherExpenses), ];')) &&
+    plBranch.includes(flat(`meta = [{ label: "Note", value: ${JSON.stringify(P_NOTICE)} }];`)) && !PROFIT_READ.test(exCode) && !PROFIT_LABEL.test(exCode), plBranch.slice(0, 300));
+check("C8 final Balance Sheet export: Current-period Profit / (Loss) (Preliminary) keeps its section (Equity) and its amount, money(d.currentPeriodProfit); its header line the disclosure — every other row as before",
+  bsBranch.includes(flat('{ section: "Equity", account: "Current-period Profit / (Loss) (Preliminary)", amount: money(d.currentPeriodProfit) },')) &&
+    bsBranch.includes(flat(`meta = [{ label: "Note", value: ${JSON.stringify(B_NOTICE)} }];`)) && bsBranch.split("account:").length === undoFin(C8F_EXPORT, exRaw).split('} else if (report === "bs") {')[1].split('} else if (report === "cf") {')[0].split("account:").length,
+  bsBranch.slice(0, 300));
+check("C8 final export route, everything else as it was: the session first (requireSession, once), the tenant on every query (session.orgId × 9), the report-kind guard, the range and account filter, the eight kinds' branches, the per-request base-currency rounding — and the header block (meta) set only by the P&L and the Balance Sheet, handed to exportResponse, so every other report's output is unchanged",
+  /export async function GET\(req: Request\) \{\n {2}const session = await requireSession\(\);/.test(exRaw) && (exRaw.match(/requireSession\(\)/g) ?? []).length === 1 &&
+    (exRaw.match(/session\.orgId/g) ?? []).length === 9 && exRaw.includes('if (!isReportKind(report)) return new Response("Unknown report", { status: 400 });') &&
+    ['report === "pl"', 'report === "bs"', 'report === "cf"', 'report === "tb"', 'report === "gl"', 'report === "ar" || report === "ap"'].every((s) => exRaw.includes(`if (${s}) {`)) &&
+    exRaw.includes("const money = moneyFor(session.orgCurrency);") && exRaw.includes("let meta: ExportMeta | undefined;") && (exCode.match(/\bmeta = \[/g) ?? []).length === 2 &&
+    exFlat.includes(flat("return exportResponse(format, `${title} (${range.from} → ${range.to})`, `${report}-${stamp}`, columns, rows, meta);")), "");
+// The exporter is unchanged, so its limits stand: one 9 pt line per header entry, a 3-column cell clipped at its width.
+const { PDFDocument, StandardFonts } = await import("pdf-lib");
+const helv = await (await PDFDocument.create()).embedFont(StandardFonts.Helvetica);
+const pdfSafe = (s: string) => s.replace(/[–—]/g, "-");
+const noteW = [P_NOTICE, B_NOTICE].map((n) => helv.widthOfTextAtSize(pdfSafe(`Note: ${n}`), 9));
+const cellW = helv.widthOfTextAtSize("Current-period Profit / (Loss) (Preliminary)", 8);
+check(`C8 final exports fit the exporter as it is (report-export.ts unchanged): each note one header line in the PDF (${noteW.map((w) => w.toFixed(1)).join(" / ")} pt ≤ 523.3 pt at 9 pt), the marked Balance Sheet line inside its column (${cellW.toFixed(1)} pt ≤ 168.4 pt at 8 pt) — nothing clipped`,
+  noteW.every((w) => w <= 595.28 - 72) && cellW <= (595.28 - 72) / 3 - 6, "");
+// The dictionary: exactly the four entries, each with its Arabic; no duplicate key; no digit in any of them.
+const dictSf = rawParse(C8F_DICT);
+const dictObj = findAll(dictSf, varNamed("DICT"))[0];
+const dictKeys = dictObj ? inside(dictObj, (n) => ts.isPropertyAssignment(n) && ts.isObjectLiteralExpression(n.parent)).map((n) => {
+  const nm = (n as ts.PropertyAssignment).name;
+  return ts.isStringLiteral(nm) ? nm.text : nm.getText();
+}) : [];
+const entriesIn = (s: string) => s.split("\n").filter((l) => /^ {2}("[^"]+"|\w+): "/.test(l)).length;
+const FIN_DICT: Record<string, string> = {
+  "Project Revenue & Costs": "إيرادات وتكاليف المشروع",
+  [P_NOTICE]: "تم إخفاء مؤشرات الربح مؤقتًا لأن احتساب تكلفة المبيعات وتقييم المخزون لم يكتمل بعد.",
+  Preliminary: "مبدئي",
+  [B_NOTICE]: "مبدئي — احتساب تكلفة المبيعات وتقييم المخزون غير مكتمل، وقد تتغير نتيجة الفترة الحالية.",
+};
+check(`C8 final dictionary: exactly four new entries — Project Revenue & Costs, the P&L notice, Preliminary, the Balance Sheet disclosure — each with its approved Arabic and no digit (Western or Arabic-Indic); ${dictKeys.length} keys, no duplicate; every earlier key and value unchanged (undone, dict.ts is the remediation's to the byte, above)`,
+  dictKeys.length === 1755 && new Set(dictKeys).size === dictKeys.length && Object.entries(FIN_DICT).every(([k, v]) => dictKeys.includes(k) && translate("ar", k) === v && !/[0-9٠-٩۰-۹]/.test(v)) &&
+    FIN_EDITS[C8F_DICT].length === 1 && entriesIn(FIN_EDITS[C8F_DICT][0][1]) - entriesIn(FIN_EDITS[C8F_DICT][0][0]) === 4, `${dictKeys.length} keys, ${new Set(dictKeys).size} distinct`);
+// Nowhere on screen: outside src/lib no application file names or reads a profitability metric — no exception left.
+const FIN_HIDDEN = /"(Actual Profit|Profit Margin|Gross Profit|Operating Profit|Net Profit|Net Profit \/ \(Loss\)|Cost & Profitability)"|\b(grossProfit|operatingProfit|netProfit|marginPercent)\b|project_health/;
+const finSeen = walk("src").filter((f) => /\.tsx?$/.test(f) && !f.startsWith("src/lib/") && FIN_HIDDEN.test(codeOnly(rawRead(f)))).map(rel);
+check('C8 final on screen and in the exports: no application file outside src/lib (the engines, the registry, the dictionary) names or reads a profitability metric — no "Gross Profit", "Operating Profit", "Net Profit", "Actual Profit" or "Profit Margin" label, no grossProfit / operatingProfit / netProfit / marginPercent read, no project_health — the P&L export route included (the remediation\'s one exception, gone); the Balance Sheet\'s Current-period Profit / (Loss) its one labelled result, marked Preliminary',
+  finSeen.length === 0 && (rawRead(C4_REPORTS).match(/"Current-period Profit \/ \(Loss\)"/g) ?? []).length === 1 && (exRaw.match(/Current-period Profit \/ \(Loss\)/g) ?? []).length === 1, finSeen.join(" "));
 
 console.log("\nGroups:");
 for (const [g, [p, f]] of Object.entries(counts)) console.log(`  ${g}: ${p}/${p + f}`);

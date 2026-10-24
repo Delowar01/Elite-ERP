@@ -46677,5 +46677,725 @@
     "bytes": 17606
    }
   }
+ },
+ "c8ref": {
+  "recordedOn": {
+   "commit": "c47c65a3cbec35f8afe938ef8d928766d7f3ca3e",
+   "srcClean": true,
+   "build": "DiOQnHWUjVgWnYo0i0dMo",
+   "chromium": "141.0.7390.37"
+  },
+  "exports": {
+   "pl|csv|en": {
+    "status": 200,
+    "type": "text/csv; charset=utf-8",
+    "file": "attachment; filename=\"pl-2026-06-15.csv\"",
+    "text": "﻿Section,Account,Amount\r\nRevenue,4000 Sales Revenue,87000.75\r\nRevenue,Total Revenue,87000.75\r\n,Gross Profit,87000.75\r\nOperating Expenses,5200 Salary Expense,81075.00\r\n,Operating Profit,5925.75\r\n,Net Profit / (Loss),5925.75"
+   },
+   "pl|xlsx|en": {
+    "status": 200,
+    "type": "application/vnd.ms-excel; charset=utf-8",
+    "file": "attachment; filename=\"pl-2026-06-15.xls\"",
+    "text": "<html xmlns:o=\"urn:schemas-microsoft-com:office:office\" xmlns:x=\"urn:schemas-microsoft-com:office:excel\"><head><meta charset=\"utf-8\"><style>table{border-collapse:collapse}th,td{border:1px solid #ccc;padding:4px 8px;font-family:Calibri,Arial,sans-serif;font-size:11pt}th{background:#1B1B4E;color:#fff;text-align:left}</style></head><body><h3>Profit &amp; Loss (2026-01-01 → 2026-12-31)</h3><table><thead><tr><th>Section</th><th>Account</th><th>Amount</th></tr></thead><tbody><tr><td>Revenue</td><td>4000 Sales Revenue</td><td>87000.75</td></tr><tr><td>Revenue</td><td>Total Revenue</td><td>87000.75</td></tr><tr><td></td><td>Gross Profit</td><td>87000.75</td></tr><tr><td>Operating Expenses</td><td>5200 Salary Expense</td><td>81075.00</td></tr><tr><td></td><td>Operating Profit</td><td>5925.75</td></tr><tr><td></td><td>Net Profit / (Loss)</td><td>5925.75</td></tr></tbody></table></body></html>"
+   },
+   "pl|pdf|en": {
+    "status": 200,
+    "type": "application/pdf",
+    "file": "attachment; filename=\"pl-2026-06-15.pdf\"",
+    "pages": 1,
+    "lines": [
+     "Profit & Loss (2026-01-01 -> 2026-12-31)",
+     "Section | Account | Amount",
+     "Revenue | 4000 Sales Revenue | 87000.75",
+     "Revenue | Total Revenue | 87000.75",
+     " | Gross Profit | 87000.75",
+     "Operating Expenses | 5200 Salary Expense | 81075.00",
+     " | Operating Profit | 5925.75",
+     " | Net Profit / (Loss) | 5925.75"
+    ],
+    "overflow": [],
+    "clipped": []
+   },
+   "bs|csv|en": {
+    "status": 200,
+    "type": "text/csv; charset=utf-8",
+    "file": "attachment; filename=\"bs-2026-06-15.csv\"",
+    "text": "﻿Section,Account,Amount\r\nCurrent Assets,1000 Cash,214984.80\r\nCurrent Assets,1100 Accounts Receivable,35131.07\r\nCurrent Assets,1200 Inventory,18040.00\r\n,Total Assets,268155.87\r\nCurrent Liabilities,2000 Accounts Payable,1886.00\r\nCurrent Liabilities,2100 VAT Payable,10344.12\r\n,Total Liabilities,12230.12\r\nEquity,3000 Owner's Equity,250000.00\r\nEquity,Retained Earnings,0.00\r\nEquity,Current-period Profit / (Loss),5925.75\r\n,Total Equity,255925.75\r\n,Total Liabilities + Equity,268155.87"
+   },
+   "bs|xlsx|en": {
+    "status": 200,
+    "type": "application/vnd.ms-excel; charset=utf-8",
+    "file": "attachment; filename=\"bs-2026-06-15.xls\"",
+    "text": "<html xmlns:o=\"urn:schemas-microsoft-com:office:office\" xmlns:x=\"urn:schemas-microsoft-com:office:excel\"><head><meta charset=\"utf-8\"><style>table{border-collapse:collapse}th,td{border:1px solid #ccc;padding:4px 8px;font-family:Calibri,Arial,sans-serif;font-size:11pt}th{background:#1B1B4E;color:#fff;text-align:left}</style></head><body><h3>Balance Sheet (2026-01-01 → 2026-12-31)</h3><table><thead><tr><th>Section</th><th>Account</th><th>Amount</th></tr></thead><tbody><tr><td>Current Assets</td><td>1000 Cash</td><td>214984.80</td></tr><tr><td>Current Assets</td><td>1100 Accounts Receivable</td><td>35131.07</td></tr><tr><td>Current Assets</td><td>1200 Inventory</td><td>18040.00</td></tr><tr><td></td><td>Total Assets</td><td>268155.87</td></tr><tr><td>Current Liabilities</td><td>2000 Accounts Payable</td><td>1886.00</td></tr><tr><td>Current Liabilities</td><td>2100 VAT Payable</td><td>10344.12</td></tr><tr><td></td><td>Total Liabilities</td><td>12230.12</td></tr><tr><td>Equity</td><td>3000 Owner's Equity</td><td>250000.00</td></tr><tr><td>Equity</td><td>Retained Earnings</td><td>0.00</td></tr><tr><td>Equity</td><td>Current-period Profit / (Loss)</td><td>5925.75</td></tr><tr><td></td><td>Total Equity</td><td>255925.75</td></tr><tr><td></td><td>Total Liabilities + Equity</td><td>268155.87</td></tr></tbody></table></body></html>"
+   },
+   "bs|pdf|en": {
+    "status": 200,
+    "type": "application/pdf",
+    "file": "attachment; filename=\"bs-2026-06-15.pdf\"",
+    "pages": 1,
+    "lines": [
+     "Balance Sheet (2026-01-01 -> 2026-12-31)",
+     "Section | Account | Amount",
+     "Current Assets | 1000 Cash | 214984.80",
+     "Current Assets | 1100 Accounts Receivable | 35131.07",
+     "Current Assets | 1200 Inventory | 18040.00",
+     " | Total Assets | 268155.87",
+     "Current Liabilities | 2000 Accounts Payable | 1886.00",
+     "Current Liabilities | 2100 VAT Payable | 10344.12",
+     " | Total Liabilities | 12230.12",
+     "Equity | 3000 Owner's Equity | 250000.00",
+     "Equity | Retained Earnings | 0.00",
+     "Equity | Current-period Profit / (Loss) | 5925.75",
+     " | Total Equity | 255925.75",
+     " | Total Liabilities + Equity | 268155.87"
+    ],
+    "overflow": [],
+    "clipped": []
+   },
+   "cf|csv|en": {
+    "status": 200,
+    "type": "text/csv; charset=utf-8",
+    "file": "attachment; filename=\"cf-2026-06-15.csv\"",
+    "text": "﻿Section,Item,Amount\r\n,Opening Cash Balance,0.00\r\nOperating,payment,46059.80\r\nOperating,payroll_run,-81075.00\r\n,Net Operating,-35015.20\r\n,Net Investing,0.00\r\n,Net Financing,250000.00\r\n,Net Cash Movement,214984.80\r\n,Closing Cash Balance,214984.80"
+   },
+   "cf|xlsx|en": {
+    "status": 200,
+    "type": "application/vnd.ms-excel; charset=utf-8",
+    "file": "attachment; filename=\"cf-2026-06-15.xls\"",
+    "text": "<html xmlns:o=\"urn:schemas-microsoft-com:office:office\" xmlns:x=\"urn:schemas-microsoft-com:office:excel\"><head><meta charset=\"utf-8\"><style>table{border-collapse:collapse}th,td{border:1px solid #ccc;padding:4px 8px;font-family:Calibri,Arial,sans-serif;font-size:11pt}th{background:#1B1B4E;color:#fff;text-align:left}</style></head><body><h3>Cash Flow (2026-01-01 → 2026-12-31)</h3><table><thead><tr><th>Section</th><th>Item</th><th>Amount</th></tr></thead><tbody><tr><td></td><td>Opening Cash Balance</td><td>0.00</td></tr><tr><td>Operating</td><td>payment</td><td>46059.80</td></tr><tr><td>Operating</td><td>payroll_run</td><td>-81075.00</td></tr><tr><td></td><td>Net Operating</td><td>-35015.20</td></tr><tr><td></td><td>Net Investing</td><td>0.00</td></tr><tr><td></td><td>Net Financing</td><td>250000.00</td></tr><tr><td></td><td>Net Cash Movement</td><td>214984.80</td></tr><tr><td></td><td>Closing Cash Balance</td><td>214984.80</td></tr></tbody></table></body></html>"
+   },
+   "cf|pdf|en": {
+    "status": 200,
+    "type": "application/pdf",
+    "file": "attachment; filename=\"cf-2026-06-15.pdf\"",
+    "pages": 1,
+    "lines": [
+     "Cash Flow (2026-01-01 -> 2026-12-31)",
+     "Section | Item | Amount",
+     " | Opening Cash Balance | 0.00",
+     "Operating | payment | 46059.80",
+     "Operating | payroll_run | -81075.00",
+     " | Net Operating | -35015.20",
+     " | Net Investing | 0.00",
+     " | Net Financing | 250000.00",
+     " | Net Cash Movement | 214984.80",
+     " | Closing Cash Balance | 214984.80"
+    ],
+    "overflow": [],
+    "clipped": []
+   },
+   "tb|csv|en": {
+    "status": 200,
+    "type": "text/csv; charset=utf-8",
+    "file": "attachment; filename=\"tb-2026-06-15.csv\"",
+    "text": "﻿Code,Account,Opening Dr,Opening Cr,Period Dr,Period Cr,Closing Dr,Closing Cr\r\n1000,Cash,0.00,0.00,314919.80,99935.00,214984.80,0.00\r\n1100,Accounts Receivable,0.00,0.00,100050.87,64919.80,35131.07,0.00\r\n1200,Inventory,0.00,0.00,18040.00,0.00,18040.00,0.00\r\n2000,Accounts Payable,0.00,0.00,18860.00,20746.00,0.00,1886.00\r\n2100,VAT Payable,0.00,0.00,2706.00,13050.12,0.00,10344.12\r\n3000,Owner's Equity,0.00,0.00,0.00,250000.00,0.00,250000.00\r\n4000,Sales Revenue,0.00,0.00,0.00,87000.75,0.00,87000.75\r\n5200,Salary Expense,0.00,0.00,81075.00,0.00,81075.00,0.00\r\n,TOTAL,0.00,0.00,535651.67,535651.67,349230.87,349230.87"
+   },
+   "tb|xlsx|en": {
+    "status": 200,
+    "type": "application/vnd.ms-excel; charset=utf-8",
+    "file": "attachment; filename=\"tb-2026-06-15.xls\"",
+    "text": "<html xmlns:o=\"urn:schemas-microsoft-com:office:office\" xmlns:x=\"urn:schemas-microsoft-com:office:excel\"><head><meta charset=\"utf-8\"><style>table{border-collapse:collapse}th,td{border:1px solid #ccc;padding:4px 8px;font-family:Calibri,Arial,sans-serif;font-size:11pt}th{background:#1B1B4E;color:#fff;text-align:left}</style></head><body><h3>Trial Balance (2026-01-01 → 2026-12-31)</h3><table><thead><tr><th>Code</th><th>Account</th><th>Opening Dr</th><th>Opening Cr</th><th>Period Dr</th><th>Period Cr</th><th>Closing Dr</th><th>Closing Cr</th></tr></thead><tbody><tr><td>1000</td><td>Cash</td><td>0.00</td><td>0.00</td><td>314919.80</td><td>99935.00</td><td>214984.80</td><td>0.00</td></tr><tr><td>1100</td><td>Accounts Receivable</td><td>0.00</td><td>0.00</td><td>100050.87</td><td>64919.80</td><td>35131.07</td><td>0.00</td></tr><tr><td>1200</td><td>Inventory</td><td>0.00</td><td>0.00</td><td>18040.00</td><td>0.00</td><td>18040.00</td><td>0.00</td></tr><tr><td>2000</td><td>Accounts Payable</td><td>0.00</td><td>0.00</td><td>18860.00</td><td>20746.00</td><td>0.00</td><td>1886.00</td></tr><tr><td>2100</td><td>VAT Payable</td><td>0.00</td><td>0.00</td><td>2706.00</td><td>13050.12</td><td>0.00</td><td>10344.12</td></tr><tr><td>3000</td><td>Owner's Equity</td><td>0.00</td><td>0.00</td><td>0.00</td><td>250000.00</td><td>0.00</td><td>250000.00</td></tr><tr><td>4000</td><td>Sales Revenue</td><td>0.00</td><td>0.00</td><td>0.00</td><td>87000.75</td><td>0.00</td><td>87000.75</td></tr><tr><td>5200</td><td>Salary Expense</td><td>0.00</td><td>0.00</td><td>81075.00</td><td>0.00</td><td>81075.00</td><td>0.00</td></tr><tr><td></td><td>TOTAL</td><td>0.00</td><td>0.00</td><td>535651.67</td><td>535651.67</td><td>349230.87</td><td>349230.87</td></tr></tbody></table></body></html>"
+   },
+   "tb|pdf|en": {
+    "status": 200,
+    "type": "application/pdf",
+    "file": "attachment; filename=\"tb-2026-06-15.pdf\"",
+    "pages": 1,
+    "lines": [
+     "Trial Balance (2026-01-01 -> 2026-12-31)",
+     "Code | Account | Opening Dr | Opening Cr | Period Dr | Period Cr | Closing Dr | Closing Cr",
+     "1000 | Cash | 0.00 | 0.00 | 314919.80 | 99935.00 | 214984.80 | 0.00",
+     "1100 | Accounts Rece... | 0.00 | 0.00 | 100050.87 | 64919.80 | 35131.07 | 0.00",
+     "1200 | Inventory | 0.00 | 0.00 | 18040.00 | 0.00 | 18040.00 | 0.00",
+     "2000 | Accounts Payab... | 0.00 | 0.00 | 18860.00 | 20746.00 | 0.00 | 1886.00",
+     "2100 | VAT Payable | 0.00 | 0.00 | 2706.00 | 13050.12 | 0.00 | 10344.12",
+     "3000 | Owner's Equity | 0.00 | 0.00 | 0.00 | 250000.00 | 0.00 | 250000.00",
+     "4000 | Sales Revenue | 0.00 | 0.00 | 0.00 | 87000.75 | 0.00 | 87000.75",
+     "5200 | Salary Expense | 0.00 | 0.00 | 81075.00 | 0.00 | 81075.00 | 0.00",
+     " | TOTAL | 0.00 | 0.00 | 535651.67 | 535651.67 | 349230.87 | 349230.87"
+    ],
+    "overflow": [],
+    "clipped": [
+     "Accounts Rece...",
+     "Accounts Payab..."
+    ]
+   },
+   "gl|csv|en": {
+    "status": 200,
+    "type": "text/csv; charset=utf-8",
+    "file": "attachment; filename=\"gl-2026-06-15.csv\"",
+    "text": "﻿Date,Code,Account,Memo,Source,Debit,Credit,Running\r\n,1000,Cash — Opening,,,,,0.00\r\n2026-01-05,1000,Cash,Owner capital contribution,manual,250000.00,0.00,250000.00\r\n2026-04-15,1000,Cash,Payment for INV-0001,payment,43240.00,0.00,293240.00\r\n2026-04-20,1000,Cash,Payment for PO-0001,payment,0.00,18860.00,274380.00\r\n2026-05-20,1000,Cash,Payment for INV-0002,payment,11536.80,0.00,285916.80\r\n2026-05-28,1000,Cash,Payroll May 2026,payroll_run,0.00,81075.00,204841.80\r\n2026-06-09,1000,Cash,Payment for INV-0005,payment,10143.00,0.00,214984.80\r\n,1000,Cash — Closing,,,314919.80,99935.00,214984.80\r\n,1100,Accounts Receivable — Opening,,,,,0.00\r\n2026-03-20,1100,Accounts Receivable,Invoice INV-0007,sales_invoice,874.29,0.00,874.29\r\n2026-04-15,1100,Accounts Receivable,Invoice INV-0001,sales_invoice,43240.00,0.00,44114.29\r\n2026-04-15,1100,Accounts Receivable,Payment for INV-0001,payment,0.00,43240.00,874.29\r\n2026-05-03,1100,Accounts Receivable,Invoice INV-0002,sales_invoice,28842.00,0.00,29716.29\r\n2026-05-20,1100,Accounts Receivable,Payment for INV-0002,payment,0.00,11536.80,18179.49\r\n2026-05-27,1100,Accounts Receivable,Invoice INV-0003,sales_invoice,13823.58,0.00,32003.07\r\n2026-06-04,1100,Accounts Receivable,Invoice INV-0004,sales_invoice,3128.00,0.00,35131.07\r\n2026-06-09,1100,Accounts Receivable,Invoice INV-0005,sales_invoice,10143.00,0.00,45274.07\r\n2026-06-09,1100,Accounts Receivable,Payment for INV-0005,payment,0.00,10143.00,35131.07\r\n,1100,Accounts Receivable — Closing,,,100050.87,64919.80,35131.07\r\n,1200,Inventory — Opening,,,,,0.00\r\n2026-04-05,1200,Inventory,Purchase order PO-0001,purchase_order,16400.00,0.00,16400.00\r\n2026-05-25,1200,Inventory,Purchase order PO-0002,purchase_order,1640.00,0.00,18040.00\r\n,1200,Inventory — Closing,,,18040.00,0.00,18040.00\r\n,2000,Accounts Payable — Opening,,,,,0.00\r\n2026-04-05,2000,Accounts Payable,Purchase order PO-0001,purchase_order,0.00,18860.00,18860.00\r\n2026-04-20,2000,Accounts Payable,Payment for PO-0001,payment,18860.00,0.00,0.00\r\n2026-05-25,2000,Accounts Payable,Purchase order PO-0002,purchase_order,0.00,1886.00,1886.00\r\n,2000,Accounts Payable — Closing,,,18860.00,20746.00,1886.00\r\n,2100,VAT Payable — Opening,,,,,0.00\r\n2026-03-20,2100,VAT Payable,Invoice INV-0007,sales_invoice,0.00,114.04,114.04\r\n2026-04-05,2100,VAT Payable,Purchase order PO-0001,purchase_order,2460.00,0.00,-2345.96\r\n2026-04-15,2100,VAT Payable,Invoice INV-0001,sales_invoice,0.00,5640.00,3294.04\r\n2026-05-03,2100,VAT Payable,Invoice INV-0002,sales_invoice,0.00,3762.00,7056.04\r\n2026-05-25,2100,VAT Payable,Purchase order PO-0002,purchase_order,246.00,0.00,6810.04\r\n2026-05-27,2100,VAT Payable,Invoice INV-0003,sales_invoice,0.00,1803.08,8613.12\r\n2026-06-04,2100,VAT Payable,Invoice INV-0004,sales_invoice,0.00,408.00,9021.12\r\n2026-06-09,2100,VAT Payable,Invoice INV-0005,sales_invoice,0.00,1323.00,10344.12\r\n,2100,VAT Payable — Closing,,,2706.00,13050.12,10344.12\r\n,3000,Owner's Equity — Opening,,,,,0.00\r\n2026-01-05,3000,Owner's Equity,Owner capital contribution,manual,0.00,250000.00,250000.00\r\n,3000,Owner's Equity — Closing,,,0.00,250000.00,250000.00\r\n,4000,Sales Revenue — Opening,,,,,0.00\r\n2026-03-20,4000,Sales Revenue,Invoice INV-0007,sales_invoice,0.00,760.25,760.25\r\n2026-04-15,4000,Sales Revenue,Invoice INV-0001,sales_invoice,0.00,37600.00,38360.25\r\n2026-05-03,4000,Sales Revenue,Invoice INV-0002,sales_invoice,0.00,25080.00,63440.25\r\n2026-05-27,4000,Sales Revenue,Invoice INV-0003,sales_invoice,0.00,12020.50,75460.75\r\n2026-06-04,4000,Sales Revenue,Invoice INV-0004,sales_invoice,0.00,2720.00,78180.75\r\n2026-06-09,4000,Sales Revenue,Invoice INV-0005,sales_invoice,0.00,8820.00,87000.75\r\n,4000,Sales Revenue — Closing,,,0.00,87000.75,87000.75\r\n,5200,Salary Expense — Opening,,,,,0.00\r\n2026-05-28,5200,Salary Expense,Payroll May 2026,payroll_run,81075.00,0.00,81075.00\r\n,5200,Salary Expense — Closing,,,81075.00,0.00,81075.00"
+   },
+   "gl|xlsx|en": {
+    "status": 200,
+    "type": "application/vnd.ms-excel; charset=utf-8",
+    "file": "attachment; filename=\"gl-2026-06-15.xls\"",
+    "text": "<html xmlns:o=\"urn:schemas-microsoft-com:office:office\" xmlns:x=\"urn:schemas-microsoft-com:office:excel\"><head><meta charset=\"utf-8\"><style>table{border-collapse:collapse}th,td{border:1px solid #ccc;padding:4px 8px;font-family:Calibri,Arial,sans-serif;font-size:11pt}th{background:#1B1B4E;color:#fff;text-align:left}</style></head><body><h3>General Ledger (2026-01-01 → 2026-12-31)</h3><table><thead><tr><th>Date</th><th>Code</th><th>Account</th><th>Memo</th><th>Source</th><th>Debit</th><th>Credit</th><th>Running</th></tr></thead><tbody><tr><td></td><td>1000</td><td>Cash — Opening</td><td></td><td></td><td></td><td></td><td>0.00</td></tr><tr><td>2026-01-05</td><td>1000</td><td>Cash</td><td>Owner capital contribution</td><td>manual</td><td>250000.00</td><td>0.00</td><td>250000.00</td></tr><tr><td>2026-04-15</td><td>1000</td><td>Cash</td><td>Payment for INV-0001</td><td>payment</td><td>43240.00</td><td>0.00</td><td>293240.00</td></tr><tr><td>2026-04-20</td><td>1000</td><td>Cash</td><td>Payment for PO-0001</td><td>payment</td><td>0.00</td><td>18860.00</td><td>274380.00</td></tr><tr><td>2026-05-20</td><td>1000</td><td>Cash</td><td>Payment for INV-0002</td><td>payment</td><td>11536.80</td><td>0.00</td><td>285916.80</td></tr><tr><td>2026-05-28</td><td>1000</td><td>Cash</td><td>Payroll May 2026</td><td>payroll_run</td><td>0.00</td><td>81075.00</td><td>204841.80</td></tr><tr><td>2026-06-09</td><td>1000</td><td>Cash</td><td>Payment for INV-0005</td><td>payment</td><td>10143.00</td><td>0.00</td><td>214984.80</td></tr><tr><td></td><td>1000</td><td>Cash — Closing</td><td></td><td></td><td>314919.80</td><td>99935.00</td><td>214984.80</td></tr><tr><td></td><td>1100</td><td>Accounts Receivable — Opening</td><td></td><td></td><td></td><td></td><td>0.00</td></tr><tr><td>2026-03-20</td><td>1100</td><td>Accounts Receivable</td><td>Invoice INV-0007</td><td>sales_invoice</td><td>874.29</td><td>0.00</td><td>874.29</td></tr><tr><td>2026-04-15</td><td>1100</td><td>Accounts Receivable</td><td>Invoice INV-0001</td><td>sales_invoice</td><td>43240.00</td><td>0.00</td><td>44114.29</td></tr><tr><td>2026-04-15</td><td>1100</td><td>Accounts Receivable</td><td>Payment for INV-0001</td><td>payment</td><td>0.00</td><td>43240.00</td><td>874.29</td></tr><tr><td>2026-05-03</td><td>1100</td><td>Accounts Receivable</td><td>Invoice INV-0002</td><td>sales_invoice</td><td>28842.00</td><td>0.00</td><td>29716.29</td></tr><tr><td>2026-05-20</td><td>1100</td><td>Accounts Receivable</td><td>Payment for INV-0002</td><td>payment</td><td>0.00</td><td>11536.80</td><td>18179.49</td></tr><tr><td>2026-05-27</td><td>1100</td><td>Accounts Receivable</td><td>Invoice INV-0003</td><td>sales_invoice</td><td>13823.58</td><td>0.00</td><td>32003.07</td></tr><tr><td>2026-06-04</td><td>1100</td><td>Accounts Receivable</td><td>Invoice INV-0004</td><td>sales_invoice</td><td>3128.00</td><td>0.00</td><td>35131.07</td></tr><tr><td>2026-06-09</td><td>1100</td><td>Accounts Receivable</td><td>Invoice INV-0005</td><td>sales_invoice</td><td>10143.00</td><td>0.00</td><td>45274.07</td></tr><tr><td>2026-06-09</td><td>1100</td><td>Accounts Receivable</td><td>Payment for INV-0005</td><td>payment</td><td>0.00</td><td>10143.00</td><td>35131.07</td></tr><tr><td></td><td>1100</td><td>Accounts Receivable — Closing</td><td></td><td></td><td>100050.87</td><td>64919.80</td><td>35131.07</td></tr><tr><td></td><td>1200</td><td>Inventory — Opening</td><td></td><td></td><td></td><td></td><td>0.00</td></tr><tr><td>2026-04-05</td><td>1200</td><td>Inventory</td><td>Purchase order PO-0001</td><td>purchase_order</td><td>16400.00</td><td>0.00</td><td>16400.00</td></tr><tr><td>2026-05-25</td><td>1200</td><td>Inventory</td><td>Purchase order PO-0002</td><td>purchase_order</td><td>1640.00</td><td>0.00</td><td>18040.00</td></tr><tr><td></td><td>1200</td><td>Inventory — Closing</td><td></td><td></td><td>18040.00</td><td>0.00</td><td>18040.00</td></tr><tr><td></td><td>2000</td><td>Accounts Payable — Opening</td><td></td><td></td><td></td><td></td><td>0.00</td></tr><tr><td>2026-04-05</td><td>2000</td><td>Accounts Payable</td><td>Purchase order PO-0001</td><td>purchase_order</td><td>0.00</td><td>18860.00</td><td>18860.00</td></tr><tr><td>2026-04-20</td><td>2000</td><td>Accounts Payable</td><td>Payment for PO-0001</td><td>payment</td><td>18860.00</td><td>0.00</td><td>0.00</td></tr><tr><td>2026-05-25</td><td>2000</td><td>Accounts Payable</td><td>Purchase order PO-0002</td><td>purchase_order</td><td>0.00</td><td>1886.00</td><td>1886.00</td></tr><tr><td></td><td>2000</td><td>Accounts Payable — Closing</td><td></td><td></td><td>18860.00</td><td>20746.00</td><td>1886.00</td></tr><tr><td></td><td>2100</td><td>VAT Payable — Opening</td><td></td><td></td><td></td><td></td><td>0.00</td></tr><tr><td>2026-03-20</td><td>2100</td><td>VAT Payable</td><td>Invoice INV-0007</td><td>sales_invoice</td><td>0.00</td><td>114.04</td><td>114.04</td></tr><tr><td>2026-04-05</td><td>2100</td><td>VAT Payable</td><td>Purchase order PO-0001</td><td>purchase_order</td><td>2460.00</td><td>0.00</td><td>-2345.96</td></tr><tr><td>2026-04-15</td><td>2100</td><td>VAT Payable</td><td>Invoice INV-0001</td><td>sales_invoice</td><td>0.00</td><td>5640.00</td><td>3294.04</td></tr><tr><td>2026-05-03</td><td>2100</td><td>VAT Payable</td><td>Invoice INV-0002</td><td>sales_invoice</td><td>0.00</td><td>3762.00</td><td>7056.04</td></tr><tr><td>2026-05-25</td><td>2100</td><td>VAT Payable</td><td>Purchase order PO-0002</td><td>purchase_order</td><td>246.00</td><td>0.00</td><td>6810.04</td></tr><tr><td>2026-05-27</td><td>2100</td><td>VAT Payable</td><td>Invoice INV-0003</td><td>sales_invoice</td><td>0.00</td><td>1803.08</td><td>8613.12</td></tr><tr><td>2026-06-04</td><td>2100</td><td>VAT Payable</td><td>Invoice INV-0004</td><td>sales_invoice</td><td>0.00</td><td>408.00</td><td>9021.12</td></tr><tr><td>2026-06-09</td><td>2100</td><td>VAT Payable</td><td>Invoice INV-0005</td><td>sales_invoice</td><td>0.00</td><td>1323.00</td><td>10344.12</td></tr><tr><td></td><td>2100</td><td>VAT Payable — Closing</td><td></td><td></td><td>2706.00</td><td>13050.12</td><td>10344.12</td></tr><tr><td></td><td>3000</td><td>Owner's Equity — Opening</td><td></td><td></td><td></td><td></td><td>0.00</td></tr><tr><td>2026-01-05</td><td>3000</td><td>Owner's Equity</td><td>Owner capital contribution</td><td>manual</td><td>0.00</td><td>250000.00</td><td>250000.00</td></tr><tr><td></td><td>3000</td><td>Owner's Equity — Closing</td><td></td><td></td><td>0.00</td><td>250000.00</td><td>250000.00</td></tr><tr><td></td><td>4000</td><td>Sales Revenue — Opening</td><td></td><td></td><td></td><td></td><td>0.00</td></tr><tr><td>2026-03-20</td><td>4000</td><td>Sales Revenue</td><td>Invoice INV-0007</td><td>sales_invoice</td><td>0.00</td><td>760.25</td><td>760.25</td></tr><tr><td>2026-04-15</td><td>4000</td><td>Sales Revenue</td><td>Invoice INV-0001</td><td>sales_invoice</td><td>0.00</td><td>37600.00</td><td>38360.25</td></tr><tr><td>2026-05-03</td><td>4000</td><td>Sales Revenue</td><td>Invoice INV-0002</td><td>sales_invoice</td><td>0.00</td><td>25080.00</td><td>63440.25</td></tr><tr><td>2026-05-27</td><td>4000</td><td>Sales Revenue</td><td>Invoice INV-0003</td><td>sales_invoice</td><td>0.00</td><td>12020.50</td><td>75460.75</td></tr><tr><td>2026-06-04</td><td>4000</td><td>Sales Revenue</td><td>Invoice INV-0004</td><td>sales_invoice</td><td>0.00</td><td>2720.00</td><td>78180.75</td></tr><tr><td>2026-06-09</td><td>4000</td><td>Sales Revenue</td><td>Invoice INV-0005</td><td>sales_invoice</td><td>0.00</td><td>8820.00</td><td>87000.75</td></tr><tr><td></td><td>4000</td><td>Sales Revenue — Closing</td><td></td><td></td><td>0.00</td><td>87000.75</td><td>87000.75</td></tr><tr><td></td><td>5200</td><td>Salary Expense — Opening</td><td></td><td></td><td></td><td></td><td>0.00</td></tr><tr><td>2026-05-28</td><td>5200</td><td>Salary Expense</td><td>Payroll May 2026</td><td>payroll_run</td><td>81075.00</td><td>0.00</td><td>81075.00</td></tr><tr><td></td><td>5200</td><td>Salary Expense — Closing</td><td></td><td></td><td>81075.00</td><td>0.00</td><td>81075.00</td></tr></tbody></table></body></html>"
+   },
+   "gl|pdf|en": {
+    "status": 200,
+    "type": "application/pdf",
+    "file": "attachment; filename=\"gl-2026-06-15.pdf\"",
+    "pages": 2,
+    "lines": [
+     "General Ledger (2026-01-01 -> 2026-12-31)",
+     "Date | Code | Account | Memo | Source | Debit | Credit | Running",
+     " | 1000 | Cash - Opening |  |  |  |  | 0.00",
+     "2026-01-05 | 1000 | Cash | Owner capital ... | manual | 250000.00 | 0.00 | 250000.00",
+     "2026-04-15 | 1000 | Cash | Payment for IN... | payment | 43240.00 | 0.00 | 293240.00",
+     "2026-04-20 | 1000 | Cash | Payment for PO... | payment | 0.00 | 18860.00 | 274380.00",
+     "2026-05-20 | 1000 | Cash | Payment for IN... | payment | 11536.80 | 0.00 | 285916.80",
+     "2026-05-28 | 1000 | Cash | Payroll May 20... | payroll_run | 0.00 | 81075.00 | 204841.80",
+     "2026-06-09 | 1000 | Cash | Payment for IN... | payment | 10143.00 | 0.00 | 214984.80",
+     " | 1000 | Cash - Closing |  |  | 314919.80 | 99935.00 | 214984.80",
+     " | 1100 | Accounts Rece... |  |  |  |  | 0.00",
+     "2026-03-20 | 1100 | Accounts Rece... | Invoice INV-00... | sales_invoice | 874.29 | 0.00 | 874.29",
+     "2026-04-15 | 1100 | Accounts Rece... | Invoice INV-00... | sales_invoice | 43240.00 | 0.00 | 44114.29",
+     "2026-04-15 | 1100 | Accounts Rece... | Payment for IN... | payment | 0.00 | 43240.00 | 874.29",
+     "2026-05-03 | 1100 | Accounts Rece... | Invoice INV-00... | sales_invoice | 28842.00 | 0.00 | 29716.29",
+     "2026-05-20 | 1100 | Accounts Rece... | Payment for IN... | payment | 0.00 | 11536.80 | 18179.49",
+     "2026-05-27 | 1100 | Accounts Rece... | Invoice INV-00... | sales_invoice | 13823.58 | 0.00 | 32003.07",
+     "2026-06-04 | 1100 | Accounts Rece... | Invoice INV-00... | sales_invoice | 3128.00 | 0.00 | 35131.07",
+     "2026-06-09 | 1100 | Accounts Rece... | Invoice INV-00... | sales_invoice | 10143.00 | 0.00 | 45274.07",
+     "2026-06-09 | 1100 | Accounts Rece... | Payment for IN... | payment | 0.00 | 10143.00 | 35131.07",
+     " | 1100 | Accounts Rece... |  |  | 100050.87 | 64919.80 | 35131.07",
+     " | 1200 | Inventory - Op... |  |  |  |  | 0.00",
+     "2026-04-05 | 1200 | Inventory | Purchase order... | purchase_order | 16400.00 | 0.00 | 16400.00",
+     "2026-05-25 | 1200 | Inventory | Purchase order... | purchase_order | 1640.00 | 0.00 | 18040.00",
+     " | 1200 | Inventory - Clos... |  |  | 18040.00 | 0.00 | 18040.00",
+     " | 2000 | Accounts Payab... |  |  |  |  | 0.00",
+     "2026-04-05 | 2000 | Accounts Payab... | Purchase order... | purchase_order | 0.00 | 18860.00 | 18860.00",
+     "2026-04-20 | 2000 | Accounts Payab... | Payment for PO... | payment | 18860.00 | 0.00 | 0.00",
+     "2026-05-25 | 2000 | Accounts Payab... | Purchase order... | purchase_order | 0.00 | 1886.00 | 1886.00",
+     " | 2000 | Accounts Payab... |  |  | 18860.00 | 20746.00 | 1886.00",
+     " | 2100 | VAT Payable - ... |  |  |  |  | 0.00",
+     "2026-03-20 | 2100 | VAT Payable | Invoice INV-00... | sales_invoice | 0.00 | 114.04 | 114.04",
+     "2026-04-05 | 2100 | VAT Payable | Purchase order... | purchase_order | 2460.00 | 0.00 | -2345.96",
+     "2026-04-15 | 2100 | VAT Payable | Invoice INV-00... | sales_invoice | 0.00 | 5640.00 | 3294.04",
+     "2026-05-03 | 2100 | VAT Payable | Invoice INV-00... | sales_invoice | 0.00 | 3762.00 | 7056.04",
+     "2026-05-25 | 2100 | VAT Payable | Purchase order... | purchase_order | 246.00 | 0.00 | 6810.04",
+     "2026-05-27 | 2100 | VAT Payable | Invoice INV-00... | sales_invoice | 0.00 | 1803.08 | 8613.12",
+     "2026-06-04 | 2100 | VAT Payable | Invoice INV-00... | sales_invoice | 0.00 | 408.00 | 9021.12",
+     "2026-06-09 | 2100 | VAT Payable | Invoice INV-00... | sales_invoice | 0.00 | 1323.00 | 10344.12",
+     " | 2100 | VAT Payable - C... |  |  | 2706.00 | 13050.12 | 10344.12",
+     " | 3000 | Owner's Equity ... |  |  |  |  | 0.00",
+     "2026-01-05 | 3000 | Owner's Equity | Owner capital ... | manual | 0.00 | 250000.00 | 250000.00",
+     " | 3000 | Owner's Equity ... |  |  | 0.00 | 250000.00 | 250000.00",
+     " | 4000 | Sales Revenue ... |  |  |  |  | 0.00",
+     "2026-03-20 | 4000 | Sales Revenue | Invoice INV-00... | sales_invoice | 0.00 | 760.25 | 760.25",
+     "2026-04-15 | 4000 | Sales Revenue | Invoice INV-00... | sales_invoice | 0.00 | 37600.00 | 38360.25",
+     "2026-05-03 | 4000 | Sales Revenue | Invoice INV-00... | sales_invoice | 0.00 | 25080.00 | 63440.25",
+     "2026-05-27 | 4000 | Sales Revenue | Invoice INV-00... | sales_invoice | 0.00 | 12020.50 | 75460.75",
+     "2026-06-04 | 4000 | Sales Revenue | Invoice INV-00... | sales_invoice | 0.00 | 2720.00 | 78180.75",
+     "2026-06-09 | 4000 | Sales Revenue | Invoice INV-00... | sales_invoice | 0.00 | 8820.00 | 87000.75",
+     " | 4000 | Sales Revenue ... |  |  | 0.00 | 87000.75 | 87000.75",
+     " | 5200 | Salary Expense... |  |  |  |  | 0.00",
+     "2026-05-28 | 5200 | Salary Expense | Payroll May 20... | payroll_run | 81075.00 | 0.00 | 81075.00",
+     " | 5200 | Salary Expense... |  |  | 81075.00 | 0.00 | 81075.00"
+    ],
+    "overflow": [],
+    "clipped": [
+     "Owner capital ...",
+     "Payment for IN...",
+     "Payment for PO...",
+     "Payment for IN...",
+     "Payroll May 20...",
+     "Payment for IN...",
+     "Accounts Rece...",
+     "Accounts Rece...",
+     "Invoice INV-00...",
+     "Accounts Rece...",
+     "Invoice INV-00...",
+     "Accounts Rece...",
+     "Payment for IN...",
+     "Accounts Rece...",
+     "Invoice INV-00...",
+     "Accounts Rece...",
+     "Payment for IN...",
+     "Accounts Rece...",
+     "Invoice INV-00...",
+     "Accounts Rece...",
+     "Invoice INV-00...",
+     "Accounts Rece...",
+     "Invoice INV-00...",
+     "Accounts Rece...",
+     "Payment for IN...",
+     "Accounts Rece...",
+     "Inventory - Op...",
+     "Purchase order...",
+     "Purchase order...",
+     "Inventory - Clos...",
+     "Accounts Payab...",
+     "Accounts Payab...",
+     "Purchase order...",
+     "Accounts Payab...",
+     "Payment for PO...",
+     "Accounts Payab...",
+     "Purchase order...",
+     "Accounts Payab...",
+     "VAT Payable - ...",
+     "Invoice INV-00...",
+     "Purchase order...",
+     "Invoice INV-00...",
+     "Invoice INV-00...",
+     "Purchase order...",
+     "Invoice INV-00...",
+     "Invoice INV-00...",
+     "Invoice INV-00...",
+     "VAT Payable - C...",
+     "Owner's Equity ...",
+     "Owner capital ...",
+     "Owner's Equity ...",
+     "Sales Revenue ...",
+     "Invoice INV-00...",
+     "Invoice INV-00...",
+     "Invoice INV-00...",
+     "Invoice INV-00...",
+     "Invoice INV-00...",
+     "Invoice INV-00...",
+     "Sales Revenue ...",
+     "Salary Expense...",
+     "Payroll May 20...",
+     "Salary Expense..."
+    ]
+   },
+   "ar|csv|en": {
+    "status": 200,
+    "type": "text/csv; charset=utf-8",
+    "file": "attachment; filename=\"ar-2026-06-15.csv\"",
+    "text": "﻿Number,Customer,Date,Due Date,Overdue Days,Total,Paid,Outstanding,Bucket\r\nINV-0007,Sara Sample (Fictional),2026-03-20,2026-04-19,256,874.29,0.00,874.29,d90p\r\nINV-0002,Blue Harbor Events (Fictional),2026-05-03,2026-06-02,212,28842.00,11536.80,17305.20,d90p\r\nINV-0003,Cedar Line Hospitality (Fictional),2026-05-27,2026-06-26,188,13823.58,0.00,13823.58,d90p\r\nINV-0004,Desert Rose Exhibitions (Fictional),2026-06-04,2026-07-04,180,3128.00,0.00,3128.00,d90p\r\n,TOTAL,,,,,,35131.07,"
+   },
+   "ar|xlsx|en": {
+    "status": 200,
+    "type": "application/vnd.ms-excel; charset=utf-8",
+    "file": "attachment; filename=\"ar-2026-06-15.xls\"",
+    "text": "<html xmlns:o=\"urn:schemas-microsoft-com:office:office\" xmlns:x=\"urn:schemas-microsoft-com:office:excel\"><head><meta charset=\"utf-8\"><style>table{border-collapse:collapse}th,td{border:1px solid #ccc;padding:4px 8px;font-family:Calibri,Arial,sans-serif;font-size:11pt}th{background:#1B1B4E;color:#fff;text-align:left}</style></head><body><h3>Accounts Receivable Aging (2026-01-01 → 2026-12-31)</h3><table><thead><tr><th>Number</th><th>Customer</th><th>Date</th><th>Due Date</th><th>Overdue Days</th><th>Total</th><th>Paid</th><th>Outstanding</th><th>Bucket</th></tr></thead><tbody><tr><td>INV-0007</td><td>Sara Sample (Fictional)</td><td>2026-03-20</td><td>2026-04-19</td><td>256</td><td>874.29</td><td>0.00</td><td>874.29</td><td>d90p</td></tr><tr><td>INV-0002</td><td>Blue Harbor Events (Fictional)</td><td>2026-05-03</td><td>2026-06-02</td><td>212</td><td>28842.00</td><td>11536.80</td><td>17305.20</td><td>d90p</td></tr><tr><td>INV-0003</td><td>Cedar Line Hospitality (Fictional)</td><td>2026-05-27</td><td>2026-06-26</td><td>188</td><td>13823.58</td><td>0.00</td><td>13823.58</td><td>d90p</td></tr><tr><td>INV-0004</td><td>Desert Rose Exhibitions (Fictional)</td><td>2026-06-04</td><td>2026-07-04</td><td>180</td><td>3128.00</td><td>0.00</td><td>3128.00</td><td>d90p</td></tr><tr><td></td><td>TOTAL</td><td></td><td></td><td></td><td></td><td></td><td>35131.07</td><td></td></tr></tbody></table></body></html>"
+   },
+   "ar|pdf|en": {
+    "status": 200,
+    "type": "application/pdf",
+    "file": "attachment; filename=\"ar-2026-06-15.pdf\"",
+    "pages": 1,
+    "lines": [
+     "Accounts Receivable Aging (2026-01-01 -> 2026-12-31)",
+     "Number | Customer | Date | Due Date | Overdue Days | Total | Paid | Outstanding | Bucket",
+     "INV-0007 | Sara Sample ... | 2026-03-20 | 2026-04-19 | 256 | 874.29 | 0.00 | 874.29 | d90p",
+     "INV-0002 | Blue Harbor ... | 2026-05-03 | 2026-06-02 | 212 | 28842.00 | 11536.80 | 17305.20 | d90p",
+     "INV-0003 | Cedar Line H... | 2026-05-27 | 2026-06-26 | 188 | 13823.58 | 0.00 | 13823.58 | d90p",
+     "INV-0004 | Desert Rose... | 2026-06-04 | 2026-07-04 | 180 | 3128.00 | 0.00 | 3128.00 | d90p",
+     " | TOTAL |  |  |  |  |  | 35131.07 | "
+    ],
+    "overflow": [],
+    "clipped": [
+     "Sara Sample ...",
+     "Blue Harbor ...",
+     "Cedar Line H...",
+     "Desert Rose..."
+    ]
+   },
+   "ap|csv|en": {
+    "status": 200,
+    "type": "text/csv; charset=utf-8",
+    "file": "attachment; filename=\"ap-2026-06-15.csv\"",
+    "text": "﻿Number,Vendor,Date,Due Date,Overdue Days,Total,Paid,Outstanding,Bucket\r\n,TOTAL,,,,,,0.00,"
+   },
+   "ap|xlsx|en": {
+    "status": 200,
+    "type": "application/vnd.ms-excel; charset=utf-8",
+    "file": "attachment; filename=\"ap-2026-06-15.xls\"",
+    "text": "<html xmlns:o=\"urn:schemas-microsoft-com:office:office\" xmlns:x=\"urn:schemas-microsoft-com:office:excel\"><head><meta charset=\"utf-8\"><style>table{border-collapse:collapse}th,td{border:1px solid #ccc;padding:4px 8px;font-family:Calibri,Arial,sans-serif;font-size:11pt}th{background:#1B1B4E;color:#fff;text-align:left}</style></head><body><h3>Accounts Payable Aging (2026-01-01 → 2026-12-31)</h3><table><thead><tr><th>Number</th><th>Vendor</th><th>Date</th><th>Due Date</th><th>Overdue Days</th><th>Total</th><th>Paid</th><th>Outstanding</th><th>Bucket</th></tr></thead><tbody><tr><td></td><td>TOTAL</td><td></td><td></td><td></td><td></td><td></td><td>0.00</td><td></td></tr></tbody></table></body></html>"
+   },
+   "ap|pdf|en": {
+    "status": 200,
+    "type": "application/pdf",
+    "file": "attachment; filename=\"ap-2026-06-15.pdf\"",
+    "pages": 1,
+    "lines": [
+     "Accounts Payable Aging (2026-01-01 -> 2026-12-31)",
+     "Number | Vendor | Date | Due Date | Overdue Days | Total | Paid | Outstanding | Bucket",
+     " | TOTAL |  |  |  |  |  | 0.00 | "
+    ],
+    "overflow": [],
+    "clipped": []
+   },
+   "vat|csv|en": {
+    "status": 200,
+    "type": "text/csv; charset=utf-8",
+    "file": "attachment; filename=\"vat-2026-06-15.csv\"",
+    "text": "﻿Item,Amount\r\nOutput VAT,13050.12\r\nInput VAT,2460.00\r\nNet VAT Payable / (Recoverable),10590.12\r\nCredit-note VAT adjustment,0.00\r\nDebit-note VAT adjustment,0.00\r\nTaxable Sales,87000.75\r\nZero-rated Sales,0.00\r\nTaxable Purchases,16400.00"
+   },
+   "vat|xlsx|en": {
+    "status": 200,
+    "type": "application/vnd.ms-excel; charset=utf-8",
+    "file": "attachment; filename=\"vat-2026-06-15.xls\"",
+    "text": "<html xmlns:o=\"urn:schemas-microsoft-com:office:office\" xmlns:x=\"urn:schemas-microsoft-com:office:excel\"><head><meta charset=\"utf-8\"><style>table{border-collapse:collapse}th,td{border:1px solid #ccc;padding:4px 8px;font-family:Calibri,Arial,sans-serif;font-size:11pt}th{background:#1B1B4E;color:#fff;text-align:left}</style></head><body><h3>VAT Summary (2026-01-01 → 2026-12-31)</h3><table><thead><tr><th>Item</th><th>Amount</th></tr></thead><tbody><tr><td>Output VAT</td><td>13050.12</td></tr><tr><td>Input VAT</td><td>2460.00</td></tr><tr><td>Net VAT Payable / (Recoverable)</td><td>10590.12</td></tr><tr><td>Credit-note VAT adjustment</td><td>0.00</td></tr><tr><td>Debit-note VAT adjustment</td><td>0.00</td></tr><tr><td>Taxable Sales</td><td>87000.75</td></tr><tr><td>Zero-rated Sales</td><td>0.00</td></tr><tr><td>Taxable Purchases</td><td>16400.00</td></tr></tbody></table></body></html>"
+   },
+   "vat|pdf|en": {
+    "status": 200,
+    "type": "application/pdf",
+    "file": "attachment; filename=\"vat-2026-06-15.pdf\"",
+    "pages": 1,
+    "lines": [
+     "VAT Summary (2026-01-01 -> 2026-12-31)",
+     "Item | Amount",
+     "Output VAT | 13050.12",
+     "Input VAT | 2460.00",
+     "Net VAT Payable / (Recoverable) | 10590.12",
+     "Credit-note VAT adjustment | 0.00",
+     "Debit-note VAT adjustment | 0.00",
+     "Taxable Sales | 87000.75",
+     "Zero-rated Sales | 0.00",
+     "Taxable Purchases | 16400.00"
+    ],
+    "overflow": [],
+    "clipped": []
+   },
+   "pl|csv|ar": {
+    "status": 200,
+    "type": "text/csv; charset=utf-8",
+    "file": "attachment; filename=\"pl-2026-06-15.csv\"",
+    "text": "﻿Section,Account,Amount\r\nRevenue,4000 إيرادات المبيعات,87000.75\r\nRevenue,Total Revenue,87000.75\r\n,Gross Profit,87000.75\r\nOperating Expenses,5200 مصروف الرواتب,81075.00\r\n,Operating Profit,5925.75\r\n,Net Profit / (Loss),5925.75"
+   },
+   "pl|xlsx|ar": {
+    "status": 200,
+    "type": "application/vnd.ms-excel; charset=utf-8",
+    "file": "attachment; filename=\"pl-2026-06-15.xls\"",
+    "text": "<html xmlns:o=\"urn:schemas-microsoft-com:office:office\" xmlns:x=\"urn:schemas-microsoft-com:office:excel\"><head><meta charset=\"utf-8\"><style>table{border-collapse:collapse}th,td{border:1px solid #ccc;padding:4px 8px;font-family:Calibri,Arial,sans-serif;font-size:11pt}th{background:#1B1B4E;color:#fff;text-align:left}</style></head><body><h3>Profit &amp; Loss (2026-01-01 → 2026-12-31)</h3><table><thead><tr><th>Section</th><th>Account</th><th>Amount</th></tr></thead><tbody><tr><td>Revenue</td><td>4000 إيرادات المبيعات</td><td>87000.75</td></tr><tr><td>Revenue</td><td>Total Revenue</td><td>87000.75</td></tr><tr><td></td><td>Gross Profit</td><td>87000.75</td></tr><tr><td>Operating Expenses</td><td>5200 مصروف الرواتب</td><td>81075.00</td></tr><tr><td></td><td>Operating Profit</td><td>5925.75</td></tr><tr><td></td><td>Net Profit / (Loss)</td><td>5925.75</td></tr></tbody></table></body></html>"
+   },
+   "pl|pdf|ar": {
+    "status": 200,
+    "type": "application/pdf",
+    "file": "attachment; filename=\"pl-2026-06-15.pdf\"",
+    "pages": 1,
+    "lines": [
+     "Profit & Loss (2026-01-01 -> 2026-12-31)",
+     "Section | Account | Amount",
+     "Revenue | 4000   | 87000.75",
+     "Revenue | Total Revenue | 87000.75",
+     " | Gross Profit | 87000.75",
+     "Operating Expenses | 5200   | 81075.00",
+     " | Operating Profit | 5925.75",
+     " | Net Profit / (Loss) | 5925.75"
+    ],
+    "overflow": [],
+    "clipped": []
+   },
+   "bs|csv|ar": {
+    "status": 200,
+    "type": "text/csv; charset=utf-8",
+    "file": "attachment; filename=\"bs-2026-06-15.csv\"",
+    "text": "﻿Section,Account,Amount\r\nCurrent Assets,1000 النقد,214984.80\r\nCurrent Assets,1100 الذمم المدينة,35131.07\r\nCurrent Assets,1200 المخزون,18040.00\r\n,Total Assets,268155.87\r\nCurrent Liabilities,2000 الذمم الدائنة,1886.00\r\nCurrent Liabilities,2100 ضريبة القيمة المضافة المستحقة,10344.12\r\n,Total Liabilities,12230.12\r\nEquity,3000 حقوق الملكية,250000.00\r\nEquity,Retained Earnings,0.00\r\nEquity,Current-period Profit / (Loss),5925.75\r\n,Total Equity,255925.75\r\n,Total Liabilities + Equity,268155.87"
+   },
+   "bs|xlsx|ar": {
+    "status": 200,
+    "type": "application/vnd.ms-excel; charset=utf-8",
+    "file": "attachment; filename=\"bs-2026-06-15.xls\"",
+    "text": "<html xmlns:o=\"urn:schemas-microsoft-com:office:office\" xmlns:x=\"urn:schemas-microsoft-com:office:excel\"><head><meta charset=\"utf-8\"><style>table{border-collapse:collapse}th,td{border:1px solid #ccc;padding:4px 8px;font-family:Calibri,Arial,sans-serif;font-size:11pt}th{background:#1B1B4E;color:#fff;text-align:left}</style></head><body><h3>Balance Sheet (2026-01-01 → 2026-12-31)</h3><table><thead><tr><th>Section</th><th>Account</th><th>Amount</th></tr></thead><tbody><tr><td>Current Assets</td><td>1000 النقد</td><td>214984.80</td></tr><tr><td>Current Assets</td><td>1100 الذمم المدينة</td><td>35131.07</td></tr><tr><td>Current Assets</td><td>1200 المخزون</td><td>18040.00</td></tr><tr><td></td><td>Total Assets</td><td>268155.87</td></tr><tr><td>Current Liabilities</td><td>2000 الذمم الدائنة</td><td>1886.00</td></tr><tr><td>Current Liabilities</td><td>2100 ضريبة القيمة المضافة المستحقة</td><td>10344.12</td></tr><tr><td></td><td>Total Liabilities</td><td>12230.12</td></tr><tr><td>Equity</td><td>3000 حقوق الملكية</td><td>250000.00</td></tr><tr><td>Equity</td><td>Retained Earnings</td><td>0.00</td></tr><tr><td>Equity</td><td>Current-period Profit / (Loss)</td><td>5925.75</td></tr><tr><td></td><td>Total Equity</td><td>255925.75</td></tr><tr><td></td><td>Total Liabilities + Equity</td><td>268155.87</td></tr></tbody></table></body></html>"
+   },
+   "bs|pdf|ar": {
+    "status": 200,
+    "type": "application/pdf",
+    "file": "attachment; filename=\"bs-2026-06-15.pdf\"",
+    "pages": 1,
+    "lines": [
+     "Balance Sheet (2026-01-01 -> 2026-12-31)",
+     "Section | Account | Amount",
+     "Current Assets | 1000  | 214984.80",
+     "Current Assets | 1100   | 35131.07",
+     "Current Assets | 1200  | 18040.00",
+     " | Total Assets | 268155.87",
+     "Current Liabilities | 2000   | 1886.00",
+     "Current Liabilities | 2100     | 10344.12",
+     " | Total Liabilities | 12230.12",
+     "Equity | 3000   | 250000.00",
+     "Equity | Retained Earnings | 0.00",
+     "Equity | Current-period Profit / (Loss) | 5925.75",
+     " | Total Equity | 255925.75",
+     " | Total Liabilities + Equity | 268155.87"
+    ],
+    "overflow": [],
+    "clipped": []
+   },
+   "cf|csv|ar": {
+    "status": 200,
+    "type": "text/csv; charset=utf-8",
+    "file": "attachment; filename=\"cf-2026-06-15.csv\"",
+    "text": "﻿Section,Item,Amount\r\n,Opening Cash Balance,0.00\r\nOperating,payment,46059.80\r\nOperating,payroll_run,-81075.00\r\n,Net Operating,-35015.20\r\n,Net Investing,0.00\r\n,Net Financing,250000.00\r\n,Net Cash Movement,214984.80\r\n,Closing Cash Balance,214984.80"
+   },
+   "cf|xlsx|ar": {
+    "status": 200,
+    "type": "application/vnd.ms-excel; charset=utf-8",
+    "file": "attachment; filename=\"cf-2026-06-15.xls\"",
+    "text": "<html xmlns:o=\"urn:schemas-microsoft-com:office:office\" xmlns:x=\"urn:schemas-microsoft-com:office:excel\"><head><meta charset=\"utf-8\"><style>table{border-collapse:collapse}th,td{border:1px solid #ccc;padding:4px 8px;font-family:Calibri,Arial,sans-serif;font-size:11pt}th{background:#1B1B4E;color:#fff;text-align:left}</style></head><body><h3>Cash Flow (2026-01-01 → 2026-12-31)</h3><table><thead><tr><th>Section</th><th>Item</th><th>Amount</th></tr></thead><tbody><tr><td></td><td>Opening Cash Balance</td><td>0.00</td></tr><tr><td>Operating</td><td>payment</td><td>46059.80</td></tr><tr><td>Operating</td><td>payroll_run</td><td>-81075.00</td></tr><tr><td></td><td>Net Operating</td><td>-35015.20</td></tr><tr><td></td><td>Net Investing</td><td>0.00</td></tr><tr><td></td><td>Net Financing</td><td>250000.00</td></tr><tr><td></td><td>Net Cash Movement</td><td>214984.80</td></tr><tr><td></td><td>Closing Cash Balance</td><td>214984.80</td></tr></tbody></table></body></html>"
+   },
+   "cf|pdf|ar": {
+    "status": 200,
+    "type": "application/pdf",
+    "file": "attachment; filename=\"cf-2026-06-15.pdf\"",
+    "pages": 1,
+    "lines": [
+     "Cash Flow (2026-01-01 -> 2026-12-31)",
+     "Section | Item | Amount",
+     " | Opening Cash Balance | 0.00",
+     "Operating | payment | 46059.80",
+     "Operating | payroll_run | -81075.00",
+     " | Net Operating | -35015.20",
+     " | Net Investing | 0.00",
+     " | Net Financing | 250000.00",
+     " | Net Cash Movement | 214984.80",
+     " | Closing Cash Balance | 214984.80"
+    ],
+    "overflow": [],
+    "clipped": []
+   },
+   "tb|csv|ar": {
+    "status": 200,
+    "type": "text/csv; charset=utf-8",
+    "file": "attachment; filename=\"tb-2026-06-15.csv\"",
+    "text": "﻿Code,Account,Opening Dr,Opening Cr,Period Dr,Period Cr,Closing Dr,Closing Cr\r\n1000,النقد,0.00,0.00,314919.80,99935.00,214984.80,0.00\r\n1100,الذمم المدينة,0.00,0.00,100050.87,64919.80,35131.07,0.00\r\n1200,المخزون,0.00,0.00,18040.00,0.00,18040.00,0.00\r\n2000,الذمم الدائنة,0.00,0.00,18860.00,20746.00,0.00,1886.00\r\n2100,ضريبة القيمة المضافة المستحقة,0.00,0.00,2706.00,13050.12,0.00,10344.12\r\n3000,حقوق الملكية,0.00,0.00,0.00,250000.00,0.00,250000.00\r\n4000,إيرادات المبيعات,0.00,0.00,0.00,87000.75,0.00,87000.75\r\n5200,مصروف الرواتب,0.00,0.00,81075.00,0.00,81075.00,0.00\r\n,TOTAL,0.00,0.00,535651.67,535651.67,349230.87,349230.87"
+   },
+   "tb|xlsx|ar": {
+    "status": 200,
+    "type": "application/vnd.ms-excel; charset=utf-8",
+    "file": "attachment; filename=\"tb-2026-06-15.xls\"",
+    "text": "<html xmlns:o=\"urn:schemas-microsoft-com:office:office\" xmlns:x=\"urn:schemas-microsoft-com:office:excel\"><head><meta charset=\"utf-8\"><style>table{border-collapse:collapse}th,td{border:1px solid #ccc;padding:4px 8px;font-family:Calibri,Arial,sans-serif;font-size:11pt}th{background:#1B1B4E;color:#fff;text-align:left}</style></head><body><h3>Trial Balance (2026-01-01 → 2026-12-31)</h3><table><thead><tr><th>Code</th><th>Account</th><th>Opening Dr</th><th>Opening Cr</th><th>Period Dr</th><th>Period Cr</th><th>Closing Dr</th><th>Closing Cr</th></tr></thead><tbody><tr><td>1000</td><td>النقد</td><td>0.00</td><td>0.00</td><td>314919.80</td><td>99935.00</td><td>214984.80</td><td>0.00</td></tr><tr><td>1100</td><td>الذمم المدينة</td><td>0.00</td><td>0.00</td><td>100050.87</td><td>64919.80</td><td>35131.07</td><td>0.00</td></tr><tr><td>1200</td><td>المخزون</td><td>0.00</td><td>0.00</td><td>18040.00</td><td>0.00</td><td>18040.00</td><td>0.00</td></tr><tr><td>2000</td><td>الذمم الدائنة</td><td>0.00</td><td>0.00</td><td>18860.00</td><td>20746.00</td><td>0.00</td><td>1886.00</td></tr><tr><td>2100</td><td>ضريبة القيمة المضافة المستحقة</td><td>0.00</td><td>0.00</td><td>2706.00</td><td>13050.12</td><td>0.00</td><td>10344.12</td></tr><tr><td>3000</td><td>حقوق الملكية</td><td>0.00</td><td>0.00</td><td>0.00</td><td>250000.00</td><td>0.00</td><td>250000.00</td></tr><tr><td>4000</td><td>إيرادات المبيعات</td><td>0.00</td><td>0.00</td><td>0.00</td><td>87000.75</td><td>0.00</td><td>87000.75</td></tr><tr><td>5200</td><td>مصروف الرواتب</td><td>0.00</td><td>0.00</td><td>81075.00</td><td>0.00</td><td>81075.00</td><td>0.00</td></tr><tr><td></td><td>TOTAL</td><td>0.00</td><td>0.00</td><td>535651.67</td><td>535651.67</td><td>349230.87</td><td>349230.87</td></tr></tbody></table></body></html>"
+   },
+   "tb|pdf|ar": {
+    "status": 200,
+    "type": "application/pdf",
+    "file": "attachment; filename=\"tb-2026-06-15.pdf\"",
+    "pages": 1,
+    "lines": [
+     "Trial Balance (2026-01-01 -> 2026-12-31)",
+     "Code | Account | Opening Dr | Opening Cr | Period Dr | Period Cr | Closing Dr | Closing Cr",
+     "1000 |  | 0.00 | 0.00 | 314919.80 | 99935.00 | 214984.80 | 0.00",
+     "1100 |   | 0.00 | 0.00 | 100050.87 | 64919.80 | 35131.07 | 0.00",
+     "1200 |  | 0.00 | 0.00 | 18040.00 | 0.00 | 18040.00 | 0.00",
+     "2000 |   | 0.00 | 0.00 | 18860.00 | 20746.00 | 0.00 | 1886.00",
+     "2100 |     | 0.00 | 0.00 | 2706.00 | 13050.12 | 0.00 | 10344.12",
+     "3000 |   | 0.00 | 0.00 | 0.00 | 250000.00 | 0.00 | 250000.00",
+     "4000 |   | 0.00 | 0.00 | 0.00 | 87000.75 | 0.00 | 87000.75",
+     "5200 |   | 0.00 | 0.00 | 81075.00 | 0.00 | 81075.00 | 0.00",
+     " | TOTAL | 0.00 | 0.00 | 535651.67 | 535651.67 | 349230.87 | 349230.87"
+    ],
+    "overflow": [],
+    "clipped": []
+   },
+   "gl|csv|ar": {
+    "status": 200,
+    "type": "text/csv; charset=utf-8",
+    "file": "attachment; filename=\"gl-2026-06-15.csv\"",
+    "text": "﻿Date,Code,Account,Memo,Source,Debit,Credit,Running\r\n,1000,النقد — Opening,,,,,0.00\r\n2026-01-05,1000,النقد,Owner capital contribution,manual,250000.00,0.00,250000.00\r\n2026-04-15,1000,النقد,Payment for INV-0001,payment,43240.00,0.00,293240.00\r\n2026-04-20,1000,النقد,Payment for PO-0001,payment,0.00,18860.00,274380.00\r\n2026-05-20,1000,النقد,Payment for INV-0002,payment,11536.80,0.00,285916.80\r\n2026-05-28,1000,النقد,Payroll May 2026,payroll_run,0.00,81075.00,204841.80\r\n2026-06-09,1000,النقد,Payment for INV-0005,payment,10143.00,0.00,214984.80\r\n,1000,النقد — Closing,,,314919.80,99935.00,214984.80\r\n,1100,الذمم المدينة — Opening,,,,,0.00\r\n2026-03-20,1100,الذمم المدينة,Invoice INV-0007,sales_invoice,874.29,0.00,874.29\r\n2026-04-15,1100,الذمم المدينة,Invoice INV-0001,sales_invoice,43240.00,0.00,44114.29\r\n2026-04-15,1100,الذمم المدينة,Payment for INV-0001,payment,0.00,43240.00,874.29\r\n2026-05-03,1100,الذمم المدينة,Invoice INV-0002,sales_invoice,28842.00,0.00,29716.29\r\n2026-05-20,1100,الذمم المدينة,Payment for INV-0002,payment,0.00,11536.80,18179.49\r\n2026-05-27,1100,الذمم المدينة,Invoice INV-0003,sales_invoice,13823.58,0.00,32003.07\r\n2026-06-04,1100,الذمم المدينة,Invoice INV-0004,sales_invoice,3128.00,0.00,35131.07\r\n2026-06-09,1100,الذمم المدينة,Invoice INV-0005,sales_invoice,10143.00,0.00,45274.07\r\n2026-06-09,1100,الذمم المدينة,Payment for INV-0005,payment,0.00,10143.00,35131.07\r\n,1100,الذمم المدينة — Closing,,,100050.87,64919.80,35131.07\r\n,1200,المخزون — Opening,,,,,0.00\r\n2026-04-05,1200,المخزون,Purchase order PO-0001,purchase_order,16400.00,0.00,16400.00\r\n2026-05-25,1200,المخزون,Purchase order PO-0002,purchase_order,1640.00,0.00,18040.00\r\n,1200,المخزون — Closing,,,18040.00,0.00,18040.00\r\n,2000,الذمم الدائنة — Opening,,,,,0.00\r\n2026-04-05,2000,الذمم الدائنة,Purchase order PO-0001,purchase_order,0.00,18860.00,18860.00\r\n2026-04-20,2000,الذمم الدائنة,Payment for PO-0001,payment,18860.00,0.00,0.00\r\n2026-05-25,2000,الذمم الدائنة,Purchase order PO-0002,purchase_order,0.00,1886.00,1886.00\r\n,2000,الذمم الدائنة — Closing,,,18860.00,20746.00,1886.00\r\n,2100,ضريبة القيمة المضافة المستحقة — Opening,,,,,0.00\r\n2026-03-20,2100,ضريبة القيمة المضافة المستحقة,Invoice INV-0007,sales_invoice,0.00,114.04,114.04\r\n2026-04-05,2100,ضريبة القيمة المضافة المستحقة,Purchase order PO-0001,purchase_order,2460.00,0.00,-2345.96\r\n2026-04-15,2100,ضريبة القيمة المضافة المستحقة,Invoice INV-0001,sales_invoice,0.00,5640.00,3294.04\r\n2026-05-03,2100,ضريبة القيمة المضافة المستحقة,Invoice INV-0002,sales_invoice,0.00,3762.00,7056.04\r\n2026-05-25,2100,ضريبة القيمة المضافة المستحقة,Purchase order PO-0002,purchase_order,246.00,0.00,6810.04\r\n2026-05-27,2100,ضريبة القيمة المضافة المستحقة,Invoice INV-0003,sales_invoice,0.00,1803.08,8613.12\r\n2026-06-04,2100,ضريبة القيمة المضافة المستحقة,Invoice INV-0004,sales_invoice,0.00,408.00,9021.12\r\n2026-06-09,2100,ضريبة القيمة المضافة المستحقة,Invoice INV-0005,sales_invoice,0.00,1323.00,10344.12\r\n,2100,ضريبة القيمة المضافة المستحقة — Closing,,,2706.00,13050.12,10344.12\r\n,3000,حقوق الملكية — Opening,,,,,0.00\r\n2026-01-05,3000,حقوق الملكية,Owner capital contribution,manual,0.00,250000.00,250000.00\r\n,3000,حقوق الملكية — Closing,,,0.00,250000.00,250000.00\r\n,4000,إيرادات المبيعات — Opening,,,,,0.00\r\n2026-03-20,4000,إيرادات المبيعات,Invoice INV-0007,sales_invoice,0.00,760.25,760.25\r\n2026-04-15,4000,إيرادات المبيعات,Invoice INV-0001,sales_invoice,0.00,37600.00,38360.25\r\n2026-05-03,4000,إيرادات المبيعات,Invoice INV-0002,sales_invoice,0.00,25080.00,63440.25\r\n2026-05-27,4000,إيرادات المبيعات,Invoice INV-0003,sales_invoice,0.00,12020.50,75460.75\r\n2026-06-04,4000,إيرادات المبيعات,Invoice INV-0004,sales_invoice,0.00,2720.00,78180.75\r\n2026-06-09,4000,إيرادات المبيعات,Invoice INV-0005,sales_invoice,0.00,8820.00,87000.75\r\n,4000,إيرادات المبيعات — Closing,,,0.00,87000.75,87000.75\r\n,5200,مصروف الرواتب — Opening,,,,,0.00\r\n2026-05-28,5200,مصروف الرواتب,Payroll May 2026,payroll_run,81075.00,0.00,81075.00\r\n,5200,مصروف الرواتب — Closing,,,81075.00,0.00,81075.00"
+   },
+   "gl|xlsx|ar": {
+    "status": 200,
+    "type": "application/vnd.ms-excel; charset=utf-8",
+    "file": "attachment; filename=\"gl-2026-06-15.xls\"",
+    "text": "<html xmlns:o=\"urn:schemas-microsoft-com:office:office\" xmlns:x=\"urn:schemas-microsoft-com:office:excel\"><head><meta charset=\"utf-8\"><style>table{border-collapse:collapse}th,td{border:1px solid #ccc;padding:4px 8px;font-family:Calibri,Arial,sans-serif;font-size:11pt}th{background:#1B1B4E;color:#fff;text-align:left}</style></head><body><h3>General Ledger (2026-01-01 → 2026-12-31)</h3><table><thead><tr><th>Date</th><th>Code</th><th>Account</th><th>Memo</th><th>Source</th><th>Debit</th><th>Credit</th><th>Running</th></tr></thead><tbody><tr><td></td><td>1000</td><td>النقد — Opening</td><td></td><td></td><td></td><td></td><td>0.00</td></tr><tr><td>2026-01-05</td><td>1000</td><td>النقد</td><td>Owner capital contribution</td><td>manual</td><td>250000.00</td><td>0.00</td><td>250000.00</td></tr><tr><td>2026-04-15</td><td>1000</td><td>النقد</td><td>Payment for INV-0001</td><td>payment</td><td>43240.00</td><td>0.00</td><td>293240.00</td></tr><tr><td>2026-04-20</td><td>1000</td><td>النقد</td><td>Payment for PO-0001</td><td>payment</td><td>0.00</td><td>18860.00</td><td>274380.00</td></tr><tr><td>2026-05-20</td><td>1000</td><td>النقد</td><td>Payment for INV-0002</td><td>payment</td><td>11536.80</td><td>0.00</td><td>285916.80</td></tr><tr><td>2026-05-28</td><td>1000</td><td>النقد</td><td>Payroll May 2026</td><td>payroll_run</td><td>0.00</td><td>81075.00</td><td>204841.80</td></tr><tr><td>2026-06-09</td><td>1000</td><td>النقد</td><td>Payment for INV-0005</td><td>payment</td><td>10143.00</td><td>0.00</td><td>214984.80</td></tr><tr><td></td><td>1000</td><td>النقد — Closing</td><td></td><td></td><td>314919.80</td><td>99935.00</td><td>214984.80</td></tr><tr><td></td><td>1100</td><td>الذمم المدينة — Opening</td><td></td><td></td><td></td><td></td><td>0.00</td></tr><tr><td>2026-03-20</td><td>1100</td><td>الذمم المدينة</td><td>Invoice INV-0007</td><td>sales_invoice</td><td>874.29</td><td>0.00</td><td>874.29</td></tr><tr><td>2026-04-15</td><td>1100</td><td>الذمم المدينة</td><td>Invoice INV-0001</td><td>sales_invoice</td><td>43240.00</td><td>0.00</td><td>44114.29</td></tr><tr><td>2026-04-15</td><td>1100</td><td>الذمم المدينة</td><td>Payment for INV-0001</td><td>payment</td><td>0.00</td><td>43240.00</td><td>874.29</td></tr><tr><td>2026-05-03</td><td>1100</td><td>الذمم المدينة</td><td>Invoice INV-0002</td><td>sales_invoice</td><td>28842.00</td><td>0.00</td><td>29716.29</td></tr><tr><td>2026-05-20</td><td>1100</td><td>الذمم المدينة</td><td>Payment for INV-0002</td><td>payment</td><td>0.00</td><td>11536.80</td><td>18179.49</td></tr><tr><td>2026-05-27</td><td>1100</td><td>الذمم المدينة</td><td>Invoice INV-0003</td><td>sales_invoice</td><td>13823.58</td><td>0.00</td><td>32003.07</td></tr><tr><td>2026-06-04</td><td>1100</td><td>الذمم المدينة</td><td>Invoice INV-0004</td><td>sales_invoice</td><td>3128.00</td><td>0.00</td><td>35131.07</td></tr><tr><td>2026-06-09</td><td>1100</td><td>الذمم المدينة</td><td>Invoice INV-0005</td><td>sales_invoice</td><td>10143.00</td><td>0.00</td><td>45274.07</td></tr><tr><td>2026-06-09</td><td>1100</td><td>الذمم المدينة</td><td>Payment for INV-0005</td><td>payment</td><td>0.00</td><td>10143.00</td><td>35131.07</td></tr><tr><td></td><td>1100</td><td>الذمم المدينة — Closing</td><td></td><td></td><td>100050.87</td><td>64919.80</td><td>35131.07</td></tr><tr><td></td><td>1200</td><td>المخزون — Opening</td><td></td><td></td><td></td><td></td><td>0.00</td></tr><tr><td>2026-04-05</td><td>1200</td><td>المخزون</td><td>Purchase order PO-0001</td><td>purchase_order</td><td>16400.00</td><td>0.00</td><td>16400.00</td></tr><tr><td>2026-05-25</td><td>1200</td><td>المخزون</td><td>Purchase order PO-0002</td><td>purchase_order</td><td>1640.00</td><td>0.00</td><td>18040.00</td></tr><tr><td></td><td>1200</td><td>المخزون — Closing</td><td></td><td></td><td>18040.00</td><td>0.00</td><td>18040.00</td></tr><tr><td></td><td>2000</td><td>الذمم الدائنة — Opening</td><td></td><td></td><td></td><td></td><td>0.00</td></tr><tr><td>2026-04-05</td><td>2000</td><td>الذمم الدائنة</td><td>Purchase order PO-0001</td><td>purchase_order</td><td>0.00</td><td>18860.00</td><td>18860.00</td></tr><tr><td>2026-04-20</td><td>2000</td><td>الذمم الدائنة</td><td>Payment for PO-0001</td><td>payment</td><td>18860.00</td><td>0.00</td><td>0.00</td></tr><tr><td>2026-05-25</td><td>2000</td><td>الذمم الدائنة</td><td>Purchase order PO-0002</td><td>purchase_order</td><td>0.00</td><td>1886.00</td><td>1886.00</td></tr><tr><td></td><td>2000</td><td>الذمم الدائنة — Closing</td><td></td><td></td><td>18860.00</td><td>20746.00</td><td>1886.00</td></tr><tr><td></td><td>2100</td><td>ضريبة القيمة المضافة المستحقة — Opening</td><td></td><td></td><td></td><td></td><td>0.00</td></tr><tr><td>2026-03-20</td><td>2100</td><td>ضريبة القيمة المضافة المستحقة</td><td>Invoice INV-0007</td><td>sales_invoice</td><td>0.00</td><td>114.04</td><td>114.04</td></tr><tr><td>2026-04-05</td><td>2100</td><td>ضريبة القيمة المضافة المستحقة</td><td>Purchase order PO-0001</td><td>purchase_order</td><td>2460.00</td><td>0.00</td><td>-2345.96</td></tr><tr><td>2026-04-15</td><td>2100</td><td>ضريبة القيمة المضافة المستحقة</td><td>Invoice INV-0001</td><td>sales_invoice</td><td>0.00</td><td>5640.00</td><td>3294.04</td></tr><tr><td>2026-05-03</td><td>2100</td><td>ضريبة القيمة المضافة المستحقة</td><td>Invoice INV-0002</td><td>sales_invoice</td><td>0.00</td><td>3762.00</td><td>7056.04</td></tr><tr><td>2026-05-25</td><td>2100</td><td>ضريبة القيمة المضافة المستحقة</td><td>Purchase order PO-0002</td><td>purchase_order</td><td>246.00</td><td>0.00</td><td>6810.04</td></tr><tr><td>2026-05-27</td><td>2100</td><td>ضريبة القيمة المضافة المستحقة</td><td>Invoice INV-0003</td><td>sales_invoice</td><td>0.00</td><td>1803.08</td><td>8613.12</td></tr><tr><td>2026-06-04</td><td>2100</td><td>ضريبة القيمة المضافة المستحقة</td><td>Invoice INV-0004</td><td>sales_invoice</td><td>0.00</td><td>408.00</td><td>9021.12</td></tr><tr><td>2026-06-09</td><td>2100</td><td>ضريبة القيمة المضافة المستحقة</td><td>Invoice INV-0005</td><td>sales_invoice</td><td>0.00</td><td>1323.00</td><td>10344.12</td></tr><tr><td></td><td>2100</td><td>ضريبة القيمة المضافة المستحقة — Closing</td><td></td><td></td><td>2706.00</td><td>13050.12</td><td>10344.12</td></tr><tr><td></td><td>3000</td><td>حقوق الملكية — Opening</td><td></td><td></td><td></td><td></td><td>0.00</td></tr><tr><td>2026-01-05</td><td>3000</td><td>حقوق الملكية</td><td>Owner capital contribution</td><td>manual</td><td>0.00</td><td>250000.00</td><td>250000.00</td></tr><tr><td></td><td>3000</td><td>حقوق الملكية — Closing</td><td></td><td></td><td>0.00</td><td>250000.00</td><td>250000.00</td></tr><tr><td></td><td>4000</td><td>إيرادات المبيعات — Opening</td><td></td><td></td><td></td><td></td><td>0.00</td></tr><tr><td>2026-03-20</td><td>4000</td><td>إيرادات المبيعات</td><td>Invoice INV-0007</td><td>sales_invoice</td><td>0.00</td><td>760.25</td><td>760.25</td></tr><tr><td>2026-04-15</td><td>4000</td><td>إيرادات المبيعات</td><td>Invoice INV-0001</td><td>sales_invoice</td><td>0.00</td><td>37600.00</td><td>38360.25</td></tr><tr><td>2026-05-03</td><td>4000</td><td>إيرادات المبيعات</td><td>Invoice INV-0002</td><td>sales_invoice</td><td>0.00</td><td>25080.00</td><td>63440.25</td></tr><tr><td>2026-05-27</td><td>4000</td><td>إيرادات المبيعات</td><td>Invoice INV-0003</td><td>sales_invoice</td><td>0.00</td><td>12020.50</td><td>75460.75</td></tr><tr><td>2026-06-04</td><td>4000</td><td>إيرادات المبيعات</td><td>Invoice INV-0004</td><td>sales_invoice</td><td>0.00</td><td>2720.00</td><td>78180.75</td></tr><tr><td>2026-06-09</td><td>4000</td><td>إيرادات المبيعات</td><td>Invoice INV-0005</td><td>sales_invoice</td><td>0.00</td><td>8820.00</td><td>87000.75</td></tr><tr><td></td><td>4000</td><td>إيرادات المبيعات — Closing</td><td></td><td></td><td>0.00</td><td>87000.75</td><td>87000.75</td></tr><tr><td></td><td>5200</td><td>مصروف الرواتب — Opening</td><td></td><td></td><td></td><td></td><td>0.00</td></tr><tr><td>2026-05-28</td><td>5200</td><td>مصروف الرواتب</td><td>Payroll May 2026</td><td>payroll_run</td><td>81075.00</td><td>0.00</td><td>81075.00</td></tr><tr><td></td><td>5200</td><td>مصروف الرواتب — Closing</td><td></td><td></td><td>81075.00</td><td>0.00</td><td>81075.00</td></tr></tbody></table></body></html>"
+   },
+   "gl|pdf|ar": {
+    "status": 200,
+    "type": "application/pdf",
+    "file": "attachment; filename=\"gl-2026-06-15.pdf\"",
+    "pages": 2,
+    "lines": [
+     "General Ledger (2026-01-01 -> 2026-12-31)",
+     "Date | Code | Account | Memo | Source | Debit | Credit | Running",
+     " | 1000 |  - Opening |  |  |  |  | 0.00",
+     "2026-01-05 | 1000 |  | Owner capital ... | manual | 250000.00 | 0.00 | 250000.00",
+     "2026-04-15 | 1000 |  | Payment for IN... | payment | 43240.00 | 0.00 | 293240.00",
+     "2026-04-20 | 1000 |  | Payment for PO... | payment | 0.00 | 18860.00 | 274380.00",
+     "2026-05-20 | 1000 |  | Payment for IN... | payment | 11536.80 | 0.00 | 285916.80",
+     "2026-05-28 | 1000 |  | Payroll May 20... | payroll_run | 0.00 | 81075.00 | 204841.80",
+     "2026-06-09 | 1000 |  | Payment for IN... | payment | 10143.00 | 0.00 | 214984.80",
+     " | 1000 |  - Closing |  |  | 314919.80 | 99935.00 | 214984.80",
+     " | 1100 |   - Opening |  |  |  |  | 0.00",
+     "2026-03-20 | 1100 |   | Invoice INV-00... | sales_invoice | 874.29 | 0.00 | 874.29",
+     "2026-04-15 | 1100 |   | Invoice INV-00... | sales_invoice | 43240.00 | 0.00 | 44114.29",
+     "2026-04-15 | 1100 |   | Payment for IN... | payment | 0.00 | 43240.00 | 874.29",
+     "2026-05-03 | 1100 |   | Invoice INV-00... | sales_invoice | 28842.00 | 0.00 | 29716.29",
+     "2026-05-20 | 1100 |   | Payment for IN... | payment | 0.00 | 11536.80 | 18179.49",
+     "2026-05-27 | 1100 |   | Invoice INV-00... | sales_invoice | 13823.58 | 0.00 | 32003.07",
+     "2026-06-04 | 1100 |   | Invoice INV-00... | sales_invoice | 3128.00 | 0.00 | 35131.07",
+     "2026-06-09 | 1100 |   | Invoice INV-00... | sales_invoice | 10143.00 | 0.00 | 45274.07",
+     "2026-06-09 | 1100 |   | Payment for IN... | payment | 0.00 | 10143.00 | 35131.07",
+     " | 1100 |   - Closing |  |  | 100050.87 | 64919.80 | 35131.07",
+     " | 1200 |  - Opening |  |  |  |  | 0.00",
+     "2026-04-05 | 1200 |  | Purchase order... | purchase_order | 16400.00 | 0.00 | 16400.00",
+     "2026-05-25 | 1200 |  | Purchase order... | purchase_order | 1640.00 | 0.00 | 18040.00",
+     " | 1200 |  - Closing |  |  | 18040.00 | 0.00 | 18040.00",
+     " | 2000 |   - Opening |  |  |  |  | 0.00",
+     "2026-04-05 | 2000 |   | Purchase order... | purchase_order | 0.00 | 18860.00 | 18860.00",
+     "2026-04-20 | 2000 |   | Payment for PO... | payment | 18860.00 | 0.00 | 0.00",
+     "2026-05-25 | 2000 |   | Purchase order... | purchase_order | 0.00 | 1886.00 | 1886.00",
+     " | 2000 |   - Closing |  |  | 18860.00 | 20746.00 | 1886.00",
+     " | 2100 |     - Opening |  |  |  |  | 0.00",
+     "2026-03-20 | 2100 |     | Invoice INV-00... | sales_invoice | 0.00 | 114.04 | 114.04",
+     "2026-04-05 | 2100 |     | Purchase order... | purchase_order | 2460.00 | 0.00 | -2345.96",
+     "2026-04-15 | 2100 |     | Invoice INV-00... | sales_invoice | 0.00 | 5640.00 | 3294.04",
+     "2026-05-03 | 2100 |     | Invoice INV-00... | sales_invoice | 0.00 | 3762.00 | 7056.04",
+     "2026-05-25 | 2100 |     | Purchase order... | purchase_order | 246.00 | 0.00 | 6810.04",
+     "2026-05-27 | 2100 |     | Invoice INV-00... | sales_invoice | 0.00 | 1803.08 | 8613.12",
+     "2026-06-04 | 2100 |     | Invoice INV-00... | sales_invoice | 0.00 | 408.00 | 9021.12",
+     "2026-06-09 | 2100 |     | Invoice INV-00... | sales_invoice | 0.00 | 1323.00 | 10344.12",
+     " | 2100 |     - Closing |  |  | 2706.00 | 13050.12 | 10344.12",
+     " | 3000 |   - Opening |  |  |  |  | 0.00",
+     "2026-01-05 | 3000 |   | Owner capital ... | manual | 0.00 | 250000.00 | 250000.00",
+     " | 3000 |   - Closing |  |  | 0.00 | 250000.00 | 250000.00",
+     " | 4000 |   - Opening |  |  |  |  | 0.00",
+     "2026-03-20 | 4000 |   | Invoice INV-00... | sales_invoice | 0.00 | 760.25 | 760.25",
+     "2026-04-15 | 4000 |   | Invoice INV-00... | sales_invoice | 0.00 | 37600.00 | 38360.25",
+     "2026-05-03 | 4000 |   | Invoice INV-00... | sales_invoice | 0.00 | 25080.00 | 63440.25",
+     "2026-05-27 | 4000 |   | Invoice INV-00... | sales_invoice | 0.00 | 12020.50 | 75460.75",
+     "2026-06-04 | 4000 |   | Invoice INV-00... | sales_invoice | 0.00 | 2720.00 | 78180.75",
+     "2026-06-09 | 4000 |   | Invoice INV-00... | sales_invoice | 0.00 | 8820.00 | 87000.75",
+     " | 4000 |   - Closing |  |  | 0.00 | 87000.75 | 87000.75",
+     " | 5200 |   - Opening |  |  |  |  | 0.00",
+     "2026-05-28 | 5200 |   | Payroll May 20... | payroll_run | 81075.00 | 0.00 | 81075.00",
+     " | 5200 |   - Closing |  |  | 81075.00 | 0.00 | 81075.00"
+    ],
+    "overflow": [],
+    "clipped": [
+     "Owner capital ...",
+     "Payment for IN...",
+     "Payment for PO...",
+     "Payment for IN...",
+     "Payroll May 20...",
+     "Payment for IN...",
+     "Invoice INV-00...",
+     "Invoice INV-00...",
+     "Payment for IN...",
+     "Invoice INV-00...",
+     "Payment for IN...",
+     "Invoice INV-00...",
+     "Invoice INV-00...",
+     "Invoice INV-00...",
+     "Payment for IN...",
+     "Purchase order...",
+     "Purchase order...",
+     "Purchase order...",
+     "Payment for PO...",
+     "Purchase order...",
+     "Invoice INV-00...",
+     "Purchase order...",
+     "Invoice INV-00...",
+     "Invoice INV-00...",
+     "Purchase order...",
+     "Invoice INV-00...",
+     "Invoice INV-00...",
+     "Invoice INV-00...",
+     "Owner capital ...",
+     "Invoice INV-00...",
+     "Invoice INV-00...",
+     "Invoice INV-00...",
+     "Invoice INV-00...",
+     "Invoice INV-00...",
+     "Invoice INV-00...",
+     "Payroll May 20..."
+    ]
+   },
+   "ar|csv|ar": {
+    "status": 200,
+    "type": "text/csv; charset=utf-8",
+    "file": "attachment; filename=\"ar-2026-06-15.csv\"",
+    "text": "﻿Number,Customer,Date,Due Date,Overdue Days,Total,Paid,Outstanding,Bucket\r\nINV-0007,Sara Sample (Fictional),2026-03-20,2026-04-19,256,874.29,0.00,874.29,d90p\r\nINV-0002,Blue Harbor Events (Fictional),2026-05-03,2026-06-02,212,28842.00,11536.80,17305.20,d90p\r\nINV-0003,Cedar Line Hospitality (Fictional),2026-05-27,2026-06-26,188,13823.58,0.00,13823.58,d90p\r\nINV-0004,Desert Rose Exhibitions (Fictional),2026-06-04,2026-07-04,180,3128.00,0.00,3128.00,d90p\r\n,TOTAL,,,,,,35131.07,"
+   },
+   "ar|xlsx|ar": {
+    "status": 200,
+    "type": "application/vnd.ms-excel; charset=utf-8",
+    "file": "attachment; filename=\"ar-2026-06-15.xls\"",
+    "text": "<html xmlns:o=\"urn:schemas-microsoft-com:office:office\" xmlns:x=\"urn:schemas-microsoft-com:office:excel\"><head><meta charset=\"utf-8\"><style>table{border-collapse:collapse}th,td{border:1px solid #ccc;padding:4px 8px;font-family:Calibri,Arial,sans-serif;font-size:11pt}th{background:#1B1B4E;color:#fff;text-align:left}</style></head><body><h3>Accounts Receivable Aging (2026-01-01 → 2026-12-31)</h3><table><thead><tr><th>Number</th><th>Customer</th><th>Date</th><th>Due Date</th><th>Overdue Days</th><th>Total</th><th>Paid</th><th>Outstanding</th><th>Bucket</th></tr></thead><tbody><tr><td>INV-0007</td><td>Sara Sample (Fictional)</td><td>2026-03-20</td><td>2026-04-19</td><td>256</td><td>874.29</td><td>0.00</td><td>874.29</td><td>d90p</td></tr><tr><td>INV-0002</td><td>Blue Harbor Events (Fictional)</td><td>2026-05-03</td><td>2026-06-02</td><td>212</td><td>28842.00</td><td>11536.80</td><td>17305.20</td><td>d90p</td></tr><tr><td>INV-0003</td><td>Cedar Line Hospitality (Fictional)</td><td>2026-05-27</td><td>2026-06-26</td><td>188</td><td>13823.58</td><td>0.00</td><td>13823.58</td><td>d90p</td></tr><tr><td>INV-0004</td><td>Desert Rose Exhibitions (Fictional)</td><td>2026-06-04</td><td>2026-07-04</td><td>180</td><td>3128.00</td><td>0.00</td><td>3128.00</td><td>d90p</td></tr><tr><td></td><td>TOTAL</td><td></td><td></td><td></td><td></td><td></td><td>35131.07</td><td></td></tr></tbody></table></body></html>"
+   },
+   "ar|pdf|ar": {
+    "status": 200,
+    "type": "application/pdf",
+    "file": "attachment; filename=\"ar-2026-06-15.pdf\"",
+    "pages": 1,
+    "lines": [
+     "Accounts Receivable Aging (2026-01-01 -> 2026-12-31)",
+     "Number | Customer | Date | Due Date | Overdue Days | Total | Paid | Outstanding | Bucket",
+     "INV-0007 | Sara Sample ... | 2026-03-20 | 2026-04-19 | 256 | 874.29 | 0.00 | 874.29 | d90p",
+     "INV-0002 | Blue Harbor ... | 2026-05-03 | 2026-06-02 | 212 | 28842.00 | 11536.80 | 17305.20 | d90p",
+     "INV-0003 | Cedar Line H... | 2026-05-27 | 2026-06-26 | 188 | 13823.58 | 0.00 | 13823.58 | d90p",
+     "INV-0004 | Desert Rose... | 2026-06-04 | 2026-07-04 | 180 | 3128.00 | 0.00 | 3128.00 | d90p",
+     " | TOTAL |  |  |  |  |  | 35131.07 | "
+    ],
+    "overflow": [],
+    "clipped": [
+     "Sara Sample ...",
+     "Blue Harbor ...",
+     "Cedar Line H...",
+     "Desert Rose..."
+    ]
+   },
+   "ap|csv|ar": {
+    "status": 200,
+    "type": "text/csv; charset=utf-8",
+    "file": "attachment; filename=\"ap-2026-06-15.csv\"",
+    "text": "﻿Number,Vendor,Date,Due Date,Overdue Days,Total,Paid,Outstanding,Bucket\r\n,TOTAL,,,,,,0.00,"
+   },
+   "ap|xlsx|ar": {
+    "status": 200,
+    "type": "application/vnd.ms-excel; charset=utf-8",
+    "file": "attachment; filename=\"ap-2026-06-15.xls\"",
+    "text": "<html xmlns:o=\"urn:schemas-microsoft-com:office:office\" xmlns:x=\"urn:schemas-microsoft-com:office:excel\"><head><meta charset=\"utf-8\"><style>table{border-collapse:collapse}th,td{border:1px solid #ccc;padding:4px 8px;font-family:Calibri,Arial,sans-serif;font-size:11pt}th{background:#1B1B4E;color:#fff;text-align:left}</style></head><body><h3>Accounts Payable Aging (2026-01-01 → 2026-12-31)</h3><table><thead><tr><th>Number</th><th>Vendor</th><th>Date</th><th>Due Date</th><th>Overdue Days</th><th>Total</th><th>Paid</th><th>Outstanding</th><th>Bucket</th></tr></thead><tbody><tr><td></td><td>TOTAL</td><td></td><td></td><td></td><td></td><td></td><td>0.00</td><td></td></tr></tbody></table></body></html>"
+   },
+   "ap|pdf|ar": {
+    "status": 200,
+    "type": "application/pdf",
+    "file": "attachment; filename=\"ap-2026-06-15.pdf\"",
+    "pages": 1,
+    "lines": [
+     "Accounts Payable Aging (2026-01-01 -> 2026-12-31)",
+     "Number | Vendor | Date | Due Date | Overdue Days | Total | Paid | Outstanding | Bucket",
+     " | TOTAL |  |  |  |  |  | 0.00 | "
+    ],
+    "overflow": [],
+    "clipped": []
+   },
+   "vat|csv|ar": {
+    "status": 200,
+    "type": "text/csv; charset=utf-8",
+    "file": "attachment; filename=\"vat-2026-06-15.csv\"",
+    "text": "﻿Item,Amount\r\nOutput VAT,13050.12\r\nInput VAT,2460.00\r\nNet VAT Payable / (Recoverable),10590.12\r\nCredit-note VAT adjustment,0.00\r\nDebit-note VAT adjustment,0.00\r\nTaxable Sales,87000.75\r\nZero-rated Sales,0.00\r\nTaxable Purchases,16400.00"
+   },
+   "vat|xlsx|ar": {
+    "status": 200,
+    "type": "application/vnd.ms-excel; charset=utf-8",
+    "file": "attachment; filename=\"vat-2026-06-15.xls\"",
+    "text": "<html xmlns:o=\"urn:schemas-microsoft-com:office:office\" xmlns:x=\"urn:schemas-microsoft-com:office:excel\"><head><meta charset=\"utf-8\"><style>table{border-collapse:collapse}th,td{border:1px solid #ccc;padding:4px 8px;font-family:Calibri,Arial,sans-serif;font-size:11pt}th{background:#1B1B4E;color:#fff;text-align:left}</style></head><body><h3>VAT Summary (2026-01-01 → 2026-12-31)</h3><table><thead><tr><th>Item</th><th>Amount</th></tr></thead><tbody><tr><td>Output VAT</td><td>13050.12</td></tr><tr><td>Input VAT</td><td>2460.00</td></tr><tr><td>Net VAT Payable / (Recoverable)</td><td>10590.12</td></tr><tr><td>Credit-note VAT adjustment</td><td>0.00</td></tr><tr><td>Debit-note VAT adjustment</td><td>0.00</td></tr><tr><td>Taxable Sales</td><td>87000.75</td></tr><tr><td>Zero-rated Sales</td><td>0.00</td></tr><tr><td>Taxable Purchases</td><td>16400.00</td></tr></tbody></table></body></html>"
+   },
+   "vat|pdf|ar": {
+    "status": 200,
+    "type": "application/pdf",
+    "file": "attachment; filename=\"vat-2026-06-15.pdf\"",
+    "pages": 1,
+    "lines": [
+     "VAT Summary (2026-01-01 -> 2026-12-31)",
+     "Item | Amount",
+     "Output VAT | 13050.12",
+     "Input VAT | 2460.00",
+     "Net VAT Payable / (Recoverable) | 10590.12",
+     "Credit-note VAT adjustment | 0.00",
+     "Debit-note VAT adjustment | 0.00",
+     "Taxable Sales | 87000.75",
+     "Zero-rated Sales | 0.00",
+     "Taxable Purchases | 16400.00"
+    ],
+    "overflow": [],
+    "clipped": []
+   }
+  },
+  "access": {
+   "anonymous": {
+    "status": 307,
+    "location": "/login"
+   },
+   "staff": {
+    "status": 200,
+    "location": null,
+    "type": "text/csv; charset=utf-8"
+   }
+  }
  }
 }

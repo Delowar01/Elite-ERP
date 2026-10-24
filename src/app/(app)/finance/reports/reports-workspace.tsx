@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { Download, Search, Loader2, ChevronRight } from "lucide-react";
+import { Download, Search, Loader2, ChevronRight, Info } from "lucide-react";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -253,19 +253,35 @@ function Row({ label, value, onDrill, final }: { label: React.ReactNode; value: 
   );
 }
 const inSearch = (s: string, ...fields: string[]) => !s.trim() || fields.some((f) => f.toLowerCase().includes(s.trim().toLowerCase()));
+// DEV-UI-01.7 C8 (product owner): a disclosure that belongs to the report — inside the report card, so it prints with
+// it; read in place (a note, not a live region); no figure of its own.
+function ReportNote({ children }: { children: React.ReactNode }) {
+  return (
+    <p role="note" className="my-3 flex items-start gap-2 rounded-[10px] border border-line bg-surface-subtle px-3 py-2 text-[13px] text-ink">
+      <Info className="mt-0.5 size-3.5 shrink-0 text-ink-muted" aria-hidden="true" />
+      <span>{children}</span>
+    </p>
+  );
+}
+// DEV-UI-01.7 C8: the Balance Sheet's current-period result is preliminary while COGS is incomplete — a word read with
+// the line it qualifies, not a colour alone.
+function PreliminaryMark({ locale }: { locale: Locale }) {
+  return <span className="ms-1.5 inline-flex items-center rounded-full border border-warning/40 bg-warning-bg px-1.5 align-middle text-[11px] font-semibold text-warning">{t(locale, "Preliminary")}</span>;
+}
 
 // ── P&L ──────────────────────────────────────────────────────────────────────
 function PnlView({ locale, d, prev, search, onDrill }: { locale: Locale; d: ProfitAndLoss; prev?: ProfitAndLoss; search: string; onDrill: (x: { id: number; name: string }) => void }) {
   const line = (l: { id: number; code: string; name: string; amount: number }) =>
     inSearch(search, l.code, l.name) ? <Row key={l.id} label={`${l.code} ${accountName(locale, l)}`} value={l.amount} onDrill={() => onDrill({ id: l.id, name: accountName(locale, l) })} /> : null;
-  // D-2 (DEV-UI-01.7 C8): no Gross Profit card or row on screen until COGS is trustworthy. finance-reports.ts still
-  // computes grossProfit, and the export route still lists it (an open decision, not part of this change).
+  // DEV-UI-01.7 C8 (product owner): no profit figure on screen until Cost of Sales and inventory valuation are complete —
+  // no Gross Profit, Operating Profit or Net Profit card or row, Revenue the one summary card. finance-reports.ts still
+  // computes all three; the export route leaves them out the same way.
   return (
     <>
       <Cards items={[
         { label: t(locale, "Revenue"), value: d.revenueTotal, delta: prev ? d.revenueTotal - prev.revenueTotal : undefined },
-        { label: t(locale, "Net Profit"), value: d.netProfit, delta: prev ? d.netProfit - prev.netProfit : undefined },
       ]} />
+      <ReportNote>{t(locale, "Profit figures are temporarily hidden because Cost of Sales and inventory valuation are not yet complete.")}</ReportNote>
       <GroupLabel>{t(locale, "Revenue")}</GroupLabel>
       {d.revenue.map(line)}
       <Row label={t(locale, "Total Revenue")} value={d.revenueTotal} final />
@@ -273,11 +289,9 @@ function PnlView({ locale, d, prev, search, onDrill }: { locale: Locale; d: Prof
       {d.costOfSales.map(line)}
       <GroupLabel>{t(locale, "Operating Expenses")}</GroupLabel>
       {d.operatingExpenses.map(line)}
-      <Row label={t(locale, "Operating Profit")} value={d.operatingProfit} final />
       {(d.otherIncome.length > 0 || d.otherExpenses.length > 0) && <GroupLabel>{t(locale, "Other Income & Expenses")}</GroupLabel>}
       {d.otherIncome.map(line)}
       {d.otherExpenses.map(line)}
-      <Row label={t(locale, "Net Profit / (Loss)")} value={d.netProfit} final />
     </>
   );
 }
@@ -303,9 +317,11 @@ function BsView({ locale, d, prev, search, onDrill }: { locale: Locale; d: Balan
       <GroupLabel>{t(locale, "Equity")}</GroupLabel>
       {d.equity.map(line)}
       <Row label={t(locale, "Retained Earnings")} value={d.retainedEarnings} />
-      <Row label={t(locale, "Current-period Profit / (Loss)")} value={d.currentPeriodProfit} />
+      {/* DEV-UI-01.7 C8: the line and its amount stay (Equity, the balance identity); it is marked Preliminary. */}
+      <Row label={<>{t(locale, "Current-period Profit / (Loss)")} <PreliminaryMark locale={locale} /></>} value={d.currentPeriodProfit} />
       <Row label={t(locale, "Total Equity")} value={d.totalEquity} final />
       <Row label={t(locale, "Total Liabilities + Equity")} value={d.totalLiabilitiesAndEquity} final />
+      <ReportNote>{t(locale, "Preliminary — Cost of Sales and inventory valuation are incomplete. The current-period result may change.")}</ReportNote>
     </>
   );
 }
@@ -559,6 +575,8 @@ function DrillDrawer({ locale, drill, block, loading, onClose }: { locale: Local
 }
 
 // Print: hide app chrome + workspace controls, show only the report area full-width.
+// DEV-UI-01.7 C8: the shell's print rule for the document preview (mockup-parity.css hides `body *`) hid the report
+// too — a printed report came out blank, its disclosures with it — so the report area shows itself again.
 function PrintStyles() {
   return (
     <style>{`@media print {
@@ -567,6 +585,7 @@ function PrintStyles() {
       main, .app-main, body { background: #fff !important; }
       .card { box-shadow: none !important; border: 1px solid #ddd !important; }
       a { color: inherit !important; text-decoration: none !important; }
+      .reports-print-area, .reports-print-area * { visibility: visible !important; }
     }`}</style>
   );
 }

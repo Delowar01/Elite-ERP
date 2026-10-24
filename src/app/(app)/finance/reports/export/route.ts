@@ -4,7 +4,7 @@ import { requireSession } from "@/lib/session";
 import { roundMoney } from "@/lib/currency/currencies";
 import { getLocale } from "@/lib/i18n/server";
 import { accountName } from "@/lib/account-names";
-import { exportResponse, type ExportColumn } from "@/lib/report-export";
+import { exportResponse, type ExportColumn, type ExportMeta } from "@/lib/report-export";
 import {
   resolveRange, isReportKind,
   getProfitAndLoss, getBalanceSheet, getCashFlow, getTrialBalance, getGeneralLedger,
@@ -36,19 +36,24 @@ export async function GET(req: Request) {
   const accountId = Number(url.searchParams.get("account")) || undefined;
 
   let title = "", columns: ExportColumn[] = [], rows: Record<string, string>[] = [];
+  // DEV-UI-01.7 C8 (product owner): the P&L's and the Balance Sheet's disclosure, printed above the table in all three
+  // formats (the exporter's header block); every other report has none, so its output is unchanged.
+  let meta: ExportMeta | undefined;
 
   if (report === "pl") {
     title = "Profit & Loss";
     columns = [{ key: "section", header: "Section" }, { key: "account", header: "Account" }, { key: "amount", header: "Amount" }];
     const d = await getProfitAndLoss(session.orgId, range);
     const grp = (section: string, lines: { code: string; name: string; amount: number }[]) => lines.map((l) => ({ section, account: `${l.code} ${acct(l)}`, amount: money(l.amount) }));
+    // No Gross Profit, Operating Profit or Net Profit / (Loss) row until Cost of Sales and inventory valuation are
+    // complete — as on screen; every account line and Total Revenue stay, and finance-reports.ts still computes all three.
     rows = [
       ...grp("Revenue", d.revenue), { section: "Revenue", account: "Total Revenue", amount: money(d.revenueTotal) },
-      ...grp("Cost of Sales", d.costOfSales), { section: "", account: "Gross Profit", amount: money(d.grossProfit) },
-      ...grp("Operating Expenses", d.operatingExpenses), { section: "", account: "Operating Profit", amount: money(d.operatingProfit) },
+      ...grp("Cost of Sales", d.costOfSales),
+      ...grp("Operating Expenses", d.operatingExpenses),
       ...grp("Other Income", d.otherIncome), ...grp("Other Expenses", d.otherExpenses),
-      { section: "", account: "Net Profit / (Loss)", amount: money(d.netProfit) },
     ];
+    meta = [{ label: "Note", value: "Profit figures are temporarily hidden because Cost of Sales and inventory valuation are not yet complete." }];
   } else if (report === "bs") {
     title = "Balance Sheet";
     columns = [{ key: "section", header: "Section" }, { key: "account", header: "Account" }, { key: "amount", header: "Amount" }];
@@ -61,10 +66,12 @@ export async function GET(req: Request) {
       { section: "", account: "Total Liabilities", amount: money(d.totalLiabilities) },
       ...grp("Equity", d.equity),
       { section: "Equity", account: "Retained Earnings", amount: money(d.retainedEarnings) },
-      { section: "Equity", account: "Current-period Profit / (Loss)", amount: money(d.currentPeriodProfit) },
+      // The line and its amount stay (Equity, the balance identity), marked Preliminary — short enough for the PDF's column.
+      { section: "Equity", account: "Current-period Profit / (Loss) (Preliminary)", amount: money(d.currentPeriodProfit) },
       { section: "", account: "Total Equity", amount: money(d.totalEquity) },
       { section: "", account: "Total Liabilities + Equity", amount: money(d.totalLiabilitiesAndEquity) },
     ];
+    meta = [{ label: "Note", value: "Preliminary — Cost of Sales and inventory valuation are incomplete. The current-period result may change." }];
   } else if (report === "cf") {
     title = "Cash Flow";
     columns = [{ key: "section", header: "Section" }, { key: "item", header: "Item" }, { key: "amount", header: "Amount" }];
@@ -129,5 +136,5 @@ export async function GET(req: Request) {
   }
 
   const stamp = new Date().toISOString().slice(0, 10);
-  return exportResponse(format, `${title} (${range.from} → ${range.to})`, `${report}-${stamp}`, columns, rows);
+  return exportResponse(format, `${title} (${range.from} → ${range.to})`, `${report}-${stamp}`, columns, rows, meta);
 }
