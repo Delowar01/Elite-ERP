@@ -43,7 +43,7 @@
   "src/db/**": "bf56b452adcee6fe (33 files)",
   "drizzle/**": "6893824c03261a8c (12 files)",
   "src/app/(app)/shell.css": "ad7a9a8b1cb8dbf1",
-  "package-lock.json": "40bb5a3ae316bb4c",
+  "package-lock.json": "31cbbd44355b2a28",
   "src/app/(app)/sales/_shared/preview-dialog.tsx": "d584d5ce60daa4ac",
   "src/app/(app)/sales/_shared/money.tsx": "874b9b2b3e282eff"
 }

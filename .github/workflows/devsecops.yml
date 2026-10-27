@@ -45,14 +45,22 @@ jobs:
   secret-scan:
     name: Secret scanning
     runs-on: ubuntu-latest
+    # pull_request scans read the PR's commit list through the API.
+    permissions:
+      contents: read
+      pull-requests: read
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - name: gitleaks
-        uses: gitleaks/gitleaks-action@v2
+        uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3.0.0
         env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITLEAKS_CONFIG: .gitleaks.toml
+          # Inline PR comments would need pull-requests: write. Findings still fail
+          # the job and are reported in the log, job summary and SARIF artifact.
+          GITLEAKS_ENABLE_COMMENTS: "false"
 
   security-tests:
     name: Security tests + production build

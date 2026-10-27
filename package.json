@@ -97,10 +97,10 @@
     "jose": "^6.2.3",
     "lucide-react": "^1.24.0",
     "n2words": "^5.1.2",
-    "next": "16.3.5",
+    "next": "16.4.3",
     "pdf-lib": "^1.17.1",
     "pg": "^8.22.0",
-    "puppeteer-core": "^25.10.0",
+    "puppeteer-core": "^25.13.0",
     "qrcode": "^1.5.4",
     "react": "19.2.4",
     "react-dom": "19.2.4",
@@ -108,7 +108,7 @@
     "server-only": "^0.0.1",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.6.0",
-    "zod": "^4.4.3"
+    "zod": "^4.6.6"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
@@ -121,9 +121,14 @@
     "dotenv": "^17.4.2",
     "drizzle-kit": "^0.31.10",
     "eslint": "^9",
-    "eslint-config-next": "16.3.5",
+    "eslint-config-next": "16.4.3",
     "playwright": "^1.61.1",
     "tailwindcss": "^4",
     "typescript": "^5"
+  },
+  "overrides": {
+    "@vercel/cli-config": {
+      "zod": "^4.6.6"
+    }
   }
 }
