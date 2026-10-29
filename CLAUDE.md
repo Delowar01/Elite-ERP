@@ -1,5 +1,16 @@
 # Elite ERP — Project Instructions
 
+
+## Development-stage SaaS status and data-loss tolerance (owner-confirmed, 2026-10-30)
+
+- **Lifecycle:** Elite ERP is currently **under development**, not commercially launched or in business production. The VPS runs a deployment for development/testing even if Node uses `NODE_ENV=production`; do not mistake runtime settings for live customer operations.
+- **Data status:** There are **no real customers, real end users, or real business data** in the Elite ERP system at this stage. Existing database records and document updates are test data.
+- **Owner's explicit risk acceptance:** The owner is comfortable losing **all existing Elite ERP test data**, including test records and changes. Do **not** require complex production-grade backup, off-site transfer, disaster-recovery, or retention procedures as blockers to routine development, schema changes, test resets, or development deployments. Backups may be kept as a convenience, not an owner-imposed requirement at this stage.
+- **Priorities:** Focus on finishing outstanding functionality and bugs efficiently, minimizing unnecessary additions and repetitive preflight gates. Elite ERP is intended to become a **commercial, multi-tenant SaaS ERP** offered to external customers in the future. Maintain good architecture, authorization, tenant isolation, and security so it can be properly production-hardened **before customer launch**.
+- **Scope of accepted loss:** This acceptance covers **Elite ERP test data only**. It does not authorize damaging unrelated applications, other databases, hosting infrastructure, shared VPS services, third-party accounts, or secrets. Confirm destructive commands target only the intended ERP development environment; keep unrelated services safe.
+- **Credentials:** The owner has stated they are not concerned if development credentials are shared in this conversation. Nevertheless, credentials can provide real server, database, cloud, or billing access even without production customers. **Never unnecessarily reproduce, publish, or commit secrets**; handle them safely without overburdening the development workflow. Assess a specific exposed key on its actual capabilities rather than assuming all development credentials are harmless.
+- **Operational posture:** A test-data backup has already been made and encrypted on the VPS. Completing the attempted Windows off-server transfer is **optional**; do not let it delay the SaaS development work. Do not automatically switch public deployments, edit unrelated services, or claim a release has been deployed without the actual operation and verification.
+
 ## Arabic/English bilingual requirement (standing convention)
 
 Every feature, screen, or component built for this project from now on **must ship with Arabic support from the start** — not as a separate translation pass added later. The Arabic output must read as **native, idiomatic Arabic**, not a literal/mechanical translation. Saudi Arabic phrasing, not generic MSA where the two diverge in a business/ERP context.
