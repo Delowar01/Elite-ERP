@@ -69,7 +69,10 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   const filename = await resolveFilename(type, id, session.orgId);
   if (!filename) return NextResponse.json({ error: "Document not found." }, { status: 404 });
 
-  const origin = request.nextUrl.origin;
+  // Behind a TLS-terminating reverse proxy, NextRequest may report https://localhost:3200
+  // even though the Next.js server listens on plain HTTP. Allow a trusted internal
+  // loopback origin for server-side PDF rendering without changing public request URLs.
+  const origin = process.env.PDF_RENDER_ORIGIN?.trim().replace(/\/+$/, "") || request.nextUrl.origin;
   const cookie = request.headers.get("cookie") ?? "";
 
   try {
