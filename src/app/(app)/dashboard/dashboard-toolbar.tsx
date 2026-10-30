@@ -11,7 +11,8 @@ import { setDashboardRangeAction } from "./dashboard-prefs-actions";
 import { CustomizeLayoutDialog } from "./customize-layout-dialog";
 
 // Dashboard toolbar: the date-range selector (drives every KPI/chart/activity server-side via
-// ?range and persists the choice per user) plus the Customize Layout trigger.
+// ?range and persists the choice per user) plus the Customize Layout trigger. DEV-UI-01.7 C6: the
+// Dashboard PageHeader's actions, side by side after the title and wrapping below it when narrow.
 export function DashboardToolbar({ locale, range, layout }: { locale: Locale; range: DashboardRange; layout: DashboardLayoutItem[] }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -41,9 +42,7 @@ export function DashboardToolbar({ locale, range, layout }: { locale: Locale; ra
           ))}
         </DropdownMenuContent>
       </DropdownMenu>
-      <div className="toolbar-actions-right">
-        <CustomizeLayoutDialog locale={locale} layout={layout} />
-      </div>
+      <CustomizeLayoutDialog locale={locale} layout={layout} />
     </div>
   );
 }

@@ -38,6 +38,7 @@ import { SearchableSelect } from "@/components/ui/searchable-select";
 import { CropImageUpload } from "@/components/upload/crop-image-upload";
 import { CROP_LOGO } from "@/components/upload/crop-configs";
 import { CurrencyMark } from "@/components/ui/currency-mark";
+import { SectionHeader } from "@/components/ui/section-header";
 import { CURRENCIES, resolveCurrencyMark } from "@/lib/currency/currencies";
 import { COUNTRIES } from "@/lib/geo/countries";
 import { getProfileByCountryName, resolveTaxLabels } from "@/lib/geo/country-profiles";
@@ -93,7 +94,7 @@ export function BusinessDetailsForm({ locale, org, postedCount }: { locale: Loca
 
   return (
     <form action={submit} className="flex flex-col gap-5 max-w-2xl">
-      <h3 className="text-[17px] font-bold">{t(locale, "Business Details")}</h3>
+      <SectionHeader level={2} title={t(locale, "Business Details")} />
       <div className="grid grid-cols-2 gap-4">
         <FormField label={t(locale, "Business Name")} htmlFor="org-name" span={2}>
           <Input id="org-name" name="name" required defaultValue={org.name} />
@@ -201,7 +202,7 @@ export function LogoPanel({ locale, org }: { locale: Locale; org: Org }) {
   const router = useRouter();
   return (
     <div className="flex flex-col gap-4">
-      <h3 className="text-[17px] font-bold">{t(locale, "Logo")}</h3>
+      <SectionHeader level={2} title={t(locale, "Logo")} />
       <div className="grid grid-cols-2 gap-5 max-w-xl">
       <Card>
         <CardContent className="p-5 flex flex-col items-center gap-3">
@@ -439,7 +440,7 @@ export function ColorThemePanel({ locale, org }: { locale: Locale; org: Org }) {
 
   return (
     <div className="flex flex-col gap-5 max-w-2xl">
-      <h3 className="text-[17px] font-bold">{t(locale, "Color Theme")}</h3>
+      <SectionHeader level={2} title={t(locale, "Color Theme")} />
       <p className="text-[12.5px] text-ink-muted -mt-3">{t(locale, "Choose how your organization's brand colors are applied. Interface colors are calculated separately for light and dark mode so text stays readable in both.")}</p>
 
       {/* Mode selector */}

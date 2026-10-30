@@ -70,7 +70,7 @@ export default async function DebitNoteDetailPage({ params }: { params: Promise<
     <div className="max-w-4xl mx-auto">
       <div className="inv-head">
         <div>
-          <h3 className="mono">{dn.debitNoteNumber}</h3>
+          <h1 className="mono">{dn.debitNoteNumber}</h1>
           <div className="inv-sub">
             {t(locale, "Against Purchase Order")} {dn.sourcePoNumber} · {dn.vendorName}
             {dn.title ? ` · ${dn.title}` : ""}

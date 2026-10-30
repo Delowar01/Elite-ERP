@@ -9,6 +9,9 @@ import { Landmark, Pencil } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
+import { PageHeader } from "@/components/layout/page-header";
+import { SectionHeader } from "@/components/ui/section-header";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Money } from "../../sales/_shared/money";
 import { BankAccountFormDialog } from "./bank-account-form-dialog";
 import { accountName } from "@/lib/account-names";
@@ -73,21 +76,23 @@ export default async function BankAccountsPage() {
 
   return (
     <div className="max-w-5xl mx-auto">
-      <div className="main-head">
-        <h3>{t(locale, "Bank Accounts")}</h3>
-        <BankAccountFormDialog
-          locale={locale}
-          glAccounts={glOptions}
-          trigger={
-            <Button>
-              <Landmark className="size-4" /> {t(locale, "New Account")}
-            </Button>
-          }
-        />
-      </div>
+      <PageHeader
+        title={t(locale, "Bank Accounts")}
+        actions={
+          <BankAccountFormDialog
+            locale={locale}
+            glAccounts={glOptions}
+            trigger={
+              <Button>
+                <Landmark className="size-4" /> {t(locale, "New Account")}
+              </Button>
+            }
+          />
+        }
+      />
 
       {bankAccounts.length === 0 ? (
-        <p className="text-ink-muted text-sm mb-6">{t(locale, "No bank accounts yet.")}</p>
+        <EmptyState message={t(locale, "No bank accounts yet.")} className="mb-6" />
       ) : (
         <div className="two-col" style={{ marginBottom: 20 }}>
           {bankAccounts.map((ba) => {
@@ -150,11 +155,9 @@ export default async function BankAccountsPage() {
         </div>
       )}
 
-      <div className="main-head" style={{ marginTop: 4 }}>
-        <h3 style={{ fontSize: 15 }}>{t(locale, "Recent payment records")}</h3>
-      </div>
+      <SectionHeader level={2} title={t(locale, "Recent payment records")} className="mt-1 mb-[22px]" />
       {recentPayments.length === 0 ? (
-        <p className="text-ink-muted text-sm">{t(locale, "No payment records yet.")}</p>
+        <EmptyState message={t(locale, "No payment records yet.")} />
       ) : (
         <Table density="compact">
           <TableHeader>

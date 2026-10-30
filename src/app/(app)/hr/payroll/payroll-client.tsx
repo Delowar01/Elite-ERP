@@ -52,7 +52,8 @@ export function PayrollClient({
 
   return (
     <>
-      <div className="two-col" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 18 }}>
+      {/* .two-col owns the grid (two columns; one below 1100px); only the wider gap is set here. */}
+      <div className="two-col" style={{ gap: 18 }}>
         <Table>
           <TableHeader>
             <TableRow>

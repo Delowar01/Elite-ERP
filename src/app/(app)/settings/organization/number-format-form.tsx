@@ -8,6 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { FormField } from "@/components/ui/form-field";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { CurrencyMark } from "@/components/ui/currency-mark";
+import { SectionHeader } from "@/components/ui/section-header";
 import { buildMoneyMark, formatAmount, formatRate, formatQuantity, markFormat } from "@/lib/currency/currencies";
 import { t, type Locale } from "@/lib/i18n/dict";
 import type { Org } from "@/db";
@@ -93,7 +94,7 @@ export function NumberFormatForm({
     <div className="flex flex-col gap-5">
       {heading && (
         <div>
-          <h3 className="text-[17px] font-bold">{t(locale, "Number Format")}</h3>
+          <SectionHeader level={2} title={t(locale, "Number Format")} />
           <p className="text-[12px] text-ink-muted mt-1">
             {t(locale, "Controls how numbers appear on documents. This never changes stored accounting values or recalculates past transactions.")}
           </p>

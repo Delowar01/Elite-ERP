@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { SectionHeader } from "@/components/ui/section-header";
 import { t, type Locale } from "@/lib/i18n/dict";
 import { BankAccountsField } from "../../sales/_shared/bank-accounts-field";
 import type { EditableBankAccount, GlAccountOption } from "../../finance/bank-accounts/bank-account-form-dialog";
@@ -36,7 +37,7 @@ export function DefaultBankAccountsPanel({
   return (
     <div className="flex flex-col gap-4 max-w-2xl">
       <div>
-        <h3 className="text-[15px] font-bold">{t(locale, "Default Bank Accounts")}</h3>
+        <SectionHeader level={2} title={t(locale, "Default Bank Accounts")} />
         <p className="text-[12px] text-ink-muted mt-1">
           {t(locale, "These accounts appear automatically on new documents. You can still add, remove or reorder accounts on a single document without changing this default.")}
         </p>

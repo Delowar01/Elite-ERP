@@ -4,6 +4,9 @@ import { requireSession } from "@/lib/session";
 import { getLocale } from "@/lib/i18n/server";
 import { t } from "@/lib/i18n/dict";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
+import { PageHeader } from "@/components/layout/page-header";
+import { SectionHeader } from "@/components/ui/section-header";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Money } from "../../sales/_shared/money";
 import { JournalForm } from "./journal-form";
 
@@ -33,18 +36,13 @@ export default async function JournalPage() {
 
   return (
     <div className="max-w-4xl mx-auto">
-      <div className="main-head">
-        <h3>{t(locale, "New Journal Entry")}</h3>
-        <span className="org-pill">{t(locale, "Manual")}</span>
-      </div>
+      <PageHeader title={t(locale, "New Journal Entry")} meta={<span className="org-pill">{t(locale, "Manual")}</span>} />
 
       <JournalForm locale={locale} accounts={accounts} currency={session.orgCurrency} projects={projects} />
 
-      <div className="main-head" style={{ marginTop: 40 }}>
-        <h3 style={{ fontSize: 15 }}>{t(locale, "Recent journal entries")}</h3>
-      </div>
+      <SectionHeader level={2} title={t(locale, "Recent journal entries")} className="mt-10 mb-[22px]" />
       {recentEntries.length === 0 ? (
-        <p className="text-ink-muted text-sm">{t(locale, "No journal entries yet.")}</p>
+        <EmptyState message={t(locale, "No journal entries yet.")} />
       ) : (
         <Table density="compact">
           <TableHeader>

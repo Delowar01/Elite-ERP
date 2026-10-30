@@ -4,6 +4,7 @@ import { requireRole } from "@/lib/session";
 import { getProfileByCountryName, profileHasFeature } from "@/lib/geo/country-profiles";
 import { getLocale } from "@/lib/i18n/server";
 import { t } from "@/lib/i18n/dict";
+import { PageHeader } from "@/components/layout/page-header";
 import { SettingsNav, SettingsNavList, SettingsNavGroupLabel, SettingsNavItem, SettingsNavContent } from "@/components/ui/settings-nav";
 import { BusinessDetailsForm, LogoPanel, ColorThemePanel } from "./company-panels";
 import { DefaultBankAccountPanel, FiscalYearPanel, VatConfigurationPanel } from "./finance-panel";
@@ -44,7 +45,9 @@ export default async function OrganizationSettingsPage({ searchParams }: { searc
 
   return (
     <div className="max-w-5xl mx-auto">
-      <SettingsNav defaultValue={defaultTab} orientation="vertical" className="flex gap-8 items-start">
+      <PageHeader title={t(locale, "Business Settings")} />
+      {/* D-7: the navigation above the panel below md (768px), beside it from md up. */}
+      <SettingsNav defaultValue={defaultTab} orientation="vertical" className="flex flex-col md:flex-row gap-8 items-start">
         <SettingsNavList>
           <SettingsNavGroupLabel>{t(locale, "Company")}</SettingsNavGroupLabel>
           <SettingsNavItem value="business-details">{t(locale, "Business Details")}</SettingsNavItem>

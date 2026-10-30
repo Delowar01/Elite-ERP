@@ -387,10 +387,18 @@ const COVER: [string, string, RegExp[], RegExp[]][] = [
     [/statusLabel\(locale, "delivery_challan", s\)/, /value: statusLabel\(locale, "delivery_challan", value\)/], [/t\(locale, (s|value)\)/]],
   ["list workspace status filter", "documents/_workspace/list-workspace-toolbar.tsx",
     [/module: DocumentType;/, /statusOptions\.map\(\(s\) =>[\s\S]{0,120}\{statusLabel\(locale, module, s\)\}/], [/t\(locale, s\)/, /isStatusDomain/]],
-  ["task kanban column labels + status select", "projects/[id]/kanban-board.tsx",
+  // DEV-UI-01.7 C3: each column's label is its h3 (the count beside it, outside), a card's accessible name
+  // carries the task's own status label, and a Done card keeps its task/done badge — all from the
+  // registry; no second task-status label map, no raw or hard-coded status through t().
+  ["task kanban column h3 labels, card names, Done badge + status select", "projects/[id]/kanban-board.tsx",
     [/const COLUMNS: \{ status: string \}\[\] = \[\{ status: "todo" \}, \{ status: "in_progress" \}, \{ status: "blocked" \}, \{ status: "done" \}\];/,
-     /<span>\{statusLabel\(locale, "task", col\.status\)\}<\/span>/, /COLUMNS\.map\(\(c\) =>[\s\S]{0,140}\{statusLabel\(locale, "task", c\.status\)\}/],
-    [/label: "(To Do|In Progress|Blocked|Done)"/, /t\(locale, (col|c)\.label\)/]],
+     /<div className="kanban-col-head">\s*<h3>\{statusLabel\(locale, "task", col\.status\)\}<\/h3>\s*<span>\{colTasks\.length\}<\/span>\s*<\/div>/,
+     /COLUMNS\.map\(\(c\) =>[\s\S]{0,140}\{statusLabel\(locale, "task", c\.status\)\}/,
+     /\{col\.status === "done" \? \(\s*<StatusBadge domain="task" status="done" locale=\{locale\} \/>/,
+     /const taskName = \(task: TaskRow\) =>\s*\[\s*task\.title,\s*statusLabel\(locale, "task", task\.status\),/],
+    [/label: "(To Do|To do|In Progress|In progress|Blocked|Done)"/, /t\(locale, (col|c|task)\.(label|status)\)/,
+     /t\(locale, "(todo|in_progress|blocked|done|To Do|To do|In Progress|In progress|Blocked|Done)"\)/,
+     /<span>\{statusLabel\(locale, "task", col\.status\)\}<\/span>/, /\b(todo|in_progress|blocked)\s*:\s*["'`]/]],
   ["dashboard HR snapshot (attendance)", "dashboard/page.tsx",
     [/\["present", hrSnapshot\.present\],\s*\["on_leave", hrSnapshot\.onLeave\],\s*\["absent", hrSnapshot\.absent\],/, /statusTextClass\("attendance", status\)\}>\{statusLabel\(locale, "attendance", status\)\}/],
     [/t\(locale, "(Present|On Leave|Absent)"\)/]],
@@ -398,9 +406,14 @@ const COVER: [string, string, RegExp[], RegExp[]][] = [
     [/\["completed", projectsOverview\.completed\],\s*\["active", projectsOverview\.active\],\s*\["on_hold", projectsOverview\.onHold\],\s*\["planned", projectsOverview\.planned\],/,
      /statusTextClass\("project", status\)\}>\{statusLabel\(locale, "project", status\)\}/],
     [/t\(locale, "(In Progress|On Hold|Not Started)"\)/]],
+  // DEV-UI-01.7 C2: the KPI strip is a StatRow. Present and On Leave take label, tone and colour from
+  // statusStat() (Present keeps its "Present today" wording); the cards' status is still a StatusBadge;
+  // nothing in the file picks a status colour or translates a raw status by hand.
   ["employee cards present / on-leave KPIs", "hr/employees/employees-client.tsx",
-    [/className=\{statusTextClass\("attendance", "present"\)\}/, /statusLabel\(locale, "attendance", "on_leave"\)/, /className=\{statusTextClass\("attendance", "on_leave"\)\}/],
-    [/color: "var\(--(accent-green|warning)\)"/]],
+    [/<StatRow\s+items=\{\[[\s\S]*?\{ \.\.\.statusStat\(locale, "attendance", "present", presentToday\), label: t\(locale, "Present today"\) \},\s*statusStat\(locale, "attendance", "on_leave", onLeaveToday\),[\s\S]*?\]\}\s*\/>/,
+     /<StatusBadge domain="employee" status="inactive" locale=\{locale\} \/>/, /<StatusBadge domain="attendance" status=\{r\.todayStatus\} locale=\{locale\} \/>/],
+    [/statusTextClass\(/, /\bcolorClass\b/, /\btext-(success|info|warning|danger|corrective)\b/, /color: "var\(--(accent-green|warning|success|info|danger)\)"/,
+     /t\(locale, (r\.todayStatus|r\.status|"(present|late|absent|on_leave|active|inactive|On leave|Present)")\)/]],
 ];
 for (const [label, file, must, mustNot] of COVER) {
   const src = read(APP + file);

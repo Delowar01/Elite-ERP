@@ -70,7 +70,7 @@ export default async function CreditNoteDetailPage({ params }: { params: Promise
     <div className="max-w-4xl mx-auto">
       <div className="inv-head">
         <div>
-          <h3 className="mono">{cn.creditNoteNumber}</h3>
+          <h1 className="mono">{cn.creditNoteNumber}</h1>
           <div className="inv-sub">
             {t(locale, "Against Invoice")} {cn.sourceInvoiceNumber} · {cn.customerName}
             {cn.title ? ` · ${cn.title}` : ""}

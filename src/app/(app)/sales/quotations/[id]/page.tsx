@@ -65,7 +65,7 @@ export default async function QuotationDetailPage({ params }: { params: Promise<
     <div className="max-w-4xl mx-auto">
       <div className="inv-head">
         <div>
-          <h3 className="mono">{quotation.quotationNumber}</h3>
+          <h1 className="mono">{quotation.quotationNumber}</h1>
           <div className="inv-sub">
             {t(locale, "Issue Date")} {quotation.issueDate}
             {quotation.validUntil ? ` · ${t(locale, "Valid Till")} ${quotation.validUntil}` : ""}

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FormField } from "@/components/ui/form-field";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { SectionHeader } from "@/components/ui/section-header";
 import { t, type Locale } from "@/lib/i18n/dict";
 import { getProfileByCountryName } from "@/lib/geo/country-profiles";
 import type { Org } from "@/db";
@@ -71,7 +72,7 @@ export function VatSettingsForm({
 
   return (
     <div className="flex flex-col gap-4 max-w-lg">
-      {heading && <h3 className="text-[17px] font-bold">{t(locale, "VAT Configuration")}</h3>}
+      {heading && <SectionHeader level={2} title={t(locale, "VAT Configuration")} />}
       <p className="text-[12.5px] text-ink-muted -mt-1">
         {t(locale, "Default VAT Rate")}: <span className="font-semibold">{profile.defaultTaxRate}%</span> · {t(locale, "from your country profile")} ({profile.countryName})
       </p>

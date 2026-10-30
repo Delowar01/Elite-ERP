@@ -15,7 +15,8 @@
  *      live search, the no-results row + polite result count, clear-search
  *   7. saved views — Escape / outside / apply keep the menu's focus return; Save + Manage hand focus into their
  *      Dialog (focusin log: the trigger never retakes it; immediate typing keeps the full name); save (≤ 60) /
- *      current / manage → rename (no limit: 69 chars, persisted, reloaded, applied) / delete
+ *      current / manage → rename (no limit: 69 chars, persisted, reloaded, applied) / delete; before Views is used
+ *      after the Filters popover, its Escape must have returned focus to the Filters trigger (DEV-UI-01.7 C8)
  *   8. master data — Enter → ?q= server search unchanged; FilterPanel Apply → ?lowStock=1; the chip
  *   9. payroll keyboard selection; shell account menu unaffected
  *
@@ -242,25 +243,36 @@ async function openViews() {
     await page.keyboard.press("Escape");
   }
 }
-// Focus recorder for the menu → Dialog handoff. focusin is logged as trigger / menu / dialog:<kind> / tag, and
+// Focus recorder for the menu → Dialog handoff. focusin is logged as trigger / filters / menu / dialog:<kind> / tag, and
 // focusout as "out:<from>><to>" with its relatedTarget. The regression (measured): ~100 ms after the Dialog
 // focuses its control, the closing menu moves focus to the Views trigger — the control blurs with
 // relatedTarget = trigger and the Dialog's focus trap pulls focus straight back, so the trigger never even
 // logs a focusin. Keystrokes in that gap are lost. Hence focusout is what must be watched.
+// DEV-UI-01.7 C8 (diagnostics only): the Filters trigger is named apart from the Views trigger ("filters"), and every
+// programmatic focus() while the recorder is installed is kept with its call stack — printed only when a check fails.
 const startFocusLog = () => page.evaluate(() => {
   window.__focusLog = [];
+  window.__focusCalls = [];
   if (!window.__focusLogOn) {
     window.__focusLogOn = true;
     const name = (t) => {
       if (!t) return "null";
       const d = t.closest?.("[data-saved-view-dialog]");
-      return t.closest?.("[data-list-views]") ? "trigger" : d ? `dialog:${d.dataset.savedViewDialog}` : t.closest?.('[role="menu"]') ? "menu" : String(t.tagName).toLowerCase();
+      return t.closest?.("[data-list-views]") ? "trigger" : t.closest?.("[data-list-filters]") ? "filters" : d ? `dialog:${d.dataset.savedViewDialog}` : t.closest?.('[role="menu"]') ? "menu" : String(t.tagName).toLowerCase();
     };
+    window.__focusName = name;
     document.addEventListener("focusin", (e) => window.__focusLog.push(name(e.target)), true);
     document.addEventListener("focusout", (e) => window.__focusLog.push(`out:${name(e.target)}>${name(e.relatedTarget)}`), true);
+    const focus = HTMLElement.prototype.focus;
+    HTMLElement.prototype.focus = function (...args) {
+      window.__focusCalls.push(`${name(this)} ← ${(new Error().stack ?? "").split("\n").slice(2, 6).map((s) => s.trim()).join(" ← ")}`);
+      return focus.apply(this, args);
+    };
   }
 });
 const focusLog = () => page.evaluate(() => window.__focusLog ?? []);
+/** For a failure's detail only: where keyboard focus is now, and the last focus() calls the recorder saw (with stacks). */
+const focusState = () => page.evaluate(() => ({ active: window.__focusName ? window.__focusName(document.activeElement) : String(document.activeElement?.tagName), calls: (window.__focusCalls ?? []).slice(-8) }));
 // the regression: once a Dialog holds focus, focus is sent to the Views trigger (focusin on it, or a blur
 // whose relatedTarget is the trigger) or the Dialog loses focus at all before the user is done
 const triggerStoleFocus = (log) => {
@@ -269,6 +281,22 @@ const triggerStoleFocus = (log) => {
 };
 const observe = () => settle(400); // an observation window AFTER the interaction (no delay before typing)
 const triggerFocused = () => page.waitForFunction(() => document.activeElement?.matches?.("[data-list-views]"), null, { timeout: 3000 }).then(() => true).catch(() => false);
+// DEV-UI-01.7 C8 — the Filters popover's Escape contract, waited for and asserted at both Filters → Views transitions.
+// Escape closes it in two steps: Radix removes the popover from the DOM, then — in FocusScope's unmount timer, measured
+// 6–16 ms later — Popover's onCloseAutoFocus returns keyboard focus to its trigger. layersClosed() sees only the first,
+// so the suite used to move on to Views in between, and a late return could take focus from the Views trigger (Enter
+// then opened the Filters popover, not the menu) or from the Save dialog's input. Wait for both: a condition with a
+// bound, never a sleep. A return that never comes is a FAIL (and stops the saved-view block), not a skipped step.
+async function closeFiltersByEscape(step) {
+  await startFocusLog();
+  await page.keyboard.press("Escape");
+  await layersClosed();
+  const returned = await page.waitForFunction(() => !document.querySelector("[data-radix-popper-content-wrapper]") && !!document.activeElement?.matches?.("main [data-list-filters]"), null, { timeout: 5000 })
+    .then(() => true, () => false);
+  check(`Filters popover (${step}): Escape closes it and keyboard focus is back on the Filters trigger before the suite moves on to Views`,
+    returned, returned ? "" : JSON.stringify({ ...(await focusState()), log: await focusLog() }));
+  if (!returned) throw new Error(`the Filters popover never returned focus to its trigger (${step})`);
+}
 // Ordinary close: open by keyboard, Escape → focus back on the Views trigger (Radix default, not suppressed).
 async function escapeRestoresTrigger() {
   await layersClosed();
@@ -286,8 +314,7 @@ const viewName = `Sent view ${Math.random().toString(36).slice(2, 6)}`;
 await page.locator("main [data-list-filters]").click();
 await page.locator("[data-radix-popper-content-wrapper] button[role='combobox']").first().click();
 await page.locator('[role="option"]').filter({ hasText: /^Sent$/ }).click();
-await page.keyboard.press("Escape");
-await layersClosed();
+await closeFiltersByEscape("status Sent chosen, before Save current view");
 // Save current view: menu → Dialog handoff, then IMMEDIATE typing (no settling wait)
 await page.locator("main [data-list-views]").focus();
 await page.keyboard.press("Enter");
@@ -303,8 +330,9 @@ await observe();
 const saveState = await saveInput.evaluate((i) => ({ max: i.maxLength, value: i.value, focused: document.activeElement === i }));
 const saveLog = await focusLog();
 check("save dialog: the name field keeps the 60-character maximum (saveViewAction's limit)", saveState.max === 60, String(saveState.max));
+const saveOk = saveState.value === viewName && saveState.focused && !triggerStoleFocus(saveLog);
 check("save handoff: the Dialog input takes focus, the Views trigger never regains it, and immediate typing keeps the full name",
-  saveState.value === viewName && saveState.focused && !triggerStoleFocus(saveLog), JSON.stringify({ value: saveState.value, focused: saveState.focused, log: saveLog }));
+  saveOk, JSON.stringify({ value: saveState.value, focused: saveState.focused, log: saveLog, ...(saveOk ? {} : await focusState()) }));
 await page.keyboard.press("Enter");
 await page.locator('[data-saved-view-dialog="save"]').waitFor({ state: "detached", timeout: 15000 });
 await page.waitForLoadState("networkidle");
@@ -329,8 +357,7 @@ const outsideClosed = (await page.locator('[role="menu"], [role="dialog"]').coun
 check("outside click closes the Views menu (no dialog); the next Escape close still restores focus to the trigger", outsideClosed && (await escapeRestoresTrigger()));
 await page.locator("main [data-list-filters]").click();
 await page.locator("[data-radix-popper-content-wrapper] button", { hasText: /Clear filters/ }).click();
-await page.keyboard.press("Escape");
-await layersClosed();
+await closeFiltersByEscape("filters cleared, before applying the saved view");
 // apply an existing view: filters apply, the menu closes with Radix's normal focus return (no suppression)
 await openViews();
 await page.locator('[role="menuitem"]').filter({ hasText: viewName }).click();
@@ -348,7 +375,8 @@ await page.waitForFunction(() => !!document.activeElement?.closest?.('[data-save
 await observe();
 const manageLog = await focusLog();
 const manageInside = await page.evaluate(() => !!document.activeElement?.closest?.('[data-saved-view-dialog="manage"]'));
-check("manage handoff: focus moves into the Manage dialog and the Views trigger does not take it back", manageInside && !triggerStoleFocus(manageLog), JSON.stringify({ manageInside, log: manageLog }));
+const manageOk = manageInside && !triggerStoleFocus(manageLog);
+check("manage handoff: focus moves into the Manage dialog and the Views trigger does not take it back", manageOk, JSON.stringify({ manageInside, log: manageLog, ...(manageOk ? {} : await focusState()) }));
 await page.locator('[data-saved-view-dialog="manage"] button[aria-label^="Rename"]').filter({ has: page.locator("svg") }).last().click();
 await page.locator('[data-saved-view-dialog="rename"]').waitFor();
 // Rename has no length limit (renameViewAction, and the window.prompt it replaced): a deterministic 69-character name.
@@ -390,7 +418,8 @@ await openViews();
 check("delete through the existing confirmation", (await page.locator('[role="menuitem"]').filter({ hasText: storedName }).count()) === 0 && (await page.locator('[role="menuitem"]').filter({ hasText: viewName }).count()) === 0);
 await page.keyboard.press("Escape");
 } catch (e) {
-  check("saved-view flow ran to completion (no step stuck)", false, String(e?.message ?? e).split("\n").filter((l) => /Timeout|waiting for/.test(l)).join(" ").slice(0, 300));
+  const stuck = String(e?.message ?? e).split("\n").filter((l) => /Timeout|waiting for|returned focus/.test(l)).join(" ").slice(0, 300);
+  check("saved-view flow ran to completion (no step stuck)", false, `${stuck} ${JSON.stringify(await focusState().catch(() => null))}`);
   await page.keyboard.press("Escape").catch(() => {});
 }
 

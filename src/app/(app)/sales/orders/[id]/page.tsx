@@ -68,7 +68,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
     <div className="max-w-4xl mx-auto">
       <div className="inv-head">
         <div>
-          <h3 className="mono">{order.soNumber}</h3>
+          <h1 className="mono">{order.soNumber}</h1>
           <div className="inv-sub">
             {t(locale, "Order Date")} {order.issueDate}
             {order.expectedDate && (

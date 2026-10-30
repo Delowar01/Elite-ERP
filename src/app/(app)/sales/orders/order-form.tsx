@@ -166,9 +166,9 @@ export function OrderForm({
     <div className="max-w-5xl mx-auto">
       <div className="doc-titlebar">
         <div>
-          <h3>
+          <h1>
             <ClipboardList className="size-5" style={{ color: "var(--brand-orange)" }} /> {t(locale, isEdit ? "Edit Sales Order" : "Create Sales Order")}
-          </h3>
+          </h1>
           <div className="sub">{t(locale, isEdit ? "Edit this draft document." : "Confirm client orders and track them through to delivery.")}</div>
         </div>
         <DocTopActions locale={locale} busy={pendingDraft || pendingPrimary} onSaveDraft={() => submit(false)} onPreview={() => setPreviewOpen(true)} dirty={dirtyForm.dirty} />

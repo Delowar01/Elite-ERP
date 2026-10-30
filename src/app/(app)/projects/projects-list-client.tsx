@@ -12,6 +12,7 @@ import { ListEmptyState } from "../sales/_shared/list-empty-state";
 import { Money } from "../sales/_shared/money";
 import { t, type Locale } from "@/lib/i18n/dict";
 import { statusStat } from "@/lib/status-registry";
+import { PageHeader } from "@/components/layout/page-header";
 
 
 export type ProjectRow = {
@@ -42,9 +43,8 @@ export function ProjectsListClient({ locale, rows }: { locale: Locale; rows: Pro
 
   return (
     <div className="max-w-6xl mx-auto">
-      <div className="flex items-center justify-between mb-[22px]">
-        <h3 className="text-[19px] font-bold">{t(locale, "Projects")}</h3>
-      </div>
+      {/* The page's one h1. New Project stays where it is, in the list toolbar. */}
+      <PageHeader title={t(locale, "Projects")} />
 
       <StatRow
         items={[

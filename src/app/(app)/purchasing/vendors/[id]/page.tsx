@@ -10,6 +10,7 @@ import { getProfileByCountryName, resolveTaxLabels } from "@/lib/geo/country-pro
 import { tenantScope } from "@/lib/tenant";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { SectionHeader } from "@/components/ui/section-header";
 import { VendorForm } from "../vendor-form";
 import { updateVendorAction } from "../actions";
 import { VendorRecordActions } from "../vendor-record-actions";
@@ -51,30 +52,31 @@ export default async function VendorDetailPage({ params }: { params: Promise<{ i
     <div className="max-w-6xl mx-auto">
       <PageHeader
         title={vendor.name}
-        description="Vendor profile"
-        actions={
-          <div className="flex items-center gap-2">
+        description={t(locale, "Vendor profile")}
+        meta={
+          <>
             <StatusBadge domain="active_flag" status={vendor.isActive ? "active" : "inactive"} locale={locale} />
             {vendor.recordState === "archived" && <StatusBadge domain="record_state" status="archived" locale={locale} />}
-            <VendorRecordActions vendor={vendor} locale={locale} />
-          </div>
+          </>
         }
+        actions={<VendorRecordActions vendor={vendor} locale={locale} />}
       />
 
-      <div className="grid grid-cols-3 gap-5">
-        <Card className="col-span-2">
+      {/* One column up to lg; from lg the form takes two thirds and the side card one. */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        <Card className="lg:col-span-2">
           <CardContent className="pt-6">
-            <VendorForm vendor={vendor} action={updateVendorAction.bind(null, vendor.id)} submitLabel="Save changes" taxNumberLabel={labels.taxNumberLabel} registrationLabel={labels.registrationLabel} />
+            <VendorForm vendor={vendor} action={updateVendorAction.bind(null, vendor.id)} submitLabel={t(locale, "Save changes")} taxNumberLabel={labels.taxNumberLabel} registrationLabel={labels.registrationLabel} />
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>Purchase Orders</CardTitle>
+            <CardTitle as="h2">{t(locale, "Purchase Orders")}</CardTitle>
           </CardHeader>
           <CardContent>
             {pos.length === 0 ? (
-              <p className="text-xs text-ink-faint">No purchase orders yet.</p>
+              <p className="text-xs text-ink-faint">{t(locale, "No purchase orders yet.")}</p>
             ) : (
               <div className="flex flex-col gap-2">
                 {pos.map((po) => (
@@ -95,7 +97,7 @@ export default async function VendorDetailPage({ params }: { params: Promise<{ i
 
       {/* Statement of account for this vendor — same component the central statement page uses. */}
       <div className="mt-6">
-        <div className="main-head"><h3>{t(locale, "Statement of Account")}</h3></div>
+        <SectionHeader level={2} title={t(locale, "Statement of Account")} className="mb-4" />
         <StatementView locale={locale} kind="vendor" partyId={vendor.id} compact initial={vendorStatement} />
       </div>
     </div>

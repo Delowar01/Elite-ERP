@@ -244,6 +244,11 @@ const DICT: Record<string, string> = {
   "Print Layout": "تنسيق الطباعة",
   "Roles & Permissions": "الأدوار والصلاحيات",
   "ZATCA E-Invoicing": "الفوترة الإلكترونية زاتكا",
+  // DEV-UI-01.7 C5: the four Settings navigation labels that had no Arabic.
+  "Fiscal Year": "السنة المالية",
+  "VAT Configuration": "إعدادات ضريبة القيمة المضافة",
+  Users: "المستخدمون",
+  Integrations: "التكاملات",
 
   "Business Name": "اسم الشركة",
   Industry: "القطاع",
@@ -1136,6 +1141,8 @@ const DICT: Record<string, string> = {
   // ---- Compliance Center (Stage 11 Part 5) ----
   "Compliance Center": "مركز الامتثال",
   "Security & Compliance Readiness": "جاهزية الأمان والامتثال",
+  // DEV-UI-01.7 C5: the readiness groups' h2 — a structural label, no certification claim.
+  "Readiness checklist": "قائمة التحقق من الجاهزية",
   GDPR: "اللائحة العامة لحماية البيانات (GDPR)",
   "An internal checklist of what this build implements. It is not a certification: no external audit has been carried out, and no framework compliance is claimed.":
     "قائمة داخلية لما تنفّذه هذه النسخة. ليست شهادة اعتماد: لم يُجرَ أي تدقيق خارجي، ولا يُدّعى الامتثال لأي إطار.",
@@ -1237,8 +1244,8 @@ const DICT: Record<string, string> = {
   "Mark as read": "تعليم كمقروء",
   "Search records or jump to a page…": "ابحث في السجلات أو انتقل إلى صفحة…",
   "Last Month": "الشهر الماضي",
-  "Last 7 Days": "آخر ٧ أيام",
-  "Last 30 Days": "آخر ٣٠ يوماً",
+  "Last 7 Days": "آخر 7 أيام",
+  "Last 30 Days": "آخر 30 يوماً",
   "This Quarter": "هذا الربع",
   "This Year": "هذه السنة",
   "All Time": "كل الأوقات",
@@ -1912,6 +1919,25 @@ const DICT: Record<string, string> = {
   "Customer directory used across quotations, orders, and invoices.": "دليل العملاء المستخدم في عروض الأسعار والطلبات والفواتير.",
   "Suppliers used for purchase orders and debit notes.": "الموردون المستخدمون في أوامر الشراء وإشعارات المدين.",
   "Inventory catalog used across quotations, orders, and invoices.": "كتالوج المخزون المستخدم في عروض الأسعار والطلبات والفواتير.",
+  // ---- DEV-UI-01.7 C1: master-data and entity-detail page copy ----
+  "Client profile": "ملف العميل",
+  "Vendor profile": "ملف المورّد",
+  Stock: "المخزون",
+  "Quantity on hand": "الكمية المتوفرة",
+  "Reorder level": "حد إعادة الطلب",
+  "Add a vendor to order and receive against.": "أضف مورّدًا لإصدار أوامر الشراء واستلام البضائع منه.",
+  "Create Vendor": "إنشاء مورّد",
+  "Add a product to your inventory catalog.": "أضف منتجًا إلى كتالوج المخزون.",
+  "Create Product": "إنشاء منتج",
+  "Clients — Recycle Bin": "العملاء — سلة المحذوفات",
+  "Vendors — Recycle Bin": "الموردون — سلة المحذوفات",
+  "Products — Recycle Bin": "المنتجات — سلة المحذوفات",
+  "Deleted clients live here until restored or permanently deleted.": "يبقى العملاء المحذوفون هنا إلى أن تتم استعادتهم أو حذفهم نهائيًا.",
+  "Deleted vendors live here until restored or permanently deleted.": "يبقى الموردون المحذوفون هنا إلى أن تتم استعادتهم أو حذفهم نهائيًا.",
+  "Deleted products live here until restored or permanently deleted.": "تبقى المنتجات المحذوفة هنا إلى أن تتم استعادتها أو حذفها نهائيًا.",
+  "Back to Clients": "العودة إلى العملاء",
+  "Back to Vendors": "العودة إلى الموردين",
+  "Back to Products": "العودة إلى المنتجات",
   // ---- DEV-UI-01.6: document server messages (display translations; the server text is unchanged) ----
   "Choose a client.": "اختر العميل.",
   "Client not found.": "العميل غير موجود.",
@@ -1984,6 +2010,12 @@ const DICT: Record<string, string> = {
   "No columns configured.": "لا توجد أعمدة مهيأة.",
   "The Actions column is required.": "عمود الإجراءات مطلوب.",
   "The Actions column must stay at the end.": "يجب أن يبقى عمود الإجراءات في النهاية.",
+  // DEV-UI-01.7 C8 (product owner): the financial display policy while Cost of Sales and inventory valuation are
+  // incomplete — the project section's name, the P&L notice, the Balance Sheet's preliminary current-period result.
+  "Project Revenue & Costs": "إيرادات وتكاليف المشروع",
+  "Profit figures are temporarily hidden because Cost of Sales and inventory valuation are not yet complete.": "تم إخفاء مؤشرات الربح مؤقتًا لأن احتساب تكلفة المبيعات وتقييم المخزون لم يكتمل بعد.",
+  Preliminary: "مبدئي",
+  "Preliminary — Cost of Sales and inventory valuation are incomplete. The current-period result may change.": "مبدئي — احتساب تكلفة المبيعات وتقييم المخزون غير مكتمل، وقد تتغير نتيجة الفترة الحالية.",
 };
 
 export function t(locale: Locale, en: string): string {

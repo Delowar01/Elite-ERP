@@ -7,6 +7,9 @@ import { Sparkline } from "./charts";
 // Matches the mockup's kpi_card_v4() exactly: <div class="card hoverable kpi-card-v4">
 // <div class="top"><div class="kpi-chip">...<div class="kpi-label">...<div class="kpi-value-row">...
 // <div class="kpi-trend">...<div class="kpi-spark">...
+// DEV-UI-01.7 C6 (D-5): the trend and the sparkline are each shown only when a real one is passed —
+// a period-over-period trend the query computed, a time series of two or more points — and left out
+// otherwise: no placeholder "0%", no borrowed or flat series, no blank space kept for them.
 export function KpiCard({
   locale,
   label,
@@ -22,11 +25,11 @@ export function KpiCard({
   label: string;
   value: string;
   isCurrency?: boolean;
-  trendPct: string;
-  trendUp: boolean;
+  trendPct?: string;
+  trendUp?: boolean;
   icon: LucideIcon;
   accent: string;
-  sparkValues: number[];
+  sparkValues?: number[];
 }) {
   return (
     <div className="card kpi-card-v4">
@@ -46,13 +49,17 @@ export function KpiCard({
           </span>
         </div>
       </div>
-      <div className={`kpi-trend ${trendUp ? "up" : "down"}`}>
-        {trendUp ? <ArrowUp className="size-2.5" style={{ color: "var(--accent-green)" }} /> : <ArrowDown className="size-2.5" style={{ color: "var(--accent-red)" }} />}
-        {trendPct} <span className="muted">{t(locale, "vs prev. period")}</span>
-      </div>
-      <div className="kpi-spark">
-        <Sparkline values={sparkValues} color={accent} />
-      </div>
+      {trendPct !== undefined && trendUp !== undefined && (
+        <div className={`kpi-trend ${trendUp ? "up" : "down"}`}>
+          {trendUp ? <ArrowUp className="size-2.5" style={{ color: "var(--accent-green)" }} /> : <ArrowDown className="size-2.5" style={{ color: "var(--accent-red)" }} />}
+          {trendPct} <span className="muted">{t(locale, "vs prev. period")}</span>
+        </div>
+      )}
+      {sparkValues && sparkValues.length > 1 && (
+        <div className="kpi-spark">
+          <Sparkline values={sparkValues} color={accent} />
+        </div>
+      )}
     </div>
   );
 }

@@ -145,13 +145,20 @@ const COMBOS = [
 ];
 
 // Every element that can carry a figure. textContent (not innerText), so a JavaScript-disabled load
-// — where streamed segments sit in hidden <div id="S:…"> blocks — reads the same strings.
+// — where streamed segments sit in hidden <div id="S:…"> blocks — reads the same strings. A segment
+// React streams from inside a table comes in its table form instead — <table hidden> holding the
+// S: tbody or row (DEV-UI-01.7 C3's project detail streams its drill-table rows that way): a hidden
+// container that is, or holds, an S: segment counts the same.
 const FIGURES = ".num-tabular, .tb-tile .v, .acct-row .bal, td, .kpi-value, .bc-stat-row .val, .bc-bignum, .fin-profit-value, .payslip-line span";
 const figures = (page) =>
   page.evaluate(
     (sel) =>
       [...document.querySelectorAll(sel)]
-        .filter((e) => e.closest("main, div[hidden][id^='S:']"))
+        .filter((e) => {
+          if (e.closest("main, div[hidden][id^='S:']")) return true;
+          const h = e.closest("[hidden]");
+          return Boolean(h && (h.matches("[id^='S:']") || h.querySelector("[id^='S:']")));
+        })
         .map((e) => e.textContent.replace(/\s+/g, " ").trim())
         .filter((s) => /[0-9٠-٩۰-۹]/.test(s)),
     FIGURES,
@@ -235,7 +242,7 @@ for (const combo of COMBOS) {
   // Record Payment: the document balances in this dialog are formatted in the browser only.
   errors.length = 0;
   await page.goto(`${BASE}/finance/payments`, { waitUntil: "networkidle" });
-  await page.locator(".main-head button").first().click();
+  await page.locator('[data-slot="page-header-actions"] button').first().click();
   await page.locator("#pay-source").click();
   await page.waitForTimeout(300);
   const options = await page.locator("[role=option]").allInnerTexts();

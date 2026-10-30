@@ -5,6 +5,8 @@ import type { Account } from "@/db";
 import type { LedgerRow } from "@/lib/accounting";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { SectionHeader } from "@/components/ui/section-header";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Money } from "../../sales/_shared/money";
 import { DISPLAY_NUMBER_LOCALE, formatMoneyNumber } from "@/lib/currency/currencies";
 import { AddAccountDialog } from "./add-account-dialog";
@@ -79,22 +81,28 @@ export function AccountLedgerView({
 
       <div>
         {!selectedAccount ? (
-          <div className="card p-8 text-center text-ink-muted text-sm">{t(locale, "Select an account to view its ledger.")}</div>
+          <EmptyState message={t(locale, "Select an account to view its ledger.")} />
         ) : (
           <div className="card" style={{ padding: 20 }}>
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <div className="mono" style={{ fontWeight: 700, fontSize: 15 }}>
+            {/* The selected account is the page's h2: code · name, its normal balance beneath, the
+                balance beside it. */}
+            <SectionHeader
+              level={2}
+              title={
+                <span className="mono">
                   {selectedAccount.code} · {accountName(locale, selectedAccount)}
-                </div>
-                <div className="text-[11.5px] text-ink-muted mt-0.5">{t(locale, NORMAL_BALANCE_CAPTION[selectedAccount.type as (typeof TYPE_ORDER)[number]])}</div>
-              </div>
-              <span className="org-pill">
-                {t(locale, "Balance")}: <Money amount={balances.get(selectedAccount.id) ?? 0} context="summary" />
-              </span>
-            </div>
+                </span>
+              }
+              description={t(locale, NORMAL_BALANCE_CAPTION[selectedAccount.type as (typeof TYPE_ORDER)[number]])}
+              meta={
+                <span className="org-pill">
+                  {t(locale, "Balance")}: <Money amount={balances.get(selectedAccount.id) ?? 0} context="summary" />
+                </span>
+              }
+              className="mb-4"
+            />
             {ledgerRows.length === 0 ? (
-              <p className="text-ink-muted text-sm py-6 text-center">{t(locale, "No transactions yet.")}</p>
+              <EmptyState message={t(locale, "No transactions yet.")} />
             ) : (
               <Table density="compact">
                 <TableHeader>

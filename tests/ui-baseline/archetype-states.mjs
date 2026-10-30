@@ -1,0 +1,769 @@
+/**
+ * DEV-UI-01.7 — page-archetype screenshot states, captured by `run.mjs capture-archetypes`.
+ *
+ * The Stage 1 representative set: one page for each archetype the 01.7 stages recompose — dashboard,
+ * master-data list, entity detail, an empty recycle bin, HR list / detail / payroll, projects, the
+ * kanban with and without tasks, a financial report, a statement, the ledger and two Settings pages —
+ * each EN + AR at 1440 / 1024 / 768 / 390 in light (120) and EN + AR at 1440 in dark (30), full page.
+ * Plus the interactions those pages can already do (12), as viewport screenshots: a department chosen
+ * in the employees filter, keyboard focus on the report picker, a kanban task opened for editing.
+ *
+ * C0 records today's behaviour and does not fake what later stages add. Not captured, because the
+ * page cannot do it yet: choosing a department by keyboard (the chips are not focusable), opening or
+ * moving a kanban card by keyboard. Each arrives with the stage that builds it.
+ *
+ * Same frozen clock, seed, TEST-ONLY database and pinned Chromium as the 256-state matrix, no
+ * masking and no injected CSS. One fixture step belongs to this set (alignDatabaseTimestamps
+ * below): the Security page shows rows the database stamped with its own clock.
+ *
+ * C1 (master data + entity detail) adds the other nine of its 12 pages — the vendor and product
+ * lists, the vendor and product detail, the three New pages, the vendor and product recycle bins —
+ * EN + AR at 1440 and 390, light, full page (36); the clients list, client detail and clients bin
+ * are already above at every width. And one fixture state (4): the PageHeader under a long name —
+ * client 1 renamed in the run's TEST-ONLY copy for that state only and restored straight after —
+ * which fails the capture if the header overflows, clips, or puts its actions over the title.
+ *
+ * C2 (HR) adds the four HR pages not above — New Employee, Departments, Attendance, Leave — EN + AR at
+ * 1440 and 390, light, full page (16); the employees list, employee detail and payroll are above at
+ * every width. Two interactions (8), viewport screenshots: a department chosen by keyboard (Tab to it,
+ * Enter — it is pressed and keeps the focus ring; the department chips were not focusable before C2),
+ * and a payroll row selected by keyboard (Tab to the second row, Enter — its payslip). Each fails the
+ * capture if the page does not do it. And the D-6 evidence: the eight document lists — the StatRow
+ * consumers C2 does not own — EN + AR at 1440 and 390, light, full page (32; Projects and Settings ›
+ * Security are above at every width), and Bank Accounts, the other .two-col page, at every width (8).
+ *
+ * C3 (Projects + kanban) adds New Project, EN + AR at 1440 and 390, light, full page (4); the list and
+ * both projects are above at every width. Three interactions (12), viewport screenshots: a task card
+ * focused by keyboard (Tab to it — a button now, with the focus ring), Edit Task opened by keyboard
+ * (Tab, Enter — the dialog for that card's task), and the empty project's Tasks section with Add Task
+ * reached by keyboard beside its EmptyState. Each fails the capture if the page does not do it.
+ *
+ * C4 (finance + reports) adds the finance states not above — the Profit & Loss report, the vendor
+ * statement with a party, Chart of Accounts and the ledger with no account selected (its EmptyState) —
+ * EN + AR at 1440 and 390, light, full page (16); the Trial Balance, the client statement, the ledger and
+ * Bank Accounts are above at every width (Payments and New Journal Entry are in the lists set). Two
+ * interactions (8), viewport screenshots: the report picker by keyboard (Tab to it, Tab ×3, Enter —
+ * Trial Balance pressed, its h2, the focus kept on it) and the statement's Vendor link by keyboard (Tab
+ * to it, Enter — the vendor page, Vendor the current page). Each fails the capture if the page does not do it.
+ *
+ * C5 (Settings) adds the Settings states not above — Business Settings on Color Theme (its default tab),
+ * Team, Fiscal Year and VAT Configuration, Presets and Security & Compliance Readiness — EN + AR at 1440
+ * and 390, light, full page (24); Business Details and the Security Center are above at every width. Two
+ * interactions (6), viewport screenshots: the Settings navigation by keyboard (Tab to the active tab,
+ * ArrowDown — Logo focused, selected and shown, the focus ring on it; at 390 the navigation stacked full
+ * width above the panel, in Arabic in the document's direction) and Compliance's controls at 390 (Tab to
+ * the customer select — the erase and consent rows wrapped, every control inside the viewport). Each
+ * fails the capture if the page does not do it.
+ *
+ * C6 (the Dashboard) adds the Dashboard states not above (a01 is the seeded Saudi org — ZATCA Phase 1 on —
+ * at every width, the default layout, this month): the representative alternate range — Last 30 Days, day
+ * buckets — EN + AR at 1440 and 390, light, full page (4). Two fixture states (8), full page, each made in
+ * the run's TEST-ONLY copy for that state only and restored straight after: an org without ZATCA Phase 1
+ * (the seeded org's country set to the United Arab Emirates — the ZATCA card must be gone) and a
+ * customized layout (the owner's saved layout: Quick Actions and the feature strip hidden, HR Snapshot
+ * above Project Overview — the page must render it so). Two interactions (8), viewport screenshots: the
+ * range selector by keyboard (Tab to it, Enter — its menu open on the seven ranges, the current one
+ * marked) and Customize Layout by keyboard (Tab, Enter — the dialog on the twelve widgets, all shown).
+ * Each fails the capture if the page does not do it. They assert what C5 and C6 share, so C5's build
+ * captures them too — the before / after pairs; what only C6 does (no empty strip, the PageHeader, the
+ * grid) the runtime verifier holds.
+ *
+ * C7 (document and app-state heading semantics, D-3 — tags only, zero pixel difference) adds every document
+ * page not above: each of the eight families' detail, create and edit page (the lists are the d6-* states),
+ * the document Recycle Bin and the not-found page (a client and an invoice that do not exist) — EN + AR at
+ * 1440 and 390, light, full page (108). The seed has documents for three families (quotations, sales
+ * invoices, purchase orders: their detail pages open QTN-0001, INV-0003 — its Tax Invoice QR panel — and
+ * PO-0001, their editors the drafts QTN-0003, INV-0006, PO-0003); for the other five each detail and edit
+ * state is a fixture: a TEST-ONLY draft (writeC7Drafts — SO-0001, PF-0001, DC-0001, CN-0001 against
+ * INV-0003, DN-0001 against PO-0002) written into the run's copy for that state only and removed straight
+ * after. A capture fails if the page is not the document. C6's build captures every one of them too — the
+ * before / after pairs, which must be byte-identical.
+ *
+ * C8 final (the product owner's financial display policy while Cost of Sales and inventory valuation are incomplete)
+ * adds the financial states not above: the Profit & Loss against the previous period and searched ("4000"), EN + AR at
+ * 1440 and 390; the Balance Sheet at every width and dark at 1440, and against the previous period at 1440 and 390 —
+ * light, full page (22); and the P&L and the Balance Sheet in print media, what the browser prints, EN + AR at 1440,
+ * full page (4). Each fails the capture if the page is not that report in that state — its toggle the one pressed, the
+ * comparison on or off as asked, the search applied, print media. They assert what the approved remediation's build
+ * (c47c65a) and C8 final share, so c47c65a captures them too — the before / after pairs; what only C8 final does (no
+ * profit figure on the P&L, the notice, the Preliminary line and the disclosure, the report printed rather than blank)
+ * the runtime verifier holds. The P&L itself (c4-profit-loss) and Project Revenue & Costs (a09, a10) are above.
+ */
+import pg from "pg";
+import { FROZEN_NOW, OWNER_EMAIL, VIEWPORTS } from "./config.mjs";
+import { DB_PREFIX, IsolationError, RUN_DB, dbUrl } from "./isolation.mjs";
+
+const vp = (name) => VIEWPORTS.find((v) => v.name === name);
+const ALLW = ["1440", "1024", "768", "390"];
+const EDGE = ["1440", "390"];
+const BOTH = ["en", "ar"];
+
+/** [id, path, area] — seed-stable ids: client 1, employee 1, project 1 (eight tasks), project 2 (none). */
+export const ARCHETYPE_ROUTES = [
+  ["a01-dashboard", "/dashboard", "Dashboard"],
+  ["a02-clients", "/clients", "Master-data list"],
+  ["a03-client-detail", "/clients/1", "Entity detail"],
+  ["a04-clients-recycle-bin-empty", "/clients/recycle-bin", "Recycle bin (empty)"],
+  ["a05-employees", "/hr/employees", "HR list"],
+  ["a06-employee-detail", "/hr/employees/1", "HR entity detail"],
+  ["a07-payroll", "/hr/payroll", "HR payroll"],
+  ["a08-projects", "/projects", "Projects list"],
+  ["a09-project-kanban", "/projects/1", "Project detail (kanban)"],
+  ["a10-project-kanban-empty", "/projects/2", "Project detail (empty kanban)"],
+  ["a11-trial-balance", "/finance/reports?report=tb", "Financial report (Trial Balance)"],
+  ["a12-statement-party", "/finance/statements?kind=client&party=1", "Statement (with a party)"],
+  ["a13-ledger", "/finance/ledger", "Ledger"],
+  ["a14-settings-business", "/settings/organization?tab=business-details", "Settings (organization / business)"],
+  ["a15-settings-security", "/settings/security", "Settings (security)"],
+];
+
+/** [id, path, action, viewports] — interactions that exist today. */
+const INTERACTIONS = [
+  ["i01-department-filter", "/hr/employees", "department", EDGE],
+  ["i02-report-picker-focus", "/finance/reports?report=tb", "report-focus", EDGE],
+  ["i03-kanban-task-edit", "/projects/1", "kanban-edit", EDGE],
+];
+
+export function archetypeMatrix() {
+  const out = [];
+  const add = (id, path, area, locale, theme, name, action, full) =>
+    out.push({ id: `arch-${id}__${locale}__${theme}__${name}`, route: { id, path, area }, locale, theme, viewport: vp(name), action, full });
+  for (const [id, path, area] of ARCHETYPE_ROUTES)
+    for (const locale of BOTH) {
+      for (const name of ALLW) add(id, path, area, locale, "light", name, null, true);
+      add(id, path, area, locale, "dark", "1440", null, true);
+    }
+  for (const [id, path, action, viewports] of INTERACTIONS)
+    for (const locale of BOTH) for (const name of viewports) add(id, path, "Interaction (today's behaviour)", locale, "light", name, action, false);
+  for (const [id, path, area] of C1_ROUTES) for (const locale of BOTH) for (const name of EDGE) add(id, path, area, locale, "light", name, null, true);
+  for (const [id, path, action, viewports] of C1_FIXTURES)
+    for (const locale of BOTH) for (const name of viewports) add(id, path, "PageHeader under a long name (fixture)", locale, "light", name, action, false);
+  for (const [id, path, area, viewports] of C2_ROUTES) for (const locale of BOTH) for (const name of viewports) add(id, path, area, locale, "light", name, null, true);
+  for (const [id, path, action, viewports] of C2_INTERACTIONS) for (const locale of BOTH) for (const name of viewports) add(id, path, "Interaction (C2)", locale, "light", name, action, false);
+  for (const [id, path, area, viewports] of C3_ROUTES) for (const locale of BOTH) for (const name of viewports) add(id, path, area, locale, "light", name, null, true);
+  for (const [id, path, action, viewports] of C3_INTERACTIONS) for (const locale of BOTH) for (const name of viewports) add(id, path, "Interaction (C3)", locale, "light", name, action, false);
+  for (const [id, path, area, viewports] of C4_ROUTES) for (const locale of BOTH) for (const name of viewports) add(id, path, area, locale, "light", name, null, true);
+  for (const [id, path, action, viewports] of C4_INTERACTIONS) for (const locale of BOTH) for (const name of viewports) add(id, path, "Interaction (C4)", locale, "light", name, action, false);
+  for (const [id, path, area, viewports] of C5_ROUTES) for (const locale of BOTH) for (const name of viewports) add(id, path, area, locale, "light", name, null, true);
+  for (const [id, path, action, viewports] of C5_INTERACTIONS) for (const locale of BOTH) for (const name of viewports) add(id, path, "Interaction (C5)", locale, "light", name, action, false);
+  for (const [id, path, area, viewports] of C6_ROUTES) for (const locale of BOTH) for (const name of viewports) add(id, path, area, locale, "light", name, null, true);
+  for (const [id, path, action, viewports] of C6_FIXTURES) for (const locale of BOTH) for (const name of viewports) add(id, path, "Dashboard fixture (C6)", locale, "light", name, action, true);
+  for (const [id, path, action, viewports] of C6_INTERACTIONS) for (const locale of BOTH) for (const name of viewports) add(id, path, "Interaction (C6)", locale, "light", name, action, false);
+  for (const [id, path, area, action] of C7_STATES) for (const locale of BOTH) for (const name of EDGE) add(id, path, area, locale, "light", name, action, true);
+  for (const [id, path, area, action, viewports, dark] of C8_STATES)
+    for (const locale of BOTH) {
+      for (const name of viewports) add(id, path, area, locale, "light", name, action, true);
+      if (dark) add(id, path, area, locale, "dark", "1440", action, true);
+    }
+  return out;
+}
+
+/** [id, path, area, viewports] — C2: the HR pages not in the set above, and the D-6 / .two-col evidence. */
+const C2_ROUTES = [
+  ["c2-employee-new", "/hr/employees/new", "HR (new employee)", EDGE],
+  ["c2-departments", "/hr/departments", "HR (departments placeholder)", EDGE],
+  ["c2-attendance", "/hr/attendance", "HR (attendance)", EDGE],
+  ["c2-leave", "/hr/leave", "HR (leave requests)", EDGE],
+  ["d6-quotations", "/sales/quotations", "D-6 StatRow (quotations list)", EDGE],
+  ["d6-sales-orders", "/sales/orders", "D-6 StatRow (sales orders list)", EDGE],
+  ["d6-proforma", "/sales/proforma", "D-6 StatRow (proforma list)", EDGE],
+  ["d6-sales-invoices", "/sales/invoices", "D-6 StatRow (sales invoices list)", EDGE],
+  ["d6-delivery-challans", "/sales/delivery-challans", "D-6 StatRow (delivery challans list)", EDGE],
+  ["d6-purchase-orders", "/purchasing/orders", "D-6 StatRow (purchase orders list)", EDGE],
+  ["d6-credit-notes", "/sales/credit-notes", "D-6 StatRow (credit notes list)", EDGE],
+  ["d6-debit-notes", "/purchasing/debit-notes", "D-6 StatRow (debit notes list)", EDGE],
+  ["c2-bank-accounts", "/finance/bank-accounts", ".two-col (bank accounts)", ALLW],
+];
+/** [id, path, action, viewports] — C2 interactions (viewport screenshots). */
+const C2_INTERACTIONS = [
+  ["i04-department-keyboard", "/hr/employees", "department-keyboard", EDGE],
+  ["i05-payroll-keyboard", "/hr/payroll", "payroll-keyboard", EDGE],
+];
+
+/** [id, path, area, viewports] — C3: the Projects page not in the set above. */
+const C3_ROUTES = [["c3-project-new", "/projects/new", "Projects (new project)", EDGE]];
+/** [id, path, action, viewports] — C3 interactions (viewport screenshots). */
+const C3_INTERACTIONS = [
+  ["i06-kanban-card-focus", "/projects/1", "kanban-card-focus", EDGE],
+  ["i07-kanban-keyboard-edit", "/projects/1", "kanban-keyboard-edit", EDGE],
+  ["i08-kanban-empty", "/projects/2", "kanban-empty", EDGE],
+];
+
+/** [id, path, area, viewports] — C4: the finance states not in the set above (seed-stable: vendor 1; no account 999999). */
+const C4_ROUTES = [
+  ["c4-profit-loss", "/finance/reports", "Financial report (Profit & Loss)", EDGE],
+  ["c4-statement-vendor", "/finance/statements?kind=vendor&party=1", "Statement (vendor, with a party)", EDGE],
+  ["c4-chart-of-accounts", "/finance/chart-of-accounts", "Chart of Accounts", EDGE],
+  ["c4-ledger-no-account", "/finance/ledger?account=999999", "Ledger (no account selected)", EDGE],
+];
+/** [id, path, action, viewports] — C4 interactions (viewport screenshots). */
+const C4_INTERACTIONS = [
+  ["i09-report-picker-keyboard", "/finance/reports", "report-keyboard", EDGE],
+  ["i10-statement-vendor-link", "/finance/statements?kind=client", "statement-vendor-keyboard", EDGE],
+];
+
+/** [id, path, area, viewports] — C5: the Settings states not in the set above. */
+const C5_ROUTES = [
+  ["c5-settings-color-theme", "/settings/organization", "Settings (Business Settings, Color Theme — the default tab)", EDGE],
+  ["c5-settings-team", "/settings/organization?tab=team", "Settings (Business Settings, Team)", EDGE],
+  ["c5-settings-fiscal-year", "/settings/organization?tab=fiscal-year", "Settings (Business Settings, Fiscal Year)", EDGE],
+  ["c5-settings-vat", "/settings/organization?tab=vat-config", "Settings (Business Settings, VAT Configuration)", EDGE],
+  ["c5-settings-presets", "/settings/presets", "Settings (Presets)", EDGE],
+  ["c5-settings-compliance", "/settings/compliance", "Settings (Security & Compliance Readiness)", EDGE],
+];
+/** [id, path, action, viewports] — C5 interactions (viewport screenshots). */
+const C5_INTERACTIONS = [
+  ["i11-settings-nav-keyboard", "/settings/organization?tab=business-details", "settings-nav-keyboard", EDGE],
+  ["i12-compliance-mobile-controls", "/settings/compliance", "compliance-mobile-controls", ["390"]],
+];
+
+/** [id, path, area, viewports] — C6: the Dashboard's representative alternate range (a01 is this month). */
+const C6_ROUTES = [["c6-dashboard-last-30-days", "/dashboard?range=last_30_days", "Dashboard (Last 30 Days — day buckets)", EDGE]];
+/** [id, path, action, viewports] — C6 fixture states (full page). */
+const C6_FIXTURES = [
+  ["f02-dashboard-no-zatca", "/dashboard", "dashboard-no-zatca", EDGE],
+  ["f03-dashboard-customized", "/dashboard", "dashboard-customized", EDGE],
+];
+/** [id, path, action, viewports] — C6 interactions (viewport screenshots). */
+const C6_INTERACTIONS = [
+  ["i13-dashboard-range-menu", "/dashboard", "dashboard-range-menu", EDGE],
+  ["i14-dashboard-customize", "/dashboard", "dashboard-customize", EDGE],
+];
+
+/**
+ * [id, path, area, action] — C7: each document family's detail, create and edit page (the lists are the d6-*
+ * states above), the document Recycle Bin and the not-found page. The detail and edit pages of the five families
+ * the seed has no document for open a TEST-ONLY draft written for that state (action "c7-draft").
+ */
+const C7_DOCS = [
+  // [key, path, the seeded detail id or null (a C7 draft, id 1), the draft to edit or null (the C7 draft), the family]
+  ["qtn", "/sales/quotations", 1, 3, "quotation"], ["so", "/sales/orders", null, null, "sales order"],
+  ["pf", "/sales/proforma", null, null, "proforma invoice"], ["inv", "/sales/invoices", 3, 6, "sales invoice"],
+  ["dc", "/sales/delivery-challans", null, null, "delivery challan"], ["cn", "/sales/credit-notes", null, null, "credit note"],
+  ["po", "/purchasing/orders", 1, 3, "purchase order"], ["dn", "/purchasing/debit-notes", null, null, "debit note"],
+];
+const C7_STATES = [
+  ...C7_DOCS.flatMap(([key, path, detail, edit, family]) => [
+    [`c7-${key}-detail`, `${path}/${detail ?? 1}`, `Document detail (${family}${detail ? "" : ", TEST-only draft"})`, detail ? null : "c7-draft"],
+    [`c7-${key}-new`, `${path}/new`, `Document editor — create (${family})`, null],
+    [`c7-${key}-edit`, `${path}/${edit ?? 1}/edit`, `Document editor — edit (${family} draft${edit ? "" : ", TEST-only"})`, edit ? null : "c7-draft"],
+  ]),
+  ["c7-recycle-bin", "/recycle-bin", "Document Recycle Bin", null],
+  ["c7-not-found", "/clients/999999", "Not found (a client that does not exist)", null],
+  ["c7-not-found-document", "/sales/invoices/999999", "Not found (an invoice that does not exist)", null],
+];
+
+/** [id, path, area, action, viewports, dark at 1440] — C8 final: the financial display policy's states (full page). */
+const C8_STATES = [
+  ["c8-pl-compare", "/finance/reports?report=pl&compare=1", "Financial report (Profit & Loss against the previous period)", "c8-pl", EDGE, false],
+  ["c8-pl-search", "/finance/reports?report=pl", "Financial report (Profit & Loss searched — 4000)", "c8-pl-search", EDGE, false],
+  ["c8-balance-sheet", "/finance/reports?report=bs", "Financial report (Balance Sheet)", "c8-bs", ALLW, true],
+  ["c8-bs-compare", "/finance/reports?report=bs&compare=1", "Financial report (Balance Sheet against the previous period)", "c8-bs", EDGE, false],
+  ["c8-pl-print", "/finance/reports?report=pl", "Financial report printed (Profit & Loss in print media)", "c8-pl-print", ["1440"], false],
+  ["c8-bs-print", "/finance/reports?report=bs", "Financial report printed (Balance Sheet in print media)", "c8-bs-print", ["1440"], false],
+];
+/**
+ * C8 final: the page is the report asked for, in the state asked for — the toggle pressed (Profit & Loss first, Balance
+ * Sheet second), the comparison on or off, the search box holding the term with the report filtered to it, print media.
+ * Read from the DOM's text (textContent), which print media does not change.
+ */
+async function c8Report(page, s, { kind, term = null, print = false }) {
+  const f = await page.evaluate(() => {
+    const area = document.querySelector("main .reports-print-area");
+    const filter = area?.querySelector(":scope > .card.no-print");
+    const body = area?.querySelector(":scope > .card:not(.no-print)");
+    return {
+      pressed: [...(area?.querySelectorAll(":scope > .tab-row button") ?? [])].map((b) => b.getAttribute("aria-pressed")).indexOf("true"),
+      compare: filter?.querySelector('[role="checkbox"]')?.getAttribute("aria-checked") ?? null,
+      search: filter?.querySelector("input:not([type])")?.value ?? null,
+      text: (body?.textContent ?? "").replace(/\s+/g, " ").trim(),
+      print: matchMedia("print").matches,
+    };
+  });
+  const ok = f.pressed === (kind === "pl" ? 0 : 1) && f.compare === (s.route.path.includes("compare=1") ? "true" : "false") && f.text.length > 0 &&
+    (term === null ? f.search === "" : f.search === term && f.text.includes(term)) && f.print === print;
+  if (!ok) throw new Error(`C8 final ${s.route.path}${term ? ` searched "${term}"` : ""}${print ? " in print media" : ""}: ${JSON.stringify({ ...f, text: f.text.slice(0, 120) })}`);
+}
+
+/** [id, path, area] — C1: the master-data / entity-detail pages not in the set above (seed-stable ids; the seed's bins are empty). */
+const C1_ROUTES = [
+  ["c1-vendors", "/purchasing/vendors", "Master-data list (vendors)"],
+  ["c1-vendor-detail", "/purchasing/vendors/1", "Entity detail (vendor)"],
+  ["c1-vendor-new", "/purchasing/vendors/new", "New vendor"],
+  ["c1-vendor-recycle-bin-empty", "/purchasing/vendors/recycle-bin", "Recycle bin (vendors, empty)"],
+  ["c1-products", "/inventory/products", "Master-data list (products)"],
+  ["c1-product-detail", "/inventory/products/1", "Entity detail (product)"],
+  ["c1-product-new", "/inventory/products/new", "New product"],
+  ["c1-product-recycle-bin-empty", "/inventory/products/recycle-bin", "Recycle bin (products, empty)"],
+  ["c1-client-new", "/clients/new", "New client"],
+];
+/** [id, path, action, viewports] — C1 fixture states (viewport screenshots). */
+const C1_FIXTURES = [["f01-page-header-long-name", "/clients/1", "long-name", EDGE]];
+
+// A client name long enough to wrap the h1 at every width, with one 44-character word that only
+// breaks because the title column may shrink (min-w-0) and wrap it (break-words).
+const LONG_NAME = "AlNoorContractingGeneralTradingEstablishment for Exhibitions, Events and Conference Services (Fictional)";
+/** Rename client 1 in the run's TEST-ONLY copy; returns the name it had. */
+async function renameClient1(name) {
+  const url = dbUrl(RUN_DB);
+  if (!new URL(url).pathname.startsWith(`/${DB_PREFIX}`)) throw new IsolationError(`refusing to edit '${new URL(url).pathname}': not a ${DB_PREFIX}* database`);
+  const c = new pg.Client({ connectionString: url });
+  await c.connect();
+  try {
+    const before = (await c.query("select name from customers where id = 1")).rows[0]?.name;
+    if (before === undefined) throw new Error("client 1 is not in the run copy");
+    await c.query("update customers set name = $1 where id = 1", [name]);
+    return before;
+  } finally {
+    await c.end();
+  }
+}
+
+/** `fn(client)` on the run's TEST-ONLY copy — refused on any database that is not a devui010_test_only_* one. */
+async function onRunCopy(fn) {
+  const url = dbUrl(RUN_DB);
+  if (!new URL(url).pathname.startsWith(`/${DB_PREFIX}`)) throw new IsolationError(`refusing to edit '${new URL(url).pathname}': not a ${DB_PREFIX}* database`);
+  const c = new pg.Client({ connectionString: url });
+  await c.connect();
+  try {
+    return await fn(c);
+  } finally {
+    await c.end();
+  }
+}
+/** Set the owner's org's country in the run copy; returns the country it had. */
+const setOwnerCountry = (country) =>
+  onRunCopy(async (c) => {
+    const org = (await c.query("select org_id from users where email = $1", [OWNER_EMAIL])).rows[0]?.org_id;
+    const before = (await c.query("select country from orgs where id = $1", [org])).rows[0]?.country;
+    if (before === undefined) throw new Error("the owner's org is not in the run copy");
+    await c.query("update orgs set country = $1 where id = $2", [country, org]);
+    return before;
+  });
+/** C6: the customized layout — Quick Actions and the feature strip hidden, HR Snapshot above Project Overview. */
+const C6_LAYOUT = ["kpi_sales", "kpi_invoices", "kpi_receivables", "kpi_payables", "financial_overview", "quick_actions", "recent_activities", "cash_flow", "invoices_overview",
+  "hr_snapshot", "project_overview", "feature_strip"].map((key) => ({ key, visible: key !== "quick_actions" && key !== "feature_strip" }));
+/** Save `layout` as the owner's dashboard layout in the run copy; returns how to put the row back exactly. */
+const setOwnerLayout = (layout) =>
+  onRunCopy(async (c) => {
+    const row = (await c.query("select p.id, p.dashboard_layout, p.updated_at from user_preferences p join users u on u.id = p.user_id where u.email = $1", [OWNER_EMAIL])).rows[0] ?? null;
+    if (row) await c.query("update user_preferences set dashboard_layout = $1 where id = $2", [JSON.stringify(layout), row.id]);
+    else await c.query("insert into user_preferences (org_id, user_id, dashboard_layout) select org_id, id, $2 from users where email = $1", [OWNER_EMAIL, JSON.stringify(layout)]);
+    return () =>
+      onRunCopy((c2) =>
+        row
+          ? c2.query("update user_preferences set dashboard_layout = $1, updated_at = $2 where id = $3", [row.dashboard_layout === null ? null : JSON.stringify(row.dashboard_layout), row.updated_at, row.id])
+          : c2.query("delete from user_preferences where user_id = (select id from users where email = $1)", [OWNER_EMAIL]));
+  });
+/**
+ * DEV-UI-01.7 C7: TEST-ONLY drafts for the five document families the seed has none of — one each, id 1, one
+ * line from the document it stands beside: Sales Order SO-0001, Proforma Invoice PF-0001 and Delivery Challan
+ * DC-0001 for INV-0003's client and first line, Credit Note CN-0001 against INV-0003, Debit Note DN-0001 against
+ * PO-0002 (its vendor and first line). Drafts are the only state an editor may open; the numbering sequences
+ * advance as a draft's would. `c` is a client on a devui010_test_only_* copy (the caller's isolation); the
+ * harness writes them for one state (removeC7Drafts straight after), the runtime verifier for its C7 pass.
+ */
+const C7_DRAFT_TYPES = ["sales_order", "proforma_invoice", "delivery_challan", "credit_note", "debit_note"];
+export async function writeC7Drafts(c) {
+  const db = (await c.query("select current_database() as d")).rows[0].d;
+  if (!db.startsWith(DB_PREFIX)) throw new IsolationError(`refusing to write C7 drafts into '${db}': not a ${DB_PREFIX}* database`);
+  const { org_id: org, id: user } = (await c.query("select org_id, id from users where email = $1", [OWNER_EMAIL])).rows[0];
+  const inv = (await c.query("select id, customer_id from sales_invoices where org_id = $1 and invoice_number = 'INV-0003'", [org])).rows[0];
+  const po = (await c.query("select id, vendor_id from purchase_orders where org_id = $1 and po_number = 'PO-0002'", [org])).rows[0];
+  const il = (await c.query("select product_id, unit, description, unit_price from sales_invoice_items where invoice_id = $1 order by id limit 1", [inv.id])).rows[0];
+  const pl = (await c.query("select product_id, unit, description, unit_cost from purchase_order_items where purchase_order_id = $1 order by id limit 1", [po.id])).rows[0];
+  const taken = (await c.query("select (select count(*) from sales_orders) + (select count(*) from proforma_invoices) + (select count(*) from delivery_challans) + (select count(*) from credit_notes) + (select count(*) from debit_notes) as n")).rows[0].n;
+  if (Number(taken) !== 0) throw new Error(`writeC7Drafts: the copy already holds ${taken} documents of the five families`);
+  const money = (price) => {
+    const sub = Math.round(Number(price) * 100) / 100;
+    const tax = Math.round(sub * 0.15 * 100) / 100;
+    return [sub, tax, Math.round((sub + tax) * 100) / 100];
+  };
+  const [sSub, sTax, sTot] = money(il.unit_price);
+  const [pSub, pTax, pTot] = money(pl.unit_cost);
+  const at = "2026-06-10 10:00:00";
+  await c.query("begin");
+  try {
+    await c.query(`insert into sales_orders (id,org_id,so_number,customer_id,status,issue_date,subtotal,tax_total,total,currency,exchange_rate,base_total,base_tax_amount,created_by_id,created_at,updated_at)
+      values (1,$1,'SO-0001',$2,'draft','2026-06-10',$3,$4,$5,'SAR',1,$5,$4,$6,$7,$7)`, [org, inv.customer_id, sSub, sTax, sTot, user, at]);
+    await c.query("insert into sales_order_items (id,sales_order_id,product_id,unit,description,quantity,unit_price,tax_rate_percent,line_total) values (1,1,$1,$2,$3,1,$4,15,$4)", [il.product_id, il.unit, il.description, sSub]);
+    await c.query(`insert into proforma_invoices (id,org_id,proforma_number,customer_id,status,issue_date,subtotal,tax_total,total,currency,exchange_rate,base_total,base_tax_amount,created_by_id,created_at,updated_at)
+      values (1,$1,'PF-0001',$2,'draft','2026-06-10',$3,$4,$5,'SAR',1,$5,$4,$6,$7,$7)`, [org, inv.customer_id, sSub, sTax, sTot, user, at]);
+    await c.query("insert into proforma_invoice_items (id,proforma_invoice_id,product_id,unit,description,quantity,unit_price,tax_rate_percent,line_total) values (1,1,$1,$2,$3,1,$4,15,$4)", [il.product_id, il.unit, il.description, sSub]);
+    await c.query(`insert into delivery_challans (id,org_id,dc_number,customer_id,status,currency,created_by_id,created_at,updated_at)
+      values (1,$1,'DC-0001',$2,'draft','SAR',$3,$4,$4)`, [org, inv.customer_id, user, at]);
+    await c.query("insert into delivery_challan_items (id,delivery_challan_id,product_id,unit,description,quantity) values (1,1,$1,$2,$3,1)", [il.product_id, il.unit, il.description]);
+    await c.query(`insert into credit_notes (id,org_id,credit_note_number,customer_id,source_invoice_id,currency,exchange_rate,base_total,base_tax_amount,status,issue_date,subtotal,tax_total,total,created_by_id,created_at)
+      values (1,$1,'CN-0001',$2,$3,'SAR',1,$6,$5,'draft','2026-06-10',$4,$5,$6,$7,$8)`, [org, inv.customer_id, inv.id, sSub, sTax, sTot, user, at]);
+    await c.query("insert into credit_note_items (id,credit_note_id,product_id,unit,description,quantity,unit_price,tax_rate_percent,line_total) values (1,1,$1,$2,$3,1,$4,15,$4)", [il.product_id, il.unit, il.description, sSub]);
+    await c.query(`insert into debit_notes (id,org_id,debit_note_number,vendor_id,source_purchase_order_id,currency,exchange_rate,base_total,base_tax_amount,status,issue_date,subtotal,tax_total,total,created_by_id,created_at)
+      values (1,$1,'DN-0001',$2,$3,'SAR',1,$6,$5,'draft','2026-06-10',$4,$5,$6,$7,$8)`, [org, po.vendor_id, po.id, pSub, pTax, pTot, user, at]);
+    await c.query("insert into debit_note_items (id,debit_note_id,product_id,unit,description,quantity,unit_cost,tax_rate_percent,line_total) values (1,1,$1,$2,$3,1,$4,15,$4)", [pl.product_id, pl.unit, pl.description, pSub]);
+    await c.query("update document_sequences set next_number = next_number + 1 where org_id = $1 and document_type = any($2)", [org, C7_DRAFT_TYPES]);
+    await c.query("commit");
+  } catch (e) {
+    await c.query("rollback");
+    throw e;
+  }
+  return ["SO-0001", "PF-0001", "DC-0001", "CN-0001", "DN-0001"];
+}
+/** Remove writeC7Drafts' five drafts (only them) and put the numbering sequences back. */
+export async function removeC7Drafts(c) {
+  const db = (await c.query("select current_database() as d")).rows[0].d;
+  if (!db.startsWith(DB_PREFIX)) throw new IsolationError(`refusing to edit '${db}': not a ${DB_PREFIX}* database`);
+  const org = (await c.query("select org_id from users where email = $1", [OWNER_EMAIL])).rows[0].org_id;
+  await c.query("begin");
+  try {
+    const gone = [
+      await c.query("delete from sales_order_items where sales_order_id in (select id from sales_orders where id = 1 and so_number = 'SO-0001')"),
+      await c.query("delete from sales_orders where id = 1 and so_number = 'SO-0001'"),
+      await c.query("delete from proforma_invoice_items where proforma_invoice_id in (select id from proforma_invoices where id = 1 and proforma_number = 'PF-0001')"),
+      await c.query("delete from proforma_invoices where id = 1 and proforma_number = 'PF-0001'"),
+      await c.query("delete from delivery_challan_items where delivery_challan_id in (select id from delivery_challans where id = 1 and dc_number = 'DC-0001')"),
+      await c.query("delete from delivery_challans where id = 1 and dc_number = 'DC-0001'"),
+      await c.query("delete from credit_note_items where credit_note_id in (select id from credit_notes where id = 1 and credit_note_number = 'CN-0001')"),
+      await c.query("delete from credit_notes where id = 1 and credit_note_number = 'CN-0001'"),
+      await c.query("delete from debit_note_items where debit_note_id in (select id from debit_notes where id = 1 and debit_note_number = 'DN-0001')"),
+      await c.query("delete from debit_notes where id = 1 and debit_note_number = 'DN-0001'"),
+    ].map((r) => r.rowCount);
+    if (gone.some((n) => n !== 1)) throw new Error(`removeC7Drafts: expected one row each, removed ${gone.join(" ")}`);
+    await c.query("update document_sequences set next_number = next_number - 1 where org_id = $1 and document_type = any($2)", [org, C7_DRAFT_TYPES]);
+    await c.query("commit");
+  } catch (e) {
+    await c.query("rollback");
+    throw e;
+  }
+}
+const settled = (page) => page.evaluate(() => document.fonts.ready.then(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))));
+
+/** Reach a control with the keyboard (Tab), so :focus-visible matches as it would for a user. */
+async function tabTo(page, selector) {
+  for (let i = 0; i < 150; i++) {
+    await page.keyboard.press("Tab");
+    if (await page.evaluate((sel) => document.activeElement?.matches(sel) ?? false, selector)) return;
+  }
+  throw new Error(`keyboard focus never reached ${selector}`);
+}
+
+export const ARCH_ACTIONS = {
+  // The first department, by pointer (C0 recorded it on the pointer-only chips; buttons since C2).
+  department: async (page) => {
+    await page.locator("main .tab-row .tab").nth(1).click();
+    await page.evaluate(() => window.scrollTo(0, 0));
+  },
+  // The report picker's entries are real buttons: Tab until the selected one (Trial Balance) has focus.
+  "report-focus": async (page) => {
+    await tabTo(page, "main .tab-row button.tab.active");
+  },
+  // C2: the first department by keyboard — Tab to its button, Enter. It must be the one pressed, with
+  // the focus ring on it.
+  "department-keyboard": async (page) => {
+    await tabTo(page, "main .tab-row > :nth-child(2)");
+    await page.keyboard.press("Enter");
+    const f = await page.evaluate(() => {
+      const b = document.activeElement;
+      return { pressed: b.getAttribute("aria-pressed"), focusVisible: b.matches(":focus-visible"), allPressed: document.querySelectorAll('main .tab-row > [aria-pressed="true"]').length };
+    });
+    if (f.pressed !== "true" || !f.focusVisible || f.allPressed !== 1) throw new Error(`department by keyboard: ${JSON.stringify(f)}`);
+  },
+  // C2 (keyboard path since DEV-UI-01.5): the second payroll row by keyboard — Tab to it, Enter. It must
+  // be the selected row, and the payslip its employee's.
+  "payroll-keyboard": async (page) => {
+    await tabTo(page, "main tr[data-payroll-row]:nth-child(2)");
+    await page.keyboard.press("Enter");
+    const f = await page.evaluate(() => {
+      const r = document.activeElement;
+      const slip = document.querySelector("main .two-col > :nth-child(2) > :first-child")?.textContent ?? "";
+      return { selected: r.getAttribute("aria-selected"), focusVisible: r.matches(":focus-visible"), slipIsRow: slip.trim().endsWith(`— ${r.cells[0].textContent.trim()}`) };
+    });
+    if (f.selected !== "true" || !f.focusVisible || !f.slipIsRow) throw new Error(`payroll row by keyboard: ${JSON.stringify(f)}`);
+  },
+  // A kanban card opens its task for editing on click (there is no keyboard path today).
+  "kanban-edit": async (page) => {
+    await page.locator("main .kanban-card").first().click();
+    await page.getByRole("dialog").waitFor();
+  },
+  // C3: the first task card by keyboard — Tab to it. It must be a button with a name and the focus ring.
+  "kanban-card-focus": async (page) => {
+    await tabTo(page, "main .kanban-card");
+    const f = await page.evaluate(() => {
+      const a = document.activeElement;
+      return { tag: a.tagName, name: a.getAttribute("aria-label"), focusVisible: a.matches(":focus-visible"), ring: getComputedStyle(a).outlineStyle };
+    });
+    if (f.tag !== "BUTTON" || !f.name || !f.focusVisible || f.ring === "none") throw new Error(`kanban card by keyboard: ${JSON.stringify(f)}`);
+  },
+  // C3: Edit Task by keyboard — Tab to the first card, Enter. The dialog must be that card's task.
+  "kanban-keyboard-edit": async (page) => {
+    await tabTo(page, "main .kanban-card");
+    const title = await page.evaluate(() => document.activeElement.querySelector(".t").textContent.trim());
+    await page.keyboard.press("Enter");
+    await page.getByRole("dialog").waitFor();
+    const got = await page.evaluate(() => document.querySelector('[role="dialog"] #task-title')?.value);
+    if (got !== title) throw new Error(`Edit Task by keyboard opened "${got}", not "${title}"`);
+  },
+  // C3: the empty project — Tab to Add Task in the Tasks header; the EmptyState beside it, no board.
+  "kanban-empty": async (page) => {
+    await tabTo(page, 'main [data-slot="section-header"] button');
+    const f = await page.evaluate(() => ({
+      focusVisible: document.activeElement.matches(":focus-visible"),
+      empty: document.querySelectorAll('main [data-slot="empty-state"]').length,
+      board: document.querySelectorAll("main .kanban, main .kanban-card").length,
+    }));
+    if (!f.focusVisible || f.empty < 1 || f.board !== 0) throw new Error(`empty kanban: ${JSON.stringify(f)}`);
+  },
+  // C4: the report picker by keyboard — Tab to it (Profit & Loss), Tab ×3 to Trial Balance, Enter. Trial
+  // Balance must be the one toggle pressed, the URL ?report=tb, the h2 its name, the focus still on it.
+  "report-keyboard": async (page) => {
+    await tabTo(page, "main .reports-print-area > .tab-row button");
+    for (let i = 0; i < 3; i++) await page.keyboard.press("Tab");
+    await page.keyboard.press("Enter");
+    await page.waitForURL(/report=tb$/, { timeout: 30000 });
+    await page.waitForFunction(() => {
+      const h2 = document.querySelector("main .reports-print-area h2")?.textContent.trim();
+      const on = document.querySelector('main .tab-row button[aria-pressed="true"]')?.textContent.trim();
+      return Boolean(h2 && h2 === on && !document.querySelector("main .reports-print-area [aria-busy='true'], main .reports-print-area .animate-spin"));
+    }, null, { timeout: 30000 });
+    await page.waitForLoadState("networkidle");
+    const f = await page.evaluate(() => {
+      const a = document.activeElement;
+      return {
+        pressed: [...document.querySelectorAll('main .tab-row button[aria-pressed="true"]')].map((b) => b.textContent.trim()),
+        focus: a?.textContent.trim(), focusPressed: a?.getAttribute("aria-pressed"), focusVisible: a?.matches(":focus-visible"),
+        h2: document.querySelector("main .reports-print-area h2")?.textContent.trim(),
+      };
+    });
+    if (f.pressed.length !== 1 || f.focus !== f.pressed[0] || f.focusPressed !== "true" || !f.focusVisible || f.h2 !== f.pressed[0]) throw new Error(`report picker by keyboard: ${JSON.stringify(f)}`);
+  },
+  // C4: the statement's Vendor link by keyboard — Tab to it, Enter. The vendor page must load with Vendor the
+  // current page (aria-current="page") and Client not.
+  "statement-vendor-keyboard": async (page) => {
+    await tabTo(page, 'main .tab-row > a[href="/finance/statements?kind=vendor"]');
+    await Promise.all([page.waitForURL(/kind=vendor$/, { timeout: 30000 }), page.keyboard.press("Enter")]);
+    await page.waitForLoadState("networkidle");
+    await page.evaluate(() => document.fonts.ready.then(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))));
+    const f = await page.evaluate(() => [...document.querySelectorAll("main .tab-row > a")].map((a) => [a.getAttribute("href"), a.getAttribute("aria-current")]));
+    if (JSON.stringify(f) !== JSON.stringify([["/finance/statements?kind=client", null], ["/finance/statements?kind=vendor", "page"]])) throw new Error(`statement Vendor link by keyboard: ${JSON.stringify(f)}`);
+  },
+  // C5: the Settings navigation by keyboard — Tab to the active tab (Business Details), ArrowDown. Logo must be
+  // the focused tab — the one selected, the only tabbable one, its panel shown, the focus ring on it; the list
+  // in the document's direction (Radix's root dir = <html dir>), stacked above the panel below 768 px, beside
+  // it from there; the URL unchanged.
+  "settings-nav-keyboard": async (page) => {
+    await tabTo(page, 'main [role="tablist"].settings-nav [role="tab"][data-state="active"]');
+    await page.keyboard.press("ArrowDown");
+    await page.waitForLoadState("networkidle");
+    await page.evaluate(() => document.fonts.ready.then(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))));
+    const f = await page.evaluate(() => {
+      const a = document.activeElement;
+      const list = document.querySelector('main [role="tablist"].settings-nav');
+      const tabs = [...list.querySelectorAll('[role="tab"]')];
+      const panel = document.querySelector('main [role="tabpanel"][data-state="active"]');
+      const value = (e) => e?.id?.split("-trigger-")[1] ?? null;
+      const l = list.getBoundingClientRect();
+      const p = panel.getBoundingClientRect();
+      return {
+        focus: value(a), selected: tabs.filter((t) => t.getAttribute("aria-selected") === "true").map(value), tabbable: tabs.filter((t) => t.tabIndex === 0).map(value),
+        panel: panel.id.split("-content-")[1], focusVisible: a.matches(":focus-visible"), ring: getComputedStyle(a).outlineStyle,
+        dir: list.parentElement.getAttribute("dir"), docDir: document.documentElement.dir, stacked: p.top >= l.bottom - 1, url: location.pathname + location.search,
+      };
+    });
+    const narrow = page.viewportSize().width < 768;
+    const ok = f.focus === "logo" && f.selected.join() === "logo" && f.tabbable.join() === "logo" && f.panel === "logo" && f.focusVisible && f.ring !== "none"
+      && f.dir === f.docDir && f.stacked === narrow && f.url === "/settings/organization?tab=business-details";
+    if (!ok) throw new Error(`Settings navigation by keyboard: ${JSON.stringify(f)}`);
+  },
+  // C5: Compliance at 390 — Tab to the customer select. The erase and consent rows wrap: the six controls of
+  // the two cards — Export organization data, the customer select, Erase, the consent subject, Grant and
+  // Withdraw — all inside the viewport, nothing past it.
+  "compliance-mobile-controls": async (page) => {
+    await tabTo(page, "#erase-customer");
+    await page.evaluate(() => document.fonts.ready.then(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))));
+    const f = await page.evaluate(() => {
+      const de = document.documentElement;
+      const cards = ["#erase-customer", "#consent-subject"].map((sel) => document.querySelector(sel).closest(".card"));
+      const controls = cards.flatMap((c) => [...c.querySelectorAll("button")]).filter((e) => e.getClientRects().length);
+      return {
+        focus: document.activeElement.id, focusVisible: document.activeElement.matches(":focus-visible"), overflow: de.scrollWidth - de.clientWidth,
+        controls: controls.length, outside: controls.filter((e) => { const r = e.getBoundingClientRect(); return r.left < -1 || r.right > de.clientWidth + 1; }).length,
+      };
+    });
+    if (f.focus !== "erase-customer" || !f.focusVisible || f.overflow > 0 || f.controls !== 6 || f.outside !== 0) throw new Error(`Compliance controls at 390: ${JSON.stringify(f)}`);
+  },
+  // C6 fixture: an org without ZATCA Phase 1 — the owner's org set to the United Arab Emirates for this state.
+  // The ZATCA card (its Shield) must be gone; the rest is the seeded org's Dashboard.
+  "dashboard-no-zatca": async (page) => {
+    const before = await setOwnerCountry("United Arab Emirates");
+    try {
+      await page.reload({ waitUntil: "networkidle", timeout: 60000 });
+      await settled(page);
+      const f = await page.evaluate(() => ({ zatca: document.querySelectorAll("main .feature-card .lucide-shield").length, grid: document.querySelectorAll("main .dash-grid > .dash-widget").length }));
+      if (f.zatca !== 0 || f.grid !== 11) throw new Error(`Dashboard without ZATCA Phase 1: ${JSON.stringify(f)}`);
+    } finally {
+      await setOwnerCountry(before);
+    }
+  },
+  // C6 fixture: a customized layout saved for the owner. The page must render it — ten widgets, no Quick
+  // Actions, HR Snapshot before Project Overview, no feature strip.
+  "dashboard-customized": async (page) => {
+    const restore = await setOwnerLayout(C6_LAYOUT);
+    try {
+      await page.reload({ waitUntil: "networkidle", timeout: 60000 });
+      await settled(page);
+      const f = await page.evaluate(() => {
+        const ws = [...document.querySelectorAll("main .dash-grid > .dash-widget")];
+        const at = (sel) => ws.findIndex((w) => w.querySelector(sel));
+        return { widgets: ws.length, quick: document.querySelectorAll("main .quick-actions-grid").length, hr: at('[data-status-domain="attendance"]'), projects: at('[data-status-domain="project"]'), strip: document.querySelectorAll("main .feature-strip").length };
+      });
+      if (f.widgets !== 10 || f.quick !== 0 || f.hr < 0 || f.projects < 0 || f.hr > f.projects || f.strip !== 0) throw new Error(`Dashboard with a customized layout: ${JSON.stringify(f)}`);
+    } finally {
+      await restore();
+    }
+  },
+  // C7 fixture: the five families' TEST-ONLY drafts, written for this state and removed straight after (the page
+  // stays as rendered). The page must be the document, where it was asked for — its number in .inv-head, or its
+  // editor: the titlebar with its DocTopActions (the editors have no <form> element; they save from those buttons).
+  "c7-draft": async (page, s) => {
+    await onRunCopy((c) => writeC7Drafts(c));
+    try {
+      await page.reload({ waitUntil: "networkidle", timeout: 60000 });
+      await settled(page);
+      const f = await page.evaluate(() => ({ path: location.pathname, number: document.querySelector("main .inv-head .mono")?.textContent?.trim() ?? null, editor: Boolean(document.querySelector("main .doc-titlebar .doc-titlebar-actions")) }));
+      const want = { "/sales/orders": "SO-0001", "/sales/proforma": "PF-0001", "/sales/delivery-challans": "DC-0001", "/sales/credit-notes": "CN-0001", "/purchasing/debit-notes": "DN-0001" }[s.route.path.replace(/\/1(\/edit)?$/, "")];
+      if (f.path !== s.route.path || (s.route.path.endsWith("/edit") ? !f.editor : f.number !== want)) throw new Error(`C7 draft page ${s.route.path}: ${JSON.stringify(f)} (expected ${s.route.path.endsWith("/edit") ? "its editor" : want})`);
+    } finally {
+      await onRunCopy((c) => removeC7Drafts(c));
+    }
+  },
+  // C6: the range selector by keyboard — Tab to it, Enter. Its menu must open on the seven ranges, the current
+  // one (This Month) marked, the focus inside it, the trigger expanded.
+  "dashboard-range-menu": async (page) => {
+    await tabTo(page, 'main .dash-toolbar [aria-haspopup="menu"]');
+    await page.keyboard.press("Enter");
+    await page.locator('[role="menu"]').waitFor({ state: "visible", timeout: 15000 });
+    await settled(page);
+    const f = await page.evaluate(() => {
+      const m = document.querySelector('[role="menu"]');
+      const items = [...m.querySelectorAll('[role="menuitem"]')];
+      return { items: items.length, marked: items.filter((i) => i.querySelector("svg")).length, focusIn: m.contains(document.activeElement), expanded: document.querySelector('main .dash-toolbar [aria-haspopup="menu"]').getAttribute("aria-expanded") };
+    });
+    if (f.items !== 7 || f.marked !== 1 || !f.focusIn || f.expanded !== "true") throw new Error(`Dashboard range menu by keyboard: ${JSON.stringify(f)}`);
+  },
+  // C6: Customize Layout by keyboard — Tab to it, Enter. The dialog must open on the twelve widgets, every one shown.
+  "dashboard-customize": async (page) => {
+    await tabTo(page, "main .dash-toolbar button.btn");
+    await page.keyboard.press("Enter");
+    await page.getByRole("dialog").waitFor({ state: "visible", timeout: 15000 });
+    await settled(page);
+    const f = await page.evaluate(() => {
+      const d = document.querySelector('[role="dialog"]');
+      return { rows: d.querySelectorAll('label[for^="w-"]').length, shown: d.querySelectorAll('button[role="checkbox"][data-state="checked"]').length, strip: d.querySelector("#w-feature_strip")?.getAttribute("data-state") };
+    });
+    if (f.rows !== 12 || f.shown !== 12 || f.strip !== "checked") throw new Error(`Customize Layout by keyboard: ${JSON.stringify(f)}`);
+  },
+  // C8 final: the P&L (here against the previous period) and the Balance Sheet, as asked for.
+  "c8-pl": (page, s) => c8Report(page, s, { kind: "pl" }),
+  "c8-bs": (page, s) => c8Report(page, s, { kind: "bs" }),
+  // C8 final: the P&L searched for an account ("4000").
+  "c8-pl-search": async (page, s) => {
+    await page.locator("main .reports-print-area > .card.no-print input:not([type])").fill("4000");
+    await page.waitForLoadState("networkidle");
+    await settled(page);
+    await c8Report(page, s, { kind: "pl", term: "4000" });
+  },
+  // C8 final: the P&L and the Balance Sheet in print media — what the browser prints.
+  "c8-pl-print": async (page, s) => {
+    await page.emulateMedia({ media: "print" });
+    await settled(page);
+    await c8Report(page, s, { kind: "pl", print: true });
+  },
+  "c8-bs-print": async (page, s) => {
+    await page.emulateMedia({ media: "print" });
+    await settled(page);
+    await c8Report(page, s, { kind: "bs", print: true });
+  },
+  // C1 fixture: client 1 under LONG_NAME. The header must wrap — the h1 over several lines inside its
+  // column, at the inline start; meta and actions at the end of the title's line or below it at the
+  // start, never over the title; nothing past the viewport — or the capture fails here.
+  "long-name": async (page) => {
+    const before = await renameClient1(LONG_NAME);
+    try {
+      await page.reload({ waitUntil: "networkidle", timeout: 60000 });
+      await page.evaluate(() => document.fonts.ready.then(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))));
+      const f = await page.evaluate(() => {
+        const de = document.documentElement;
+        const ph = document.querySelector('main [data-slot="page-header"]');
+        if (!ph) return { error: "no PageHeader" };
+        const rtl = de.dir === "rtl";
+        const box = ph.getBoundingClientRect();
+        const h1 = ph.querySelector("h1");
+        const r = h1.getBoundingClientRect();
+        const title = ph.firstElementChild.getBoundingClientRect();
+        const trail = ph.children[1]?.getBoundingClientRect();
+        const sameLine = Boolean(trail && trail.top < title.bottom - 1);
+        const startGap = (x) => (rtl ? box.right - x.right : x.left - box.left);
+        const endGap = (x) => (rtl ? x.left - box.left : box.right - x.right);
+        return {
+          dir: de.dir,
+          text: h1.textContent,
+          overflow: de.scrollWidth - de.clientWidth,
+          lines: Math.round(r.height / parseFloat(getComputedStyle(h1).lineHeight)),
+          h1Inside: r.left >= box.left - 1 && r.right <= box.right + 1 && h1.scrollWidth <= h1.clientWidth + 1,
+          titleAtStart: startGap(title) <= 1,
+          trailing: !trail ? "none" : sameLine ? (endGap(trail) <= 1 ? "end" : "misplaced") : startGap(trail) <= 1 ? "below" : "misplaced",
+          overlap: sameLine && (rtl ? trail.right > title.left + 1 : trail.left < title.right - 1),
+          inViewport: box.left >= -1 && box.right <= de.clientWidth + 1,
+        };
+      });
+      const { text, ...facts } = f;
+      const width = page.viewportSize().width;
+      console.log(`    PageHeader long name @${width}: ${JSON.stringify(facts)}`);
+      // At 1440 the name fits on one line beside meta and actions; at 390 it cannot, so it must wrap.
+      const ok = text === LONG_NAME && f.overflow <= 0 && (width >= 1024 || f.lines >= 2) && f.h1Inside && f.titleAtStart && f.trailing !== "misplaced" && !f.overlap && f.inViewport;
+      if (!ok) throw new Error(`PageHeader under a long name: ${JSON.stringify(f)}`);
+    } finally {
+      await renameClient1(before);
+    }
+  },
+};
+
+/**
+ * Rows stamped by the DATABASE's clock (`now()`) — which freeze-time.cjs does not reach — carry the
+ * real time of the run (the login's session and security event) or of the last `prepare` (the
+ * default chart of accounts, departments and cash account, the owner's "password last changed"),
+ * and the Security page prints some of them. Every audit stamp — created_at, updated_at,
+ * last_activity_at, password_changed_at — later than the frozen instant was written that way; in
+ * the run's TEST-ONLY copy only, this moves each to the frozen instant, as if it had happened then.
+ * Business dates are not stamps and are left alone. Fixture normalisation, not masking: the pages
+ * render whatever the rows say. The two insert-only tables (audit_logs, security_events) reject
+ * UPDATE through a trigger, so a table's own triggers are set aside for its statement, inside one
+ * transaction, and restored.
+ */
+const STAMPS = ["created_at", "updated_at", "last_activity_at", "password_changed_at"];
+export async function alignDatabaseTimestamps(databaseUrl) {
+  if (!new URL(databaseUrl).pathname.startsWith(`/${DB_PREFIX}`)) throw new IsolationError(`refusing to edit '${new URL(databaseUrl).pathname}': not a ${DB_PREFIX}* database`);
+  const c = new pg.Client({ connectionString: databaseUrl });
+  await c.connect();
+  try {
+    await c.query("begin");
+    const cols = (
+      await c.query(
+        "select table_name, column_name from information_schema.columns where table_schema = 'public' and data_type like 'timestamp%' and column_name = any($1) order by 1, 2",
+        [STAMPS],
+      )
+    ).rows;
+    for (const { table_name: table, column_name: column } of cols) {
+      const t = c.escapeIdentifier(table);
+      const col = c.escapeIdentifier(column);
+      const triggers = (await c.query("select tgname from pg_trigger where tgrelid = $1::regclass and not tgisinternal", [table])).rows.map((r) => c.escapeIdentifier(r.tgname));
+      for (const g of triggers) await c.query(`alter table ${t} disable trigger ${g}`);
+      await c.query(`update ${t} set ${col} = $1 where ${col} > $1`, [FROZEN_NOW]);
+      for (const g of triggers) await c.query(`alter table ${t} enable trigger ${g}`);
+    }
+    await c.query("commit");
+  } catch (e) {
+    await c.query("rollback").catch(() => {});
+    throw e;
+  } finally {
+    await c.end();
+  }
+}

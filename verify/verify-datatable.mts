@@ -216,7 +216,14 @@ check("Payroll rows: keyboard selectable, aria-selected, visible focus; selected
   /e\.key === "Enter" \|\| e\.key === " "/.test(read(A + "hr/payroll/payroll-client.tsx")) && decl(rules('table.data-table tbody tr[aria-selected="true"] > td'), "background").length === 1);
 check("Reports: a negative number is not automatically danger red (semantic red kept on deltas / badges)", !/v < 0 \? "text-danger"/.test(read(A + "finance/reports/reports-workspace.tsx")) &&
   /it\.delta >= 0 \? "text-success" : "text-danger"/.test(read(A + "finance/reports/reports-workspace.tsx")));
-check("/clients: the frozen PageHeader wraps (className) instead of overflowing at 390px", /<PageHeader\s+className="flex-wrap"/.test(read(A + "clients/page.tsx")));
+// DEV-UI-01.7 C1 (D-9): PageHeader itself wraps now, for every page, so /clients no longer passes
+// className="flex-wrap". Stronger than the 01.5 check: the shared row wraps, the shrink-0 action group
+// that overflowed at 390px is gone, and /clients renders through PageHeader without opting out.
+const pageHeader = code(read("src/components/layout/page-header.tsx"));
+const clientsPage = code(read(A + "clients/page.tsx"));
+check("/clients: PageHeader wraps instead of overflowing at 390px (the shared header row is flex-wrap, no shrink-0 group; /clients does not opt out)",
+  /<div data-slot="page-header" className=\{cn\("flex flex-wrap /.test(pageHeader) && !/\bshrink-0\b|\bflex-nowrap\b/.test(pageHeader) &&
+    /<PageHeader\b/.test(clientsPage) && !/\bshrink-0\b|\bflex-nowrap\b/.test(clientsPage));
 
 // ---------- 8. boundaries ----------
 const PINNED: Record<string, string> = {

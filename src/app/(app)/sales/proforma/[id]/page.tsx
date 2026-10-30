@@ -138,7 +138,7 @@ export default async function ProformaDetailPage({ params }: { params: Promise<{
       {relNodes.length > 1 && <DocRelationships locale={locale} nodes={relNodes} currentLabel="Proforma Invoice" />}
       <div className="inv-head">
         <div>
-          <h3 className="mono">{pf.proformaNumber}</h3>
+          <h1 className="mono">{pf.proformaNumber}</h1>
           <div className="inv-sub">
             {t(locale, "Issue Date")} {pf.issueDate}
             {pf.title ? ` · ${pf.title}` : ""}

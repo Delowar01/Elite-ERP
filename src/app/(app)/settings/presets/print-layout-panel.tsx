@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FormField } from "@/components/ui/form-field";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { SectionHeader } from "@/components/ui/section-header";
 import { CropImageUpload } from "@/components/upload/crop-image-upload";
 import { cn } from "@/lib/utils";
 import { t, type Locale } from "@/lib/i18n/dict";
@@ -81,7 +82,7 @@ export function PrintLayoutPanel({ locale, org }: { locale: Locale; org: Org }) 
   return (
     <div className="flex flex-col gap-6 max-w-3xl">
       <div>
-        <h3 className="text-[17px] font-bold">{t(locale, "Print Layout")}</h3>
+        <SectionHeader level={2} title={t(locale, "Print Layout")} />
         <p className="text-[12.5px] text-ink-muted mt-1">
           {t(locale, "Choose how your documents look when previewed, printed, exported to PDF, downloaded and shared. Settings are saved for your whole organization.")}
         </p>

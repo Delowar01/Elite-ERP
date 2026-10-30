@@ -5,6 +5,9 @@ import { requireSession } from "@/lib/session";
 import { getLocale } from "@/lib/i18n/server";
 import { t } from "@/lib/i18n/dict";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
+import { PageHeader } from "@/components/layout/page-header";
+import { EmptyState } from "@/components/ui/empty-state";
+import { formatDisplayDate } from "@/lib/i18n/format-date";
 import { AttendanceRowActions } from "./attendance-row-actions";
 
 function todayIso(): string {
@@ -36,21 +39,16 @@ export default async function AttendancePage() {
   ]);
 
   const recordByEmployee = new Map(records.map((r) => [r.employeeId, r]));
-  const todayLabel = new Date().toLocaleDateString(locale === "ar" ? "ar-SA" : "en-US", { month: "short", day: "numeric", year: "numeric" });
+  // The calendar day the records above were selected for (todayIso, UTC), written out in UTC — the
+  // formatter never picks a day of its own; Gregorian with Western digits in Arabic too.
+  const todayLabel = formatDisplayDate(`${today}T00:00:00Z`, locale, "date");
 
   return (
     <div className="max-w-6xl mx-auto">
-      <div className="main-head">
-        <h3>
-          {t(locale, "Attendance")} — {t(locale, "Today")}
-        </h3>
-        <span className="org-pill">{todayLabel}</span>
-      </div>
+      <PageHeader title={`${t(locale, "Attendance")} — ${t(locale, "Today")}`} meta={<span className="org-pill">{todayLabel}</span>} />
 
       {employees.length === 0 ? (
-        <div className="rounded-2xl border border-line bg-surface shadow-elevated py-12 text-center text-ink-muted text-sm">
-          {t(locale, "No active employees yet — add employees to start tracking attendance.")}
-        </div>
+        <EmptyState message={t(locale, "No active employees yet — add employees to start tracking attendance.")} />
       ) : (
         <Table list>
           <TableHeader>

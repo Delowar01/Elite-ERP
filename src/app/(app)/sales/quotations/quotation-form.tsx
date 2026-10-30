@@ -180,9 +180,9 @@ export function QuotationForm({
     <div className="max-w-5xl mx-auto">
       <div className="doc-titlebar">
         <div>
-          <h3>
+          <h1>
             <FileText className="size-5" style={{ color: "var(--brand-orange)" }} /> {t(locale, isEdit ? "Edit Quotation" : "Create Quotation")}
-          </h3>
+          </h1>
           <div className="sub">{t(locale, isEdit ? "Edit this draft quotation." : "Create and send professional quotations to your clients.")}</div>
         </div>
         <DocTopActions locale={locale} busy={pendingDraft || pendingPrimary} onSaveDraft={() => submit(false)} onPreview={() => setPreviewOpen(true)} dirty={dirtyForm.dirty} />
