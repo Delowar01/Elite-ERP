@@ -101,6 +101,14 @@
  * export route's business pin and the dictionary's included, keeps its strength; group 17 proves those hunks are the
  * files' only change and holds the files as they are to the policy. Its pins change nothing.
  *
+ * Integration with main (after C8 final) adds group 18. Main moved on beneath the branch, and one approved main change
+ * lands in a file this verifier freezes: PR #7 (32702c3) has the PDF route render its print page from a trusted internal
+ * origin, PDF_RENDER_ORIGIN (http://127.0.0.1:3200 on the VPS), instead of the https://localhost:3200 that NextRequest
+ * reports behind a TLS-terminating proxy. Every byte-identity hash — the business pins, the pinned directories, groups 16
+ * and 17's src trees — reads that file through `frozen`, its MAIN_EDITS hunk undone (1bfdbbf's bytes), so every pin keeps
+ * its strength; content checks read it as it is. Group 18 proves the hunk is the route's only change and that the fix is
+ * in place. Its pins change nothing.
+ *
  * `--write-pins` recomputes verify/page-archetype-pins.json from the working tree. Only a stage that
  * deliberately re-baselines may run it, and the diff of that file is what its review reads.
  * docs/ui/dev-ui-01-7/c0-foundations-and-guardrails.md, docs/ui/dev-ui-01-7/c1-master-data-and-detail.md,
@@ -465,6 +473,23 @@ function undoFin(f: string, s: string): string {
   return (FIN_EDITS[f] ?? []).reduce((acc, [was, is]) => acc.replace(is, () => was), s);
 }
 
+/**
+ * Integration with main: the approved main changes to files this verifier freezes, [1bfdbbf, main] byte for byte.
+ *   document-pdf route (1, PR #7 32702c3): the print page rendered from PDF_RENDER_ORIGIN — trimmed, without a trailing
+ *     slash — when it is set, else from the request's origin as before.
+ * `frozen` undoes them for every byte-identity hash; group 18 proves they are each file's only change.
+ */
+const PDF_ROUTE = "src/app/api/document-pdf/[type]/[id]/route.ts";
+const MAIN_EDITS: Record<string, [string, string][]> = {
+  [PDF_ROUTE]: [
+    ["  const origin = request.nextUrl.origin;\n",
+      "  // Behind a TLS-terminating reverse proxy, NextRequest may report https://localhost:3200\n  // even though the Next.js server listens on plain HTTP. Allow a trusted internal\n  // loopback origin for server-side PDF rendering without changing public request URLs.\n  const origin = process.env.PDF_RENDER_ORIGIN?.trim().replace(/\\/+$/, \"\") || request.nextUrl.origin;\n"],
+  ],
+};
+/** A file's bytes for a byte-identity hash: main's approved change undone (MAIN_EDITS), every other file as it is. */
+const frozen = (f: string): string | Buffer =>
+  f in MAIN_EDITS ? MAIN_EDITS[f].reduce((acc, [was, is]) => acc.replace(is, () => was), rawRead(f)) : readFileSync(path.join(ROOT, f));
+
 let pass = 0;
 let fail = 0;
 let group = "";
@@ -686,13 +711,13 @@ function dirHash(dir: string) {
   const hh = createHash("sha256");
   for (const f of files) {
     hh.update(f + "\0");
-    hh.update(readFileSync(path.join(ROOT, f)));
+    hh.update(frozen(f));
   }
   return `${hh.digest("hex").slice(0, 16)} (${files.length} files)`;
 }
 // C8 final: the P&L export route (and dict.ts) hashed with their FIN_EDITS hunks undone — their pins hold the
-// remediation's bytes; group 17 proves the hunks are their only change.
-const sha = (p: string) => (p in FIN_EDITS ? h16(read(p)) : h16(readFileSync(path.join(ROOT, p))));
+// remediation's bytes; group 17 proves the hunks are their only change. The PDF route likewise with main's (group 18).
+const sha = (p: string) => (p in FIN_EDITS ? h16(read(p)) : h16(frozen(p)));
 function business(): Record<string, string> {
   const out: Record<string, string> = {};
   for (const f of [...BUSINESS_FILES, ...actionFiles()].sort()) out[f] = existsSync(path.join(ROOT, f)) ? sha(f) : "(missing)";
@@ -2879,7 +2904,7 @@ const d2Others = walk("src").filter((f) => !(f in D2_EDITS));
 const srcRestHash = createHash("sha256");
 for (const f of d2Others) {
   srcRestHash.update(f + "\0");
-  srcRestHash.update(f in FIN_EDITS ? read(f) : readFileSync(path.join(ROOT, f))); // C8 final's hunks undone (group 17)
+  srcRestHash.update(f in FIN_EDITS ? read(f) : frozen(f)); // C8 final's hunks undone (group 17), main's (group 18)
 }
 const srcRest = `${srcRestHash.digest("hex").slice(0, 16)} (${d2Others.length} files)`;
 check(`C8 changed no other application file: every file under src/ but the two is C7's to the byte (${d2Others.length}) — the engines, the export route, the status registry, the dictionary, the list workspace and its saved-view toolbar among them (the DataTable correction is test-only)`,
@@ -2937,7 +2962,7 @@ const finOthers = walk("src").filter((f) => !(f in FIN_EDITS));
 const finRestHash = createHash("sha256");
 for (const f of finOthers) {
   finRestHash.update(f + "\0");
-  finRestHash.update(readFileSync(path.join(ROOT, f)));
+  finRestHash.update(frozen(f)); // main's approved hunks undone (group 18)
 }
 const finRest = `${finRestHash.digest("hex").slice(0, 16)} (${finOthers.length} files)`;
 check(`C8 final changed no other application file: every file under src/ but the four is c47c65a's to the byte (${finOthers.length}) — the engines (project-costing, finance-reports, accounting, settlement), the status registry, the shared exporter report-export.ts, every finance, posting, inventory, purchase, payroll, Dashboard and document module, the session / tenant / role code, src/db and the list workspace among them`,
@@ -3062,6 +3087,17 @@ const FIN_HIDDEN = /"(Actual Profit|Profit Margin|Gross Profit|Operating Profit|
 const finSeen = walk("src").filter((f) => /\.tsx?$/.test(f) && !f.startsWith("src/lib/") && FIN_HIDDEN.test(codeOnly(rawRead(f)))).map(rel);
 check('C8 final on screen and in the exports: no application file outside src/lib (the engines, the registry, the dictionary) names or reads a profitability metric — no "Gross Profit", "Operating Profit", "Net Profit", "Actual Profit" or "Profit Margin" label, no grossProfit / operatingProfit / netProfit / marginPercent read, no project_health — the P&L export route included (the remediation\'s one exception, gone); the Balance Sheet\'s Current-period Profit / (Loss) its one labelled result, marked Preliminary',
   finSeen.length === 0 && (rawRead(C4_REPORTS).match(/"Current-period Profit \/ \(Loss\)"/g) ?? []).length === 1 && (exRaw.match(/Current-period Profit \/ \(Loss\)/g) ?? []).length === 1, finSeen.join(" "));
+
+// ---------- 18. Integration with main — the approved main changes to frozen files ----------
+section("18. Integration with main — approved main changes to frozen files");
+// Each file's MAIN_EDITS hunks occur once, their 1bfdbbf form nowhere; undone, the file is its business pin to the byte.
+const mainDrift = Object.keys(MAIN_EDITS).filter((f) => {
+  const src = rawRead(f);
+  return !MAIN_EDITS[f].every(([was, is]) => src.split(is).length === 2 && !src.includes(was)) || h16(frozen(f)) !== pins.business[f];
+});
+check("Integration with main: the PDF route's one change since its business pin is PR #7's hunk (32702c3) — the print page rendered from PDF_RENDER_ORIGIN, trimmed and without a trailing slash, when it is set (the trusted loopback origin behind the TLS-terminating proxy, not the https://localhost:3200 NextRequest reports there), else from the request's origin — once, its earlier form nowhere; undone, the route is its business pin (6d3dc7899981d148) to the byte",
+  same(Object.keys(MAIN_EDITS), [PDF_ROUTE]) && MAIN_EDITS[PDF_ROUTE].length === 1 && mainDrift.length === 0 && pins.business[PDF_ROUTE] === "6d3dc7899981d148",
+  mainDrift.map(rel).join(" "));
 
 console.log("\nGroups:");
 for (const [g, [p, f]] of Object.entries(counts)) console.log(`  ${g}: ${p}/${p + f}`);
