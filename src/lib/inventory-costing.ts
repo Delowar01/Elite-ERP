@@ -24,7 +24,8 @@ import { getCurrency, roundMoney } from "@/lib/currency/currencies";
  * in the base currency. Receipts and opening stock add units AT THEIR COST; issues, purchase
  * returns and decreases take units out at the pool's average (`stock_value / valued_quantity`), and
  * the unit that empties the pool takes exactly what is left, so no residue ever sits on zero
- * units. A reversal puts back exactly what its original took out, at the original's cost.
+ * units. An outflow never changes the average of the units that stay. A reversal puts back exactly
+ * what its original took out, at the original's cost.
  *
  * ## What is refused, and what is recorded as incomplete instead
  *
@@ -389,16 +390,16 @@ export async function stockLineFlags(tx: Tx, orgId: number, lines: DocumentStock
 }
 
 /**
- * Purchase return (debit note): each stock line leaves at the value the supplier credits for it
- * (`value`, the line's share of the note's net at the purchase order's rate) — the purchase being
- * reversed. Two guards keep the pool sound, and route the difference to cost of sales:
+ * Purchase return (debit note): the returned units leave at the pool's weighted-average cost, like
+ * every outflow — the perpetual WAC policy has one exit price, so the units that stay keep their
+ * average whatever the supplier credits. The credit itself (`value`, the line's share of the note's
+ * net at the purchase order's stored rate) is recorded at what it is: the caller debits AP for the
+ * whole note. The difference between the credit for the costed units and the cost relieved is the
+ * return's price variance (positive: the supplier credited more than the units cost — credit 5000;
+ * negative: debit 5000). The unit that empties the pool takes exactly what is left.
  *
- *  - a return that empties the pool relieves exactly what is left;
- *  - a credit larger than the whole pool while units remain relieves the weighted average instead.
- *
- * Units with no cost basis (pre-ACC-01 stock) leave uncosted; their share of the credit still
- * relieves 1200, where the pre-ACC-01 receipt put their cost. Returns the 1200 credit and the
- * variance (positive: credit 5000; negative: debit 5000).
+ * Units with no cost basis (pre-ACC-01 stock) leave uncosted; their share of the credit relieves
+ * 1200, where the pre-ACC-01 receipt put their cost. Returns the 1200 credit and the variance.
  */
 export async function returnToSupplier(
   tx: Tx,
@@ -412,25 +413,13 @@ export async function returnToSupplier(
   let inventoryCredit = roundMoney(0, cur);
   let variance = roundMoney(0, cur);
   for (const { line, state, qty } of items) {
-    if (qty > state.onHand) throw insufficient(state, qty);
     const lineValue = roundMoney(line.value, cur);
-    const valued = Math.min(qty, Math.max(0, state.valuedQty));
-    const valuedShare = valued === qty ? lineValue : roundMoney((Number(lineValue) * valued) / qty, cur);
+    const out = takeOut(state, qty, cur);
+    const valuedShare = out.valued === qty ? lineValue : roundMoney((Number(lineValue) * out.valued) / qty, cur);
     const unvaluedShare = sub(lineValue, valuedShare, cur);
-
-    let relief = valuedShare;
-    if (valued > 0 && valued >= state.valuedQty) relief = roundMoney(state.value, cur);
-    else if (valued > 0 && Number(valuedShare) > Number(state.value)) {
-      relief = weightedAverageCost({ quantity: state.valuedQty, value: state.value }, valued, cur);
-    }
-    state.onHand -= qty;
-    state.valuedQty -= valued;
-    state.value = sub(state.value, relief, cur);
-    state.touched = true;
-
-    inventoryCredit = add(inventoryCredit, add(relief, unvaluedShare, cur), cur);
-    variance = add(variance, sub(valuedShare, relief, cur), cur);
-    drafts.push(...outflowDrafts("purchase_return", state.id, line.sourceLineId ?? null, { valued, cost: relief, uncosted: qty - valued }, cur));
+    inventoryCredit = add(inventoryCredit, add(out.cost, unvaluedShare, cur), cur);
+    variance = add(variance, sub(valuedShare, out.cost, cur), cur);
+    drafts.push(...outflowDrafts("purchase_return", state.id, line.sourceLineId ?? null, out, cur));
   }
   await persist(tx, ctx, source, states, drafts);
   return { inventoryCredit, variance };

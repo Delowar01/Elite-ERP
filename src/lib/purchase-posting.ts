@@ -30,7 +30,9 @@ import {
  * so every entry balances by construction) is spread over the lines by line value — the document
  * discount applies pro rata — and then:
  *
- *   stock lines      → 1200 Inventory, at that share, through the weighted-average pool
+ *   stock lines      → 1200 Inventory: a receipt adds them to the weighted-average pool at that
+ *                      share; a return takes them out at the pool's average, and the difference
+ *                      between the supplier's credit and that cost goes to 5000 Cost of Goods Sold
  *   other lines      → 5100 Operating Expenses (free-text lines and services are not stock)
  *   VAT              → 2100, recoverable input tax, never part of cost
  *   the gross        → 2000 Accounts Payable
@@ -99,9 +101,10 @@ export async function postPurchaseReceipt(
 }
 
 /**
- * A debit note's purchase return: Dr 2000 gross / Cr 1200 the stock lines' value · Cr 5100 the
- * non-stock lines · Cr 2100 VAT, ± 5000 for the variance a closing or oversized return leaves
- * (see returnToSupplier). Stock leaves at the value the supplier credits, at the PO's stored rate.
+ * A debit note's purchase return: Dr 2000 for the gross the supplier credits (at the PO's stored rate)
+ * / Cr 1200 the returned stock at the weighted-average cost · Cr 5100 the non-stock lines · Cr 2100
+ * VAT, ± 5000 for the price variance — the supplier's credit for the stock lines less the cost they
+ * left at (see returnToSupplier). The units that stay keep their average.
  */
 export async function postPurchaseReturn(
   tx: Tx,
@@ -142,7 +145,8 @@ export async function postPurchaseReturn(
   if (Number(relieved.inventoryCredit) !== 0) otherSide.push({ accountId: acc.get(INVENTORY_ACCOUNT)!, debit: "0", credit: relieved.inventoryCredit });
   if (Number(unExpensed) !== 0) otherSide.push({ accountId: acc.get(NON_STOCK_PURCHASE_ACCOUNT)!, debit: "0", credit: unExpensed });
   if (Number(captured.baseTaxAmount) !== 0) otherSide.push({ accountId: acc.get(VAT_ACCOUNT)!, debit: "0", credit: captured.baseTaxAmount });
-  // A positive variance is credit the supplier gave beyond the cost relieved: it reduces cost of sales.
+  // The price variance: a positive one is credit the supplier gave beyond the units' weighted-average cost
+  // (it reduces cost of sales), a negative one credit short of it (it adds to cost of sales).
   if (Number(relieved.variance) > 0) otherSide.push({ accountId: acc.get(COGS_ACCOUNT)!, debit: "0", credit: relieved.variance });
   if (Number(relieved.variance) < 0) otherSide.push({ accountId: acc.get(COGS_ACCOUNT)!, debit: roundMoney(-Number(relieved.variance), base), credit: "0" });
   // A zero-value note keeps the old two-line shape.
