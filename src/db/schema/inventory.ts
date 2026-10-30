@@ -1,4 +1,4 @@
-import { pgTable, pgEnum, serial, integer, text, numeric, date, timestamp, index, type AnyPgColumn } from "drizzle-orm/pg-core";
+import { pgTable, pgEnum, serial, integer, text, numeric, date, timestamp, index, foreignKey } from "drizzle-orm/pg-core";
 import { orgsTable } from "./orgs";
 import { usersTable } from "./users";
 import { productsTable } from "./products";
@@ -69,7 +69,7 @@ export const inventoryMovementsTable = pgTable(
     /** The document line (invoice / PO / debit note item id) this row came from, when there is one. */
     sourceLineId: integer("source_line_id"),
     journalEntryId: integer("journal_entry_id").references(() => journalEntriesTable.id),
-    reversesMovementId: integer("reverses_movement_id").references((): AnyPgColumn => inventoryMovementsTable.id),
+    reversesMovementId: integer("reverses_movement_id"),
     memo: text("memo"),
     createdById: integer("created_by_id")
       .notNull()
@@ -79,6 +79,9 @@ export const inventoryMovementsTable = pgTable(
   (t) => [
     index("inventory_movements_org_product_idx").on(t.orgId, t.productId, t.id),
     index("inventory_movements_org_source_idx").on(t.orgId, t.sourceType, t.sourceId),
+    // Named explicitly: the generated name is longer than Postgres's 63-byte limit, so every push
+    // would drop and re-add (and re-validate) it against the truncated name the database holds.
+    foreignKey({ name: "inventory_movements_reverses_movement_fk", columns: [t.reversesMovementId], foreignColumns: [t.id] }),
   ],
 );
 
