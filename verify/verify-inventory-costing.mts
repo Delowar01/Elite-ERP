@@ -495,6 +495,26 @@ section("13. services and non-stock lines");
   check("item type: a product with stock history cannot change type", !!change);
   const fresh = await mkProduct(A, "FRESH");
   check("item type: a product with no stock and no history can", (await db.transaction((tx) => itemTypeChangeRefusal(tx, A.id, fresh))) === null);
+  // A service a posted document names stays a service: the document moved no stock for it, so after the change
+  // its void, a goods return against it or its reversal would read it as pre-ACC-01 and move stock that never moved.
+  const T = await mkOrg();
+  const toStock = (p: number) => db.transaction((tx) => itemTypeChangeRefusal(tx, T.id, p));
+  const svcI = await mkProduct(T, "SVC-I", { itemType: "service" });
+  await send(T, await mkInvoice(T, [{ productId: svcI, qty: "2", price: "40" }]));
+  const svcP = await mkProduct(T, "SVC-P", { itemType: "service" });
+  await receive(T, await mkPo(T, [{ productId: svcP, qty: "1", price: "30" }]));
+  const svcD = await mkProduct(T, "SVC-D", { itemType: "service" });
+  const poFree = await mkPo(T, [{ productId: null, qty: "1", price: "100" }]);
+  await receive(T, poFree);
+  await issueDn(T, await mkDn(T, poFree, [{ productId: svcD, qty: "1", price: "10" }]));
+  const svcDraft = await mkProduct(T, "SVC-DRAFT", { itemType: "service" });
+  await mkInvoice(T, [{ productId: svcDraft, qty: "1", price: "5" }]);
+  const onSent = await toStock(svcI);
+  check("item type: a service on a sent invoice cannot become a stock item — its void or a goods return against it would put back units that never left stock",
+    /cannot become a stock item/.test(onSent?.message ?? "") && /لا يمكن تحويلها إلى صنف مخزني/.test(onSent?.ar ?? ""), onSent?.message);
+  check("…nor a service on a received purchase order, nor one on an issued debit note",
+    /cannot become a stock item/.test((await toStock(svcP))?.message ?? "") && /cannot become a stock item/.test((await toStock(svcD))?.message ?? ""));
+  check("…while a service named only on a draft invoice can (its posting reads the type the product has then)", (await toStock(svcDraft)) === null);
 }
 
 section("14. missing or invalid cost; stock with no cost basis");

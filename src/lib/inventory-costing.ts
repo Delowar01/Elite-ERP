@@ -624,18 +624,39 @@ export async function adjustStock(tx: Tx, ctx: InventoryContext, args: { product
 /**
  * Whether a product's item type may change: only while it has no stock (counted or valued) and no
  * stock history, so no movement, valuation or open document ever straddles the two kinds.
+ *
+ * A service also stays a service while a posted document names it — a sent invoice, a received
+ * purchase order or an issued debit note. Those posted no movement for it, so after the change their
+ * void, a goods return against them or their reversal would read them as pre-ACC-01 documents and
+ * move stock that never moved.
  */
 export async function itemTypeChangeRefusal(tx: Tx, orgId: number, productId: number): Promise<InventoryRefusal | null> {
   const res = await tx.execute(sql`
-    select p.quantity_on_hand, p.valued_quantity, p.stock_value::text as stock_value,
-           exists (select 1 from inventory_movements m where m.org_id = ${orgId} and m.product_id = p.id) as has_movements
+    select p.item_type, p.quantity_on_hand, p.valued_quantity, p.stock_value::text as stock_value,
+           exists (select 1 from inventory_movements m where m.org_id = ${orgId} and m.product_id = p.id) as has_movements,
+           (exists (select 1 from sales_invoice_items i join sales_invoices v on v.id = i.invoice_id
+                     where v.org_id = ${orgId} and i.product_id = p.id and v.status not in ('draft', 'void'))
+            or exists (select 1 from purchase_order_items i join purchase_orders o on o.id = i.purchase_order_id
+                        where o.org_id = ${orgId} and i.product_id = p.id and o.status = 'received')
+            or exists (select 1 from debit_note_items i join debit_notes d on d.id = i.debit_note_id
+                        where d.org_id = ${orgId} and i.product_id = p.id and d.status = 'issued')) as on_posted_document
       from products p where p.org_id = ${orgId} and p.id = ${productId} for update`);
-  const r = (res.rows as unknown as { quantity_on_hand: number; valued_quantity: number; stock_value: string; has_movements: boolean }[])[0];
+  const r = (res.rows as unknown as {
+    item_type: "stock" | "service"; quantity_on_hand: number; valued_quantity: number; stock_value: string; has_movements: boolean; on_posted_document: boolean;
+  }[])[0];
   if (!r) return notInOrg();
   if (Number(r.quantity_on_hand) !== 0 || Number(r.valued_quantity) !== 0 || Number(r.stock_value) !== 0 || r.has_movements) {
     return new InventoryRefusal(
       "The item type can only change while the product has no stock and no stock history.",
       "لا يمكن تغيير نوع الصنف إلا إذا لم يكن له رصيد مخزون ولا حركات مخزون سابقة.",
+    );
+  }
+  if (r.item_type === "service" && r.on_posted_document) {
+    return new InventoryRefusal(
+      "This service is on a sent invoice, a received purchase order or an issued debit note, so it cannot become a stock item: " +
+        "those documents moved no stock for it, and voiding, returning or reversing them would move stock that never moved.",
+      "هذه الخدمة واردة في فاتورة مرسلة أو أمر شراء مستلم أو إشعار مدين صادر، فلا يمكن تحويلها إلى صنف مخزني: " +
+        "تلك المستندات لم تُحرّك لها مخزونًا، وإلغاؤها أو إرجاع بضاعتها أو عكسها سيحرّك مخزونًا لم يتحرك قط.",
     );
   }
   return null;

@@ -114,7 +114,9 @@ note of another organization is not found.
 **Audit trail.** Movements are only ever inserted; a correction is a new `reversal` row pointing at the row it undoes (a
 row counts as reversed only when a `reversal` points at it). A product with stock history cannot be permanently deleted
 (the owner's Recycle Bin action refuses with a message), and an item type changes only while the product has no stock
-and no history.
+and no history. A service also stays a service while a sent invoice, a received purchase order or an issued debit note
+names it: those documents moved no stock for it, so once it became a stock item, their void, a goods return against them
+or their reversal would read them as pre-ACC-01 documents and move stock that never moved.
 
 ## 4. Schema (Drizzle, `db:push`)
 
@@ -176,18 +178,19 @@ The product detail page's Stock card shows the item's average cost and stock val
 
 ## 7. Verification
 
-* **`verify:inventory-costing`** (new, in `verify:server`): 149 checks on fixture organizations, through the same posting
-  functions the actions call — opening stock; receipt cost (discount, VAT, non-stock lines); WAC; receipts at different
-  costs; partial and full issue (the last unit takes the exact remainder); COGS on the invoice entry; delivery challans
-  moving nothing; repeated posting; purchase return and its reversal; void and its cost reversal; cancelled orders;
-  reconciliation; P&L and Balance Sheet; services; missing and invalid cost; stock with no cost basis; negative and
-  fractional stock; SAR / USD / KWD rounding; concurrency; tenant isolation; role gates; mixed documents; legacy data; a
-  tampered pool as a negative control; the permanent-delete guard; then **supplier returns credited above and below the
-  average** (multiple purchase prices, partial and full returns, a minor-unit rounding case, USD, reversal, tenant
-  isolation) and **customer returns** (a note without returned goods, partial and full returns, several notes against
-  one invoice, duplicate and over-returns refused, exact and average reversals, a reversal refused when the goods are
-  gone, uncosted and pre-ACC-01 stock, mixed lines, the void guard, USD and KWD rounding, two notes racing for the last
-  unit, a double click, tenant isolation, role gates, reconciliation). Mutation runs are recorded in the PR.
+* **`verify:inventory-costing`** (new, in `verify:server`): 152 checks on fixture organizations, through the same
+  posting functions the actions call — opening stock; receipt cost (discount, VAT, non-stock lines); WAC; receipts at
+  different costs; partial and full issue (the last unit takes the exact remainder); COGS on the invoice entry;
+  delivery challans moving nothing; repeated posting; purchase return and its reversal; void and its cost reversal;
+  cancelled orders; reconciliation; P&L and Balance Sheet; services and the item-type guard; missing and invalid cost;
+  stock with no cost basis; negative and fractional stock; SAR / USD / KWD rounding; concurrency; tenant isolation;
+  role gates; mixed documents; legacy data; a tampered pool as a negative control; the permanent-delete guard; then
+  **supplier returns credited above and below the average** (multiple purchase prices, partial and full returns, a
+  minor-unit rounding case, USD, reversal, tenant isolation) and **customer returns** (a note without returned goods,
+  partial and full returns, several notes against one invoice, duplicate and over-returns refused, exact and average
+  reversals, a reversal refused when the goods are gone, uncosted and pre-ACC-01 stock, mixed lines, the void guard,
+  USD and KWD rounding, two notes racing for the last unit, a double click, tenant isolation, role gates,
+  reconciliation). Mutation runs are recorded in the PR.
 * **`verify-fx-posting`** (browser): five expectations state the corrected postings — the receipt capitalises the net
   and debits VAT to 2100; a debit note's free-text line comes back out of 5100 and its VAT goes back to 2100, with no
   inventory line. The old expectations ("Dr Inventory 2300.000") were the defect: VAT carried into stock. Every FX

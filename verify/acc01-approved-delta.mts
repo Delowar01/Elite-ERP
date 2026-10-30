@@ -269,7 +269,7 @@ export const ACC01_BASE_SHA: Record<string, string> = {
 export const ACC01_NEW: Record<string, string> = {
   "src/db/schema/inventory.ts": "ee7950f243a76ca8",
   "src/lib/credit-note-returns.ts": "1351b6a308009fa9",
-  "src/lib/inventory-costing.ts": "5eef7ccf9b31dd8d",
+  "src/lib/inventory-costing.ts": "1db05f36c259ea99",
   "src/lib/inventory-valuation.ts": "a5a4a1f6979e5f73",
   "src/lib/purchase-posting.ts": "0260d9383ea65662",
 };
