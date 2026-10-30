@@ -9,25 +9,29 @@ was made and postponed, not an idea someone had.
 ## ACC-01 follow-ups — inventory decisions that are the owner's (decide before retiring the C8 notices)
 
 **Status:** open. ACC-01 (docs/accounting/acc-01-inventory-costing.md) implemented weighted-average costing, COGS at the
-invoice's stock issue, net-of-VAT receipts and an inventory-to-GL reconciliation. These are deliberately NOT done:
+invoice's stock issue, net-of-VAT receipts, supplier returns at the weighted average (the credit's difference as a price
+variance), customer goods returns on credit notes at the issued cost, and an inventory-to-GL reconciliation. These are
+deliberately NOT done:
 
-1. **Sales returns do not restock.** A credit note cannot tell a return of goods from a price adjustment, so it stays
-   financial-only and its cost is not reversed. Smallest safe change: a "goods returned to stock" option on the credit
-   note that reverses the source invoice's issue movements (`reverseSourceMovements`) at their original cost. Material:
-   until it exists the P&L notice and the Balance Sheet's Preliminary marker stay.
-2. **Stock from before ACC-01 has no cost basis.** It sells without COGS (an explicit uncosted movement) and the legacy
-   1200 balance (gross receipts) sits unattributed in the reconciliation. Value it with a cutover tool (count, cost,
-   clear the legacy balance to equity) or reset the test data.
-3. **Non-stock purchase lines go to 5100.** Direct project purchases may belong in cost of sales: needs a per-line or
+1. **Stock from before ACC-01 has no cost basis.** It sells without COGS (an explicit uncosted movement) and the legacy
+   1200 balance (gross receipts) sits unattributed in the reconciliation. The data is disposable test data: the
+   recommended cutover (design doc §10) resets the test organizations' transactional data at deployment and re-enters
+   opening stock with unit costs; the alternative (value the counted units, reclassify the legacy balance) needs a small
+   tool that does not exist yet. Material: until it is done the P&L notice and the Balance Sheet's Preliminary marker stay.
+2. **Non-stock purchase lines go to 5100.** Direct project purchases may belong in cost of sales: needs a per-line or
    per-order expense account if so.
-4. **Input VAT nets in 2100.** A separate recoverable-VAT account, and capitalising VAT for an organization that is not
+3. **Input VAT nets in 2100.** A separate recoverable-VAT account, and capitalising VAT for an organization that is not
    VAT-registered, are policy choices.
-5. **COGS at invoicing, not at delivery** — delivery challans move no stock. Moving the issue to the challan is a
+4. **Price variances go to 5000.** Supplier returns credited above or below the average post the difference to Cost of
+   Goods Sold; a dedicated purchase-price-variance account is a chart-of-accounts decision.
+5. **Goods returns are a second step** after issuing a credit note; a mistaken return is undone by reversing the note
+   (or a stock adjustment) — there is no stand-alone "undo return".
+6. **COGS at invoicing, not at delivery** — delivery challans move no stock. Moving the issue to the challan is a
    lifecycle change.
-6. **No valuation screen yet** — `scripts/inventory-valuation-report.ts` and the product Stock card only; a Financial
+7. **No valuation screen yet** — `scripts/inventory-valuation-report.ts` and the product Stock card only; a Financial
    Reports page touches the DEV-UI-pinned workspace.
-7. **Fractional stock is refused** (it used to be truncated). Fractional quantities are Batch 12 (R-24).
-8. **`inventory_movements` is append-only by convention**, not by a trigger; adding it to `apply-db-hardening.ts` is an
+8. **Fractional stock is refused** (it used to be truncated). Fractional quantities are Batch 12 (R-24).
+9. **`inventory_movements` is append-only by convention**, not by a trigger; adding it to `apply-db-hardening.ts` is an
    AUD-08.3-style change.
 
 Two known defects sit outside ACC-01 and are left exactly as they were, each under its own entry below: credit notes on a
