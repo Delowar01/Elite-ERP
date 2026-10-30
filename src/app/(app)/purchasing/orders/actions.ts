@@ -5,7 +5,7 @@ import { sanitizeIfHtml } from "@/lib/sanitize-html";
 import { normalizeDocumentTerms, type DocumentTerm } from "../../sales/_shared/document-terms";
 import { redirect } from "next/navigation";
 import { and, eq, sql } from "drizzle-orm";
-import { db, vendorsTable, purchaseOrdersTable, purchaseOrderItemsTable, productsTable, accountsTable, journalEntriesTable, journalLinesTable, projectsTable } from "@/db";
+import { db, vendorsTable, purchaseOrdersTable, purchaseOrderItemsTable, accountsTable, projectsTable } from "@/db";
 import { requireSession } from "@/lib/session";
 import { logActivity } from "@/lib/activity";
 import { nextDocumentNumber } from "@/lib/documents";
@@ -14,6 +14,9 @@ import { snapshotDocumentBankAccounts } from "@/lib/document-bank-data";
 import { snapshotSealForDoc, applySealOverride } from "@/lib/doc-seal";
 import { normalizeDocCurrency, roundMoney } from "@/lib/currency/currencies";
 import { captureBaseAmounts } from "@/lib/posting-currency";
+import { isInventoryRefusal, refusalText } from "@/lib/inventory-costing";
+import { postPurchaseReceipt } from "@/lib/purchase-posting";
+import { getLocale } from "@/lib/i18n/server";
 import { computeTotals, type LineItemInput } from "../../sales/_shared/totals";
 import { persistDocumentAttachments, type AttachmentInput } from "../../sales/_shared/attachment-persist";
 
@@ -235,9 +238,11 @@ export async function cancelPurchaseOrderAction(poId: number): Promise<ActionRes
   return {};
 }
 
-// Mirrors sendInvoiceAction's structure exactly, inverted: receiving stock increments
-// productsTable.quantityOnHand and posts Dr Inventory / Cr Accounts Payable in one
-// transaction, so a failure partway through never leaves stock and books out of sync.
+// Mirrors sendInvoiceAction's structure, inverted: receiving brings the stock in and books the
+// liability in one transaction, so a failure partway through never leaves stock and books out of
+// sync. ACC-01: the posting itself (postPurchaseReceipt) splits the purchase — stock lines into
+// inventory at cost through the weighted-average pool, VAT to 2100 as recoverable input tax, other
+// lines to 5100 — against the gross on AP.
 export async function receivePurchaseOrderAction(poId: number): Promise<ActionResult> {
   const session = await requireSession();
 
@@ -270,33 +275,19 @@ export async function receivePurchaseOrderAction(poId: number): Promise<ActionRe
   });
   if (!captured.ok) return { error: captured.error, missingRate: captured.missingRate };
 
-  await db.transaction(async (tx) => {
-    for (const item of items) {
-      if (item.productId) {
-        await tx
-          .update(productsTable)
-          .set({ quantityOnHand: sql`${productsTable.quantityOnHand} + ${Math.trunc(Number(item.quantity))}` })
-          .where(and(eq(productsTable.id, item.productId), eq(productsTable.orgId, session.orgId)));
-      }
+  try {
+  const outcome = await db.transaction(async (tx) => {
+    // Two clicks on Receive can both pass the status check above; the second waits here and stops.
+    const lockedPo = await tx.execute(sql`select status from purchase_orders where id = ${poId} and org_id = ${session.orgId} for update`);
+    if ((lockedPo.rows as unknown as { status: string }[])[0]?.status !== "ordered") {
+      return { error: "Only ordered purchase orders can be received." } as const;
     }
 
-    const [entry] = await tx
-      .insert(journalEntriesTable)
-      .values({
-        orgId: session.orgId,
-        entryDate: po.orderDate,
-        memo: `Purchase order ${po.poNumber} received`,
-        sourceType: "purchase_order",
-        sourceId: po.id,
-        createdById: session.userId,
-      })
-      .returning({ id: journalEntriesTable.id });
-
-    // The ledger holds BASE currency only. Two lines of the same figure — balanced by construction.
-    await tx.insert(journalLinesTable).values([
-      { journalEntryId: entry.id, accountId: inventory.id, debit: captured.baseTotal, credit: "0" },
-      { journalEntryId: entry.id, accountId: accountsPayable.id, debit: "0", credit: captured.baseTotal },
-    ]);
+    await postPurchaseReceipt(tx, {
+      orgId: session.orgId, userId: session.userId, baseCurrency: session.orgCurrency,
+      po: { id: po.id, poNumber: po.poNumber, orderDate: po.orderDate },
+      items, captured, receiptDate,
+    });
 
     await tx
       .update(purchaseOrdersTable)
@@ -310,7 +301,14 @@ export async function receivePurchaseOrderAction(poId: number): Promise<ActionRe
         updatedAt: new Date(),
       })
       .where(eq(purchaseOrdersTable.id, poId));
+    return {} as const;
   });
+  if ("error" in outcome) return { error: outcome.error };
+  } catch (e) {
+    // ACC-01: a fractional stock quantity, or a product not in this org — nothing was written.
+    if (isInventoryRefusal(e)) return { error: refusalText(e, await getLocale()) };
+    throw e;
+  }
 
   await logActivity(session, {
     type: "purchase_order.received",

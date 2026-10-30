@@ -17,6 +17,8 @@ import { snapshotDocumentBankAccounts } from "@/lib/document-bank-data";
 import { snapshotSealForDoc, applySealOverride } from "@/lib/doc-seal";
 import { moneyEpsilon, normalizeDocCurrency, roundMoney } from "@/lib/currency/currencies";
 import { prepareInvoicePosting, type PreparedInvoicePosting } from "@/lib/invoice-posting";
+import { isInventoryRefusal, refusalText } from "@/lib/inventory-costing";
+import { getLocale } from "@/lib/i18n/server";
 import {
   lockAdvanceAndReadPot, planAllocations, sameCustomerRefusal, sameCurrencyRefusal,
   type AdvancePot,
@@ -264,6 +266,8 @@ export async function convertProformaToInvoiceAction(proformaId: number): Promis
   if (posting && !byCode.get("2300")) return { error: "Chart of accounts is missing a required system account (2300 Customer Advances)." };
   if (posting && !byCode.get("1100")) return { error: "Chart of accounts is missing a required system account (1100)." };
 
+  // ACC-01: an invoice born posted issues its stock here, so a stock shortfall refuses the whole
+  // conversion — proforma, invoice, allocations and all — exactly as it would refuse a send.
   const result = await db.transaction(async (tx) => {
     // Double-submit guard on the SERVER, not only in the confirm dialog: two clicks can both pass
     // the convertedInvoiceId check above before either commits. Locking the proforma row and
@@ -425,6 +429,9 @@ export async function convertProformaToInvoiceAction(proformaId: number): Promis
     // Link the proforma to the invoice; its payment history stays visible read-only.
     await tx.update(proformaInvoicesTable).set({ convertedInvoiceId: inv.id, updatedAt: new Date() }).where(eq(proformaInvoicesTable.id, proformaId));
     return { id: inv.id, allocations: planned.plan, posted: willPost, paidStr } as const;
+  }).catch(async (e) => {
+    if (isInventoryRefusal(e)) return { error: refusalText(e, await getLocale()) } as const;
+    throw e;
   });
   if ("error" in result) return { error: result.error };
   const { id, allocations, posted } = result;

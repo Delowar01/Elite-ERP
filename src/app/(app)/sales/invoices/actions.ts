@@ -5,7 +5,7 @@ import { sanitizeIfHtml } from "@/lib/sanitize-html";
 import { normalizeDocumentTerms, type DocumentTerm } from "../_shared/document-terms";
 import { redirect } from "next/navigation";
 import { and, eq, sql } from "drizzle-orm";
-import { db, customersTable, projectsTable, salesInvoicesTable, salesInvoiceItemsTable, productsTable, journalEntriesTable, journalLinesTable, deliveryChallansTable, deliveryChallanItemsTable, paymentTermPresetsTable, paymentsTable } from "@/db";
+import { db, customersTable, projectsTable, salesInvoicesTable, salesInvoiceItemsTable, deliveryChallansTable, deliveryChallanItemsTable, paymentTermPresetsTable, paymentsTable } from "@/db";
 import { requireSession } from "@/lib/session";
 import { logActivity } from "@/lib/activity";
 import { nextDocumentNumber } from "@/lib/documents";
@@ -15,7 +15,9 @@ import { persistDocumentAttachments, type AttachmentInput } from "../_shared/att
 import { snapshotDocumentBankAccounts } from "@/lib/document-bank-data";
 import { snapshotSealForDoc, applySealOverride } from "@/lib/doc-seal";
 import { normalizeDocCurrency, roundMoney } from "@/lib/currency/currencies";
-import { prepareInvoicePosting } from "@/lib/invoice-posting";
+import { prepareInvoicePosting, reverseInvoicePosting } from "@/lib/invoice-posting";
+import { isInventoryRefusal, refusalText } from "@/lib/inventory-costing";
+import { getLocale } from "@/lib/i18n/server";
 import { releaseAllocations } from "@/lib/advance-allocations";
 
 export type ActionResult = {
@@ -282,6 +284,7 @@ export async function sendInvoiceAction(invoiceId: number): Promise<ActionResult
         : roundMoney(transferred.reduce((sum, p) => sum + Number(p.baseAppliedAmount), 0), session.orgCurrency);
     }
   }
+  try {
   await db.transaction(async (tx) => {
     await posting.post(tx, { invoiceId: invoice.id, memo: `Invoice ${invoice.invoiceNumber} sent` });
 
@@ -297,6 +300,11 @@ export async function sendInvoiceAction(invoiceId: number): Promise<ActionResult
       })
       .where(eq(salesInvoicesTable.id, invoiceId));
   });
+  } catch (e) {
+    // ACC-01: a stock shortfall or a fractional stock quantity — nothing was written.
+    if (isInventoryRefusal(e)) return { error: refusalText(e, await getLocale()) };
+    throw e;
+  }
 
   await logActivity(session, { type: "sales_invoice.sent", description: `Sent invoice ${invoice.invoiceNumber} — posted to ledger and decremented stock`, entityType: "sales_invoice", entityId: invoiceId });
   revalidatePath(PATH);
@@ -366,57 +374,20 @@ export async function voidInvoiceAction(invoiceId: number): Promise<ActionResult
   // No chart-of-accounts lookup here any more: the reversal mirrors the posting entry's own
   // lines, so the accounts come from what was actually posted.
 
-  await db.transaction(async (tx) => {
-    for (const item of items) {
-      if (item.productId) {
-        await tx
-          .update(productsTable)
-          .set({ quantityOnHand: sql`${productsTable.quantityOnHand} + ${Math.trunc(Number(item.quantity))}` })
-          .where(and(eq(productsTable.id, item.productId), eq(productsTable.orgId, session.orgId)));
-      }
-    }
+  const voided = await db.transaction(async (tx) => {
+    // The lifecycle decision again, under the invoice's row lock: two clicks on Void can both pass
+    // the check above, and a second reversal would put the stock and its cost back twice.
+    const lockedRow = await tx.execute(sql`select status, paid_amount::text as paid_amount from sales_invoices where id = ${invoiceId} and org_id = ${session.orgId} for update`);
+    const locked = (lockedRow.rows as unknown as { status: string; paid_amount: string }[])[0];
+    const again = locked ? evaluate("sales_invoice", locked.status, "void", { hasPayments: Number(locked.paid_amount) > 0 }) : null;
+    if (!again?.allowed) return { error: again?.reason ?? "Invoice not found." } as const;
 
-    // FX-6: the reversal MIRRORS the posting entry's own stored lines instead of recomputing from
-    // the document. That is what "reverse at the stored rate" means made literal — whatever was
-    // posted (today's base-currency figures, a pre-FX-6 foreign posting at face value, a
-    // discounted invoice) is negated line for line, so the reversal balances iff the original did
-    // and a rate entered since the posting can never leak in. A document with NO posting entry
-    // (fixtures inserted as "sent" by SQL) reverses nothing — the old code recomputed from the
-    // document's columns here and, fed one inconsistent fixture, wrote eleven one-sided entries
-    // into the dev ledger before anyone noticed.
-    const [posting] = await tx
-      .select({ id: journalEntriesTable.id })
-      .from(journalEntriesTable)
-      .where(and(
-        eq(journalEntriesTable.orgId, session.orgId),
-        eq(journalEntriesTable.sourceType, "sales_invoice"),
-        eq(journalEntriesTable.sourceId, invoice.id),
-      ))
-      .orderBy(journalEntriesTable.id)
-      .limit(1);
-
-    if (posting) {
-      const originalLines = await tx
-        .select({ accountId: journalLinesTable.accountId, debit: journalLinesTable.debit, credit: journalLinesTable.credit })
-        .from(journalLinesTable)
-        .where(eq(journalLinesTable.journalEntryId, posting.id));
-
-      const [entry] = await tx
-        .insert(journalEntriesTable)
-        .values({
-          orgId: session.orgId,
-          entryDate: new Date().toISOString().slice(0, 10),
-          memo: `Invoice ${invoice.invoiceNumber} voided (reversal)`,
-          sourceType: "sales_invoice",
-          sourceId: invoice.id,
-          createdById: session.userId,
-        })
-        .returning({ id: journalEntriesTable.id });
-
-      await tx.insert(journalLinesTable).values(
-        originalLines.map((l) => ({ journalEntryId: entry.id, accountId: l.accountId, debit: l.credit, credit: l.debit })),
-      );
-    }
+    // FX-6 mirror of the posting entry (now carrying its COGS lines), and the stock back exactly as
+    // it left (ACC-01) — see reverseInvoicePosting.
+    await reverseInvoicePosting(tx, {
+      orgId: session.orgId, userId: session.userId, baseCurrency: session.orgCurrency,
+      invoice: { id: invoice.id, invoiceNumber: invoice.invoiceNumber }, items, date: new Date().toISOString().slice(0, 10),
+    });
 
     // Release any advance allocations this invoice consumed, so the customer's money returns to
     // 2300 as available rather than vanishing with the voided receivable. Each release mirrors its
@@ -454,7 +425,9 @@ export async function voidInvoiceAction(invoiceId: number): Promise<ActionResult
         : {}),
       updatedAt: new Date(),
     }).where(eq(salesInvoicesTable.id, invoiceId));
+    return {} as const;
   });
+  if ("error" in voided) return { error: voided.error };
 
   await logActivity(session, { type: "sales_invoice.voided", description: `Voided invoice ${invoice.invoiceNumber} — reversed ledger entry and restored stock`, entityType: "sales_invoice", entityId: invoiceId });
   revalidatePath(PATH);
