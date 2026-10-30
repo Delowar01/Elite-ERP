@@ -13,7 +13,9 @@
  *   6 full delivery · 7 COGS posting · 8 repeated posting · 9 returns and cost reversal ·
  *   10 cancellation / reversal · 11 inventory-to-GL reconciliation · 12 P&L / Balance Sheet ·
  *   13 services / non-stock · 14 missing / invalid cost · 15 negative stock · 16 rounding and
- *   multi-currency · 17 concurrency · 18 tenant isolation and role gates — then mixed scenarios.
+ *   multi-currency · 17 concurrency · 18 tenant isolation and role gates · 19 supplier returns at the
+ *   weighted average when the credit differs from it · 20 customer goods returns on credit notes —
+ *   then mixed scenarios.
  *
  * Every expected figure is worked out by hand in the comments beside it, never read back from the
  * code under test.
@@ -27,7 +29,8 @@ import { DEFAULT_CHART_OF_ACCOUNTS } from "../src/db/schema/accounting";
 import { computeTotals } from "../src/app/(app)/sales/_shared/totals";
 import { roundMoney } from "../src/lib/currency/currencies";
 import { captureBaseAmounts } from "../src/lib/posting-currency";
-import { noteBaseAmounts } from "../src/lib/reversal-currency";
+import { creditNoteLines, noteBaseAmounts } from "../src/lib/reversal-currency";
+import { returnCreditNoteGoods, reverseCreditNoteReturns } from "../src/lib/credit-note-returns";
 import { prepareInvoicePosting, reverseInvoicePosting } from "../src/lib/invoice-posting";
 import { postPurchaseReceipt, postPurchaseReturn, reversePurchaseReturn } from "../src/lib/purchase-posting";
 import {
@@ -64,6 +67,8 @@ async function sweep() {
     `delete from journal_entries where org_id in ${orgs}`,
     `delete from delivery_challan_items where delivery_challan_id in (select id from delivery_challans where org_id in ${orgs})`,
     `delete from delivery_challans where org_id in ${orgs}`,
+    `delete from credit_note_items where credit_note_id in (select id from credit_notes where org_id in ${orgs})`,
+    `delete from credit_notes where org_id in ${orgs}`,
     `delete from sales_invoice_items where invoice_id in (select id from sales_invoices where org_id in ${orgs})`,
     `delete from sales_invoices where org_id in ${orgs}`,
     `delete from debit_note_items where debit_note_id in (select id from debit_notes where org_id in ${orgs})`,
@@ -234,6 +239,63 @@ async function voidInv(o: Org, invoiceId: number) {
 const invoiceEntry = async (o: Org, invoiceId: number) => (await pool.query(
   "select id from journal_entries where org_id=$1 and source_type='sales_invoice' and source_id=$2 order by id", [o.id, invoiceId])).rows.map((r) => r.id as number);
 
+// ---- credit notes: the financial half as issueCreditNoteAction posts it; the goods half through the posting code ----
+async function mkCn(o: Org, invoiceId: number, lines: DocLineIn[]) {
+  const inv = (await pool.query("select customer_id, currency from sales_invoices where id=$1", [invoiceId])).rows[0];
+  const cur = inv.currency ?? o.currency;
+  const t = computeTotals(lines.map((l) => ({ quantity: l.qty, unitPrice: l.price, taxRatePercent: l.tax ?? "15" })), "0", cur);
+  const id = (await pool.query(`insert into credit_notes (org_id,credit_note_number,customer_id,source_invoice_id,currency,issue_date,subtotal,tax_total,total,status,created_by_id)
+    values ($1,$2,$3,$4,$5,$6,$7,$8,$9,'draft',$10) returning id`,
+    [o.id, `CN-${uniq()}`, inv.customer_id, invoiceId, inv.currency, TODAY, t.subtotal, t.taxTotal, t.total, o.user])).rows[0].id as number;
+  const lineIds: number[] = [];
+  for (const l of lines) {
+    lineIds.push((await pool.query(`insert into credit_note_items (credit_note_id,product_id,description,quantity,unit_price,tax_rate_percent,line_total)
+      values ($1,$2,'returned',$3,$4,$5,$6) returning id`, [id, l.productId, l.qty, l.price, l.tax ?? "15", roundMoney(Number(l.qty) * Number(l.price), cur)])).rows[0].id as number);
+  }
+  return { id, lines: lineIds };
+}
+/** Issue: Dr 4000 / Dr 2100 / Cr 1100 at the invoice's stored rate — the credit note's financial half, no stock. */
+async function issueCn(o: Org, cnId: number) {
+  const cn = (await pool.query("select credit_note_number, source_invoice_id, currency, total::text total, tax_total::text tax_total from credit_notes where id=$1", [cnId])).rows[0];
+  const inv = (await pool.query("select currency, exchange_rate::text exchange_rate, total::text total, base_total::text base_total, base_tax_amount::text base_tax_amount from sales_invoices where id=$1", [cn.source_invoice_id])).rows[0];
+  const captured = noteBaseAmounts({
+    baseCurrency: o.currency,
+    source: { currency: inv.currency, exchangeRate: inv.exchange_rate, total: inv.total, baseTotal: inv.base_total, baseTaxAmount: inv.base_tax_amount },
+    note: { currency: cn.currency, total: cn.total, taxTotal: cn.tax_total },
+    priorNotes: { total: "0", baseTotal: "0", baseTaxAmount: "0" },
+  });
+  if (!captured.ok) throw new Error(captured.error);
+  await db.transaction(async (tx) => {
+    const e = (await tx.execute(sql`insert into journal_entries (org_id,entry_date,memo,source_type,source_id,created_by_id)
+      values (${o.id}, ${TODAY}, ${`Credit note ${cn.credit_note_number} issued`}, 'credit_note', ${cnId}, ${o.user}) returning id`)).rows[0] as { id: number };
+    const lines = creditNoteLines({
+      baseTotal: captured.baseTotal, baseRevenue: roundMoney(Number(captured.baseTotal) - Number(captured.baseTaxAmount), o.currency), baseTaxAmount: captured.baseTaxAmount,
+      arAccountId: o.acc.get("1100")!, revenueAccountId: o.acc.get("4000")!, vatAccountId: o.acc.get("2100")!,
+    });
+    for (const l of lines) await tx.execute(sql`insert into journal_lines (journal_entry_id,account_id,debit,credit) values (${e.id}, ${l.accountId}, ${l.debit}, ${l.credit})`);
+    await tx.execute(sql`update credit_notes set status = 'issued', exchange_rate = ${captured.exchangeRate}, base_total = ${captured.baseTotal}, base_tax_amount = ${captured.baseTaxAmount} where id = ${cnId}`);
+  });
+}
+/** Goods back to stock against an issued note — the posting returnCreditNoteGoodsAction runs. */
+const returnGoods = (o: Org, cnId: number, request: { lineId: number; quantity: number | string }[]) =>
+  db.transaction((tx) => returnCreditNoteGoods(tx, { orgId: o.id, userId: o.user, baseCurrency: o.currency, date: TODAY, creditNoteId: cnId, request }));
+/** Reverse a note as reverseCreditNoteAction does: its row lock, its goods back out, the financial mirror, status reversed. */
+async function reverseCn(o: Org, cnId: number) {
+  const cn = (await pool.query("select credit_note_number from credit_notes where id=$1", [cnId])).rows[0];
+  return db.transaction(async (tx) => {
+    await tx.execute(sql`select status from credit_notes where id = ${cnId} and org_id = ${o.id} for update`);
+    const goods = await reverseCreditNoteReturns(tx, { orgId: o.id, userId: o.user, baseCurrency: o.currency, date: TODAY, creditNote: { id: cnId, creditNoteNumber: cn.credit_note_number } });
+    const posting = (await tx.execute(sql`select id from journal_entries where org_id = ${o.id} and source_type = 'credit_note' and source_id = ${cnId} order by id limit 1`)).rows[0] as { id: number };
+    const e = (await tx.execute(sql`insert into journal_entries (org_id,entry_date,memo,source_type,source_id,created_by_id)
+      values (${o.id}, ${TODAY}, 'reversed', 'credit_note', ${cnId}, ${o.user}) returning id`)).rows[0] as { id: number };
+    await tx.execute(sql`insert into journal_lines (journal_entry_id,account_id,debit,credit) select ${e.id}, account_id, credit, debit from journal_lines where journal_entry_id = ${posting.id}`);
+    await tx.execute(sql`update credit_notes set status = 'reversed' where id = ${cnId}`);
+    return goods;
+  });
+}
+const returnEntries = async (o: Org, cnId: number) => (await pool.query(
+  "select id from journal_entries where org_id=$1 and source_type='sales_return' and source_id=$2 order by id", [o.id, cnId])).rows.map((r) => r.id as number);
+
 console.log("ACC-01 — weighted-average inventory costing, COGS and reconciliation");
 
 // ═════════════════════════════════════════════════════════════════════════════════════════════
@@ -353,13 +415,14 @@ section("9–10. returns and cost reversal, cancellation / reversal");
 const pB = await mkProduct(A, "B");
 const poB = await mkPo(A, [{ productId: pB, qty: "10", price: "20", tax: "15" }]);
 await receive(A, poB);
-// Return 3 at 20.00: net 60.00 + VAT 9.00 = 69.00. Relieved at the credited value: pool 7 / 140.00.
+// Return 3 at 20.00: net 60.00 + VAT 9.00 = 69.00. The units leave at the average, 20.00 — here also the
+// price credited, so no variance: pool 7 / 140.00.
 const dnB = await mkDn(A, poB, [{ productId: pB, qty: "3", price: "20", tax: "15" }]);
 const rB = await issueDn(A, dnB);
 {
   const l = await entryLines(rB.entryId);
   check("purchase return: Dr 2000 69.00 / Cr 1200 60.00 / Cr 2100 9.00", eq(line(l, "2000")[0]?.debit, 69) && eq(line(l, "1200")[0]?.credit, 60) && eq(line(l, "2100")[0]?.credit, 9) && l.length === 3, JSON.stringify(l));
-  check("purchase return: pool 7 units worth 140.00 (cost reversed at the purchase price)", JSON.stringify(await poolOf(pB)) === JSON.stringify({ onHand: 7, valued: 7, value: "140.000" }), JSON.stringify(await poolOf(pB)));
+  check("purchase return: pool 7 units worth 140.00 (left at the average, 20.00, here the price credited)", JSON.stringify(await poolOf(pB)) === JSON.stringify({ onHand: 7, valued: 7, value: "140.000" }), JSON.stringify(await poolOf(pB)));
 }
 await reverseDn(A, dnB);
 {
@@ -498,7 +561,7 @@ section("16. rounding and multi-currency");
   await receive(U, poR);
   const dn = await mkDn(U, poR, [{ productId: p2, qty: "1", price: "10" }]);
   const rd = await issueDn(U, dn);
-  check("foreign return: relieved at the PO's rate — 10 USD × 3.75 = 37.50 SAR", eq(rd.inventoryCredit, 37.5) && eq((await poolOf(p2)).value, 112.5), JSON.stringify(await poolOf(p2)));
+  check("foreign return: credited at the PO's rate (10 USD × 3.75 = 37.50 SAR); the unit leaves at the average, here also 37.50", eq(rd.inventoryCredit, 37.5) && eq((await poolOf(p2)).value, 112.5), JSON.stringify(await poolOf(p2)));
   check("every entry the USD org posted balances", (await unbalancedEntries(U)) === 0);
 
   const K = await mkOrg("KWD");
@@ -563,6 +626,337 @@ section("18. tenant isolation and role gates");
   check("every stock query in the engine is scoped to the org (no product lock or movement read without org_id)",
     (src("src/lib/inventory-costing.ts").match(/from products\b[^`]*`/g) ?? []).every((q) => /org_id = \$\{/.test(q))
       && (src("src/lib/inventory-costing.ts").match(/from inventory_movements\b[^`]*`/g) ?? []).every((q) => /org_id = \$\{/.test(q)));
+}
+
+section("19. supplier returns at the weighted average — a credit that differs from it");
+{
+  const W = await mkOrg("SAR");
+  const pw = await mkProduct(W, "WAC-RET");
+  // Two receipts at different prices (VAT 15%): 10 × 20.00 = 200.00 and 10 × 26.00 = 260.00 → 20 / 460.00, average 23.00.
+  const po1 = await mkPo(W, [{ productId: pw, qty: "10", price: "20", tax: "15" }]);
+  await receive(W, po1);
+  const po2 = await mkPo(W, [{ productId: pw, qty: "10", price: "26", tax: "15" }]);
+  await receive(W, po2);
+  check("multiple purchase prices: 20 units worth 460.00 — average 23.00", JSON.stringify(await poolOf(pw)) === JSON.stringify({ onHand: 20, valued: 20, value: "460.000" }), JSON.stringify(await poolOf(pw)));
+  // Return 4 of the dearer receipt: the supplier credits 4 × 26.00 = 104.00 + VAT 15.60 = 119.60. The 4 units
+  // leave at the average, 4 × 23.00 = 92.00; the 12.00 the credit exceeds that by is the price variance.
+  const dn1 = await mkDn(W, po2, [{ productId: pw, qty: "4", price: "26", tax: "15" }]);
+  const r1 = await issueDn(W, dn1);
+  const l1 = await entryLines(r1.entryId);
+  check("partial return credited above the average: Dr 2000 119.60 / Cr 1200 92.00 (4 × 23.00) · Cr 2100 15.60 · Cr 5000 12.00",
+    eq(line(l1, "2000")[0]?.debit, 119.6) && eq(line(l1, "1200")[0]?.credit, 92) && eq(line(l1, "2100")[0]?.credit, 15.6) && eq(line(l1, "5000")[0]?.credit, 12) && l1.length === 4, JSON.stringify(l1));
+  check("…the supplier's credit recorded at what it is (AP 119.60) and the 16 units left keep their average: 16 / 368.00, 23.00 each",
+    eq(r1.variance, 12) && JSON.stringify(await poolOf(pw)) === JSON.stringify({ onHand: 16, valued: 16, value: "368.000" }), JSON.stringify(await poolOf(pw)));
+  const m1 = await movements(W, "debit_note", dn1);
+  check("…the purchase_return movement leaves at the average: −4 at −92.00, linked to the entry",
+    m1.length === 1 && m1[0].kind === "purchase_return" && m1[0].quantity === -4 && eq(m1[0].total_cost, -92) && m1[0].journal_entry_id === r1.entryId, JSON.stringify(m1));
+  // Return 2 of the cheaper receipt: credited 2 × 20.00 = 40.00 + VAT 6.00; the units cost 46.00 at the average — 6.00 short.
+  const dn2 = await mkDn(W, po1, [{ productId: pw, qty: "2", price: "20", tax: "15" }]);
+  const r2 = await issueDn(W, dn2);
+  const l2 = await entryLines(r2.entryId);
+  check("partial return credited below the average: Dr 2000 46.00 · Dr 5000 6.00 / Cr 1200 46.00 (2 × 23.00) · Cr 2100 6.00",
+    eq(line(l2, "2000")[0]?.debit, 46) && eq(line(l2, "5000")[0]?.debit, 6) && eq(line(l2, "1200")[0]?.credit, 46) && eq(line(l2, "2100")[0]?.credit, 6) && l2.length === 4, JSON.stringify(l2));
+  check("…14 / 322.00 left, still 23.00 each", JSON.stringify(await poolOf(pw)) === JSON.stringify({ onHand: 14, valued: 14, value: "322.000" }), JSON.stringify(await poolOf(pw)));
+  // Reverse the first return: the units come back at the 92.00 they left at, and the whole entry is mirrored — variance too.
+  const before5000 = await gl(W, "5000");
+  await reverseDn(W, dn1);
+  check("supplier-return reversal: 18 / 414.00 — the units back at exactly the cost they left at",
+    JSON.stringify(await poolOf(pw)) === JSON.stringify({ onHand: 18, valued: 18, value: "414.000" }), JSON.stringify(await poolOf(pw)));
+  check("…and its mirror takes the 12.00 variance back out of cost of sales", mils(await gl(W, "5000")) - mils(before5000) === 12000, `${before5000} → ${await gl(W, "5000")}`);
+
+  // Rounding, then a full return: 2 × 10.00 + 1 × 10.01 → 3 / 30.01 (average 10.0033…).
+  const pf = await mkProduct(W, "WAC-FULL");
+  const poA = await mkPo(W, [{ productId: pf, qty: "2", price: "10" }]);
+  await receive(W, poA);
+  const poB = await mkPo(W, [{ productId: pf, qty: "1", price: "10.01" }]);
+  await receive(W, poB);
+  const rb = await issueDn(W, await mkDn(W, poB, [{ productId: pf, qty: "1", price: "10.01" }]));
+  check("rounding: 1 of 3 worth 30.01 leaves at 10.00 (the minor unit); the 0.01 credited above it is variance",
+    eq(rb.inventoryCredit, 10) && eq(rb.variance, 0.01) && JSON.stringify(await poolOf(pf)) === JSON.stringify({ onHand: 2, valued: 2, value: "20.010" }), JSON.stringify(await poolOf(pf)));
+  const ra = await issueDn(W, await mkDn(W, poA, [{ productId: pf, qty: "2", price: "10" }]));
+  check("full return: the last 2 relieve exactly the 20.01 left — nothing stranded on zero units; the 0.01 the credit falls short is variance",
+    eq(ra.inventoryCredit, 20.01) && eq(ra.variance, -0.01) && JSON.stringify(await poolOf(pf)) === JSON.stringify({ onHand: 0, valued: 0, value: "0.000" }), JSON.stringify(await poolOf(pf)));
+
+  // Multi-currency: 5 × 10.00 USD and 2 × 10.04 USD at 3.75 → 187.50 + 75.30 = 262.80 SAR for 7 (average 37.542857…).
+  await pool.query("insert into exchange_rates (org_id,from_currency,to_currency,rate,effective_date,source) values ($1,'USD','SAR','3.75000000',$2,'manual')", [W.id, TODAY]);
+  const pu = await mkProduct(W, "WAC-USD");
+  const pu1 = await mkPo(W, [{ productId: pu, qty: "5", price: "10" }], { currency: "USD" });
+  await receive(W, pu1);
+  const pu2 = await mkPo(W, [{ productId: pu, qty: "2", price: "10.04" }], { currency: "USD" });
+  await receive(W, pu2);
+  // Return the 2: credited 20.08 USD at the PO's rate = 75.30 SAR; they leave at 262.80 × 2 / 7 = 75.0857… → 75.09.
+  const ru2 = await issueDn(W, await mkDn(W, pu2, [{ productId: pu, qty: "2", price: "10.04" }]));
+  check("USD return: credited 2 × 10.04 USD × 3.75 = 75.30 SAR (the PO's rate); the units leave at the average, 75.09; variance 0.21",
+    eq(ru2.inventoryCredit, 75.09) && eq(ru2.variance, 0.21) && eq((await poolOf(pu)).value, 187.71), JSON.stringify(await poolOf(pu)));
+  const ru1 = await issueDn(W, await mkDn(W, pu1, [{ productId: pu, qty: "5", price: "10" }]));
+  check("USD full return: credited 187.50; the last 5 relieve exactly the 187.71 left (−0.21 variance) — the two variances net to zero",
+    eq(ru1.inventoryCredit, 187.71) && eq(ru1.variance, -0.21) && JSON.stringify(await poolOf(pu)) === JSON.stringify({ onHand: 0, valued: 0, value: "0.000" }), JSON.stringify(await poolOf(pu)));
+
+  // A debit note in another organization naming this one's product is refused.
+  const X = await mkOrg("SAR");
+  const px = await mkProduct(X, "X-OWN");
+  const pox = await mkPo(X, [{ productId: px, qty: "1", price: "5" }]);
+  await receive(X, pox);
+  const foreign = await refusalOf(() => mkDn(X, pox, [{ productId: pw, qty: "1", price: "5" }]).then((dn) => issueDn(X, dn)));
+  check("tenant isolation: a debit note in another organization naming this one's product is refused, its stock untouched",
+    !!foreign && /does not exist in this organization/.test(foreign.message) && (await poolOf(pw)).onHand === 18, foreign?.message ?? "no refusal");
+  const recW = await getInventoryReconciliation(W.id, W.currency);
+  check("supplier returns: GL 1200 = valuation, integrity holds, nothing unattributed; every entry balances",
+    recW.integrityOk && recW.reconciled && (await unbalancedEntries(W)) === 0, JSON.stringify(recW));
+}
+
+section("20. customer goods returns on credit notes");
+const R = await mkOrg("SAR");
+const g = await mkProduct(R, "RET-G");
+// Two receipts: 4 × 10.00 and 4 × 14.00 → 8 / 96.00, average 12.00. Sell 5 at 30.00: COGS 60.00; 3 / 36.00 left.
+await receive(R, await mkPo(R, [{ productId: g, qty: "4", price: "10" }]));
+await receive(R, await mkPo(R, [{ productId: g, qty: "4", price: "14" }]));
+const invG = await mkInvoice(R, [{ productId: g, qty: "5", price: "30" }]);
+await send(R, invG);
+const issueG = (await movements(R, "sales_invoice", invG))[0];
+const poolIs = async (p: number, onHand: number, valued: number, value: string) => JSON.stringify(await poolOf(p)) === JSON.stringify({ onHand, valued, value });
+const cnB = await mkCn(R, invG, [{ productId: g, qty: "3", price: "30" }]);
+{
+  const g1200 = await gl(R, "1200");
+  const g5000 = await gl(R, "5000");
+  // A — financial only: a credit note for 1 unit is issued and nothing comes back.
+  const cnA = await mkCn(R, invG, [{ productId: g, qty: "1", price: "30" }]);
+  await issueCn(R, cnA.id);
+  check("credit note without returned goods: no movement and no stock entry; stock 3 / 36.00; GL 1200 and 5000 unchanged (revenue, VAT and AR only)",
+    (await movements(R, "credit_note", cnA.id)).length === 0 && (await returnEntries(R, cnA.id)).length === 0 && await poolIs(g, 3, 3, "36.000")
+      && (await gl(R, "1200")) === g1200 && (await gl(R, "5000")) === g5000, JSON.stringify(await poolOf(g)));
+
+  // B — 3 credited: 2 come back now, 1 later. The invoice issued them at 12.00 each (60.00 for 5).
+  await issueCn(R, cnB.id);
+  const rB = await returnGoods(R, cnB.id, [{ lineId: cnB.lines[0], quantity: 2 }]);
+  const eB = await returnEntries(R, cnB.id);
+  const lB = eB.length ? await entryLines(eB[0]) : [];
+  check("partial return: 2 units back at the cost the invoice issued them at — Dr 1200 24.00 / Cr 5000 24.00, keyed (sales_return, the note)",
+    eq(rB.cost, 24) && eB.length === 1 && eq(line(lB, "1200")[0]?.debit, 24) && eq(line(lB, "5000")[0]?.credit, 24) && lB.length === 2, JSON.stringify(lB));
+  const mB = await movements(R, "credit_note", cnB.id);
+  const lineOf = Number((await pool.query("select source_line_id from inventory_movements where id=$1", [mB[0]?.id])).rows[0]?.source_line_id);
+  check("…a sales_return movement +2 at 24.00, linked to the invoice's stock issue, the note's line and the entry",
+    mB.length === 1 && mB[0].kind === "sales_return" && mB[0].quantity === 2 && eq(mB[0].total_cost, 24) && mB[0].reverses_movement_id === issueG.id
+      && lineOf === cnB.lines[0] && mB[0].journal_entry_id === eB[0], JSON.stringify(mB));
+  check("…stock 5 / 60.00 — the average is still 12.00", await poolIs(g, 5, 5, "60.000"), JSON.stringify(await poolOf(g)));
+  const rB2 = await returnGoods(R, cnB.id, [{ lineId: cnB.lines[0], quantity: "1" }]);
+  check("a second part on the same note: 1 more at 12.00 — stock 6 / 72.00", eq(rB2.cost, 12) && await poolIs(g, 6, 6, "72.000"), JSON.stringify(await poolOf(g)));
+  const dupB = await refusalOf(() => returnGoods(R, cnB.id, [{ lineId: cnB.lines[0], quantity: 1 }]));
+  check("duplicate restocking refused: the note credits 3 and all 3 came back — nothing written",
+    !!dupB && /credits 3, of which 3 already came back/.test(dupB.message) && (await movements(R, "credit_note", cnB.id)).length === 2, dupB?.message ?? "no refusal");
+
+  // C — another note against the same invoice returns the last 2 of the 5 issued: exactly what is left of the 60.00.
+  const cnC = await mkCn(R, invG, [{ productId: g, qty: "2", price: "30" }]);
+  await issueCn(R, cnC.id);
+  const rC = await returnGoods(R, cnC.id, [{ lineId: cnC.lines[0], quantity: 2 }]);
+  check("multiple credit notes against one invoice: the last 2 of the 5 come back at exactly the 24.00 left of the issue — 8 / 96.00",
+    eq(rC.cost, 24) && await poolIs(g, 8, 8, "96.000"), JSON.stringify(await poolOf(g)));
+  check("…the whole sale returned: GL 1200 back to 96.00, 5000 back to 0.00", eq(await gl(R, "1200"), 96) && eq(await gl(R, "5000"), 0), `${await gl(R, "1200")} / ${await gl(R, "5000")}`);
+  // D — the invoice has nothing left to give back.
+  const cnD = await mkCn(R, invG, [{ productId: g, qty: "1", price: "30" }]);
+  await issueCn(R, cnD.id);
+  const overD = await refusalOf(() => returnGoods(R, cnD.id, [{ lineId: cnD.lines[0], quantity: 1 }]));
+  check("over-return refused: never more than the invoice issued (5 issued, 5 back) — nothing written",
+    !!overD && /only 0 of the units this invoice issued/.test(overD.message) && (await movements(R, "credit_note", cnD.id)).length === 0, overD?.message ?? "no refusal");
+  const overLine = await refusalOf(() => returnGoods(R, cnD.id, [{ lineId: cnD.lines[0], quantity: 2 }]));
+  check("…nor more than the note's line credits (1 credited, 2 asked)", !!overLine && /credits 1, of which 0 already came back/.test(overLine.message), overLine?.message ?? "no refusal");
+
+  // Reverse C: nothing has left stock since its return, so it comes off exactly.
+  const revC = await reverseCn(R, cnC.id);
+  const eC = await returnEntries(R, cnC.id);
+  const lC = eC.length > 1 ? await entryLines(eC[1]) : [];
+  check("customer-return reversal: the 2 go back out exactly as they came in — Dr 5000 24.00 / Cr 1200 24.00; stock 6 / 72.00",
+    eq(revC.cost, 24) && eC.length === 2 && eq(line(lC, "5000")[0]?.debit, 24) && eq(line(lC, "1200")[0]?.credit, 24) && await poolIs(g, 6, 6, "72.000"), JSON.stringify(lC));
+  const mC = await movements(R, "credit_note", cnC.id);
+  check("…a reversal movement points at the return it undoes",
+    mC.length === 2 && mC[1].kind === "reversal" && mC[1].reverses_movement_id === mC[0].id && mC[1].quantity === -2 && eq(mC[1].total_cost, -24), JSON.stringify(mC));
+  const againC = await db.transaction((tx) => reverseCreditNoteReturns(tx, { orgId: R.id, userId: R.user, baseCurrency: R.currency, date: TODAY, creditNote: { id: cnC.id, creditNoteNumber: "again" } }));
+  check("…a second reversal finds nothing to take out (no double reversal)", againC.reversed === 0 && await poolIs(g, 6, 6, "72.000"));
+  const rD = await returnGoods(R, cnD.id, [{ lineId: cnD.lines[0], quantity: 1 }]);
+  check("…which gives the 2 back to the invoice's issue: D now returns 1 at 12.00 — stock 7 / 84.00", eq(rD.cost, 12) && await poolIs(g, 7, 7, "84.000"), JSON.stringify(await poolOf(g)));
+  check("a reversed credit note returns nothing", /issued credit note/.test((await refusalOf(() => returnGoods(R, cnC.id, [{ lineId: cnC.lines[0], quantity: 1 }])))?.message ?? ""));
+  const cnDraft = await mkCn(R, invG, [{ productId: g, qty: "1", price: "30" }]);
+  check("a draft credit note returns nothing", /issued credit note/.test((await refusalOf(() => returnGoods(R, cnDraft.id, [{ lineId: cnDraft.lines[0], quantity: 1 }])))?.message ?? ""));
+  check("a fractional quantity is refused", /whole quantities/.test((await refusalOf(() => returnGoods(R, cnD.id, [{ lineId: cnD.lines[0], quantity: "0.5" }])))?.message ?? ""));
+}
+{
+  // A note with a stock line, a service line and a free-text line: only the stock line can come back.
+  const sv = await mkProduct(R, "RET-SVC", { itemType: "service" });
+  const s2 = await mkProduct(R, "RET-S2");
+  await receive(R, await mkPo(R, [{ productId: s2, qty: "3", price: "7" }]));
+  const inv = await mkInvoice(R, [{ productId: s2, qty: "3", price: "12" }, { productId: sv, qty: "1", price: "100" }, { productId: null, qty: "1", price: "20" }]);
+  await send(R, inv);
+  const cn = await mkCn(R, inv, [{ productId: s2, qty: "2", price: "12" }, { productId: sv, qty: "1", price: "100" }, { productId: null, qty: "1", price: "20" }]);
+  await issueCn(R, cn.id);
+  check("mixed note: a service line has no stock to return", /not a stock item/.test((await refusalOf(() => returnGoods(R, cn.id, [{ lineId: cn.lines[1], quantity: 1 }])))?.message ?? ""));
+  check("mixed note: a free-text line has no stock to return", /not a stock item/.test((await refusalOf(() => returnGoods(R, cn.id, [{ lineId: cn.lines[2], quantity: 1 }])))?.message ?? ""));
+  const r = await returnGoods(R, cn.id, [{ lineId: cn.lines[0], quantity: 2 }, { lineId: cn.lines[1], quantity: 0 }]);
+  check("mixed note: the stock line's 2 come back at 14.00 (2 × 7.00); zero lines are ignored", eq(r.cost, 14) && await poolIs(s2, 2, 2, "14.000"), JSON.stringify(await poolOf(s2)));
+}
+{
+  // An exact reversal is not the average: 2 sold at 10.00 come back into a pool now averaging 16.00 (blended to 13.00);
+  // reversed before anything leaves, they go back out at their own 20.00 and the pool is again 2 / 32.00 at 16.00.
+  const h = await mkProduct(R, "RET-H");
+  await receive(R, await mkPo(R, [{ productId: h, qty: "2", price: "10" }]));
+  const invH = await mkInvoice(R, [{ productId: h, qty: "2", price: "25" }]);
+  await send(R, invH);                                                              // COGS 20.00; 0 / 0
+  await receive(R, await mkPo(R, [{ productId: h, qty: "2", price: "16" }]));      // 2 / 32.00
+  const cnH = await mkCn(R, invH, [{ productId: h, qty: "2", price: "25" }]);
+  await issueCn(R, cnH.id);
+  const rH = await returnGoods(R, cnH.id, [{ lineId: cnH.lines[0], quantity: 2 }]);
+  check("a return comes back at its sale's cost (20.00), not today's average (16.00): 4 / 52.00", eq(rH.cost, 20) && await poolIs(h, 4, 4, "52.000"), JSON.stringify(await poolOf(h)));
+  const revH = await reverseCn(R, cnH.id);
+  check("…reversed with no stock gone out since: back out at exactly 20.00 — the pool is precisely 2 / 32.00 again (average 16.00, not 13.00)",
+    eq(revH.cost, 20) && await poolIs(h, 2, 2, "32.000"), JSON.stringify(await poolOf(h)));
+}
+{
+  // Reversal after stock went out in between: the returned units are no longer separable — they leave at the average.
+  const k = await mkProduct(R, "RET-K");
+  await receive(R, await mkPo(R, [{ productId: k, qty: "2", price: "10" }]));
+  const invK = await mkInvoice(R, [{ productId: k, qty: "2", price: "25" }]);
+  await send(R, invK);
+  const cnK = await mkCn(R, invK, [{ productId: k, qty: "2", price: "25" }]);
+  await issueCn(R, cnK.id);
+  await returnGoods(R, cnK.id, [{ lineId: cnK.lines[0], quantity: 2 }]);          // 2 / 20.00
+  await receive(R, await mkPo(R, [{ productId: k, qty: "2", price: "16" }]));      // 4 / 52.00, average 13.00
+  await send(R, await mkInvoice(R, [{ productId: k, qty: "1", price: "25" }]));    // COGS 13.00; 3 / 39.00
+  const revK = await reverseCn(R, cnK.id);
+  check("reversal after stock went out in between: the 2 leave at the average, 2 × 13.00 = 26.00 — 1 / 13.00 left, its average unchanged",
+    eq(revK.cost, 26) && await poolIs(k, 1, 1, "13.000"), JSON.stringify(await poolOf(k)));
+  // The returned goods sold again: the reversal cannot take them back out, and writes nothing.
+  const q = await mkProduct(R, "RET-Q");
+  await receive(R, await mkPo(R, [{ productId: q, qty: "1", price: "5" }]));
+  const invQ = await mkInvoice(R, [{ productId: q, qty: "1", price: "9" }]);
+  await send(R, invQ);
+  const cnQ = await mkCn(R, invQ, [{ productId: q, qty: "1", price: "9" }]);
+  await issueCn(R, cnQ.id);
+  await returnGoods(R, cnQ.id, [{ lineId: cnQ.lines[0], quantity: 1 }]);
+  await send(R, await mkInvoice(R, [{ productId: q, qty: "1", price: "9" }]));
+  const refusedQ = await refusalOf(() => reverseCn(R, cnQ.id));
+  const stQ = (await pool.query("select status from credit_notes where id=$1", [cnQ.id])).rows[0].status;
+  check("reversal refused when the returned goods are gone — nothing written, the note stays issued",
+    !!refusedQ && /no longer all in stock/.test(refusedQ.message) && stQ === "issued" && (await movements(R, "credit_note", cnQ.id)).length === 1 && await poolIs(q, 0, 0, "0.000"), refusedQ?.message ?? "no refusal");
+}
+{
+  // The void guard: a zero-value note (goods back for an exchange) leaves the invoice unsettled, so void stays open.
+  const v = await mkProduct(R, "RET-VOID");
+  await receive(R, await mkPo(R, [{ productId: v, qty: "2", price: "10" }]));
+  const invV = await mkInvoice(R, [{ productId: v, qty: "2", price: "15" }]);
+  await send(R, invV);
+  const cnV = await mkCn(R, invV, [{ productId: v, qty: "1", price: "0" }]);
+  await issueCn(R, cnV.id);
+  await returnGoods(R, cnV.id, [{ lineId: cnV.lines[0], quantity: 1 }]);
+  const blocked = await refusalOf(() => voidInv(R, invV));
+  check("void refused while a credit note's returned goods stand against the sale (the same units would come back twice)",
+    !!blocked && /Reverse those credit notes/.test(blocked.message) && await poolIs(v, 1, 1, "10.000"), blocked?.message ?? "no refusal");
+  await reverseCn(R, cnV.id);
+  await voidInv(R, invV);
+  check("…once the note is reversed the void goes through: both units back, 2 / 20.00", await poolIs(v, 2, 2, "20.000"), JSON.stringify(await poolOf(v)));
+}
+{
+  // Multi-currency: a USD invoice in a SAR organization — COGS and its return are BASE, whatever the documents' currency.
+  await pool.query("insert into exchange_rates (org_id,from_currency,to_currency,rate,effective_date,source) values ($1,'USD','SAR','3.75000000',$2,'manual')", [R.id, TODAY]);
+  const u = await mkProduct(R, "RET-USD");
+  await db.transaction((tx) => recordOpeningStock(tx, ctx(R), { productId: u, quantity: 3, unitCost: 33.33 }));   // 99.99 SAR
+  const invU = await mkInvoice(R, [{ productId: u, qty: "3", price: "20" }], { currency: "USD" });
+  await send(R, invU);                                                                                                // COGS 99.99 SAR
+  const cnU = await mkCn(R, invU, [{ productId: u, qty: "3", price: "20" }]);
+  await issueCn(R, cnU.id);
+  const a = await returnGoods(R, cnU.id, [{ lineId: cnU.lines[0], quantity: 1 }]);
+  const b = await returnGoods(R, cnU.id, [{ lineId: cnU.lines[0], quantity: 2 }]);
+  check("USD credit note: 1 of 3 back at 33.33 SAR, the last 2 at exactly the 66.66 left — 99.99 restored in base, independent of the note's currency",
+    eq(a.cost, 33.33) && eq(b.cost, 66.66) && await poolIs(u, 3, 3, "99.990"), `${a.cost} + ${b.cost}`);
+  const K = await mkOrg("KWD");
+  const pk = await mkProduct(K, "RET-KWD");
+  await db.transaction((tx) => recordOpeningStock(tx, ctx(K), { productId: pk, quantity: 3, unitCost: 0.3333 }));  // 1.000 KWD
+  const invK = await mkInvoice(K, [{ productId: pk, qty: "3", price: "1" }]);
+  await send(K, invK);
+  const cnK = await mkCn(K, invK, [{ productId: pk, qty: "3", price: "1" }]);
+  await issueCn(K, cnK.id);
+  const ka = await returnGoods(K, cnK.id, [{ lineId: cnK.lines[0], quantity: 1 }]);
+  const kb = await returnGoods(K, cnK.id, [{ lineId: cnK.lines[0], quantity: 2 }]);
+  check("KWD rounding: 1 of 3 back at 0.333, the last 2 at exactly the 0.667 left — 1.000 restored, 5000 back to 0.000",
+    eq(ka.cost, 0.333) && eq(kb.cost, 0.667) && await poolIs(pk, 3, 3, "1.000") && eq(await gl(K, "5000"), 0), `${ka.cost} + ${kb.cost}`);
+}
+{
+  // Concurrency: two notes racing for a sale's last unit, and a double click on one note.
+  const c = await mkProduct(R, "RET-CONC");
+  await receive(R, await mkPo(R, [{ productId: c, qty: "2", price: "8" }]));
+  const invC = await mkInvoice(R, [{ productId: c, qty: "1", price: "12" }]);
+  await send(R, invC);
+  const n1 = await mkCn(R, invC, [{ productId: c, qty: "1", price: "12" }]);
+  await issueCn(R, n1.id);
+  const n2 = await mkCn(R, invC, [{ productId: c, qty: "1", price: "12" }]);
+  await issueCn(R, n2.id);
+  const race = await Promise.allSettled([returnGoods(R, n1.id, [{ lineId: n1.lines[0], quantity: 1 }]), returnGoods(R, n2.id, [{ lineId: n2.lines[0], quantity: 1 }])]);
+  check("two credit notes racing for the sale's last unit: one returns it, the other is refused",
+    race.filter((o) => o.status === "fulfilled").length === 1 && race.filter((o) => o.status === "rejected" && isInventoryRefusal(o.reason)).length === 1 && await poolIs(c, 2, 2, "16.000"),
+    JSON.stringify(race.map((o) => o.status)));
+  const invC2 = await mkInvoice(R, [{ productId: c, qty: "2", price: "12" }]);
+  await send(R, invC2);
+  const n3 = await mkCn(R, invC2, [{ productId: c, qty: "1", price: "12" }]);
+  await issueCn(R, n3.id);
+  const dbl = await Promise.allSettled([returnGoods(R, n3.id, [{ lineId: n3.lines[0], quantity: 1 }]), returnGoods(R, n3.id, [{ lineId: n3.lines[0], quantity: 1 }])]);
+  check("a double click on one note: one return, the second refused by the line's cap (the note's row lock)",
+    dbl.filter((o) => o.status === "fulfilled").length === 1 && dbl.filter((o) => o.status === "rejected" && isInventoryRefusal(o.reason)).length === 1 && await poolIs(c, 1, 1, "8.000"),
+    JSON.stringify(dbl.map((o) => o.status)));
+}
+{
+  // Tenant isolation: another organization can neither return against nor reverse this one's note.
+  const X = await mkOrg("SAR");
+  const before = await poolOf(g);
+  const r = await refusalOf(() => returnGoods(X, cnB.id, [{ lineId: cnB.lines[0], quantity: 1 }]));
+  check("another organization cannot return goods against this one's credit note — not found, nothing written",
+    !!r && /not found/.test(r.message) && JSON.stringify(await poolOf(g)) === JSON.stringify(before), r?.message ?? "no refusal");
+  const rx = await db.transaction((tx) => reverseCreditNoteReturns(tx, { orgId: X.id, userId: X.user, baseCurrency: X.currency, date: TODAY, creditNote: { id: cnB.id, creditNoteNumber: "x" } }));
+  check("…nor take its returned goods back out: the query is scoped to the organization and finds nothing",
+    rx.reversed === 0 && JSON.stringify(await poolOf(g)) === JSON.stringify(before));
+  const src = readFileSync(path.join(ROOT, "src/app/(app)/sales/credit-notes/actions.ts"), "utf8");
+  const fnBody = (name: string) => src.slice(src.indexOf(`export async function ${name}(`), src.indexOf("\n}\n", src.indexOf(`export async function ${name}(`)));
+  check("role gates: returning goods takes the gate issuing and reversing a credit note take (a session first), and the reversal re-checks its status under the note's row lock",
+    ["issueCreditNoteAction", "reverseCreditNoteAction", "returnCreditNoteGoodsAction"].every((n) => /^[^\n]*\n\s*const session = await requireSession\(\);/.test(fnBody(n)))
+      && /select status from credit_notes where id = \$\{cn\.id\} and org_id = \$\{session\.orgId\} for update/.test(fnBody("reverseCreditNoteAction")));
+}
+{
+  // Uncosted stock: units a sale issued with no cost basis come back first — still uncosted. A cost is never invented.
+  const U = await mkOrg("SAR");
+  const u = await mkProduct(U, "RET-UNC", { legacyQty: 3 });
+  await db.transaction((tx) => recordOpeningStock(tx, ctx(U), { productId: u, quantity: 2, unitCost: 10 }));    // 5 on hand, 2 / 20.00
+  const invU = await mkInvoice(U, [{ productId: u, qty: "4", price: "15" }]);
+  await send(U, invU);                                                                                         // 2 costed (20.00) + 2 uncosted
+  const recBefore = await getInventoryReconciliation(U.id, U.currency);
+  const cnU = await mkCn(U, invU, [{ productId: u, qty: "3", price: "15" }]);
+  await issueCn(U, cnU.id);
+  const rU = await returnGoods(U, cnU.id, [{ lineId: cnU.lines[0], quantity: 3 }]);
+  const mU = await movements(U, "credit_note", cnU.id);
+  check("uncosted units come back first, still uncosted (last out, first back), then 1 costed unit at its issue's cost 10.00 — no cost invented",
+    eq(rU.cost, 10) && mU.length === 2 && mU[0].total_cost === null && mU[0].quantity === 2 && eq(mU[1].total_cost, 10) && mU[1].quantity === 1, JSON.stringify(mU));
+  check("…stock 4 on hand, 1 / 10.00 valued — the 3 without a cost basis stay without one", await poolIs(u, 4, 1, "10.000"), JSON.stringify(await poolOf(u)));
+  const recAfter = await getInventoryReconciliation(U.id, U.currency);
+  check("…the sale's missing COGS (2 uncosted units) is gone once they came back; GL 1200 = valuation",
+    recBefore.uncostedIssues.quantity === 2 && recAfter.uncostedIssues.quantity === 0 && recAfter.integrityOk && recAfter.reconciled, JSON.stringify(recAfter.uncostedIssues));
+  // A pre-ACC-01 invoice (the old decrement, no movements): its units come back uncosted, up to what it sold.
+  const p = await mkProduct(U, "RET-OLD", { legacyQty: 8 });
+  const inv = await mkInvoice(U, [{ productId: p, qty: "3", price: "10" }]);
+  const old = (await pool.query("insert into journal_entries (org_id,entry_date,memo,source_type,source_id,created_by_id) values ($1,$2,'old','sales_invoice',$3,$4) returning id", [U.id, TODAY, inv, U.user])).rows[0].id;
+  await pool.query("insert into journal_lines (journal_entry_id,account_id,debit,credit) values ($1,$2,'34.50','0'),($1,$3,'0','30.00'),($1,$4,'0','4.50')", [old, U.acc.get("1100"), U.acc.get("4000"), U.acc.get("2100")]);
+  await pool.query("update products set quantity_on_hand = quantity_on_hand - 3 where id=$1", [p]);
+  await pool.query("update sales_invoices set status='sent', exchange_rate='1', base_total=total, base_tax_amount=tax_total where id=$1", [inv]);
+  const c1 = await mkCn(U, inv, [{ productId: p, qty: "2", price: "10" }]);
+  await issueCn(U, c1.id);
+  const r1 = await returnGoods(U, c1.id, [{ lineId: c1.lines[0], quantity: 2 }]);
+  const m1 = await movements(U, "credit_note", c1.id);
+  check("pre-ACC-01 invoice: 2 units come back uncosted, with no entry — no cost invented",
+    eq(r1.cost, 0) && await poolIs(p, 7, 0, "0.000") && (await returnEntries(U, c1.id)).length === 0 && m1.length === 1 && m1[0].total_cost === null && m1[0].reverses_movement_id === null, JSON.stringify(m1));
+  const c2 = await mkCn(U, inv, [{ productId: p, qty: "2", price: "10" }]);
+  await issueCn(U, c2.id);
+  const over = await refusalOf(() => returnGoods(U, c2.id, [{ lineId: c2.lines[0], quantity: 2 }]));
+  check("…and never more than it sold: 3 sold, 2 back, 2 more refused (1 left)", !!over && /only 1 of the units/.test(over.message), over?.message ?? "no refusal");
+}
+{
+  const recR = await getInventoryReconciliation(R.id, R.currency);
+  check("customer returns and their reversals: GL 1200 = valuation, integrity holds, nothing unattributed", recR.integrityOk && recR.reconciled, JSON.stringify(recR));
+  check("…every entry the organization posted balances", (await unbalancedEntries(R)) === 0);
 }
 
 section("mixed scenarios");
