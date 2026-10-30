@@ -3,7 +3,7 @@ import { and, eq, sql } from "drizzle-orm";
 import { db, accountsTable, journalEntriesTable, journalLinesTable } from "@/db";
 import { captureBaseAmounts, subtractMoney, type CapturedBaseAmounts } from "@/lib/posting-currency";
 import {
-  COGS_ACCOUNT, INVENTORY_ACCOUNT, hasSourceMovements, inventoryAccounts, issueForSale,
+  COGS_ACCOUNT, INVENTORY_ACCOUNT, InventoryRefusal, hasSourceMovements, inventoryAccounts, issueForSale,
   restorePreValuationQuantities, reverseSourceMovements,
 } from "@/lib/inventory-costing";
 
@@ -167,6 +167,22 @@ export async function reverseInvoicePosting(
 ) {
   const { orgId, userId, invoice } = args;
   const memo = `Invoice ${invoice.invoiceNumber} voided (reversal)`;
+  // Goods a credit note returned to stock came back out of this sale's issue; the void would put the
+  // whole issue back on top of them — the same units twice. Their credit notes are reversed first.
+  // (An issued credit note settles part of the invoice, and a settled invoice cannot be voided, so
+  // only a zero-value note reaches this; the caller holds the invoice's row lock, which every return
+  // against it also takes.)
+  const returned = await tx.execute(sql`
+    select 1 from inventory_movements r join credit_notes c on c.id = r.source_id and c.org_id = r.org_id
+     where r.org_id = ${orgId} and r.kind = 'sales_return' and r.source_type = 'credit_note' and c.source_invoice_id = ${invoice.id}
+       and not exists (select 1 from inventory_movements x where x.org_id = ${orgId} and x.kind = 'reversal' and x.reverses_movement_id = r.id)
+     limit 1`);
+  if (returned.rows.length > 0) {
+    throw new InventoryRefusal(
+      "Goods returned against this invoice's credit notes are back in stock. Reverse those credit notes before voiding the invoice.",
+      "البضاعة المرتجعة بإشعارات دائن على هذه الفاتورة عادت إلى المخزون. اعكس تلك الإشعارات قبل إلغاء الفاتورة.",
+    );
+  }
   const [posting] = await tx
     .select({ id: journalEntriesTable.id })
     .from(journalEntriesTable)

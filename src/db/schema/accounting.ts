@@ -42,10 +42,12 @@ export const journalEntriesTable = pgTable("journal_entries", {
    * Known values: sales_invoice | credit_note | purchase_order | debit_note | payment |
    * advance_application | advance_application_release | advance_application_release_reversal |
    * bank_opening | payment_reversal | payroll_run | expense | manual | inventory_opening |
-   * inventory_adjustment.
+   * inventory_adjustment | sales_return.
    *
    * `inventory_opening` and `inventory_adjustment` (ACC-01) key off `inventory_movements.id` — the
-   * movement the entry values — never the product's id.
+   * movement the entry values — never the product's id. `sales_return` (ACC-01) keys off
+   * `credit_notes.id`: the goods a credit note took back into stock (Dr 1200 / Cr 5000 at the cost
+   * the invoice issued them at), and, when the note is reversed, the entry taking them out again.
    *
    * `payment_reversal` keys off `payments.id` — the SAME id its original `payment` entry uses, under
    * a different type. That is deliberate and it is the whole idempotency key: a reversal exists iff

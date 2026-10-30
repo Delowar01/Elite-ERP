@@ -114,15 +114,20 @@ export async function getInventoryReconciliation(orgId: number, baseCurrency: st
     select coalesce(sum(stock_value), 0)::text as value from products where org_id = ${orgId}`);
   const valuedStock = money((pools.rows[0] as { value: string }).value);
 
-  // An uncosted issue that was later reversed (its invoice voided) no longer counts as missing COGS.
+  // An uncosted issue that was later reversed (its invoice voided) no longer counts as missing COGS,
+  // and neither do its units a credit note returned to stock (a return that still stands).
   const moves = await db.execute(sql`
     with m as (
-      select mv.*, exists (select 1 from inventory_movements r where r.org_id = ${orgId} and r.reverses_movement_id = mv.id) as reversed
+      select mv.*,
+             exists (select 1 from inventory_movements r where r.org_id = ${orgId} and r.reverses_movement_id = mv.id and r.kind = 'reversal') as reversed,
+             coalesce((select sum(r.quantity) from inventory_movements r
+                        where r.org_id = ${orgId} and r.kind = 'sales_return' and r.reverses_movement_id = mv.id
+                          and not exists (select 1 from inventory_movements x where x.org_id = ${orgId} and x.kind = 'reversal' and x.reverses_movement_id = r.id)), 0) as returned
         from inventory_movements mv where mv.org_id = ${orgId})
     select coalesce(sum(total_cost), 0)::text as value,
            count(*) filter (where total_cost is not null and total_cost <> 0 and journal_entry_id is null)::int as detached,
-           count(*) filter (where total_cost is null and kind = 'issue' and not reversed)::int as uncosted_issues,
-           coalesce(-sum(quantity) filter (where total_cost is null and kind = 'issue' and not reversed), 0)::int as uncosted_quantity
+           count(*) filter (where total_cost is null and kind = 'issue' and not reversed and -quantity > returned)::int as uncosted_issues,
+           coalesce(sum(-quantity - returned) filter (where total_cost is null and kind = 'issue' and not reversed), 0)::int as uncosted_quantity
       from m`);
   const m = moves.rows[0] as { value: string; detached: number; uncosted_issues: number; uncosted_quantity: number };
 

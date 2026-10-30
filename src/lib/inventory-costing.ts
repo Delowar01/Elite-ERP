@@ -24,8 +24,9 @@ import { getCurrency, roundMoney } from "@/lib/currency/currencies";
  * in the base currency. Receipts and opening stock add units AT THEIR COST; issues, purchase
  * returns and decreases take units out at the pool's average (`stock_value / valued_quantity`), and
  * the unit that empties the pool takes exactly what is left, so no residue ever sits on zero
- * units. An outflow never changes the average of the units that stay. A reversal puts back exactly
- * what its original took out, at the original's cost.
+ * units. An outflow never changes the average of the units that stay. A customer's returned goods
+ * come back at the cost their sale issued them at (the return of that sale). A reversal puts back
+ * exactly what its original took out, at the original's cost.
  *
  * ## What is refused, and what is recorded as incomplete instead
  *
@@ -443,7 +444,7 @@ export async function reverseSourceMovements(
       from inventory_movements m
      where m.org_id = ${ctx.orgId} and m.source_type = ${source.sourceType} and m.source_id = ${source.sourceId}
        and m.kind in (${sql.join(kinds.map((k) => sql`${k}`), sql`, `)})
-       and not exists (select 1 from inventory_movements r where r.org_id = ${ctx.orgId} and r.reverses_movement_id = m.id)
+       and not exists (select 1 from inventory_movements r where r.org_id = ${ctx.orgId} and r.reverses_movement_id = m.id and r.kind = 'reversal')
      order by m.id`);
   const rows = originals.rows as unknown as { id: number; product_id: number; quantity: number; total_cost: string | null; source_line_id: number | null }[];
   if (rows.length === 0) return { reversed: 0, cost: roundMoney(0, cur) };
@@ -638,4 +639,214 @@ export async function itemTypeChangeRefusal(tx: Tx, orgId: number, productId: nu
     );
   }
   return null;
+}
+
+// ---------------------------------------------------------------------------------------------
+// Customer returns — a credit note's goods back into stock. They post their own journal entries,
+// `(sales_return, <credit note id>)`.
+// ---------------------------------------------------------------------------------------------
+
+/** Goods a customer returned: `quantity` units of `productId`, from the credit note line `sourceLineId`. */
+export type CustomerReturnLine = { productId: number; quantity: number | string; sourceLineId: number };
+
+/** What is left of one stock issue to come back: units, and their cost (null when it had none). */
+type ReturnableIssue = { issueId: number | null; units: number; cost: string | null };
+
+const overReturn = (s: StockState, requested: number, left: number) =>
+  new InventoryRefusal(
+    `Cannot return ${requested} of "${s.name}" (${s.sku}) to stock: only ${left} of the units this invoice issued have not already come back. ` +
+      "A return can never exceed what the sale took out of stock.",
+    `لا يمكن إرجاع ${requested} من "${s.name}" (${s.sku}) إلى المخزون: لم يتبقَّ من الوحدات التي صرفتها هذه الفاتورة سوى ${left} لم تُرجَع بعد، ` +
+      "ولا يمكن أن يتجاوز المرتجع ما صرفه البيع من المخزون.",
+  );
+
+const notBackInStock = (s: StockState, needed: number) =>
+  new InventoryRefusal(
+    `The goods this credit note returned are no longer all in stock: ${s.onHand} of "${s.name}" (${s.sku}) on hand, ${needed} to take back out. ` +
+      "Adjust the stock first, then reverse the credit note.",
+    `البضاعة التي أرجعها هذا الإشعار لم تعد كلها في المخزون: المتوفر من "${s.name}" (${s.sku}) ${s.onHand} والمطلوب إخراجه ${needed}. ` +
+      "عدّل المخزون أولًا ثم اعكس إشعار الدائن.",
+  );
+
+/**
+ * The invoice's stock issues of `productId` with what is left of each to come back — newest first —
+ * net of every return that still stands (a reversed return gives its units back to the issue). An
+ * issue the void reversed has nothing left. An invoice posted before ACC-01 has no issue rows: what
+ * it sold (`trunc` of its lines, as the old decrement moved) is one uncosted remainder.
+ */
+async function returnableIssues(tx: Tx, orgId: number, invoiceId: number, productId: number, legacy: boolean, currency: string): Promise<ReturnableIssue[]> {
+  if (legacy) {
+    const res = await tx.execute(sql`
+      select coalesce((select sum(trunc(i.quantity))::int from sales_invoice_items i join sales_invoices v on v.id = i.invoice_id
+                        where v.org_id = ${orgId} and v.id = ${invoiceId} and i.product_id = ${productId}), 0) as sold,
+             coalesce((select sum(r.quantity)::int from inventory_movements r join credit_notes c on c.id = r.source_id and c.org_id = r.org_id
+                        where r.org_id = ${orgId} and r.kind = 'sales_return' and r.source_type = 'credit_note' and r.product_id = ${productId}
+                          and c.source_invoice_id = ${invoiceId}
+                          and not exists (select 1 from inventory_movements x where x.org_id = ${orgId} and x.kind = 'reversal' and x.reverses_movement_id = r.id)), 0) as returned`);
+    const r = res.rows[0] as { sold: number; returned: number };
+    return [{ issueId: null, units: Math.max(0, Number(r.sold) - Number(r.returned)), cost: null }];
+  }
+  const res = await tx.execute(sql`
+    select m.id, -m.quantity as issued, m.total_cost::text as total_cost,
+           coalesce(ret.qty, 0)::int as returned_qty, coalesce(ret.cost, 0)::text as returned_cost
+      from inventory_movements m
+      left join lateral (
+        select sum(r.quantity) as qty, sum(r.total_cost) as cost
+          from inventory_movements r
+         where r.org_id = ${orgId} and r.kind = 'sales_return' and r.reverses_movement_id = m.id
+           and not exists (select 1 from inventory_movements x where x.org_id = ${orgId} and x.kind = 'reversal' and x.reverses_movement_id = r.id)
+      ) ret on true
+     where m.org_id = ${orgId} and m.source_type = 'sales_invoice' and m.source_id = ${invoiceId}
+       and m.product_id = ${productId} and m.kind = 'issue'
+       and not exists (select 1 from inventory_movements x where x.org_id = ${orgId} and x.kind = 'reversal' and x.reverses_movement_id = m.id)
+     order by m.id desc`);
+  return (res.rows as unknown as { id: number; issued: number; total_cost: string | null; returned_qty: number; returned_cost: string }[]).map((r) => ({
+    issueId: Number(r.id),
+    units: Number(r.issued) - Number(r.returned_qty),
+    cost: r.total_cost === null ? null : roundMoney(-Number(r.total_cost) - Number(r.returned_cost), currency),
+  }));
+}
+
+/**
+ * A customer's goods back into stock against a credit note — the return of a sale, so each unit comes
+ * back at the cost the invoice ISSUED it at, never at today's average, and the COGS that sale
+ * recognised for it is reversed: Dr 1200 / Cr 5000, `(sales_return, <credit note id>)`.
+ *
+ * Within a product, units come back in the reverse of the order the sale took them out — last out,
+ * first back: units the sale issued with no cost basis come back first, still uncosted (a return
+ * never invents a cost), then costed units at their own issue's cost, the last unit of an issue taking
+ * exactly what is left of it. Each row points at the issue it came back from.
+ *
+ * An invoice posted before ACC-01 has no issue rows: its units come back uncosted, up to the quantity
+ * it sold. More than the invoice issued, net of every return that still stands, is refused. The
+ * caller holds the credit note's and the invoice's row locks; the products are locked here, before
+ * anything is read, so two returns against the same sale queue and the second sees the first.
+ */
+export async function returnFromCustomer(
+  tx: Tx,
+  ctx: InventoryContext,
+  source: MovementSource & { sourceId: number },
+  args: { invoiceId: number; lines: CustomerReturnLine[] },
+) {
+  const cur = ctx.baseCurrency;
+  const { states, items } = await lockStockLines(tx, ctx.orgId, args.lines);
+  const legacy = !(await hasSourceMovements(tx, ctx.orgId, "sales_invoice", args.invoiceId, ["issue"]));
+  const issues = new Map<number, ReturnableIssue[]>();
+  const drafts: MovementDraft[] = [];
+  let cost = roundMoney(0, cur);
+  for (const { line, state, qty } of items) {
+    if (!issues.has(state.id)) issues.set(state.id, await returnableIssues(tx, ctx.orgId, args.invoiceId, state.id, legacy, cur));
+    const rows = issues.get(state.id)!;
+    const left = rows.reduce((n, r) => n + r.units, 0);
+    if (qty > left) throw overReturn(state, qty, left);
+    let need = qty;
+    for (const r of rows) {
+      if (need === 0) break;
+      const take = Math.min(need, r.units);
+      if (take === 0) continue;
+      let back: string | null = null;
+      if (r.cost === null) {
+        state.onHand += take;
+        state.touched = true;
+      } else {
+        back = weightedAverageCost({ quantity: r.units, value: r.cost }, take, cur);
+        r.cost = sub(r.cost, back, cur);
+        putIn(state, take, back, cur);
+        cost = add(cost, back, cur);
+      }
+      r.units -= take;
+      need -= take;
+      drafts.push({ productId: state.id, kind: "sales_return", quantity: take, totalCost: back, sourceLineId: Number(line.sourceLineId), reversesMovementId: r.issueId });
+    }
+  }
+  const ids = await persist(tx, ctx, source, states, drafts);
+  if (Number(cost) !== 0) {
+    const acc = await inventoryAccounts(tx, ctx.orgId, [INVENTORY_ACCOUNT, COGS_ACCOUNT]);
+    const entryId = await postEntry(tx, ctx, { sourceType: "sales_return", sourceId: source.sourceId, memo: source.memo }, [
+      { accountId: acc.get(INVENTORY_ACCOUNT)!, debit: cost, credit: "0" },
+      { accountId: acc.get(COGS_ACCOUNT)!, debit: "0", credit: cost },
+    ]);
+    await linkMovements(tx, ctx.orgId, ids, entryId);
+  }
+  return { cost, movementIds: ids };
+}
+
+/**
+ * Take a credit note's returned goods back out of stock — the note is being reversed. Each of its
+ * `sales_return` rows not yet reversed comes off exactly (the same units, at the same cost) when no
+ * stock of that product has gone out since the return: the pool is then precisely what it would have
+ * been without it. Once stock has gone out in between, the returned units are no longer separable
+ * from the rest, and they leave like any outflow — at the weighted average, valued units first.
+ * Refuses when they are no longer on hand. Dr 5000 / Cr 1200 for the cost taken out,
+ * `(sales_return, <credit note id>)`. The caller holds the credit note's row lock.
+ */
+export async function reverseCustomerReturns(tx: Tx, ctx: InventoryContext, source: MovementSource & { sourceId: number }) {
+  const cur = ctx.baseCurrency;
+  const found = await tx.execute(sql`
+    select m.id, m.product_id, m.quantity, m.total_cost::text as total_cost, m.source_line_id
+      from inventory_movements m
+     where m.org_id = ${ctx.orgId} and m.source_type = ${source.sourceType} and m.source_id = ${source.sourceId} and m.kind = 'sales_return'
+       and not exists (select 1 from inventory_movements r where r.org_id = ${ctx.orgId} and r.reverses_movement_id = m.id and r.kind = 'reversal')
+     order by m.id`);
+  const rows = found.rows as unknown as { id: number; product_id: number; quantity: number; total_cost: string | null; source_line_id: number | null }[];
+  if (rows.length === 0) return { reversed: 0, cost: roundMoney(0, cur), movementIds: [] as number[] };
+
+  const states = await lockProducts(tx, ctx.orgId, rows.map((r) => Number(r.product_id)));
+  // Read under the product locks: no other posting can add an outflow between this and the write.
+  const since = await tx.execute(sql`
+    select m.id, exists (select 1 from inventory_movements o where o.org_id = ${ctx.orgId} and o.product_id = m.product_id and o.id > m.id and o.quantity < 0) as moved
+      from inventory_movements m where m.org_id = ${ctx.orgId} and m.id in (${sql.join(rows.map((r) => sql`${r.id}`), sql`, `)})`);
+  const movedSince = new Map((since.rows as unknown as { id: number; moved: boolean }[]).map((r) => [Number(r.id), Boolean(r.moved)]));
+
+  const drafts: MovementDraft[] = [];
+  let cost = roundMoney(0, cur);
+  for (const r of rows) {
+    const s = states.get(Number(r.product_id));
+    if (!s) throw notInOrg();
+    const qty = Number(r.quantity);
+    if (qty > s.onHand) throw notBackInStock(s, qty);
+    const back = r.total_cost === null ? null : roundMoney(r.total_cost, cur);
+    const exact = !movedSince.get(Number(r.id))
+      && (back === null ? s.onHand - s.valuedQty >= qty : s.valuedQty >= qty && Number(s.value) >= Number(back));
+    if (exact) {
+      s.onHand -= qty;
+      if (back !== null) {
+        s.valuedQty -= qty;
+        s.value = sub(s.value, back, cur);
+        cost = add(cost, back, cur);
+      }
+      s.touched = true;
+      drafts.push({ productId: s.id, kind: "reversal", quantity: -qty, totalCost: back === null ? null : neg(back, cur), sourceLineId: r.source_line_id, reversesMovementId: Number(r.id) });
+    } else {
+      const out = takeOut(s, qty, cur);
+      cost = add(cost, out.cost, cur);
+      drafts.push(...outflowDrafts("reversal", s.id, r.source_line_id, out, cur).map((d) => ({ ...d, reversesMovementId: Number(r.id) })));
+    }
+  }
+  const ids = await persist(tx, ctx, source, states, drafts);
+  if (Number(cost) !== 0) {
+    const acc = await inventoryAccounts(tx, ctx.orgId, [INVENTORY_ACCOUNT, COGS_ACCOUNT]);
+    const entryId = await postEntry(tx, ctx, { sourceType: "sales_return", sourceId: source.sourceId, memo: source.memo }, [
+      { accountId: acc.get(COGS_ACCOUNT)!, debit: cost, credit: "0" },
+      { accountId: acc.get(INVENTORY_ACCOUNT)!, debit: "0", credit: cost },
+    ]);
+    await linkMovements(tx, ctx.orgId, ids, entryId);
+  }
+  return { reversed: rows.length, cost, movementIds: ids };
+}
+
+/**
+ * Units of `productId` the invoice issued that have not come back yet (net of returns that still
+ * stand), and of those the units the credit note's line `lineId` has already returned — for the
+ * return dialog. Read-only; the posting re-reads both under its locks.
+ */
+export async function returnableUnits(tx: Tx, orgId: number, args: { invoiceId: number; productId: number; creditNoteId: number; lineId: number; baseCurrency: string }) {
+  const legacy = !(await hasSourceMovements(tx, orgId, "sales_invoice", args.invoiceId, ["issue"]));
+  const rows = await returnableIssues(tx, orgId, args.invoiceId, args.productId, legacy, args.baseCurrency);
+  const onLine = await tx.execute(sql`
+    select coalesce(sum(m.quantity), 0)::int as n from inventory_movements m
+     where m.org_id = ${orgId} and m.kind = 'sales_return' and m.source_type = 'credit_note' and m.source_id = ${args.creditNoteId}
+       and m.source_line_id = ${args.lineId}
+       and not exists (select 1 from inventory_movements r where r.org_id = ${orgId} and r.reverses_movement_id = m.id and r.kind = 'reversal')`);
+  return { invoiceLeft: rows.reduce((n, r) => n + r.units, 0), returnedOnLine: Number((onLine.rows[0] as { n: number }).n) };
 }

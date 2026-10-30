@@ -426,6 +426,10 @@ export async function voidInvoiceAction(invoiceId: number): Promise<ActionResult
       updatedAt: new Date(),
     }).where(eq(salesInvoicesTable.id, invoiceId));
     return {} as const;
+  }).catch(async (e) => {
+    // ACC-01: goods a credit note returned to stock still stand against this sale — nothing was written.
+    if (isInventoryRefusal(e)) return { error: refusalText(e, await getLocale()) } as const;
+    throw e;
   });
   if ("error" in voided) return { error: voided.error };
 

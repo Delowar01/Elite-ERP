@@ -8,9 +8,15 @@ import { journalEntriesTable } from "./accounting";
  * ACC-01 — the stock ledger behind weighted-average costing.
  *
  * One row per stock event on a STOCK item (services never appear): an opening balance, a purchase
- * receipt, a sales issue, a purchase return, a manual adjustment, or the exact reversal of one of
- * those. Rows are only ever inserted — a correction is a new `reversal` row pointing at the row it
- * undoes — so the table is the audit history of every quantity and every unit of cost.
+ * receipt, a sales issue, a purchase return, a customer's goods coming back against a credit note
+ * (`sales_return`), a manual adjustment, or the reversal of one of those. Rows are only ever
+ * inserted — a correction is a new `reversal` row pointing at the row it undoes — so the table is the
+ * audit history of every quantity and every unit of cost.
+ *
+ * `reverses_movement_id` links a row to an earlier one. On a `reversal` it is the row undone (a row
+ * counts as reversed only when a `reversal` points at it). On a `sales_return` it is the invoice's
+ * `issue` row the units come back from — at that issue's own cost — so a return is always tied to
+ * the sale and its stock issue, and no issue can take back more units than it issued.
  *
  * ## The two quantities on a product, and how these rows tie to them
  *
@@ -34,9 +40,10 @@ import { journalEntriesTable } from "./accounting";
  * (pre-ACC-01 postings, manual journals). A costed row with a non-zero cost always has one.
  *
  * `source_type` / `source_id` follow the journal's identity rule: the pair, never the id alone.
- * Values: sales_invoice | purchase_order | debit_note — the document — or product (opening stock and
- * manual adjustments, keyed by the product; their journal entries key off the movement instead:
- * `(inventory_opening | inventory_adjustment, <movement id>)`).
+ * Values: sales_invoice | purchase_order | debit_note | credit_note — the document (a credit note's
+ * returned goods, `source_line_id` its line, their entries `(sales_return, <credit note id>)`) — or
+ * product (opening stock and manual adjustments, keyed by the product; their journal entries key off
+ * the movement instead: `(inventory_opening | inventory_adjustment, <movement id>)`).
  */
 export const inventoryMovementKindEnum = pgEnum("inventory_movement_kind", [
   "opening",
@@ -45,6 +52,7 @@ export const inventoryMovementKindEnum = pgEnum("inventory_movement_kind", [
   "purchase_return",
   "adjustment",
   "reversal",
+  "sales_return",
 ]);
 export type InventoryMovementKind = (typeof inventoryMovementKindEnum.enumValues)[number];
 
@@ -66,7 +74,7 @@ export const inventoryMovementsTable = pgTable(
     totalCost: numeric("total_cost", { precision: 15, scale: 3 }),
     sourceType: text("source_type").notNull(),
     sourceId: integer("source_id"),
-    /** The document line (invoice / PO / debit note item id) this row came from, when there is one. */
+    /** The document line (invoice / PO / debit note / credit note item id) this row came from, when there is one. */
     sourceLineId: integer("source_line_id"),
     journalEntryId: integer("journal_entry_id").references(() => journalEntriesTable.id),
     reversesMovementId: integer("reverses_movement_id"),
