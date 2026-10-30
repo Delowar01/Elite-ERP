@@ -39,6 +39,7 @@ const SOURCE_BADGE: Record<string, { label: string; variant: "info" | "success" 
   expense: { label: "Expense", variant: "neutral" },
   inventory_opening: { label: "Inventory", variant: "neutral" },
   inventory_adjustment: { label: "Inventory", variant: "neutral" },
+  sales_return: { label: "Inventory", variant: "neutral" },
 };
 
 export function AccountLedgerView({

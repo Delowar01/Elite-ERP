@@ -349,7 +349,7 @@ function CfView({ locale, d, prev }: { locale: Locale; d: CashFlow; prev?: CashF
   );
 }
 function sourceLabel(s: string): string {
-  const map: Record<string, string> = { sales_invoice: "Sales invoices", payment: "Payments", purchase_order: "Purchases", credit_note: "Credit notes", debit_note: "Debit notes", payroll: "Payroll", payroll_run: "Payroll", expense: "Expenses", manual: "Manual entries", inventory_opening: "Opening stock", inventory_adjustment: "Stock adjustments" };
+  const map: Record<string, string> = { sales_invoice: "Sales invoices", payment: "Payments", purchase_order: "Purchases", credit_note: "Credit notes", debit_note: "Debit notes", payroll: "Payroll", payroll_run: "Payroll", expense: "Expenses", manual: "Manual entries", inventory_opening: "Opening stock", inventory_adjustment: "Stock adjustments", sales_return: "Goods returned" };
   return map[s] ?? s;
 }
 

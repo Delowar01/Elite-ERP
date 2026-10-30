@@ -2042,6 +2042,17 @@ const DICT: Record<string, string> = {
   "Opening stock": "المخزون الافتتاحي",
   "Stock adjustments": "تسويات المخزون",
   "This product has stock history, so it cannot be permanently deleted.": "لهذا المنتج حركات مخزون مسجّلة، لذا لا يمكن حذفه نهائيًا.",
+  // ACC-01: a credit note's goods returned to stock — the return dialog and its journal source type.
+  "Return goods to stock": "إرجاع البضاعة إلى المخزون",
+  "Record the goods the customer sent back. They return to stock at the cost the invoice sold them at, and that cost comes off cost of goods sold. Leave a line empty if nothing came back on it.":
+    "سجّل البضاعة التي أعادها العميل. تعود إلى المخزون بالتكلفة التي صُرفت بها في الفاتورة، وتُخصم تلك التكلفة من تكلفة البضاعة المباعة. اترك البند فارغًا إذا لم يُرجَع منه شيء.",
+  Credited: "المقيَّد في الإشعار",
+  "Already returned": "أُرجع سابقًا",
+  "Can still come back": "المتبقي للإرجاع",
+  "Return to stock": "إرجاع إلى المخزون",
+  "Returning…": "جارٍ الإرجاع…",
+  "Goods returned to stock.": "أُعيدت البضاعة إلى المخزون.",
+  "Goods returned": "البضاعة المرتجعة",
 };
 
 export function t(locale: Locale, en: string): string {
