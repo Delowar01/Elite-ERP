@@ -16,7 +16,9 @@ import { journalEntriesTable } from "./accounting";
  * `reverses_movement_id` links a row to an earlier one. On a `reversal` it is the row undone (a row
  * counts as reversed only when a `reversal` points at it). On a `sales_return` it is the invoice's
  * `issue` row the units come back from — at that issue's own cost — so a return is always tied to
- * the sale and its stock issue, and no issue can take back more units than it issued.
+ * the sale and its stock issue, and no issue can take back more units than it issued. A return's
+ * rows also carry `request_key`, the submission they were recorded for, so one submission is recorded
+ * once however often it arrives.
  *
  * ## The two quantities on a product, and how these rows tie to them
  *
@@ -78,6 +80,12 @@ export const inventoryMovementsTable = pgTable(
     sourceLineId: integer("source_line_id"),
     journalEntryId: integer("journal_entry_id").references(() => journalEntriesTable.id),
     reversesMovementId: integer("reverses_movement_id"),
+    /**
+     * On a `sales_return`, the submission it came from: the key the return dialog sends, one per opening. A
+     * second request under the same key against the same credit note is the same return — a double click,
+     * a retry — and is answered from these rows without writing anything. NULL on every other row.
+     */
+    requestKey: text("request_key"),
     memo: text("memo"),
     createdById: integer("created_by_id")
       .notNull()

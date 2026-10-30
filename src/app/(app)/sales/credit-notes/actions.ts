@@ -543,26 +543,31 @@ export async function reverseCreditNoteAction(creditNoteId: number): Promise<Act
  * as the goods arrive: each unit at the cost the invoice issued it at, that cost back out of cost
  * of goods sold (see returnCreditNoteGoods). The same gate as issuing and reversing a credit note.
  */
-export async function returnCreditNoteGoodsAction(creditNoteId: number, request: { lineId: number; quantity: string }[]): Promise<ActionResult> {
+export async function returnCreditNoteGoodsAction(creditNoteId: number, request: { lineId: number; quantity: string }[], requestKey: string): Promise<ActionResult> {
   const session = await requireSession();
   let result;
   try {
     result = await db.transaction((tx) => returnCreditNoteGoods(tx, {
       orgId: session.orgId, userId: session.userId, baseCurrency: session.orgCurrency,
-      date: new Date().toISOString().slice(0, 10), creditNoteId, request,
+      date: new Date().toISOString().slice(0, 10), creditNoteId, requestKey, request,
     }));
   } catch (e) {
-    // Over-return, a draft or reversed note, a line that is not stock — nothing was written.
+    // Over-return, a line named twice, a draft or reversed note, a line that is not stock, a reused
+    // submission key with other quantities — nothing was written.
     if (isInventoryRefusal(e)) return { error: refusalText(e, await getLocale()) };
     throw e;
   }
 
-  await logActivity(session, {
-    type: "credit_note.goods_returned",
-    description: `Returned ${result.units} unit(s) to stock against credit note ${result.creditNoteNumber} at their issued cost`,
-    entityType: "credit_note",
-    entityId: creditNoteId,
-  });
+  // A replay (the same submission again — a double click, a retry) wrote nothing: it is answered as the
+  // first time was, and logged once, by the first time.
+  if (!result.replayed) {
+    await logActivity(session, {
+      type: "credit_note.goods_returned",
+      description: `Returned ${result.units} unit(s) to stock against credit note ${result.creditNoteNumber} at their issued cost`,
+      entityType: "credit_note",
+      entityId: creditNoteId,
+    });
+  }
   revalidatePath(`/sales/credit-notes/${creditNoteId}`);
   revalidatePath("/inventory/products");
   revalidatePath("/finance/chart-of-accounts");

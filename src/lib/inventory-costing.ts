@@ -92,6 +92,8 @@ export type MovementSource = {
   sourceId: number | null;
   journalEntryId: number | null;
   memo: string;
+  /** The submission a customer return was recorded for (see credit-note-returns.ts); absent elsewhere. */
+  requestKey?: string | null;
 };
 
 export type DocumentStockLine = { productId: number | null; quantity: string | number; sourceLineId?: number | null };
@@ -283,6 +285,7 @@ async function persist(tx: Tx, ctx: InventoryContext, source: MovementSource, st
       sourceLineId: d.sourceLineId,
       journalEntryId: source.journalEntryId,
       reversesMovementId: d.reversesMovementId ?? null,
+      requestKey: source.requestKey ?? null,
       memo: source.memo,
       createdById: ctx.userId,
     })))

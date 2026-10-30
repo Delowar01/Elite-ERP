@@ -14,12 +14,13 @@
  *   10 cancellation / reversal · 11 inventory-to-GL reconciliation · 12 P&L / Balance Sheet ·
  *   13 services / non-stock · 14 missing / invalid cost · 15 negative stock · 16 rounding and
  *   multi-currency · 17 concurrency · 18 tenant isolation and role gates · 19 supplier returns at the
- *   weighted average when the credit differs from it · 20 customer goods returns on credit notes —
- *   then mixed scenarios.
+ *   weighted average when the credit differs from it · 20 customer goods returns on credit notes ·
+ *   21 return requests: each line once, each submission once — then mixed scenarios.
  *
  * Every expected figure is worked out by hand in the comments beside it, never read back from the
  * code under test.
  */
+import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { Pool } from "pg";
@@ -276,9 +277,10 @@ async function issueCn(o: Org, cnId: number) {
     await tx.execute(sql`update credit_notes set status = 'issued', exchange_rate = ${captured.exchangeRate}, base_total = ${captured.baseTotal}, base_tax_amount = ${captured.baseTaxAmount} where id = ${cnId}`);
   });
 }
-/** Goods back to stock against an issued note — the posting returnCreditNoteGoodsAction runs. */
-const returnGoods = (o: Org, cnId: number, request: { lineId: number; quantity: number | string }[]) =>
-  db.transaction((tx) => returnCreditNoteGoods(tx, { orgId: o.id, userId: o.user, baseCurrency: o.currency, date: TODAY, creditNoteId: cnId, request }));
+/** Goods back to stock against an issued note — the posting returnCreditNoteGoodsAction runs. Each call is a new
+ *  submission (a fresh key, as each opening of the return dialog makes) unless a key is given to replay one. */
+const returnGoods = (o: Org, cnId: number, request: { lineId: number; quantity: number | string }[], requestKey: string = randomUUID()) =>
+  db.transaction((tx) => returnCreditNoteGoods(tx, { orgId: o.id, userId: o.user, baseCurrency: o.currency, date: TODAY, creditNoteId: cnId, requestKey, request }));
 /** Reverse a note as reverseCreditNoteAction does: its row lock, its goods back out, the financial mirror, status reversed. */
 async function reverseCn(o: Org, cnId: number) {
   const cn = (await pool.query("select credit_note_number from credit_notes where id=$1", [cnId])).rows[0];
@@ -899,7 +901,8 @@ const cnB = await mkCn(R, invG, [{ productId: g, qty: "3", price: "30" }]);
     eq(ka.cost, 0.333) && eq(kb.cost, 0.667) && await poolIs(pk, 3, 3, "1.000") && eq(await gl(K, "5000"), 0), `${ka.cost} + ${kb.cost}`);
 }
 {
-  // Concurrency: two notes racing for a sale's last unit, and a double click on one note.
+  // Concurrency: two notes racing for a sale's last unit, and two separate submissions on one note racing for its last
+  // unit (a double click — one submission sent twice — is section 21's).
   const c = await mkProduct(R, "RET-CONC");
   await receive(R, await mkPo(R, [{ productId: c, qty: "2", price: "8" }]));
   const invC = await mkInvoice(R, [{ productId: c, qty: "1", price: "12" }]);
@@ -917,7 +920,7 @@ const cnB = await mkCn(R, invG, [{ productId: g, qty: "3", price: "30" }]);
   const n3 = await mkCn(R, invC2, [{ productId: c, qty: "1", price: "12" }]);
   await issueCn(R, n3.id);
   const dbl = await Promise.allSettled([returnGoods(R, n3.id, [{ lineId: n3.lines[0], quantity: 1 }]), returnGoods(R, n3.id, [{ lineId: n3.lines[0], quantity: 1 }])]);
-  check("a double click on one note: one return, the second refused by the line's cap (the note's row lock)",
+  check("two submissions on one note racing for its last unit: one return, the second refused by the line's cap (the note's row lock)",
     dbl.filter((o) => o.status === "fulfilled").length === 1 && dbl.filter((o) => o.status === "rejected" && isInventoryRefusal(o.reason)).length === 1 && await poolIs(c, 1, 1, "8.000"),
     JSON.stringify(dbl.map((o) => o.status)));
 }
@@ -977,6 +980,131 @@ const cnB = await mkCn(R, invG, [{ productId: g, qty: "3", price: "30" }]);
   const recR = await getInventoryReconciliation(R.id, R.currency);
   check("customer returns and their reversals: GL 1200 = valuation, integrity holds, nothing unattributed", recR.integrityOk && recR.reconciled, JSON.stringify(recR));
   check("…every entry the organization posted balances", (await unbalancedEntries(R)) === 0);
+}
+
+section("21. return requests: each line once, each submission once");
+type ReturnResult = Awaited<ReturnType<typeof returnGoods>>;
+const Q = await mkOrg("SAR");
+const pd = await mkProduct(Q, "REQ-D");
+const pr = await mkProduct(Q, "REQ-R");
+// Each sale issues 5 at a cost the pool no longer carries, so a return at the wrong cost shows: REQ-D 5 × 10.00 and
+// REQ-R 5 × 12.00 are received and sold (COGS 50.00 + 60.00); then 2 × 16.00 and 2 × 20.00 arrive, so the pools stand at
+// 2 / 32.00 (average 16.00) and 2 / 40.00 (average 20.00). GL 1200 = 72.00, 5000 = 110.00.
+await receive(Q, await mkPo(Q, [{ productId: pd, qty: "5", price: "10" }, { productId: pr, qty: "5", price: "12" }]));
+const invQD = await mkInvoice(Q, [{ productId: pd, qty: "5", price: "30" }]);
+await send(Q, invQD);
+const invQR = await mkInvoice(Q, [{ productId: pr, qty: "5", price: "30" }]);
+await send(Q, invQR);
+await receive(Q, await mkPo(Q, [{ productId: pd, qty: "2", price: "16" }, { productId: pr, qty: "2", price: "20" }]));
+const cnQR = await mkCn(Q, invQR, [{ productId: pr, qty: "3", price: "30" }]);
+const K1 = randomUUID();
+{
+  // D — the note credits 2 on one line; the request names that line twice, 2 each. Restocking 4 would over-return.
+  const cnD = await mkCn(Q, invQD, [{ productId: pd, qty: "2", price: "30" }]);
+  await issueCn(Q, cnD.id);
+  const lineD = cnD.lines[0];
+  const before = JSON.stringify({ pool: await poolOf(pd), g1200: await gl(Q, "1200"), g5000: await gl(Q, "5000") });
+  const now = async () => JSON.stringify({ pool: await poolOf(pd), g1200: await gl(Q, "1200"), g5000: await gl(Q, "5000") });
+  const dup = await refusalOf(() => returnGoods(Q, cnD.id, [{ lineId: lineD, quantity: 2 }, { lineId: lineD, quantity: 2 }]));
+  check("one line named twice in one request (2 + 2 on a line crediting 2) is refused — not 4 restocked; no movement, no entry, pool and GL unchanged",
+    !!dup && /more than once/.test(dup.message) && /أكثر من مرة/.test(dup.ar) && (await movements(Q, "credit_note", cnD.id)).length === 0
+      && (await returnEntries(Q, cnD.id)).length === 0 && (await now()) === before,
+    dup?.message ?? `no refusal — ${await now()}`);
+  const split = await refusalOf(() => returnGoods(Q, cnD.id, [{ lineId: lineD, quantity: 1 }, { lineId: String(lineD) as unknown as number, quantity: 1 }]));
+  check("…also when the two parts would fit the line together (1 + 1, the id once as text): each line is named once — nothing written",
+    !!split && /more than once/.test(split.message) && (await movements(Q, "credit_note", cnD.id)).length === 0 && (await now()) === before,
+    split?.message ?? `no refusal — ${await now()}`);
+  const okD = await returnGoods(Q, cnD.id, [{ lineId: lineD, quantity: 2 }]);
+  check("…the line named once: 2 back at the 10.00 the sale issued them at, not today's 16.00 — Dr 1200 20.00 / Cr 5000 20.00; REQ-D 4 / 52.00",
+    !okD.replayed && okD.units === 2 && eq(okD.cost, 20) && await poolIs(pd, 4, 4, "52.000"), JSON.stringify({ okD, pool: await poolOf(pd) }));
+
+  // E — two lines of REQ-D in one note, 2 each; 3 of the sale's 5 are left to come back.
+  const cnE = await mkCn(Q, invQD, [{ productId: pd, qty: "2", price: "30" }, { productId: pd, qty: "2", price: "30" }]);
+  await issueCn(Q, cnE.id);
+  const overE = await refusalOf(() => returnGoods(Q, cnE.id, [{ lineId: cnE.lines[0], quantity: 2 }, { lineId: cnE.lines[1], quantity: 2 }]));
+  check("invoice limit over the complete request: two lines asking 2 + 2 of a product when 3 of the sale's 5 are left is refused as a whole — neither line written",
+    !!overE && /asks for 4 of "Item REQ-D" \(REQ-D\) across its lines, but only 3/.test(overE.message) && (await movements(Q, "credit_note", cnE.id)).length === 0
+      && await poolIs(pd, 4, 4, "52.000"), overE?.message ?? "no refusal");
+  const okE = await returnGoods(Q, cnE.id, [{ lineId: cnE.lines[0], quantity: 2 }, { lineId: cnE.lines[1], quantity: 1 }]);
+  check("…2 + 1 fits: the sale's last 3 come back at exactly the 30.00 left of its 50.00 — REQ-D 7 / 82.00",
+    eq(okE.cost, 30) && okE.units === 3 && await poolIs(pd, 7, 7, "82.000"), JSON.stringify(await poolOf(pd)));
+}
+{
+  // R — 3 credited on one line; the sale issued 5 at 12.00 each, and the pool now averages 20.00.
+  await issueCn(Q, cnQR.id);
+  const lineR = cnQR.lines[0];
+  const first = await returnGoods(Q, cnQR.id, [{ lineId: lineR, quantity: 1 }], K1);
+  check("a partial return: 1 unit back at the 12.00 the sale issued it at (today's average is 20.00) — REQ-R 3 / 52.00",
+    !first.replayed && first.units === 1 && eq(first.cost, 12) && (await movements(Q, "credit_note", cnQR.id)).length === 1 && await poolIs(pr, 3, 3, "52.000"),
+    JSON.stringify({ first, pool: await poolOf(pr) }));
+  const again = await returnGoods(Q, cnQR.id, [{ lineId: lineR, quantity: "1" }], K1);
+  check("the identical request submitted again (the same submission key): the same return, not a second one — nothing written, the first result returned",
+    again.replayed && again.units === 1 && eq(again.cost, 12) && JSON.stringify(again.movementIds) === JSON.stringify(first.movementIds)
+      && (await movements(Q, "credit_note", cnQR.id)).length === 1 && (await returnEntries(Q, cnQR.id)).length === 1 && await poolIs(pr, 3, 3, "52.000"),
+    JSON.stringify({ again, pool: await poolOf(pr) }));
+  const changed = await refusalOf(() => returnGoods(Q, cnQR.id, [{ lineId: lineR, quantity: 2 }], K1));
+  check("…the same key with different quantities is refused, never merged or run again — nothing written",
+    !!changed && /already recorded with different quantities/.test(changed.message) && (await movements(Q, "credit_note", cnQR.id)).length === 1,
+    changed?.message ?? "no refusal");
+  const noKey = await refusalOf(() => db.transaction((tx) => returnCreditNoteGoods(tx, {
+    orgId: Q.id, userId: Q.user, baseCurrency: Q.currency, date: TODAY, creditNoteId: cnQR.id, requestKey: "", request: [{ lineId: lineR, quantity: 1 }],
+  })));
+  check("a request without a valid submission key is refused while the line still has room — nothing written",
+    !!noKey && /submission key/.test(noKey.message) && (await movements(Q, "credit_note", cnQR.id)).length === 1, noKey?.message ?? "no refusal");
+
+  // Concurrent duplicate submissions: one key, two requests at once.
+  const K2 = randomUUID();
+  const both = await Promise.allSettled([1, 2].map(() => returnGoods(Q, cnQR.id, [{ lineId: lineR, quantity: 1 }], K2)));
+  const answered = both.filter((o): o is PromiseFulfilledResult<ReturnResult> => o.status === "fulfilled").map((o) => o.value);
+  check("concurrent duplicate submissions (one key, two requests at once): both answer, exactly one return is recorded — the note's row lock queues the second, which finds the first",
+    answered.length === 2 && answered.filter((r) => r.replayed).length === 1 && (await movements(Q, "credit_note", cnQR.id)).length === 2
+      && (await returnEntries(Q, cnQR.id)).length === 2 && await poolIs(pr, 4, 4, "64.000"),
+    JSON.stringify(both.map((o) => (o.status === "fulfilled" ? { replayed: o.value.replayed, units: o.value.units } : String(o.reason)))));
+
+  // A later, deliberate delivery is a new submission.
+  const later = await returnGoods(Q, cnQR.id, [{ lineId: lineR, quantity: 1 }], randomUUID());
+  check("a later partial delivery is a new submission (a new key) and is recorded: the 3rd unit at 12.00 — REQ-R 5 / 76.00",
+    !later.replayed && eq(later.cost, 12) && (await returnEntries(Q, cnQR.id)).length === 3 && await poolIs(pr, 5, 5, "76.000"), JSON.stringify(await poolOf(pr)));
+  const fourth = await refusalOf(() => returnGoods(Q, cnQR.id, [{ lineId: lineR, quantity: 1 }], randomUUID()));
+  check("…and the line limit holds across submissions: a 4th unit on a line crediting 3 is refused", !!fourth && /credits 3, of which 3 already came back/.test(fourth.message),
+    fourth?.message ?? "no refusal");
+  const keys = (await pool.query("select request_key, count(*)::int n from inventory_movements where org_id=$1 and source_type='credit_note' and source_id=$2 group by 1 order by 1",
+    [Q.id, cnQR.id])).rows as { request_key: string | null; n: number }[];
+  check("…each recorded return carries the key it was submitted under — 3 keys, one movement each, none without a key",
+    keys.length === 3 && keys.every((k) => k.request_key !== null && k.n === 1) && keys.some((k) => k.request_key === K1) && keys.some((k) => k.request_key === K2), JSON.stringify(keys));
+}
+{
+  check("COGS reversed exactly: 5000 = 50.00 + 60.00 − 20.00 − 30.00 − 3 × 12.00 = 24.00; GL 1200 = 82.00 + 76.00 = 158.00",
+    eq(await gl(Q, "5000"), 24) && eq(await gl(Q, "1200"), 158), `${await gl(Q, "5000")} / ${await gl(Q, "1200")}`);
+  const recQ = await getInventoryReconciliation(Q.id, Q.currency);
+  check("…GL 1200 = valuation, integrity holds, nothing unattributed; every entry balances",
+    recQ.integrityOk && recQ.reconciled && (await unbalancedEntries(Q)) === 0, JSON.stringify(recQ));
+
+  // Tenant isolation: another organization's own return under the same key is its own; it cannot touch this one's.
+  const Z = await mkOrg("SAR");
+  const pz = await mkProduct(Z, "REQ-Z");
+  await receive(Z, await mkPo(Z, [{ productId: pz, qty: "2", price: "7" }]));
+  const invZ = await mkInvoice(Z, [{ productId: pz, qty: "2", price: "9" }]);
+  await send(Z, invZ);
+  const cnZ = await mkCn(Z, invZ, [{ productId: pz, qty: "1", price: "9" }]);
+  await issueCn(Z, cnZ.id);
+  const zr = await returnGoods(Z, cnZ.id, [{ lineId: cnZ.lines[0], quantity: 1 }], K1);
+  check("tenant isolation: another organization's return under the same key is its own submission — recorded at its own cost, not taken for this one's",
+    !zr.replayed && eq(zr.cost, 7) && await poolIs(pz, 1, 1, "7.000"), JSON.stringify(zr));
+  const cross = await refusalOf(() => returnGoods(Z, cnQR.id, [{ lineId: cnQR.lines[0], quantity: 1 }], K1));
+  check("…and it can neither replay nor read this one's: the note is not found in its organization — nothing written",
+    !!cross && /Credit note not found/.test(cross.message) && (await movements(Q, "credit_note", cnQR.id)).length === 3 && await poolIs(pr, 5, 5, "76.000"),
+    cross?.message ?? "no refusal");
+
+  // The wiring the browser cannot force: one key per opening of the dialog, sent with every submit of that
+  // opening; the action hands it to the posting and logs a return once, not on its replay.
+  const dialog = readFileSync(path.join(ROOT, "src/app/(app)/sales/credit-notes/cn-detail-actions.tsx"), "utf8");
+  const action = readFileSync(path.join(ROOT, "src/app/(app)/sales/credit-notes/actions.ts"), "utf8");
+  const actionBody = action.slice(action.indexOf("export async function returnCreditNoteGoodsAction("));
+  check("the return dialog makes a new submission key each time it opens and sends it with the request; the action passes it to the posting and logs only a first submission",
+    /onOpenChange=\{\(o\) => \{ setOpen\(o\); if \(o\) setRequestKey\(submissionKey\(\)\);/.test(dialog)
+      && /returnCreditNoteGoodsAction\(creditNoteId, request, requestKey\)/.test(dialog) && /crypto\.getRandomValues/.test(dialog)
+      && /creditNoteId, requestKey, request,/.test(actionBody) && /if \(!result\.replayed\) \{\n\s*await logActivity\(/.test(actionBody));
 }
 
 section("mixed scenarios");
