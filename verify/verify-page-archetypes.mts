@@ -109,6 +109,13 @@
  * its strength; content checks read it as it is. Group 18 proves the hunk is the route's only change and that the fix is
  * in place. Its pins change nothing.
  *
+ * ACC-01 (weighted-average inventory costing and COGS, after the integration) adds group 19. ACC-01 changes business logic
+ * by design — the invoice, receipt and return postings, the product actions, the schema, the dictionary, two source-type
+ * labels — in files this verifier freezes. Its hunks are recorded byte for byte in verify/acc01-approved-delta.mts:
+ * `rawRead` (and so `read`, `parse` and `frozen`) gives every older group those files with the hunks undone — main's
+ * bytes — and `walk` leaves out the four files ACC-01 added under src/, so every pin keeps its strength. Group 19 proves
+ * the hunks are each file's only change and the added files are as recorded. Its pins change nothing.
+ *
  * `--write-pins` recomputes verify/page-archetype-pins.json from the working tree. Only a stage that
  * deliberately re-baselines may run it, and the diff of that file is what its review reads.
  * docs/ui/dev-ui-01-7/c0-foundations-and-guardrails.md, docs/ui/dev-ui-01-7/c1-master-data-and-detail.md,
@@ -122,12 +129,16 @@ import { spawnSync } from "node:child_process";
 import path from "node:path";
 import ts from "typescript";
 import { createElement as h } from "react";
+import { ACC01_BASE, ACC01_EDITS, ACC01_NEW, acc01Drift, undoAcc01 } from "./acc01-approved-delta.mjs";
 import { renderToStaticMarkup } from "react-dom/server";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
 const PINS_FILE = "verify/page-archetype-pins.json";
 const WRITE = process.argv.includes("--write-pins");
-const rawRead = (p: string) => readFileSync(path.join(ROOT, p), "utf8");
+// ACC-01: every group reads the files ACC-01 changed as main left them — its recorded hunks undone (group 19 proves
+// they are each file's only change); `actualRead` is the file as it is on disk.
+const actualRead = (p: string) => readFileSync(path.join(ROOT, p), "utf8");
+const rawRead = (p: string) => undoAcc01(p, actualRead(p));
 // DEV-UI-01.7 C8 final: every group but 17 reads the four files the final batch changed as the approved remediation
 // (c47c65a) left them — their FIN_EDITS hunks undone — so each older pin keeps its strength; group 17 proves those hunks
 // are each file's only change and holds the files as they are to the product owner's financial display policy.
@@ -488,7 +499,8 @@ const MAIN_EDITS: Record<string, [string, string][]> = {
 };
 /** A file's bytes for a byte-identity hash: main's approved change undone (MAIN_EDITS), every other file as it is. */
 const frozen = (f: string): string | Buffer =>
-  f in MAIN_EDITS ? MAIN_EDITS[f].reduce((acc, [was, is]) => acc.replace(is, () => was), rawRead(f)) : readFileSync(path.join(ROOT, f));
+  f in MAIN_EDITS ? MAIN_EDITS[f].reduce((acc, [was, is]) => acc.replace(is, () => was), rawRead(f))
+    : f in ACC01_EDITS ? rawRead(f) : readFileSync(path.join(ROOT, f));
 
 let pass = 0;
 let fail = 0;
@@ -517,13 +529,13 @@ function parse(f: string): ts.SourceFile {
   }
   return sf;
 }
-/** Files under `dir`, repository-relative, sorted. */
+/** Files under `dir`, repository-relative, sorted — without the files ACC-01 added (group 19 holds those). */
 function walk(dir: string): string[] {
   const out: string[] = [];
   for (const name of readdirSync(path.join(ROOT, dir)).sort()) {
     const p = path.posix.join(dir, name);
     if (statSync(path.join(ROOT, p)).isDirectory()) out.push(...walk(p));
-    else out.push(p);
+    else if (!(p in ACC01_NEW)) out.push(p);
   }
   return out;
 }
@@ -3098,6 +3110,23 @@ const mainDrift = Object.keys(MAIN_EDITS).filter((f) => {
 check("Integration with main: the PDF route's one change since its business pin is PR #7's hunk (32702c3) — the print page rendered from PDF_RENDER_ORIGIN, trimmed and without a trailing slash, when it is set (the trusted loopback origin behind the TLS-terminating proxy, not the https://localhost:3200 NextRequest reports there), else from the request's origin — once, its earlier form nowhere; undone, the route is its business pin (6d3dc7899981d148) to the byte",
   same(Object.keys(MAIN_EDITS), [PDF_ROUTE]) && MAIN_EDITS[PDF_ROUTE].length === 1 && mainDrift.length === 0 && pins.business[PDF_ROUTE] === "6d3dc7899981d148",
   mainDrift.map(rel).join(" "));
+
+// ---------- 19. ACC-01 — the approved change to frozen business files ----------
+section("19. ACC-01 — weighted-average inventory costing (the approved change to frozen business files)");
+// Read as they are on disk: each changed file is main's plus exactly its recorded hunks, each added file as recorded.
+const accDrift = acc01Drift((f) => (existsSync(path.join(ROOT, f)) ? actualRead(f) : null));
+const accHunks = Object.values(ACC01_EDITS).flat().length;
+check(`ACC-01 changed its ${Object.keys(ACC01_EDITS).length} files (src/, and verify-document-form.mts for its own undo layer) by exactly their ${accHunks} recorded hunks — each once, its main form nowhere; undone, each file is main's (${ACC01_BASE.slice(0, 7)}) to the byte — and added exactly its ${Object.keys(ACC01_NEW).length} files under src/lib and src/db/schema, as recorded`,
+  accDrift.length === 0 && Object.keys(ACC01_EDITS).length === 18 && accHunks === 78 && Object.keys(ACC01_NEW).length === 4 &&
+    Object.keys(ACC01_NEW).every((f) => /^src\/(lib|db\/schema)\/[\w-]+\.ts$/.test(f)) &&
+    Object.keys(ACC01_EDITS).every((f) => f.startsWith("src/") || f === "verify/verify-document-form.mts"),
+  accDrift.map(rel).join(" "));
+// No file under src/ outside the record differs from main: every other file is in the older groups' byte-identity hashes
+// (groups 4, 16 and 17), and a new file the record does not list is caught there too — `walk` leaves out only ACC01_NEW.
+check("ACC-01 added no file under src/ but the recorded four (an unrecorded new file would sit in groups 16 and 17's src trees)",
+  walk("src").length + Object.keys(ACC01_NEW).length === (function all(d: string): number {
+    return readdirSync(path.join(ROOT, d)).reduce((n, name) => n + (statSync(path.join(ROOT, d, name)).isDirectory() ? all(path.posix.join(d, name)) : 1), 0);
+  })("src"));
 
 console.log("\nGroups:");
 for (const [g, [p, f]] of Object.entries(counts)) console.log(`  ${g}: ${p}/${p + f}`);
