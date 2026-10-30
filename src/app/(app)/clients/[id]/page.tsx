@@ -10,6 +10,7 @@ import { composeAddress, countryCodeByName } from "@/lib/geo/countries";
 import { getCountryProfile, resolveTaxLabels } from "@/lib/geo/country-profiles";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { SectionHeader } from "@/components/ui/section-header";
 import { ClientForm } from "../client-form";
 import { updateClientAction } from "../actions";
 import { ClientRecordActions } from "../client-record-actions";
@@ -53,27 +54,28 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
     <div className="max-w-6xl mx-auto">
       <PageHeader
         title={client.name}
-        description="Client profile"
-        actions={
-          <div className="flex items-center gap-2">
+        description={t(locale, "Client profile")}
+        meta={
+          <>
             <StatusBadge domain="active_flag" status={client.isActive ? "active" : "inactive"} locale={locale} />
             {client.recordState === "archived" && <StatusBadge domain="record_state" status="archived" locale={locale} />}
-            <ClientRecordActions client={client} locale={locale} />
-          </div>
+          </>
         }
+        actions={<ClientRecordActions client={client} locale={locale} />}
       />
 
-      <div className="grid grid-cols-3 gap-5">
-        <Card className="col-span-2">
+      {/* One column up to lg; from lg the form takes two thirds and the side cards one. */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        <Card className="lg:col-span-2">
           <CardContent className="pt-6">
-            <ClientForm locale={locale} client={client} action={updateClientAction.bind(null, client.id)} submitLabel="Save changes" taxOverrides={org} />
+            <ClientForm locale={locale} client={client} action={updateClientAction.bind(null, client.id)} submitLabel={t(locale, "Save changes")} taxOverrides={org} />
           </CardContent>
         </Card>
 
         <div className="flex flex-col gap-5">
         <Card>
           <CardHeader>
-            <CardTitle>{t(locale, "Details")}</CardTitle>
+            <CardTitle as="h2">{t(locale, "Details")}</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-2 text-[13px]">
             <div className="flex justify-between"><span className="text-ink-faint">{t(locale, "Client Type")}</span><span>{t(locale, client.clientType === "company" ? "Company" : "Individual")}</span></div>
@@ -85,11 +87,11 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
 
         <Card>
           <CardHeader>
-            <CardTitle>{t(locale, "Invoices")}</CardTitle>
+            <CardTitle as="h2">{t(locale, "Invoices")}</CardTitle>
           </CardHeader>
           <CardContent>
             {invoices.length === 0 ? (
-              <p className="text-xs text-ink-faint">No invoices yet.</p>
+              <p className="text-xs text-ink-faint">{t(locale, "No invoices yet.")}</p>
             ) : (
               <div className="flex flex-col gap-2">
                 {invoices.map((inv) => (
@@ -107,7 +109,7 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
 
       {/* Statement of account for this client — same component the central statement page uses. */}
       <div className="mt-6">
-        <div className="main-head"><h3>{t(locale, "Statement of Account")}</h3></div>
+        <SectionHeader level={2} title={t(locale, "Statement of Account")} className="mb-4" />
         <StatementView locale={locale} kind="client" partyId={client.id} compact initial={clientStatement} />
       </div>
     </div>

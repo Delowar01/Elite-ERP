@@ -29,7 +29,7 @@ export function EInvoicePreviewPanel({
   return (
     <div className="card einvoice-panel" style={variant === "create" ? { position: "static", maxWidth: "100%", padding: 18 } : undefined}>
       <div className="eh">
-        <h4>{variant === "create" ? t(locale, "Tax Invoice QR preview") : t(locale, "Tax Invoice QR")}</h4>
+        <h2>{variant === "create" ? t(locale, "Tax Invoice QR preview") : t(locale, "Tax Invoice QR")}</h2>
       </div>
       <div className="desc">
         {variant === "create"

@@ -98,9 +98,9 @@ for (const [css, sel, label] of [
 // ---------- 6. representative code/ID call sites keep the code face ----------
 const app = (p: string) => read(`src/app/(app)/${p}`);
 const CODE_SITES: [string, RegExp, string][] = [
-  ["sales/invoices/[id]/page.tsx", /<h3 className="mono">\{invoice\.invoiceNumber\}<\/h3>/, "invoice number heading"],
+  ["sales/invoices/[id]/page.tsx", /<h1 className="mono">\{invoice\.invoiceNumber\}<\/h1>/, "invoice number heading"],
   ["sales/invoices/invoices-list-client.tsx", /className="hover:text-brand-orange font-mono">/, "invoice number link in list"],
-  ["purchasing/orders/[id]/page.tsx", /<h3 className="mono">\{po\.poNumber\}<\/h3>/, "PO number heading"],
+  ["purchasing/orders/[id]/page.tsx", /<h1 className="mono">\{po\.poNumber\}<\/h1>/, "PO number heading"],
   ["inventory/products/page.tsx", /<TableCell className="font-mono text-xs">\{p\.sku\}<\/TableCell>/, "product SKU"],
   ["clients/client-form.tsx", /id="vatNumber"[^>]*className="font-mono"/, "client VAT number input"],
   ["sales/_shared/party-card.tsx", /<span className="font-mono">\{selected\.vatNumber\}<\/span>/, "party VAT number"],

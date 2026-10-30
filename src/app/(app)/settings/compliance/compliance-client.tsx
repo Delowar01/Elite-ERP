@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
+import { PageHeader } from "@/components/layout/page-header";
+import { SectionHeader } from "@/components/ui/section-header";
 import { t, type Locale } from "@/lib/i18n/dict";
 import { useConfirm } from "../../_shared/confirm-provider";
 import { recordConsentAction, exportOrgDataAction, anonymizeCustomerAction, deleteConsentAction } from "./actions";
@@ -185,22 +187,21 @@ export function ComplianceCenterClient(props: {
 
   return (
     <div className="max-w-5xl mx-auto">
-      <div className="main-head">
-        <h3>{t(locale, "Security & Compliance Readiness")}</h3>
-      </div>
+      <PageHeader
+        title={t(locale, "Security & Compliance Readiness")}
+        description={t(locale, "An internal checklist of what this build implements. It is not a certification: no external audit has been carried out, and no framework compliance is claimed.")}
+      />
 
       {/* Readiness groups. Deliberately NO "n/n" success badge: a full-marks badge is the visual
           claim that drifted into certification theatre, and it can come back through a data change
           rather than a wording change. Each control carries its own honest state instead. */}
-      <p className="text-[12.5px] text-ink-muted mb-4">
-        {t(locale, "An internal checklist of what this build implements. It is not a certification: no external audit has been carried out, and no framework compliance is claimed.")}
-      </p>
+      <SectionHeader level={2} title={t(locale, "Readiness checklist")} className="mb-3" />
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         {groups.map((g) => (
           <div key={g.name} className="card" style={{ padding: "18px 20px" }}>
             <div className="flex items-center gap-2 mb-1">
               <FileCheck2 className="size-4" style={{ color: "var(--brand-orange)" }} />
-              <span className="text-[14px] font-bold">{t(locale, g.name)}</span>
+              <h3 className="text-[14px] font-bold">{t(locale, g.name)}</h3>
             </div>
             <p className="text-[11.5px] text-ink-faint mb-3">{t(locale, g.note)}</p>
             <ul className="flex flex-col gap-2">
@@ -224,7 +225,7 @@ export function ComplianceCenterClient(props: {
 
       {/* GDPR data subject rights */}
       <div className="card" style={{ padding: "20px 22px", marginBottom: 18 }}>
-        <div className="text-[14px] font-bold mb-1">{t(locale, "Data Subject Rights")}</div>
+        <SectionHeader level={2} title={t(locale, "Data Subject Rights")} className="mb-1" />
         <p className="text-[12.5px] text-ink-muted mb-4">
           {t(locale, "Export all personal data held by your organization, or erase an individual's personal data on request.")}
         </p>
@@ -235,7 +236,7 @@ export function ComplianceCenterClient(props: {
             </Button>
           </div>
           <div className="flex-1" />
-          <div className="flex items-end gap-2">
+          <div className="flex flex-wrap items-end gap-2">
             <div className="flex flex-col gap-1.5">
               <label htmlFor="erase-customer" className="text-[12px] font-medium text-ink-muted">{t(locale, "Erase customer data")}</label>
               {/* Shared Select primitive (DEV-UI-01.4); "" = nothing chosen, shown as the placeholder. */}
@@ -259,9 +260,9 @@ export function ComplianceCenterClient(props: {
 
       {/* Consent management */}
       <div className="card" style={{ padding: "20px 22px", marginBottom: 18 }}>
-        <div className="text-[14px] font-bold mb-1">{t(locale, "Consent Management")}</div>
+        <SectionHeader level={2} title={t(locale, "Consent Management")} className="mb-1" />
         <p className="text-[12.5px] text-ink-muted mb-4">{t(locale, "Record and track data-processing consent for this account.")}</p>
-        <div className="flex items-end gap-2 mb-4">
+        <div className="flex flex-wrap items-end gap-2 mb-4">
           <div className="flex flex-col gap-1.5">
             <label htmlFor="consent-subject" className="text-[12px] font-medium text-ink-muted">{t(locale, "Subject")}</label>
             <Select value={consentSubject} onValueChange={setConsentSubject}>

@@ -136,9 +136,9 @@ export function CnForm({
     <div className="max-w-4xl mx-auto">
       <div className="doc-titlebar">
         <div>
-          <h3>
+          <h1>
             <FileMinus2 className="size-5" style={{ color: "var(--brand-orange)" }} /> {t(locale, isEdit ? "Edit Credit Note" : "Create Credit Note")}
-          </h3>
+          </h1>
           <div className="sub">{t(locale, isEdit ? "Edit this draft document." : "Issue a credit against a sent invoice — posts Dr Sales Revenue + Dr VAT Payable, Cr Accounts Receivable.")}</div>
         </div>
         <DocTopActions locale={locale} busy={pendingDraft || pendingPrimary} onSaveDraft={() => submit(false)} onPreview={() => setPreviewOpen(true)} dirty={dirtyForm.dirty} />

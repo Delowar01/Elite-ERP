@@ -57,7 +57,7 @@ export default async function DcDetailPage({ params }: { params: Promise<{ id: s
     <div className="max-w-4xl mx-auto">
       <div className="inv-head">
         <div>
-          <h3 className="mono">{dc.dcNumber}</h3>
+          <h1 className="mono">{dc.dcNumber}</h1>
           <div className="inv-sub">
             {(dc.sourceSoNumber || dc.sourceInvoiceNumber) && `${t(locale, "Converted From")} ${dc.sourceSoNumber ?? dc.sourceInvoiceNumber} · `}
             {org.name} → {dc.customerName}

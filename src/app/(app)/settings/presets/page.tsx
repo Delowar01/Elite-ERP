@@ -28,6 +28,7 @@ import { ExchangeRatesPanel, type LatestRate } from "./exchange-rates-panel";
 import { getLocale } from "@/lib/i18n/server";
 import { t } from "@/lib/i18n/dict";
 import { tenantScope } from "@/lib/tenant";
+import { PageHeader } from "@/components/layout/page-header";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { SimplePresetPanel } from "./simple-preset-panel";
 import { NoteTemplatesPanel } from "./note-templates-panel";
@@ -168,9 +169,7 @@ export default async function PresetsPage() {
 
   return (
     <div className="max-w-5xl mx-auto">
-      <div className="main-head">
-        <h3>{t(locale, "Presets")}</h3>
-      </div>
+      <PageHeader title={t(locale, "Presets")} />
 
       <Tabs defaultValue="tax-rates">
         <TabsList>

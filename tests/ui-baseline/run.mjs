@@ -9,6 +9,7 @@
  *   node tests/ui-baseline/run.mjs capture-controls [--out=D]  the DEV-UI-01.4 control gallery (controls-states.mjs)
  *   node tests/ui-baseline/run.mjs capture-lists [--out=D]  the DEV-UI-01.5 list / data-table states (list-states.mjs)
  *   node tests/ui-baseline/run.mjs capture-documents [--out=D]  the DEV-UI-01.6 document editor / detail states (document-states.mjs)
+ *   node tests/ui-baseline/run.mjs capture-archetypes [--out=D]  the DEV-UI-01.7 page-archetype states (archetype-states.mjs)
  *
  * Flags: --skip-build (reuse .next — only when it was built from the current tree), --only=<substr>.
  *
@@ -32,6 +33,7 @@ import { STAFF_EMAIL, shellMatrix } from "./shell-states.mjs";
 import { controlsMatrix } from "./controls-states.mjs";
 import { listMatrix, SAVED_VIEW_FIXTURE } from "./list-states.mjs";
 import { documentMatrix, DOC_ACTIONS } from "./document-states.mjs";
+import { archetypeMatrix, ARCH_ACTIONS, alignDatabaseTimestamps } from "./archetype-states.mjs";
 import { IsolationError, RUN_DB, TEMPLATE_DB, adminUrl, dbUrl, describe, serverEnv } from "./isolation.mjs";
 
 const ROOT = resolve(new URL("../..", import.meta.url).pathname);
@@ -252,7 +254,7 @@ const SHELL_ACTIONS = {
 };
 
 // ------------------------------------------------------------------------------------- capture
-async function capture(outDir, shell = false, lists = false, docs = false) {
+async function capture(outDir, shell = false, lists = false, docs = false, arch = false) {
   if (!existsSync(PASSWORD_FILE)) {
     console.error("✗ no seeded template — run `prepare` first");
     process.exit(2);
@@ -291,6 +293,10 @@ async function capture(outDir, shell = false, lists = false, docs = false) {
     await Promise.all([lp.waitForURL(`${BASE}/dashboard`, { timeout: 30000 }), lp.click('button[type="submit"]')]);
     const storageState = await loginCtx.storageState();
     await loginCtx.close();
+    // Audit stamps the database wrote with its own clock (this login's session and event, the seeded
+    // defaults, the owner's password date) are moved to the frozen instant in this run's TEST-ONLY
+    // copy — the Security page prints some of them (archetype-states.mjs).
+    if (arch) await alignDatabaseTimestamps(env.DATABASE_URL);
 
     // Shell states also need a Staff session: a Staff member is added to this run's TEST-ONLY copy
     // (never the template), sharing the owner's synthetic password.
@@ -349,7 +355,7 @@ async function capture(outDir, shell = false, lists = false, docs = false) {
     }
 
     const only = value("only");
-    const states = (docs ? documentMatrix() : lists ? listMatrix() : shell ? shellMatrix() : matrix()).filter((s) => !only || s.id.includes(only));
+    const states = (arch ? archetypeMatrix() : docs ? documentMatrix() : lists ? listMatrix() : shell ? shellMatrix() : matrix()).filter((s) => !only || s.id.includes(only));
     let n = 0;
     for (const s of states) {
       n++;
@@ -388,24 +394,24 @@ async function capture(outDir, shell = false, lists = false, docs = false) {
         };
       });
       if (s.action) {
-        await (docs ? DOC_ACTIONS : lists ? LIST_ACTIONS : SHELL_ACTIONS)[s.action](page, s);
-        if (lists || docs) await page.waitForTimeout(250); // let Radix settle (transitions are reduced)
+        await (arch ? ARCH_ACTIONS : docs ? DOC_ACTIONS : lists ? LIST_ACTIONS : SHELL_ACTIONS)[s.action](page, s);
+        if (lists || docs || arch) await page.waitForTimeout(250); // let Radix settle (transitions are reduced)
         await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
       }
       const file = join(outDir, `${s.id}.png`);
-      await page.screenshot({ path: file, fullPage: docs ? s.full : !shell && !lists, animations: "disabled", caret: "hide", scale: "css" });
+      await page.screenshot({ path: file, fullPage: docs || arch ? s.full : !shell && !lists, animations: "disabled", caret: "hide", scale: "css" });
       const png = readFileSync(file);
       manifest.states[s.id] = {
         route: s.route.path,
         area: s.route.area,
-        ...(shell || lists || docs ? { action: s.action, role: s.role, cookies: s.cookies } : {}),
-        ...(docs ? { fullPage: s.full } : {}),
+        ...(shell || lists || docs || arch ? { action: s.action, role: s.role, cookies: s.cookies } : {}),
+        ...(docs || arch ? { fullPage: s.full } : {}),
         locale: s.locale,
         theme: s.theme,
         viewport: `${s.viewport.width}x${s.viewport.height}`,
         status: resp?.status() ?? null,
         finalPath: new URL(page.url()).pathname,
-        redirected: new URL(page.url()).pathname !== s.route.path,
+        redirected: new URL(page.url()).pathname !== s.route.path.split("?")[0], // archetype routes carry a query
         horizontalOverflowPx: Math.max(0, facts.scrollWidth - facts.clientWidth),
         ...facts,
         consoleErrors,
@@ -654,6 +660,7 @@ try {
   else if (cmd === "capture-shell") await capture(resolve(value("out") ?? join(WORK, "captures/shell-latest")), true);
   else if (cmd === "capture-lists") await capture(resolve(value("out") ?? join(WORK, "captures/lists-latest")), false, true);
   else if (cmd === "capture-documents") await capture(resolve(value("out") ?? join(WORK, "captures/documents-latest")), false, false, true);
+  else if (cmd === "capture-archetypes") await capture(resolve(value("out") ?? join(WORK, "captures/archetypes-latest")), false, false, false, true);
   else if (cmd === "capture-controls") await captureControls(resolve(value("out") ?? join(WORK, "captures/controls-latest")));
   else if (cmd === "compare") process.exit((await compare(resolve(positional[0]), resolve(positional[1]))) === 0 ? 0 : 1);
   else if (cmd === "check") {
@@ -661,7 +668,7 @@ try {
     await capture(out);
     process.exit((await compare(BASELINE_DIR, out)) === 0 ? 0 : 1);
   } else {
-    console.error("usage: run.mjs prepare | capture [--out=DIR] | capture-shell [--out=DIR] | capture-controls [--out=DIR] | capture-lists [--out=DIR] | capture-documents [--out=DIR] | compare A B | check   [--skip-build] [--only=substr]");
+    console.error("usage: run.mjs prepare | capture [--out=DIR] | capture-shell [--out=DIR] | capture-controls [--out=DIR] | capture-lists [--out=DIR] | capture-documents [--out=DIR] | capture-archetypes [--out=DIR] | compare A B | check   [--skip-build] [--only=substr]");
     process.exit(2);
   }
 } catch (e) {

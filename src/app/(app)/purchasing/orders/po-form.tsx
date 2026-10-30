@@ -187,9 +187,9 @@ export function PoForm({
     <div className="max-w-5xl mx-auto">
       <div className="doc-titlebar">
         <div>
-          <h3>
+          <h1>
             <ShoppingCart className="size-5" style={{ color: "var(--brand-orange)" }} /> {t(locale, isEdit ? "Edit Purchase Order" : "Create Purchase Order")}
-          </h3>
+          </h1>
           <div className="sub">{t(locale, isEdit ? "Edit this draft document." : "Order stock from a vendor — receiving posts to inventory and accounts payable.")}</div>
         </div>
         <DocTopActions locale={locale} busy={pendingDraft || pendingPrimary} onSaveDraft={() => submit(false)} onPreview={() => setPreviewOpen(true)} dirty={dirtyForm.dirty} />

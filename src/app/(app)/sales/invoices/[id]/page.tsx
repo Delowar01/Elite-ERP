@@ -140,7 +140,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
       {relNodes.length > 1 && <DocRelationships locale={locale} nodes={relNodes} currentLabel="Invoice" />}
       <div className="inv-head">
         <div>
-          <h3 className="mono">{invoice.invoiceNumber}</h3>
+          <h1 className="mono">{invoice.invoiceNumber}</h1>
           <div className="inv-sub">
             {t(locale, "Issue Date")} {invoice.issueDate}
             {invoice.dueDate ? ` · ${t(locale, "Due Date")} ${invoice.dueDate}` : ""}

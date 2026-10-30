@@ -152,9 +152,9 @@ export function ProformaForm({
     <div className="max-w-5xl mx-auto">
       <div className="doc-titlebar">
         <div>
-          <h3>
+          <h1>
             <FileCheck2 className="size-5" style={{ color: "var(--brand-orange)" }} /> {t(locale, isEdit ? "Edit Proforma Invoice" : "Create Proforma Invoice")}
-          </h3>
+          </h1>
           <div className="sub">{t(locale, isEdit ? "Edit this draft document." : "A preview invoice for client reference — never posts revenue or affects stock.")}</div>
         </div>
         <DocTopActions locale={locale} busy={pendingDraft || pendingPrimary} onSaveDraft={() => submit(false)} onPreview={() => setPreviewOpen(true)} dirty={dirtyForm.dirty} />

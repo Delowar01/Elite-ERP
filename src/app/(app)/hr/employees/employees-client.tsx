@@ -6,7 +6,10 @@ import Link from "next/link";
 import { Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { t, type Locale } from "@/lib/i18n/dict";
-import { statusLabel, statusTextClass } from "@/lib/status-registry";
+import { statusStat } from "@/lib/status-registry";
+import { PageHeader } from "@/components/layout/page-header";
+import { EmptyState } from "@/components/ui/empty-state";
+import { StatRow } from "../../sales/_shared/stat-row";
 
 export type EmployeeCardRow = {
   id: number;
@@ -56,51 +59,41 @@ export function EmployeesClient({
 
   return (
     <div className="max-w-6xl mx-auto">
-      <div className="main-head">
-        <h3>{t(locale, "Employees")}</h3>
-        <Link href="/hr/employees/new" className="btn btn-primary" style={{ width: "auto", padding: "0 18px" }}>
-          <Plus className="size-3.5" /> {t(locale, "Add Employee")}
-        </Link>
-      </div>
+      <PageHeader
+        title={t(locale, "Employees")}
+        actions={
+          <Link href="/hr/employees/new" className="btn btn-primary" style={{ width: "auto", padding: "0 18px" }}>
+            <Plus className="size-3.5" /> {t(locale, "Add Employee")}
+          </Link>
+        }
+      />
 
+      {/* Department filter: real toggle buttons — Tab reaches each, Enter / Space choose it, the chosen one is
+          aria-pressed — on the same .tab row. Filtering is unchanged. */}
       <div className="tab-row">
-        <span className={cn("tab", activeDept === null && "active")} onClick={() => setActiveDept(null)}>
+        <button type="button" className={cn("tab", activeDept === null && "active")} aria-pressed={activeDept === null} onClick={() => setActiveDept(null)}>
           {t(locale, "All departments")}
-        </span>
+        </button>
         {departments.map((d) => (
-          <span key={d.id} className={cn("tab", activeDept === d.id && "active")} onClick={() => setActiveDept(d.id)}>
+          <button key={d.id} type="button" className={cn("tab", activeDept === d.id && "active")} aria-pressed={activeDept === d.id} onClick={() => setActiveDept(d.id)}>
             {d.name}
-          </span>
+          </button>
         ))}
       </div>
 
-      <div className="stat-row-2">
-        <div className="card" style={{ padding: "16px 18px" }}>
-          <div style={{ fontSize: 11.5, color: "var(--ink-muted)" }}>{t(locale, "Headcount")}</div>
-          <div style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 20, marginTop: 4 }}>{rows.length}</div>
-        </div>
-        <div className="card" style={{ padding: "16px 18px" }}>
-          <div style={{ fontSize: 11.5, color: "var(--ink-muted)" }}>{t(locale, "Present today")}</div>
-          <div className={statusTextClass("attendance", "present")} style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 20, marginTop: 4 }}>
-            {presentToday}
-          </div>
-        </div>
-        <div className="card" style={{ padding: "16px 18px" }}>
-          <div style={{ fontSize: 11.5, color: "var(--ink-muted)" }}>{statusLabel(locale, "attendance", "on_leave")}</div>
-          <div className={statusTextClass("attendance", "on_leave")} style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 20, marginTop: 4 }}>
-            {onLeaveToday}
-          </div>
-        </div>
-        <div className="card" style={{ padding: "16px 18px" }}>
-          <div style={{ fontSize: 11.5, color: "var(--ink-muted)" }}>{t(locale, "Departments")}</div>
-          <div style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 20, marginTop: 4 }}>{departments.length}</div>
-        </div>
-      </div>
+      {/* Present and On Leave are attendance statuses: label, tone and colour come from the status registry
+          (statusStat), Present keeping its "Present today" wording. Headcount and Departments are plain counts. */}
+      <StatRow
+        items={[
+          { label: t(locale, "Headcount"), value: rows.length },
+          { ...statusStat(locale, "attendance", "present", presentToday), label: t(locale, "Present today") },
+          statusStat(locale, "attendance", "on_leave", onLeaveToday),
+          { label: t(locale, "Departments"), value: departments.length },
+        ]}
+      />
 
       {rows.length === 0 ? (
-        <div className="rounded-2xl border border-line bg-surface shadow-elevated py-12 text-center text-ink-muted text-sm">
-          {t(locale, "No employees yet. Add your first employee.")}
-        </div>
+        <EmptyState message={t(locale, "No employees yet. Add your first employee.")} />
       ) : (
         <div className="emp-grid">
           {filtered.map((r) => {

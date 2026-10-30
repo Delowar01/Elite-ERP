@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { SectionHeader } from "@/components/ui/section-header";
 import { CropImageUpload } from "@/components/upload/crop-image-upload";
 import { CROP_SEAL, CROP_SIGNATURE } from "@/components/upload/crop-configs";
 import { t, type Locale } from "@/lib/i18n/dict";
@@ -79,7 +80,7 @@ export function SealSignaturePresetPanel({ locale, org, assets }: { locale: Loca
   return (
     <div className="flex flex-col gap-6 max-w-3xl">
       <div>
-        <h3 className="text-[17px] font-bold">{t(locale, "Seal & Signature")}</h3>
+        <SectionHeader level={2} title={t(locale, "Seal & Signature")} />
         <p className="text-[12.5px] text-ink-muted mt-1">
           {t(locale, "Upload seals and signatures, then choose a default for each document type. Changing a default only affects new documents — already-saved documents keep the seal and signature they were saved with.")}
         </p>

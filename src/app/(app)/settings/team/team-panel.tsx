@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { FormField } from "@/components/ui/form-field";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { SectionHeader } from "@/components/ui/section-header";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -96,7 +97,7 @@ export function TeamPanel({
 
   return (
     <div className="flex flex-col gap-4">
-      <h3 className="text-[17px] font-bold">{t(locale, "Team")}</h3>
+      <SectionHeader level={2} title={t(locale, "Team")} />
       <Table density="compact">
         <TableHeader>
           <TableRow>

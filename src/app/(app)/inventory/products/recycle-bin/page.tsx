@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { t } from "@/lib/i18n/dict";
 import { getLocale } from "@/lib/i18n/server";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
-import { Card, CardContent } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
 import { ArrowLeft } from "lucide-react";
 import { ProductRecycleBinActions } from "../recycle-bin-actions";
 
@@ -24,21 +24,19 @@ export default async function ProductRecycleBinPage() {
   return (
     <div className="max-w-6xl mx-auto">
       <PageHeader
-        title="Products — Recycle Bin"
-        description="Deleted products live here until restored or permanently deleted."
+        title={t(locale, "Products — Recycle Bin")}
+        description={t(locale, "Deleted products live here until restored or permanently deleted.")}
         actions={
           <Button variant="outline" asChild>
             <Link href="/inventory/products">
-              <ArrowLeft className="size-4" /> Back to Products
+              <ArrowLeft className="size-4 rtl:rotate-180" /> {t(locale, "Back to Products")}
             </Link>
           </Button>
         }
       />
 
       {deleted.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center text-ink-muted text-sm">{t(locale, "Recycle Bin is empty.")}</CardContent>
-        </Card>
+        <EmptyState message={t(locale, "Recycle Bin is empty.")} />
       ) : (
         <Table list>
           <TableHeader>

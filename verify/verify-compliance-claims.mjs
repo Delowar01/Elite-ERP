@@ -96,7 +96,11 @@ await p.goto(`${BASE}/dashboard`, { waitUntil: "networkidle" });
 await p.waitForTimeout(400);
 const dash = await p.locator("body").innerText();
 ok("dashboard does NOT claim 'Your data is encrypted'", !dash.includes("Your data is encrypted"));
-ok("dashboard says what is actually encrypted", dash.includes("Encrypted connection, encrypted credentials"));
+ok(
+  "dashboard removes the Secure & Reliable security marketing copy (DEV-UI-01.7 C6, D-4)",
+  !dash.includes("Secure & Reliable") &&
+    !dash.includes("Encrypted connection, encrypted credentials"),
+);
 
 await b.close(); await pool.end();
 console.log(`\n${fail === 0 ? "ALL PASSED" : fail + " CHECK(S) FAILED"}`);

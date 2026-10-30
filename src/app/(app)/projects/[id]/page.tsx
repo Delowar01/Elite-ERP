@@ -23,7 +23,11 @@ import { tenantScope } from "@/lib/tenant";
 import { t } from "@/lib/i18n/dict";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
+import { PageHeader } from "@/components/layout/page-header";
+import { SectionHeader } from "@/components/ui/section-header";
+import { EmptyState } from "@/components/ui/empty-state";
 import { resolveCurrencyMark, displayCurrency, formatMoneyNumber } from "@/lib/currency/currencies";
+import { StatRow } from "../../sales/_shared/stat-row";
 import { KanbanBoard } from "./kanban-board";
 import { LogTimeDialog } from "./log-time-dialog";
 import { ProjectStatusSelect } from "./project-status-select";
@@ -132,13 +136,13 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
 
   return (
     <div className="max-w-6xl mx-auto">
-      <div className="main-head">
-        <h3>{project.name}</h3>
-        <div className="flex items-center gap-3">
-          <span className="org-pill">{pillParts.join(" · ")}</span>
-          <ProjectStatusSelect locale={locale} projectId={project.id} status={project.status} />
-        </div>
-      </div>
+      {/* The project's name is the page's one h1; the status / budget pill is meta and the status select an
+          action, both outside it. */}
+      <PageHeader
+        title={project.name}
+        meta={<span className="org-pill">{pillParts.join(" · ")}</span>}
+        actions={<ProjectStatusSelect locale={locale} projectId={project.id} status={project.status} />}
+      />
       {(project.clientName || project.startDate || project.endDate || project.description) && (
         <div className="text-[12.5px] text-ink-muted -mt-3 mb-5 flex flex-wrap gap-x-4">
           {project.clientName && (
@@ -160,40 +164,41 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
         </div>
       )}
 
-      <div className="stat-row-2" style={{ gridTemplateColumns: "repeat(2, 1fr)", maxWidth: 520 }}>
-        <div className="card" style={{ padding: "16px 18px" }}>
-          <div style={{ fontSize: 11.5, color: "var(--ink-muted)" }}>{t(locale, "Budget")}</div>
-          <div style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 20, marginTop: 4 }}>
-            {project.budget ? <Money amount={project.budget} context="summary" /> : "—"}
-          </div>
-        </div>
-        <div className="card" style={{ padding: "16px 18px" }}>
-          <div style={{ fontSize: 11.5, color: "var(--ink-muted)" }}>
-            {t(locale, "Tasks")} · {costControl.labourEstimate.hours.toFixed(1)} {t(locale, "Hours logged").toLowerCase()}
-          </div>
-          <div style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 20, marginTop: 4 }}>{tasks.length}</div>
-        </div>
+      {/* Budget and tasks: plain values, two across (at every width, D-6), in the summary's 520px. */}
+      <div className="max-w-[520px]">
+        <StatRow
+          columns={2}
+          items={[
+            { label: t(locale, "Budget"), value: project.budget ? <Money amount={project.budget} context="summary" /> : "—" },
+            {
+              label: `${t(locale, "Tasks")} · ${costControl.labourEstimate.hours.toFixed(1)} ${t(locale, "Hours logged").toLowerCase()}`,
+              value: tasks.length,
+            },
+          ]}
+        />
       </div>
 
       <ProjectCostControlSection locale={locale} data={costControl} />
 
       <KanbanBoard locale={locale} projectId={project.id} tasks={tasks} employees={employees} />
 
-      <div className="main-head" style={{ marginTop: 22 }}>
-        <h3 style={{ fontSize: 15 }}>{t(locale, "Time logged this week")}</h3>
-        {employees.length > 0 && tasks.length > 0 ? (
-          <LogTimeDialog locale={locale} tasks={tasks.map((task) => ({ id: task.id, title: task.title }))} employees={employees} />
-        ) : null}
-      </div>
+      <SectionHeader
+        level={2}
+        title={t(locale, "Time logged this week")}
+        actions={
+          employees.length > 0 && tasks.length > 0 ? (
+            <LogTimeDialog locale={locale} tasks={tasks.map((task) => ({ id: task.id, title: task.title }))} employees={employees} />
+          ) : null
+        }
+        className="mt-[22px] mb-[22px]"
+      />
       {employees.length === 0 && (
         <p className="text-[12px] text-ink-faint -mt-2 mb-3">
           {t(locale, "Time logging needs at least one employee — the People module ships in a later section.")}
         </p>
       )}
       {timeLogs.length === 0 ? (
-        <div className="rounded-2xl border border-line bg-surface shadow-elevated py-8 text-center text-ink-muted text-sm">
-          {t(locale, "No time logged yet.")}
-        </div>
+        <EmptyState message={t(locale, "No time logged yet.")} />
       ) : (
         <Table>
           <TableHeader>
@@ -202,7 +207,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
               <TableHead>{t(locale, "Task")}</TableHead>
               <TableHead>{t(locale, "Employee")}</TableHead>
               <TableHead>{t(locale, "Billable")}</TableHead>
-              <TableHead className="text-right">{t(locale, "Hours")}</TableHead>
+              <TableHead numeric>{t(locale, "Hours")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -214,20 +219,18 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                 <TableCell>
                   <Badge variant={log.billable ? "success" : "neutral"}>{t(locale, log.billable ? "Yes" : "No")}</Badge>
                 </TableCell>
-                <TableCell className="text-right num-tabular">{Number(log.hours).toFixed(1)}</TableCell>
+                <TableCell numeric className="num-tabular">{Number(log.hours).toFixed(1)}</TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
       )}
 
-      <div className="main-head" style={{ marginTop: 22 }}>
-        <h3 style={{ fontSize: 15 }}>{t(locale, "Linked Documents")}</h3>
-      </div>
+      <SectionHeader level={2} title={t(locale, "Linked Documents")} className="mt-[22px] mb-[22px]" />
       {linkedDocs.length === 0 ? (
-        <div className="rounded-2xl border border-line bg-surface shadow-elevated py-8 text-center text-ink-muted text-sm">
-          {t(locale, "No documents tagged to this project yet. Pick this project in the Project field when creating a quotation, sales order, or invoice.")}
-        </div>
+        <EmptyState
+          message={t(locale, "No documents tagged to this project yet. Pick this project in the Project field when creating a quotation, sales order, or invoice.")}
+        />
       ) : (
         <Table>
           <TableHeader>
@@ -235,7 +238,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
               <TableHead>{t(locale, "Type")}</TableHead>
               <TableHead>{t(locale, "Number")}</TableHead>
               <TableHead>{t(locale, "Date")}</TableHead>
-              <TableHead className="text-right">{t(locale, "Amount")}</TableHead>
+              <TableHead numeric>{t(locale, "Amount")}</TableHead>
               <TableHead>{t(locale, "Status")}</TableHead>
             </TableRow>
           </TableHeader>
@@ -249,7 +252,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                   </Link>
                 </TableCell>
                 <TableCell className="num-tabular text-xs">{d.date}</TableCell>
-                <TableCell className="text-right num-tabular">
+                <TableCell numeric className="num-tabular">
                   <Money amount={d.total} />
                 </TableCell>
                 <TableCell className="text-[12.5px] text-ink-muted">{statusLabel(locale, d.domain, d.status)}</TableCell>

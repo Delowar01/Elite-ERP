@@ -69,9 +69,9 @@ export function RecycleBinClient({ locale, rows, isOwner }: { locale: Locale; ro
   return (
     <div className="max-w-6xl mx-auto">
       <div className="main-head flex items-center justify-between mb-[22px]">
-        <h3 className="text-[19px] font-bold flex items-center gap-2">
+        <h1 className="text-[19px] font-bold flex items-center gap-2">
           <Trash2 className="size-5" style={{ color: "var(--brand-orange)" }} /> {t(locale, "Recycle Bin")}
-        </h3>
+        </h1>
       </div>
 
       <p className="text-body-sm text-ink-muted mb-4 flex items-center gap-1.5">

@@ -39,10 +39,9 @@ export default async function ClientsPage({
 
   return (
     <div className="max-w-6xl mx-auto">
-      {/* flex-wrap: at 390px the three header actions move below the heading instead of pushing the page
-          wider than the viewport (PageHeader itself is frozen; it already takes a className). */}
+      {/* At 390px the three header actions wrap below the heading (PageHeader wraps by itself since
+          DEV-UI-01.7 C1; this page no longer passes flex-wrap). */}
       <PageHeader
-        className="flex-wrap"
         title={t(locale, "Clients")}
         description={t(locale, "Customer directory used across quotations, orders, and invoices.")}
         actions={

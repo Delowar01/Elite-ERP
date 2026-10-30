@@ -10,6 +10,8 @@ import { FormField } from "@/components/ui/form-field";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
+import { PageHeader } from "@/components/layout/page-header";
+import { EmptyState } from "@/components/ui/empty-state";
 import { t, type Locale } from "@/lib/i18n/dict";
 import { requestLeaveAction, approveLeaveAction, rejectLeaveAction } from "./actions";
 
@@ -76,17 +78,17 @@ export function LeaveClient({
 
   return (
     <div className="max-w-6xl mx-auto">
-      <div className="main-head">
-        <h3>{t(locale, "Leave Requests")}</h3>
-        <Button onClick={() => setOpen(true)} disabled={employees.length === 0} style={{ padding: "0 18px" }}>
-          <Plus className="size-3.5" /> {t(locale, "Request Leave")}
-        </Button>
-      </div>
+      <PageHeader
+        title={t(locale, "Leave Requests")}
+        actions={
+          <Button onClick={() => setOpen(true)} disabled={employees.length === 0} style={{ padding: "0 18px" }}>
+            <Plus className="size-3.5" /> {t(locale, "Request Leave")}
+          </Button>
+        }
+      />
 
       {rows.length === 0 ? (
-        <div className="rounded-2xl border border-line bg-surface shadow-elevated py-12 text-center text-ink-muted text-sm">
-          {t(locale, "No leave requests yet.")}
-        </div>
+        <EmptyState message={t(locale, "No leave requests yet.")} />
       ) : (
         <Table list>
           <TableHeader>

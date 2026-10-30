@@ -304,7 +304,14 @@ const party = code(read(SH + "party-card.tsx"));
 check("party cards: Button empty state, pencils named with the party", !/btn btn-primary/.test(party) && /<Button type="button" onClick=\{\(\) => setCreateOpen\(true\)\}>/.test(party) &&
   /const openLabel = selected \? `\$\{t\(locale, "Edit"\)\} \$\{selected\.name\}` : t\(locale, "Edit"\);/.test(party) && /: \$\{name\}`;/.test(party) &&
   /title=\{openLabel\} aria-label=\{openLabel\}/.test(party) && /title=\{editLabel\} aria-label=\{editLabel\}/.test(party));
-check("document headings left for DEV-UI-01.7 (editor titles stay h3)", FORMS.every((f) => /<h3>/.test(formSrc[f])));
+// DEV-UI-01.7 C7 (D-3): the hand-off above ("editor titles stay h3") reached its planned expiry. Each editor's title is
+// its page's one h1, first in the titlebar, its icon and Create / Edit title inside; no h3 title is left. Its CSS twin
+// carries the h3 rule's declarations exactly (the h3 rule stays), so the title looks as it did.
+const TITLE_H1 = /<div className="doc-titlebar">\s*<div>\s*<h1>\s*<[A-Z]\w* className="size-5" style=\{\{ color: "var\(--brand-orange\)" \}\} \/> \{t\(locale, isEdit \? "Edit [^"]+" : "Create [^"]+"\)\}\s*<\/h1>\s*<div className="sub">/;
+check("document headings (DEV-UI-01.7 C7): every editor's title is a real h1 in .doc-titlebar — its icon and Create / Edit title inside, exactly one h1 and no h2–h6 in the form, no h3 title left",
+  FORMS.every((f) => TITLE_H1.test(formSrc[f]) && (formSrc[f].match(/<h1[\s>]/g) ?? []).length === 1 && !/<h[2-6][\s>]/.test(formSrc[f])), FORMS.filter((f) => !TITLE_H1.test(formSrc[f])).map(short).join(" "));
+check("document heading twins (DEV-UI-01.7 C7): .doc-titlebar h1, .inv-head h1 and .einvoice-panel h2 carry exactly the declarations of the h3 / h4 rules they twin, which stay",
+  [[".doc-titlebar h1", ".doc-titlebar h3"], [".inv-head h1", ".inv-head h3"], [".einvoice-panel h2", ".einvoice-panel h4"]].every(([twin, rule]) => rules(rule) !== "" && rules(twin) === rules(rule)));
 
 const FOCUS_SELECTORS = [".item-name-input", ".item-cell-input", ".doc-totals-card .t-row.discount .v input", ".item-del-btn", ".doc-add-item-btn", ".doc-pill-btn",
   ".rte-editable", ".doc-term-input", ".doc-form-error"];

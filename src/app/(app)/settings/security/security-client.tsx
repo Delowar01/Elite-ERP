@@ -9,6 +9,9 @@ import { Input } from "@/components/ui/input";
 import { FormField } from "@/components/ui/form-field";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
+import { PageHeader } from "@/components/layout/page-header";
+import { SectionHeader } from "@/components/ui/section-header";
+import { EmptyState } from "@/components/ui/empty-state";
 import { t, type Locale } from "@/lib/i18n/dict";
 import {
   beginMfaSetupAction,
@@ -137,20 +140,22 @@ export function SecurityCenterClient(props: {
 
   return (
     <div className="max-w-5xl mx-auto">
-      <div className="main-head">
-        <h3>{t(locale, "Security Center")}</h3>
-        {props.isAdmin && (
-          <span className="pill" style={{ background: risk.bg, color: risk.color, fontWeight: 700 }}>
-            {t(locale, "Risk")}: {t(locale, risk.label)}
-          </span>
-        )}
-      </div>
+      <PageHeader
+        title={t(locale, "Security Center")}
+        meta={
+          props.isAdmin && (
+            <span className="pill" style={{ background: risk.bg, color: risk.color, fontWeight: 700 }}>
+              {t(locale, "Risk")}: {t(locale, risk.label)}
+            </span>
+          )
+        }
+      />
 
       {/* Threat alerts */}
       {props.isAdmin && props.alerts.length > 0 && (
         <div className="flex flex-col gap-2 mb-6">
           {props.alerts.map((a, i) => (
-            <div key={i} className="flex items-start gap-3 rounded-xl border border-line bg-surface p-4 shadow-elevated" style={{ borderLeft: `3px solid ${a.severity === "high" || a.severity === "critical" ? "var(--crit)" : "var(--warn)"}` }}>
+            <div key={i} className="flex items-start gap-3 rounded-xl border border-line bg-surface p-4 shadow-elevated" style={{ borderInlineStart: `3px solid ${a.severity === "high" || a.severity === "critical" ? "var(--crit)" : "var(--warn)"}` }}>
               <AlertTriangle className="size-4 mt-0.5" style={{ color: a.severity === "high" || a.severity === "critical" ? "var(--crit)" : "var(--warn)" }} />
               <div>
                 <div className="text-[13.5px] font-semibold">{a.title}</div>
@@ -184,7 +189,7 @@ export function SecurityCenterClient(props: {
           <div className="flex items-center gap-3">
             {props.mfaEnabled ? <ShieldCheck className="size-5" style={{ color: "var(--good)" }} /> : <ShieldAlert className="size-5" style={{ color: "var(--warn)" }} />}
             <div>
-              <div className="text-[14px] font-bold">{t(locale, "Two-Factor Authentication")}</div>
+              <h2 className="text-[14px] font-bold">{t(locale, "Two-Factor Authentication")}</h2>
               <div className="text-[12.5px] text-ink-muted">
                 {props.mfaEnabled
                   ? t(locale, "Enabled — a code from your authenticator app is required at sign-in.")
@@ -211,7 +216,7 @@ export function SecurityCenterClient(props: {
         <div className="flex items-center gap-3 mb-4">
           <KeyRound className="size-5" style={{ color: "var(--brand-orange)" }} />
           <div>
-            <div className="text-[14px] font-bold">{t(locale, "Password")}</div>
+            <h2 className="text-[14px] font-bold">{t(locale, "Password")}</h2>
             <div className="text-[12.5px] text-ink-muted">
               {props.passwordChangedAt ? `${t(locale, "Last changed")} ${fmtDateTime(props.passwordChangedAt)}` : t(locale, "Change your password")}
             </div>
@@ -233,14 +238,18 @@ export function SecurityCenterClient(props: {
       </div>
 
       {/* Active sessions */}
-      <div className="main-head" style={{ marginTop: 8 }}>
-        <h3 style={{ fontSize: 15 }}>{t(locale, "Active Sessions")}</h3>
-        {props.sessions.length > 1 && (
-          <Button variant="secondary" size="sm" disabled={pending} onClick={logoutAll}>
-            <LogOut className="size-3.5" /> {t(locale, "Log out all other devices")}
-          </Button>
-        )}
-      </div>
+      <SectionHeader
+        level={2}
+        title={t(locale, "Active Sessions")}
+        actions={
+          props.sessions.length > 1 && (
+            <Button variant="secondary" size="sm" disabled={pending} onClick={logoutAll}>
+              <LogOut className="size-3.5" /> {t(locale, "Log out all other devices")}
+            </Button>
+          )
+        }
+        className="mt-2 mb-[22px]"
+      />
       <Table density="compact">
         <TableHeader>
           <TableRow>
@@ -280,11 +289,9 @@ export function SecurityCenterClient(props: {
       {/* Security timeline (admins) */}
       {props.isAdmin && (
         <>
-          <div className="main-head" style={{ marginTop: 26 }}>
-            <h3 style={{ fontSize: 15 }}>{t(locale, "Security Timeline")}</h3>
-          </div>
+          <SectionHeader level={2} title={t(locale, "Security Timeline")} className="mt-[26px] mb-[22px]" />
           {props.events.length === 0 ? (
-            <div className="rounded-2xl border border-line bg-surface shadow-elevated py-8 text-center text-ink-muted text-sm">{t(locale, "No security events yet.")}</div>
+            <EmptyState message={t(locale, "No security events yet.")} />
           ) : (
             <Table density="compact">
               <TableHeader>

@@ -25,7 +25,7 @@ export default async function NewClientPage() {
       <PageHeader title={t(locale, "New Client")} description={t(locale, "Add a client to bill and quote against.")} />
       <Card>
         <CardContent className="pt-6">
-          <ClientForm locale={locale} action={createClientAction} submitLabel="Create Client" defaultCountryCode={defaultCountryCode} taxOverrides={org} />
+          <ClientForm locale={locale} action={createClientAction} submitLabel={t(locale, "Create Client")} defaultCountryCode={defaultCountryCode} taxOverrides={org} />
         </CardContent>
       </Card>
     </div>

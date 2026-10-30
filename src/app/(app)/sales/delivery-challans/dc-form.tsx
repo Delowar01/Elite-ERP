@@ -117,9 +117,9 @@ export function DcForm({
     <div className="max-w-4xl mx-auto">
       <div className="doc-titlebar">
         <div>
-          <h3>
+          <h1>
             <Truck className="size-5" style={{ color: "var(--brand-orange)" }} /> {t(locale, isEdit ? "Edit Delivery Challan" : "Create Delivery Challan")}
-          </h3>
+          </h1>
           <div className="sub">{t(locale, isEdit ? "Edit this draft document." : "Dispatch stock to a client — logistics only, no pricing or ledger impact.")}</div>
         </div>
         <DocTopActions locale={locale} busy={pendingDraft || pendingPrimary} onSaveDraft={() => submit(false)} onPreview={() => setPreviewOpen(true)} dirty={dirtyForm.dirty} />

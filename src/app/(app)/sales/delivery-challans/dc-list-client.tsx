@@ -69,7 +69,7 @@ export function DcListClient({
   return (
     <div className="max-w-6xl mx-auto">
       <div className="flex items-center justify-between mb-[22px]">
-        <h3 className="text-[19px] font-bold">{t(locale, "Delivery Challans")}</h3>
+        <h1 className="text-[19px] font-bold">{t(locale, "Delivery Challans")}</h1>
       </div>
 
       <StatRow
