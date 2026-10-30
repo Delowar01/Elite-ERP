@@ -256,8 +256,11 @@ check("PO baseTotal = total", p1.base_total === "2300.000", String(p1.base_total
 check("PO baseTaxAmount = taxTotal", p1.base_tax_amount === "300.000", String(p1.base_tax_amount));
 check("PO basePaidAmount initialised to zero", p1.base_paid_amount === "0.000", String(p1.base_paid_amount));
 const pEntries = await entriesFor(A.org, "purchase_order", poBase);
-check("PO posting: Dr Inventory 2300.000 / Cr AP 2300.000",
-  line(pEntries[0], "1200")?.debit === "2300.000" && line(pEntries[0], "2000")?.credit === "2300.000",
+// ACC-01: VAT is recoverable input tax, not inventory cost — the receipt capitalises the net (the old expectation,
+// Dr Inventory 2300.000, was the defect: VAT carried into stock and, from there, into cost of sales).
+check("PO posting: Dr Inventory 2000.000 (net) / Dr VAT 300.000 / Cr AP 2300.000",
+  line(pEntries[0], "1200")?.debit === "2000.000" && line(pEntries[0], "2100")?.debit === "300.000" &&
+    line(pEntries[0], "2000")?.credit === "2300.000" && pEntries[0]?.lines.length === 3,
   JSON.stringify(pEntries[0]?.lines));
 await checkLedgerBalanced(A.org, "after base PO receive");
 
@@ -280,8 +283,9 @@ check("the RECEIPT date's rate (3.80, today's best) — NOT the order date's 3.7
 check("PO baseTotal = 1150 × 3.80 = 4370.00", p3.base_total === "4370.000", String(p3.base_total));
 check("PO baseTaxAmount = 570.00", p3.base_tax_amount === "570.000", String(p3.base_tax_amount));
 const puEntries = await entriesFor(A.org, "purchase_order", poUsd);
-check("USD PO posts in BASE: Dr Inventory 4370.000 / Cr AP 4370.000",
-  line(puEntries[0], "1200")?.debit === "4370.000" && line(puEntries[0], "2000")?.credit === "4370.000",
+check("USD PO posts in BASE: Dr Inventory 3800.000 (net) / Dr VAT 570.000 / Cr AP 4370.000",
+  line(puEntries[0], "1200")?.debit === "3800.000" && line(puEntries[0], "2100")?.debit === "570.000" &&
+    line(puEntries[0], "2000")?.credit === "4370.000" && puEntries[0]?.lines.length === 3,
   JSON.stringify(puEntries[0]?.lines));
 await checkLedgerBalanced(A.org, "after foreign PO receive");
 
@@ -441,8 +445,11 @@ check("base-currency DN issued", d1.status === "issued", d1.status);
 check("DN identity rate stored", Number(d1.exchange_rate) === 1, String(d1.exchange_rate));
 check("DN baseTotal = total", d1.base_total === "460.000", String(d1.base_total));
 const dnE = (await entriesFor(A.org, "debit_note", dnBase))[0];
-check("DN entry: Dr AP 460.000 / Cr Inventory 460.000",
-  line(dnE, "2000")?.debit === "460.000" && line(dnE, "1200")?.credit === "460.000", JSON.stringify(dnE?.lines));
+// ACC-01: the note's VAT goes back to 2100, and its one line is free text (no product), so it is not stock — it comes
+// back out of 5100, where a non-stock purchase line is expensed. No inventory line, no stock movement.
+check("DN entry: Dr AP 460.000 / Cr 5100 400.000 (a free-text line is not stock) / Cr VAT 60.000 — no inventory line",
+  line(dnE, "2000")?.debit === "460.000" && line(dnE, "5100")?.credit === "400.000" && line(dnE, "2100")?.credit === "60.000" &&
+    !line(dnE, "1200") && dnE?.lines.length === 3, JSON.stringify(dnE?.lines));
 await checkLedgerBalanced(A.org, "after base DN issue");
 
 // ---- foreign DN INHERITS the PO's receipt rate (3.80), ignoring the note date's (3.75) ----
@@ -457,8 +464,9 @@ check("USD DN inherits the PURCHASE ORDER's stored rate 3.80 — the note date's
 check("DN baseTotal = 230 × 3.80 = 874.00", d2.base_total === "874.000", String(d2.base_total));
 check("DN baseTaxAmount = 114.00", d2.base_tax_amount === "114.000", String(d2.base_tax_amount));
 const dnuE = (await entriesFor(A.org, "debit_note", dnUsd))[0];
-check("USD DN posts in BASE: Dr AP 874.000 / Cr Inventory 874.000",
-  line(dnuE, "2000")?.debit === "874.000" && line(dnuE, "1200")?.credit === "874.000", JSON.stringify(dnuE?.lines));
+check("USD DN posts in BASE: Dr AP 874.000 / Cr 5100 760.000 / Cr VAT 114.000",
+  line(dnuE, "2000")?.debit === "874.000" && line(dnuE, "5100")?.credit === "760.000" && line(dnuE, "2100")?.credit === "114.000" &&
+    dnuE?.lines.length === 3, JSON.stringify(dnuE?.lines));
 check("…and NO 4900 line", !line(dnuE, "4900"), JSON.stringify(dnuE?.lines));
 await checkLedgerBalanced(A.org, "after foreign DN issue");
 
@@ -482,8 +490,9 @@ await A.page.waitForTimeout(2000);
 const dnRevEntries = await entriesFor(A.org, "debit_note", dnUsd);
 check("DN reversal added exactly one entry", dnRevEntries.length === 2, `n=${dnRevEntries.length}`);
 const dnR = dnRevEntries[1];
-check("DN reversal mirrors stored figures: Cr AP 874.000 / Dr Inventory 874.000 (no rate consulted)",
-  line(dnR, "2000")?.credit === "874.000" && line(dnR, "1200")?.debit === "874.000", JSON.stringify(dnR?.lines));
+check("DN reversal mirrors stored figures: Cr AP 874.000 / Dr 5100 760.000 / Dr VAT 114.000 (no rate consulted)",
+  line(dnR, "2000")?.credit === "874.000" && line(dnR, "5100")?.debit === "760.000" && line(dnR, "2100")?.debit === "114.000" &&
+    dnR?.lines.length === 3, JSON.stringify(dnR?.lines));
 await checkLedgerBalanced(A.org, "after DN reversal");
 
 // ================= Org B: BHD base (3 decimals) =================
