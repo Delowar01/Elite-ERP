@@ -19,23 +19,30 @@
 //   8. numbers / RTL — logical end for document numbers; detail line tables on Table `numeric`
 //   9. boundaries    — business logic, server actions, dirty-form, print / PDF, shell, DB byte-identical;
 //                      submit bodies, dirty snapshots and the line-item shape identical to the baseline
+//
+// ACC-01 (weighted-average inventory costing) changes posting code and the schema that group 9 pins, by design. Its
+// hunks are recorded byte for byte in verify/acc01-approved-delta.mts; every check here reads those files with the
+// hunks undone (main's bytes) and leaves the files ACC-01 added out of the directory pins, so each pin keeps its
+// strength, and one check proves the hunks are each file's only change.
 
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { join } from "node:path";
 import ts from "typescript";
 import { t as translate } from "../src/lib/i18n/dict";
+import { ACC01_EDITS, ACC01_NEW, acc01Drift, undoAcc01 } from "./acc01-approved-delta.mjs";
 
 const results: [boolean, string, string][] = [];
 const check = (name: string, cond: boolean, extra = "") => results.push([cond, name, extra]);
 const ROOT = new URL("..", import.meta.url).pathname;
-const read = (p: string) => readFileSync(join(ROOT, p), "utf8");
+const actualRead = (p: string) => readFileSync(join(ROOT, p), "utf8");
+const read = (p: string) => undoAcc01(p, actualRead(p));
 const A = "src/app/(app)/";
 const SH = A + "sales/_shared/";
 /** Source without comments, so a check never matches its own explanation. */
 const code = (s: string) => s.replace(/\{\/\*[\s\S]*?\*\/\}/g, "").replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/.*$/gm, "$1");
 const h16 = (s: string | Buffer) => createHash("sha256").update(s).digest("hex").slice(0, 16);
-const sha = (p: string) => h16(readFileSync(join(ROOT, p)));
+const sha = (p: string) => (p in ACC01_EDITS ? h16(read(p)) : h16(readFileSync(join(ROOT, p))));
 const css = read(A + "mockup-parity.css").replace(/\/\*[\s\S]*?\*\//g, "");
 function rules(sel: string) {
   const out: string[] = [];
@@ -333,16 +340,19 @@ const PINS = JSON.parse(read("verify/document-form-pins.json")) as Record<string
 const fileDrift = Object.entries(PINS).filter(([p, hsh]) => !p.endsWith("/**") && sha(p) !== hsh).map(([p]) => p);
 function dirHash(dir: string) {
   const files: string[] = [];
-  const walk = (d: string) => { for (const f of readdirSync(join(ROOT, d))) { const p = join(d, f); if (statSync(join(ROOT, p)).isDirectory()) walk(p); else files.push(p); } };
+  const walk = (d: string) => { for (const f of readdirSync(join(ROOT, d))) { const p = join(d, f); if (statSync(join(ROOT, p)).isDirectory()) walk(p); else if (!(p in ACC01_NEW)) files.push(p); } };
   walk(dir);
   const hh = createHash("sha256");
-  for (const f of files.sort()) { hh.update(f + "\0"); hh.update(readFileSync(join(ROOT, f))); }
+  for (const f of files.sort()) { hh.update(f + "\0"); hh.update(f in ACC01_EDITS ? read(f) : readFileSync(join(ROOT, f))); }
   return hh.digest("hex").slice(0, 16);
 }
 const dirDrift = Object.entries(PINS).filter(([p, hsh]) => p.endsWith("/**") && dirHash(p.slice(0, -3)) !== hsh.split(" ")[0]).map(([p]) => p);
 check("protected files byte-identical (lifecycle, posting, status registry, column config, sanitizer, editor maths, server actions, dirty-form, list logic, dropdown, preview body, shell.css, lockfile)",
   fileDrift.length === 0 && Object.keys(PINS).length >= 40, fileDrift.join(" "));
 check("protected directories byte-identical (currency, PDF, print, layout, db, drizzle)", dirDrift.length === 0, dirDrift.join(" "));
+const accDrift = acc01Drift((f) => { try { return actualRead(f); } catch { return null; } });
+check("ACC-01's approved change: each recorded file is main's plus exactly its hunks, each added file as recorded (verify/acc01-approved-delta.mts)",
+  accDrift.length === 0 && Object.keys(ACC01_EDITS).length > 0, accDrift.join(" "));
 const SUBMIT: Record<string, string> = {
   "sales/quotations/quotation-form.tsx": "9bdada8919ca1c68", "sales/orders/order-form.tsx": "5878b69222c20ecc", "sales/proforma/proforma-form.tsx": "298ddfd557fa4b5b",
   "sales/invoices/invoice-form.tsx": "9ac743493b5e4887", "sales/delivery-challans/dc-form.tsx": "b43736b93681d299", "sales/credit-notes/cn-form.tsx": "6e40556ff6eda6e1",

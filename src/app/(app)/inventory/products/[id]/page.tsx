@@ -12,6 +12,7 @@ import { ProductForm } from "../product-form";
 import { updateProductAction } from "../actions";
 import { AdjustStockDialog } from "../adjust-stock-dialog";
 import { ProductRecordActions } from "../product-record-actions";
+import { Money } from "../../../sales/_shared/money";
 
 export default async function ProductDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await requireSession();
@@ -48,7 +49,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         <Card className="lg:col-span-2">
           <CardContent className="pt-6">
-            <ProductForm product={product} action={updateProductAction.bind(null, product.id)} submitLabel={t(locale, "Save changes")} />
+            <ProductForm product={product} action={updateProductAction.bind(null, product.id)} submitLabel={t(locale, "Save changes")} locale={locale} />
           </CardContent>
         </Card>
 
@@ -62,7 +63,32 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
               <div className="font-display font-extrabold text-2xl mt-1">{product.quantityOnHand}</div>
               <div className="text-xs text-ink-faint mt-0.5">{t(locale, "Reorder level")}: {product.reorderLevel}</div>
             </div>
-            <AdjustStockDialog productId={product.id} currentQty={product.quantityOnHand} />
+            {/* ACC-01: the weighted-average pool, from the product's own running state. */}
+            {product.itemType === "service" ? (
+              <p className="text-xs text-ink-faint">{t(locale, "A service carries no stock.")}</p>
+            ) : (
+              <>
+                <dl className="flex flex-wrap gap-x-6 gap-y-3">
+                  <div className="min-w-0">
+                    <dt className="text-[11px] text-ink-faint uppercase tracking-wide">{t(locale, "Average cost")}</dt>
+                    <dd className="mt-0.5 font-semibold">
+                      {product.valuedQuantity > 0 ? <Money amount={Number(product.stockValue) / product.valuedQuantity} /> : "—"}
+                    </dd>
+                  </div>
+                  <div className="min-w-0">
+                    <dt className="text-[11px] text-ink-faint uppercase tracking-wide">{t(locale, "Stock value")}</dt>
+                    <dd className="mt-0.5 font-semibold"><Money amount={product.stockValue} /></dd>
+                  </div>
+                </dl>
+                {product.quantityOnHand !== product.valuedQuantity && (
+                  <p role="note" className="text-xs text-warning">
+                    {t(locale, "Units without a recorded cost")}: <span className="num">{product.quantityOnHand - product.valuedQuantity}</span>.{" "}
+                    {t(locale, "They predate inventory valuation; selling them posts no cost of goods sold.")}
+                  </p>
+                )}
+                <AdjustStockDialog productId={product.id} currentQty={product.quantityOnHand} locale={locale} />
+              </>
+            )}
           </CardContent>
         </Card>
       </div>

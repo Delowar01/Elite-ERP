@@ -186,16 +186,21 @@ export function creditNoteLines(args: {
 }
 
 /**
- * The debit note's lines: Dr Accounts Payable / Cr Inventory. Two lines of the same figure, so it
- * balances by construction. No FX parameter, for the same reason as above.
+ * The debit note's lines: Dr Accounts Payable for the note's whole base total, against the
+ * `otherSide` — ACC-01's split of the same figure (the note's VAT back to 2100, its stock lines at
+ * the value they leave inventory, its non-stock lines back out of expense, any purchase-price
+ * variance), which must sum to `baseTotal`. Without `otherSide` the whole figure credits inventory:
+ * the shape of a note with no VAT whose lines are all stock, relieved at the credited value. No FX
+ * parameter, for the same reason as above.
  */
 export function debitNoteLines(args: {
   baseTotal: string;
   apAccountId: number;
   inventoryAccountId: number;
+  otherSide?: { accountId: number; debit: string; credit: string }[];
 }): { accountId: number; debit: string; credit: string }[] {
   return [
     { accountId: args.apAccountId, debit: args.baseTotal, credit: "0" },
-    { accountId: args.inventoryAccountId, debit: "0", credit: args.baseTotal },
+    ...(args.otherSide ?? [{ accountId: args.inventoryAccountId, debit: "0", credit: args.baseTotal }]),
   ];
 }

@@ -20,6 +20,9 @@ import { settlementOf } from "@/lib/settlement";
 import {
   activeAllocationTotal, creditNoteReleaseAmount, releaseAllocations, reverseReleasesOfCause,
 } from "@/lib/advance-allocations";
+import { getLocale } from "@/lib/i18n/server";
+import { isInventoryRefusal, refusalText } from "@/lib/inventory-costing";
+import { returnCreditNoteGoods, reverseCreditNoteReturns } from "@/lib/credit-note-returns";
 
 export type ActionResult = {
   error?: string;
@@ -412,7 +415,21 @@ export async function reverseCreditNoteAction(creditNoteId: number): Promise<Act
   // No chart-of-accounts lookup: the reversal mirrors the issue entry's own lines (FX-6), so the
   // accounts come from what was actually posted, and the stored conversion cannot be re-derived.
 
-  await db.transaction(async (tx) => {
+  const reversed = await db.transaction(async (tx) => {
+    // ACC-01: the lifecycle decision again, under the note's row lock — two clicks on Reverse could
+    // both pass the check above, and a second reversal would post the mirror (and take any returned
+    // goods out of stock) twice. The lock is also the one a goods return against this note takes.
+    const noteLock = await tx.execute(sql`select status from credit_notes where id = ${cn.id} and org_id = ${session.orgId} for update`);
+    const again = evaluate("credit_note", (noteLock.rows as unknown as { status: string }[])[0]?.status ?? "", "reverse");
+    if (!again.allowed) return { error: again.reason } as const;
+
+    // Goods this note returned to stock go back out — before anything else is written, so a shortfall
+    // refuses the whole reversal.
+    const goods = await reverseCreditNoteReturns(tx, {
+      orgId: session.orgId, userId: session.userId, baseCurrency: session.orgCurrency,
+      date: new Date().toISOString().slice(0, 10), creditNote: { id: cn.id, creditNoteNumber: cn.creditNoteNumber },
+    });
+
     const [posting] = await tx
       .select({ id: journalEntriesTable.id })
       .from(journalEntriesTable)
@@ -493,15 +510,68 @@ export async function reverseCreditNoteAction(creditNoteId: number): Promise<Act
         }).status })
         .where(eq(salesInvoicesTable.id, cn.sourceInvoiceId));
     }
+    return { goodsReversed: goods.reversed } as const;
+  }).catch(async (e) => {
+    // ACC-01: the goods this note returned are no longer all in stock — nothing was written.
+    if (isInventoryRefusal(e)) return { error: refusalText(e, await getLocale()) } as const;
+    throw e;
   });
+  if ("error" in reversed) return { error: reversed.error };
 
-  await logActivity(session, { type: "credit_note.reversed", description: `Reversed credit note ${cn.creditNoteNumber} — posted reversing entry and restored invoice balance`, entityType: "credit_note", entityId: creditNoteId });
+  await logActivity(session, {
+    type: "credit_note.reversed",
+    description: reversed.goodsReversed > 0
+      ? `Reversed credit note ${cn.creditNoteNumber} — posted reversing entry, restored invoice balance and took its returned goods back out of stock`
+      : `Reversed credit note ${cn.creditNoteNumber} — posted reversing entry and restored invoice balance`,
+    entityType: "credit_note",
+    entityId: creditNoteId,
+  });
   revalidatePath(PATH);
   revalidatePath(`/sales/credit-notes/${creditNoteId}`);
   revalidatePath(`/sales/invoices/${cn.sourceInvoiceId}`);
   revalidatePath("/finance/chart-of-accounts");
   revalidatePath("/finance/ledger");
   revalidatePath("/finance/reports");
+  revalidatePath("/inventory/products");
   revalidatePath("/dashboard");
+  return {};
+}
+
+/**
+ * ACC-01 — goods the customer physically returned, back into stock against an issued credit note.
+ * The note itself stays financial; this is the explicit return, line by line and in as many parts
+ * as the goods arrive: each unit at the cost the invoice issued it at, that cost back out of cost
+ * of goods sold (see returnCreditNoteGoods). The same gate as issuing and reversing a credit note.
+ */
+export async function returnCreditNoteGoodsAction(creditNoteId: number, request: { lineId: number; quantity: string }[], requestKey: string): Promise<ActionResult> {
+  const session = await requireSession();
+  let result;
+  try {
+    result = await db.transaction((tx) => returnCreditNoteGoods(tx, {
+      orgId: session.orgId, userId: session.userId, baseCurrency: session.orgCurrency,
+      date: new Date().toISOString().slice(0, 10), creditNoteId, requestKey, request,
+    }));
+  } catch (e) {
+    // Over-return, a line named twice, a draft or reversed note, a line that is not stock, a reused
+    // submission key with other quantities — nothing was written.
+    if (isInventoryRefusal(e)) return { error: refusalText(e, await getLocale()) };
+    throw e;
+  }
+
+  // A replay (the same submission again — a double click, a retry) wrote nothing: it is answered as the
+  // first time was, and logged once, by the first time.
+  if (!result.replayed) {
+    await logActivity(session, {
+      type: "credit_note.goods_returned",
+      description: `Returned ${result.units} unit(s) to stock against credit note ${result.creditNoteNumber} at their issued cost`,
+      entityType: "credit_note",
+      entityId: creditNoteId,
+    });
+  }
+  revalidatePath(`/sales/credit-notes/${creditNoteId}`);
+  revalidatePath("/inventory/products");
+  revalidatePath("/finance/chart-of-accounts");
+  revalidatePath("/finance/ledger");
+  revalidatePath("/finance/reports");
   return {};
 }

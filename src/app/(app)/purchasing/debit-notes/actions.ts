@@ -5,7 +5,7 @@ import { sanitizeIfHtml } from "@/lib/sanitize-html";
 import { normalizeDocumentTerms, type DocumentTerm } from "../../sales/_shared/document-terms";
 import { redirect } from "next/navigation";
 import { and, eq, sql, isNull } from "drizzle-orm";
-import { db, debitNotesTable, debitNoteItemsTable, purchaseOrdersTable, productsTable, accountsTable, journalEntriesTable, journalLinesTable } from "@/db";
+import { db, debitNotesTable, debitNoteItemsTable, purchaseOrdersTable, accountsTable } from "@/db";
 import { requireSession } from "@/lib/session";
 import { logActivity } from "@/lib/activity";
 import { nextDocumentNumber } from "@/lib/documents";
@@ -14,7 +14,10 @@ import { snapshotSealForDoc } from "@/lib/doc-seal";
 import { snapshotDocumentBankAccounts } from "@/lib/document-bank-data";
 import { computeTotals, type LineItemInput } from "../../sales/_shared/totals";
 import { roundMoney } from "@/lib/currency/currencies";
-import { debitNoteLines, noteBaseAmounts } from "@/lib/reversal-currency";
+import { noteBaseAmounts } from "@/lib/reversal-currency";
+import { isInventoryRefusal, refusalText } from "@/lib/inventory-costing";
+import { postPurchaseReturn, reversePurchaseReturn } from "@/lib/purchase-posting";
+import { getLocale } from "@/lib/i18n/server";
 
 export type ActionResult = {
   error?: string;
@@ -158,13 +161,13 @@ export async function updateDebitNoteAction(
   redirect(`/purchasing/debit-notes/${id}`);
 }
 
-// Reverses receivePurchaseOrderAction's ledger impact: Dr Accounts Payable / Cr Inventory,
-// using the debit note's total only (the PO's receive entry never split VAT into its own
-// line either — see receivePurchaseOrderAction) — and decrements product stock back down,
-// since a debit note represents goods physically returned to the vendor, symmetric with how
-// receiving incremented it. This is the one place this mirrors, rather than copies, Credit
-// Note's reversal: a sales credit note never touches stock (it's often a pure price
-// adjustment), but a purchase debit note always means a physical return.
+// Reverses part of receivePurchaseOrderAction's ledger impact — and takes the returned stock back
+// out, since a debit note represents goods physically returned to the vendor, symmetric with how
+// receiving brought them in. This is the one place this mirrors, rather than copies, Credit Note's
+// reversal: a sales credit note never touches stock (it's often a pure price adjustment), but a
+// purchase debit note always means a physical return. ACC-01: the posting (postPurchaseReturn)
+// splits like the receipt it reverses — AP debited the gross; VAT back to 2100; stock lines out of
+// inventory at the value the supplier credits; other lines back out of 5100.
 export async function issueDebitNoteAction(debitNoteId: number): Promise<ActionResult> {
   const session = await requireSession();
 
@@ -182,7 +185,9 @@ export async function issueDebitNoteAction(debitNoteId: number): Promise<ActionR
     return { error: "Chart of accounts is missing a required system account (1200/2000)." };
   }
 
-  const outcome = await db.transaction(async (tx) => {
+  let outcome: { error?: string };
+  try {
+  outcome = await db.transaction(async (tx) => {
     // Lock the NOTE first, and re-check its status. The outer `status !== "draft"` check above ran
     // before the transaction, so two clicks on Issue can both pass it; the second finds the note
     // already issued here and stops before writing anything. The credit note has always done this;
@@ -250,32 +255,11 @@ export async function issueDebitNoteAction(debitNoteId: number): Promise<ActionR
     });
     if (!captured.ok) return { error: captured.error } as const;
 
-    for (const item of items) {
-      if (item.productId) {
-        await tx
-          .update(productsTable)
-          .set({ quantityOnHand: sql`${productsTable.quantityOnHand} - ${Math.trunc(Number(item.quantity))}` })
-          .where(and(eq(productsTable.id, item.productId), eq(productsTable.orgId, session.orgId)));
-      }
-    }
-
-    const [entry] = await tx
-      .insert(journalEntriesTable)
-      .values({
-        orgId: session.orgId,
-        entryDate: dn.issueDate,
-        memo: `Debit note ${dn.debitNoteNumber} issued`,
-        sourceType: "debit_note",
-        sourceId: dn.id,
-        createdById: session.userId,
-      })
-      .returning({ id: journalEntriesTable.id });
-
-    // BASE currency only. Two lines of the same figure — balanced by construction.
-    await tx.insert(journalLinesTable).values(
-      debitNoteLines({ baseTotal: captured.baseTotal, apAccountId: accountsPayable.id, inventoryAccountId: inventory.id })
-        .map((l) => ({ journalEntryId: entry.id, ...l })),
-    );
+    await postPurchaseReturn(tx, {
+      orgId: session.orgId, userId: session.userId, baseCurrency: session.orgCurrency,
+      dn: { id: dn.id, debitNoteNumber: dn.debitNoteNumber, issueDate: dn.issueDate },
+      items, captured,
+    });
 
     await tx
       .update(debitNotesTable)
@@ -288,7 +272,12 @@ export async function issueDebitNoteAction(debitNoteId: number): Promise<ActionR
       .where(eq(debitNotesTable.id, debitNoteId));
     return {} as const;
   });
-  if ("error" in outcome && outcome.error) return { error: outcome.error };
+  } catch (e) {
+    // ACC-01: a stock shortfall or a fractional stock quantity — nothing was written.
+    if (isInventoryRefusal(e)) return { error: refusalText(e, await getLocale()) };
+    throw e;
+  }
+  if (outcome.error) return { error: outcome.error };
 
   await logActivity(session, { type: "debit_note.issued", description: `Issued debit note ${dn.debitNoteNumber} — posted reversing entry to ledger`, entityType: "debit_note", entityId: debitNoteId });
   revalidatePath(PATH);
@@ -318,52 +307,23 @@ export async function reverseDebitNoteAction(debitNoteId: number): Promise<Actio
   // No chart-of-accounts lookup: the reversal mirrors the issue entry's own lines (FX-6), so the
   // accounts come from what was actually posted and the stored conversion cannot be re-derived.
 
-  await db.transaction(async (tx) => {
-    for (const item of items) {
-      if (item.productId) {
-        await tx
-          .update(productsTable)
-          .set({ quantityOnHand: sql`${productsTable.quantityOnHand} + ${Math.trunc(Number(item.quantity))}` })
-          .where(and(eq(productsTable.id, item.productId), eq(productsTable.orgId, session.orgId)));
-      }
-    }
+  const reversed = await db.transaction(async (tx) => {
+    // The lifecycle decision again under the note's row lock: a second concurrent reverse would put
+    // the returned stock and its cost back twice.
+    const noteLock = await tx.execute(sql`select status from debit_notes where id = ${dn.id} and org_id = ${session.orgId} for update`);
+    const again = evaluate("debit_note", (noteLock.rows as unknown as { status: string }[])[0]?.status ?? "", "reverse");
+    if (!again.allowed) return { error: again.reason } as const;
 
-    const [posting] = await tx
-      .select({ id: journalEntriesTable.id })
-      .from(journalEntriesTable)
-      .where(and(
-        eq(journalEntriesTable.orgId, session.orgId),
-        eq(journalEntriesTable.sourceType, "debit_note"),
-        eq(journalEntriesTable.sourceId, dn.id),
-      ))
-      .orderBy(journalEntriesTable.id)
-      .limit(1);
-
-    if (posting) {
-      const originalLines = await tx
-        .select({ accountId: journalLinesTable.accountId, debit: journalLinesTable.debit, credit: journalLinesTable.credit })
-        .from(journalLinesTable)
-        .where(eq(journalLinesTable.journalEntryId, posting.id));
-
-      const [entry] = await tx
-        .insert(journalEntriesTable)
-        .values({
-          orgId: session.orgId,
-          entryDate: new Date().toISOString().slice(0, 10),
-          memo: `Debit note ${dn.debitNoteNumber} reversed`,
-          sourceType: "debit_note",
-          sourceId: dn.id,
-          createdById: session.userId,
-        })
-        .returning({ id: journalEntriesTable.id });
-
-      await tx.insert(journalLinesTable).values(
-        originalLines.map((l) => ({ journalEntryId: entry.id, accountId: l.accountId, debit: l.credit, credit: l.debit })),
-      );
-    }
+    // FX-6 mirror of the posting entry, and the returned stock put back exactly as it left (ACC-01).
+    await reversePurchaseReturn(tx, {
+      orgId: session.orgId, userId: session.userId, baseCurrency: session.orgCurrency,
+      dn: { id: dn.id, debitNoteNumber: dn.debitNoteNumber }, items, date: new Date().toISOString().slice(0, 10),
+    });
 
     await tx.update(debitNotesTable).set({ status: "reversed" }).where(eq(debitNotesTable.id, debitNoteId));
+    return {} as const;
   });
+  if ("error" in reversed) return { error: reversed.error };
 
   await logActivity(session, { type: "debit_note.reversed", description: `Reversed debit note ${dn.debitNoteNumber} — posted reversing entry and restored stock`, entityType: "debit_note", entityId: debitNoteId });
   revalidatePath(PATH);
