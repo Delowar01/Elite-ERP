@@ -87,8 +87,15 @@ units per line, in as many parts as they arrive.
 * **Link.** Each `sales_return` row points at the invoice's `issue` row it came back from, and carries the credit
   note and its line as its source; its entry is `(sales_return, <credit note id>)`, memo naming the note and the invoice.
 * **Caps.** A line returns at most the whole units it credits (less what it has already returned), and a sale gives
-  back at most what it issued, across every credit note against it (less returns that still stand). A return of a
-  service or free-text line, against a draft or reversed note, or of a fraction is refused.
+  back at most what it issued, across every credit note against it (less returns that still stand). Both hold against
+  the complete request: a request names each line once — a line named twice is refused, even when its parts would
+  fit — and the lines of one product are added up before the sale's limit is checked. A return of a service or
+  free-text line, against a draft or reversed note, or of a fraction is refused.
+* **One submission, one return.** Each opening of the return dialog is one submission, with its own key; the return's
+  movements carry it (`request_key`). The same key again — a double click, a retried request — is answered from the
+  return already recorded and writes nothing; the same key with other quantities is refused. Duplicates sent at the
+  same moment queue on the credit note's row lock, so the second finds the first. A later delivery opens the dialog
+  again, under a new key, and is recorded. A request without a valid key is refused.
 * **Reversal.** Reversing a credit note takes its returned goods back out. When no stock of the product has gone out
   since the return, they leave **exactly** — the same units at the same cost — so the pool is precisely what it would
   have been without the return. Once stock has gone out in between, the returned units are no longer separable from the
@@ -127,7 +134,8 @@ AUD-08). ACC-01 adds only:
   default 0) and `products.stock_value` (numeric(15,3), default 0) — the weighted-average pool;
 * `inventory_movements` (enum `inventory_movement_kind`: opening, receipt, issue, purchase_return, adjustment, reversal,
   sales_return) — the stock ledger: org, product, date, kind, signed quantity, signed base cost (NULL = no cost basis), the
-  source document and line, the journal entry, the movement it reverses or returns from, memo, creator. Foreign keys to
+  source document and line, the journal entry, the movement it reverses or returns from, a customer return's submission
+  key (`request_key`, nullable), memo, creator. Foreign keys to
   orgs (cascade), products, journal entries, itself (named `inventory_movements_reverses_movement_fk`) and users;
   indexed by (org, product) and (org, source).
 
@@ -137,9 +145,10 @@ copies:
 * **main's seed → this branch:** 21 statements — 2 enums, 1 table, 3 columns, 5 foreign keys, 2 indexes, plus the drop and
   re-add of four long-named foreign keys that **main's own schema produces on every push** (Postgres truncates their
   names to 63 bytes; a pre-existing quirk, not an ACC-01 change).
-* **an earlier ACC-01 schema → this branch:** `ALTER TYPE inventory_movement_kind ADD VALUE 'sales_return'`, and the
-  self-reference renamed once to its short name. The generated name was longer than 63 bytes too; named explicitly, it
-  no longer churns (a second push shows only main's four).
+* **an earlier ACC-01 schema → this branch:** whichever it lacks of `ALTER TYPE inventory_movement_kind ADD VALUE
+  'sales_return'`, the self-reference renamed once to its short name (the generated name was longer than 63 bytes too;
+  named explicitly, it no longer churns — a second push shows only main's four) and `ALTER TABLE inventory_movements
+  ADD COLUMN request_key text`. From `ce65b59`'s schema that column is the only statement besides main's four.
 
 Deployment (not performed): back up, `npm run db:push` against the target, deploy the build, then run the read-only
 report below to see what the existing data carries. Nothing backfills: existing products become stock items with no
@@ -178,7 +187,7 @@ The product detail page's Stock card shows the item's average cost and stock val
 
 ## 7. Verification
 
-* **`verify:inventory-costing`** (new, in `verify:server`): 152 checks on fixture organizations, through the same
+* **`verify:inventory-costing`** (new, in `verify:server`): 169 checks on fixture organizations, through the same
   posting functions the actions call — opening stock; receipt cost (discount, VAT, non-stock lines); WAC; receipts at
   different costs; partial and full issue (the last unit takes the exact remainder); COGS on the invoice entry;
   delivery challans moving nothing; repeated posting; purchase return and its reversal; void and its cost reversal;
@@ -189,8 +198,10 @@ The product detail page's Stock card shows the item's average cost and stock val
   minor-unit rounding case, USD, reversal, tenant isolation) and **customer returns** (a note without returned goods,
   partial and full returns, several notes against one invoice, duplicate and over-returns refused, exact and average
   reversals, a reversal refused when the goods are gone, uncosted and pre-ACC-01 stock, mixed lines, the void guard,
-  USD and KWD rounding, two notes racing for the last unit, a double click, tenant isolation, role gates,
-  reconciliation). Mutation runs are recorded in the PR.
+  USD and KWD rounding, two notes racing for the last unit, two submissions racing for a note's last unit, tenant
+  isolation, role gates, reconciliation) and **return requests** (a line named twice, request-wide limits, the same
+  submission replayed, the same key with other quantities, a missing key, concurrent duplicates, a later partial
+  delivery, original cost and COGS, reconciliation, tenant isolation). Mutation runs are recorded in the PR.
 * **`verify-fx-posting`** (browser): five expectations state the corrected postings — the receipt capitalises the net
   and debits VAT to 2100; a debit note's free-text line comes back out of 5100 and its VAT goes back to 2100, with no
   inventory line. The old expectations ("Dr Inventory 2300.000") were the defect: VAT carried into stock. Every FX
