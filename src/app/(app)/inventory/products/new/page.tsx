@@ -12,7 +12,7 @@ export default async function NewProductPage() {
       <PageHeader title={t(locale, "New Product")} description={t(locale, "Add a product to your inventory catalog.")} />
       <Card>
         <CardContent className="pt-6">
-          <ProductForm action={createProductAction} submitLabel={t(locale, "Create Product")} />
+          <ProductForm action={createProductAction} submitLabel={t(locale, "Create Product")} locale={locale} />
         </CardContent>
       </Card>
     </div>
