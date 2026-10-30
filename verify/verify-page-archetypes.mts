@@ -113,7 +113,7 @@
  * by design — the invoice, receipt and return postings, the product actions, the schema, the dictionary, two source-type
  * labels — in files this verifier freezes. Its hunks are recorded byte for byte in verify/acc01-approved-delta.mts:
  * `rawRead` (and so `read`, `parse` and `frozen`) gives every older group those files with the hunks undone — main's
- * bytes — and `walk` leaves out the four files ACC-01 added under src/, so every pin keeps its strength. Group 19 proves
+ * bytes — and `walk` leaves out the five files ACC-01 added under src/, so every pin keeps its strength. Group 19 proves
  * the hunks are each file's only change and the added files are as recorded. Its pins change nothing.
  *
  * `--write-pins` recomputes verify/page-archetype-pins.json from the working tree. Only a stage that
@@ -3117,13 +3117,13 @@ section("19. ACC-01 — weighted-average inventory costing (the approved change 
 const accDrift = acc01Drift((f) => (existsSync(path.join(ROOT, f)) ? actualRead(f) : null));
 const accHunks = Object.values(ACC01_EDITS).flat().length;
 check(`ACC-01 changed its ${Object.keys(ACC01_EDITS).length} files (src/, and verify-document-form.mts for its own undo layer) by exactly their ${accHunks} recorded hunks — each once, its main form nowhere; undone, each file is main's (${ACC01_BASE.slice(0, 7)}) to the byte — and added exactly its ${Object.keys(ACC01_NEW).length} files under src/lib and src/db/schema, as recorded`,
-  accDrift.length === 0 && Object.keys(ACC01_EDITS).length === 18 && accHunks === 79 && Object.keys(ACC01_NEW).length === 4 &&
+  accDrift.length === 0 && Object.keys(ACC01_EDITS).length === 21 && accHunks === 91 && Object.keys(ACC01_NEW).length === 5 &&
     Object.keys(ACC01_NEW).every((f) => /^src\/(lib|db\/schema)\/[\w-]+\.ts$/.test(f)) &&
     Object.keys(ACC01_EDITS).every((f) => f.startsWith("src/") || f === "verify/verify-document-form.mts"),
   accDrift.map(rel).join(" "));
 // No file under src/ outside the record differs from main: every other file is in the older groups' byte-identity hashes
 // (groups 4, 16 and 17), and a new file the record does not list is caught there too — `walk` leaves out only ACC01_NEW.
-check("ACC-01 added no file under src/ but the recorded four (an unrecorded new file would sit in groups 16 and 17's src trees)",
+check(`ACC-01 added no file under src/ but the recorded ${Object.keys(ACC01_NEW).length} (an unrecorded new file would sit in groups 16 and 17's src trees)`,
   walk("src").length + Object.keys(ACC01_NEW).length === (function all(d: string): number {
     return readdirSync(path.join(ROOT, d)).reduce((n, name) => n + (statSync(path.join(ROOT, d, name)).isDirectory() ? all(path.posix.join(d, name)) : 1), 0);
   })("src"));
