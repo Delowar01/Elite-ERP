@@ -30,6 +30,10 @@ invoice's stock issue, net-of-VAT receipts and an inventory-to-GL reconciliation
 8. **`inventory_movements` is append-only by convention**, not by a trigger; adding it to `apply-db-hardening.ts` is an
    AUD-08.3-style change.
 
+Two known defects sit outside ACC-01 and are left exactly as they were, each under its own entry below: credit notes on a
+cash-paid invoice still drive AR negative (F-9), and proformas carry no `projectId`, so revenue converted from a proforma
+belongs to no project (Batch 9).
+
 ---
 
 ## Expense categories: preset or free text? (decide before building Expenses)
