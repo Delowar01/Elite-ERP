@@ -36,7 +36,7 @@ import { prepareInvoicePosting, reverseInvoicePosting } from "../src/lib/invoice
 import { postPurchaseReceipt, postPurchaseReturn, reversePurchaseReturn } from "../src/lib/purchase-posting";
 import {
   adjustStock, allocateByWeight, isInventoryRefusal, itemTypeChangeRefusal, parseUnitCost, recordOpeningStock,
-  reverseSourceMovements, weightedAverageCost,
+  returnFromCustomer, reverseSourceMovements, weightedAverageCost,
 } from "../src/lib/inventory-costing";
 import { getInventoryReconciliation, getInventoryValuation } from "../src/lib/inventory-valuation";
 import { getBalanceSheet, getProfitAndLoss } from "../src/lib/finance-reports";
@@ -1028,6 +1028,14 @@ const K1 = randomUUID();
   const okE = await returnGoods(Q, cnE.id, [{ lineId: cnE.lines[0], quantity: 2 }, { lineId: cnE.lines[1], quantity: 1 }]);
   check("…2 + 1 fits: the sale's last 3 come back at exactly the 30.00 left of its 50.00 — REQ-D 7 / 82.00",
     eq(okE.cost, 30) && okE.units === 3 && await poolIs(pd, 7, 7, "82.000"), JSON.stringify(await poolOf(pd)));
+  // The engine's own sale limit stays beneath the request checks (which now refuse first): called directly, as no
+  // action does, a 6th unit of the 5-unit sale is still refused.
+  const engine = await refusalOf(() => db.transaction((tx) => returnFromCustomer(tx, ctx(Q),
+    { sourceType: "credit_note", sourceId: cnE.id, journalEntryId: null, memo: "direct", requestKey: randomUUID() },
+    { invoiceId: invQD, lines: [{ productId: pd, quantity: 1, sourceLineId: cnE.lines[1] }] })));
+  check("…and the engine's own sale limit holds beneath them: called directly, a 6th unit of the 5-unit sale is refused — nothing written",
+    !!engine && /^Cannot return 1 of "Item REQ-D" \(REQ-D\) to stock: only 0 of the units this invoice issued/.test(engine.message)
+      && (await movements(Q, "credit_note", cnE.id)).length === 2 && await poolIs(pd, 7, 7, "82.000"), engine?.message ?? "no refusal");
 }
 {
   // R — 3 credited on one line; the sale issued 5 at 12.00 each, and the pool now averages 20.00.

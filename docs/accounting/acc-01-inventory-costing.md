@@ -187,7 +187,7 @@ The product detail page's Stock card shows the item's average cost and stock val
 
 ## 7. Verification
 
-* **`verify:inventory-costing`** (new, in `verify:server`): 169 checks on fixture organizations, through the same
+* **`verify:inventory-costing`** (new, in `verify:server`): 171 checks on fixture organizations, through the same
   posting functions the actions call — opening stock; receipt cost (discount, VAT, non-stock lines); WAC; receipts at
   different costs; partial and full issue (the last unit takes the exact remainder); COGS on the invoice entry;
   delivery challans moving nothing; repeated posting; purchase return and its reversal; void and its cost reversal;
