@@ -3117,7 +3117,7 @@ section("19. ACC-01 — weighted-average inventory costing (the approved change 
 const accDrift = acc01Drift((f) => (existsSync(path.join(ROOT, f)) ? actualRead(f) : null));
 const accHunks = Object.values(ACC01_EDITS).flat().length;
 check(`ACC-01 changed its ${Object.keys(ACC01_EDITS).length} files (src/, and verify-document-form.mts for its own undo layer) by exactly their ${accHunks} recorded hunks — each once, its main form nowhere; undone, each file is main's (${ACC01_BASE.slice(0, 7)}) to the byte — and added exactly its ${Object.keys(ACC01_NEW).length} files under src/lib and src/db/schema, as recorded`,
-  accDrift.length === 0 && Object.keys(ACC01_EDITS).length === 18 && accHunks === 78 && Object.keys(ACC01_NEW).length === 4 &&
+  accDrift.length === 0 && Object.keys(ACC01_EDITS).length === 18 && accHunks === 79 && Object.keys(ACC01_NEW).length === 4 &&
     Object.keys(ACC01_NEW).every((f) => /^src\/(lib|db\/schema)\/[\w-]+\.ts$/.test(f)) &&
     Object.keys(ACC01_EDITS).every((f) => f.startsWith("src/") || f === "verify/verify-document-form.mts"),
   accDrift.map(rel).join(" "));

@@ -145,7 +145,11 @@ The product detail page's Stock card shows the item's average cost and stock val
 * **DEV-UI-01.7 verifiers.** `verify-page-archetypes` and `verify-document-form` freeze the business files ACC-01 had to
   change. Following their rule for an approved change (no re-baseline), ACC-01's hunks are recorded byte for byte in
   `verify/acc01-approved-delta.mts`; the older checks read those files with the hunks undone (main's bytes), and new
-  checks prove the hunks are each file's only change and pin the four added files. Their pins are unchanged.
+  checks prove the hunks are each file's only change and pin the four added files. Their pins are unchanged. The runtime
+  verifier re-records nothing either: the product pages' owner and Staff action lists are compared with the record plus
+  exactly ACC-01's change (Item type's two radios, in the page's language; the Arabic product page's Adjust stock trigger
+  in Arabic), and every other measure as recorded, unnamed controls included. That is why Item type is the shared native
+  RadioGroup (as Client Type): a Radix Select inside a form renders a hidden, unnamed native `<select>`.
 
 ## 8. Decisions this batch leaves open (flagged for the owner)
 
