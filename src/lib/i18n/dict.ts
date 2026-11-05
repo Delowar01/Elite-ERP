@@ -2016,6 +2016,43 @@ const DICT: Record<string, string> = {
   "Profit figures are temporarily hidden because Cost of Sales and inventory valuation are not yet complete.": "تم إخفاء مؤشرات الربح مؤقتًا لأن احتساب تكلفة المبيعات وتقييم المخزون لم يكتمل بعد.",
   Preliminary: "مبدئي",
   "Preliminary — Cost of Sales and inventory valuation are incomplete. The current-period result may change.": "مبدئي — احتساب تكلفة المبيعات وتقييم المخزون غير مكتمل، وقد تتغير نتيجة الفترة الحالية.",
+  // ACC-01: weighted-average inventory valuation — the product form, the Stock card, the adjustment
+  // dialog and the two journal source types inventory postings carry.
+  "Item type": "نوع الصنف",
+  "Stock items are counted and valued at weighted-average cost; services carry no stock.": "الأصناف المخزنية تُعدّ وتُقيَّم بمتوسط التكلفة المرجّح، أما الخدمات فلا يُحتفظ لها بمخزون.",
+  "Stock item": "صنف مخزني",
+  Service: "خدمة",
+  "Opening unit cost": "تكلفة الوحدة الافتتاحية",
+  "In the base currency. Required when the opening quantity is above zero.": "بالعملة الأساسية، وهي مطلوبة إذا كانت الكمية الافتتاحية أكبر من صفر.",
+  "Adjust stock": "تعديل المخزون",
+  "Manually correct the quantity on hand.": "تصحيح الكمية المتوفرة يدويًا.",
+  "Change in quantity (negative to remove)": "التغيير في الكمية (بالسالب للخصم)",
+  "Resulting quantity": "الكمية بعد التعديل",
+  "Unit cost of the stock added": "تكلفة الوحدة للكمية المضافة",
+  "In the base currency. Removals leave at the weighted-average cost.": "بالعملة الأساسية، أما الكميات المخصومة فتخرج بمتوسط التكلفة المرجّح.",
+  "Stock count correction": "تصحيح بعد الجرد",
+  "Stock adjusted": "تم تعديل المخزون",
+  "Apply adjustment": "تطبيق التعديل",
+  "Product not found.": "المنتج غير موجود.",
+  "A service carries no stock.": "الخدمة لا يُحتفظ لها بمخزون.",
+  "Average cost": "متوسط التكلفة",
+  "Stock value": "قيمة المخزون",
+  "Units without a recorded cost": "وحدات بلا تكلفة مسجّلة",
+  "They predate inventory valuation; selling them posts no cost of goods sold.": "هذه الوحدات سابقة لتفعيل تقييم المخزون، ولا يُرحَّل عند بيعها أي قيد لتكلفة البضاعة المباعة.",
+  "Opening stock": "المخزون الافتتاحي",
+  "Stock adjustments": "تسويات المخزون",
+  "This product has stock history, so it cannot be permanently deleted.": "لهذا المنتج حركات مخزون مسجّلة، لذا لا يمكن حذفه نهائيًا.",
+  // ACC-01: a credit note's goods returned to stock — the return dialog and its journal source type.
+  "Return goods to stock": "إرجاع البضاعة إلى المخزون",
+  "Record the goods the customer sent back. They return to stock at the cost the invoice sold them at, and that cost comes off cost of goods sold. Leave a line empty if nothing came back on it.":
+    "سجّل البضاعة التي أعادها العميل. تعود إلى المخزون بالتكلفة التي صُرفت بها في الفاتورة، وتُخصم تلك التكلفة من تكلفة البضاعة المباعة. اترك البند فارغًا إذا لم يُرجَع منه شيء.",
+  Credited: "المقيَّد في الإشعار",
+  "Already returned": "أُرجع سابقًا",
+  "Can still come back": "المتبقي للإرجاع",
+  "Return to stock": "إرجاع إلى المخزون",
+  "Returning…": "جارٍ الإرجاع…",
+  "Goods returned to stock.": "أُعيدت البضاعة إلى المخزون.",
+  "Goods returned": "البضاعة المرتجعة",
 };
 
 export function t(locale: Locale, en: string): string {

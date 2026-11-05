@@ -40,6 +40,12 @@
  * unchanged; a print pass reads the P&L and the Balance Sheet in print media (the report's lines, its notes, no app
  * chrome). The project section is Project Revenue & Costs: the recorded outlines are read with that one h2 renamed.
  *
+ * ACC-01 (weighted-average inventory costing, a business change) re-records nothing. The product form gained Item type
+ * — two native radios (the shared RadioGroup, as Client Type), Stock item / Service in the page's language — on New
+ * Product and on the product's own page, which edits it; and the Arabic product page's Adjust stock trigger is Arabic
+ * (the record has it in English). The owner and Staff action lists are compared with the record plus exactly those
+ * actions — derived, not re-recorded; every other measure of the two pages (unnamed controls included) as recorded.
+ *
  * C7 (document and app-state heading semantics, D-3 — tags only, zero pixel difference) re-recorded the document
  * Recycle Bin and the not-found page (their titles h3 → h1) and adds a heading pass, run first — before any probe
  * writes to this copy: each of the eight document families' list, detail, create and edit page, the Recycle Bin and
@@ -457,6 +463,9 @@ new Function("module", "exports", "require", ts.transpileModule(readFileSync("sr
   dictMod, dictMod.exports, (spec) => { throw new Error(`dict.ts imports ${spec}`); });
 /** What the page says for `en` in locale `l` — the dictionary's t(). */
 const T = (l, en) => dictMod.exports.t(l, en);
+/** ACC-01: the product pages' one authorized action change — what it says, in each language (held to the dictionary below). */
+const ACC01_PAGES = ["product-detail", "product-new"];
+const ACC01_WORDS = { en: { stock: "Stock item", service: "Service", adjust: "Adjust stock" }, ar: { stock: "صنف مخزني", service: "خدمة", adjust: "تعديل المخزون" } };
 /** C6: the customizable widgets (key, dialog label, default order) — dashboard-layout.ts itself, a pure module. */
 const layoutMod = { exports: {} };
 new Function("module", "exports", "require", ts.transpileModule(readFileSync("src/lib/dashboard-layout.ts", "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 } }).outputText)(
@@ -2947,13 +2956,24 @@ check("Staff open every other 01.7 route where it is (session pages)", staffOpen
 const BSw = scoped(base.sweep);
 const sweepWorse = Object.keys(now.sweep).filter((k) => BSw[k] && (now.sweep[k].consoleErrors > BSw[k].consoleErrors || now.sweep[k].finalPath !== BSw[k].finalPath));
 check(`${SWEEP_ZONE} sweep: same routes, console errors never more`, sweepWorse.length === 0, list(sweepWorse));
+// ACC-01: a product page's recorded actions with Item type's two radios added (in the page's language) and, on the
+// Arabic product page, the recorded English Adjust stock trigger read as its Arabic — nothing else. Applied to the record
+// before comparing, as C8 final's renamed outline; a record without that trigger keeps it, and so fails below.
+const acc01Actions = (k, recorded) => {
+  const [id, l] = k.split("|");
+  if (!recorded || !ACC01_PAGES.includes(id)) return recorded;
+  const W = ACC01_WORDS[l];
+  const trigger = (name) => `button|${name}||type=button|popup=dialog`;
+  const read = recorded.map((a) => (id === "product-detail" && l === "ar" && a === trigger(ACC01_WORDS.en.adjust) ? trigger(W.adjust) : a));
+  return [...read, `input:radio|${W.stock}|||`, `input:radio|${W.service}|||`];
+};
 function actionDelta(group, which = (k) => !rebased(k)) {
   const want = scoped(baseActs[group]);
   const got = acts[group];
   const out = [];
   for (const k of new Set([...Object.keys(want), ...Object.keys(got)])) {
     if (!which(k)) continue;
-    const w = [...(want[k] ?? [])];
+    const w = [...(acc01Actions(k, want[k]) ?? [])];
     const extra = [];
     for (const g of got[k] ?? []) {
       const i = w.indexOf(g);
@@ -2968,6 +2988,14 @@ const nOwner = Object.values(acts.owner).reduce((n, a) => n + a.length, 0);
 const nStaff = Object.values(acts.staff).reduce((n, a) => n + a.length, 0);
 check(`owner action inventory unchanged — ${nOwner} actions (EN + AR at 1440, EN at 390): name, target, type, disabled`, actionDelta("owner").length === 0, list(actionDelta("owner")));
 check(`Staff action inventory unchanged — ${nStaff} actions (EN + AR at 1440)`, actionDelta("staff").length === 0, list(actionDelta("staff")));
+// ACC-01: the change the two checks above read into the record is exactly the dictionary's words, applied where recorded.
+const acc01Lists = (group) => Object.keys(scoped(baseActs[group])).filter((k) => ACC01_PAGES.includes(k.split("|")[0]));
+const acc01Words = ["en", "ar"].flatMap((l) => [["Stock item", "stock"], ["Service", "service"], ["Adjust stock", "adjust"]]
+  .filter(([en, w]) => T(l, en) !== ACC01_WORDS[l][w]).map(([en]) => `${l}: ${en} → ${T(l, en)}`));
+const acc01Trigger = ["owner", "staff"].flatMap((g) => acc01Lists(g).filter((k) => k.startsWith("product-detail|ar|"))
+  .filter((k) => !baseActs[g][k].includes(`button|${ACC01_WORDS.en.adjust}||type=button|popup=dialog`)).map((k) => `${g} ${k}: no recorded English Adjust stock trigger`));
+check(`ACC-01 (inventory costing): the product pages' one authorized action change, derived from the record (not re-recorded) — Item type's two radios, Stock item / Service in the page's language, on New Product and the product page (owner ${acc01Lists("owner").length} lists, Staff ${acc01Lists("staff").length}); the Arabic product page's Adjust stock trigger in Arabic; the words the dictionary's`,
+  acc01Words.length === 0 && acc01Trigger.length === 0 && (ONLY || (acc01Lists("owner").length === 6 && acc01Lists("staff").length === 4)), list([...acc01Words, ...acc01Trigger]));
 if (REBASE) {
   // The re-recorded routes' actions must stay EQUIVALENT: the same kinds, targets, types and states.
   // English names are unchanged; an Arabic name may change only from C1 page copy that was still

@@ -16,6 +16,7 @@ import { Money, DocNum } from "../../_shared/money";
 import { CnDetailActions } from "../cn-detail-actions";
 import { DownloadPdfButton } from "../../_shared/download-pdf-button";
 import { EditDocumentButton } from "../../../_shared/edit-document";
+import { creditNoteReturnables } from "@/lib/credit-note-returns";
 
 
 function vatPercent(subtotal: string, taxTotal: string): string {
@@ -61,6 +62,8 @@ export default async function CreditNoteDetailPage({ params }: { params: Promise
 
   const items = await db.select().from(creditNoteItemsTable).where(eq(creditNoteItemsTable.creditNoteId, cnId));
   const [org] = await db.select().from(orgsTable).where(eq(orgsTable.id, session.orgId));
+  // ACC-01: what an issued note can still return to stock (none on a draft or a reversed note).
+  const returnables = await creditNoteReturnables(session.orgId, session.orgCurrency, { id: cn.id, sourceInvoiceId: cn.sourceInvoiceId, status: cn.status });
 
   return (
     // Without this the page rendered the note's USD figures under the ORG's base mark — "SAR 575"
@@ -80,7 +83,7 @@ export default async function CreditNoteDetailPage({ params }: { params: Promise
         <div className="inv-head-actions">
           <EditDocumentButton locale={locale} docType="credit_note" id={cn.id} number={cn.creditNoteNumber} status={cn.status} recordState={cn.deletedAt ? "deleted" : cn.archivedAt ? "archived" : "active"} />
           <DownloadPdfButton locale={locale} type="credit-note" docId={cn.id} number={cn.creditNoteNumber} />
-          <CnDetailActions locale={locale} creditNoteId={cn.id} creditNoteNumber={cn.creditNoteNumber} status={cn.status} />
+          <CnDetailActions locale={locale} creditNoteId={cn.id} creditNoteNumber={cn.creditNoteNumber} status={cn.status} returnables={returnables} />
         </div>
       </div>
 

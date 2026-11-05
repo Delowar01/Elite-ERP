@@ -8,6 +8,7 @@ export * from "./presets";
 export * from "./customers";
 export * from "./vendors";
 export * from "./products";
+export * from "./inventory";
 export * from "./hr";
 export * from "./projects";
 export * from "./quotations";
