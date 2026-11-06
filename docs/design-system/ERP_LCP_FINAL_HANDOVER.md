@@ -35,7 +35,8 @@ Every value and deviation is sourced in `ERP_LCP_TOKEN_MAP.md` (§6: 11 deviatio
 | 5 — UI baseline replacement | `326c29c` | test(ui-baseline): LCP shell states and the reviewed baseline replacement |
 | 6 — QA layout fixes, runtime verifier | `42a47d9` | fix(design-system): Dashboard grid and the 640-767px header beside the LCP shell; LCP stage record for the page-archetype runtime verifier |
 | 7 — runtime record | `39f881b` | test(page-archetypes): LCP stage record and the Settings › Organization re-record |
-| 8 — final docs | the commit carrying this file (PR head) | docs(design-system): final handover, route-matrix evidence |
+| 8 — final docs | `0a7696a` | docs(design-system): final handover, route-matrix evidence |
+| 9 — secret-scan false positive (CI) | the commit carrying this change (PR head) | ci(secret-scan): list LCP delta hashes first; accept one false positive |
 
 Every commit is signed (SSH) and sits on `feat/erp-lcp-design-system`, branched from `83e8093`; nothing was pushed to `main`.
 
@@ -53,12 +54,13 @@ Every commit is signed (SSH) and sits on `feat/erp-lcp-design-system`, branched 
 | File storage | `src/lib/storage/*` | none |
 | PDF / print / document output, exports, imports | `src/app/print/*`, `src/lib/pdf/*`, `src/lib/doc-print.ts`, `src/lib/doc-seal.ts`, `src/lib/report-export.ts`, `src/lib/import/*` | none |
 | Dependencies | `package-lock.json` | none |
-| CI / deployment / scripts | `.github/*`, `scripts/*` | none |
+| CI / deployment / scripts | `.github/*`, `scripts/*`, `.gitleaks.toml`, `.gitleaksignore` | `.gitleaksignore` (new): one exact fingerprint, the secret scan's one false positive (§5); `.github/*`, `scripts/*` and `.gitleaks.toml` unchanged |
 
 `package.json`: only scripts — adds `verify:lcp-design` and appends it to `verify:static`; no dependency, version or other field changes.
 
-All 302 changed paths:
+All 303 changed paths:
 
+* `.gitleaksignore` (1): `.gitleaksignore`
 * `docs/design-system` (4): `ERP_LCP_FINAL_HANDOVER.md`, `ERP_LCP_MIGRATION_AUDIT.md`, `ERP_LCP_ROUTE_MATRIX.md`, `ERP_LCP_TOKEN_MAP.md`
 * `package.json` (1): `package.json`
 * `src/app` (12): `(app)/design-system/page.tsx`, `(app)/layout.tsx`, `(app)/lcp.css`, `(app)/sales/_shared/item-entry-cell.tsx`, `(app)/settings/organization/company-panels.tsx`, `(app)/shell.css`, `(auth)/auth.css`, `(auth)/layout.tsx`, `(auth)/login/login-form.tsx`, `(auth)/register/register-form.tsx`, `globals.css`, `layout.tsx`
@@ -68,7 +70,7 @@ All 302 changed paths:
 * `tests/ui-baseline/baseline/* (replaced UI baseline, §8)` (257)
 * `verify` (15): `lcp-approved-delta.mts`, `page-archetype-actions.json`, `page-archetype-runtime-baseline.json`, `verify-color-theme.mjs`, `verify-contrast.mts`, `verify-controls-runtime.mjs`, `verify-dark-theme.mjs`, `verify-document-form.mts`, `verify-lcp-design.mts`, `verify-page-archetypes-runtime.mjs`, `verify-page-archetypes.mts`, `verify-shell-runtime.mjs`, `verify-shell.mts`, `verify-skeletons.mts`, `verify-status-registry.mts`
 
-**Result: no protected path is touched.** `company-panels.tsx` changes only how the Color Theme panel *displays* a default org (the save action `theme-actions.ts` is unchanged); `item-entry-cell.tsx` changes only where the picker list is placed; `dict.ts` only adds Arabic strings for new UI text.
+**Result: no protected path is touched.** `company-panels.tsx` changes only how the Color Theme panel *displays* a default org (the save action `theme-actions.ts` is unchanged); `item-entry-cell.tsx` changes only where the picker list is placed; `dict.ts` only adds Arabic strings for new UI text. `.gitleaksignore` is CI configuration: it accepts one reviewed false positive by its exact fingerprint (§5) and changes no rule.
 
 ## 4. Print / PDF output — unchanged, proven
 
@@ -102,6 +104,7 @@ build `Eg3N0EAzVszXzSLoWQEae`: **48/48 identical** (screen pixels, print-media p
 | Layout probe — Dashboard grid (QA fix 1) | 1101–1440px × sidebar expanded / 68px rail × EN / AR, 44 states: **nothing clipped**. Two tracks up to 1279px beside the expanded sidebar and twelve from 1280px; twelve from 1101px beside the rail. Before the fix: clipping at 1101–1260px. |
 | Layout probe — header (QA fix 2) | 360–820px × four pages × EN / AR, 128 states: **no page overflow**. 640–767px: no header controls overlapping, and the organization name truncates (65px at 640, 192px at 767). Before the fix: up to 32px overflow at 640–671px, and the Ctrl+K hint over EN \| ع up to 767px. |
 | Clip scan (every route at 1101 / 1180 / 1279px beside the 256px sidebar, EN / AR) | 438 states: **no cut-off content**, not counting screen-reader-only labels and inputs scrolling their own text. Wide tables scroll inside their cards by design, as at 1024px. |
+| Secret scan — gitleaks 8.24.3 (CI's version), `.gitleaks.toml`, CI's command | **no leaks** on the PR's commits (`4f036d0^..` the head, 10 commits), on the PR squashed onto `main` (as #9 was merged) and on a merge commit (as #6 and #8). Before commit 9, CI run 42246888658 and the same local run found one: `generic-api-key` on `verify/lcp-approved-delta.mts` line 364 at `dbef9d4`, the first 16 hex digits of the sha256 of `src/app/(auth)/auth.css` (recomputed: equal), flagged because the path holds the word auth. The approved-delta record now lists each hash before its path (all four records deep-equal; a changed, edited or deleted file is still reported), and `.gitleaksignore` accepts that one history line by its exact fingerprint. A rebase merge would rewrite `dbef9d4` and needs that line's new fingerprint; a merge commit or a squash does not. |
 
 **Runtime suites re-encoded for intended LCP decisions** (thresholds unchanged except the owner-decided white label, each with the kit source):
 `verify-color-theme` (default org opens on the preset; opening writes nothing — new checks),
@@ -297,3 +300,5 @@ existing deployment runbook (build, restart `elite-erp.service`) — no database
 (no schema, migration or data change). Rollback is reverting the merge commit and redeploying; no data
 needs restoring. Recommended acceptance after deployment: log in, open the dashboard, an invoice detail and
 its PDF, the Color Theme panel (preset shown, nothing saved), and Arabic + dark mode once each.
+
+CI on this PR: static analysis, the security tests + production build and (from commit 9) the secret scan pass. The dependency scan (`npm audit --audit-level=high`) fails exactly as on `main`, whose own push run 42125864209 (2026-11-05, `83e8093`) failed the same step: `follow-redirects` 1.16.1 (high, GHSA-mrwp-f3q8-3g9p) via `@sparticuz/chromium-min`, the PDF renderer. This branch's `package-lock.json` is `main`'s byte for byte. Fixing it is a separate dependency change, to be verified against print / PDF output, and is not part of this design change.

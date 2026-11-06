@@ -360,37 +360,44 @@ export const LCP_EDITS: Record<string, [string, string][]> = {
       "  accDrift.length === 0 && Object.keys(ACC01_EDITS).length > 0, accDrift.join(\" \"));\nconst lcpDriftNow = lcpDrift((f) => { try { return diskRead(f); } catch { return null; } });\ncheck(\"the LCP design adoption's approved change: each recorded file is main's (83e8093) plus exactly its hunks, each added file as recorded (verify/lcp-approved-delta.mts)\",\n  lcpDriftNow.length === 0 && Object.keys(LCP_EDITS).length > 0, lcpDriftNow.join(\" \"));\nconst SUBMIT: Record<string, string> = {\n"],
   ],
 };
+/**
+ * [sha256 (16 hex), path] pairs, read as path -> hash. The hash is written first: a path holding a word such as
+ * auth or token, written before its hash, reads to a secret scanner as a credential name and its value.
+ */
+function byPath(pairs: [string, string][]): Record<string, string> {
+  return Object.fromEntries(pairs.map(([sha, file]) => [file, sha]));
+}
 /** main's bytes of each changed file (sha256, 16 hex) — what the file is once its hunks are undone. */
-export const LCP_BASE_SHA: Record<string, string> = {
-  "src/app/(app)/layout.tsx": "6f008640a1d5f3c7",
-  "src/app/(app)/sales/_shared/item-entry-cell.tsx": "556c826ef758dc32",
-  "src/app/(app)/settings/organization/company-panels.tsx": "08718389db2f7dfb",
-  "src/app/(app)/shell.css": "ad7a9a8b1cb8dbf1",
-  "src/app/(auth)/layout.tsx": "2ff9ede185e49dc4",
-  "src/app/(auth)/login/login-form.tsx": "cb660fe3ada54f70",
-  "src/app/(auth)/register/register-form.tsx": "b8563541f79a47b5",
-  "src/app/globals.css": "cb7950c58dbf0b12",
-  "src/app/layout.tsx": "e1319daf0bcb78df",
-  "src/components/layout/app-shell.tsx": "1615e39838780248",
-  "src/components/layout/command-palette.tsx": "d5dabe4406913cdb",
-  "src/components/layout/mobile-nav.tsx": "60e361855cf3e123",
-  "src/components/layout/record-search.tsx": "d1cbcb3a7c5125dc",
-  "src/components/layout/sidebar.tsx": "3824e6dc6f3ba3c8",
-  "src/components/ui/button.tsx": "131d477b08553f16",
-  "src/components/ui/dialog.tsx": "6701e51cfdc34840",
-  "src/components/ui/drawer.tsx": "08090290649c1e87",
-  "src/lib/brand-theme.ts": "8b1ce534be495294",
-  "src/lib/design-tokens.ts": "9f438dd0cdaeaf06",
-  "src/lib/i18n/dict.ts": "ebe2534a66f0a640",
-  "verify/verify-document-form.mts": "25b8d862df639fb9",
-};
+export const LCP_BASE_SHA: Record<string, string> = byPath([
+  ["6f008640a1d5f3c7", "src/app/(app)/layout.tsx"],
+  ["556c826ef758dc32", "src/app/(app)/sales/_shared/item-entry-cell.tsx"],
+  ["08718389db2f7dfb", "src/app/(app)/settings/organization/company-panels.tsx"],
+  ["ad7a9a8b1cb8dbf1", "src/app/(app)/shell.css"],
+  ["2ff9ede185e49dc4", "src/app/(auth)/layout.tsx"],
+  ["cb660fe3ada54f70", "src/app/(auth)/login/login-form.tsx"],
+  ["b8563541f79a47b5", "src/app/(auth)/register/register-form.tsx"],
+  ["cb7950c58dbf0b12", "src/app/globals.css"],
+  ["e1319daf0bcb78df", "src/app/layout.tsx"],
+  ["1615e39838780248", "src/components/layout/app-shell.tsx"],
+  ["d5dabe4406913cdb", "src/components/layout/command-palette.tsx"],
+  ["60e361855cf3e123", "src/components/layout/mobile-nav.tsx"],
+  ["d1cbcb3a7c5125dc", "src/components/layout/record-search.tsx"],
+  ["3824e6dc6f3ba3c8", "src/components/layout/sidebar.tsx"],
+  ["131d477b08553f16", "src/components/ui/button.tsx"],
+  ["6701e51cfdc34840", "src/components/ui/dialog.tsx"],
+  ["08090290649c1e87", "src/components/ui/drawer.tsx"],
+  ["8b1ce534be495294", "src/lib/brand-theme.ts"],
+  ["9f438dd0cdaeaf06", "src/lib/design-tokens.ts"],
+  ["ebe2534a66f0a640", "src/lib/i18n/dict.ts"],
+  ["25b8d862df639fb9", "verify/verify-document-form.mts"],
+]);
 /** The files the LCP stage added under src/ (sha256, 16 hex). */
-export const LCP_NEW: Record<string, string> = {
-  "src/app/(app)/design-system/page.tsx": "d4c176fd8eaf5b07",
-  "src/app/(app)/lcp.css": "582e7dd66f68c6bd",
-  "src/app/(auth)/auth.css": "985eb301763d3f0a",
-  "src/components/layout/brand-mark.tsx": "5cc846fc18c0fe18",
-};
+export const LCP_NEW: Record<string, string> = byPath([
+  ["d4c176fd8eaf5b07", "src/app/(app)/design-system/page.tsx"],
+  ["582e7dd66f68c6bd", "src/app/(app)/lcp.css"],
+  ["985eb301763d3f0a", "src/app/(auth)/auth.css"],
+  ["5cc846fc18c0fe18", "src/components/layout/brand-mark.tsx"],
+]);
 
 const h16 = (s: string) => createHash("sha256").update(s).digest("hex").slice(0, 16);
 

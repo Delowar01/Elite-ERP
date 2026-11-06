@@ -1,0 +1,7 @@
+# gitleaks: findings reviewed and accepted as not secrets, one exact fingerprint (commit:file:rule:line) each.
+#
+# dbef9d4, verify/lcp-approved-delta.mts line 364: the first 16 hex digits of the sha256 of the committed
+# stylesheet src/app/(auth)/auth.css in the LCP approved-delta record. generic-api-key read the word auth in
+# the path as a credential name. The record now lists each hash before its path; this line stays in that
+# commit's history.
+dbef9d46b4f0794419a7bc6c40aa50324228366a:verify/lcp-approved-delta.mts:generic-api-key:364
