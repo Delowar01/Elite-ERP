@@ -135,6 +135,17 @@ check("the legacy stylesheet and the pinned primitives are not edited by the LCP
 // ---------- 4. surfaces (the LCP recipes) ----------
 const rule = (css: string, sel: string) => noComments(css).match(new RegExp(`(?:^|\\n)${sel.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")} \\{([^}]*)\\}`))?.[1] ?? "";
 check("card: LCP rounded-xl (12px), the hairline and shadow-sm", /border-radius:\s*12px/.test(rule(lcpCss, ".card")) && /box-shadow:\s*var\(--shadow-sm\)/.test(rule(lcpCss, ".card")));
+// The Dashboard grid beside the LCP sidebar: its twelve-track desktop spans need a grid of about 950px, which the expanded
+// 256px sidebar leaves only from 1270px — so while it is expanded the two-track arrangement runs on to 1279px; beside the
+// 68px mini rail the desktop grid starts at 1101px as before. (verify-page-archetypes-runtime.mjs measures the breakpoints.)
+const dashMq = noComments(lcpCss).match(/@media \(min-width: 1100\.02px\) and \(max-width: 1279\.98px\) \{([\s\S]*?)\n\}/)?.[1] ?? "";
+const expandedSidebar = ".app-body:has(> .sidebar:not(.collapsed, [data-rail]))";
+check("Dashboard: beside the expanded 256px sidebar the two-track grid runs on to 1279px (the desktop grid starts at 1280px, LCP xl); beside the mini rail at 1101px as before",
+  [`${expandedSidebar} .dash-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: auto; }`,
+    `${expandedSidebar} .dash-widget { grid-column: auto; grid-row: auto; }`,
+    `${expandedSidebar} .dash-widget[data-wide] { grid-column: 1 / -1; }`,
+    `${expandedSidebar} .dash-widget > *:not(.dash-widget-chrome):not(.dash-resize-handle) { overflow: visible; }`].every((r) => dashMq.includes(r)),
+  dashMq.trim().slice(0, 160) || "no 1100.02–1279.98px block");
 const th = rule(lcpCss, "table.data-table thead th");
 check("data table header: LCP sentence case, 14px, medium, muted, on the card", /text-transform:\s*none/.test(th) && /font-size:\s*var\(--text-body\)/.test(th) && /font-weight:\s*500/.test(th) && /color:\s*var\(--ink-muted\)/.test(th), th.trim());
 const ph = rule(lcpCss, '[data-slot="page-header"] h1');

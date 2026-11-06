@@ -57,13 +57,26 @@ h1 { font-weight: 700; letter-spacing: -0.015em; }
 .kpi-card-v4 .kpi-label { font-size: var(--text-body); }
 .kpi-card-v4 .kpi-value { font-weight: 700; font-size: var(--text-display-sm); letter-spacing: -0.02em; }
 
+/* ---- the Dashboard grid beside the LCP sidebar. Its twelve-track desktop arrangement (mockup-parity.css, above
+   1100px) was sized beside the pre-LCP 66px rail: its spans need a grid of about 950px (Arabic's Recent
+   Activities is the tightest), which the expanded 256px sidebar leaves only from 1270px. So while the sidebar is
+   expanded the two-track arrangement — the ≤1100px rules, repeated — runs on to 1279px and the desktop grid starts
+   at 1280px (LCP xl); beside the 68px mini rail the grid is 969px or wider from 1101px, so it starts at 1101px as
+   before. Layout only: every widget, its order and its content stay as they are. ---- */
+@media (min-width: 1100.02px) and (max-width: 1279.98px) {
+  .app-body:has(> .sidebar:not(.collapsed, [data-rail])) .dash-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: auto; }
+  .app-body:has(> .sidebar:not(.collapsed, [data-rail])) .dash-widget { grid-column: auto; grid-row: auto; }
+  .app-body:has(> .sidebar:not(.collapsed, [data-rail])) .dash-widget[data-wide] { grid-column: 1 / -1; }
+  .app-body:has(> .sidebar:not(.collapsed, [data-rail])) .dash-widget > *:not(.dash-widget-chrome):not(.dash-resize-handle) { overflow: visible; }
+}
+
 /* ---- neutral pill (LCP neutral badge: `bg-muted text-muted-foreground`). The legacy pair (muted ink on the
    border grey) is 3.98:1; the neutral pair is 4.60:1 light, 4.99:1 dark. ---- */
 .pill-neutral { background: var(--neutral-bg); color: var(--neutral); }
 
-/* ---- initials on the accent gradient (employee cards, kanban): the accent's own readable foreground — INK on
-   the LCP orange (white on #F06000 is 3.3:1, on its lighter stop 2.6:1), the theme engine's pick for a custom
-   org accent. The other avatar palettes are dark and keep white. ---- */
+/* ---- initials on the accent gradient (employee cards, kanban): the accent's own foreground — the LCP white on
+   the stock orange (the owner-decided label, 3.29:1 on #F06000; token map D-LCP-2), the theme engine's readable
+   pick for a custom org accent. The other avatar palettes are dark and keep white. ---- */
 .emp-card .avatar[style*="--brand-orange"],
 .kanban-avatar[style*="--brand-orange"] { color: var(--accent-foreground); }
 

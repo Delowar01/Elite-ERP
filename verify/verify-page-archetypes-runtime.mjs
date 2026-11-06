@@ -18,8 +18,25 @@
  *                                                   it as the baseline's `c6ref` record (C6 recorded it on C5's build)
  *   node verify/verify-page-archetypes-runtime.mjs --write-c7ref     measure the C7 heading pass alone; write it as the
  *                                                   baseline's `c7ref` record (C7 recorded it on C6's build)
+ *   node verify/verify-page-archetypes-runtime.mjs --write-lcpref    measure everything (a full run, which may also
+ *                                                   --rebaseline); write the presentation the LCP stage changed as
+ *                                                   the baseline's `lcpref` record (recorded on the LCP build)
  *   flags: --skip-build (reuse .next — only when it was built from the current tree), --only=<route id>[,<route id>…],
  *          --measure-out=<file> (also write what this run measured, for review evidence)
+ *
+ * LCP (the Elite ERP × Lead Capture Pro design adoption — presentation only) adds one record, lcpref, measured on the
+ * LCP build (--write-lcpref, src clean) and re-records one route, settings-org (--rebaseline: its Color Theme panel
+ * now offers "Use suggested text color" for the five on-orange components — the owner-decided white label is below
+ * 4.5:1, which the panel's warning-only audit reports). Every other record stays as its stage made it, and every check
+ * against it stands, but for what the LCP restyle changes by design, which is now held to lcpref exactly — and lcpref is
+ * held to the older record but for exactly that (each "LCP record" check): the C7 page titles' and QR heading's computed
+ * style and box (their words and classes C6's); each C7 page's text and each report's lines, letter case aside (the
+ * LCP table headers and captions are no longer upper-cased: every difference an upper-case letter of the record now
+ * lower-case, nothing else); the kanban cards' themed properties (size, border colours, shadow, colour, face — their
+ * content C2's); the D-6 cards' and badges' colours and the rows' card widths and height (every label, value, tone,
+ * class and table C1's). The error boundary's title as an h1 and as an h3 now differ by exactly the LCP page-title
+ * rule (weight 700, -0.015em), and each render is lcpref's to the pixel. The Dashboard's desktop grid starts at 1280px
+ * beside the expanded 256px sidebar (it needs a grid of about 950px) and at 1101px beside the 68px mini rail, as before.
  *
  * C8 (the remediation — D-2 applied, presentation only) re-records nothing. The project pass now holds Cost &
  * Profitability to four factual cards (Sales Value, Invoiced, Collected, Total Cost — four across above 640 px, two at
@@ -232,6 +249,8 @@ const WRITE_C4REF = args.some((a) => a === "--write-c4ref" || a.startsWith("--wr
 const WRITE_C6REF = args.some((a) => a === "--write-c6ref" || a.startsWith("--write-c6ref="));
 const WRITE_C7REF = args.some((a) => a === "--write-c7ref" || a.startsWith("--write-c7ref="));
 const WRITE_C8REF = args.some((a) => a === "--write-c8ref" || a.startsWith("--write-c8ref="));
+/** LCP: a full run that also writes the LCP stage's presentation record (lcpref) — it may also --rebaseline. */
+const WRITE_LCPREF = args.includes("--write-lcpref");
 /** A pass that records one thing alone: no owner / Staff / sweep passes, no probes. */
 const RECORD_ONLY = WRITE_D6 || WRITE_C3REF || WRITE_C4REF || WRITE_C6REF || WRITE_C7REF || WRITE_C8REF;
 /** --only=<id>[,<id>…]: a route (or pass) id containing any of them. */
@@ -494,6 +513,13 @@ const C6_WIDGETS = [
   ["Recent Activities", 4, 5], ["Cash Flow", 3, 3], ["Invoices Overview", 3, 4], ["Project Overview", 3, 4], ["HR Snapshot", 3, 3],
 ];
 const C6_H2 = ["Financial Overview", "Quick Actions", "Recent Activities", "Cash Flow", "Invoices Overview", "Project Overview", "HR Snapshot"];
+/** The breakpoint probes, [width, beside the 68px mini rail]: LCP — beside the expanded 256px sidebar the desktop grid starts
+ * at 1280px (its spans need a grid of about 950px; the sidebar leaves 1024px less its padding there) and two tracks hold
+ * from 1279px down — 1180 and 1101px are where the twelve tracks clipped; beside the rail the desktop grid starts at
+ * 1101px as before (a grid of 969px or more); two tracks → one at 641 / 640px (no persistent sidebar there). */
+const C6_BP = [[1280, false], [1279, false], [1180, false], [1101, false], [1101, true], [1100, true], [641, false], [640, false]];
+/** The sidebar each probe is beside (its rendered width): 256 expanded, 68 the rail, 0 below 768px (the navigation sheet). */
+const C6_BP_SIDEBAR = { 1280: 256, 1279: 256, 1180: 256, 1101: 256, "1101|rail": 68, "1100|rail": 68, 641: 0, 640: 0 };
 /** D-5: [label, a real trend, a real sparkline]. */
 const C6_KPIS = [["Total Sales", true, true], ["Total Invoices", true, false], ["Total Receivables", false, false], ["Total Payables", false, false]];
 /** What the Dashboard no longer says (D-1, D-4), in English — and in Arabic where the dictionary has it. */
@@ -550,6 +576,7 @@ if (WRITE_C4REF && (WRITE || REBASE || ONLY || WRITE_D6 || WRITE_C3REF)) refuse(
 if (WRITE_C6REF && (WRITE || REBASE || ONLY || WRITE_D6 || WRITE_C3REF || WRITE_C4REF)) refuse("--write-c6ref records the C6 Dashboard value pass alone, every case: not with --write-baseline, --rebaseline, --only, --write-d6, --write-c3ref or --write-c4ref");
 if (WRITE_C7REF && (WRITE || REBASE || ONLY || WRITE_D6 || WRITE_C3REF || WRITE_C4REF || WRITE_C6REF)) refuse("--write-c7ref records the C7 heading pass alone, every page: not with --write-baseline, --rebaseline, --only or another --write-*");
 if (WRITE_C8REF && (WRITE || REBASE || ONLY || WRITE_D6 || WRITE_C3REF || WRITE_C4REF || WRITE_C6REF || WRITE_C7REF)) refuse("--write-c8ref records the C8 final export pass alone, every kind and format: not with --write-baseline, --rebaseline, --only or another --write-*");
+if (WRITE_LCPREF && (WRITE || ONLY || RECORD_ONLY)) refuse("--write-lcpref records what a full run measured (it may --rebaseline): not with --write-baseline, --only or a --write-* record pass");
 if (REBASE) {
   // A partial re-record must still see every route: the routes it keeps are compared, not copied blind.
   if (ONLY || WRITE) refuse("--rebaseline measures every route and re-records only the ones it names: not with --only or --write-baseline");
@@ -2011,9 +2038,9 @@ try {
 
   // C2 probes, EN and AR, as a person would use the pages. One page each, the frozen clock, the owner
   // (C4: or the org a probe registered).
-  async function probePage(locale, [w, h], path, storageState = ownerState) {
+  async function probePage(locale, [w, h], path, storageState = ownerState, cookies = []) {
     const ctx = await context({ storageState, locale: BROWSERS[locale].locale, timezoneId: BROWSERS[locale].timezoneId });
-    await ctx.addCookies([{ name: "locale", value: locale, url: BASE }, { name: "theme", value: "light", url: BASE }]);
+    await ctx.addCookies([{ name: "locale", value: locale, url: BASE }, { name: "theme", value: "light", url: BASE }, ...cookies.map((c) => ({ ...c, url: BASE }))]);
     const page = await ctx.newPage();
     await page.clock.setFixedTime(new Date(FROZEN_NOW));
     const errors = [];
@@ -2507,7 +2534,8 @@ try {
     delete now.c5.alertOrgState;
     console.log("  C5 probes done");
   }
-  // C6 probes, EN and AR. The grid's two breakpoints (1101 / 1100 px: twelve tracks → two; 641 / 640 px: two →
+  // C6 probes, EN and AR. The grid's breakpoints (LCP: beside the expanded 256px sidebar 1280 / 1279 px — twelve
+  // tracks → two; beside the 68px mini rail, the user's sidebar_collapsed, 1101 / 1100 px as before; 641 / 640 px: two →
   // one). The range selector in the PageHeader, by pointer (the owner, 1440): Last Month chosen — the URL
   // ?range=last_month, the preference saved, the label, the figures and the chart re-read and equal to a direct
   // load of that range — then This Month again (saved back). Customize Layout, in an org registered through
@@ -2534,11 +2562,12 @@ try {
     };
     const prefOf = (email) => dbq6(async (c) => (await c.query("select dashboard_range, dashboard_layout from user_preferences where user_id = (select id from users where email = $1)", [email])).rows[0] ?? null);
     for (const locale of ["en", "ar"])
-      for (const w of [1101, 1100, 641, 640]) {
-        const { ctx, page, errors } = await probePage(locale, [w, 900], "/dashboard");
+      for (const [w, rail] of C6_BP) {
+        const { ctx, page, errors } = await probePage(locale, [w, 900], "/dashboard", ownerState, rail ? [{ name: "sidebar_collapsed", value: "1" }] : []);
         const f = await page.evaluate(DASH_FACTS, c6W(locale));
-        now.c6.bp[`${locale}|${w}`] = { tracks: f?.tracks.length ?? null, autoRows: f?.autoRows ?? null, widgets: f?.widgets.map(({ name, span, clipX, clipY, inGrid, inView, row }) => ({ name, span, clipX, clipY, inGrid, inView, row })) ?? null,
-          gone: f?.gone ?? null, overflow: (await page.evaluate(MEASURE, C1_LITERALS)).overflow, ...errFacts(errors) };
+        const sidebar = await page.evaluate(() => { const s = document.querySelector("aside.sidebar"); return s && getComputedStyle(s).display !== "none" ? Math.round(s.getBoundingClientRect().width) : 0; });
+        now.c6.bp[`${locale}|${w}${rail ? "|rail" : ""}`] = { tracks: f?.tracks.length ?? null, autoRows: f?.autoRows ?? null, widgets: f?.widgets.map(({ name, span, clipX, clipY, inGrid, inView, row }) => ({ name, span, clipX, clipY, inGrid, inView, row })) ?? null,
+          gone: f?.gone ?? null, sidebar, overflow: (await page.evaluate(MEASURE, C1_LITERALS)).overflow, ...errFacts(errors) };
         await ctx.close();
       }
     for (const locale of ["en", "ar"]) {
@@ -2881,6 +2910,37 @@ if (REBASE) {
   console.log(`• re-recorded ${REBASE.length} routes in ${BASELINE_FILE} and ${ACTIONS_FILE}: ${n(now.states)} owner states, ${n(now.staff)} staff, ${n(now.sweep)} sweep, ` +
     `${n(acts.owner) + n(acts.staff)} action lists; every other route kept as pinned. The checks below compare with the baseline they replace.`);
 }
+// The LCP record: the presentation the LCP stage changed by design, as the LCP build draws it — the C7 titles (and QR
+// heading), texts and error-boundary renders; the report states of the value pass; the kanban facts; the D-6 rows and
+// badges — with the commit and build. The checks hold a run to it exactly, and it to the older records but for that.
+const lcpRecord = () => ({
+  recordedOn: { commit: git("rev-parse", "HEAD"), srcClean: git("status", "--porcelain", "--", "src") === "", build: buildId, chromium: now.chromium },
+  c7: {
+    states: Object.fromEntries(Object.entries(now.c7.states).map(([k, v]) => [k, { title: v.title, qr: v.qr, text: v.text }])),
+    error: Object.fromEntries(Object.entries(now.c7.error).map(([k, v]) => [k, { title: v.title, png: v.png }])),
+  },
+  c4: Object.fromEntries(Object.entries(now.c4.values).filter(([k]) => k.startsWith("report-"))
+    .map(([k, v]) => [k, Object.fromEntries(Object.entries(v).filter(([f]) => !["consoleErrors", "pageErrors", "r418", "errorSample"].includes(f)))])),
+  c3: Object.fromEntries(Object.entries(now.c3.layout).filter(([, v]) => v.kanbanFacts).map(([k, v]) => [k, v.kanbanFacts])),
+  d6: Object.fromEntries(Object.entries(now.d6).filter(([k]) => !D6_C2.includes(k.split("|")[0])).map(([k, v]) => [k, { statRows: v.statRows, badges: v.badges }])),
+});
+if (WRITE_LCPREF) {
+  const rec = lcpRecord();
+  if (!rec.recordedOn.srcClean) refuse("--write-lcpref: src/ has uncommitted changes — the LCP record is measured on a committed tree");
+  if (Object.keys(rec.c7.states).length !== C7_ROUTES.length * 4 || Object.keys(rec.c7.error).length !== 4 || !Object.keys(rec.c4).length || Object.keys(rec.c3).length !== 4 || !Object.keys(rec.d6).length)
+    refuse(`--write-lcpref: a pass is incomplete (C7 ${Object.keys(rec.c7.states).length} / ${Object.keys(rec.c7.error).length}, reports ${Object.keys(rec.c4).length}, kanban ${Object.keys(rec.c3).length}, D-6 ${Object.keys(rec.d6).length})`);
+  const cur = JSON.parse(readFileSync(BASELINE_FILE, "utf8"));
+  writeFileSync(BASELINE_FILE, JSON.stringify({ ...cur, lcpref: rec }, null, 1) + "\n");
+  console.log(`• wrote the LCP record into ${BASELINE_FILE}: ${Object.keys(rec.c7.states).length} C7 states and ${Object.keys(rec.c7.error).length} error renders, ${Object.keys(rec.c4).length} report states, ` +
+    `${Object.keys(rec.c3).length} kanban states, ${Object.keys(rec.d6).length} D-6 states — measured on ${rec.recordedOn.commit.slice(0, 7)} (src clean), build ${buildId}`);
+}
+/** LCP: `b` is `a` with only upper-case letters lowered — the LCP table headers and captions are no longer upper-cased:
+ * the same length, and at every difference an upper-case letter of `a` and its lower case in `b`; nothing else. */
+const caseOnly = (a, b) => {
+  if (typeof a !== "string" || typeof b !== "string" || a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) if (a[i] !== b[i] && !(a[i] !== a[i].toLowerCase() && a[i].toLowerCase() === b[i])) return false;
+  return true;
+};
 
 // ------------------------------------------------------------------------------------- checks
 const base = WRITE ? { ...now } : pinned;
@@ -2890,8 +2950,13 @@ const check = (name, cond, extra = "") => results.push([Boolean(cond), name, ext
 const keys = Object.keys(now.states);
 const list = (xs) => (xs.length ? `${xs.length}: ${xs.slice(0, 6).join(" · ")}${xs.length > 6 ? " …" : ""}` : "");
 const scoped = (o) => Object.fromEntries(Object.entries(o).filter(([k]) => onlyId(k.split("|")[0])));
+// LCP: the presentation the LCP stage changed, as its build draws it (lcpref) — this run's own when it writes the record.
+const lcpRef = (WRITE_LCPREF ? lcpRecord() : pinned?.lcpref) ?? null;
 
 check(`isolation: TEST-ONLY loopback database, no .env, server on 127.0.0.1, browser confined to loopback (${blocked} other requests refused)`, target.pathname === `/${DB}` && !existsSync(join(ROOT, ".env")));
+check(`LCP record: lcpref measured on the LCP build (${lcpRef?.recordedOn?.commit?.slice(0, 7) ?? "—"}, src ${lcpRef?.recordedOn?.srcClean ? "clean" : "MODIFIED"}, build ${lcpRef?.recordedOn?.build ?? "—"}) — the C7 titles, texts and error renders, the report states, the kanban facts, the D-6 rows and badges`,
+  lcpRef?.recordedOn?.srcClean === true && lcpRef.recordedOn.chromium === now.chromium && Object.keys(lcpRef.c7?.states ?? {}).length === C7_ROUTES.length * 4 && Object.keys(lcpRef.c7?.error ?? {}).length === 4
+    && Object.keys(lcpRef.c4 ?? {}).length > 0 && Object.keys(lcpRef.c3 ?? {}).length === 4 && Object.keys(lcpRef.d6 ?? {}).length > 0);
 check(`pinned Chromium (${now.chromium})`, now.chromium === base.chromium, `baseline ${base.chromium}`);
 const pages = new Set(ROUTES.map((r) => r[2]));
 check(`the routes exercise all 36 DEV-UI-01.7 pages (${ROUTES.length} routes; C4 added the VAT report and the vendor statement, with and without a party; C5 the seven other Business Settings tabs)`, ONLY || (pages.size === 36 && ROUTES.length === 54), [...pages].length);
@@ -3275,30 +3340,60 @@ check(`C3 logical numeric columns: Amount (Linked Documents) and Hours (time log
   numBad.length === 0 && (ONLY || amountSeen === 16) && (ONLY && !hoursRuns.length || (hoursRuns.length === 4 && hoursRuns.every((h) => h.numeric.some((c) => c.tag === "td" && c.text === "2.5") && !h.errors.length && h.overflow === 0))),
   list(numBad));
 // §36: the kanban cards, C2's div vs C3's button — computed style and geometry at rest and hovered; the heads.
-const factsDiff = [];
-for (const [k, v] of c3L) {
-  const ref = C3R[k]?.kanbanFacts;
-  if (!v.kanbanFacts) continue;
-  if (!ref) { factsDiff.push(`${k}: no record`); continue; }
+// LCP: a run is held to the LCP record exactly; the LCP record to C2's but for the LCP theme (`allow`): on a card its
+// size and box, border colours, shadow, colour and face; inside it each element's box, face, size, line height, colour
+// and background (its words and every other property C2's); on a head its boxes, face and colour (label, count, height
+// C2's). The head's label element changed tag on purpose in C3 (span → h3); against C2 the tag is left aside.
+const LCP_KANBAN = {
+  card: ["width", "height", "border-top-color", "border-right-color", "border-bottom-color", "border-left-color", "box-shadow", "color", "font-family"],
+  inner: ["box", "font-family", "font-size", "line-height", "color", "background-color"],
+  head: ["font-family", "color"],
+};
+const INNER_FIELDS = ["box", ...INNER_PROPS, "text"];
+function kanbanDiff(k, ref, cur, out, allow = null) {
   const byTitle = (xs) => Object.fromEntries((xs ?? []).filter(Boolean).map((c) => [c.title, c]));
-  for (const [what, a, b] of [["card", byTitle(ref.cards), byTitle(v.kanbanFacts.cards)], ["hovered", byTitle(ref.hover), byTitle(v.kanbanFacts.hover)]]) {
-    if (JSON.stringify(Object.keys(a).sort()) !== JSON.stringify(Object.keys(b).sort())) factsDiff.push(`${k} ${what}s: ${Object.keys(a)} → ${Object.keys(b)}`);
+  for (const [what, a, b] of [["card", byTitle(ref.cards), byTitle(cur.cards)], ["hovered", byTitle(ref.hover), byTitle(cur.hover)]]) {
+    if (JSON.stringify(Object.keys(a).sort()) !== JSON.stringify(Object.keys(b).sort())) out.push(`${k} ${what}s: ${Object.keys(a)} → ${Object.keys(b)}`);
     for (const t of Object.keys(a)) {
       if (!b[t]) continue;
-      if (a[t].box !== b[t].box) factsDiff.push(`${k} ${what} "${t}" box ${a[t].box} → ${b[t].box}`);
+      if (a[t].box !== b[t].box && !allow) out.push(`${k} ${what} "${t}" box ${a[t].box} → ${b[t].box}`);
       const sa = a[t].style.split("|"), sb = b[t].style.split("|");
-      CARD_PROPS.forEach((p, i) => sa[i] !== sb[i] && factsDiff.push(`${k} ${what} "${t}" ${p}: ${sa[i]} → ${sb[i]}`));
-      if (JSON.stringify(a[t].inner) !== JSON.stringify(b[t].inner)) factsDiff.push(`${k} ${what} "${t}" inside: ${JSON.stringify(a[t].inner).slice(0, 120)} → ${JSON.stringify(b[t].inner).slice(0, 120)}`);
+      CARD_PROPS.forEach((p, i) => sa[i] !== sb[i] && !allow?.card.includes(p) && out.push(`${k} ${what} "${t}" ${p}: ${sa[i]} → ${sb[i]}`));
+      if (!allow) {
+        if (JSON.stringify(a[t].inner) !== JSON.stringify(b[t].inner)) out.push(`${k} ${what} "${t}" inside: ${JSON.stringify(a[t].inner).slice(0, 120)} → ${JSON.stringify(b[t].inner).slice(0, 120)}`);
+      } else if (a[t].inner.length !== b[t].inner.length) out.push(`${k} ${what} "${t}" inside: ${a[t].inner.length} → ${b[t].inner.length} elements`);
+      else a[t].inner.forEach((x, j) => {
+        const [fa, fb] = [x.split("|"), b[t].inner[j].split("|")];
+        INNER_FIELDS.forEach((f, i) => fa[i] !== fb[i] && !allow.inner.includes(f) && out.push(`${k} ${what} "${t}" inside #${j} ${f}: ${fa[i]} → ${fb[i]}`));
+      });
     }
   }
-  // A head's label element changes tag on purpose (span → h3); everything else about it is compared.
-  const heads = (xs) => JSON.stringify((xs ?? []).map((h) => Object.fromEntries(Object.entries(h).filter(([f]) => f !== "tag"))));
-  if (heads(ref.heads) !== heads(v.kanbanFacts.heads)) factsDiff.push(`${k} heads: ${heads(ref.heads).slice(0, 160)} → ${heads(v.kanbanFacts.heads).slice(0, 160)}`);
+  const heads = (xs) => (xs ?? []).map((h) => Object.fromEntries(Object.entries(h).filter(([f]) => f !== "tag" && !(allow && /Box$/.test(f)) && !(allow && /Style$/.test(f)))));
+  if (JSON.stringify(heads(ref.heads)) !== JSON.stringify(heads(cur.heads))) out.push(`${k} heads: ${JSON.stringify(heads(ref.heads)).slice(0, 160)} → ${JSON.stringify(heads(cur.heads)).slice(0, 160)}`);
+  if (allow) (ref.heads ?? []).forEach((h, j) => ["labelStyle", "countStyle"].forEach((f) => {
+    const [sa, sb] = [(h[f] ?? "").split("|"), (cur.heads?.[j]?.[f] ?? "").split("|")];
+    HEAD_PROPS.forEach((p, i) => sa[i] !== sb[i] && !allow.head.includes(p) && out.push(`${k} head #${j} ${f} ${p}: ${sa[i]} → ${sb[i]}`));
+  }));
+}
+const factsDiff = [];
+const kanbanCross = [];
+for (const [k, v] of c3L) {
+  if (!v.kanbanFacts) continue;
+  const ref = lcpRef?.c3?.[k];
+  if (!ref) { factsDiff.push(`${k}: no LCP record`); continue; }
+  kanbanDiff(k, ref, v.kanbanFacts, factsDiff);
   if (!v.kanbanFacts.heads.every((h) => h.tag === "h3")) factsDiff.push(`${k} heads: not h3`);
 }
+for (const [k, l] of Object.entries(scoped(lcpRef?.c3 ?? {}))) {
+  const c2 = C3R[k]?.kanbanFacts;
+  if (!c2) { kanbanCross.push(`${k}: no c3ref state`); continue; }
+  kanbanDiff(k, c2, l, kanbanCross, LCP_KANBAN);
+}
 const kfStates = c3L.filter(([, v]) => v.kanbanFacts).length;
-check(`C3 kanban visual equivalence (C2 div → C3 button): every card's ${CARD_PROPS.length} computed properties (width, height, border, radius, background, shadow, padding, margin, font, colour, text-align, cursor, transform…), its box in the column and everything inside it — at rest and hovered — and every column head (label now an h3: same box, same type) are C2's, at 1440 and 390, EN / AR (${kfStates} states)`,
+check(`C3 kanban visual equivalence (C2 div → C3 button; LCP: the LCP record): every card's ${CARD_PROPS.length} computed properties (width, height, border, radius, background, shadow, padding, margin, font, colour, text-align, cursor, transform…), its box in the column and everything inside it — at rest and hovered — and every column head (its label an h3) are the LCP record's, at 1440 and 390, EN / AR (${kfStates} states)`,
   (ONLY || kfStates === 4) && factsDiff.length === 0, list(factsDiff));
+check(`C3 kanban, LCP record against C2's (c3ref): the same cards, words and column heads; every computed property C2's but the LCP theme's — on a card ${LCP_KANBAN.card.join(", ")} (and its box); inside it each element's ${LCP_KANBAN.inner.join(", ")}; on a head its boxes, ${LCP_KANBAN.head.join(", ")}`,
+  (ONLY || Object.keys(lcpRef?.c3 ?? {}).length === 4) && kanbanCross.length === 0, list(kanbanCross));
 
 // §34: the kanban by keyboard (blocking) and by pointer.
 const nameOf = (l, id) => { const t = projDb.tasks.find((x) => String(x.id) === String(id)); return t ? taskName(l, t) : null; };
@@ -3465,15 +3560,27 @@ function preliminary(ref, l) {
   return { ...ref, body: [...body, T(l, B_NOTICE)] };
 }
 const c4Expect = (k) => (isPnl(k) ? withoutProfit(C4R[k], k.split("|")[1]) : isBs(k) ? preliminary(C4R[k], k.split("|")[1]) : C4R[k]);
-const valueDiff = (pred) => vals.filter(([k]) => pred(k) && C4R[k]).flatMap(([k, v]) => {
-  const ref = c4Expect(k);
-  if (!ref) return [`${k}: its c4ref state lacks what C8 final's expectation is derived from`];
+// LCP: a report state is held to the LCP record exactly, and the LCP record to C8 final's expectation (from c4ref) but
+// for letter case — the LCP table headers are no longer upper-cased (caseOnly). The statements say what c4ref says.
+const c4Lcp = (k) => lcpRef?.c4?.[k] ?? null;
+const valueDiff = (pred, refOf = c4Expect, why = "its c4ref state lacks what C8 final's expectation is derived from") => vals.filter(([k]) => pred(k) && C4R[k]).flatMap(([k, v]) => {
+  const ref = refOf(k);
+  if (!ref) return [`${k}: ${why}`];
   return [...new Set([...Object.keys(ref), ...Object.keys(v)])].filter((f) => !ERR_FIELDS.includes(f) && JSON.stringify(v[f]) !== JSON.stringify(ref[f]))
     .map((f) => `${k} ${f}: ${JSON.stringify(ref[f]).slice(0, 90)} → ${JSON.stringify(v[f]).slice(0, 90)}`);
 });
-const reportDiff = valueDiff((k) => k.startsWith("report-"));
-check("C4 report value equality (§47, blocking; C8 final's policy applied): the eight reports — and P&L / Balance Sheet / Cash Flow / VAT against the previous period, an account's General Ledger, a custom-range Trial Balance — say exactly what C3's build said (the P&L states without their three profit figures and with the notice, the Balance Sheet states with the Preliminary line and the disclosure — derived from c4ref): every line, figure and row count, every summary card (value, delta, balance badge), every drill target, the title and range, the picker, presets, dates and compare toggle, the CSV / Excel / PDF links; the search's result and the drill-down's drawer the same (EN / AR, 1440 and 390)",
+const reportDiff = valueDiff((k) => k.startsWith("report-"), c4Lcp, "no LCP record state");
+check("C4 report value equality (§47, blocking; C8 final's policy applied; LCP: the LCP record): the eight reports — and P&L / Balance Sheet / Cash Flow / VAT against the previous period, an account's General Ledger, a custom-range Trial Balance — say exactly what the LCP record says, which is what C3's build said (the P&L states without their three profit figures and with the notice, the Balance Sheet states with the Preliminary line and the disclosure — derived from c4ref) but for letter case: every line, figure and row count, every summary card (value, delta, balance badge), every drill target, the title and range, the picker, presets, dates and compare toggle, the CSV / Excel / PDF links; the search's result and the drill-down's drawer the same (EN / AR, 1440 and 390)",
   reportDiff.length === 0, list(reportDiff));
+const c4Cross = Object.entries(scoped(lcpRef?.c4 ?? {})).flatMap(([k, l]) => {
+  const ref = c4Expect(k);
+  if (!ref) return [`${k}: no c4ref state to derive C8 final's expectation from`];
+  return [...new Set([...Object.keys(ref), ...Object.keys(l)])].filter((f) => !ERR_FIELDS.includes(f) && !caseOnly(JSON.stringify(ref[f]) ?? "", JSON.stringify(l[f]) ?? ""))
+    .map((f) => `${k} ${f}: ${JSON.stringify(ref[f]).slice(0, 90)} → ${JSON.stringify(l[f]).slice(0, 90)}`);
+});
+const c4CaseRuns = Object.entries(scoped(lcpRef?.c4 ?? {})).filter(([k, l]) => c4Expect(k) && JSON.stringify(c4Expect(k)) !== JSON.stringify(Object.fromEntries(Object.keys(c4Expect(k)).map((f) => [f, l[f]])))).length;
+check(`C4, LCP record against C8 final's expectation (c4ref): every report state's every field the same but for letter case — upper-case letters of the record lower-case now, nothing else (${c4CaseRuns} of ${Object.keys(scoped(lcpRef?.c4 ?? {})).length} states so recased: the LCP table headers)`,
+  Object.keys(scoped(lcpRef?.c4 ?? {})).length === vals.filter(([k]) => k.startsWith("report-")).length && c4Cross.length === 0, list(c4Cross));
 const statementDiff = valueDiff((k) => k.startsWith("statement-"));
 check("C4 statement value equality (§48, blocking): the client and vendor statements, with a party and without, say exactly what C3's build said — the Client / Vendor links, the party, every line, filter and date, every table row (opening, transactions, debit / credit, running balance, closing); after the from-date filter the same (EN / AR, 1440 and 390)",
   statementDiff.length === 0, list(statementDiff));
@@ -3582,8 +3689,9 @@ for (const [run, r] of pRuns) {
     if (!s.buttons.every((b) => ["true", "false"].includes(b.pressed) && (b.pressed === "true") === b.active && b.type === "button")) why.push("aria-pressed is not the shown-active state on every toggle");
     if (s.url !== STEP_URLS[i]) why.push(`URL ${s.url}`);
     if (s.h2 !== want || s.h2s !== 1) why.push(`h2 "${s.h2}" (${s.h2s} h2s)`);
-    const ref = c4Expect(`report-${i < 2 ? "default" : s.kind}|${l}|${w}`); // C8 final: a P&L step without its profit figures, with the notice
-    if (!ref) why.push("no c4ref state to compare with (or none to derive C8 final's P&L expectation from)");
+    // C8 final: a P&L step without its profit figures, with the notice; LCP: as the LCP record says it (held to that above).
+    const ref = c4Lcp(`report-${i < 2 ? "default" : s.kind}|${l}|${w}`);
+    if (!ref) why.push("no LCP record state to compare with");
     else {
       if (JSON.stringify(s.exports) !== JSON.stringify(ref.exports.map((e) => e.slice(e.indexOf(" ") + 1)))) why.push(`exports ${JSON.stringify(s.exports)}`);
       const drift = ["title", "body", "figures", "rows", "cards", "drills", "dates", "compare"].filter((f) => JSON.stringify(s.facts?.[f]) !== JSON.stringify(ref[f]));
@@ -3805,7 +3913,9 @@ const c6Keys = keys.filter((k) => k.startsWith("dashboard|"));
 const c6Off = ONLY && !c6Keys.length; // an --only run without the Dashboard: nothing of C6's to hold
 const c6 = (pred) => c6Keys.filter((k) => !pred(now.states[k], k));
 const c6Dash = (k) => now.c6.dash[k.split("|").slice(1).join("|")] ?? null;
-const C6_TRACKS = { 1440: 12, 1101: 12, 1100: 2, 1024: 2, 768: 2, 641: 2, 640: 1, 390: 1 };
+const C6_TRACKS = { 1440: 12, 1024: 2, 768: 2, 390: 1 };
+/** The breakpoint probes' tracks (C6_BP): LCP — twelve from 1280px beside the expanded sidebar, from 1101px beside the rail. */
+const C6_BP_TRACKS = { 1280: 12, 1279: 2, 1180: 2, 1101: 2, "1101|rail": 12, "1100|rail": 2, 641: 2, 640: 1 };
 /** The span each widget must have with `tracks` columns: its desktop span; on two, Financial Overview both, the rest one; on one, one. */
 const c6Span = (i, tracks) => (tracks === 12 ? C6_WIDGETS[i][1] : tracks === 2 ? (C6_WIDGETS[i][0] === "Financial Overview" ? 2 : 1) : 1);
 /** The widgets' names in the page's language: the KPI labels and the h2s — Cash Flow's carries the range. */
@@ -3953,13 +4063,14 @@ for (const l of ["en", "ar"]) console.log(`    ${l}  ${JSON.stringify(c6Ref?.sta
 
 // The probes.
 const bpBad = Object.entries(now.c6.bp).filter(([k, b]) => {
-  const [l, w] = k.split("|");
-  const n = C6_TRACKS[w];
-  return !(b && b.tracks === n && b.overflow === 0 && b.gone?.length === 0 && JSON.stringify(b.widgets.map((x) => x.name)) === JSON.stringify(c6Names(l)) && rowsOk(b, n)
+  const l = k.split("|")[0];
+  const at = k.split("|").slice(1).join("|");
+  const n = C6_BP_TRACKS[at];
+  return !(b && n && b.tracks === n && b.sidebar === C6_BP_SIDEBAR[at] && b.overflow === 0 && b.gone?.length === 0 && JSON.stringify(b.widgets.map((x) => x.name)) === JSON.stringify(c6Names(l)) && rowsOk(b, n)
     && b.widgets.every((x, i) => x.span === c6Span(i, n) && !x.clipX && !x.clipY && x.inGrid && x.inView) && !b.consoleErrors && !b.pageErrors && !b.r418);
 }).map(([k, b]) => `${k} ${JSON.stringify(b)}`);
-check("C6 breakpoints (blocking; EN / AR): 1101 px — twelve tracks, 86 px rows, the desktop spans; 1100 px — two tracks, Financial Overview across both, every other widget one, rows automatic; 641 px — still two; 640 px — one; nothing clipped, nothing past the viewport, no overflow",
-  c6Off || (bpBad.length === 0 && Object.keys(now.c6.bp).length === 8), list(bpBad));
+check("C6 breakpoints (blocking; EN / AR; LCP: the desktop grid needs about 950px): beside the expanded 256px sidebar, 1280 px — twelve tracks, 86 px rows, the desktop spans — and 1279, 1180 and 1101 px — two tracks, Financial Overview across both, every other widget one, rows automatic; beside the 68px mini rail (sidebar_collapsed) twelve at 1101 px and two at 1100 px, as before; 641 px — still two; 640 px — one; nothing clipped, nothing past the viewport, no overflow",
+  c6Off || (bpBad.length === 0 && Object.keys(now.c6.bp).length === C6_BP.length * 2), list(bpBad));
 const RANGE_ITEMS = (l) => Object.values(C6_RANGE_KEYS).map((en) => T(l, en));
 const rangeE2E = Object.entries(now.c6.range).filter(([l, r]) => {
   const values = r.after?.values;
@@ -4050,16 +4161,40 @@ const d6Ov = d6Keys.filter((k) => now.d6[k].overflow !== 0);
 check("D-6: no page overflow on any StatRow consumer at any width", d6Ov.length === 0, list(d6Ov.map(d6Show((s) => `${s.overflow}px`))));
 const d6Err = d6Keys.filter((k) => now.d6[k].status !== 200 || now.d6[k].consoleErrors || now.d6[k].pageErrors || now.d6[k].r418);
 check("D-6: every consumer answers 200, with zero console errors, page errors and React #418", d6Err.length === 0, list(d6Err.map(d6Show((s) => `${s.status} ${JSON.stringify(s.errorSample)}`))));
-// Against the record: nothing changed but the phone layout.
-const d6Diff = (f, which = d6Recorded) =>
-  which.filter((k) => D6R[k] && JSON.stringify(f(now.d6[k])) !== JSON.stringify(f(D6R[k]))).map((k) => `${k} ${JSON.stringify(f(D6R[k])).slice(0, 140)} → ${JSON.stringify(f(now.d6[k])).slice(0, 140)}`);
+// Against the record: nothing changed but the phone layout. LCP: the rows (their cards' colours, widths and height) and
+// the badges' colours are the LCP record's — C1's record with the LCP record's rows and badges — and the LCP record is
+// C1's but for exactly those (the LCP palette and the LCP metric-card size; held below).
+const d6Exp = (k) => (D6R[k] && lcpRef?.d6?.[k] ? { ...D6R[k], statRows: lcpRef.d6[k].statRows, badges: lcpRef.d6[k].badges } : null);
+const d6Diff = (f, which = d6Recorded, refOf = (k) => D6R[k]) =>
+  which.filter((k) => D6R[k] && (!refOf(k) || JSON.stringify(f(now.d6[k])) !== JSON.stringify(f(refOf(k))))).map((k) => (refOf(k) ? `${k} ${JSON.stringify(f(refOf(k))).slice(0, 140)} → ${JSON.stringify(f(now.d6[k])).slice(0, 140)}` : `${k}: no LCP record state`));
 const says = (s) => [s.finalPath, s.statRows.map((r) => r.facts), s.badges, s.tables];
-check("D-6: the document lists, Projects and Settings › Security say what the record says — route; each card's label, value, tone, classes and colour; every status badge (tone, colours); every table (heads, rows) — all widths, EN / AR",
-  d6Diff(says).length === 0, list(d6Diff(says)));
+check("D-6: the document lists, Projects and Settings › Security say what the record says (LCP: their cards and badges as the LCP record colours them) — route; each card's label, value, tone, classes and colour; every status badge (tone, colours); every table (heads, rows) — all widths, EN / AR",
+  d6Diff(says, d6Recorded, d6Exp).length === 0, list(d6Diff(says, d6Recorded, d6Exp)));
 check("D-6: …offer the same actions (1440 and 390, EN / AR)", d6Diff((s) => s.actions ?? null).length === 0, list(d6Diff((s) => s.actions ?? null)));
 const geometry = (s) => s.statRows.map((r) => [r.tracks, r.perRow, r.lines, r.widths, r.height]);
-check("D-6: …and above 640 px their rows are the record's to the pixel — tracks, cards a line, card widths, row height (1440 / 1024 / 768)",
-  d6Diff(geometry, d6Recorded.filter((k) => !k.endsWith("|390"))).length === 0, list(d6Diff(geometry, d6Recorded.filter((k) => !k.endsWith("|390")))));
+check("D-6: …and above 640 px their rows are the record's to the pixel (LCP: the LCP record's) — tracks, cards a line, card widths, row height (1440 / 1024 / 768)",
+  d6Diff(geometry, d6Recorded.filter((k) => !k.endsWith("|390")), d6Exp).length === 0, list(d6Diff(geometry, d6Recorded.filter((k) => !k.endsWith("|390")), d6Exp)));
+// The LCP record against C1's: every row's tracks, cards, cards a line, lines, clipping and placement (above 640 px —
+// at 390 C2's two-across is held to its targets above) and every card's label, value, classes, tone and status C1's,
+// only the colour free; every badge's document type, status, tone and words C1's, only its two colours free.
+const d6Cross = Object.entries(scoped(lcpRef?.d6 ?? {})).flatMap(([k, l]) => {
+  const c1 = D6R[k];
+  if (!c1) return [`${k}: no d6 record state`];
+  const out = [];
+  if (l.statRows.length !== c1.statRows.length) out.push(`${k}: ${c1.statRows.length} → ${l.statRows.length} rows`);
+  l.statRows.forEach((r, i) => {
+    const a = c1.statRows[i];
+    if (!a) return;
+    for (const f of ["cards", "clipped", "outside", ...(k.endsWith("|390") ? [] : ["tracks", "perRow", "lines"])]) if (JSON.stringify(a[f]) !== JSON.stringify(r[f])) out.push(`${k} row ${i} ${f}: ${JSON.stringify(a[f])} → ${JSON.stringify(r[f])}`);
+    if (a.facts.length !== r.facts.length) out.push(`${k} row ${i}: ${a.facts.length} → ${r.facts.length} cards`);
+    a.facts.forEach((x, j) => ["label", "value", "cls", "tone", "status"].forEach((f) => x[f] !== r.facts[j]?.[f] && out.push(`${k} row ${i} card ${j} ${f}: ${x[f]} → ${r.facts[j]?.[f]}`)));
+  });
+  const words = (b) => b.split("|").slice(0, 4).join("|");
+  if (JSON.stringify(c1.badges.map(words)) !== JSON.stringify(l.badges.map(words))) out.push(`${k} badges: ${JSON.stringify(c1.badges.map(words)).slice(0, 140)} → ${JSON.stringify(l.badges.map(words)).slice(0, 140)}`);
+  return out;
+});
+check(`D-6, LCP record against C1's (d6): the same rows and cards — tracks, cards a line and lines above 640 px, nothing clipped or outside; every card's label, value, classes, tone and status, every badge's type, status, tone and words C1's — only the colours (the LCP palette), the card widths and the row height (the LCP metric card) differ (${Object.keys(scoped(lcpRef?.d6 ?? {})).length} states)`,
+  (ONLY || Object.keys(lcpRef?.d6 ?? {}).length === d6Recorded.length) && d6Cross.length === 0, list(d6Cross));
 // The intended change, listed for the review: each consumer's rows at 390, as recorded → now.
 console.log("• D-6 at 390 (tracks / cards a line / lines, recorded → now):");
 for (const k of phone.filter((k) => D6R[k])) console.log(`    ${k.padEnd(28)} ${JSON.stringify(D6R[k].statRows.map((r) => [r.tracks, r.perRow, r.lines]))} → ${JSON.stringify(rowsOf(k).map((r) => [r.tracks, r.perRow, r.lines]))}`);
@@ -4116,28 +4251,60 @@ if (!ONLY || ONLY.split(",").includes("c7")) {
   const bad4 = k7.filter((k) => !R7[k] || !S7[k] || !/^3 /.test(R7[k].aria?.[0] ?? "") || JSON.stringify(S7[k].aria) !== JSON.stringify(wantAria(R7[k])));
   check("C7 accessibility tree (Playwright's aria snapshot of <main>): each page title heading level 3 → 1 and the Tax Invoice QR heading level 4 → 2, every heading's name unchanged, no other level changed",
     bad4.length === 0, list(bad4.map((k) => `${k} ${JSON.stringify(R7[k]?.aria)}→${JSON.stringify(S7[k]?.aria)}`)));
+  // LCP: each title's (and the QR heading's) computed style and box, and each page's text, are the LCP record's exactly;
+  // the LCP record's are C6's but for the LCP heading rules — the face, size, line height, weight, letter spacing and
+  // colour of the LCP page title, and so its width, height and box (its words, classes, margins, padding, display,
+  // alignment, gaps and wrapping C6's) — and but for letter case (the LCP table headers and captions are no longer
+  // upper-cased). Every other C7 check holds the run to C6's record as it stands.
+  const L7 = lcpRef?.c7?.states ?? {};
+  const LCP_TITLE = ["fontFamily", "fontSize", "lineHeight", "fontWeight", "letterSpacing", "color", "width", "height"];
   const sameFacts = (a, b) => Boolean(a) === Boolean(b) && (!a || (a.text === b.text && a.cls === b.cls && JSON.stringify(a.style) === JSON.stringify(b.style) && JSON.stringify(a.box) === JSON.stringify(b.box)));
-  const bad5 = k7.filter((k) => !R7[k] || !S7[k] || !sameFacts(S7[k].title, R7[k].title) || !sameFacts(S7[k].qr, R7[k].qr));
-  check("C7 computed style and box: each page title's — and the Tax Invoice QR heading's — font family, size, weight, line height, letter spacing, colour, alignment, wrapping, margins, padding, display, alignment, gaps, width, height, x and y identical to C6's, words and classes too (EN / AR, 1440 / 390)",
-    bad5.length === 0, list(bad5.map((k) => `${k} ${JSON.stringify([R7[k]?.title?.style?.fontWeight, R7[k]?.title?.box])}→${JSON.stringify([S7[k]?.title?.style?.fontWeight, S7[k]?.title?.box])}`)));
+  const bad5 = k7.filter((k) => !L7[k] || !S7[k] || !sameFacts(S7[k].title, L7[k].title) || !sameFacts(S7[k].qr, L7[k].qr));
+  check("C7 computed style and box (LCP: the LCP record's): each page title's — and the Tax Invoice QR heading's — font family, size, weight, line height, letter spacing, colour, alignment, wrapping, margins, padding, display, alignment, gaps, width, height, x and y identical to the LCP record's, words and classes too (EN / AR, 1440 / 390)",
+    bad5.length === 0, list(bad5.map((k) => `${k} ${JSON.stringify([L7[k]?.title?.style?.fontWeight, L7[k]?.title?.box])}→${JSON.stringify([S7[k]?.title?.style?.fontWeight, S7[k]?.title?.box])}`)));
+  const restyled = (a, b) => Boolean(a) === Boolean(b) && (!a || (a.text === b.text && a.cls === b.cls
+    && Object.keys({ ...a.style, ...b.style }).every((p) => a.style?.[p] === b.style?.[p] || LCP_TITLE.includes(p))));
+  const cross5 = k7.filter((k) => !L7[k] || !R7[k] || !restyled(R7[k].title, L7[k].title) || !restyled(R7[k].qr, L7[k].qr));
+  check(`C7, LCP record against C6's (c7ref): every page title and the Tax Invoice QR heading in C6's words and classes, every computed property C6's but the LCP page title's — ${LCP_TITLE.join(", ")} — and so its box (EN / AR, 1440 / 390)`,
+    Object.keys(L7).length === k7.length && cross5.length === 0, list(cross5.map((k) => `${k} ${JSON.stringify(R7[k]?.title)?.slice(0, 120)} → ${JSON.stringify(L7[k]?.title)?.slice(0, 120)}`)));
   const bad6 = k7.filter((k) => kind7(k) === "detail" && (!S7[k] || !/mono/i.test(S7[k].title?.style?.fontFamily ?? "") || !/mono/i.test(R7[k]?.title?.style?.fontFamily ?? "") || /mono/i.test(S7[k].moneyFont ?? "")));
   check("C7 Mono: the 8 document numbers (h1.mono) set in the code face, as in C6 — and the money on those pages not",
     bad6.length === 0, list(bad6.map((k) => `${k} ${S7[k]?.title?.style?.fontFamily} / ${S7[k]?.moneyFont}`)));
-  const bad7 = k7.filter((k) => !R7[k] || !S7[k] || S7[k].text !== R7[k].text || JSON.stringify(S7[k].actions) !== JSON.stringify(R7[k].actions) || S7[k].overflow !== R7[k].overflow);
-  check("C7 nothing else moved: every C7 page's text in <main> and its action inventory identical to C6's — rows, filters, search, saved views, export / import, statuses, row and document actions, relationships, notes, amounts; overflow as C6",
-    bad7.length === 0, list(bad7.map((k) => `${k} text ${S7[k]?.text === R7[k]?.text} actions ${JSON.stringify(S7[k]?.actions) === JSON.stringify(R7[k]?.actions)}`)));
+  const bad7 = k7.filter((k) => !R7[k] || !S7[k] || !L7[k] || S7[k].text !== L7[k].text || JSON.stringify(S7[k].actions) !== JSON.stringify(R7[k].actions) || S7[k].overflow !== R7[k].overflow);
+  check("C7 nothing else moved: every C7 page's text in <main> the LCP record's (C6's but for letter case, held below) and its action inventory identical to C6's — rows, filters, search, saved views, export / import, statuses, row and document actions, relationships, notes, amounts; overflow as C6",
+    bad7.length === 0, list(bad7.map((k) => `${k} text ${S7[k]?.text === L7[k]?.text} actions ${JSON.stringify(S7[k]?.actions) === JSON.stringify(R7[k]?.actions)}`)));
+  const cross7 = k7.filter((k) => !L7[k] || !R7[k] || !caseOnly(R7[k].text, L7[k].text));
+  const recased7 = k7.filter((k) => L7[k] && R7[k] && L7[k].text !== R7[k].text).length;
+  check(`C7, LCP record against C6's (c7ref): every page's text C6's but for letter case — upper-case letters of C6's text lower-case now, nothing else (${recased7} of ${k7.length} states recased: the LCP table headers and captions)`,
+    Object.keys(L7).length === k7.length && cross7.length === 0, list(cross7));
   const bad8 = k7.filter((k) => !S7[k] || S7[k].consoleErrors || S7[k].pageErrors || S7[k].r418);
   check("C7: zero console errors, page errors and React #418 on every C7 state", bad8.length === 0, list(bad8.map((k) => `${k} ${JSON.stringify(S7[k]?.errorSample ?? null)}`)));
   const E = now.c7.error;
   const ER = c7Ref?.error ?? {};
+  const EL = lcpRef?.c7?.error ?? {};
+  // LCP: the LCP page-title rule (lcp.css `h1`: weight 700, letter spacing -0.015em — -0.285px on the boundary's 19px title)
+  // reaches the boundary's h1 and not an h3, so the two renders differ by exactly that; each is the LCP record's to the pixel.
+  const LCP_H1_RULE = { fontWeight: "700", letterSpacing: "-0.285px" };
+  const styleDiff = (x, y) => Object.keys({ ...x, ...y }).filter((p) => x?.[p] !== y?.[p]).sort();
   const errBad = [1440, 390].filter((w) => {
-    const [a, b] = [E[`h3|${w}`], E[`h1|${w}`]];
-    return !a || !b || a.title?.tag !== "h3" || b.title?.tag !== "h1" || b.h1 !== 1 || a.title.text !== "Something went wrong" ||
-      JSON.stringify(a.title.style) !== JSON.stringify(b.title.style) || JSON.stringify(a.title.box) !== JSON.stringify(b.title.box) || a.png !== b.png ||
-      ER[`h3|${w}`]?.png !== a.png || ER[`h1|${w}`]?.png !== b.png;
+    const [a, b, c6h3] = [E[`h3|${w}`], E[`h1|${w}`], ER[`h3|${w}`]?.title];
+    return !a || !b || !c6h3 || a.title?.tag !== "h3" || b.title?.tag !== "h1" || b.h1 !== 1 || a.title.text !== "Something went wrong" || b.title.text !== a.title.text ||
+      JSON.stringify(styleDiff(a.title.style, b.title.style)) !== JSON.stringify(Object.keys(LCP_H1_RULE).sort()) ||
+      Object.entries(LCP_H1_RULE).some(([p, v]) => b.title.style[p] !== v || a.title.style[p] !== c6h3.style[p]) ||
+      JSON.stringify(a.title.box) !== JSON.stringify(b.title.box) || EL[`h3|${w}`]?.png !== a.png || EL[`h1|${w}`]?.png !== b.png;
   });
-  check("C7 error boundary (no route raises it; its markup rendered into <main>, EN at 1440 and 390): the title as C6's h3 and as C7's h1 — identical computed style and box, and the two renders pixel-identical (and identical to C6's build's)",
-    errBad.length === 0, list(errBad.map((w) => `${w}: ${E[`h3|${w}`]?.png}/${E[`h1|${w}`]?.png} (C6 ${ER[`h3|${w}`]?.png}/${ER[`h1|${w}`]?.png})`)));
+  check("C7 error boundary (no route raises it; its markup rendered into <main>, EN at 1440 and 390): the title as C6's h3 and as C7's h1 — the same words and box, their computed style the same but for exactly the LCP page-title rule on the h1 (weight 700, letter spacing -0.015em = -0.285px; the h3's C6's), each render the LCP record's to the pixel",
+    errBad.length === 0, list(errBad.map((w) => `${w}: ${E[`h3|${w}`]?.png}/${E[`h1|${w}`]?.png} (LCP record ${EL[`h3|${w}`]?.png}/${EL[`h1|${w}`]?.png}) style ${JSON.stringify(styleDiff(E[`h3|${w}`]?.title?.style, E[`h1|${w}`]?.title?.style))}`)));
+  // …and the LCP record's renders against C6's: the same words and tags; each title's computed style C6's but the LCP theme's
+  // (colour, face), the LCP page-title rule on the h1, and the width (the markup replaces <main>'s content, and the LCP shell
+  // pads <main>'s inner wrapper, not <main>).
+  const errCross = Object.keys(ER).filter((k) => {
+    const [c6, l] = [ER[k]?.title, EL[k]?.title];
+    const free = ["color", "fontFamily", "width", ...(k.startsWith("h1|") ? Object.keys(LCP_H1_RULE) : [])];
+    return !c6 || !l || c6.tag !== l.tag || c6.text !== l.text || styleDiff(c6.style, l.style).some((p) => !free.includes(p));
+  });
+  check("C7 error boundary, LCP record against C6's (c7ref): the four renders' titles in C6's words and tags, every computed property C6's but the LCP theme's colour and face, the LCP page-title rule on the h1, and the width",
+    Object.keys(ER).length === 4 && Object.keys(EL).length === 4 && errCross.length === 0, list(errCross.map((k) => `${k} ${JSON.stringify(styleDiff(ER[k]?.title?.style, EL[k]?.title?.style))}`)));
   // The two app-state routes the baseline holds, re-recorded: their outline is the h1 alone now.
   const appStates = ["recycle-bin", "nf-client"].filter((id) => ROUTES.some((r) => r[0] === id));
   const badApp = keys.filter((k) => appStates.includes(k.split("|")[0])).filter((k) => {

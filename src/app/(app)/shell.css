@@ -15,7 +15,8 @@
      ≥ 1024    persistent sidebar, 256px expanded or the 68px mini rail (the user's sidebar_collapsed)
      768–1023  always the 68px mini rail — dense ERP tables keep their width on a tablet; the expand
                toggle is hidden (nothing to expand to at this width)
-     < 768     no persistent rail; the navigation sheet (mobile-nav.tsx) carries the navigation
+     < 768     no persistent rail; the navigation sheet (mobile-nav.tsx) carries the navigation; the search
+               field becomes the compact search entry and the organization name truncates, so the row fits
      < 640     the header utilities (theme, favorites, notifications, settings, account) move into the
                sheet; menu, organization mark, search and EN | ع stay in the header
    ===================================================================================================== */
@@ -445,7 +446,13 @@
 @media (max-width: 767.98px) {
   .sidebar { display: none; }
   .topbar-menu-btn { display: flex; }
-  .topbar-brand { margin-inline-end: 0; }
+  /* Beside the menu button and, from 640px, the utilities, the row has no room for the search field: the compact
+     search entry stands in for it (LCP md), it and the command-menu pill keep their size, and the organization
+     name alone gives way (it truncates) rather than push the bar past the viewport or under its neighbours. */
+  .topbar-brand { margin-inline-end: 0; flex-shrink: 1; }
+  .topbar .topbar-search { display: none; }
+  .topbar .topbar-search-icon { display: flex; }
+  .topbar-search-slot { flex: 0 0 auto; }
 }
 
 @media (max-width: 639.98px) {
@@ -453,9 +460,6 @@
   .topbar-actions { gap: var(--space-6); }
   .topbar-utilities { display: none; }
   .topbar-brand-name { display: none; }
-  .topbar .topbar-search { display: none; }
-  .topbar .topbar-search-icon { display: flex; }
-  .topbar-search-slot { flex: 0 1 auto; }
 
   /* The utilities, inside the sheet on the subtle plate so they read as in the header. */
   .mobile-nav-utilities {

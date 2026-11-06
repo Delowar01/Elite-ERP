@@ -191,9 +191,14 @@ const mobile = media("max-width: 767.98px");
 const narrow = media("max-width: 639.98px");
 check("768–1023: the rail is always 68px and the expand toggle is hidden", /\.sidebar \{ width: 68px; \}/.test(tablet) && /\.sidebar \.sidebar-toggle,/.test(tablet));
 check("<768: no persistent sidebar; the menu trigger appears (LCP md breakpoint)", /\.sidebar \{ display: none; \}/.test(mobile) && /\.topbar-menu-btn \{ display: flex; \}/.test(mobile));
-check("<640: utilities move to the sheet; the search box becomes the compact search; menu, mark, search and EN | ع stay",
-  /\.topbar-utilities \{ display: none; \}/.test(narrow) && /\.mobile-nav-utilities \{/.test(narrow) && /\.topbar \.topbar-search-icon \{ display: flex; \}/.test(narrow) &&
-  !/\.(topbar-lang|topbar-menu-btn|topbar-brand|cmdk-trigger-pill)[^{-]*\{[^}]*display: none/.test(narrow));
+// LCP: from 640 to 767px the menu button and the utilities leave the field no room (it was squeezed to nothing, its ⌘K
+// hint over EN | ع, the account past the viewport): below 768 the compact search stands in for it, and the name gives way.
+check("<768: the search box becomes the compact search (it and the command-menu pill keep their size) and the organization name alone gives way (truncates) — the row never passes the viewport or overlaps",
+  /\.topbar \.topbar-search \{ display: none; \}/.test(mobile) && /\.topbar \.topbar-search-icon \{ display: flex; \}/.test(mobile) &&
+  /\.topbar-brand \{[^}]*flex-shrink: 1;/.test(mobile) && /\.topbar-search-slot \{ flex: 0 0 auto; \}/.test(mobile));
+check("<640: utilities move to the sheet; the name hides; menu, mark, search and EN | ع stay",
+  /\.topbar-utilities \{ display: none; \}/.test(narrow) && /\.mobile-nav-utilities \{/.test(narrow) && /\.topbar-brand-name \{ display: none; \}/.test(narrow) &&
+  !/\.(topbar-lang|topbar-menu-btn|topbar-brand|cmdk-trigger-pill|topbar-search-icon)[^{-]*\{[^}]*display: none/.test(narrow));
 check("the organization name truncates (never widens the bar) and keeps its own direction",
   /max-width:\s*220px/.test(rule(".topbar-brand-name")) && /text-overflow:\s*ellipsis/.test(rule(".topbar-brand-name")) && /dir="auto"/.test(appShell));
 

@@ -81,6 +81,18 @@ const measure = () =>
       aside: shown(aside) ? box(aside) : null,
       asideInView: !shown(aside) || inView(aside),
       stranded: controls.filter((c) => !inView(c)).map((c) => c.className.toString().slice(0, 40) || c.tagName),
+      // LCP: no two header controls drawn over each other (the 640–767px row once squeezed the search field to nothing and
+      // drew its ⌘K hint over EN | ع). Nested controls (the EN / ع options inside the switch) are one control.
+      overlaps: (() => {
+        const hc = controls.filter((c) => c.closest("header.topbar") && !controls.some((o) => o !== c && o.contains(c)));
+        const out = [];
+        hc.forEach((a, i) => hc.slice(i + 1).forEach((b) => {
+          const [p, r] = [a.getBoundingClientRect(), b.getBoundingClientRect()];
+          if (Math.min(p.right, r.right) - Math.max(p.left, r.left) > 1 && Math.min(p.bottom, r.bottom) - Math.max(p.top, r.top) > 1)
+            out.push(`${a.className.toString().split(" ")[0] || a.tagName} × ${b.className.toString().split(" ")[0] || b.tagName}`);
+        }));
+        return out;
+      })(),
       brand: shown(q("header.topbar .topbar-brand")) && inView(q("header.topbar .topbar-brand")) && q("header.topbar .topbar-brand").tagName === "A",
       brandName: shown(q(".topbar-brand-name")) ? q(".topbar-brand-name").textContent : null,
       headerHeight: Math.round(header.getBoundingClientRect().height),
@@ -99,7 +111,8 @@ const pageOverflowReport = [];
 for (const locale of ["en", "ar"]) {
   for (const theme of ["light", "dark"]) {
     await setPrefs({ locale, theme, sidebar_collapsed: "0" });
-    for (const w of [1440, 1024, 768, 390]) {
+    // LCP: 700 and 640 too — the band where the menu button and the header utilities share the row.
+    for (const w of [1440, 1024, 768, 700, 640, 390]) {
       await page.setViewportSize({ width: w, height: 900 });
       for (const route of ["/dashboard", "/sales/invoices"]) {
         await page.goto(`${BASE}${route}`, { waitUntil: "networkidle" });
@@ -108,11 +121,12 @@ for (const locale of ["en", "ar"]) {
         const tag = `${locale}/${theme}/${w} ${route}`;
         check(`${tag}: the shell adds no horizontal overflow`, m.headerOverflow <= 0 && m.headerInView && m.asideInView, JSON.stringify(m));
         check(`${tag}: no visible shell control outside the viewport`, m.stranded.length === 0, m.stranded.join(","));
+        check(`${tag}: no two header controls drawn over each other`, m.overlaps.length === 0, m.overlaps.join(", "));
         check(`${tag}: the organization identity is in the 56px header (a link, the name from 640px)`,
           m.brand && m.headerHeight === 56 && (w >= 640 ? m.brandName === "Shell Runtime Co" : m.brandName === null), `${m.brand} ${m.headerHeight} ${m.brandName}`);
         check(`${tag}: EN | ع reachable`, m.lang);
         check(`${tag}: navigation reachable (sidebar ≥768, menu button below)`, w >= 768 ? m.asideShown && !m.menuBtn : !m.asideShown && m.menuBtn);
-        check(`${tag}: search reachable (box ≥640, compact icon below)`, w >= 640 ? m.searchBox && !m.searchIcon : !m.searchBox && m.searchIcon);
+        check(`${tag}: search reachable (box ≥768, the compact icon below — LCP md)`, w >= 768 ? m.searchBox && !m.searchIcon : !m.searchBox && m.searchIcon);
         check(`${tag}: account in the top bar from 640px`, w >= 640 ? m.account : !m.account);
         if (w >= 768) {
           check(`${tag}: sidebar width (256 expanded from 1024; the 68px mini rail at 768 even when expanded is preferred)`, Math.round(m.aside.width) === (w >= 1024 ? 256 : 68), String(m.aside.width));
@@ -232,7 +246,7 @@ for (const w of [1440, 390]) {
   await page.setViewportSize({ width: w, height: 900 });
   await page.goto(`${BASE}/dashboard`, { waitUntil: "networkidle" });
   await overlayFocus(".cmdk-trigger-pill", `command palette @${w}`);
-  await overlayFocus(w >= 640 ? "header.topbar .topbar-search" : ".topbar-search-icon", `record search @${w}`);
+  await overlayFocus(w >= 768 ? "header.topbar .topbar-search" : ".topbar-search-icon", `record search @${w}`);
 }
 await page.setViewportSize({ width: 1440, height: 900 });
 await page.goto(`${BASE}/dashboard`, { waitUntil: "networkidle" });
