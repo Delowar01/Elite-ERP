@@ -1,16 +1,18 @@
 @import "tailwindcss";
 
 /* =================================================================================================
-   NAVY COMMAND DESIGN TOKENS (DEV-UI-01.1)
+   ELITE ERP × LEAD CAPTURE PRO DESIGN TOKENS (LCP design adoption; structure from DEV-UI-01.1)
 
    ONE definition per token. Every colour is declared once as `light-dark(<light>, <dark>)` and the
    active appearance is chosen by `color-scheme` (below), so light and dark can never drift apart into
    two blocks. The values are mirrored in src/lib/design-tokens.ts; verify-contrast parses this file
    and fails if they differ, then checks every pairing against WCAG.
 
-   Direction (owner decisions D-02…D-04): dark navy structure, light restrained work area, SOLID
-   colours only, navy primary actions with white text, orange as accent / focus / active marker.
-   The Mockup V12 contract (mockup-parity.css) is superseded (D-01).
+   Values: the Lead Capture Pro WEB palette resolved from its HSL triplets to HEX (the LCP kit's
+   `--primary: 24 100% 50%` form is NOT valid for a registered <color>, so it is never pasted here),
+   adapted where a value fails WCAG — see docs/design-system/ERP_LCP_TOKEN_MAP.md. Supersedes the
+   Navy Command palette by the owner's LCP direction; the token NAMES and the single-block structure
+   are unchanged, so every consumer and the per-org theme engine re-skin without a second system.
    ================================================================================================= */
 
 /* Every colour token that is ever assigned a light-dark() value — here or in the per-org theme CSS —
@@ -85,6 +87,13 @@
 @property --selected-item-text { syntax: "<color>"; inherits: true; initial-value: transparent; }
 @property --badge-background { syntax: "<color>"; inherits: true; initial-value: transparent; }
 @property --badge-text { syntax: "<color>"; inherits: true; initial-value: transparent; }
+/* LCP shell: the dark 56px application header (LCP `--sidebar` surface) and its parts. */
+@property --header-bg { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --header-ink { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --header-border { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --header-accent { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --shadow-color-soft { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --brand-ink { syntax: "<color>"; inherits: true; initial-value: transparent; }
 
 :root {
   /* Follow the OS unless the user picked an appearance (the `theme` cookie → data-theme). */
@@ -93,57 +102,82 @@
   /* ---- brand constants (not appearance-dependent) ---- */
   --brand-navy: #1b1b4e;
   --brand-navy-deep: #100f32;
+  /* The Elite lockup on the page surface: brand navy in light, the page ink in dark. */
+  --brand-ink: light-dark(#1b1b4e, #f9fafb);
 
-  /* ---- canonical semantic tokens ---- */
-  --canvas: light-dark(#f5f6f8, #090b17);
-  --surface: light-dark(#ffffff, #171b31);
-  --surface-subtle: light-dark(#eef0f4, #1e2239);
-  --surface-raised: light-dark(#ffffff, #20253f);
-  --text: light-dark(#17173f, #eceef7);
-  --text-muted: light-dark(#555a75, #a9aecb);
-  --text-faint: light-dark(#646982, #959bbb);
-  --border: light-dark(#e2e5eb, #2b3050);
-  --border-strong: light-dark(#c9ced8, #3c4268);
-  --border-control: light-dark(#868ca3, #646b8f);
-  --primary: light-dark(#1b1b4e, #5a60d6);
-  --primary-foreground: light-dark(#ffffff, #ffffff);
-  --primary-hover: light-dark(#2b2c6e, #4e54c8);
-  --accent: light-dark(#e87722, #f0924a);
+  /* ---- canonical semantic tokens (LCP web palette, resolved; adaptations in the token map) ---- */
+  --canvas: light-dark(#f9fafb, #1a1a1a);
+  --surface: light-dark(#ffffff, #272727);
+  --surface-subtle: light-dark(#f3f4f6, #333333);
+  --surface-raised: light-dark(#ffffff, #2b2b2b);
+  --text: light-dark(#212121, #f9fafb);
+  --text-muted: light-dark(#676f7e, #9da3af);
+  --text-faint: light-dark(#676f7e, #9da3af);
+  --border: light-dark(#e2e4e9, #363636);
+  --border-strong: light-dark(#cbcfd7, #454545);
+  --border-control: light-dark(#878e9b, #7a7a7a);
+  --primary: light-dark(#f06000, #ff6600);
+  --primary-foreground: light-dark(#17173f, #17173f);
+  --primary-hover: light-dark(#e65c00, #ff7b24);
+  --accent: light-dark(#f06000, #ff6600);
   --accent-foreground: light-dark(#17173f, #17173f);
-  --accent-ink: light-dark(#a9500c, #f5a868);
-  --accent-tint: light-dark(#fdf0e6, #3a2615);
-  --focus: light-dark(#c55f0e, #f0924a);
-  --link: light-dark(#1b1b4e, #a9b0ff);
-  --success: light-dark(#17734a, #5fcf9a);
-  --success-bg: light-dark(#e3f2ea, #13301f);
-  --warning: light-dark(#8a5a00, #f0c060);
-  --warning-bg: light-dark(#fbf0d9, #33270a);
-  --danger: light-dark(#b4322d, #f08a83);
-  --danger-bg: light-dark(#fbe6e4, #3a1716);
+  --accent-ink: light-dark(#b84900, #ff6600);
+  --accent-tint: light-dark(#fff0e5, #3d220f);
+  --focus: light-dark(#f06000, #ff6600);
+  --link: light-dark(#b84900, #ff6600);
+  --success: light-dark(#157f3c, #24c25e);
+  --success-bg: light-dark(#ebfaf0, #153220);
+  --warning: light-dark(#9f5704, #fbbd23);
+  --warning-bg: light-dark(#fef5dc, #342714);
+  --danger: light-dark(#c52020, #f87171);
+  --danger-bg: light-dark(#feecec, #371515);
   --danger-foreground: light-dark(#ffffff, #17173f);
-  --danger-hover: light-dark(#992b26, #f29c96);
-  --info: light-dark(#2f4fb8, #93a6f0);
-  --info-bg: light-dark(#e7ecfa, #19203f);
+  --danger-hover: light-dark(#a71b1b, #f98686);
+  --info: light-dark(#0a5adb, #61a6fa);
+  --info-bg: light-dark(#e6f1fe, #152337);
   --corrective: light-dark(#5b3fb8, #b3a3f5);
   --corrective-bg: light-dark(#eeeafb, #251d45);
-  --neutral: light-dark(#4f546e, #b3b7cf);
-  --neutral-bg: light-dark(#eceef3, #232741);
-  --disabled-background: light-dark(#eceef2, #1f2338);
-  --disabled-text: light-dark(#6b6f86, #9a9fbd);
+  --neutral: light-dark(#676f7e, #9da3af);
+  --neutral-bg: light-dark(#f3f4f6, #333333);
+  --disabled-background: light-dark(#f3f4f6, #2e2e2e);
+  --disabled-text: light-dark(#7c8494, #8c8c8c);
+
+  /* ---- LCP shell surfaces ----
+     The application header is the LCP `--sidebar` surface: LCP navy hsl(233 28% 14%) in light, the
+     charcoal hsl(0 0% 13%) in dark; its border is hsl(233 28% 10%) / the dark hairline, its accent
+     (search field, hover) hsl(233 28% 20%) / hsl(0 0% 20%). Ink is the LCP foreground #F9FAFB. */
+  --header-bg: light-dark(#1a1c2e, #212121);
+  --header-ink: light-dark(#f9fafb, #f9fafb);
+  --header-border: light-dark(#121421, #2e2e2e);
+  --header-accent: light-dark(#252841, #333333);
+  --header-ink-muted: color-mix(in srgb, var(--header-ink) 76%, var(--header-bg));
+  --header-hover-bg: var(--header-accent);
+  --header-height: 56px;
 
   /* ---- type families ---- */
-  /* Latin UI → IBM Plex Sans; Arabic glyphs fall through to IBM Plex Sans Arabic (Plex Sans ships no
-     Arabic), so mixed Arabic/English text uses each script's intended face. Plex Mono is for codes,
-     IDs and hashes ONLY — money uses the UI face with tabular figures. */
+  /* Latin UI → Inter 400/500/600/700 (the LCP face, self-hosted by next/font); Arabic glyphs fall
+     through to IBM Plex Sans Arabic (Inter ships no Arabic), so mixed Arabic/English text uses each
+     script's intended face. Plex Mono is for codes, IDs and hashes ONLY — money uses the UI face with
+     tabular figures. */
   --font-ui: var(--font-body-raw), var(--font-arabic-raw), system-ui, sans-serif;
   --font-code-family: var(--font-mono-raw), ui-monospace, monospace;
 
-  /* ---- elevation: borders lead, shadows are restrained ---- */
-  --shadow-color: light-dark(rgba(23, 23, 63, 0.06), rgba(0, 0, 0, 0.35));
-  --shadow-overlay-color: light-dark(rgba(16, 15, 50, 0.22), rgba(0, 0, 0, 0.6));
-  --shadow-sm: 0 1px 2px var(--shadow-color);
-  --shadow-overlay: 0 12px 32px -8px var(--shadow-overlay-color);
-  --focus-ring: light-dark(rgba(197, 95, 14, 0.35), rgba(240, 146, 74, 0.5));
+  /* ---- elevation: the shadow scale LCP actually renders (Tailwind v4 defaults; its declared flat
+     --shadow-* values are dead in the reference product). Dark mode deepens the shadow colour. ---- */
+  --shadow-color: light-dark(rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.45));
+  --shadow-color-soft: light-dark(rgba(0, 0, 0, 0.05), rgba(0, 0, 0, 0.3));
+  --shadow-overlay-color: light-dark(rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.5));
+  --shadow-xs: 0 1px 2px 0 var(--shadow-color-soft);
+  --shadow-sm: 0 1px 3px 0 var(--shadow-color), 0 1px 2px -1px var(--shadow-color);
+  --shadow-md: 0 4px 6px -1px var(--shadow-color), 0 2px 4px -2px var(--shadow-color);
+  --shadow-overlay: 0 10px 15px -3px var(--shadow-overlay-color), 0 4px 6px -4px var(--shadow-overlay-color);
+  --focus-ring: light-dark(rgba(240, 96, 0, 0.35), rgba(255, 102, 0, 0.5));
+
+  /* ---- motion (LCP): 120 / 180 / 280ms; the global reduced-motion rule collapses all of it ---- */
+  --motion-fast: 120ms;
+  --motion-base: 180ms;
+  --motion-slow: 280ms;
+  --motion-ease: cubic-bezier(0.2, 0, 0, 1);
 
   /* ---- spacing (4px base) and radius families ---- */
   --space-0: 0px;
@@ -159,7 +193,7 @@
   --space-40: 40px;
   --space-48: 48px;
   --space-64: 64px;
-  --radius: 8px;
+  --radius: 8px; /* LCP --radius .5rem: sm 4 · md 6 (controls) · lg 8 · xl 12 (cards) */
 
   /* ---- density foundation (D-05: comfortable default; compact is a later preference) ---- */
   --control-height: 36px;
@@ -186,8 +220,9 @@
   --font-numeric: var(--font-ui);
 
   --brand-orange: var(--accent);
-  --brand-orange-light: light-dark(#f5a25c, #f8b57c);
-  --chart-navy: light-dark(#1b1b4e, #8c90e0);
+  --brand-orange-light: light-dark(#ff8533, #ff9e5c);
+  /* LCP chart-2: navy hsl(233 28% 40%) / hsl(233 28% 60%). */
+  --chart-navy: light-dark(#495083, #7c83b6);
   --brand-primary: var(--primary);
   --brand-primary-foreground: var(--primary-foreground);
   --brand-accent: var(--accent);
@@ -205,13 +240,13 @@
   --text-secondary: var(--text-muted);
   --line: var(--border);
   --line-strong: var(--border-strong);
-  --input-background: light-dark(#ffffff, #1e2239);
+  --input-background: light-dark(#ffffff, #333333);
 
   --primary-background: var(--primary);
   --primary-text: var(--primary-foreground);
   --accent-background: var(--accent);
   --accent-text: var(--accent-foreground);
-  --accent-hover: light-dark(#cf6414, #f4a76b);
+  --accent-hover: light-dark(#e65c00, #ff7b24);
   --active-tab-background: var(--accent);
   --active-tab-text: var(--accent-foreground);
   --selected-item-background: var(--accent);
@@ -229,21 +264,20 @@
   --accent-red: var(--danger);
   --accent-red-bg: var(--danger-bg);
 
-  /* Application frame (DEV-UI-01.3, D-01.3-A): a navy sidebar in BOTH appearances — brand navy in
-     light, the deeper brand navy in dark. Its text is the approved light ink (white / the dark-mode
-     text value); muted text, borders, hover and the selected tint are mixes of those approved colours,
-     so no new palette is introduced. `--sidebar-active-bg` is kept for the org theme engine, which
-     still writes it; the shell paints the selected state from the tint + indicator below, both of
-     which follow the org's Selected-item colour (`--selected-item-background`). */
-  --sidebar-bg: light-dark(var(--brand-navy), var(--brand-navy-deep));
-  --sidebar-ink: light-dark(#ffffff, #eceef7);
-  --sidebar-ink-muted: color-mix(in srgb, var(--sidebar-ink) 72%, var(--sidebar-bg));
+  /* Application frame (LCP shell, supersedes DEV-UI-01.3 D-01.3-A): the sidebar is the LIGHT card
+     surface under the dark header — LCP `bg-card border-e` — in both appearances: the card colour, the
+     body / muted ink, the hairline, the subtle hover fill. The selected item is the solid org
+     Selected-item fill (LCP `bg-primary text-primary-foreground shadow-sm`), so the org theme engine's
+     injected `.nav-item.active` rule and the shell paint the same pair. `--sidebar-active-bg` is kept
+     for that engine, which still writes it. */
+  --sidebar-bg: var(--surface);
+  --sidebar-ink: var(--text);
+  --sidebar-ink-muted: var(--text-muted);
   --sidebar-active-bg: var(--accent);
-  --sidebar-border: color-mix(in srgb, var(--sidebar-ink) 14%, var(--sidebar-bg));
-  --sidebar-hover-bg: color-mix(in srgb, var(--sidebar-ink) 9%, var(--sidebar-bg));
-  --sidebar-selected-tint: color-mix(in srgb, var(--selected-item-background) 22%, var(--sidebar-bg));
-  --sidebar-indicator: var(--selected-item-background);
-  /* Uploaded organisation logos are designed for white paper; they sit on a white plate on the rail. */
+  --sidebar-border: var(--border);
+  --sidebar-hover-bg: var(--surface-subtle);
+  /* Uploaded organisation logos are designed for white paper; they sit on a white plate (LCP
+     `bg-white/95 p-0.5`) on the dark header and in the sidebar footer. */
   --sidebar-logo-plate: #ffffff;
 
   --shadow-card: var(--shadow-sm);
@@ -261,36 +295,39 @@
 }
 
 /* Nine-step type scale (DEV-UI-00 §7.1) — utilities text-caption … text-display. Declared with
-   plain @theme (not inline) so the Arabic line heights below can re-point the same variables. */
+   plain @theme (not inline) so the Arabic line heights below can re-point the same variables.
+   LCP adoption: the steps keep their names and are re-pointed to the LCP / Tailwind sizes — body and
+   controls 14/20 (LCP text-sm, so `body` and `body-lg` now share a size), title 18/28 (text-lg),
+   display 30/36 (text-3xl). Mirrored by TYPE_SCALE in src/lib/design-tokens.ts. */
 @theme {
   --text-caption: 11px;
   --text-caption--line-height: 16px;
   --text-body-sm: 12px;
   --text-body-sm--line-height: 16px;
-  --text-body: 13px;
+  --text-body: 14px;
   --text-body--line-height: 20px;
   --text-body-lg: 14px;
   --text-body-lg--line-height: 20px;
   --text-title-sm: 16px;
   --text-title-sm--line-height: 24px;
   --text-title: 18px;
-  --text-title--line-height: 26px;
+  --text-title--line-height: 28px;
   --text-page: 20px;
   --text-page--line-height: 28px;
   --text-display-sm: 24px;
   --text-display-sm--line-height: 32px;
   --text-display: 30px;
-  --text-display--line-height: 38px;
+  --text-display--line-height: 36px;
 }
 
 /* Arabic runs ~10% taller (ascenders/descenders and diacritics). */
 :root[lang="ar"] {
   --text-caption--line-height: 18px;
   --text-body-sm--line-height: 20px;
-  --text-body--line-height: 22px;
+  --text-body--line-height: 24px;
   --text-body-lg--line-height: 24px;
   --text-title-sm--line-height: 26px;
-  --text-title--line-height: 28px;
+  --text-title--line-height: 30px;
   --text-page--line-height: 32px;
   --text-display-sm--line-height: 36px;
   --text-display--line-height: 44px;
@@ -351,7 +388,13 @@
   --color-neutral: var(--neutral);
   --color-neutral-bg: var(--neutral-bg);
 
-  /* Approved radius family: 4 · 6 · 8 · 12. */
+  /* LCP shell colours as utilities (bg-header, text-header-ink …). */
+  --color-header: var(--header-bg);
+  --color-header-ink: var(--header-ink);
+  --color-header-border: var(--header-border);
+  --color-header-accent: var(--header-accent);
+
+  /* Approved radius family: 4 · 6 · 8 · 12 (= LCP rounded-sm / md / lg / xl). */
   --radius-sm: 4px;
   --radius-md: 6px;
   --radius-lg: 8px;
@@ -410,24 +453,38 @@ h1, h2, h3, h4, h5, h6 {
   font-variant-numeric: tabular-nums;
 }
 
-/* Status tag (DEV-UI-01.2, owner decision D-13) — rendered ONLY by <StatusBadge>, from the status
-   registry. A restrained 4px enterprise tag: semantic foreground on its tint, no leading dot, no
-   gradient, glow or lift. Logical padding, so it reads correctly in RTL. Generic `.pill` / <Badge>
-   (Default, document type, access level …) is deliberately NOT changed by this class. */
+/* Status pill (DEV-UI-01.2 registry; LCP shape, decision D-LCP-6 superseding D-13) — rendered ONLY by
+   <StatusBadge>, from the status registry. The LCP `StatusBadge` recipe: a soft rounded-full pill, the
+   semantic foreground on its tint, a hairline in the tone at 25%, and a leading 6px dot in the
+   foreground (LCP `dot`) — unless the tag already leads with an icon or the registry's pulse indicator,
+   which take the dot's place. Decorative only: the label carries the meaning, so the dot is a
+   pseudo-element (never read). No gradient, glow or lift. Logical padding, so it reads correctly in
+   RTL. Generic `.pill` / <Badge> (Default, document type, access level …) is deliberately NOT changed
+   by this class. */
 .status-tag {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding-block: 2px;
-  padding-inline: 8px;
-  border-radius: 4px;
-  font-size: var(--text-caption);
-  line-height: var(--text-caption--line-height);
+  padding-block: 1px;
+  padding-inline: 9px;
+  border-radius: 9999px;
+  border: 1px solid color-mix(in srgb, var(--status-fg) 25%, transparent);
+  font-size: var(--text-body-sm);
+  line-height: var(--text-body-sm--line-height);
   font-weight: 500;
   white-space: nowrap;
   color: var(--status-fg);
   background: var(--status-bg);
 }
+.status-tag::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  background: currentColor;
+  flex-shrink: 0;
+}
+.status-tag:has(> svg, > .status-tag-pulse)::before { content: none; }
 .status-tag[data-tone="neutral"] { --status-fg: var(--neutral); --status-bg: var(--neutral-bg); }
 .status-tag[data-tone="info"] { --status-fg: var(--info); --status-bg: var(--info-bg); }
 .status-tag[data-tone="success"] { --status-fg: var(--success); --status-bg: var(--success-bg); }

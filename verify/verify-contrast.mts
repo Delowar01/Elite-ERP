@@ -6,8 +6,9 @@ import {
   auditTheme, componentContrast, auditedPair, AUDITED_COMPONENTS, THEME_COMPONENTS,
   contrastRatio, isReadable, NEUTRALS, resolveComponentColors, type ThemeInput,
   buildThemeOverrideCss, isDefaultTheme, generateComponentColors, DEFAULT_PRIMARY, DEFAULT_ACCENT,
+  adaptBrand, stockComponentColors, PRESET_MODE, PRESET_PRIMARY, PRESET_ACCENT, INK,
 } from "../src/lib/brand-theme";
-import { TOKENS, TOKEN_CSS_NAME, type CoreTokens, type Appearance } from "../src/lib/design-tokens";
+import { TOKENS, TOKEN_CSS_NAME, LCP_ORANGE, type CoreTokens, type Appearance } from "../src/lib/design-tokens";
 import { readFileSync } from "node:fs";
 import { buttonVariants } from "../src/components/ui/button";
 import { cn } from "../src/lib/utils";
@@ -200,15 +201,50 @@ for (const ap of ["light", "dark"] as Appearance[]) {
     check(`${ap}: ${label} ≥ ${min}:1`, meets(r, min), formatRatio(r));
   }
 }
-check("light: primary is Elite navy with white text (D-03)", TOKENS.light.primary === "#1b1b4e" && TOKENS.light.primaryForeground === "#ffffff");
-check("light: orange is the accent, not the primary fill", TOKENS.light.accent === "#e87722" && TOKENS.light.primary !== TOKENS.light.accent);
+// LCP design adoption (D-LCP-2, superseding the Navy Command decision D-03 "navy primary, white text"):
+// the primary is the LCP web orange #FF6600 — exactly in dark; in light, the org engine's own 3:1
+// adaptation of it (#FF6600 is 2.94:1 on white) — and the text on it is the engine's INK, because white
+// on #FF6600 is 2.94:1. Both halves are asserted, so neither can silently revert.
+check("light: primary is the LCP orange as the org engine adapts it for 3:1 on white (#FF6600 → #F06000), with INK text (D-LCP-2)",
+  TOKENS.light.primary === adaptBrand(LCP_ORANGE, "light") && TOKENS.light.primary === "#f06000" && TOKENS.light.primaryForeground === INK.toLowerCase(),
+  `${TOKENS.light.primary} / ${TOKENS.light.primaryForeground}`);
+check("dark: primary renders the LCP web orange #FF6600 exactly, with INK text", TOKENS.dark.primary === LCP_ORANGE && TOKENS.dark.primaryForeground === INK.toLowerCase());
+check("the documented LCP failure is measured, not inherited: white on #FF6600 is ~2.94:1, so no orange fill carries white text",
+  near(contrastRatio("#ffffff", LCP_ORANGE), 2.94, 0.02) && (["light", "dark"] as Appearance[]).every((ap) => TOKENS[ap].primaryForeground !== "#ffffff" && TOKENS[ap].accentForeground !== "#ffffff"),
+  contrastRatio("#ffffff", LCP_ORANGE).toFixed(3));
+check("LCP: the active marker (accent) is the primary orange itself; orange TEXT uses the AA accent-ink", TOKENS.light.accent === TOKENS.light.primary && TOKENS.dark.accent === TOKENS.dark.primary &&
+  contrastRatio(TOKENS.light.accentInk, TOKENS.light.surface) >= 4.5 && TOKENS.light.accentInk !== TOKENS.light.primary);
+check("no Expo orange (#FF6B00) and no Navy Command primary leak into the stock palette",
+  !JSON.stringify(TOKENS).toLowerCase().includes("#ff6b00") && TOKENS.light.primary !== "#1b1b4e" && TOKENS.dark.primary !== "#5a60d6");
 check("dark: canvas and surface are distinguishable (≥ 1.15:1)", contrastRatio(TOKENS.dark.canvas, TOKENS.dark.surface) >= 1.15, contrastRatio(TOKENS.dark.canvas, TOKENS.dark.surface).toFixed(3));
 check("brand-theme NEUTRALS mirror the token source", NEUTRALS.light.surface === TOKENS.light.surface && NEUTRALS.dark.background === TOKENS.dark.canvas);
 
 // ---------- 12. organization overrides stay contrast-safe and solid ----------
 const stock: ThemeInput = { mode: "gradient", primaryColor: DEFAULT_PRIMARY, accentColor: DEFAULT_ACCENT, gradientFrom: "#F5A25C", gradientTo: "#E87722" };
 check("the stock org (gradient mode, default stops) is the default theme — nothing injected", isDefaultTheme(stock) && buildThemeOverrideCss(stock) === "");
-check("generated stock primary is navy with white text", generateComponentColors(stock, "light").primaryButton.bg.toLowerCase() === "#1b1b4e" && generateComponentColors(stock, "light").primaryButton.fg === "#ffffff");
+// The engine itself is unchanged: fed the stored Elite navy it still produces a navy primary with white
+// text — which is what a CUSTOM org on navy gets. A default org paints the stock palette instead.
+check("the unchanged engine still turns the stored Elite navy into a navy primary with white text", generateComponentColors(stock, "light").primaryButton.bg.toLowerCase() === "#1b1b4e" && generateComponentColors(stock, "light").primaryButton.fg === "#ffffff");
+// LCP adoption: the system preset the Color Theme panel shows (and saves) is a default too, and every
+// default theme resolves to the stock palette — so the panel's preview and audit show what is painted.
+const preset: ThemeInput = { mode: PRESET_MODE, primaryColor: PRESET_PRIMARY, accentColor: PRESET_ACCENT, gradientFrom: "#F5A25C", gradientTo: "#E87722" };
+const singleStored: ThemeInput = { ...stock, mode: "single" };
+check("the LCP preset (single, #FF6600 / #FF6600) is a default theme — nothing injected", isDefaultTheme(preset) && buildThemeOverrideCss(preset) === "");
+check("the old defaults saved explicitly in single mode are still default (unchanged semantics)", isDefaultTheme(singleStored) && buildThemeOverrideCss(singleStored) === "");
+check("a default theme resolves to the stock palette in both appearances (preview == painted)",
+  [stock, preset, singleStored].every((inp) => (["light", "dark"] as Appearance[]).every((ap) => JSON.stringify(resolveComponentColors(inp, ap)) === JSON.stringify(stockComponentColors(ap)))));
+check("the stock component colours are the canonical tokens", JSON.stringify(stockComponentColors("light").primaryButton) === JSON.stringify({ bg: TOKENS.light.primary, fg: TOKENS.light.primaryForeground }) &&
+  JSON.stringify(stockComponentColors("dark").badge) === JSON.stringify({ bg: TOKENS.dark.accentTint, fg: TOKENS.dark.accentInk }));
+check("the engine fed the preset generates the same light primary the stock palette paints", generateComponentColors(preset, "light").primaryButton.bg.toLowerCase() === TOKENS.light.primary &&
+  generateComponentColors(preset, "light").primaryButton.fg.toLowerCase() === TOKENS.light.primaryForeground);
+check("an override, or any other colour, is a custom theme and is still injected", !isDefaultTheme({ ...preset, overrides: { light: { badge: { bg: "#eeeeee" } } } } as ThemeInput) &&
+  !isDefaultTheme({ ...preset, primaryColor: "#0E7C66" }) && buildThemeOverrideCss({ ...preset, primaryColor: "#0E7C66" }).length > 0);
+for (const ap of ["light", "dark"] as Appearance[]) {
+  for (const comp of AUDITED_COMPONENTS) {
+    const c = componentContrast(stock, ap, comp);
+    check(`stock (default) theme ${ap} ${comp}: passes AA`, c.passes, formatRatio(c.ratio));
+  }
+}
 // A deliberately awkward brand: pale yellow primary, teal accent.
 const yellow: ThemeInput = { mode: "single", primaryColor: "#F7D44A", accentColor: "#14B8A6", gradientFrom: "#F5A25C", gradientTo: "#E87722" };
 for (const ap of ["light", "dark"] as Appearance[]) {

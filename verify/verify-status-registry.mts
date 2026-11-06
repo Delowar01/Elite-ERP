@@ -9,7 +9,9 @@
 //   4. ownership      — <StatusBadge> takes no variant / pulse from callers; the registry decides
 //   5. no local maps  — an independent AST scan (not the G4 regex) for status→tone/colour maps,
 //                       status-driven Badge variants, raw pill-tone classes and raw status labels
-//   6. tag shape      — 4px status tag, no default dot, pulse only where the registry says so,
+//   6. tag shape      — the LCP soft pill (D-LCP-6, superseding D-13's 4px tag): rounded-full, a 25% tone
+//                       hairline, the decorative leading dot (replaced by an icon or the pulse), pulse only
+//                       where the registry says so,
 //                       and the generic .pill / <Badge> left as it was
 //   7. contrast       — all six tones, light and dark, on the approved DEV-UI-01.1 tokens
 //   8. labels + tones outside tags (DEV-UI-01.2-C1) — AST rules: no status option list rendered
@@ -190,10 +192,16 @@ check("dashboard invoice legend takes colour and label from the registry",
 const globals = read("src/app/globals.css");
 const mockup = read("src/app/(app)/mockup-parity.css");
 const tagRule = globals.match(/\.status-tag \{([^}]*)\}/)?.[1] ?? "";
-check("status tag radius is 4px", /border-radius:\s*4px/.test(tagRule), tagRule.trim());
+// LCP ds/StatusBadge (D-LCP-6): rounded-full, the tone at 25% as a hairline, 12px medium.
+check("status pill radius is fully rounded (LCP rounded-full)", /border-radius:\s*9999px/.test(tagRule), tagRule.trim());
+check("status pill hairline is the tone at 25% (LCP border-{tone}/25)", /border:\s*1px solid color-mix\(in srgb, var\(--status-fg\) 25%, transparent\)/.test(tagRule), tagRule.trim());
 check("status tag uses logical padding (RTL-safe)", /padding-inline:/.test(tagRule) && !/padding-(left|right):/.test(tagRule));
 check("status tag has no gradient, shadow or transform", !/gradient|box-shadow|transform/.test(tagRule));
-check("status tag has no default leading dot", !/\.status-tag::before|\.status-tag:before/.test(globals));
+const dotRule = globals.match(/\.status-tag::before \{([^}]*)\}/)?.[1] ?? "";
+check("status pill draws the LCP leading dot: a 6px currentColor circle, decorative (a pseudo-element is never read)",
+  /content:\s*""/.test(dotRule) && /width:\s*6px/.test(dotRule) && /height:\s*6px/.test(dotRule) && /background:\s*currentColor/.test(dotRule) && /border-radius:\s*9999px/.test(dotRule), dotRule.trim());
+check("an icon or the pulse indicator takes the dot's place (never two markers)",
+  /\.status-tag:has\(> svg, > \.status-tag-pulse\)::before \{ content: none; \}/.test(globals));
 check("generic .pill was not converted (still the original 999px pill)", /\.pill \{[^}]*border-radius: 999px/.test(mockup));
 const plain = render("sales_invoice", "paid");
 const leavePending = render("leave", "pending");

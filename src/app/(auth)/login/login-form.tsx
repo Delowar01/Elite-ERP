@@ -30,12 +30,12 @@ export function LoginForm({ locale }: { locale: Locale }) {
           : null;
 
   return (
-    <div className="w-full max-w-[400px] rounded-2xl border border-line bg-surface-glass p-9 shadow-glass backdrop-blur-xl animate-fade-up">
-      <div className="flex justify-center mb-7">
-        <LogoLockup ink="var(--brand-navy)" size={30} />
+    <div className="auth-form w-full max-w-[400px] animate-fade-up">
+      <div className="flex mb-10">
+        <LogoLockup ink="var(--brand-ink)" size={30} />
       </div>
-      <h1 className="text-center text-xl font-bold">{t(locale, "Welcome back")}</h1>
-      <p className="text-center text-ink-muted text-sm mt-1 mb-6">
+      <h1 className="text-display font-bold tracking-tight">{t(locale, "Welcome back")}</h1>
+      <p className="text-ink-muted text-body-lg mt-2 mb-8">
         {mfaStage ? t(locale, "Enter the code from your authenticator app") : t(locale, "Sign in to your organization")}
       </p>
 
@@ -55,14 +55,14 @@ export function LoginForm({ locale }: { locale: Locale }) {
           </div>
         )}
         {errorText && <p className="text-[12.5px] text-danger">{errorText}</p>}
-        <Button type="submit" className="w-full mt-1" disabled={pending}>
+        <Button type="submit" size="lg" className="w-full mt-2" disabled={pending}>
           {pending ? t(locale, "Signing in…") : mfaStage ? t(locale, "Verify") : t(locale, "Sign in")}
         </Button>
       </form>
 
-      <p className="text-center text-[12.5px] text-ink-muted mt-5">
+      <p className="text-[12.5px] text-ink-muted mt-6">
         {t(locale, "New organization?")}{" "}
-        <Link href="/register" className="text-brand-orange font-semibold">
+        <Link href="/register" className="text-link font-semibold">
           {t(locale, "Create an account")}
         </Link>
       </p>

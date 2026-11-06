@@ -31,18 +31,22 @@ import { join } from "node:path";
 import ts from "typescript";
 import { t as translate } from "../src/lib/i18n/dict";
 import { ACC01_EDITS, ACC01_NEW, acc01Drift, undoAcc01 } from "./acc01-approved-delta.mjs";
+import { LCP_EDITS, LCP_NEW, lcpDrift, undoLcp } from "./lcp-approved-delta.mjs";
 
 const results: [boolean, string, string][] = [];
 const check = (name: string, cond: boolean, extra = "") => results.push([cond, name, extra]);
 const ROOT = new URL("..", import.meta.url).pathname;
-const actualRead = (p: string) => readFileSync(join(ROOT, p), "utf8");
+// LCP design adoption: `actualRead` is the file as main (83e8093) left it — the LCP stage's recorded hunks undone (its
+// check in group 10 proves they are each file's only change); `diskRead` is the file on disk.
+const diskRead = (p: string) => readFileSync(join(ROOT, p), "utf8");
+const actualRead = (p: string) => undoLcp(p, diskRead(p));
 const read = (p: string) => undoAcc01(p, actualRead(p));
 const A = "src/app/(app)/";
 const SH = A + "sales/_shared/";
 /** Source without comments, so a check never matches its own explanation. */
 const code = (s: string) => s.replace(/\{\/\*[\s\S]*?\*\/\}/g, "").replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/.*$/gm, "$1");
 const h16 = (s: string | Buffer) => createHash("sha256").update(s).digest("hex").slice(0, 16);
-const sha = (p: string) => (p in ACC01_EDITS ? h16(read(p)) : h16(readFileSync(join(ROOT, p))));
+const sha = (p: string) => (p in ACC01_EDITS || p in LCP_EDITS ? h16(read(p)) : h16(readFileSync(join(ROOT, p))));
 const css = read(A + "mockup-parity.css").replace(/\/\*[\s\S]*?\*\//g, "");
 function rules(sel: string) {
   const out: string[] = [];
@@ -340,10 +344,10 @@ const PINS = JSON.parse(read("verify/document-form-pins.json")) as Record<string
 const fileDrift = Object.entries(PINS).filter(([p, hsh]) => !p.endsWith("/**") && sha(p) !== hsh).map(([p]) => p);
 function dirHash(dir: string) {
   const files: string[] = [];
-  const walk = (d: string) => { for (const f of readdirSync(join(ROOT, d))) { const p = join(d, f); if (statSync(join(ROOT, p)).isDirectory()) walk(p); else if (!(p in ACC01_NEW)) files.push(p); } };
+  const walk = (d: string) => { for (const f of readdirSync(join(ROOT, d))) { const p = join(d, f); if (statSync(join(ROOT, p)).isDirectory()) walk(p); else if (!(p in ACC01_NEW) && !(p in LCP_NEW)) files.push(p); } };
   walk(dir);
   const hh = createHash("sha256");
-  for (const f of files.sort()) { hh.update(f + "\0"); hh.update(f in ACC01_EDITS ? read(f) : readFileSync(join(ROOT, f))); }
+  for (const f of files.sort()) { hh.update(f + "\0"); hh.update(f in ACC01_EDITS || f in LCP_EDITS ? read(f) : readFileSync(join(ROOT, f))); }
   return hh.digest("hex").slice(0, 16);
 }
 const dirDrift = Object.entries(PINS).filter(([p, hsh]) => p.endsWith("/**") && dirHash(p.slice(0, -3)) !== hsh.split(" ")[0]).map(([p]) => p);
@@ -353,6 +357,9 @@ check("protected directories byte-identical (currency, PDF, print, layout, db, d
 const accDrift = acc01Drift((f) => { try { return actualRead(f); } catch { return null; } });
 check("ACC-01's approved change: each recorded file is main's plus exactly its hunks, each added file as recorded (verify/acc01-approved-delta.mts)",
   accDrift.length === 0 && Object.keys(ACC01_EDITS).length > 0, accDrift.join(" "));
+const lcpDriftNow = lcpDrift((f) => { try { return diskRead(f); } catch { return null; } });
+check("the LCP design adoption's approved change: each recorded file is main's (83e8093) plus exactly its hunks, each added file as recorded (verify/lcp-approved-delta.mts)",
+  lcpDriftNow.length === 0 && Object.keys(LCP_EDITS).length > 0, lcpDriftNow.join(" "));
 const SUBMIT: Record<string, string> = {
   "sales/quotations/quotation-form.tsx": "9bdada8919ca1c68", "sales/orders/order-form.tsx": "5878b69222c20ecc", "sales/proforma/proforma-form.tsx": "298ddfd557fa4b5b",
   "sales/invoices/invoice-form.tsx": "9ac743493b5e4887", "sales/delivery-challans/dc-form.tsx": "b43736b93681d299", "sales/credit-notes/cn-form.tsx": "6e40556ff6eda6e1",

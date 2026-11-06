@@ -27,8 +27,8 @@ function DrawerContent({
 }) {
   return (
     <DialogPrimitive.Portal>
-      {/* Plain dim overlay — no blur, no decorative animation (DEV-UI-01.3). */}
-      <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-brand-navy-deep/40" />
+      {/* Plain dim overlay — no blur, no decorative animation (DEV-UI-01.3; LCP sheet overlay bg-black/80). */}
+      <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/80" />
       <DialogPrimitive.Content
         data-side={side}
         className={cn(

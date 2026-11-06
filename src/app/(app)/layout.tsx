@@ -12,6 +12,8 @@ import { FavoriteHrefsProvider } from "./_shared/favorites-context";
 import { buildMoneyMark } from "@/lib/currency/currencies";
 import "./mockup-parity.css";
 import "./shell.css";
+// The LCP presentation layer — last, so it restyles the two stylesheets above without editing them.
+import "./lcp.css";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await requireSession();

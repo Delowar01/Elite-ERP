@@ -3,9 +3,11 @@
 // appearance, so a brand color that reads well on white is never painted raw onto a dark surface
 // (and vice versa).
 //
-// Navy Command (DEV-UI-01.1, owner decisions D-03 / D-04) — the core UI is SOLID-ONLY:
-//   - the primary action is always the org's solid Primary colour (Elite navy by default) with a
-//     contrast-checked foreground — never a gradient, in either mode;
+// SOLID-ONLY (DEV-UI-01.1, owner decision D-04), kept by the LCP design adoption:
+//   - the primary action is always the org's solid Primary colour with a contrast-checked foreground —
+//     never a gradient, in either mode. An org that never chose colours (or chose the LCP preset)
+//     injects nothing and renders the stock palette, which is now the Lead Capture Pro palette
+//     (design-tokens.ts; docs/design-system/ERP_LCP_TOKEN_MAP.md);
 //   - "single" mode: Accent is the org's Accent colour;
 //   - "gradient" mode (legacy): the two stops are still stored and still editable, but no core
 //     control paints a gradient any more. The gradient's END stop is used as the solid Accent, so an
@@ -27,13 +29,22 @@ export type ColorThemeMode = "gradient" | "single";
 export type Appearance = "light" | "dark";
 export const APPEARANCES: Appearance[] = ["light", "dark"];
 
-export const DEFAULT_PRIMARY = "#1B1B4E"; // Elite navy
-export const DEFAULT_ACCENT = "#E87722"; // Elite orange
+// The STORED defaults: what every org row holds until an owner saves a theme (orgs.primary_color /
+// accent_color column defaults). An org still on them never chose colours, so it follows the system
+// palette — Navy Command before, Lead Capture Pro now. Never written back by this module.
+export const DEFAULT_PRIMARY = "#1B1B4E"; // Elite navy (stored default)
+export const DEFAULT_ACCENT = "#E87722"; // Elite orange (stored default)
+// The system preset shown and saved by the Color Theme panel (LCP design adoption): the Lead Capture
+// Pro web orange as both primary and accent, single mode. Also a default — saving it unchanged
+// injects nothing, so the stock palette (with its documented accessible adaptations) keeps painting.
+export const PRESET_MODE: ColorThemeMode = "single";
+export const PRESET_PRIMARY = "#FF6600";
+export const PRESET_ACCENT = "#FF6600";
 export const DEFAULT_GRADIENT_FROM = "#F5A25C"; // Elite gradient start (light orange)
 export const DEFAULT_GRADIENT_TO = "#E87722"; // Elite gradient end (orange)
 export const HEX_COLOR = /^#([0-9a-fA-F]{6})$/;
 export const INK = "#17173f";
-import { TOKENS } from "./design-tokens";
+import { TOKENS, type CoreTokens } from "./design-tokens";
 import {
   contrast, contrastOverGradient, parseColor, relativeLuminance, meets, isGradient,
   CONTRAST_NORMAL_TEXT, CONTRAST_LARGE_TEXT, formatRatio,
@@ -210,15 +221,32 @@ export function generateComponentColors(input: ThemeInput, appearance: Appearanc
   // Badge is a soft tint: toward white on light, toward the elevated dark surface on dark — mixing
   // toward white in dark mode is exactly what made badges glare/wash out before.
   const badgeBg = appearance === "dark" ? mixHex(b.accentSolid, n.surfaceElevated, 0.74) : mixHex(b.accentSolid, "#ffffff", 0.86);
-  const onPrimary = suggestReadableFg(b.primarySolid, readableForeground(b.primarySolid));
-  const onAccent = suggestReadableFg(b.accentSolid, readableForeground(b.accentSolid));
+  const primary = readablePair(b.primarySolid, appearance);
+  const accent = readablePair(b.accentSolid, appearance);
   return {
-    primaryButton: { bg: b.primarySolid, fg: onPrimary },
-    accentButton: { bg: b.accentSolid, fg: onAccent },
-    activeTab: { bg: b.accentSolid, fg: onAccent },
-    selectedItem: { bg: b.accentSolid, fg: onAccent },
+    primaryButton: primary,
+    accentButton: accent,
+    activeTab: accent,
+    selectedItem: accent,
     badge: { bg: badgeBg, fg: suggestReadableFg(badgeBg, b.accentSolid) },
   };
+}
+
+/**
+ * A solid component fill and a font colour for it that meets AA (4.5:1). The fill keeps its hue; only
+ * when neither white nor INK reaches AA on it (a mid-tone brand colour, e.g. a green on the LCP dark
+ * card) is it moved further from the page surface — lighter in dark mode (toward INK), darker in light
+ * mode (toward white) — just far enough. A pair that already passes is returned unchanged.
+ */
+function readablePair(bg: string, appearance: Appearance): ComponentColor {
+  const fg = suggestReadableFg(bg, readableForeground(bg));
+  if (contrastRatio(fg, bg) >= CONTRAST_AA) return { bg, fg };
+  const towardFg = appearance === "dark" ? INK : "#ffffff";
+  for (let t = 0.04; t <= 0.6; t += 0.04) {
+    const cand = appearance === "dark" ? lighten(bg, t) : darken(bg, t);
+    if (contrastRatio(towardFg, cand) >= CONTRAST_AA) return { bg: cand, fg: towardFg };
+  }
+  return { bg, fg };
 }
 
 /** Normalize either overrides shape into the per-mode shape (legacy flat = light-mode overrides). */
@@ -235,8 +263,29 @@ export function normalizeOverrides(raw: ThemeOverridesByMode | ThemeOverrides | 
   return Object.keys(legacy).length ? { light: legacy } : {};
 }
 
-/** Merge auto-generated colors with this appearance's manual overrides (bg/fg independently). */
+/**
+ * What the stock palette paints for each component in one appearance (globals.css maps the component
+ * variables to these canonical tokens). A default theme injects nothing, so these — not the engine's
+ * output for the stored brand colours — are the colours on screen.
+ */
+export function stockComponentColors(appearance: Appearance = "light"): Record<ThemeComponent, ComponentColor> {
+  const t: CoreTokens = TOKENS[appearance];
+  return {
+    primaryButton: { bg: t.primary, fg: t.primaryForeground },
+    accentButton: { bg: t.accent, fg: t.accentForeground },
+    activeTab: { bg: t.accent, fg: t.accentForeground },
+    selectedItem: { bg: t.accent, fg: t.accentForeground },
+    badge: { bg: t.accentTint, fg: t.accentInk },
+  };
+}
+
+/**
+ * Merge auto-generated colors with this appearance's manual overrides (bg/fg independently). A default
+ * theme resolves to the stock palette, so the Color Theme preview and audit always show what is
+ * actually painted.
+ */
 export function resolveComponentColors(input: ThemeInput, appearance: Appearance = "light"): Record<ThemeComponent, ComponentColor> {
+  if (isDefaultTheme(input)) return stockComponentColors(appearance);
   const gen = generateComponentColors(input, appearance);
   const ov = normalizeOverrides(input.overrides)[appearance] ?? {};
   const out = {} as Record<ThemeComponent, ComponentColor>;
@@ -313,9 +362,10 @@ export function buildSemanticTokens(input: ThemeInput, appearance: Appearance): 
 }
 
 /**
- * Is this the untouched default theme? (then we inject nothing and globals.css paints the stock Navy
- * Command palette exactly.) Judged on the EFFECTIVE solid colours, so a gradient-mode org with the
- * default stops and a single-mode org on Elite navy/orange are both default.
+ * Is this a default theme? (then we inject nothing and globals.css paints the stock palette exactly.)
+ * Judged on the EFFECTIVE solid colours with no overrides: the stored defaults (Elite navy + orange —
+ * a gradient-mode org with the default stops and a single-mode org on navy/orange are both default)
+ * and the LCP system preset (orange + orange).
  */
 export function isDefaultTheme(input: ThemeInput): boolean {
   const ov = normalizeOverrides(input.overrides);
@@ -323,7 +373,19 @@ export function isDefaultTheme(input: ThemeInput): boolean {
   const single = input.mode === "single";
   const primary = safe(input.primaryColor, DEFAULT_PRIMARY).toLowerCase();
   const accent = (single ? safe(input.accentColor, DEFAULT_ACCENT) : safe(input.gradientTo, DEFAULT_GRADIENT_TO)).toLowerCase();
-  return noOverrides && primary === DEFAULT_PRIMARY.toLowerCase() && accent === DEFAULT_ACCENT.toLowerCase();
+  const stored = primary === DEFAULT_PRIMARY.toLowerCase() && accent === DEFAULT_ACCENT.toLowerCase();
+  const preset = primary === PRESET_PRIMARY.toLowerCase() && accent === PRESET_ACCENT.toLowerCase();
+  return noOverrides && (stored || preset);
+}
+
+/**
+ * The colours the Color Theme panel starts from (display only — nothing is written). An org on a
+ * default theme is shown the system preset it is actually rendering; any customised theme is shown
+ * exactly as stored. The org row changes only when an owner/admin saves.
+ */
+export function displayThemeFields(input: ThemeInput): { mode: ColorThemeMode; primaryColor: string; accentColor: string } {
+  if (isDefaultTheme(input)) return { mode: PRESET_MODE, primaryColor: PRESET_PRIMARY, accentColor: PRESET_ACCENT };
+  return { mode: input.mode, primaryColor: input.primaryColor, accentColor: input.accentColor };
 }
 
 // Selector each component maps to in the real app (drives the whole app from the one stylesheet).
