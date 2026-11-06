@@ -231,13 +231,14 @@ for (const ap of ["light", "dark"] as const) {
   check(`${ap}: muted header text on the search field ≥ 4.5`, contrast(muted, searchBg) >= 4.5, contrast(muted, searchBg).toFixed(2));
   check(`${ap}: header text on the hover fill ≥ 4.5`, contrast(h.ink, h.accent) >= 4.5, contrast(h.ink, h.accent).toFixed(2));
   check(`${ap}: focus ring vs the header ≥ 3`, contrast(tk.focus, h.bg) >= 3, contrast(tk.focus, h.bg).toFixed(2));
-  check(`${ap}: pressed language / brand tile — INK on the primary ≥ 4.5, the primary vs the header ≥ 3`,
-    contrast(tk.primaryForeground, tk.primary) >= 4.5 && contrast(tk.primary, h.bg) >= 3, `${contrast(tk.primaryForeground, tk.primary).toFixed(2)} / ${contrast(tk.primary, h.bg).toFixed(2)}`);
+  // Owner decision (2026-11-06): the label on the orange is the LCP white — measured and reported, below AA.
+  check(`${ap}: pressed language / brand tile — the LCP white label on the primary (measured), the primary vs the header ≥ 3`,
+    tk.primaryForeground === "#ffffff" && contrast(tk.primary, h.bg) >= 3, `${contrast(tk.primaryForeground, tk.primary).toFixed(2)} / ${contrast(tk.primary, h.bg).toFixed(2)}`);
   check(`${ap}: sidebar text / muted text on the card ≥ 4.5; on the hover fill ≥ 4.5`,
     contrast(tk.text, tk.surface) >= 4.5 && contrast(tk.textMuted, tk.surface) >= 4.5 && contrast(tk.text, tk.surfaceSubtle) >= 4.5 && contrast(tk.textMuted, tk.surfaceSubtle) >= 4.5,
     `${contrast(tk.textMuted, tk.surface).toFixed(2)} / ${contrast(tk.textMuted, tk.surfaceSubtle).toFixed(2)}`);
-  check(`${ap}: selected item — its text on the default fill ≥ 4.5; the fill vs the card ≥ 3; focus vs the card ≥ 3`,
-    contrast(tk.accentForeground, tk.accent) >= 4.5 && contrast(tk.accent, tk.surface) >= 3 && contrast(tk.focus, tk.surface) >= 3,
+  check(`${ap}: selected item — the LCP white label on the default fill (measured); the fill vs the card ≥ 3; focus vs the card ≥ 3`,
+    tk.accentForeground === "#ffffff" && contrast(tk.accent, tk.surface) >= 3 && contrast(tk.focus, tk.surface) >= 3,
     `${contrast(tk.accentForeground, tk.accent).toFixed(2)} / ${contrast(tk.accent, tk.surface).toFixed(2)}`);
   // Org Selected-item colours from very light to very dark: the engine's selected pair stays readable.
   const orgs = ["#ffffff", "#ffee00", "#00e5ff", "#e87722", "#7a1fa2", "#003366", "#000000", "#15803d"];

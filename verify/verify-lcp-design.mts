@@ -20,7 +20,7 @@ import { contrast } from "../src/lib/contrast";
 import { TOKENS, LCP_ORANGE, type CoreTokens } from "../src/lib/design-tokens";
 import {
   displayThemeFields, isDefaultTheme, buildThemeOverrideCss, resolveComponentColors, stockComponentColors,
-  DEFAULT_PRIMARY, DEFAULT_ACCENT, PRESET_MODE, PRESET_PRIMARY, PRESET_ACCENT, type ThemeInput,
+  DEFAULT_PRIMARY, DEFAULT_ACCENT, PRESET_MODE, PRESET_PRIMARY, PRESET_ACCENT, type ThemeInput, generateComponentColors,
 } from "../src/lib/brand-theme";
 import { t } from "../src/lib/i18n/dict";
 
@@ -65,7 +65,12 @@ const exactBad = EXACT.flatMap(([k, l, d]) => [l !== null && TOKENS.light[k] !==
 check(`the LCP web palette is in the canonical tokens where it passes AA as is (${EXACT.length} tokens)`, exactBad.length === 0, exactBad.join(" "));
 // The documented adaptations (ERP_LCP_TOKEN_MAP.md §6), each with the reason it exists.
 check("adaptation: light primary #F06000 because #FF6600 is below 3:1 on white", TOKENS.light.primary === "#f06000" && contrast(LCP_ORANGE, "#ffffff") < 3 && contrast(TOKENS.light.primary, "#ffffff") >= 3);
-check("adaptation: INK on the orange because white on #FF6600 is 2.94:1", contrast("#ffffff", LCP_ORANGE) < 3 && TOKENS.light.primaryForeground === "#17173f" && TOKENS.dark.primaryForeground === "#17173f");
+// Owner decision (2026-11-06): the label on the orange is WHITE, as the LCP design system specifies (--primary-foreground
+// 0 0% 100%) — replacing the earlier INK adaptation. Its shortfall against AA is pinned here so it is never mistaken for a pass.
+check("owner decision: white on the orange (LCP --primary-foreground) — 3.29:1 on #F06000, 2.94:1 on #FF6600, below AA 4.5:1",
+  (["light", "dark"] as const).every((ap) => TOKENS[ap].primaryForeground === "#ffffff" && TOKENS[ap].accentForeground === "#ffffff") &&
+  Math.abs(contrast("#ffffff", TOKENS.light.primary) - 3.29) < 0.02 && Math.abs(contrast("#ffffff", TOKENS.dark.primary) - 2.94) < 0.02,
+  `${contrast("#ffffff", TOKENS.light.primary).toFixed(2)} / ${contrast("#ffffff", TOKENS.dark.primary).toFixed(2)}`);
 check("adaptation: light warning / danger darkened, dark danger lightened (LCP values fail 4.5)",
   contrast("#bd6705", "#ffffff") < 4.5 && contrast("#ef4343", "#ffffff") < 4.5 && contrast("#ef4343", TOKENS.dark.surface) < 4.5 &&
   contrast(TOKENS.light.warning, TOKENS.light.warningTint) >= 4.5 && contrast(TOKENS.light.danger, TOKENS.light.dangerTint) >= 4.5 && contrast(TOKENS.dark.danger, TOKENS.dark.surface) >= 4.5);
@@ -142,17 +147,31 @@ check("empty state: LCP dashed container on a half-card fill", /border-style:\s*
 check("document line items: the LCP muted table header replaces the orange gradient band", /background:\s*var\(--surface-subtle\)/.test(rule(lcpCss, "table.doc-items-table thead th")));
 const dialog = read("src/components/ui/dialog.tsx"), drawer = read("src/components/ui/drawer.tsx");
 check("dialog and sheet overlays: LCP bg-black/80, no blur", /bg-black\/80/.test(dialog) && /bg-black\/80/.test(drawer) && !/backdrop-blur/.test(dialog + drawer));
+const palette = read("src/components/layout/command-palette.tsx"), recordSearch = read("src/components/layout/record-search.tsx");
+check("command palette and record search overlays: the same LCP bg-black/80 dim, not the old navy tint",
+  [palette, recordSearch].every((s) => /DialogPrimitive\.Overlay className="[^"]*\bbg-black\/80"/.test(s) && !/navy-deep\/40/.test(s) && !/backdrop-blur/.test(s)));
 const button = read("src/components/ui/button.tsx");
 check("button: the primary carries the LCP primary border; secondary / outline the LCP shadow-xs; 16px inline padding",
   /primary:\s*\n\s*"[^"]*border-\[color:var\(--primary-hover\)\]!/.test(button) && /secondary:\s*\n\s*"[^"]*shadow-xs/.test(button) && /outline: "[^"]*shadow-xs/.test(button) && /default: "h-\(--control-height\) px-4"/.test(button));
 
 check("sweep finding: the header ⌘K hint takes the pill's muted header ink (the page's ink-faint was 3.3:1 on the light-mode header)",
   /\.cmdk-trigger-pill \.cmdk-kbd \{ color: inherit; border-color: var\(--header-accent\); \}/.test(shellCss) && /\.cmdk-trigger-pill \{[^}]*color: var\(--header-ink-muted\);/.test(shellCss));
-check("sweep finding: the neutral pill uses the neutral pair; initials on the accent gradient use the accent foreground (INK on the LCP orange)",
+check("sweep finding: the neutral pill uses the neutral pair; initials on the accent gradient follow the accent foreground (the LCP white label)",
   /\.pill-neutral \{ background: var\(--neutral-bg\); color: var\(--neutral\); \}/.test(lcpCss) &&
   /\.emp-card \.avatar\[style\*="--brand-orange"\],\n\.kanban-avatar\[style\*="--brand-orange"\] \{ color: var\(--accent-foreground\); \}/.test(lcpCss));
-// INK on the gradient's lighter stop (#FF8533 light / #FF9E5C dark), the worst point under the initials.
-check("accent-gradient avatar initials stay ≥ 4.5:1 on the lighter stop too", contrast(TOKENS.light.accentForeground, "#ff8533") >= 4.5 && contrast(TOKENS.dark.accentForeground, "#ff9e5c") >= 4.5,
+// Sweep finding (white-label build): the Color Theme warning now shows for the default theme, and its "Use suggested text
+// color" link was orange TEXT on the light canvas (3.15:1) — it takes the AA link colour like every other orange text.
+const companyPanels = read("src/app/(app)/settings/organization/company-panels.tsx");
+check("sweep finding: the Color Theme suggestion link uses the AA link colour, not orange text (3.15:1)",
+  /className="self-start text-link underline"/.test(companyPanels) && !/text-brand-orange underline/.test(companyPanels) && contrast(TOKENS.light.link, TOKENS.light.canvas) >= 4.5,
+  contrast(TOKENS.light.link, TOKENS.light.canvas).toFixed(2));
+// The org-theme engine gives the stock orange the stock white label, so the Color Theme panel's "auto" font and a preset
+// theme with overrides match what the stock palette paints (no flip to INK).
+check("theme engine: the preset orange generates the stock white label in both appearances",
+  (["light", "dark"] as const).every((ap) => generateComponentColors({ mode: "single", primaryColor: "#FF6600", accentColor: "#FF6600", gradientFrom: "#F5A25C", gradientTo: "#E87722" }, ap).primaryButton.fg === TOKENS[ap].primaryForeground));
+// White on the gradient's lighter stop (#FF8533 light / #FF9E5C dark) is the worst point under the initials — reported,
+// not passed: the owner's white-on-orange decision covers the avatars too.
+check("accent-gradient avatar initials are the white label (measured on the lighter stop, below AA)", TOKENS.light.accentForeground === "#ffffff" && TOKENS.dark.accentForeground === "#ffffff",
   `${contrast(TOKENS.light.accentForeground, "#ff8533").toFixed(2)} / ${contrast(TOKENS.dark.accentForeground, "#ff9e5c").toFixed(2)}`);
 
 // ---------- 5. contrast (LCP pairings introduced by this stage) ----------
@@ -165,11 +184,12 @@ for (const ap of ["light", "dark"] as const) {
     ["line-item header (muted) on the subtle fill", k.textMuted, k.surfaceSubtle, 4.5],
     ["raised surface text (menus, dialogs)", k.text, k.surfaceRaised, 4.5],
     ["muted text on raised surfaces", k.textMuted, k.surfaceRaised, 4.5],
-    ["INK on the primary hover", k.primaryForeground, k.primaryHover, 4.5],
     ["neutral pill: neutral ink on its tint (the legacy muted-on-border pair was 3.98:1)", k.neutral, k.neutralTint, 4.5],
-    ["accent-gradient avatar initials: the accent foreground on the accent", k.accentForeground, k.accent, 4.5],
   ];
   for (const [label, fg, bg, min] of pairs) check(`${ap}: ${label} ≥ ${min}:1`, contrast(fg, bg) >= min, contrast(fg, bg).toFixed(2));
+  // The orange fills carry the LCP white label (owner decision) — measured and reported, not counted as AA.
+  check(`${ap}: the LCP white label on the primary, its hover and the accent (owner decision — measured)`, k.primaryForeground === "#ffffff" && k.accentForeground === "#ffffff",
+    [k.primary, k.primaryHover, k.accent].map((bg) => contrast("#ffffff", bg).toFixed(2)).join(" / "));
 }
 check("auth brand panel: header ink on the panel ≥ 4.5 in both appearances (#1a1c2e / #212121)", contrast("#f9fafb", "#1a1c2e") >= 4.5 && contrast("#f9fafb", "#212121") >= 4.5);
 check("Elite lockup ink on the form surface ≥ 4.5 (navy on white; page ink on the dark card)", contrast("#1b1b4e", TOKENS.light.surface) >= 4.5 && contrast("#f9fafb", TOKENS.dark.surface) >= 4.5 &&

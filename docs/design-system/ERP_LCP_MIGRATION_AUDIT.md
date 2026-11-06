@@ -76,6 +76,11 @@ fill is the engine's own 3:1 adaptation of `#FF6600` (`#F06000`), dark mode rend
 warning / danger / control borders are darkened (light) or lightened (dark) along their LCP hue until
 they pass; the dark card is lifted to `#272727`. **No contrast check is lowered or removed.**
 
+**Update (2026-11-06, owner decision):** the label on the orange is white, exactly as the LCP design system specifies,
+instead of the INK adaptation above. That pair (3.29:1 light, 2.94:1 dark) is the one contrast check changed — from a
+4.5:1 pass threshold to an asserted, measured report (white on the orange token, floor 2.5:1). Every other check is unchanged
+(token map §6.1).
+
 ## 5. Owner-decision re-baseline (visual decisions superseded by the LCP direction)
 
 The master prompt supersedes the Navy Command *visual* decisions. Each verifier assertion that encodes
@@ -83,12 +88,12 @@ one of them is **re-encoded to the new decision with the same strictness**, neve
 
 | Old decision (asserted by) | New decision (D-LCP-…) |
 |---|---|
-| D-03 navy primary + white text (`verify:contrast` §11/§12) | D-LCP-2: LCP orange primary, contrast-validated INK foreground |
+| D-03 navy primary + white text (`verify:contrast` §11/§12) | D-LCP-2: LCP orange primary with the LCP white label (owner decision 2026-11-06; the pair is reported below AA, see the token map §6.1) |
 | D-01.3-A navy sidebar in both modes (`verify:shell`) | D-LCP-3: dark 56 px header (LCP navy `#1A1C2E` light / card dark), light 256 px sidebar on the card surface, 68 px mini rail, drawer < 768 px |
 | D-01.3-B selected = tint + indicator bar (`verify:shell`) | D-LCP-4: selected = solid selected-item fill (org colour, AA foreground) + LCP `shadow-sm` |
 | weights 400/500/600 only; no shadows in the shell (`verify:shell`) | D-LCP-5: Inter 400/500/600/700; only the LCP-rendered Tailwind shadow scale |
 | D-13 status = 4 px tag, no dot (`verify:status-registry`) | D-LCP-6: soft rounded-full pill with a dot (tone colours unchanged) |
-| IBM Plex Sans UI face (`verify:typography`) | D-LCP-7: Inter (Latin UI) via `next/font`; IBM Plex Sans Arabic keeps Arabic glyphs; IBM Plex Mono keeps codes |
+| IBM Plex Sans UI face (`verify:typography`) | D-LCP-7: Inter (Latin UI) via `next/font`; IBM Plex Sans Arabic keeps Arabic glyphs; IBM Plex Mono keeps codes; printed / PDF documents keep IBM Plex Sans (frozen output — token map deviation 12) |
 
 Assertions that protect **behaviour** (role filter, guards, ARIA, skip link, focus-visible, logical
 properties / RTL, translations, money/number formatting, document-form behaviour, page-archetype business

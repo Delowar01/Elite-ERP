@@ -118,10 +118,10 @@
   --border-strong: light-dark(#cbcfd7, #454545);
   --border-control: light-dark(#878e9b, #7a7a7a);
   --primary: light-dark(#f06000, #ff6600);
-  --primary-foreground: light-dark(#17173f, #17173f);
+  --primary-foreground: light-dark(#ffffff, #ffffff);
   --primary-hover: light-dark(#e65c00, #ff7b24);
   --accent: light-dark(#f06000, #ff6600);
-  --accent-foreground: light-dark(#17173f, #17173f);
+  --accent-foreground: light-dark(#ffffff, #ffffff);
   --accent-ink: light-dark(#b84900, #ff6600);
   --accent-tint: light-dark(#fff0e5, #3d220f);
   --focus: light-dark(#f06000, #ff6600);

@@ -578,7 +578,7 @@ export function ColorThemePanel({ locale, org }: { locale: Locale; org: Org }) {
                       </div>
                     </div>
                     {comp !== "sidebarActive" && (
-                      <button type="button" className="self-start text-brand-orange underline"
+                      <button type="button" className="self-start text-link underline"
                         onClick={() => setOv(comp as ThemeComponent, "fg", suggestReadableFg(componentBgSolid(input, editMode, comp as ThemeComponent), rFg))}>
                         {t(locale, "Use suggested text color")}
                       </button>

@@ -147,7 +147,10 @@ console.log("page-level overflow (not a shell measurement; reported only):", pag
   await p2.goto(`${BASE}/dashboard`, { waitUntil: "load" });
   const railBox = await p2.locator("aside.sidebar").boundingBox();
   check("first paint at 1024 (no JS): the expanded sidebar is already 256px", railBox && Math.round(railBox.width) === 256, JSON.stringify(railBox));
+  // A real first paint at tablet width — a fresh load, not a resize: the rail's width transition animates any change
+  // after first paint, so measuring right after a 1024 → 768 resize would race the 256 → 68 animation.
   await p2.setViewportSize({ width: 768, height: 900 });
+  await p2.goto(`${BASE}/dashboard`, { waitUntil: "load" });
   const tabletBox = await p2.locator("aside.sidebar").boundingBox();
   check("first paint at 768 (no JS): the mini rail is already 68px", tabletBox && Math.round(tabletBox.width) === 68, JSON.stringify(tabletBox));
   await p2.setViewportSize({ width: 767, height: 900 });

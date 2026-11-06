@@ -124,7 +124,8 @@ export function CommandPalettePanel({ locale, role, onClose }: { locale: Locale;
     // behind (DEV-UI-01.3). Mounted only while open, so `open` is constant.
     <DialogPrimitive.Root open onOpenChange={(open) => !open && onClose()}>
       <DialogPrimitive.Portal>
-        <DialogPrimitive.Overlay className="fixed inset-0 z-[100] bg-brand-navy-deep/40" />
+        {/* LCP overlay: the same plain bg-black/80 dim as every LCP dialog and sheet, no blur. */}
+        <DialogPrimitive.Overlay className="fixed inset-0 z-[100] bg-black/80" />
         <DialogPrimitive.Content
           className="shell-overlay-panel fixed inset-x-4 top-[12vh] z-[100] mx-auto w-auto max-w-[520px] rounded-xl border border-line bg-surface shadow-glass overflow-hidden outline-none focus-visible:ring-2 focus-visible:ring-focus"
         >

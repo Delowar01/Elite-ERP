@@ -36,7 +36,7 @@ export const DEFAULT_PRIMARY = "#1B1B4E"; // Elite navy (stored default)
 export const DEFAULT_ACCENT = "#E87722"; // Elite orange (stored default)
 // The system preset shown and saved by the Color Theme panel (LCP design adoption): the Lead Capture
 // Pro web orange as both primary and accent, single mode. Also a default — saving it unchanged
-// injects nothing, so the stock palette (with its documented accessible adaptations) keeps painting.
+// injects nothing, so the stock palette (the LCP palette and its documented adaptations) keeps painting.
 export const PRESET_MODE: ColorThemeMode = "single";
 export const PRESET_PRIMARY = "#FF6600";
 export const PRESET_ACCENT = "#FF6600";
@@ -239,6 +239,11 @@ export function generateComponentColors(input: ThemeInput, appearance: Appearanc
  * mode (toward white) — just far enough. A pair that already passes is returned unchanged.
  */
 function readablePair(bg: string, appearance: Appearance): ComponentColor {
+  // The stock orange of this appearance carries the stock label — white, as the LCP design system specifies (owner
+  // decision 2026-11-06; below AA, recorded in the token map) — so a theme on the preset colours, with or without
+  // overrides, generates exactly what the stock palette paints instead of flipping to INK.
+  const stock = TOKENS[appearance];
+  if (bg.toLowerCase() === stock.primary || bg.toLowerCase() === stock.accent) return { bg, fg: stock.primaryForeground };
   const fg = suggestReadableFg(bg, readableForeground(bg));
   if (contrastRatio(fg, bg) >= CONTRAST_AA) return { bg, fg };
   const towardFg = appearance === "dark" ? INK : "#ffffff";

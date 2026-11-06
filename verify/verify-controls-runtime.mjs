@@ -278,7 +278,10 @@ for (const locale of ["en", "ar"]) {
     await settle();
     check(`${T}: Checkbox toggles with Space`, (await cb.getAttribute("data-state")) === "checked");
     const cc = await cb.evaluate((el) => ({ bg: getComputedStyle(el).backgroundColor, tick: getComputedStyle(el.querySelector("svg")).color }));
-    check(`${T}: checked tick vs fill ≥ 4.5`, ratio(cc.bg, cc.tick) >= 4.5, `${cc.bg} / ${cc.tick} = ${ratio(cc.bg, cc.tick).toFixed(2)}`);
+    // Owner decision (2026-11-06): on the orange the tick is the LCP white (--primary-foreground) — the ratio is reported,
+    // not counted as AA; a 2.5:1 floor stops a further-lightened orange.
+    check(`${T}: checked tick = the primary label (LCP white, measured; floor 2.5:1)`, cc.tick === (await resolve("var(--primary-foreground)")) && cc.tick === "rgb(255, 255, 255)" && ratio(cc.bg, cc.tick) >= 2.5,
+      `${cc.bg} / ${cc.tick} = ${ratio(cc.bg, cc.tick).toFixed(2)}`);
     check(`${T}: checked fill = --primary`, cc.bg === (await resolve("var(--primary)")), cc.bg);
     await expectFocus(`${T} Radio`, "[data-slot=radio]:checked");
     await page.keyboard.press("ArrowDown"); // company → (government disabled, skipped) → individual

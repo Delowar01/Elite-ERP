@@ -170,10 +170,7 @@ const PAIRS: Pair[] = [
   ["muted text on canvas", "textMuted", "canvas", 4.5],
   ["muted text on surface", "textMuted", "surface", 4.5],
   ["faint text on surface", "textFaint", "surface", 4.5],
-  ["primary-foreground on primary", "primaryForeground", "primary", 4.5],
-  ["primary-foreground on primary-hover", "primaryForeground", "primaryHover", 4.5],
   ["primary boundary vs surface (UI 3:1)", "primary", "surface", 3],
-  ["accent-foreground on accent", "accentForeground", "accent", 4.5],
   ["accent-ink text on surface", "accentInk", "surface", 4.5],
   ["accent-ink text on canvas", "accentInk", "canvas", 4.5],
   ["link on surface", "link", "surface", 4.5],
@@ -201,17 +198,33 @@ for (const ap of ["light", "dark"] as Appearance[]) {
     check(`${ap}: ${label} ≥ ${min}:1`, meets(r, min), formatRatio(r));
   }
 }
+// D-LCP-2, revised by the owner (2026-11-06): the label on the orange fills is WHITE — the Lead Capture
+// Pro design system's --primary-foreground (0 0% 100%). It does not reach AA for body-size text, so it is
+// not counted as a pass: each pair is asserted to be exactly white on the orange token, its ratio is
+// measured and reported, and a 2.5:1 floor stops a further-lightened orange. Every other pair stays AA.
+const ON_ORANGE_PAIRS: [string, keyof CoreTokens, keyof CoreTokens][] = [
+  ["primary-foreground on primary", "primaryForeground", "primary"],
+  ["primary-foreground on primary-hover", "primaryForeground", "primaryHover"],
+  ["accent-foreground on accent", "accentForeground", "accent"],
+];
+for (const ap of ["light", "dark"] as Appearance[]) {
+  for (const [label, fg, bg] of ON_ORANGE_PAIRS) {
+    const r = contrastRatio(TOKENS[ap][fg], TOKENS[ap][bg]);
+    check(`${ap}: ${label} is the LCP white label (owner decision — measured, below AA, floor 2.5:1)`, TOKENS[ap][fg] === "#ffffff" && r >= 2.5, formatRatio(r));
+  }
+}
 // LCP design adoption (D-LCP-2, superseding the Navy Command decision D-03 "navy primary, white text"):
 // the primary is the LCP web orange #FF6600 — exactly in dark; in light, the org engine's own 3:1
-// adaptation of it (#FF6600 is 2.94:1 on white) — and the text on it is the engine's INK, because white
-// on #FF6600 is 2.94:1. Both halves are asserted, so neither can silently revert.
-check("light: primary is the LCP orange as the org engine adapts it for 3:1 on white (#FF6600 → #F06000), with INK text (D-LCP-2)",
-  TOKENS.light.primary === adaptBrand(LCP_ORANGE, "light") && TOKENS.light.primary === "#f06000" && TOKENS.light.primaryForeground === INK.toLowerCase(),
+// adaptation of it (#FF6600 is 2.94:1 on white). The text on it is WHITE, as the LCP design system
+// specifies — the owner's decision (2026-11-06), replacing the earlier INK label. Both halves are asserted.
+check("light: primary is the LCP orange as the org engine adapts it for 3:1 on white (#FF6600 → #F06000), with the LCP white label (D-LCP-2)",
+  TOKENS.light.primary === adaptBrand(LCP_ORANGE, "light") && TOKENS.light.primary === "#f06000" && TOKENS.light.primaryForeground === "#ffffff",
   `${TOKENS.light.primary} / ${TOKENS.light.primaryForeground}`);
-check("dark: primary renders the LCP web orange #FF6600 exactly, with INK text", TOKENS.dark.primary === LCP_ORANGE && TOKENS.dark.primaryForeground === INK.toLowerCase());
-check("the documented LCP failure is measured, not inherited: white on #FF6600 is ~2.94:1, so no orange fill carries white text",
-  near(contrastRatio("#ffffff", LCP_ORANGE), 2.94, 0.02) && (["light", "dark"] as Appearance[]).every((ap) => TOKENS[ap].primaryForeground !== "#ffffff" && TOKENS[ap].accentForeground !== "#ffffff"),
-  contrastRatio("#ffffff", LCP_ORANGE).toFixed(3));
+check("dark: primary renders the LCP web orange #FF6600 exactly, with the LCP white label", TOKENS.dark.primary === LCP_ORANGE && TOKENS.dark.primaryForeground === "#ffffff");
+check("the white label's shortfall is measured, not hidden: white on #FF6600 ~2.94:1, on #F06000 ~3.29:1 — below AA 4.5:1",
+  near(contrastRatio("#ffffff", LCP_ORANGE), 2.94, 0.02) && near(contrastRatio("#ffffff", "#f06000"), 3.29, 0.02) &&
+  (["light", "dark"] as Appearance[]).every((ap) => TOKENS[ap].primaryForeground === "#ffffff" && TOKENS[ap].accentForeground === "#ffffff"),
+  `${contrastRatio("#ffffff", "#f06000").toFixed(3)} / ${contrastRatio("#ffffff", LCP_ORANGE).toFixed(3)}`);
 check("LCP: the active marker (accent) is the primary orange itself; orange TEXT uses the AA accent-ink", TOKENS.light.accent === TOKENS.light.primary && TOKENS.dark.accent === TOKENS.dark.primary &&
   contrastRatio(TOKENS.light.accentInk, TOKENS.light.surface) >= 4.5 && TOKENS.light.accentInk !== TOKENS.light.primary);
 check("no Expo orange (#FF6B00) and no Navy Command primary leak into the stock palette",
@@ -235,14 +248,29 @@ check("a default theme resolves to the stock palette in both appearances (previe
   [stock, preset, singleStored].every((inp) => (["light", "dark"] as Appearance[]).every((ap) => JSON.stringify(resolveComponentColors(inp, ap)) === JSON.stringify(stockComponentColors(ap)))));
 check("the stock component colours are the canonical tokens", JSON.stringify(stockComponentColors("light").primaryButton) === JSON.stringify({ bg: TOKENS.light.primary, fg: TOKENS.light.primaryForeground }) &&
   JSON.stringify(stockComponentColors("dark").badge) === JSON.stringify({ bg: TOKENS.dark.accentTint, fg: TOKENS.dark.accentInk }));
-check("the engine fed the preset generates the same light primary the stock palette paints", generateComponentColors(preset, "light").primaryButton.bg.toLowerCase() === TOKENS.light.primary &&
-  generateComponentColors(preset, "light").primaryButton.fg.toLowerCase() === TOKENS.light.primaryForeground);
+check("the engine fed the preset generates the same light primary fill the stock palette paints", generateComponentColors(preset, "light").primaryButton.bg.toLowerCase() === TOKENS.light.primary);
+// The engine gives the stock orange the stock (LCP white) label, so a theme on the preset colours — with or
+// without overrides — generates exactly what the stock palette paints and never flips its labels to INK; any
+// other orange keeps the engine's own AA choice.
+check("the engine fed the preset generates exactly the stock palette's orange components, white label included (both appearances)",
+  (["light", "dark"] as Appearance[]).every((ap) => (["primaryButton", "accentButton", "activeTab", "selectedItem"] as const).every((c) =>
+    JSON.stringify(generateComponentColors(preset, ap)[c]).toLowerCase() === JSON.stringify(stockComponentColors(ap)[c]).toLowerCase())) && TOKENS.light.primaryForeground === "#ffffff");
+const otherOrange: ThemeInput = { mode: "single", primaryColor: "#FF7700", accentColor: "#E87722", gradientFrom: "#F5A25C", gradientTo: "#E87722" };
+check("any other orange keeps the engine's AA label (INK, ≥ 4.5:1)", (["light", "dark"] as Appearance[]).every((ap) => {
+  const g = generateComponentColors(otherOrange, ap).primaryButton; return g.fg.toLowerCase() === INK.toLowerCase() && contrastRatio(g.fg, g.bg) >= 4.5; }));
+check("a preset theme with an override keeps the stock white label on its other orange components",
+  resolveComponentColors({ ...preset, overrides: { light: { badge: { bg: "#eeeeee" } } } } as ThemeInput, "light").primaryButton.fg === TOKENS.light.primaryForeground);
 check("an override, or any other colour, is a custom theme and is still injected", !isDefaultTheme({ ...preset, overrides: { light: { badge: { bg: "#eeeeee" } } } } as ThemeInput) &&
   !isDefaultTheme({ ...preset, primaryColor: "#0E7C66" }) && buildThemeOverrideCss({ ...preset, primaryColor: "#0E7C66" }).length > 0);
+const ON_ORANGE_COMPONENTS = ["primaryButton", "accentButton", "activeTab", "selectedItem", "sidebarActive"];
 for (const ap of ["light", "dark"] as Appearance[]) {
+  const orange = [TOKENS[ap].primary, TOKENS[ap].accent];
+  const painted = AUDITED_COMPONENTS.filter((comp) => { const c = componentContrast(stock, ap, comp); return c.fg === "#ffffff" && orange.includes(c.bg.toLowerCase()); });
+  check(`stock (default) theme ${ap}: exactly the five orange components carry the LCP white label`, JSON.stringify(painted) === JSON.stringify(ON_ORANGE_COMPONENTS), painted.join(","));
   for (const comp of AUDITED_COMPONENTS) {
     const c = componentContrast(stock, ap, comp);
-    check(`stock (default) theme ${ap} ${comp}: passes AA`, c.passes, formatRatio(c.ratio));
+    if (ON_ORANGE_COMPONENTS.includes(comp)) check(`stock (default) theme ${ap} ${comp}: the LCP white label on the orange (owner decision — measured, below AA, boundary ≥ 3:1)`, c.ratio >= 2.5 && c.boundaryPasses, `${formatRatio(c.ratio)} · boundary ${formatRatio(c.boundaryRatio)}`);
+    else check(`stock (default) theme ${ap} ${comp}: passes AA`, c.passes, formatRatio(c.ratio));
   }
 }
 // A deliberately awkward brand: pale yellow primary, teal accent.

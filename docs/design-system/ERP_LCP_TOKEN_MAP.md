@@ -34,9 +34,9 @@ client (`#FF6B00` is **not** used). Ratios are WCAG 2.x, measured with `src/lib/
 | `--border-strong` | — | `#cbcfd7` | `#454545` | ERP-only (secondary button outline) |
 | `--border-control` | `--input` 220 14% 90% | **`#878e9b`** | **`#7a7a7a`** | LCP's input hairline is 1.27:1; a control boundary must be ≥ 3:1 (WCAG 1.4.11) |
 | `--primary` | `--primary` 24 100% 50% `#FF6600` | **`#f06000`** | `#ff6600` | light: `#FF6600` is 2.94:1 on white (< 3:1 boundary); `#F06000` is the org engine's own `adaptBrand("#FF6600")` (3.30:1 on white, 3.16:1 on the canvas). Dark renders `#FF6600` exactly |
-| `--primary-foreground` | `--primary-foreground` white | **`#17173f`** | **`#17173f`** | white on `#FF6600` is 2.94:1; INK (the engine's `readableForeground`) is 5.17:1 on `#F06000`, 5.81:1 on `#FF6600` |
-| `--primary-hover` | `hover-elevate` overlay (≈ 3% darker / lighter) | `#e65c00` | `#ff7b24` | INK keeps 4.77:1 / 6.7:1 |
-| `--accent` / `--accent-foreground` | active nav = `bg-primary` | `#f06000` / `#17173f` | `#ff6600` / `#17173f` | the ERP's marker colour (active tab, selected nav, org "accent") = the LCP primary |
+| `--primary-foreground` | `--primary-foreground` 0 0% 100% (white) | `#ffffff` | `#ffffff` | **white, exactly as LCP — owner decision (2026-11-06)**, replacing the earlier INK label. Measured 3.29:1 on `#F06000`, 2.94:1 on `#FF6600`: below AA 4.5:1 for body-size text (light still meets the 3:1 large-text / UI level). `verify:contrast` asserts the pair and reports its ratio; it never counts it as a pass |
+| `--primary-hover` | `hover-elevate` overlay (≈ 3% darker / lighter) | `#e65c00` | `#ff7b24` | white measures 3.56:1 / 2.59:1 (reported, floor 2.5:1) |
+| `--accent` / `--accent-foreground` | active nav = `bg-primary` / `text-primary-foreground` | `#f06000` / `#ffffff` | `#ff6600` / `#ffffff` | the ERP's marker colour (active tab, selected nav, org "accent") = the LCP primary, with its white label |
 | `--accent-ink` / `--link` | `text-primary` | **`#b84900`** | `#ff6600` | orange text on light needs ≥ 4.5 (5.26 on white, 4.72 on the tint) |
 | `--accent-tint` | `--primary-soft` 24 100% 95% / 24 60% 15% | `#fff0e5` | `#3d220f` | exact |
 | `--focus` | `--ring` = primary | `#f06000` | `#ff6600` | ≥ 3:1 on card and canvas in both modes |
@@ -63,7 +63,7 @@ client (`#FF6B00` is **not** used). Ratios are WCAG 2.x, measured with `src/lib/
 | untouched (column defaults: gradient mode, `#1B1B4E` / `#E87722`, default stops) | stock palette = this map | unchanged |
 | single mode, `#1B1B4E` / `#E87722` (the old defaults saved explicitly) | stock palette (it was "default" before too) | unchanged |
 | LCP preset (single, `#FF6600` / `#FF6600`, no overrides) — what the panel shows for a default org | stock palette | written only when an owner/admin presses Save |
-| any other primary / accent / gradient / override | the unchanged engine (`brand-theme.ts`) generates contrast-checked component colours over the LCP neutrals | unchanged |
+| any other primary / accent / gradient / override | the engine (`brand-theme.ts`) generates contrast-checked component colours over the LCP neutrals; the stock orange itself (`#F06000` light / `#FF6600` dark) keeps the stock white label, so a preset theme with overrides matches the stock palette instead of flipping to INK | unchanged |
 
 `resolveComponentColors()` returns the stock colours for a default theme, so the Color Theme preview
 and its contrast audit show exactly what is painted.
@@ -97,11 +97,15 @@ and its contrast audit show exactly what is painted.
 | Content | `p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto` | `.app-main-inner` 16 / 24 / 32px, max 1280px |
 | Controls | `h-9`, 6px radius, `shadow-sm` inputs | 36px, 6px radius; 3:1 control border (above) |
 | Status | `ds/StatusBadge`: rounded-full pill, tone tint, 25% tone border, 6px dot | `.status-tag` (registry-driven), same recipe; icon or pulse replaces the dot |
-| Overlay | `bg-black/80` | dialog and sheet overlays `bg-black/80`, no blur |
+| Overlay | `bg-black/80` (`DialogOverlay`, `SheetOverlay`, and so `CommandDialog`) | dialog, sheet, command-palette and record-search overlays `bg-black/80`, no blur |
 
 ## 6. Deviations from the LCP reference (all accessibility- or ERP-driven)
 
-1. Text on orange fills is INK `#17173f`, not white (2.94:1 → 5.17–5.81:1).
+1. *Not a deviation any more — the one accepted contrast exception.* Text on orange fills is white, exactly as in LCP
+   (owner decision, 2026-11-06; it was INK `#17173f` until then). It is the only token pair below WCAG AA: 3.29:1 on the
+   light `#F06000`, 2.94:1 on `#FF6600`, 3.56 / 2.59:1 on hover, about 2.4 / 2.0:1 under avatar initials on the gradient's
+   lighter stop. `verify:contrast` and `verify:lcp-design` assert the pair and report the ratios; the all-routes sweep
+   counts these labels separately; the Color Theme panel shows them as low-contrast warnings for the default theme.
 2. Light-mode orange fill is `#F06000` (3:1 boundary on white), dark renders `#FF6600`.
 3. Orange *text* on light surfaces is `#B84900`.
 4. Warning and danger are darkened (light) / lightened (dark) to reach 4.5:1.

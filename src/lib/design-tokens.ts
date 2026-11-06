@@ -9,10 +9,12 @@
 // palette, resolved from its HSL triplets into HEX — cool-neutral light workspace (#F9FAFB canvas,
 // white cards), charcoal dark mode, the LCP web orange (#FF6600) as the primary action, focus and
 // active marker. Where an LCP value fails this codebase's WCAG checks it is moved along its own hue
-// until it passes, and the deviation is recorded in the token map — no check is relaxed:
+// until it passes, and the deviation is recorded in the token map — with one owner-decided exception:
 //   * primary fill: dark mode renders #FF6600 exactly; light mode renders #F06000, the org-theme
 //     engine's own 3:1 adaptation of #FF6600 against white (#FF6600 itself is 2.94:1);
-//   * text on the orange is INK (#17173f) — white on #FF6600 is 2.94:1;
+//   * text on the orange is WHITE, as the LCP design system specifies (--primary-foreground 0 0% 100%) —
+//     the owner's decision. It measures 3.29:1 on the light #F06000 and 2.94:1 on #FF6600, below the
+//     4.5:1 AA minimum for body-size text; verify-contrast measures and reports it rather than passing it;
 //   * warning / danger / control borders darkened (light) or lightened (dark) until AA / 3:1;
 //   * dark cards lifted from #212121 to #272727 so canvas and surface stay ≥ 1.15:1 apart.
 // Supersedes the Navy Command palette (DEV-UI-01.1, owner decisions D-02…D-04) by the owner's LCP
@@ -67,8 +69,10 @@ export const BRAND_NAVY = "#1b1b4e";
 export const BRAND_ORANGE = "#e87722";
 /** The Lead Capture Pro web primary as rendered by the reference product (HSL 24 100% 50%). */
 export const LCP_ORANGE = "#ff6600";
-/** Text colour on the orange fills: the org-theme engine's INK (brand-theme.ts). */
-export const ON_ORANGE_INK = "#17173f";
+/** Text colour on the orange fills: white, as the LCP design system specifies (owner decision; token map D-LCP-2). */
+export const ON_ORANGE = "#ffffff";
+/** The org-theme engine's INK (brand-theme.ts): the dark label for light fills, e.g. the dark-mode danger. */
+export const INK_LABEL = "#17173f";
 
 export const TOKENS: Record<Appearance, CoreTokens> = {
   light: {
@@ -85,10 +89,10 @@ export const TOKENS: Record<Appearance, CoreTokens> = {
     // LCP inputs use the 1.27:1 hairline; a control boundary must reach 3:1 (WCAG 1.4.11).
     borderControl: "#878e9b",
     primary: "#f06000",
-    primaryForeground: ON_ORANGE_INK,
+    primaryForeground: ON_ORANGE,
     primaryHover: "#e65c00",
     accent: "#f06000",
-    accentForeground: ON_ORANGE_INK,
+    accentForeground: ON_ORANGE,
     accentInk: "#b84900",
     accentTint: "#fff0e5",
     focus: "#f06000",
@@ -123,10 +127,10 @@ export const TOKENS: Record<Appearance, CoreTokens> = {
     borderStrong: "#454545",
     borderControl: "#7a7a7a",
     primary: LCP_ORANGE,
-    primaryForeground: ON_ORANGE_INK,
+    primaryForeground: ON_ORANGE,
     primaryHover: "#ff7b24",
     accent: LCP_ORANGE,
-    accentForeground: ON_ORANGE_INK,
+    accentForeground: ON_ORANGE,
     accentInk: LCP_ORANGE,
     accentTint: "#3d220f",
     focus: LCP_ORANGE,
@@ -137,7 +141,7 @@ export const TOKENS: Record<Appearance, CoreTokens> = {
     warningTint: "#342714",
     danger: "#f87171",
     dangerTint: "#371515",
-    dangerForeground: ON_ORANGE_INK,
+    dangerForeground: INK_LABEL,
     dangerHover: "#f98686",
     info: "#61a6fa",
     infoTint: "#152337",
