@@ -129,6 +129,9 @@
   cursor: pointer;
 }
 .cmdk-trigger-pill:hover { color: var(--header-ink); background: var(--header-hover-bg); }
+/* The ⌘K hint inside it: the legacy .cmdk-kbd colours are the page's (ink-faint, 3.3:1 on this header in
+   light mode); in the header pill it takes the pill's muted header ink and the header hairline. */
+.cmdk-trigger-pill .cmdk-kbd { color: inherit; border-color: var(--header-accent); }
 
 .topbar-actions { display: flex; align-items: center; gap: var(--space-8); flex-shrink: 0; margin-inline-start: auto; }
 .topbar-utilities { display: flex; align-items: center; gap: var(--space-4); }

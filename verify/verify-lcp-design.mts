@@ -146,6 +146,15 @@ const button = read("src/components/ui/button.tsx");
 check("button: the primary carries the LCP primary border; secondary / outline the LCP shadow-xs; 16px inline padding",
   /primary:\s*\n\s*"[^"]*border-\[color:var\(--primary-hover\)\]!/.test(button) && /secondary:\s*\n\s*"[^"]*shadow-xs/.test(button) && /outline: "[^"]*shadow-xs/.test(button) && /default: "h-\(--control-height\) px-4"/.test(button));
 
+check("sweep finding: the header ⌘K hint takes the pill's muted header ink (the page's ink-faint was 3.3:1 on the light-mode header)",
+  /\.cmdk-trigger-pill \.cmdk-kbd \{ color: inherit; border-color: var\(--header-accent\); \}/.test(shellCss) && /\.cmdk-trigger-pill \{[^}]*color: var\(--header-ink-muted\);/.test(shellCss));
+check("sweep finding: the neutral pill uses the neutral pair; initials on the accent gradient use the accent foreground (INK on the LCP orange)",
+  /\.pill-neutral \{ background: var\(--neutral-bg\); color: var\(--neutral\); \}/.test(lcpCss) &&
+  /\.emp-card \.avatar\[style\*="--brand-orange"\],\n\.kanban-avatar\[style\*="--brand-orange"\] \{ color: var\(--accent-foreground\); \}/.test(lcpCss));
+// INK on the gradient's lighter stop (#FF8533 light / #FF9E5C dark), the worst point under the initials.
+check("accent-gradient avatar initials stay ≥ 4.5:1 on the lighter stop too", contrast(TOKENS.light.accentForeground, "#ff8533") >= 4.5 && contrast(TOKENS.dark.accentForeground, "#ff9e5c") >= 4.5,
+  `${contrast(TOKENS.light.accentForeground, "#ff8533").toFixed(2)} / ${contrast(TOKENS.dark.accentForeground, "#ff9e5c").toFixed(2)}`);
+
 // ---------- 5. contrast (LCP pairings introduced by this stage) ----------
 for (const ap of ["light", "dark"] as const) {
   const k = TOKENS[ap];
@@ -157,6 +166,8 @@ for (const ap of ["light", "dark"] as const) {
     ["raised surface text (menus, dialogs)", k.text, k.surfaceRaised, 4.5],
     ["muted text on raised surfaces", k.textMuted, k.surfaceRaised, 4.5],
     ["INK on the primary hover", k.primaryForeground, k.primaryHover, 4.5],
+    ["neutral pill: neutral ink on its tint (the legacy muted-on-border pair was 3.98:1)", k.neutral, k.neutralTint, 4.5],
+    ["accent-gradient avatar initials: the accent foreground on the accent", k.accentForeground, k.accent, 4.5],
   ];
   for (const [label, fg, bg, min] of pairs) check(`${ap}: ${label} ≥ ${min}:1`, contrast(fg, bg) >= min, contrast(fg, bg).toFixed(2));
 }

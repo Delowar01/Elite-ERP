@@ -57,6 +57,16 @@ h1 { font-weight: 700; letter-spacing: -0.015em; }
 .kpi-card-v4 .kpi-label { font-size: var(--text-body); }
 .kpi-card-v4 .kpi-value { font-weight: 700; font-size: var(--text-display-sm); letter-spacing: -0.02em; }
 
+/* ---- neutral pill (LCP neutral badge: `bg-muted text-muted-foreground`). The legacy pair (muted ink on the
+   border grey) is 3.98:1; the neutral pair is 4.60:1 light, 4.99:1 dark. ---- */
+.pill-neutral { background: var(--neutral-bg); color: var(--neutral); }
+
+/* ---- initials on the accent gradient (employee cards, kanban): the accent's own readable foreground — INK on
+   the LCP orange (white on #F06000 is 3.3:1, on its lighter stop 2.6:1), the theme engine's pick for a custom
+   org accent. The other avatar palettes are dark and keep white. ---- */
+.emp-card .avatar[style*="--brand-orange"],
+.kanban-avatar[style*="--brand-orange"] { color: var(--accent-foreground); }
+
 /* ---- empty states (LCP ds/StateViews EmptyState: dashed, half-card fill, 8px) ---- */
 [data-slot="empty-state"] {
   border-style: dashed;
