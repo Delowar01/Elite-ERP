@@ -92,9 +92,10 @@ and its contrast audit show exactly what is painted.
 | Radii | 4 / 6 (controls) / 8 (nav, KPI) / 12 (cards) | same family; `.card` and table cards 12px |
 | Shadows | rendered Tailwind v4 scale (`xs`, `sm`, `md`, `lg`) | `--shadow-xs/sm/md/overlay` with the same geometry; deeper colour in dark |
 | Motion | 120 / 180 / 280ms, reduced-motion collapses all | `--motion-fast/base/slow`, the existing global reduced-motion rule |
-| Header | 56px, `bg-sidebar` | `.topbar` 56px on `--header-bg`, sticky |
+| Header | 56px, `bg-sidebar` | `.topbar` 56px on `--header-bg`, sticky; below 768px (beside the menu trigger) the compact search entry replaces the field, and the organization name truncates — it and the search entry never push the row past the viewport or under EN \| ع (they did from 640 to 767px) |
 | Sidebar | 256px / 68px mini, `bg-card border-e`; sheet `w-72` < 768 | same; 768–1023 is forced to the 68px rail (dense ERP tables) |
 | Content | `p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto` | `.app-main-inner` 16 / 24 / 32px, max 1280px |
+| Dashboard grid | (ERP-only: the LCP has no twelve-track widget grid) | twelve tracks from 1280px (LCP `xl`) beside the expanded 256px sidebar — its spans need a grid of about 950px — and from 1101px beside the 68px rail, as before; two tracks below; one below 641px |
 | Controls | `h-9`, 6px radius, `shadow-sm` inputs | 36px, 6px radius; 3:1 control border (above) |
 | Status | `ds/StatusBadge`: rounded-full pill, tone tint, 25% tone border, 6px dot | `.status-tag` (registry-driven), same recipe; icon or pulse replaces the dot |
 | Overlay | `bg-black/80` (`DialogOverlay`, `SheetOverlay`, and so `CommandDialog`) | dialog, sheet, command-palette and record-search overlays `bg-black/80`, no blur |
