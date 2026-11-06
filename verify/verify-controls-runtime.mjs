@@ -135,11 +135,16 @@ for (const locale of ["en", "ar"]) {
     const sized = Object.entries(b).filter(([v]) => v !== "link");
     const badSize = sized.filter(([, r]) => !(r.h[0][1] === 32 && r.h[1][1] === 36 && r.h[2][1] === 40 && r.h[3][0] === 36 && r.h[3][1] === 36 && r.h[4][0] === 32 && r.h[4][1] === 32)).map(([v, r]) => `${v}:${JSON.stringify(r.h)}`);
     check(`${T}: Button sm 32 / default 36 / lg 40 / icon 36² / icon-sm 32² for every variant`, badSize.length === 0, badSize.join(" "));
-    check(`${T}: Button label 13px / 500 / radius 6`, sized.every(([, r]) => r.size === "13px" && r.weight === "500" && r.radius === "6px"), JSON.stringify(sized.map(([v, r]) => [v, r.size, r.weight, r.radius])));
-    const transparent = (c) => c === "rgba(0, 0, 0, 0)" || /,\s*0\)$/.test(c);
-    check(`${T}: ghost / destructive-ghost / primary borders are transparent; outline / secondary are not`,
-      transparent(b.ghost.border) && transparent(b["destructive-ghost"].border) && transparent(b.primary.border) && !transparent(b.outline.border) && !transparent(b.secondary.border),
-      JSON.stringify([b.ghost.border, b["destructive-ghost"].border, b.primary.border, b.outline.border, b.secondary.border]));
+    // LCP adoption: the LCP Button is `rounded-md text-sm font-medium` (kit ui/button.tsx) — 14px / 500 / 6px.
+    check(`${T}: Button label 14px / 500 / radius 6 (LCP text-sm font-medium rounded-md)`, sized.every(([, r]) => r.size === "14px" && r.weight === "500" && r.radius === "6px"), JSON.stringify(sized.map(([v, r]) => [v, r.size, r.weight, r.radius])));
+    // Transparent = alpha 0 only. (This used to also match any colour ending in ", 0)" — rgb(230, 92, 0), the light
+    // primary border, read as "transparent" while the dark one did not.)
+    const transparent = (c) => c === "transparent" || /^rgba\(\s*[\d.]+,\s*[\d.]+,\s*[\d.]+,\s*0\s*\)$/.test(c);
+    // The LCP primary carries its darker primary border (kit ui/button.tsx: `bg-primary … border border-primary-border`).
+    const primaryBorder = await resolve("var(--primary-hover)");
+    check(`${T}: ghost / destructive-ghost borders are transparent; the primary border is --primary-hover (LCP border-primary-border); outline / secondary are not transparent`,
+      transparent(b.ghost.border) && transparent(b["destructive-ghost"].border) && b.primary.border === primaryBorder && !transparent(b.primary.border) && !transparent(b.outline.border) && !transparent(b.secondary.border),
+      JSON.stringify([b.ghost.border, b["destructive-ghost"].border, b.primary.border, primaryBorder, b.outline.border, b.secondary.border]));
     check(`${T}: destructive-ghost text is --danger`, b["destructive-ghost"].color === (await resolve("var(--danger)")), b["destructive-ghost"].color);
     check(`${T}: glass renders exactly like secondary`, b.glass.border === b.secondary.border && b.glass.color === b.secondary.color);
     const badLoading = Object.entries(b).filter(([, r]) => !r.loading.every((l) => l.disabled && l.busy === "true" && l.spinner)).map(([v]) => v);
@@ -183,8 +188,9 @@ for (const locale of ["en", "ar"]) {
     check(`${T}: Input / Textarea invalid border = --danger`, f.invalidBorder === danger && f.taInvalid === danger, `${f.invalidBorder} ${f.taInvalid}`);
     check(`${T}: Input / Textarea disabled = --disabled-background`, f.disBg === disabledBg && f.taDisabled && f.taDisBg === disabledBg, `${f.disBg} ${f.taDisBg}`);
     check(`${T}: Input read-only is visibly distinct from editable`, f.roBg !== f.inBg, `${f.roBg} vs ${f.inBg}`);
-    check(`${T}: Textarea on the Input foundation (6px, 13px)`, f.taRadius === "6px" && f.taSize === "13px");
-    check(`${T}: field 13px, Label 12px / 500`, f.label[0] === "13px" && f.label[1] === "12px" && f.label[2] === "500", f.label.join(","));
+    // LCP Input / Textarea `md:text-sm` and Label `text-sm font-medium` (kit ui/input.tsx, textarea.tsx, label.tsx): 14px.
+    check(`${T}: Textarea on the Input foundation (6px, 14px)`, f.taRadius === "6px" && f.taSize === "14px", `${f.taRadius} ${f.taSize}`);
+    check(`${T}: field 14px, Label 14px / 500 (LCP text-sm / text-sm font-medium)`, f.label[0] === "14px" && f.label[1] === "14px" && f.label[2] === "500", f.label.join(","));
     await expectFocus(`${T} Input`, "[data-slot=input]");
     await expectFocus(`${T} Textarea`, "textarea");
 
@@ -288,14 +294,16 @@ for (const locale of ["en", "ar"]) {
     await settle();
     const tb = await page.evaluate(() => ({ focused: document.activeElement?.textContent, active: document.querySelector('[role="tab"][data-state="active"]')?.textContent, weight: getComputedStyle(document.querySelector('[role="tab"][data-state="active"]')).fontWeight, size: getComputedStyle(document.activeElement).fontSize }));
     check(`${T}: Tabs arrow key moves to and activates the next tab`, tb.focused === tb.active && /Logo|الشعار/.test(tb.active ?? ""), JSON.stringify(tb));
-    check(`${T}: Tabs 12px, active 600`, tb.size === "12px" && tb.weight === "600", JSON.stringify(tb));
+    // LCP TabsTrigger `text-sm` (kit ui/tabs.tsx): 14px; the active tab keeps the ERP's 600 with the org's Active-tab fill.
+    check(`${T}: Tabs 14px (LCP text-sm), active 600`, tb.size === "14px" && tb.weight === "600", JSON.stringify(tb));
     await expectFocus(`${T} row-menu button`, ".row-menu-btn");
     await page.keyboard.press("Enter");
     await page.locator('[role="menu"]').waitFor();
     const mi = await page.locator('[role="menuitem"]').first().evaluate((e) => getComputedStyle(e).fontSize);
     await page.keyboard.press("Escape");
     await settle();
-    check(`${T}: row menu opens from the keyboard, items 13px, Escape returns focus`, mi === "13px" && (await page.evaluate(() => document.activeElement?.classList.contains("row-menu-btn"))), mi);
+    // LCP DropdownMenuItem `text-sm` (kit ui/dropdown-menu.tsx): 14px.
+    check(`${T}: row menu opens from the keyboard, items 14px (LCP text-sm), Escape returns focus`, mi === "14px" && (await page.evaluate(() => document.activeElement?.classList.contains("row-menu-btn"))), mi);
 
     // ---- C1: DropdownMenu direction (the real shared RowMenu + a Radix Sub) ----
     await openGallery("menus", locale, theme);

@@ -90,6 +90,7 @@
 /* LCP shell: the dark 56px application header (LCP `--sidebar` surface) and its parts. */
 @property --header-bg { syntax: "<color>"; inherits: true; initial-value: transparent; }
 @property --header-ink { syntax: "<color>"; inherits: true; initial-value: transparent; }
+@property --header-ink-muted { syntax: "<color>"; inherits: true; initial-value: transparent; }
 @property --header-border { syntax: "<color>"; inherits: true; initial-value: transparent; }
 @property --header-accent { syntax: "<color>"; inherits: true; initial-value: transparent; }
 @property --shadow-color-soft { syntax: "<color>"; inherits: true; initial-value: transparent; }
@@ -150,17 +151,13 @@
   --header-ink: light-dark(#f9fafb, #f9fafb);
   --header-border: light-dark(#121421, #2e2e2e);
   --header-accent: light-dark(#252841, #333333);
-  --header-ink-muted: color-mix(in srgb, var(--header-ink) 76%, var(--header-bg));
+  /* Muted header ink: the header ink at 76% over the header surface, resolved to HEX like every other
+     colour here (9.73:1 / 9.41:1 on the header, 8.34:1 / 7.39:1 on its accent). */
+  --header-ink-muted: light-dark(#c3c5ca, #c5c6c7);
   --header-hover-bg: var(--header-accent);
   --header-height: 56px;
 
-  /* ---- type families ---- */
-  /* Latin UI → Inter 400/500/600/700 (the LCP face, self-hosted by next/font); Arabic glyphs fall
-     through to IBM Plex Sans Arabic (Inter ships no Arabic), so mixed Arabic/English text uses each
-     script's intended face. Plex Mono is for codes, IDs and hashes ONLY — money uses the UI face with
-     tabular figures. */
-  --font-ui: var(--font-body-raw), var(--font-arabic-raw), system-ui, sans-serif;
-  --font-code-family: var(--font-mono-raw), ui-monospace, monospace;
+  /* ---- type families: in their own `:root, .print-root` block right after this one ---- */
 
   /* ---- elevation: the shadow scale LCP actually renders (Tailwind v4 defaults; its declared flat
      --shadow-* values are dead in the reference product). Dark mode deepens the shadow colour. ---- */
@@ -210,14 +207,7 @@
      LEGACY ALIASES — pre-redesign names, kept so untouched screens inherit the new palette instead of
      breaking. New code uses the canonical names above. Each alias is a pointer, never a second value.
      ================================================================================================ */
-  /* Font aliases used by legacy CSS. Plus Jakarta Sans is retired (display → UI face). Mono stays a
-     REAL code face (DEV-UI-01.1-C1): --font-mono is IBM Plex Mono for codes, IDs and hashes. Numeric
-     data (money, prices, rates, quantities, balances, percentages, dates) uses the UI face with
-     tabular figures via --font-numeric / the `num-tabular` utility — never by redefining Mono. */
-  --font-body: var(--font-ui);
-  --font-display: var(--font-ui);
-  --font-mono: var(--font-code-family);
-  --font-numeric: var(--font-ui);
+  /* Font aliases used by legacy CSS: in the type-families block below, with the families they point at. */
 
   --brand-orange: var(--accent);
   --brand-orange-light: light-dark(#ff8533, #ff9e5c);
@@ -284,6 +274,30 @@
   --shadow-card-hover: var(--shadow-sm);
   --shadow-glass: var(--shadow-overlay);
   --ring-orange: 0 0 0 3px var(--focus-ring);
+}
+
+/* ---- type families ----
+   Latin UI → Inter 400–700 (the LCP face, self-hosted by next/font); Arabic glyphs fall through to IBM
+   Plex Sans Arabic (Inter ships no Arabic), so mixed Arabic/English text uses each script's intended face.
+   Plex Mono is for codes, IDs and hashes ONLY — money uses the UI face with tabular figures.
+   Declared on the root AND re-resolved on .print-root: the print / PDF document binds --font-body-raw to
+   its own frozen face (IBM Plex Sans 400–600, --font-print-raw — the pre-LCP face), so a printed or PDF
+   document never changes with the UI face: one definition, two bindings. The legacy aliases sit here with
+   the families they point at, so they re-resolve on the print root too: Plus Jakarta Sans is retired
+   (display → UI face); --font-mono stays a REAL code face (DEV-UI-01.1-C1); numeric data (money, prices,
+   rates, quantities, balances, percentages, dates) uses the UI face with tabular figures via
+   --font-numeric / the `num-tabular` utility — never by redefining Mono. */
+:root,
+.print-root {
+  --font-ui: var(--font-body-raw), var(--font-arabic-raw), system-ui, sans-serif;
+  --font-code-family: var(--font-mono-raw), ui-monospace, monospace;
+  --font-body: var(--font-ui);
+  --font-display: var(--font-ui);
+  --font-mono: var(--font-code-family);
+  --font-numeric: var(--font-ui);
+}
+.print-root {
+  --font-body-raw: var(--font-print-raw);
 }
 
 :root[data-theme="light"] {
@@ -414,6 +428,13 @@ body {
   line-height: var(--text-body-lg--line-height);
   /* Figures line up in every table, total and KPI without a monospace face. */
   font-variant-numeric: tabular-nums;
+}
+
+/* Print / PDF output is frozen (LCP adoption): Chromium paints the document canvas into the PDF wherever the
+   A4 page does not cover it (the page edge, a long document's last page), so the print route keeps the
+   pre-LCP canvas exactly — light #f5f6f8, dark #090b17 — and its PDFs stay identical. App pages never match. */
+body:has(> .print-root) {
+  background: light-dark(#f5f6f8, #090b17);
 }
 
 /* Arabic: no uppercase, no Latin-style tracking — letter-spacing breaks Arabic joining. Applied to

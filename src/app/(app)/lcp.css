@@ -93,6 +93,11 @@ table.data-table tbody tr[aria-selected="true"] > td { background: color-mix(in 
 .tab.active,
 .tab[data-state="active"] { box-shadow: var(--shadow-sm); }
 
+/* ---- form labels (LCP ui/label / FormLabel: `text-sm font-medium`, the foreground ink) ----
+   The Label primitive behind FormField: every long form, settings panel and dialog field. The document
+   editors' compact in-box labels (.doc-field .doc-field-label, more specific) keep their caption size. */
+[data-slot="label"] { font-size: var(--text-body); line-height: var(--text-body--line-height); color: var(--text); }
+
 /* ---- menus (LCP dropdown-menu: rounded-md, hairline, p-1, shadow-md; 14px items, rounded-sm) ---- */
 .row-menu { border-radius: 6px; border-color: var(--border); box-shadow: var(--shadow-md); padding: var(--space-4); }
 .row-menu-item { padding: 6px 8px; border-radius: 4px; }
@@ -137,3 +142,7 @@ table.doc-items-table thead th {
   letter-spacing: 0.02em;
   border-block-end: 1px solid var(--border);
 }
+/* Arabic is never tracked (it would pull the joined letters apart) — the type scale's own Arabic rule — and
+   its longer labels (the three-word VAT header) get 10px inline padding, so every whole word fits the
+   narrow fixed-layout columns at 1024px; English keeps the 14px that aligns each label with its field edge. */
+:root[lang="ar"] table.doc-items-table thead th { letter-spacing: normal; padding-inline: 10px; }

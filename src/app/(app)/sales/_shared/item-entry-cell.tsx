@@ -55,7 +55,10 @@ export function ItemEntryCell({
   const [open, setOpen] = useState(false);
   // `start` is the inline-start offset of the fixed popup: from the left edge in LTR, from the right
   // edge in RTL (innerWidth - rect.right) — the list opens under the field's start edge either way.
-  const [rect, setRect] = useState<{ top: number; start: number; width: number } | null>(null);
+  // Vertically it opens below the field (`top`), or above it (`bottom`) when the room below is short of the
+  // list's full height and there is more room above, so it is never pushed off-screen; `max` caps its height
+  // to the room on the chosen side.
+  const [rect, setRect] = useState<{ top?: number; bottom?: number; max: number; start: number; width: number } | null>(null);
   // DEV-UI-01.6: combobox state — the keyboard-active option (index into `options`), the popup ids.
   const [active, setActive] = useState(-1);
   const listId = useId();
@@ -72,7 +75,15 @@ export function ItemEntryCell({
   function placeOf(el: HTMLElement) {
     const r = el.getBoundingClientRect();
     const rtl = document.documentElement.dir === "rtl";
-    return { top: r.bottom + 4, start: rtl ? window.innerWidth - r.right : r.left, width: r.width };
+    const below = window.innerHeight - r.bottom - 12;
+    const above = r.top - 12;
+    const up = below < 256 && above > below; // 256 = the list's max-h-64
+    return {
+      ...(up ? { bottom: window.innerHeight - r.top + 4 } : { top: r.bottom + 4 }),
+      max: Math.max(120, Math.min(256, up ? above : below)),
+      start: rtl ? window.innerWidth - r.right : r.left,
+      width: r.width,
+    };
   }
 
   /** Open (or re-place) the list; `activeAt` is the option made active — none unless opened by arrow key. */
@@ -213,7 +224,7 @@ export function ItemEntryCell({
           id={listId}
           role="listbox"
           aria-label={t(locale, "Saved items")}
-          style={{ position: "fixed", top: rect.top, insetInlineStart: rect.start, width: Math.max(rect.width, 180), zIndex: 120 }}
+          style={{ position: "fixed", top: rect.top, bottom: rect.bottom, maxHeight: rect.max, insetInlineStart: rect.start, width: Math.max(rect.width, 180), zIndex: 120 }}
           className="item-picker-list max-h-64 overflow-auto rounded-[10px] border border-line bg-surface-raised shadow-lg text-body-sm"
           data-item-picker=""
         >

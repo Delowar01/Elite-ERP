@@ -215,10 +215,16 @@ const mix = (a: string, pct: number, b: string) => { const A = parseColor(a)!, B
   return `rgb(${Math.round(A.r * f + Bc.r * (1 - f))}, ${Math.round(A.g * f + Bc.g * (1 - f))}, ${Math.round(A.b * f + Bc.b * (1 - f))})`; };
 const HEADER = { light: { bg: "#1a1c2e", ink: "#f9fafb", accent: "#252841" }, dark: { bg: "#212121", ink: "#f9fafb", accent: "#333333" } };
 check("globals.css keeps the Elite brand navy constants (logo, brand panels)", /--brand-navy:\s*#1b1b4e;/.test(G) && /--brand-navy-deep:\s*#100f32;/.test(G));
-check("header-ink-muted is the header ink at 76% over the header (the value measured below)", /--header-ink-muted:\s*color-mix\(in srgb, var\(--header-ink\) 76%, var\(--header-bg\)\);/.test(G));
+// The muted header ink is the header ink at 76% over the header, resolved to HEX (a registered <color>, so
+// computed styles read rgb() like every other token); the declared pair must BE that mix, and it is what is measured.
+const mutedDecl = /--header-ink-muted:\s*light-dark\((#[0-9a-f]{6}), (#[0-9a-f]{6})\);/.exec(G);
+const MUTED = { light: mutedDecl?.[1] ?? "", dark: mutedDecl?.[2] ?? "" };
+check("header-ink-muted is the header ink at 76% over the header, resolved to HEX per appearance and registered (the value measured below)",
+  !!mutedDecl && (["light", "dark"] as const).every((ap) => mix(MUTED[ap], 100, "#000000") === mix(HEADER[ap].ink, 76, HEADER[ap].bg)) &&
+  /@property --header-ink-muted \{ syntax: "<color>"/.test(G), JSON.stringify(MUTED));
 for (const ap of ["light", "dark"] as const) {
   const h = HEADER[ap], tk = TOKENS[ap];
-  const muted = mix(h.ink, 76, h.bg);
+  const muted = MUTED[ap] || mix(h.ink, 76, h.bg);
   const searchBg = mix(h.accent, 50, h.bg);
   check(`${ap}: header text on the header ≥ 4.5`, contrast(h.ink, h.bg) >= 4.5, contrast(h.ink, h.bg).toFixed(2));
   check(`${ap}: muted header text (icons, search placeholder, role) on the header ≥ 4.5`, contrast(muted, h.bg) >= 4.5, contrast(muted, h.bg).toFixed(2));

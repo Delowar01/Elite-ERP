@@ -4,7 +4,7 @@
 //   1. palette      — the LCP web values resolved to HEX in the canonical tokens (exact where AA allows, the
 //                     documented adaptation where it does not); no HSL triplet and no hsl(var(--x)) in the app
 //   2. typography   — Inter 400–700 via next/font for Latin, IBM Plex Sans Arabic kept for Arabic, Mono for codes;
-//                     no font binary committed
+//                     no font binary committed; the print / PDF document keeps its pre-LCP faces (frozen output)
 //   3. layering     — the LCP presentation layer loads last; it holds no literal colour, no physical property, and
 //                     `!important` only where a pinned primitive sets the property inline
 //   4. surfaces     — the LCP recipes the layer renders (card, table, page header, status pill, overlays, buttons)
@@ -75,17 +75,37 @@ const triplets = noComments(globals).match(/--[a-z0-9-]+:\s*\d{1,3}(\.\d+)?\s+\d
 check("no bare HSL triplet token (the LCP `24 100% 50%` form is not a valid registered <color>)", triplets.length === 0, triplets.join(" "));
 const hslVar = SRC.filter((f) => /\.(css|tsx?)$/.test(f) && /hsl\(var\(--/.test(read(f)));
 check("no hsl(var(--token)) consumer anywhere in src (no LCP stylesheet was pasted)", hslVar.length === 0, hslVar.join(" "));
-const REGISTERED = ["--header-bg", "--header-ink", "--header-border", "--header-accent", "--shadow-color-soft", "--brand-ink"];
+const REGISTERED = ["--header-bg", "--header-ink", "--header-ink-muted", "--header-border", "--header-accent", "--shadow-color-soft", "--brand-ink"];
 check("the new shell / brand colour tokens are registered <color>s (computed values resolve per appearance)",
   REGISTERED.every((n) => new RegExp(`@property ${n} \\{ syntax: "<color>"`).test(globals)), REGISTERED.filter((n) => !new RegExp(`@property ${n} \\{`).test(globals)).join(" "));
 
 // ---------- 2. typography ----------
 check("Latin UI is Inter (next/font, self-hosted at build), weights 400 / 500 / 600 / 700, on --font-body-raw",
-  /import \{ Inter, IBM_Plex_Sans_Arabic, IBM_Plex_Mono \} from "next\/font\/google";/.test(rootLayout) &&
+  /import \{ Inter, IBM_Plex_Sans, IBM_Plex_Sans_Arabic, IBM_Plex_Mono \} from "next\/font\/google";/.test(rootLayout) &&
   /const body = Inter\(\{\s*variable: "--font-body-raw",\s*subsets: \["latin"\],\s*weight: \["400", "500", "600", "700"\],\s*\}\);/.test(rootLayout));
-check("Arabic keeps IBM Plex Sans Arabic after the Latin face (Inter ships no Arabic), now with 700 for bold titles",
-  /const arabic = IBM_Plex_Sans_Arabic\(\{\s*variable: "--font-arabic-raw",\s*subsets: \["arabic"\],\s*weight: \["400", "500", "600", "700"\],/.test(rootLayout) &&
+// next/font family names are global ("IBM Plex Sans Arabic"), so an Arabic 700 face would also reach the
+// Arabic text of every printed / PDF document (party names at 700, the brand word at 800 — the 600 face today).
+check("Arabic keeps IBM Plex Sans Arabic after the Latin face, at its pre-LCP weights 400 / 500 / 600 exactly (no 700 face to leak into PDFs)",
+  /const arabic = IBM_Plex_Sans_Arabic\(\{\s*variable: "--font-arabic-raw",\s*subsets: \["arabic"\],\s*weight: \["400", "500", "600"\],\s*\}\);/.test(rootLayout) &&
   /--font-ui: var\(--font-body-raw\), var\(--font-arabic-raw\)/.test(globals));
+// Print / PDF output is frozen (master prompt: "DO NOT change output document payload/format/PDF appearance"):
+// the print root keeps the pre-LCP Latin face through its own binding of the ONE type-family definition.
+const fontBlock = /\n:root,\n\.print-root \{\n([^}]*)\}\n\.print-root \{\n {2}--font-body-raw: var\(--font-print-raw\);\n\}\n/.exec(globals)?.[1] ?? "";
+check("print / PDF typography frozen: IBM Plex Sans 400 / 500 / 600 (the pre-LCP Latin face) on --font-print-raw, not preloaded, bound on <html>",
+  /const printLatin = IBM_Plex_Sans\(\{\s*variable: "--font-print-raw",\s*subsets: \["latin"\],\s*weight: \["400", "500", "600"\],\s*preload: false,\s*\}\);/.test(rootLayout) &&
+  /className=\{`\$\{body\.variable\} \$\{arabic\.variable\} \$\{mono\.variable\} \$\{printLatin\.variable\} h-full antialiased`\}/.test(rootLayout));
+check("print / PDF typography frozen: every family and alias is declared once, in the `:root, .print-root` block, and .print-root re-binds --font-body-raw to the print face",
+  ["--font-ui: var(--font-body-raw), var(--font-arabic-raw), system-ui, sans-serif;", "--font-code-family: var(--font-mono-raw), ui-monospace, monospace;",
+    "--font-body: var(--font-ui);", "--font-display: var(--font-ui);", "--font-mono: var(--font-code-family);", "--font-numeric: var(--font-ui);"].every((d) => fontBlock.includes(d)) &&
+  ["--font-ui", "--font-code-family", "--font-numeric"].every((n) => (globals.match(new RegExp(`(?:^|[\\s;{])${n}:`, "g")) ?? []).length === 1),
+  fontBlock.trim().replace(/\s+/g, " ").slice(0, 160));
+// Chromium paints the document canvas into the PDF wherever the A4 page does not cover it — measured: a 1px strip
+// at the page edge, Δ4 (light) / Δ17 (dark) with the LCP canvas — so the print route keeps the pre-LCP canvas.
+check("print / PDF canvas frozen: the print route's body keeps the pre-LCP canvas (light #f5f6f8, dark #090b17)",
+  /\nbody:has\(> \.print-root\) \{\n {2}background: light-dark\(#f5f6f8, #090b17\);\n\}/.test(globals));
+check("print / PDF typography frozen: --font-print-raw is read by the print-root binding only",
+  (noComments(globals).match(/--font-print-raw/g) ?? []).length === 1 &&
+  SRC.filter((f) => /\.(tsx?|css)$/.test(f) && f !== "src/app/layout.tsx" && f !== "src/app/globals.css" && read(f).includes("--font-print-raw")).length === 0);
 const fontBinaries = [...walk("public"), ...SRC].filter((f) => /\.(ttf|otf|woff2?)$/i.test(f));
 check("no font binary is committed (the kit's Inter files are not bundled)", fontBinaries.length === 0, fontBinaries.join(" "));
 check("type scale re-pointed to the LCP sizes: body / controls 14px, title 18/28, display 30/36",
@@ -115,6 +135,9 @@ check("data table header: LCP sentence case, 14px, medium, muted, on the card", 
 const ph = rule(lcpCss, '[data-slot="page-header"] h1');
 check("page title: LCP 24px bold (display-sm, 700)", /font-size:\s*var\(--text-display-sm\)/.test(ph) && /font-weight:\s*700/.test(ph), ph.trim());
 check("list-page header actions are LCP pills (rounded-full, 40px), icon buttons excluded", /\[data-slot="page-header-actions"\] \[data-slot="button"\]:not\(\[class\*="size-\("\]\) \{[^}]*border-radius:\s*9999px/.test(noComments(lcpCss)));
+check("form labels: LCP ui/label `text-sm font-medium` in the foreground ink (14px, text); document in-box labels keep their more specific caption rule",
+  /font-size:\s*var\(--text-body\)/.test(rule(lcpCss, '[data-slot="label"]')) && /color:\s*var\(--text\)/.test(rule(lcpCss, '[data-slot="label"]')) &&
+  /\.doc-field \.doc-field-label \{[^}]*font-size: var\(--text-caption\)/.test(read("src/app/(app)/mockup-parity.css")));
 check("empty state: LCP dashed container on a half-card fill", /border-style:\s*dashed/.test(rule(lcpCss, '[data-slot="empty-state"]')));
 check("document line items: the LCP muted table header replaces the orange gradient band", /background:\s*var\(--surface-subtle\)/.test(rule(lcpCss, "table.doc-items-table thead th")));
 const dialog = read("src/components/ui/dialog.tsx"), drawer = read("src/components/ui/drawer.tsx");

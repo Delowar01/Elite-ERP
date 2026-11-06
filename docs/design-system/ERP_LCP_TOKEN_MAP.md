@@ -73,14 +73,17 @@ and its contrast audit show exactly what is painted.
 | | LCP | ERP |
 |---|---|---|
 | Latin UI | Inter 400/500/600/700 | Inter via `next/font/google` (self-hosted at build, no binary in the repo) |
-| Arabic | — (LCP web is English-only) | IBM Plex Sans Arabic 400/500/600/700, after Inter in `--font-ui` |
+| Arabic | — (LCP web is English-only) | IBM Plex Sans Arabic 400/500/600, after Inter in `--font-ui` (bold steps use the 600 face — see deviation 11) |
 | Codes / IDs | Menlo | IBM Plex Mono (unchanged ERP rule: codes, IDs, hashes only) |
 | Body / controls | `text-sm` 14/20 | `--text-body` and `--text-body-lg` 14/20 (Arabic 24) |
 | Labels / meta | `text-xs` 12/16 | `--text-body-sm` 12/16 |
+| Form labels | `ui/label` `text-sm font-medium`, foreground | Label primitive (FormField: every long form, settings panel and dialog field) 14/20, 500, `--text`; document editors' compact in-box labels keep the 11px caption |
+| Menu items / tabs | `text-sm` | `.row-menu-item` and `.tab` 14px (tabs keep the ERP's 600 on the active tab) |
 | Group label | `text-[11px]` semibold uppercase | `--text-caption` 11/16 (Arabic: no case, no tracking) |
 | Page title | `text-2xl font-bold tracking-tight` | `--text-display-sm` 24/32, 700, −0.015em |
 | KPI value | `text-3xl font-bold tabular-nums` | 24/32 700 in list KPI rows (four across), tabular |
 | Numbers | `tabular-nums` | `tabular-nums` on `body` (unchanged) |
+| Print / PDF documents | — | **unchanged**: IBM Plex Sans 400/500/600 + IBM Plex Sans Arabic 400/500/600 inside `.print-root` (deviation 12) |
 
 ## 5. Shape, elevation, motion, layout
 
@@ -109,3 +112,17 @@ and its contrast audit show exactly what is painted.
 9. Arabic / RTL throughout (LCP web is English / LTR only); Arabic glyphs in IBM Plex Sans Arabic.
 10. No LCP logo, favicon, product name or copy anywhere; the brand slot shows the organisation (logo
     or the Elite mark) and "Elite ERP".
+11. Arabic keeps its pre-LCP weights 400/500/600: `next/font` family names are global, so a 700 Arabic
+    face would also reach the Arabic text of printed / PDF documents (party names at 700, the brand word
+    at 800 render with the 600 face today). Arabic page titles and KPI values therefore render 600.
+12. Print / PDF output is frozen (master prompt §13: no change to output document appearance). The
+    `/print/[type]/[id]` page — the PDF generator's source — keeps the pre-LCP faces: the root layout
+    loads IBM Plex Sans 400–600 as `--font-print-raw` (not preloaded) and globals.css declares the type
+    families once on `:root, .print-root`, with `.print-root` re-binding `--font-body-raw` to that face.
+    The print route's body also keeps the pre-LCP canvas (light `#f5f6f8`, dark `#090b17`): Chromium
+    paints the document canvas into the PDF wherever the A4 page does not cover it (measured: a 1px strip
+    at the page edge, Δ4 light / Δ17 dark with the LCP canvas, and the second page of long Arabic
+    invoices).
+    `src/app/print/**` is byte-identical to 83e8093; the base-vs-branch print comparison (48 states:
+    16 documents of all nine types × EN light / AR light / EN dark — screen pixels, print-media pixels,
+    rasterised PDF pages and PDF text) is in `ERP_LCP_FINAL_HANDOVER.md`.
