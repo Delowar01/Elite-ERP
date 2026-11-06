@@ -18,7 +18,10 @@ const vp = (name) => VIEWPORTS.find((v) => v.name === name);
 /** [group, path, action, role, cookies, locales, themes, viewports] */
 const GROUPS = [
   ["s1-collapsed-rail", "/dashboard", null, "owner", { sidebar_collapsed: "1" }, ["en", "ar"], ["light", "dark"], ["1440"]],
-  ["s2-drawer-open", "/dashboard", "drawer", "owner", {}, ["en", "ar"], ["light", "dark"], ["768", "390"]],
+  // LCP adoption (D-LCP-3): the navigation drawer is for phones only (< 768px); a 768px tablet shows the
+  // forced 68px rail instead — captured as its own state, so both halves of the decision stay photographed.
+  ["s2-drawer-open", "/dashboard", "drawer", "owner", {}, ["en", "ar"], ["light", "dark"], ["390"]],
+  ["s2-tablet-rail", "/dashboard", null, "owner", {}, ["en", "ar"], ["light", "dark"], ["768"]],
   ["s3-command-palette", "/dashboard", "palette", "owner", {}, ["en", "ar"], ["light"], ["1440", "390"]],
   ["s4-record-search", "/dashboard", "search", "owner", {}, ["en", "ar"], ["light"], ["1440", "390"]],
   ["s5-account-menu", "/dashboard", "account", "owner", {}, ["en", "ar"], ["light"], ["1440", "390"]],

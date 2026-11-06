@@ -40,8 +40,27 @@ async function setComp(p,comp,channel,hex){
 const ctx1=await browser.newContext();
 const {p, orgId}=await reg(ctx1);
 
-console.log("\n== Gradient: editable start/end + live preview + save + apply + persist ==");
+// LCP design adoption: an org on a DEFAULT theme (a new org: the stored legacy-gradient defaults) is painted
+// with the stock LCP palette, so its Color Theme panel opens on the system preset it is actually rendering —
+// Single Color, #FF6600 / #FF6600 (displayThemeFields, src/lib/brand-theme.ts). Display only: opening the panel
+// writes nothing; the row changes when an owner saves. The gradient flow below therefore CHOOSES the Gradient
+// Color mode first (it used to be the panel's initial mode for a new org) and then edits it exactly as before.
+const themeRow = async (id) => (await pool.query("select color_theme_mode,primary_color,accent_color,gradient_from,gradient_to,theme_overrides,updated_at from orgs where id=$1",[id])).rows[0];
+console.log("\n== Default org: the panel opens on the LCP preset, display only ==");
+const rowBefore = await themeRow(orgId);
 await p.goto(`${BASE}/settings/organization?tab=color-theme`,{waitUntil:"networkidle"}); await p.waitForTimeout(500);
+const presetShown = { single: await p.getByRole("radio",{name:/Single Color/}).getAttribute("aria-checked"),
+  primary: await p.locator('div.p-5',{hasText:"Primary color"}).first().locator('input.font-mono').first().inputValue(),
+  accent: await p.locator('div.p-5',{hasText:"Accent color"}).first().locator('input.font-mono').first().inputValue() };
+ok("A default org's Color Theme panel opens on the LCP preset (Single Color, #FF6600 / #FF6600)",
+   presetShown.single === "true" && presetShown.primary.toUpperCase() === "#FF6600" && presetShown.accent.toUpperCase() === "#FF6600", JSON.stringify(presetShown));
+ok("Opening the panel writes nothing (the org's stored theme row is unchanged)", JSON.stringify(await themeRow(orgId)) === JSON.stringify(rowBefore), JSON.stringify(rowBefore));
+
+console.log("\n== Gradient: editable start/end + live preview + save + apply + persist ==");
+await p.getByRole("radio",{name:/Gradient Color/}).click(); await p.waitForTimeout(250);
+ok("Choosing Gradient Color shows the stored legacy stops (#F5A25C → #E87722) for editing",
+   (await p.locator('div.p-5',{hasText:"Gradient start color"}).first().locator('input.font-mono').first().inputValue()).toUpperCase() === "#F5A25C" &&
+   (await p.locator('div.p-5',{hasText:"Gradient end color"}).first().locator('input.font-mono').first().inputValue()).toUpperCase() === "#E87722");
 const accentBefore = await p.locator('span',{hasText:"Accent button"}).first().evaluate(el=>el.style.background||el.style.backgroundColor);
 await setMain(p,"Gradient start color","#2244AA");
 await setMain(p,"Gradient end color","#11CC88");

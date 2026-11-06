@@ -130,14 +130,18 @@ import path from "node:path";
 import ts from "typescript";
 import { createElement as h } from "react";
 import { ACC01_BASE, ACC01_EDITS, ACC01_NEW, acc01Drift, undoAcc01 } from "./acc01-approved-delta.mjs";
+import { LCP_BASE, LCP_EDITS, LCP_NEW, lcpDrift, undoLcp } from "./lcp-approved-delta.mjs";
 import { renderToStaticMarkup } from "react-dom/server";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
 const PINS_FILE = "verify/page-archetype-pins.json";
 const WRITE = process.argv.includes("--write-pins");
 // ACC-01: every group reads the files ACC-01 changed as main left them — its recorded hunks undone (group 19 proves
-// they are each file's only change); `actualRead` is the file as it is on disk.
-const actualRead = (p: string) => readFileSync(path.join(ROOT, p), "utf8");
+// they are each file's only change); `actualRead` is the file as main (83e8093) left it.
+// LCP design adoption: `actualRead` itself undoes the LCP stage's recorded hunks first (group 20 proves they are each
+// file's only change), so every older group — ACC-01's included — reads main's bytes; `diskRead` is the file on disk.
+const diskRead = (p: string) => readFileSync(path.join(ROOT, p), "utf8");
+const actualRead = (p: string) => undoLcp(p, diskRead(p));
 const rawRead = (p: string) => undoAcc01(p, actualRead(p));
 // DEV-UI-01.7 C8 final: every group but 17 reads the four files the final batch changed as the approved remediation
 // (c47c65a) left them — their FIN_EDITS hunks undone — so each older pin keeps its strength; group 17 proves those hunks
@@ -500,7 +504,7 @@ const MAIN_EDITS: Record<string, [string, string][]> = {
 /** A file's bytes for a byte-identity hash: main's approved change undone (MAIN_EDITS), every other file as it is. */
 const frozen = (f: string): string | Buffer =>
   f in MAIN_EDITS ? MAIN_EDITS[f].reduce((acc, [was, is]) => acc.replace(is, () => was), rawRead(f))
-    : f in ACC01_EDITS ? rawRead(f) : readFileSync(path.join(ROOT, f));
+    : f in ACC01_EDITS ? rawRead(f) : f in LCP_EDITS ? actualRead(f) : readFileSync(path.join(ROOT, f));
 
 let pass = 0;
 let fail = 0;
@@ -535,7 +539,7 @@ function walk(dir: string): string[] {
   for (const name of readdirSync(path.join(ROOT, dir)).sort()) {
     const p = path.posix.join(dir, name);
     if (statSync(path.join(ROOT, p)).isDirectory()) out.push(...walk(p));
-    else if (!(p in ACC01_NEW)) out.push(p);
+    else if (!(p in ACC01_NEW) && !(p in LCP_NEW)) out.push(p);
   }
   return out;
 }
@@ -2981,7 +2985,7 @@ check(`C8 final changed no other application file: every file under src/ but the
   finRest === "c05dcaf4283af501 (495 files)", finRest);
 check("C8 final is presentation only: project-costing.ts, finance-reports.ts (grossProfit, operatingProfit, netProfit still computed), accounting.ts, settlement.ts, the status registry and the shared exporter report-export.ts are their business pins, read as they are",
   ["src/lib/project-costing.ts", "src/lib/finance-reports.ts", "src/lib/accounting.ts", "src/lib/settlement.ts", "src/lib/status-registry.ts", "src/lib/report-export.ts"]
-    .every((f) => !!pins.business[f] && h16(readFileSync(path.join(ROOT, f))) === pins.business[f]) &&
+    .every((f) => !!pins.business[f] && h16(f in LCP_EDITS ? actualRead(f) : readFileSync(path.join(ROOT, f))) === pins.business[f]) &&
     ["const grossProfit = revenueTotal - costOfSalesTotal;", "operatingProfit", "netProfit"].every((s) => rawRead("src/lib/finance-reports.ts").includes(s)));
 
 const P_NOTICE = "Profit figures are temporarily hidden because Cost of Sales and inventory valuation are not yet complete.";
@@ -3124,9 +3128,23 @@ check(`ACC-01 changed its ${Object.keys(ACC01_EDITS).length} files (src/, and ve
 // No file under src/ outside the record differs from main: every other file is in the older groups' byte-identity hashes
 // (groups 4, 16 and 17), and a new file the record does not list is caught there too — `walk` leaves out only ACC01_NEW.
 check(`ACC-01 added no file under src/ but the recorded ${Object.keys(ACC01_NEW).length} (an unrecorded new file would sit in groups 16 and 17's src trees)`,
-  walk("src").length + Object.keys(ACC01_NEW).length === (function all(d: string): number {
+  walk("src").length + Object.keys(ACC01_NEW).length + Object.keys(LCP_NEW).length === (function all(d: string): number {
     return readdirSync(path.join(ROOT, d)).reduce((n, name) => n + (statSync(path.join(ROOT, d, name)).isDirectory() ? all(path.posix.join(d, name)) : 1), 0);
   })("src"));
+
+// ---------- 20. LCP design adoption — the approved change to frozen files ----------
+section("20. LCP design adoption — the approved change to frozen files (Elite ERP × Lead Capture Pro)");
+// Read as they are on disk: each changed file is main's (83e8093) plus exactly its recorded hunks, each added file as recorded.
+const lcpDriftNow = lcpDrift((f) => (existsSync(path.join(ROOT, f)) ? diskRead(f) : null));
+const lcpHunks = Object.values(LCP_EDITS).flat().length;
+check(`the LCP stage changed its ${Object.keys(LCP_EDITS).length} files (src/, and the frozen verifiers it re-encodes) by exactly their ${lcpHunks} recorded hunks — each once, its main form nowhere; undone, each file is main's (${LCP_BASE.slice(0, 7)}) to the byte — and added exactly its ${Object.keys(LCP_NEW).length} files under src/, as recorded`,
+  lcpDriftNow.length === 0 && Object.keys(LCP_EDITS).length > 0 && LCP_BASE === "83e8093276b36320754972f845c38f23fd28fa61" &&
+    Object.keys(LCP_EDITS).every((f) => f.startsWith("src/") || f.startsWith("verify/")) && Object.keys(LCP_NEW).every((f) => f.startsWith("src/")),
+  lcpDriftNow.map(rel).join(" "));
+// The LCP stage is presentation only: no recorded or added file is a business, schema, posting, API, auth or print file.
+const LCP_FORBIDDEN = /^src\/(db|app\/api|app\/print|app\/uploads)\/|^src\/lib\/(inventory-|credit-note-returns|invoice-posting|purchase-posting|reversal-currency|zatca|session|auth|finance-reports|csrf|rate-limit)|\/actions\.ts$|^drizzle\//;
+const lcpBusiness = [...Object.keys(LCP_EDITS), ...Object.keys(LCP_NEW)].filter((f) => LCP_FORBIDDEN.test(f));
+check("the LCP stage touched no business, schema, posting, API, auth, print or server-action file", lcpBusiness.length === 0, lcpBusiness.join(" "));
 
 console.log("\nGroups:");
 for (const [g, [p, f]] of Object.entries(counts)) console.log(`  ${g}: ${p}/${p + f}`);

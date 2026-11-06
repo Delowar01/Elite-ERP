@@ -2,8 +2,8 @@
 
 import { usePathname } from "next/navigation";
 import { useRef, useState, useSyncExternalStore } from "react";
-import { PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen } from "lucide-react";
-import { LogoMark } from "@/components/brand/logo-mark";
+import { ChevronsLeft, ChevronsRight } from "lucide-react";
+import { BrandMark } from "./brand-mark";
 import { NavList } from "./nav-list";
 import type { Role } from "./nav-config";
 import { cn } from "@/lib/utils";
@@ -11,11 +11,12 @@ import { t, type Locale } from "@/lib/i18n/dict";
 import { SIDEBAR_COLLAPSED_COOKIE, SIDEBAR_GROUPS_COOKIE } from "@/lib/sidebar-cookies";
 import { useSidebarScroll } from "./use-sidebar-scroll";
 
-// Breakpoint model (D-01.3-G): ≥1280 the user's expanded/compact preference; 1024–1279 always the
-// compact 66px rail; <1024 no persistent rail (the mobile drawer takes over, see mobile-nav.tsx).
-// shell.css enforces the geometry from the first paint; this query only switches the rendered
-// content (labels → tooltips, group headers off) once the client knows the width.
-const TABLET_RAIL_QUERY = "(min-width: 1024px) and (max-width: 1279.98px)";
+// Breakpoint model (LCP shell): ≥1024 the user's expanded (256px) / mini (68px) preference; 768–1023
+// always the 68px mini rail, so dense ERP tables keep their width on a tablet; <768 no persistent rail
+// (the LCP navigation sheet takes over, see mobile-nav.tsx). shell.css enforces the geometry from the
+// first paint; this query only switches the rendered content (labels → tooltips, group headers off)
+// once the client knows the width.
+const TABLET_RAIL_QUERY = "(min-width: 768px) and (max-width: 1023.98px)";
 
 function useTabletRail(): boolean {
   return useSyncExternalStore(
@@ -76,42 +77,14 @@ export function Sidebar({
     });
   }
 
-  // The panel icon points at the sidebar's own edge — the inline-start edge: left in LTR, right in RTL.
+  // The chevrons point toward the sidebar's own edge (collapse) or away from it (expand) — the inline-
+  // start edge: left in LTR, right in RTL.
   const rtl = locale === "ar";
-  const ToggleIcon = collapsed ? (rtl ? PanelRightOpen : PanelLeftOpen) : rtl ? PanelRightClose : PanelLeftClose;
+  const ToggleIcon = collapsed ? (rtl ? ChevronsLeft : ChevronsRight) : rtl ? ChevronsRight : ChevronsLeft;
+  const toggleLabel = t(locale, collapsed ? "Expand sidebar" : "Collapse sidebar");
 
   return (
     <aside ref={navRef} className={cn("sidebar", collapsed && "collapsed")} data-rail={rail ? "true" : undefined}>
-      <div className="sidebar-head">
-        {orgLogoUrl ? (
-          <div className="sidebar-brand">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={orgLogoUrl} alt={orgName} className="sidebar-logo-img" />
-          </div>
-        ) : (
-          <div className="sidebar-brand">
-            <LogoMark size={30} color="var(--accent)" />
-            {!rail && (
-              <div className="sidebar-brand-text">
-                <div className="word1">ELITE</div>
-                <div className="word2">INNOVATION SOLUTIONS</div>
-              </div>
-            )}
-          </div>
-        )}
-        <button
-          type="button"
-          className="sidebar-toggle"
-          onClick={toggleSidebar}
-          aria-label={t(locale, collapsed ? "Expand sidebar" : "Collapse sidebar")}
-          title={t(locale, collapsed ? "Expand sidebar" : "Collapse sidebar")}
-          aria-expanded={!collapsed}
-        >
-          <ToggleIcon className="size-4" aria-hidden />
-        </button>
-      </div>
-      {!orgLogoUrl && !rail && <div className="sidebar-product">Elite ERP</div>}
-
       <NavList
         role={role}
         locale={locale}
@@ -122,6 +95,29 @@ export function Sidebar({
         idPrefix="sidebar"
         label={t(locale, "Main navigation")}
       />
+      {/* LCP SidebarFooter: the organization card and the collapse control. */}
+      <div className="sidebar-footer">
+        <div className="sidebar-org" title={rail ? orgName : undefined}>
+          <BrandMark orgLogoUrl={orgLogoUrl} size="lg" />
+          {!rail && (
+            <div className="sidebar-org-text">
+              <div className="sidebar-org-name" dir="auto">{orgName}</div>
+              <div className="sidebar-org-product">Elite ERP</div>
+            </div>
+          )}
+        </div>
+        <button
+          type="button"
+          className="sidebar-toggle"
+          onClick={toggleSidebar}
+          aria-label={toggleLabel}
+          title={toggleLabel}
+          aria-expanded={!collapsed}
+        >
+          <ToggleIcon className="size-4" aria-hidden />
+          {!rail && <span className="sidebar-toggle-label">{t(locale, collapsed ? "Expand" : "Collapse")}</span>}
+        </button>
+      </div>
     </aside>
   );
 }

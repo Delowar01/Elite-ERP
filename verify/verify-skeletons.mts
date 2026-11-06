@@ -59,6 +59,8 @@ const DELIBERATELY_NONE: Record<string, string> = {
   "settings/team": "fixed settings panels, bounded",
   "settings/security": "fixed settings panels, bounded",
   "settings/compliance": "fixed settings panels, bounded",
+  // LCP design adoption: the dev-only design specimen renders static components and reads no data.
+  "design-system": "static design specimen, no data (development only)",
 };
 /** Route SHAPES that never need one: forms and detail pages fetch a bounded amount. */
 const NONE_PATTERNS = [/\/new$/, /\[id\]/];

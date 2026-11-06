@@ -1,5 +1,8 @@
-// App shell (DEV-UI-01.3). Run via `npm run verify:shell` — deliberately WITHOUT
+// App shell (DEV-UI-01.3; LCP shell — D-LCP-3/4/5). Run via `npm run verify:shell` — deliberately WITHOUT
 // --conditions=react-server: it server-renders the real <NavList>, which needs the ordinary React build.
+// The LCP adoption re-encodes the visual decisions it supersedes (navy rail → dark header + light sidebar,
+// tint + bar → solid selected fill, 400–600 → 400–700, no shadows → the LCP shadow-sm only, the page title
+// in the bar → the organization identity); every structural, role, ARIA, RTL and focus assertion is kept.
 //
 // What it pins, so the shell cannot drift back:
 //   1. structure     — skip link, main#main-content, a labelled <nav> landmark, the shell title is not
@@ -11,7 +14,8 @@
 //   5. styling       — shell.css on tokens: logical properties, no gradient, 400/500/600 only, the type
 //                      scale, the 4·6·8·12 radius family, no active glow, focus-visible, breakpoints
 //   6. drawer        — logical start/end sides, close button at inline-end, no blur
-//   7. contrast      — the navy frame, the selected tint for the default AND sample org colours
+//   7. contrast      — the dark header and the light sidebar, the selected fill for the default AND sample
+//                      org colours
 
 import { readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
@@ -22,7 +26,8 @@ import { NAV_GROUPS, visibleNavGroups, shellTitleKey, isNavActive } from "../src
 import { NavList } from "../src/components/layout/nav-list";
 import { t } from "../src/lib/i18n/dict";
 import { contrast, parseColor } from "../src/lib/contrast";
-import { TOKENS, BRAND_NAVY } from "../src/lib/design-tokens";
+import { TOKENS } from "../src/lib/design-tokens";
+import { resolveComponentColors, buildSemanticTokens, type ThemeInput } from "../src/lib/brand-theme";
 
 const results: [boolean, string, string][] = [];
 const check = (name: string, cond: boolean, extra = "") => results.push([cond, name, extra]);
@@ -61,8 +66,14 @@ const shellEls = jsxElements(appShell);
 check("skip link to #main-content is rendered", shellEls.some((e) => e.tag === "a" && e.attrs.href === '"#main-content"' && /skip-link/.test(e.attrs.className ?? "")));
 check("<main id=\"main-content\"> is the skip target", shellEls.some((e) => e.tag === "main" && e.attrs.id === '"main-content"'));
 check("the shell renders no <h1> (page content owns the page heading)", !shellEls.some((e) => e.tag === "h1") && !/<h1\b/.test(navList + sidebar + mobileNav));
-const titleEl = shellEls.find((e) => /topbar-title/.test(e.attrs.className ?? ""));
-check("the shell title element is not an <h1>", !!titleEl && titleEl.tag !== "h1", titleEl?.tag);
+// LCP header: the organization identity (logo or Elite mark + name) where the page title used to be; the
+// page's own <h1> names the page. No heading element at all in the bar.
+const brandEl = shellEls.find((e) => /topbar-brand"/.test(e.attrs.className ?? "") && e.tag === "Link");
+check("the header shows the organization identity: a link home with the mark and the name (not a heading)",
+  !!brandEl && brandEl.attrs.href === '"/dashboard"' && /<BrandMark orgLogoUrl=\{orgLogoUrl\} \/>/.test(appShell) &&
+  /<span className="topbar-brand-name" dir="auto">\{orgName\}<\/span>/.test(appShell) && !shellEls.some((e) => /^h[1-6]$/.test(e.tag)), brandEl?.attrs.href);
+check("the organization mark is decorative beside the name (alt=\"\" / aria-hidden) — the name is the text",
+  /alt=""/.test(read(L + "brand-mark.tsx")) && /aria-hidden="true"/.test(read(L + "brand-mark.tsx")));
 check("app layout imports shell.css", /import "\.\/shell\.css";/.test(layout));
 // Settings gear: rendered only behind the owner/admin guard, which must equal the page's own guard.
 const guard = read("src/app/(app)/settings/organization/page.tsx").match(/requireRole\(([^)]*)\)/)?.[1].replace(/\s/g, "");
@@ -118,14 +129,14 @@ check("language control sits in the top bar itself, not in the utilities that mo
   !(appShell.match(/const utilities = \(([\s\S]*?)\n  \);/)?.[1] ?? "LanguageSwitcher").includes("LanguageSwitcher"));
 check("the locale is still set through the existing server action", /setLocaleAction\(o\.locale\)/.test(lang));
 
-// ---------- 4. title ----------
+// ---------- 4. contextual title (the Favorites label; no longer painted in the bar) ----------
 const TITLES: [string, string][] = [["/recycle-bin", "Recycle Bin"], ["/clients/recycle-bin", "Clients"], ["/sales/invoices/6/edit", "Invoices"],
   ["/hr/employees/new", "Employees"], ["/dashboard", "Dashboard"], ["/settings/team", "Dashboard"], ["/finance/statements", "Client & Vendor Statements"]];
 const badTitles = TITLES.filter(([p, k]) => shellTitleKey(p) !== k).map(([p]) => `${p}→${shellTitleKey(p)}`);
-check("shell title resolver (recycle bin, nested routes, fallback)", badTitles.length === 0, badTitles.join(" "));
+check("contextual title resolver (recycle bin, nested routes, fallback)", badTitles.length === 0, badTitles.join(" "));
 check("Recycle Bin is NOT added to the sidebar", !navHrefs.includes("/recycle-bin"));
 const keys = [...new Set([...NAV_GROUPS.flatMap((g) => [g.label ?? "", ...g.items.map((i) => i.label)]).filter(Boolean), "Recycle Bin",
-  "Main navigation", "Skip to main content", "Open navigation", "Close navigation", "Language"])];
+  "Main navigation", "Skip to main content", "Open navigation", "Close navigation", "Language", "Collapse", "Expand", "Collapse sidebar", "Expand sidebar"])];
 const untranslated = keys.filter((k) => t("ar", k) === k);
 check("every shell string has an Arabic translation", untranslated.length === 0, untranslated.join(","));
 
@@ -137,7 +148,10 @@ const dirHacks = cssNoComments.match(/\[dir=/g) ?? [];
 check("shell.css has exactly one [dir] rule (the chevron rotation, which has no logical form)", dirHacks.length === 1, String(dirHacks.length));
 check("no gradient in the shell (CSS or components)", !/gradient\(/.test(cssNoComments) && !SHELL_TSX.some(([, s]) => /gradient\(/.test(s)));
 const weights = [...cssNoComments.matchAll(/font-weight:\s*([^;]+);/g)].map((m) => m[1].trim());
-check("shell.css font weights are 400 / 500 / 600 only", weights.length > 0 && weights.every((w) => ["400", "500", "600"].includes(w)), [...new Set(weights)].join(","));
+check("shell.css font weights are the LCP set 400 / 500 / 600 / 700", weights.length > 0 && weights.every((w) => ["400", "500", "600", "700"].includes(w)), [...new Set(weights)].join(","));
+const boldRules = [...cssNoComments.matchAll(/([^{}]+)\{[^}]*font-weight:\s*700;[^}]*\}/g)].map((m) => m[1].trim());
+check("700 only on the organization name and the avatar initials (LCP bold brand / initials)",
+  boldRules.length === 2 && boldRules.every((r) => r === ".topbar-brand-name" || r === ".topbar-avatar"), boldRules.join(" | "));
 const boldClasses = SHELL_TSX.filter(([, s]) => /\bfont-(bold|extrabold|black)\b/.test(s)).map(([f]) => f);
 check("no bold / extrabold classes in shell components", boldClasses.length === 0, boldClasses.join(","));
 const sizes = [...cssNoComments.matchAll(/font-size:\s*([^;]+);/g)].map((m) => m[1].trim());
@@ -145,31 +159,48 @@ check("shell.css font sizes come from the type scale", sizes.length > 0 && sizes
 const arbitrary = SHELL_TSX.filter(([, s]) => /\btext-\[\d/.test(s)).map(([f]) => f);
 check("no arbitrary pixel font sizes in shell components", arbitrary.length === 0, arbitrary.join(","));
 const radii = [...cssNoComments.matchAll(/border-radius:\s*([^;]+);/g)].map((m) => m[1].trim());
-check("shell.css radii are 4 / 6 / 8 / 12 (or 0)", radii.every((r) => ["0", "4px", "6px", "8px", "12px"].includes(r)), [...new Set(radii)].join(","));
+check("shell.css radii are 4 / 6 / 8 / 12, or 9999px for the round count badge (LCP rounded-full)", radii.every((r) => ["0", "4px", "6px", "8px", "12px", "9999px"].includes(r)), [...new Set(radii)].join(","));
 const shadows = [...cssNoComments.matchAll(/box-shadow:\s*([^;]+);/g)].map((m) => m[1].trim());
-check("no glow: the only box-shadow in shell.css is `none`", shadows.every((s) => s === "none"), shadows.join(" | "));
+check("no glow: the only shadows in shell.css are the LCP-rendered shadow-sm token (selected item, brand mark)", shadows.length === 2 && shadows.every((s) => s === "var(--shadow-sm)"), shadows.join(" | "));
 const activeRule = cssNoComments.match(/\.nav-list \.nav-item\.active \{([^}]*)\}/)?.[1] ?? "";
-const indicator = cssNoComments.match(/\.nav-list \.nav-item\.active::before \{([^}]*)\}/)?.[1] ?? "";
-check("selected item: tint background, weight 600, no shadow", /background:\s*var\(--sidebar-selected-tint\)/.test(activeRule) && /font-weight:\s*600/.test(activeRule) && /box-shadow:\s*none/.test(activeRule), activeRule.trim());
-check("selected item: inline-start indicator bar in the org's selected-item colour", /inset-inline-start:\s*0/.test(indicator) && /background:\s*var\(--sidebar-indicator\)/.test(indicator));
-check("the tint and indicator derive from --selected-item-background (org theming stays effective)",
-  /--sidebar-selected-tint:\s*color-mix\(in srgb, var\(--selected-item-background\)/.test(read("src/app/globals.css")) && /--sidebar-indicator:\s*var\(--selected-item-background\)/.test(read("src/app/globals.css")));
-check("navy sidebar in both appearances on the approved navy tokens", /--sidebar-bg:\s*light-dark\(var\(--brand-navy\), var\(--brand-navy-deep\)\)/.test(read("src/app/globals.css")));
-for (const sel of [".nav-list :is(.nav-item, .nav-divider):focus-visible", ".sidebar-toggle:focus-visible", ".topbar :is(.topbar-icon-btn, .topbar-search, .cmdk-trigger-pill, .topbar-lang-option, .topbar-profile):focus-visible", ".skip-link:focus-visible"]) {
+check("selected item (LCP bg-primary text-primary-foreground shadow-sm): the org Selected-item fill + its text, weight 600, shadow-sm",
+  /background:\s*var\(--selected-item-background\)/.test(activeRule) && /color:\s*var\(--selected-item-text\)/.test(activeRule) && /font-weight:\s*600/.test(activeRule) && /box-shadow:\s*var\(--shadow-sm\)/.test(activeRule), activeRule.trim());
+check("no indicator bar or tint remains (the selected state is the fill; nothing draws over it)", !/\.nav-item\.active::before/.test(cssNoComments) && !/--sidebar-(selected-tint|indicator)/.test(read("src/app/globals.css")));
+const orgVars = buildSemanticTokens({ mode: "single", primaryColor: "#0E7C66", accentColor: "#7A1FA2", gradientFrom: "#F5A25C", gradientTo: "#E87722" }, "light");
+check("the selected pair is exactly what the org theme engine writes (--selected-item-background / --selected-item-text), so org theming stays effective",
+  !!orgVars["--selected-item-background"] && !!orgVars["--selected-item-text"]);
+const G = read("src/app/globals.css");
+check("LCP frame tokens: the light sidebar is the card surface in both appearances; the header is the LCP navy / charcoal",
+  /--sidebar-bg:\s*var\(--surface\);/.test(G) && /--sidebar-ink:\s*var\(--text\);/.test(G) && /--sidebar-border:\s*var\(--border\);/.test(G) &&
+  /--header-bg:\s*light-dark\(#1a1c2e, #212121\);/.test(G) && /--header-ink:\s*light-dark\(#f9fafb, #f9fafb\);/.test(G) && /--header-height:\s*56px;/.test(G));
+const rule = (sel: string) => cssNoComments.match(new RegExp(`(?:^|\\n)${sel.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")} \\{([^}]*)\\}`))?.[1] ?? "";
+check("geometry: header 56px sticky on top; sidebar 256px, sticky under the header, its own scroller; mini rail 68px",
+  /height:\s*var\(--header-height\)/.test(rule(".topbar")) && /position:\s*sticky/.test(rule(".topbar")) && /width:\s*256px/.test(rule(".sidebar")) &&
+  /top:\s*var\(--header-height\)/.test(rule(".sidebar")) && /overflow-y:\s*auto/.test(rule(".sidebar")) && /\.sidebar:is\(\.collapsed, \[data-rail\]\) \{ width: 68px; \}/.test(cssNoComments));
+check("content: LCP max-w-7xl (1280px) with 16 / 24 / 32px padding by breakpoint",
+  /max-width:\s*1280px/.test(rule(".app-main-inner")) && /padding:\s*var\(--space-16\)/.test(rule(".app-main-inner")) &&
+  /@media \(min-width: 640px\) \{\s*\.app-main-inner \{ padding: var\(--space-24\); \}/.test(cssNoComments) && /@media \(min-width: 1024px\) \{\s*\.app-main-inner \{ padding: var\(--space-32\); \}/.test(cssNoComments));
+for (const sel of [".nav-list :is(.nav-item, .nav-divider):focus-visible", ".sidebar-toggle:focus-visible", ".topbar :is(.topbar-icon-btn, .topbar-search, .cmdk-trigger-pill, .topbar-lang-option, .topbar-profile, .topbar-brand):focus-visible", ".skip-link:focus-visible"]) {
   check(`focus-visible style: ${sel}`, cssNoComments.includes(sel));
 }
 const outlineNone = SHELL_TSX.filter(([, s]) => /\boutline-none\b/.test(s.replace(/outline-none focus-visible:ring-2/g, ""))).map(([f]) => f);
 check("no outline-none without a focus-visible replacement in shell components", outlineNone.length === 0, outlineNone.join(","));
 const media = (q: string) => cssNoComments.match(new RegExp(`@media \\(${q.replace(/[()]/g, "\\$&")}\\) \\{([\\s\\S]*?)\\n\\}`))?.[1] ?? "";
-const tablet = media("min-width: 1024px) and (max-width: 1279.98px");
-const mobile = media("max-width: 1023.98px");
+const tablet = media("min-width: 768px) and (max-width: 1023.98px");
+const mobile = media("max-width: 767.98px");
 const narrow = media("max-width: 639.98px");
-check("1024–1279: the rail is always 66px and the expand toggle is hidden", /\.sidebar \{ width: 66px;/.test(tablet) && /\.sidebar \.sidebar-toggle,/.test(tablet));
-check("<1024: no persistent sidebar; the menu trigger and compact search appear", /\.sidebar \{ display: none; \}/.test(mobile) && /\.topbar-menu-btn \{ display: flex; \}/.test(mobile) && /\.topbar-search-icon \{ display: flex; \}/.test(mobile));
-check("<640: utilities move to the drawer; menu, title, search and EN | ع stay",
-  /\.topbar-utilities \{ display: none; \}/.test(narrow) && /\.mobile-nav-utilities \{/.test(narrow) &&
-  !/\.(topbar-lang|topbar-search-icon|topbar-menu-btn|topbar-greeting|topbar-title|cmdk-trigger-pill)[^{]*\{[^}]*display: none/.test(narrow));
-check("the shell title never collapses to zero width", /\.topbar-greeting \{ flex: 1 1 auto; min-width: 6rem; \}/.test(cssNoComments));
+check("768–1023: the rail is always 68px and the expand toggle is hidden", /\.sidebar \{ width: 68px; \}/.test(tablet) && /\.sidebar \.sidebar-toggle,/.test(tablet));
+check("<768: no persistent sidebar; the menu trigger appears (LCP md breakpoint)", /\.sidebar \{ display: none; \}/.test(mobile) && /\.topbar-menu-btn \{ display: flex; \}/.test(mobile));
+// LCP: from 640 to 767px the menu button and the utilities leave the field no room (it was squeezed to nothing, its ⌘K
+// hint over EN | ع, the account past the viewport): below 768 the compact search stands in for it, and the name gives way.
+check("<768: the search box becomes the compact search (it and the command-menu pill keep their size) and the organization name alone gives way (truncates) — the row never passes the viewport or overlaps",
+  /\.topbar \.topbar-search \{ display: none; \}/.test(mobile) && /\.topbar \.topbar-search-icon \{ display: flex; \}/.test(mobile) &&
+  /\.topbar-brand \{[^}]*flex-shrink: 1;/.test(mobile) && /\.topbar-search-slot \{ flex: 0 0 auto; \}/.test(mobile));
+check("<640: utilities move to the sheet; the name hides; menu, mark, search and EN | ع stay",
+  /\.topbar-utilities \{ display: none; \}/.test(narrow) && /\.mobile-nav-utilities \{/.test(narrow) && /\.topbar-brand-name \{ display: none; \}/.test(narrow) &&
+  !/\.(topbar-lang|topbar-menu-btn|topbar-brand|cmdk-trigger-pill|topbar-search-icon)[^{-]*\{[^}]*display: none/.test(narrow));
+check("the organization name truncates (never widens the bar) and keeps its own direction",
+  /max-width:\s*220px/.test(rule(".topbar-brand-name")) && /text-overflow:\s*ellipsis/.test(rule(".topbar-brand-name")) && /dir="auto"/.test(appShell));
 
 // ---------- 6. drawer ----------
 check("Drawer sides are logical (start-0 / end-0, border-e / border-s)", /side === "start" \? "start-0 border-e" : "end-0 border-s"/.test(drawer) && !/\b(left-0|right-0|border-l|border-r|right-4|left-4)\b/.test(drawer));
@@ -181,24 +212,43 @@ check("mobile nav opens from inline-start, is titled, and closes on navigation (
 check("mobile nav shows the organization context", /\{orgName\}/.test(mobileNav));
 check("palette and record search: Radix dialog (trap + focus return), no blur",
   ["command-palette.tsx", "record-search.tsx"].every((f) => { const s = SHELL_TSX.find(([n]) => n === f)![1]; return /DialogPrimitive\.Root/.test(s) && /DialogPrimitive\.Title/.test(s) && !/backdrop-blur/.test(s); }));
-check("search has a no-keyboard entry below 1024 and Ctrl/⌘+K still opens the palette",
+check("search has a no-keyboard entry on narrow headers and Ctrl/⌘+K still opens the palette",
   /topbar-search-icon/.test(read(L + "topbar-search.tsx")) && /\(e\.metaKey \|\| e\.ctrlKey\) && e\.key\.toLowerCase\(\) === "k"/.test(read(L + "topbar-search.tsx")));
 
-// ---------- 7. contrast of the navy frame ----------
+// ---------- 7. contrast of the LCP frame: the dark header and the light sidebar ----------
 const mix = (a: string, pct: number, b: string) => { const A = parseColor(a)!, Bc = parseColor(b)!; const f = pct / 100;
   return `rgb(${Math.round(A.r * f + Bc.r * (1 - f))}, ${Math.round(A.g * f + Bc.g * (1 - f))}, ${Math.round(A.b * f + Bc.b * (1 - f))})`; };
-const FRAME = { light: { bg: BRAND_NAVY, ink: "#ffffff", accent: TOKENS.light.accent, focus: TOKENS.light.focus }, dark: { bg: "#100f32", ink: "#eceef7", accent: TOKENS.dark.accent, focus: TOKENS.dark.focus } };
-check("globals.css navy tokens are the approved values", /--brand-navy:\s*#1b1b4e;/.test(read("src/app/globals.css")) && /--brand-navy-deep:\s*#100f32;/.test(read("src/app/globals.css")));
-for (const [ap, f] of Object.entries(FRAME)) {
-  const muted = mix(f.ink, 72, f.bg);
-  check(`${ap}: sidebar text on navy ≥ 4.5`, contrast(f.ink, f.bg) >= 4.5, contrast(f.ink, f.bg).toFixed(2));
-  check(`${ap}: muted sidebar text on navy ≥ 4.5`, contrast(muted, f.bg) >= 4.5, contrast(muted, f.bg).toFixed(2));
-  check(`${ap}: muted text on the hover tint ≥ 4.5`, contrast(f.ink, mix(f.ink, 9, f.bg)) >= 4.5);
-  check(`${ap}: indicator (default accent) vs navy ≥ 3 (non-text)`, contrast(f.accent, f.bg) >= 3, contrast(f.accent, f.bg).toFixed(2));
-  check(`${ap}: focus ring vs navy ≥ 3`, contrast(f.focus, f.bg) >= 3, contrast(f.focus, f.bg).toFixed(2));
-  // Org Selected-item colours, from very light to very dark: the label on the tint must stay readable.
-  const worst = ["#ffffff", "#ffee00", "#00e5ff", f.accent, "#7a1fa2", "#003366", "#000000"].map((c) => contrast(f.ink, mix(c, 22, f.bg)));
-  check(`${ap}: selected label on the tint ≥ 4.5 for any org selected-item colour`, Math.min(...worst) >= 4.5, worst.map((r) => r.toFixed(1)).join(","));
+const HEADER = { light: { bg: "#1a1c2e", ink: "#f9fafb", accent: "#252841" }, dark: { bg: "#212121", ink: "#f9fafb", accent: "#333333" } };
+check("globals.css keeps the Elite brand navy constants (logo, brand panels)", /--brand-navy:\s*#1b1b4e;/.test(G) && /--brand-navy-deep:\s*#100f32;/.test(G));
+// The muted header ink is the header ink at 76% over the header, resolved to HEX (a registered <color>, so
+// computed styles read rgb() like every other token); the declared pair must BE that mix, and it is what is measured.
+const mutedDecl = /--header-ink-muted:\s*light-dark\((#[0-9a-f]{6}), (#[0-9a-f]{6})\);/.exec(G);
+const MUTED = { light: mutedDecl?.[1] ?? "", dark: mutedDecl?.[2] ?? "" };
+check("header-ink-muted is the header ink at 76% over the header, resolved to HEX per appearance and registered (the value measured below)",
+  !!mutedDecl && (["light", "dark"] as const).every((ap) => mix(MUTED[ap], 100, "#000000") === mix(HEADER[ap].ink, 76, HEADER[ap].bg)) &&
+  /@property --header-ink-muted \{ syntax: "<color>"/.test(G), JSON.stringify(MUTED));
+for (const ap of ["light", "dark"] as const) {
+  const h = HEADER[ap], tk = TOKENS[ap];
+  const muted = MUTED[ap] || mix(h.ink, 76, h.bg);
+  const searchBg = mix(h.accent, 50, h.bg);
+  check(`${ap}: header text on the header ≥ 4.5`, contrast(h.ink, h.bg) >= 4.5, contrast(h.ink, h.bg).toFixed(2));
+  check(`${ap}: muted header text (icons, search placeholder, role) on the header ≥ 4.5`, contrast(muted, h.bg) >= 4.5, contrast(muted, h.bg).toFixed(2));
+  check(`${ap}: muted header text on the search field ≥ 4.5`, contrast(muted, searchBg) >= 4.5, contrast(muted, searchBg).toFixed(2));
+  check(`${ap}: header text on the hover fill ≥ 4.5`, contrast(h.ink, h.accent) >= 4.5, contrast(h.ink, h.accent).toFixed(2));
+  check(`${ap}: focus ring vs the header ≥ 3`, contrast(tk.focus, h.bg) >= 3, contrast(tk.focus, h.bg).toFixed(2));
+  // Owner decision (2026-11-06): the label on the orange is the LCP white — measured and reported, below AA.
+  check(`${ap}: pressed language / brand tile — the LCP white label on the primary (measured), the primary vs the header ≥ 3`,
+    tk.primaryForeground === "#ffffff" && contrast(tk.primary, h.bg) >= 3, `${contrast(tk.primaryForeground, tk.primary).toFixed(2)} / ${contrast(tk.primary, h.bg).toFixed(2)}`);
+  check(`${ap}: sidebar text / muted text on the card ≥ 4.5; on the hover fill ≥ 4.5`,
+    contrast(tk.text, tk.surface) >= 4.5 && contrast(tk.textMuted, tk.surface) >= 4.5 && contrast(tk.text, tk.surfaceSubtle) >= 4.5 && contrast(tk.textMuted, tk.surfaceSubtle) >= 4.5,
+    `${contrast(tk.textMuted, tk.surface).toFixed(2)} / ${contrast(tk.textMuted, tk.surfaceSubtle).toFixed(2)}`);
+  check(`${ap}: selected item — the LCP white label on the default fill (measured); the fill vs the card ≥ 3; focus vs the card ≥ 3`,
+    tk.accentForeground === "#ffffff" && contrast(tk.accent, tk.surface) >= 3 && contrast(tk.focus, tk.surface) >= 3,
+    `${contrast(tk.accentForeground, tk.accent).toFixed(2)} / ${contrast(tk.accent, tk.surface).toFixed(2)}`);
+  // Org Selected-item colours from very light to very dark: the engine's selected pair stays readable.
+  const orgs = ["#ffffff", "#ffee00", "#00e5ff", "#e87722", "#7a1fa2", "#003366", "#000000", "#15803d"];
+  const worst = orgs.map((c) => { const sel = resolveComponentColors({ mode: "single", primaryColor: "#0e7c66", accentColor: c, gradientFrom: "#F5A25C", gradientTo: "#E87722" } as ThemeInput, ap).selectedItem; return contrast(sel.fg, sel.bg); });
+  check(`${ap}: selected label on the org fill ≥ 4.5 for any org selected-item colour`, Math.min(...worst) >= 4.5, worst.map((r) => r.toFixed(1)).join(","));
 }
 
 let ok = true;

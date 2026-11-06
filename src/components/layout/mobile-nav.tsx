@@ -4,12 +4,13 @@ import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { Menu } from "lucide-react";
 import { Drawer, DrawerTrigger, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
-import { LogoMark } from "@/components/brand/logo-mark";
+import { BrandMark } from "./brand-mark";
 import { NavList } from "./nav-list";
 import type { Role } from "./nav-config";
 import { t, type Locale } from "@/lib/i18n/dict";
 
-// Below 1024px there is no persistent rail (D-01.3-G); this drawer carries the navigation instead.
+// Below 768px there is no persistent rail (LCP shell: the sidebar becomes a left Sheet, `w-72`); this
+// drawer carries the navigation instead.
 // It is the Radix Dialog drawer, so the focus trap, focus return to the trigger, Escape and the inert
 // page behind come from Radix — no hand-written focus management. It opens from the inline-start edge
 // (left in English, right in Arabic) and renders the same NavList as the sidebar. Below 640px it also
@@ -85,14 +86,9 @@ export function MobileNav({
       >
         <DrawerTitle className="sr-only">{t(locale, "Main navigation")}</DrawerTitle>
         <div className="mobile-nav-head">
-          {orgLogoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={orgLogoUrl} alt="" className="sidebar-logo-img" />
-          ) : (
-            <LogoMark size={28} color="var(--accent)" />
-          )}
+          <BrandMark orgLogoUrl={orgLogoUrl} size="lg" />
           <div className="mobile-nav-org">
-            <div className="mobile-nav-org-name">{orgName}</div>
+            <div className="mobile-nav-org-name" dir="auto">{orgName}</div>
             <div className="mobile-nav-product">Elite ERP</div>
           </div>
         </div>
