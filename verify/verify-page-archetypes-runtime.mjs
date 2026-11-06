@@ -3081,6 +3081,12 @@ if (REBASE) {
   const c5Renamed = (k, gone, came) => /^settings-(org|team)[|-]/.test(k) && k.includes("|ar|") && gone.length === came.length && gone.every((g) => C5_RENAMES.has(g))
     && JSON.stringify([...came].sort()) === JSON.stringify(gone.map((g) => C5_RENAMES.get(g)).sort());
   const c5renamed = [];
+  // LCP adds four controls on purpose, on Settings › Organization only: the white label on the orange (the owner's
+  // decision) is below 4.5:1, so the Color Theme panel's warning-only audit flags the default theme's five on-orange
+  // components and offers its suggestion on four of them (the selected sidebar item has none) — four type=button
+  // buttons, each "Use suggested text color" in the page's language. Exactly those may appear; nothing else may change.
+  const LCP_SUGGEST = (k) => (/^settings-org\|/.test(k) ? T(k.split("|")[1], "Use suggested text color") : null);
+  const lcpAdded = [];
   // C4 adds no control; it has two intended state changes: the report picker's buttons say whether they are
   // pressed — pressed=true on the report shown, pressed=false on the other seven — and the statement's
   // Client / Vendor links say which is the current page (current=page on the kind shown). The baseline's
@@ -3119,7 +3125,16 @@ if (REBASE) {
           else problems.push(`${group} ${k}: added ${JSON.stringify(b)} ≠ intended ${JSON.stringify(intended.get(r))} (${r})`);
           continue;
         }
-        if (a.length !== b.length) { problems.push(`${group} ${k}: ${a.length}→${b.length} × ${r}`); continue; }
+        if (a.length !== b.length) {
+          const extra = [...b];
+          for (const x of a) { const i = extra.indexOf(x); if (i >= 0) extra.splice(i, 1); }
+          if (LCP_SUGGEST(k) && r === "button||type=button|" && b.length === a.length + 4 && extra.length === 4 && extra.every((x) => x === LCP_SUGGEST(k))) {
+            lcpAdded.push(`${group} ${k}: + 4 × ${r} (${LCP_SUGGEST(k)})`);
+            continue;
+          }
+          problems.push(`${group} ${k}: ${a.length}→${b.length} × ${r}`);
+          continue;
+        }
         const gone = a.filter((x) => !b.includes(x));
         const came = b.filter((x) => !a.includes(x));
         if (!gone.length) continue;
@@ -3136,11 +3151,13 @@ if (REBASE) {
   for (const x of added) console.log(`    ${x}`);
   console.log(`• C4 intended state changes in the re-recorded routes (${stated.length} lists):`);
   for (const x of stated) console.log(`    ${x}`);
+  console.log(`• LCP's four Color Theme suggestion buttons on Settings › Organization (${lcpAdded.length} lists):`);
+  for (const x of lcpAdded) console.log(`    ${x}`);
   if (fresh.length) {
     console.log(`• routes recorded for the first time (${fresh.length} lists; nothing to compare them with):`);
     for (const x of fresh) console.log(`    ${x}`);
   }
-  check(`re-recorded routes: actions equivalent to the baseline — same kinds, targets, types and states; English names unchanged; Arabic names changed only from C1 page copy to Arabic (${renamed.length} lists) or, C5's two Business Settings tab labels, from Fiscal Year / VAT Configuration to السنة المالية / إعدادات ضريبة القيمة المضافة (${c5renamed.length} groups); added only the intended controls — C2's department filters, C3's task-card buttons (${added.length} groups); C4's intended states only — the report picker's pressed=true / false, the statement links' current=page (${stated.length} lists)`,
+  check(`re-recorded routes: actions equivalent to the baseline — same kinds, targets, types and states; English names unchanged; Arabic names changed only from C1 page copy to Arabic (${renamed.length} lists) or, C5's two Business Settings tab labels, from Fiscal Year / VAT Configuration to السنة المالية / إعدادات ضريبة القيمة المضافة (${c5renamed.length} groups); added only the intended controls — C2's department filters, C3's task-card buttons (${added.length} groups), LCP's four "Use suggested text color" buttons on Settings › Organization (${lcpAdded.length} lists); C4's intended states only — the report picker's pressed=true / false, the statement links' current=page (${stated.length} lists)`,
     problems.length === 0, list(problems));
 }
 
@@ -3578,7 +3595,10 @@ const c4Cross = Object.entries(scoped(lcpRef?.c4 ?? {})).flatMap(([k, l]) => {
   return [...new Set([...Object.keys(ref), ...Object.keys(l)])].filter((f) => !ERR_FIELDS.includes(f) && !caseOnly(JSON.stringify(ref[f]) ?? "", JSON.stringify(l[f]) ?? ""))
     .map((f) => `${k} ${f}: ${JSON.stringify(ref[f]).slice(0, 90)} → ${JSON.stringify(l[f]).slice(0, 90)}`);
 });
-const c4CaseRuns = Object.entries(scoped(lcpRef?.c4 ?? {})).filter(([k, l]) => c4Expect(k) && JSON.stringify(c4Expect(k)) !== JSON.stringify(Object.fromEntries(Object.keys(c4Expect(k)).map((f) => [f, l[f]])))).length;
+const c4CaseRuns = Object.entries(scoped(lcpRef?.c4 ?? {})).filter(([k, l]) => {
+  const e = c4Expect(k);
+  return e && [...new Set([...Object.keys(e), ...Object.keys(l)])].some((f) => !ERR_FIELDS.includes(f) && JSON.stringify(e[f]) !== JSON.stringify(l[f]));
+}).length;
 check(`C4, LCP record against C8 final's expectation (c4ref): every report state's every field the same but for letter case — upper-case letters of the record lower-case now, nothing else (${c4CaseRuns} of ${Object.keys(scoped(lcpRef?.c4 ?? {})).length} states so recased: the LCP table headers)`,
   Object.keys(scoped(lcpRef?.c4 ?? {})).length === vals.filter(([k]) => k.startsWith("report-")).length && c4Cross.length === 0, list(c4Cross));
 const statementDiff = valueDiff((k) => k.startsWith("statement-"));
