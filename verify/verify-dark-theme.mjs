@@ -75,7 +75,9 @@ await pool.query(
 const TARGETS = [
   ["body", "body text", 4.5],
   [".nav-item.active", "sidebar selected item", 4.5],
-  [".topbar-greeting h3", "page title", 4.5],
+  // LCP header: the organization name on the dark header surface (the page title moved into the page's <h1>).
+  [".topbar-brand-name", "organization name in the header", 4.5],
+  ["main h1", "page title", 4.5],
   [".topbar-profile-role", "profile role (small muted)", 4.5],
 ];
 
@@ -91,8 +93,9 @@ async function measure(appearance) {
   await p.waitForFunction(
     (mode) => {
       const bg = getComputedStyle(document.body).backgroundColor;
-      const isDark = bg === "rgb(12, 11, 34)" || bg === "rgb(22, 21, 47)";
-      return mode === "dark" ? isDark || bg.includes("12, 11, 34") : !isDark;
+      // The LCP canvas: #1a1a1a in dark (rgb(26, 26, 26)), #f9fafb in light.
+      const isDark = bg === "rgb(26, 26, 26)";
+      return mode === "dark" ? isDark : !isDark;
     },
     appearance,
     { timeout: 20000 },

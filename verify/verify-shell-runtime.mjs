@@ -1,10 +1,10 @@
 /**
- * App shell runtime (DEV-UI-01.3). Drives the real shell in a browser — reading CSS is not the same as
+ * App shell runtime (DEV-UI-01.3; LCP shell — D-LCP-3/4). Drives the real shell in a browser — reading CSS is not the same as
  * proving that a control is on screen, that a drawer opens from the right side in Arabic, or that
  * focus comes back to the button that opened something.
  *
  *   1. 1440 / 1024 / 768 / 390 × EN / AR × light / dark: the shell itself adds no horizontal overflow
- *      (header and rail are measured, not page tables); title, EN | ع, navigation, search and the
+ *      (header and rail are measured, not page tables); the organization identity, EN | ع, navigation, search and the
  *      account are reachable; no visible shell control sits outside the viewport; the rail /
  *      drawer breakpoint model and the RTL side
  *   2. drawer: inline-start side in LTR and RTL, focus trapped, Escape closes, focus returns to the
@@ -13,7 +13,9 @@
  *      the compact search entry on mobile
  *   4. aria-current, keyboard focus-visible, the collapsed-rail cookie persisting at desktop
  *   5. Staff: no Settings gear, no restricted nav, Administration flattened; server guard unchanged
- *   6. /recycle-bin title; an org Selected-item colour still drives the selected tint / indicator
+ *   6. /recycle-bin names itself in its h1; an org Selected-item colour still drives the selected fill
+ * LCP adoption: the visual expectations follow the LCP shell (dark 56px header with the organization identity, the
+ * light 256px sidebar / 68px mini rail, the sheet below 768px, the solid selected fill); every behavioural check is kept.
  *   7. reduced motion
  */
 import { chromium } from "playwright";
@@ -79,8 +81,21 @@ const measure = () =>
       aside: shown(aside) ? box(aside) : null,
       asideInView: !shown(aside) || inView(aside),
       stranded: controls.filter((c) => !inView(c)).map((c) => c.className.toString().slice(0, 40) || c.tagName),
-      titleWidth: q(".topbar-title")?.getBoundingClientRect().width ?? 0,
-      titleTag: q(".topbar-title")?.tagName,
+      // LCP: no two header controls drawn over each other (the 640–767px row once squeezed the search field to nothing and
+      // drew its ⌘K hint over EN | ع). Nested controls (the EN / ع options inside the switch) are one control.
+      overlaps: (() => {
+        const hc = controls.filter((c) => c.closest("header.topbar") && !controls.some((o) => o !== c && o.contains(c)));
+        const out = [];
+        hc.forEach((a, i) => hc.slice(i + 1).forEach((b) => {
+          const [p, r] = [a.getBoundingClientRect(), b.getBoundingClientRect()];
+          if (Math.min(p.right, r.right) - Math.max(p.left, r.left) > 1 && Math.min(p.bottom, r.bottom) - Math.max(p.top, r.top) > 1)
+            out.push(`${a.className.toString().split(" ")[0] || a.tagName} × ${b.className.toString().split(" ")[0] || b.tagName}`);
+        }));
+        return out;
+      })(),
+      brand: shown(q("header.topbar .topbar-brand")) && inView(q("header.topbar .topbar-brand")) && q("header.topbar .topbar-brand").tagName === "A",
+      brandName: shown(q(".topbar-brand-name")) ? q(".topbar-brand-name").textContent : null,
+      headerHeight: Math.round(header.getBoundingClientRect().height),
       lang: shown(q(".topbar-lang")) && inView(q(".topbar-lang")) && document.querySelectorAll(".topbar-lang-option").length === 2,
       menuBtn: shown(q(".topbar-menu-btn")),
       searchBox: shown(q("header.topbar .topbar-search")),
@@ -96,7 +111,8 @@ const pageOverflowReport = [];
 for (const locale of ["en", "ar"]) {
   for (const theme of ["light", "dark"]) {
     await setPrefs({ locale, theme, sidebar_collapsed: "0" });
-    for (const w of [1440, 1024, 768, 390]) {
+    // LCP: 700 and 640 too — the band where the menu button and the header utilities share the row.
+    for (const w of [1440, 1024, 768, 700, 640, 390]) {
       await page.setViewportSize({ width: w, height: 900 });
       for (const route of ["/dashboard", "/sales/invoices"]) {
         await page.goto(`${BASE}${route}`, { waitUntil: "networkidle" });
@@ -105,14 +121,16 @@ for (const locale of ["en", "ar"]) {
         const tag = `${locale}/${theme}/${w} ${route}`;
         check(`${tag}: the shell adds no horizontal overflow`, m.headerOverflow <= 0 && m.headerInView && m.asideInView, JSON.stringify(m));
         check(`${tag}: no visible shell control outside the viewport`, m.stranded.length === 0, m.stranded.join(","));
-        check(`${tag}: title visible (not an h1)`, m.titleWidth > 40 && m.titleTag !== "H1", `${m.titleWidth} ${m.titleTag}`);
+        check(`${tag}: no two header controls drawn over each other`, m.overlaps.length === 0, m.overlaps.join(", "));
+        check(`${tag}: the organization identity is in the 56px header (a link, the name from 640px)`,
+          m.brand && m.headerHeight === 56 && (w >= 640 ? m.brandName === "Shell Runtime Co" : m.brandName === null), `${m.brand} ${m.headerHeight} ${m.brandName}`);
         check(`${tag}: EN | ع reachable`, m.lang);
-        check(`${tag}: navigation reachable (rail ≥1024, menu button below)`, w >= 1024 ? m.asideShown && !m.menuBtn : !m.asideShown && m.menuBtn);
-        check(`${tag}: search reachable (box ≥1024, compact icon below)`, w >= 1024 ? m.searchBox && !m.searchIcon : !m.searchBox && m.searchIcon);
+        check(`${tag}: navigation reachable (sidebar ≥768, menu button below)`, w >= 768 ? m.asideShown && !m.menuBtn : !m.asideShown && m.menuBtn);
+        check(`${tag}: search reachable (box ≥768, the compact icon below — LCP md)`, w >= 768 ? m.searchBox && !m.searchIcon : !m.searchBox && m.searchIcon);
         check(`${tag}: account in the top bar from 640px`, w >= 640 ? m.account : !m.account);
-        if (w >= 1024) {
-          check(`${tag}: rail width (240 at 1440 expanded, 66 at 1024 even when expanded is preferred)`, Math.round(m.aside.width) === (w >= 1280 ? 240 : 66), String(m.aside.width));
-          check(`${tag}: rail on the inline-start side`, locale === "ar" ? Math.round(m.aside.right) === m.vw : Math.round(m.aside.left) === 0, JSON.stringify(m.aside));
+        if (w >= 768) {
+          check(`${tag}: sidebar width (256 expanded from 1024; the 68px mini rail at 768 even when expanded is preferred)`, Math.round(m.aside.width) === (w >= 1024 ? 256 : 68), String(m.aside.width));
+          check(`${tag}: sidebar on the inline-start side`, locale === "ar" ? Math.round(m.aside.right) === m.vw : Math.round(m.aside.left) === 0, JSON.stringify(m.aside));
         }
         check(`${tag}: dir`, m.dir === (locale === "ar" ? "rtl" : "ltr"));
         if (route === "/sales/invoices") pageOverflowReport.push(`${tag}=${m.pageOverflow}`);
@@ -134,24 +152,30 @@ for (const locale of ["en", "ar"]) {
 }
 console.log("page-level overflow (not a shell measurement; reported only):", pageOverflowReport.join("  "));
 
-// First paint, before hydration (JavaScript off): the CSS alone must already give the 66px rail at
-// tablet width with the expanded preference, and no rail at all below 1024.
+// First paint, before hydration (JavaScript off): the CSS alone must already give the 256px sidebar at 1024
+// with the expanded preference, the 68px mini rail at tablet width, and no rail at all below 768.
 {
   const noJs = await browser.newContext({ javaScriptEnabled: false, storageState: await ctx.storageState(), viewport: { width: 1024, height: 900 } });
   await noJs.addCookies([{ name: "sidebar_collapsed", value: "0", url: BASE }, { name: "locale", value: "en", url: BASE }]);
   const p2 = await noJs.newPage();
   await p2.goto(`${BASE}/dashboard`, { waitUntil: "load" });
   const railBox = await p2.locator("aside.sidebar").boundingBox();
-  check("first paint at 1024 (no JS): the rail is already 66px", railBox && Math.round(railBox.width) === 66, JSON.stringify(railBox));
+  check("first paint at 1024 (no JS): the expanded sidebar is already 256px", railBox && Math.round(railBox.width) === 256, JSON.stringify(railBox));
+  // A real first paint at tablet width — a fresh load, not a resize: the rail's width transition animates any change
+  // after first paint, so measuring right after a 1024 → 768 resize would race the 256 → 68 animation.
   await p2.setViewportSize({ width: 768, height: 900 });
-  check("first paint at 768 (no JS): no persistent rail", (await p2.locator("aside.sidebar").boundingBox()) === null);
+  await p2.goto(`${BASE}/dashboard`, { waitUntil: "load" });
+  const tabletBox = await p2.locator("aside.sidebar").boundingBox();
+  check("first paint at 768 (no JS): the mini rail is already 68px", tabletBox && Math.round(tabletBox.width) === 68, JSON.stringify(tabletBox));
+  await p2.setViewportSize({ width: 767, height: 900 });
+  check("first paint at 767 (no JS): no persistent rail", (await p2.locator("aside.sidebar").boundingBox()) === null);
   await noJs.close();
 }
 
 // ---------- 2. drawer ----------
 for (const locale of ["en", "ar"]) {
   await setPrefs({ locale, theme: "light" });
-  for (const w of [768, 390]) {
+  for (const w of [600, 390]) {
     await page.setViewportSize({ width: w, height: 900 });
     await page.goto(`${BASE}/dashboard`, { waitUntil: "networkidle" });
     const trigger = page.locator(".topbar-menu-btn");
@@ -192,7 +216,7 @@ await page.click(".topbar-menu-btn");
 await page.locator('.mobile-nav a[href="/clients"]').click();
 await page.waitForURL(/\/clients$/);
 await page.locator(".mobile-nav").waitFor({ state: "detached", timeout: 10000 }).catch(() => {});
-check("drawer closes after navigating", (await page.locator(".mobile-nav").count()) === 0 && (await page.locator(".topbar-title").innerText()) === "Clients");
+check("drawer closes after navigating", (await page.locator(".mobile-nav").count()) === 0 && (await page.locator("main h1").first().innerText()).trim() === "Clients");
 
 // ---------- 3. palette and record search ----------
 async function overlayFocus(openSelector, label, viaKeyboard = false) {
@@ -222,7 +246,7 @@ for (const w of [1440, 390]) {
   await page.setViewportSize({ width: w, height: 900 });
   await page.goto(`${BASE}/dashboard`, { waitUntil: "networkidle" });
   await overlayFocus(".cmdk-trigger-pill", `command palette @${w}`);
-  await overlayFocus(w >= 1024 ? "header.topbar .topbar-search" : ".topbar-search-icon", `record search @${w}`);
+  await overlayFocus(w >= 768 ? "header.topbar .topbar-search" : ".topbar-search-icon", `record search @${w}`);
 }
 await page.setViewportSize({ width: 1440, height: 900 });
 await page.goto(`${BASE}/dashboard`, { waitUntil: "networkidle" });
@@ -235,9 +259,15 @@ check("aria-current marks exactly the parent nav item on a nested route", cur.le
 const ind = await page.evaluate(() => {
   const a = document.querySelector('aside.sidebar [aria-current="page"]');
   const s = getComputedStyle(a), b = getComputedStyle(a, "::before");
-  return { weight: s.fontWeight, shadow: s.boxShadow, bar: b.content !== "none" && parseFloat(b.width) >= 2, barBg: b.backgroundColor, bg: s.backgroundColor };
+  const sel = document.createElement("i");
+  sel.style.color = "var(--selected-item-background)";
+  document.body.append(sel);
+  const selBg = getComputedStyle(sel).color;
+  sel.remove();
+  return { weight: s.fontWeight, shadow: s.boxShadow, bar: b.content !== "none" && parseFloat(b.width) >= 2, bg: s.backgroundColor, selBg };
 });
-check("selected item: weight 600, indicator bar, no glow", ind.weight === "600" && ind.bar && ind.shadow === "none", JSON.stringify(ind));
+check("selected item (LCP): weight 600, the solid Selected-item fill, the LCP shadow-sm, no indicator bar",
+  ind.weight === "600" && ind.bg === ind.selBg && ind.shadow !== "none" && !ind.bar, JSON.stringify(ind));
 await page.goto(`${BASE}/dashboard`, { waitUntil: "networkidle" });
 await page.locator("body").press("Tab"); // skip link
 const skip = await page.evaluate(() => ({ cls: document.activeElement?.className, visible: document.activeElement?.getBoundingClientRect().top >= 0 }));
@@ -257,19 +287,20 @@ await page.click(".sidebar-toggle");
 await page.waitForTimeout(400);
 await page.reload({ waitUntil: "networkidle" });
 const collapsedW = await page.evaluate(() => document.querySelector("aside.sidebar").getBoundingClientRect().width);
-check("collapsed rail persists across a reload at desktop width (cookie)", Math.round(collapsedW) === 66, String(collapsedW));
+check("collapsed rail persists across a reload at desktop width (cookie)", Math.round(collapsedW) === 68, String(collapsedW));
 await page.click(".sidebar-toggle");
 await page.waitForTimeout(400);
 await page.reload({ waitUntil: "networkidle" });
-check("and expanding persists too", Math.round(await page.evaluate(() => document.querySelector("aside.sidebar").getBoundingClientRect().width)) === 240);
+check("and expanding persists too", Math.round(await page.evaluate(() => document.querySelector("aside.sidebar").getBoundingClientRect().width)) === 256);
 
 // ---------- 6a. recycle bin title, language switch ----------
 await page.goto(`${BASE}/recycle-bin`, { waitUntil: "networkidle" });
-check("/recycle-bin shell title is Recycle Bin (not Dashboard)", (await page.locator(".topbar-title").innerText()) === "Recycle Bin");
+check("/recycle-bin names itself in its h1 (Recycle Bin); the header keeps the organization", (await page.locator("main h1").first().innerText()).trim() === "Recycle Bin" &&
+  (await page.locator(".topbar-brand-name").innerText()).trim() === "Shell Runtime Co");
 check("Recycle Bin is not a sidebar item", (await page.locator('aside.sidebar a[href="/recycle-bin"]').count()) === 0);
 await page.locator('.topbar-lang-option[lang="ar"]').click();
 await page.waitForFunction(() => document.documentElement.dir === "rtl", null, { timeout: 20000 });
-check("ع switches to Arabic (RTL) through the existing cookie + action", (await page.locator(".topbar-title").innerText()) !== "Recycle Bin" &&
+check("ع switches to Arabic (RTL) through the existing cookie + action", /[\u0600-\u06FF]/.test(await page.locator("main h1").first().innerText()) &&
   (await page.locator('.topbar-lang-option[lang="ar"]').getAttribute("aria-pressed")) === "true");
 await page.locator('.topbar-lang-option[lang="en"]').click();
 await page.waitForFunction(() => document.documentElement.dir === "ltr", null, { timeout: 20000 });
@@ -288,8 +319,7 @@ await page.goto(`${BASE}/dashboard`, { waitUntil: "networkidle" });
 const after = await activeColours();
 const lum = (c) => { const [r, g, b] = c.match(/[\d.]+/g).slice(0, 3).map(Number).map((v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
 const ratio = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((m, n) => n - m); return (x + 0.05) / (y + 0.05); };
-check("org Selected-item colour changes the indicator bar", before.bar !== after.bar && /14, 124, 102|0e7c66/i.test(after.bar), JSON.stringify({ before, after }));
-check("org Selected-item colour changes the selected tint", before.bg !== after.bg, `${before.bg} → ${after.bg}`);
+check("org Selected-item colour changes the selected fill (the org's own colour)", before.bg !== after.bg && /14, 124, 102/.test(after.bg), JSON.stringify({ before, after }));
 check("selected label stays readable on the org tint (≥ 4.5)", ratio(after.fg, after.bg) >= 4.5, ratio(after.fg, after.bg).toFixed(2));
 await db.query("update orgs set color_theme_mode='gradient', theme_overrides=null where id=$1", [org]);
 

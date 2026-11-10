@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LogOut, Settings } from "lucide-react";
 import { shellTitleKey, type Role } from "./nav-config";
+import { BrandMark } from "./brand-mark";
 import { buildThemeOverrideCss, isColorThemeMode, type ThemeOverrides, type ThemeOverridesByMode } from "@/lib/brand-theme";
 import { Sidebar } from "./sidebar";
 import { MobileNav } from "./mobile-nav";
@@ -110,7 +111,8 @@ export function AppShell({
     .join("")
     .toUpperCase();
 
-  // Persistent shell title (contextual, not the page's heading — never an <h1>, D-01.3-F).
+  // The contextual title of the current page (never an <h1>): the label Favorites stores for it. The
+  // LCP header shows the organization, not a page title — the page's own <h1> names the page.
   const pageTitle = t(locale, shellTitleKey(pathname));
 
   // Per-org Color Theme. Gradient mode → no override (the built-in Elite gradient renders as-is).
@@ -147,32 +149,37 @@ export function AppShell({
       <a href="#main-content" className="skip-link">
         {t(locale, "Skip to main content")}
       </a>
+      {/* LCP shell: a dark 56px header across the full width, then the light sidebar and the page. The
+          document scrolls; the header is sticky and the sidebar is its own sticky, scrolling column. */}
       <div className="app-frame">
         <style>{themeOverrideCss}</style>
-        <Sidebar
-          role={user.role}
-          locale={locale}
-          orgName={orgName}
-          orgLogoUrl={orgLogoUrl}
-          initialCollapsed={sidebarPrefs.collapsed}
-          initialCollapsedGroups={sidebarPrefs.collapsedGroups}
-        />
-
-        <div className="app-column">
-          <header className="topbar">
-            <MobileNav role={user.role} locale={locale} orgName={orgName} orgLogoUrl={orgLogoUrl} utilities={utilities} />
-            <div className="topbar-greeting">
-              <h3 className="topbar-title">{pageTitle}</h3>
-              <p className="topbar-org">{orgName}</p>
-            </div>
-            <div className="topbar-actions">
-              <TopbarSearch locale={locale} role={user.role} />
-              <LanguageSwitcher locale={locale} />
-              <div className="topbar-utilities">{utilities}</div>
-            </div>
-          </header>
+        <header className="topbar">
+          <MobileNav role={user.role} locale={locale} orgName={orgName} orgLogoUrl={orgLogoUrl} utilities={utilities} />
+          {/* The organization identity (LCP tenant slot): its logo on a white plate, or the Elite mark,
+              and its name. Not a heading — the page owns its <h1>. */}
+          <Link href="/dashboard" className="topbar-brand" aria-label={`${orgName} — ${t(locale, "Dashboard")}`}>
+            <BrandMark orgLogoUrl={orgLogoUrl} />
+            <span className="topbar-brand-name" dir="auto">{orgName}</span>
+          </Link>
+          <div className="topbar-search-slot">
+            <TopbarSearch locale={locale} role={user.role} />
+          </div>
+          <div className="topbar-actions">
+            <LanguageSwitcher locale={locale} />
+            <div className="topbar-utilities">{utilities}</div>
+          </div>
+        </header>
+        <div className="app-body">
+          <Sidebar
+            role={user.role}
+            locale={locale}
+            orgName={orgName}
+            orgLogoUrl={orgLogoUrl}
+            initialCollapsed={sidebarPrefs.collapsed}
+            initialCollapsedGroups={sidebarPrefs.collapsedGroups}
+          />
           <main id="main-content" tabIndex={-1} className="app-main">
-            {children}
+            <div className="app-main-inner">{children}</div>
           </main>
         </div>
       </div>

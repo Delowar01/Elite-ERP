@@ -1,0 +1,171 @@
+/* =====================================================================================================
+   LCP presentation layer (Elite ERP × Lead Capture Pro design adoption).
+
+   Loaded LAST by the (app) layout — after mockup-parity.css and shell.css — so its unlayered rules
+   restyle the shared surfaces without editing the legacy stylesheet or the DEV-UI-01.x primitives,
+   whose source stays byte-identical (their page-archetype pins keep protecting behaviour and markup).
+   Every rule here is presentation only: no element is added, hidden, reordered or relabelled, no
+   interaction changes, and every colour is a semantic token, so dark mode, Arabic / RTL and the per-org
+   theme flow through unchanged. Each block names the LCP recipe it renders (docs/design-system/
+   ERP_LCP_TOKEN_MAP.md has the source of every value). `!important` appears only where a pinned
+   primitive sets the property inline (StatRow), and nowhere else.
+   ===================================================================================================== */
+
+/* ---- headings: LCP page titles are bold and tight (`text-2xl font-bold tracking-tight`) ---- */
+h1 { font-weight: 700; letter-spacing: -0.015em; }
+
+/* ---- page header (LCP ds/PageHeader): 24px bold title, 14px muted description ---- */
+[data-slot="page-header"] h1 {
+  font-size: var(--text-display-sm);
+  line-height: var(--text-display-sm--line-height);
+  font-weight: 700;
+}
+[data-slot="page-header"] > div > p { font-size: var(--text-body); line-height: var(--text-body--line-height); }
+/* List-page primary actions are LCP pills (`rounded-full h-10 px-5`); icon-only buttons stay square. */
+[data-slot="page-header-actions"] [data-slot="button"]:not([class*="size-("]) {
+  height: 40px;
+  padding-inline: var(--space-20);
+  border-radius: 9999px;
+}
+
+/* Legacy title bars (lists, document detail, document editor): the same LCP 24px bold title. */
+.main-head h1, .main-head h3,
+.inv-head h1, .inv-head h3,
+.doc-titlebar h1, .doc-titlebar h3 {
+  font-size: var(--text-display-sm);
+  line-height: var(--text-display-sm--line-height);
+  letter-spacing: -0.015em;
+}
+.inv-sub, .doc-titlebar .sub { font-size: var(--text-body); color: var(--ink-muted); }
+
+/* ---- cards (LCP ui/card: `rounded-xl border bg-card shadow`) ---- */
+.card { border-radius: 12px; border-color: var(--border); box-shadow: var(--shadow-sm); }
+[data-slot="card-title"] { letter-spacing: -0.01em; }
+
+/* ---- KPI tiles (LCP ds/MetricCard: label 14px medium muted, value bold tight tabular) ----
+   StatRow sets its type inline (its markup is pinned), hence the scoped !important. */
+.stat-row-2 > .card { padding: var(--space-20) !important; }
+.stat-row-2 .kpi-label { font-size: var(--text-body) !important; line-height: var(--text-body--line-height); font-weight: 500; }
+.stat-row-2 .kpi-value {
+  font-size: var(--text-display-sm) !important;
+  line-height: var(--text-display-sm--line-height);
+  font-weight: 700 !important;
+  letter-spacing: -0.02em;
+  margin-top: var(--space-8) !important;
+  font-variant-numeric: tabular-nums;
+}
+.kpi-card-v4 .kpi-label { font-size: var(--text-body); }
+.kpi-card-v4 .kpi-value { font-weight: 700; font-size: var(--text-display-sm); letter-spacing: -0.02em; }
+
+/* ---- the Dashboard grid beside the LCP sidebar. Its twelve-track desktop arrangement (mockup-parity.css, above
+   1100px) was sized beside the pre-LCP 66px rail: its spans need a grid of about 950px (Arabic's Recent
+   Activities is the tightest), which the expanded 256px sidebar leaves only from 1270px. So while the sidebar is
+   expanded the two-track arrangement — the ≤1100px rules, repeated — runs on to 1279px and the desktop grid starts
+   at 1280px (LCP xl); beside the 68px mini rail the grid is 969px or wider from 1101px, so it starts at 1101px as
+   before. Layout only: every widget, its order and its content stay as they are. ---- */
+@media (min-width: 1100.02px) and (max-width: 1279.98px) {
+  .app-body:has(> .sidebar:not(.collapsed, [data-rail])) .dash-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: auto; }
+  .app-body:has(> .sidebar:not(.collapsed, [data-rail])) .dash-widget { grid-column: auto; grid-row: auto; }
+  .app-body:has(> .sidebar:not(.collapsed, [data-rail])) .dash-widget[data-wide] { grid-column: 1 / -1; }
+  .app-body:has(> .sidebar:not(.collapsed, [data-rail])) .dash-widget > *:not(.dash-widget-chrome):not(.dash-resize-handle) { overflow: visible; }
+}
+
+/* ---- neutral pill (LCP neutral badge: `bg-muted text-muted-foreground`). The legacy pair (muted ink on the
+   border grey) is 3.98:1; the neutral pair is 4.60:1 light, 4.99:1 dark. ---- */
+.pill-neutral { background: var(--neutral-bg); color: var(--neutral); }
+
+/* ---- initials on the accent gradient (employee cards, kanban): the accent's own foreground — the LCP white on
+   the stock orange (the owner-decided label, 3.29:1 on #F06000; token map D-LCP-2), the theme engine's readable
+   pick for a custom org accent. The other avatar palettes are dark and keep white. ---- */
+.emp-card .avatar[style*="--brand-orange"],
+.kanban-avatar[style*="--brand-orange"] { color: var(--accent-foreground); }
+
+/* ---- empty states (LCP ds/StateViews EmptyState: dashed, half-card fill, 8px) ---- */
+[data-slot="empty-state"] {
+  border-style: dashed;
+  border-color: var(--border-strong);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--surface) 50%, transparent);
+}
+
+/* ---- data table (LCP ui/table inside the list card: sentence-case 14px medium muted headers, compact
+   cells, muted/50 row hover, the card's rounded-xl border and shadow-sm) ---- */
+.data-table-wrap { box-shadow: var(--shadow-sm); border-color: var(--border); }
+table.data-table thead th {
+  font-size: var(--text-body);
+  line-height: var(--text-body--line-height);
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: normal;
+  color: var(--ink-muted);
+  background: var(--surface);
+  padding-inline: var(--space-12);
+}
+table.data-table td { padding-inline: var(--space-12); }
+table.data-table[data-density="compact"] thead th,
+table.data-table[data-density="compact"] td { padding-inline: var(--space-8); }
+table.data-table tbody tr:hover > td { background: color-mix(in srgb, var(--surface-subtle) 50%, var(--surface)); }
+table.data-table th[data-cell="action"] { background: var(--surface); }
+table.data-table tbody tr[aria-selected="true"] > td { background: color-mix(in srgb, var(--primary) 5%, var(--surface)); }
+
+/* ---- tabs (LCP ui/tabs: a muted, borderless 8px track; 6px tabs, 14px medium). The active tab keeps
+   the org theme's Active-tab fill — the colour the Color Theme panel previews — with the LCP shadow. */
+.tab-row { border-color: transparent; background: var(--surface-subtle); }
+.tab { font-size: var(--text-body); line-height: var(--text-body--line-height); padding: 6px 12px; }
+.tab:not(.active):not([data-state="active"]):hover { background: var(--surface); color: var(--ink); }
+.tab.active,
+.tab[data-state="active"] { box-shadow: var(--shadow-sm); }
+
+/* ---- form labels (LCP ui/label / FormLabel: `text-sm font-medium`, the foreground ink) ----
+   The Label primitive behind FormField: every long form, settings panel and dialog field. The document
+   editors' compact in-box labels (.doc-field .doc-field-label, more specific) keep their caption size. */
+[data-slot="label"] { font-size: var(--text-body); line-height: var(--text-body--line-height); color: var(--text); }
+
+/* ---- menus (LCP dropdown-menu: rounded-md, hairline, p-1, shadow-md; 14px items, rounded-sm) ---- */
+.row-menu { border-radius: 6px; border-color: var(--border); box-shadow: var(--shadow-md); padding: var(--space-4); }
+.row-menu-item { padding: 6px 8px; border-radius: 4px; }
+.row-menu-item:hover,
+.row-menu-item[data-highlighted] { background: var(--surface-subtle); }
+
+/* ---- settings navigation (LCP settings tab list: rounded-lg items, muted hover, primary-soft active) ---- */
+.settings-nav-item { border-radius: 8px; font-size: var(--text-body); }
+.settings-nav-item:not(.active):not([data-state="active"]):hover { background: var(--surface-subtle); }
+
+/* ---- legacy buttons (.btn / .btn-primary / .btn-glass): the LCP button recipe ---- */
+.btn { font-size: var(--text-body); line-height: var(--text-body--line-height); }
+.btn-primary { border: 1px solid var(--primary-hover); }
+.btn-glass { border-color: var(--border-strong); box-shadow: var(--shadow-xs); }
+.btn-glass:hover { background: var(--surface-subtle); border-color: var(--border-strong); }
+
+/* ---- orange TEXT reads in the AA orange ink (LCP `text-primary`; #F06000 is 3.3:1 on white, the ink
+   #B84900 is 5.3:1; dark mode's ink is #FF6600 itself). Fills, borders and icons keep the orange. ---- */
+.doc-brand-panel .word2,
+.doc-field .doc-field-label .req,
+.doc-gear-btn:hover, .doc-gear-btn.open,
+.party-card-v2 .pc-name,
+.item-quicklinks span,
+.doc-add-item-btn,
+.doc-tabbar button.active,
+.doc-add-links span,
+.doc-crumb.back-link:hover,
+.add-row-btn,
+.side-panel-head .view-all,
+.bc-link,
+.rte-body a,
+.rich-html a { color: var(--accent-ink); }
+
+/* ---- document line items (LCP ui/table header instead of the legacy orange gradient band) ---- */
+table.doc-items-table { border: 1px solid var(--border); }
+table.doc-items-table thead th {
+  background: var(--surface-subtle);
+  color: var(--ink-muted);
+  font-size: var(--text-body-sm);
+  line-height: var(--text-body-sm--line-height);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  border-block-end: 1px solid var(--border);
+}
+/* Arabic is never tracked (it would pull the joined letters apart) — the type scale's own Arabic rule — and
+   its longer labels (the three-word VAT header) get 10px inline padding, so every whole word fits the
+   narrow fixed-layout columns at 1024px; English keeps the 14px that aligns each label with its field edge. */
+:root[lang="ar"] table.doc-items-table thead th { letter-spacing: normal; padding-inline: 10px; }

@@ -35,12 +35,12 @@ export function RegisterForm({ locale }: { locale: Locale }) {
   }
 
   return (
-    <div className="w-full max-w-[420px] rounded-2xl border border-line bg-surface-glass p-9 shadow-glass backdrop-blur-xl animate-fade-up">
-      <div className="flex justify-center mb-7">
-        <LogoLockup ink="var(--brand-navy)" size={30} />
+    <div className="auth-form w-full max-w-[420px] animate-fade-up">
+      <div className="flex mb-10">
+        <LogoLockup ink="var(--brand-ink)" size={30} />
       </div>
-      <h1 className="text-center text-xl font-bold">{t(locale, "Create your organization")}</h1>
-      <p className="text-center text-ink-muted text-sm mt-1 mb-6">{t(locale, "Start your Elite ERP workspace")}</p>
+      <h1 className="text-display font-bold tracking-tight">{t(locale, "Create your organization")}</h1>
+      <p className="text-ink-muted text-body-lg mt-2 mb-8">{t(locale, "Start your Elite ERP workspace")}</p>
 
       <form action={formAction} className="flex flex-col gap-4">
         <div className="flex flex-col gap-1.5">
@@ -94,14 +94,14 @@ export function RegisterForm({ locale }: { locale: Locale }) {
           <Input id="password" name="password" type="password" required minLength={8} autoComplete="new-password" />
         </div>
         {errorText && <p className="text-[12.5px] text-danger">{errorText}</p>}
-        <Button type="submit" className="w-full mt-1" disabled={pending}>
+        <Button type="submit" size="lg" className="w-full mt-2" disabled={pending}>
           {pending ? t(locale, "Creating…") : t(locale, "Create account")}
         </Button>
       </form>
 
-      <p className="text-center text-[12.5px] text-ink-muted mt-5">
+      <p className="text-[12.5px] text-ink-muted mt-6">
         {t(locale, "Already have an account?")}{" "}
-        <Link href="/login" className="text-brand-orange font-semibold">
+        <Link href="/login" className="text-link font-semibold">
           {t(locale, "Sign in")}
         </Link>
       </p>

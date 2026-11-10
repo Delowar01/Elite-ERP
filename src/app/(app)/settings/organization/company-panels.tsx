@@ -5,8 +5,9 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Upload, Check, RotateCcw, AlertTriangle } from "lucide-react";
 import {
-  DEFAULT_PRIMARY,
-  DEFAULT_ACCENT,
+  PRESET_PRIMARY,
+  PRESET_ACCENT,
+  displayThemeFields,
   DEFAULT_GRADIENT_FROM,
   DEFAULT_GRADIENT_TO,
   HEX_COLOR,
@@ -256,7 +257,7 @@ function ColorField({ locale, label, value, onChange, valid, onReset }: {
           </button>
         </div>
         <div className="flex items-center gap-3">
-          <input type="color" value={valid ? value : DEFAULT_PRIMARY} onChange={(e) => onChange(e.target.value)} className="size-11 rounded-xl border border-line-strong cursor-pointer shrink-0" aria-label={t(locale, label)} />
+          <input type="color" value={valid ? value : PRESET_PRIMARY} onChange={(e) => onChange(e.target.value)} className="size-11 rounded-xl border border-line-strong cursor-pointer shrink-0" aria-label={t(locale, label)} />
           <Input value={value} onChange={(e) => onChange(e.target.value)} className="font-mono uppercase" spellCheck={false} />
           <span className="size-9 rounded-lg border border-line-strong shrink-0" style={{ backgroundColor: valid ? value : "transparent" }} aria-hidden />
         </div>
@@ -362,9 +363,21 @@ function ModePreview({ locale, input, appearance, lowContrast }: {
 
 export function ColorThemePanel({ locale, org }: { locale: Locale; org: Org }) {
   const router = useRouter();
-  const [mode, setMode] = useState<ColorThemeMode>(org.colorThemeMode === "single" ? "single" : "gradient");
-  const [primary, setPrimary] = useState(org.primaryColor);
-  const [accent, setAccent] = useState(org.accentColor);
+  // A default theme is shown as the system preset it actually renders (display only; nothing is
+  // written until Save). A customised theme is shown exactly as stored.
+  const [shown] = useState(() =>
+    displayThemeFields({
+      mode: org.colorThemeMode === "single" ? "single" : "gradient",
+      primaryColor: org.primaryColor,
+      accentColor: org.accentColor,
+      gradientFrom: org.gradientFrom,
+      gradientTo: org.gradientTo,
+      overrides: org.themeOverrides ?? null,
+    }),
+  );
+  const [mode, setMode] = useState<ColorThemeMode>(shown.mode);
+  const [primary, setPrimary] = useState(shown.primaryColor);
+  const [accent, setAccent] = useState(shown.accentColor);
   const [gradientFrom, setGradientFrom] = useState(org.gradientFrom);
   const [gradientTo, setGradientTo] = useState(org.gradientTo);
   // Overrides are stored per appearance, so editing light never changes dark (and vice versa).
@@ -449,8 +462,8 @@ export function ColorThemePanel({ locale, org }: { locale: Locale; org: Org }) {
           { key: "gradient", title: "Gradient Color", desc: "Use an editable two-color brand gradient.", sample: <div className="h-8 rounded-lg" style={{ background: themeGradient }} /> },
           { key: "single", title: "Single Color", desc: "Use your own solid primary and accent colors.", sample: (
             <div className="flex gap-2">
-              <div className="h-8 flex-1 rounded-lg" style={{ backgroundColor: primaryValid ? primary : DEFAULT_PRIMARY }} />
-              <div className="h-8 flex-1 rounded-lg" style={{ backgroundColor: accentValid ? accent : DEFAULT_ACCENT }} />
+              <div className="h-8 flex-1 rounded-lg" style={{ backgroundColor: primaryValid ? primary : PRESET_PRIMARY }} />
+              <div className="h-8 flex-1 rounded-lg" style={{ backgroundColor: accentValid ? accent : PRESET_ACCENT }} />
             </div>
           ) },
         ] as const).map((opt) => {
@@ -474,8 +487,8 @@ export function ColorThemePanel({ locale, org }: { locale: Locale; org: Org }) {
       {/* Main brand colors (shared by both appearances; each mode adapts them for contrast) */}
       {single ? (
         <div className="grid grid-cols-2 gap-4">
-          <ColorField locale={locale} label="Primary color" value={primary} onChange={setPrimary} valid={primaryValid} onReset={() => setPrimary(DEFAULT_PRIMARY)} />
-          <ColorField locale={locale} label="Accent color" value={accent} onChange={setAccent} valid={accentValid} onReset={() => setAccent(DEFAULT_ACCENT)} />
+          <ColorField locale={locale} label="Primary color" value={primary} onChange={setPrimary} valid={primaryValid} onReset={() => setPrimary(PRESET_PRIMARY)} />
+          <ColorField locale={locale} label="Accent color" value={accent} onChange={setAccent} valid={accentValid} onReset={() => setAccent(PRESET_ACCENT)} />
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-4">
@@ -565,7 +578,7 @@ export function ColorThemePanel({ locale, org }: { locale: Locale; org: Org }) {
                       </div>
                     </div>
                     {comp !== "sidebarActive" && (
-                      <button type="button" className="self-start text-brand-orange underline"
+                      <button type="button" className="self-start text-link underline"
                         onClick={() => setOv(comp as ThemeComponent, "fg", suggestReadableFg(componentBgSolid(input, editMode, comp as ThemeComponent), rFg))}>
                         {t(locale, "Use suggested text color")}
                       </button>

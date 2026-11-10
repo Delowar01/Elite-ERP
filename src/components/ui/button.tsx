@@ -3,10 +3,13 @@ import { Slot } from "@radix-ui/react-slot";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
-// Navy Command button foundation (DEV-UI-01.1, owner decision D-03; variants and sizes DEV-UI-01.4):
-// solid navy primary with white text, flat — no gradient, no glow, no hover lift. Colours come only
-// from semantic tokens, so the per-org theme and dark mode re-map them without touching this file.
-// Focus is a 2px orange outline offset from the control, shown for keyboard focus only.
+// Button foundation (variants and sizes DEV-UI-01.4; LCP look, D-LCP-2): the LCP `ui/button` recipe —
+// 6px radius, 14px medium label, 36px default height with 16px inline padding, the primary in the LCP
+// orange with its 8%-darker primary border and the contrast-validated INK label (white on #FF6600 is
+// 2.94:1), bordered secondary / outline actions with the LCP shadow-xs. Flat — no gradient, no glow,
+// no hover lift. Colours come only from semantic tokens, so the per-org theme and dark mode re-map them
+// without touching this file. Focus is a 2px outline offset from the control (stronger than LCP's
+// 1px ring), shown for keyboard focus only.
 //
 // Border colours carry `!` (DEV-UI-01.4): globals.css declares an UNLAYERED `* { border-color }`,
 // which outranks every layered Tailwind border-colour utility — without `!` the bordered variants
@@ -19,15 +22,15 @@ const buttonVariants = cva(
         // Primary action: navy fill, white label (D-03). `background` shorthand so an org theme value
         // always paints, whatever form it takes.
         primary:
-          "text-[color:var(--primary-foreground)] [background:var(--primary)] hover:[background:var(--primary-hover)]",
+          "text-[color:var(--primary-foreground)] [background:var(--primary)] border-[color:var(--primary-hover)]! hover:[background:var(--primary-hover)]",
         // Secondary: a quiet bordered action that never competes with the primary.
         secondary:
-          "bg-surface text-ink border-border-strong! hover:bg-surface-subtle active:bg-surface-subtle",
+          "bg-surface text-ink border-border-strong! shadow-xs hover:bg-surface-subtle active:bg-surface-subtle active:shadow-none",
         // Legacy name — a compatibility alias of `secondary` (no blur, no translucency).
         glass:
-          "bg-surface text-ink border-border-strong! hover:bg-surface-subtle active:bg-surface-subtle",
+          "bg-surface text-ink border-border-strong! shadow-xs hover:bg-surface-subtle active:bg-surface-subtle active:shadow-none",
         // Bordered tertiary action on a transparent fill (what `ghost` rendered before DEV-UI-01.4).
-        outline: "bg-transparent text-ink-muted border-border-strong! hover:bg-surface-subtle hover:text-ink",
+        outline: "bg-transparent text-ink-muted border-border-strong! shadow-xs hover:bg-surface-subtle hover:text-ink active:shadow-none",
         // True ghost: no border, no fill until hover — icon and tertiary actions.
         ghost: "bg-transparent text-ink-muted border-transparent! hover:bg-surface-subtle hover:text-ink",
         // Destructive stays semantically distinct from primary: danger red, never navy.
@@ -39,9 +42,9 @@ const buttonVariants = cva(
       },
       size: {
         // Comfortable default (D-05); compact and touch sizes share the same foundation tokens.
-        default: "h-(--control-height) px-3.5",
+        default: "h-(--control-height) px-4",
         sm: "h-(--control-height-compact) px-3 text-body-sm",
-        lg: "h-(--control-height-touch) px-4",
+        lg: "h-(--control-height-touch) px-6",
         icon: "size-(--control-height)",
         "icon-sm": "size-(--control-height-compact)",
       },
