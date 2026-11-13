@@ -7,7 +7,9 @@ layouts that PO-02 … PO-06 will fill.
 
 Nothing here is deployed or applied to production. The console stays **off** unless
 `PLATFORM_CONSOLE_ENABLED=true`. Specifications: PR #11 (draft, unmerged) at `357e93e`. Earlier
-phases: [`PO00_BASELINE.md`](./PO00_BASELINE.md), [`PO01A_DEVELOPMENT.md`](./PO01A_DEVELOPMENT.md).
+phases: [`PO00_BASELINE.md`](./PO00_BASELINE.md), [`PO01A_DEVELOPMENT.md`](./PO01A_DEVELOPMENT.md). Security
+corrections on top of PO-01B — session revocation and audit atomicity, emergency containment during an audit-trail outage,
+`X-Forwarded-Host` trust: [`PO01B1_SECURITY_CORRECTIONS.md`](./PO01B1_SECURITY_CORRECTIONS.md).
 
 ## Routes
 
@@ -82,6 +84,10 @@ configuration:
 `X-Real-IP` is never trusted. **Owner decision before production:** set the hop count to match the
 real infrastructure. Unset (0) is safe, but it disables the per-IP limit.
 
+The same setting governs the same-origin check (PO-01B.1). `X-Forwarded-Host` is used only when the hop count is
+≥ 1, and only when it has a single value. Otherwise the request's `Host` is used. The production proxy must
+therefore set one `X-Forwarded-Host`, or pass `Host` through unchanged.
+
 ## Security settings (operational)
 
 - **This session:** device (browser and OS only, from the stored User-Agent), trusted IP, sign-in time, last activity and expiry. All times are shown in **Riyadh time**.
@@ -95,6 +101,11 @@ real infrastructure. Unset (0) is safe, but it disables the per-IP limit.
   - A failed password, a wrong code, a replayed code or a throttled attempt rotates nothing (tested).
   - The new codes are shown once, in a dialog that Escape or an outside click cannot dismiss. They are never stored by the browser.
   - It fails closed while the audit trail's protection is missing. Revoking sessions and signing out stay available, so an incident can be contained.
+- **Audit-trail outage (PO-01B.1):**
+  - A session change whose audit record cannot be written is not applied, and the UI says so.
+  - The operator can then end their own sessions explicitly, without an audit record. This is reported as such, logged as a security incident, and recorded late.
+  - Signing out always ends the session.
+  - See [`PO01B1_SECURITY_CORRECTIONS.md`](./PO01B1_SECURITY_CORRECTIONS.md).
 - **Provisional policy shown in the UI:** 12 h absolute and 30 min idle. Owner approval is needed before production; the policy itself is unchanged from PO-01A.
 
 ## UI
@@ -149,7 +160,8 @@ Without step 4's flag, every `/platform` path is a 404. Drop the database afterw
 | `npm run verify:platform-proxy` | The real `proxy()`: the flag (7 values), public and protected paths, look-alikes, 19 token-confusion cases, fail-closed configuration, cross-principal cookies, **96 customer path × cookie cases identical to 621f156's proxy**, an unchanged matcher, and production cookie names. |
 | `npm run verify:platform-console` | Disposable database: audit protection, the flag on every operation, CSRF and origin on every mutation, trusted IP and throttle bypass, generic sign-in failures, TOTP and recovery-code replay, revocation (including concurrent), expiry, atomic step-up regeneration, cross-principal isolation, no secret in audit rows. |
 | `npm run verify:platform-browser` | Production build + `next start` + Chromium. Every flow listed in the PO-01B brief: EN/AR, light/dark, 1440/1024/390, a forged-request replay, and the flag-off server. `PO01B_SCREENSHOT_DIR` saves the screenshots. Needs `npm run build` first; uses the pre-installed Chromium (`PO01B_CHROMIUM`, default `/opt/pw-browsers/chromium`). |
-| `npm run verify:platform` | boundary → proxy → schema → auth → bootstrap → console. |
+| `npm run verify:platform-containment` | PO-01B.1: a real audit-write outage. All-or-nothing session changes, emergency containment, exactly-once late recording, concurrency, expiry, tenant isolation, no leakage. |
+| `npm run verify:platform` | boundary → proxy → schema → auth → bootstrap → console → containment. |
 
 ## Change control
 
@@ -167,6 +179,9 @@ older pin therefore keeps reading its original bytes; nothing was re-baselined a
 - every added file is in the console's own directories.
 
 Changing a PO-01B file means regenerating the record. The regenerated record is part of the change under review.
+
+PO-01B.1 adds its own layer on top: `verify/po01b1-approved-delta.mts` and group 23. The undo order becomes PO-01B.1,
+PO-01B, PO-01A, LCP, ACC-01. The PO-01B record above stays byte-identical.
 
 ## Provisional and open — owner decisions
 
