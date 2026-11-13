@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { jwtVerify } from "jose";
+import { isPlatformPath, platformGate } from "@/lib/platform-edge/proxy-gate";
 
 // Kept in sync with src/lib/auth.ts (middleware can't import it — bcryptjs isn't edge-safe).
 const SESSION_COOKIE = process.env.NODE_ENV === "production" ? "__Host-elite_erp_session" : "elite_erp_session";
@@ -31,6 +32,9 @@ async function tokenIsCryptoValid(token: string | undefined): Promise<boolean> {
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  // Platform Owner console (PO-01B): its own narrowly scoped branch, decided before — and without —
+  // the customer session cookie. Nothing below this line changes for customer routes.
+  if (isPlatformPath(pathname)) return platformGate(request);
   const token = request.cookies.get(SESSION_COOKIE)?.value;
   const hasCookie = Boolean(token);
 
