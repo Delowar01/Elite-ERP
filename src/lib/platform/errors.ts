@@ -21,6 +21,8 @@ export const PLATFORM_ERROR_MESSAGES = {
   CONFLICT: { en: "This change conflicts with the current state. Refresh and try again.", ar: "يتعارض هذا التغيير مع الحالة الحالية. حدّث الصفحة وحاول مرة أخرى." },
   CONSOLE_DISABLED: { en: "This page is not available.", ar: "هذه الصفحة غير متاحة." },
   CONFIG_ERROR: { en: "The platform console is temporarily unavailable.", ar: "لوحة إدارة المنصة غير متاحة مؤقتًا." },
+  // PO-01B.1: a change whose audit record could not be written is rolled back, never applied silently.
+  AUDIT_UNAVAILABLE: { en: "This change was not applied because it could not be recorded in the audit trail.", ar: "لم يُطبَّق هذا التغيير لتعذّر تسجيله في سجل التدقيق." },
   // Reserved for later phases (TRD §8); defined now so the code set is stable.
   COMPANY_SUSPENDED: { en: "This company's access is suspended.", ar: "تم إيقاف وصول هذه الشركة." },
   INVITE_EXPIRED: { en: "This invitation has expired.", ar: "انتهت صلاحية هذه الدعوة." },

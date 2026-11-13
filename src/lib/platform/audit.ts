@@ -4,6 +4,7 @@ import { db, platformAuditEventsTable, type Tx } from "@/db";
 import { AUDIT_PROTECTION_QUERY, evaluateAuditProtection, type AuditProtectionRow } from "./audit-protection";
 import { platformClock } from "./clock";
 import { PlatformError } from "./errors";
+import { errorClass } from "./incident";
 
 // ---------------------------------------------------------------------------------------------
 // Append-only Platform Owner audit (PR #11 Schema.md §3.4). This module can only INSERT: there is
@@ -67,29 +68,39 @@ function safeSnapshot(value: Record<string, unknown> | null | undefined): Record
 
 const clip = (value: string | null | undefined, max: number) => (value ? value.slice(0, max) : null);
 
-/** Insert one audit event (inside the caller's transaction when `executor` is a Tx). */
+/**
+ * Insert one audit event (inside the caller's transaction when `executor` is a Tx).
+ *
+ * PO-01B.1: a failed INSERT is reported as PlatformError("AUDIT_UNAVAILABLE") — the database error
+ * itself (which may quote values) is never surfaced. Callers that change state write the change and
+ * this record in ONE transaction, so this error always means "nothing was applied".
+ */
 export async function recordPlatformAudit(input: PlatformAuditInput, executor: Tx | typeof db = db): Promise<number> {
   if (!ACTION.test(input.action)) throw new PlatformError("VALIDATION_FAILED", `invalid audit action "${input.action}"`);
   if (input.requestId && !UUID.test(input.requestId)) throw new PlatformError("VALIDATION_FAILED", "requestId must be a UUID");
-  const [row] = await executor
-    .insert(platformAuditEventsTable)
-    .values({
-      actorPlatformAdminId: input.actorAdminId ?? null,
-      actorLabel: clip(input.actorLabel, 200) || "system",
-      action: input.action,
-      entityType: clip(input.entityType, 100) || "unknown",
-      entityId: clip(input.entityId, 200) || "unknown",
-      orgId: input.orgId ?? null,
-      reason: clip(input.reason, 2000),
-      beforeSafe: safeSnapshot(input.before),
-      afterSafe: safeSnapshot(input.after),
-      result: input.result,
-      requestId: input.requestId ?? null,
-      ipAddress: clip(input.ipAddress, 64),
-      userAgent: clip(input.userAgent, 512),
-      createdAt: platformClock.now(),
-    })
-    .returning({ id: platformAuditEventsTable.id });
+  const values = {
+    actorPlatformAdminId: input.actorAdminId ?? null,
+    actorLabel: clip(input.actorLabel, 200) || "system",
+    action: input.action,
+    entityType: clip(input.entityType, 100) || "unknown",
+    entityId: clip(input.entityId, 200) || "unknown",
+    orgId: input.orgId ?? null,
+    reason: clip(input.reason, 2000),
+    beforeSafe: safeSnapshot(input.before),
+    afterSafe: safeSnapshot(input.after),
+    result: input.result,
+    requestId: input.requestId ?? null,
+    ipAddress: clip(input.ipAddress, 64),
+    userAgent: clip(input.userAgent, 512),
+    createdAt: platformClock.now(),
+  };
+  let row: { id: number } | undefined;
+  try {
+    [row] = await executor.insert(platformAuditEventsTable).values(values).returning({ id: platformAuditEventsTable.id });
+  } catch (err) {
+    throw new PlatformError("AUDIT_UNAVAILABLE", `audit insert failed (${errorClass(err)})`);
+  }
+  if (!row) throw new PlatformError("AUDIT_UNAVAILABLE", "audit insert returned no row");
   return row.id;
 }
 
