@@ -125,8 +125,8 @@ export const PO02B_BASE_SHA: Record<string, string> = byPath([
 /** The files PO-02B added under src/ (sha256, 16 hex). */
 export const PO02B_NEW: Record<string, string> = byPath([
   ["dff2bdfb01b18c59", "src/app/(platform)/platform/(console)/companies/[orgId]/not-found.tsx"],
-  ["6dafdddbc8e98210", "src/app/(platform)/platform/(console)/companies/[orgId]/page.tsx"],
-  ["e6b9e6ca65e0ab94", "src/components/platform/companies-kit.tsx"],
+  ["249e6b69aad0da92", "src/app/(platform)/platform/(console)/companies/[orgId]/page.tsx"],
+  ["7be120f64a69070b", "src/components/platform/companies-kit.tsx"],
   ["743b12a7d16bc27d", "src/components/platform/company-tabs.tsx"],
   ["ffce07e9bb80dd36", "src/lib/platform/companies.ts"],
   ["12b86978ca852742", "src/lib/platform/display.ts"],

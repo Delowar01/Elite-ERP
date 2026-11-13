@@ -3,11 +3,10 @@ import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
 import { ChevronLeft, ChevronRight, ChevronsLeft } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { Locale } from "@/lib/i18n/dict";
-import { pt } from "./i18n";
+import { pt, type PlatformStringKey } from "./i18n";
 
 // ---------------------------------------------------------------------------------------------
 // Company directory / detail building blocks (PO-02B). Server-compatible (no hooks, no state).
@@ -95,12 +94,50 @@ export function Interpolated({ template, values }: { template: string; values: R
   );
 }
 
+// ---- Platform Owner states: ONE table decides tone and label ------------------------------------
+// The design system's status registry (src/lib/status-registry.ts, DEV-UI-01.2) is the one place
+// that presents CUSTOMER document and record states, labelled from the customer dictionary. Platform
+// Owner states exist only in this console and are labelled from the platform dictionary, so they
+// follow the same rule here, without touching the customer registry: callers pass the domain and the
+// raw value, this table decides the tone and the label, and the tag is the design system's
+// status-tag pill (tone tokens, light and dark). No page chooses a colour (platform-boundary rule 29).
+type PlatformStateTone = "neutral" | "info" | "success" | "warning" | "danger";
+type PlatformStateDef = { readonly tone: PlatformStateTone; readonly label: PlatformStringKey };
+type PlatformStateTable = Readonly<Record<string, Readonly<Record<string, PlatformStateDef>>>>;
+const PLATFORM_STATES = {
+  company_access: {
+    active: { tone: "success", label: "access.active" },
+    suspended: { tone: "danger", label: "access.suspended" },
+  },
+  invitation: {
+    pending: { tone: "info", label: "inv.statePending" },
+    expired: { tone: "warning", label: "inv.stateExpired" },
+  },
+  audit_result: {
+    success: { tone: "success", label: "result.success" },
+    rejected: { tone: "warning", label: "result.rejected" },
+    failed: { tone: "danger", label: "result.failed" },
+  },
+} as const satisfies PlatformStateTable;
+export type PlatformStateDomain = keyof typeof PLATFORM_STATES;
+
+/** A Platform Owner state as a status tag. An unknown value renders neutral, showing its raw text. */
+export function PlatformStatusTag({ locale, domain, value }: { locale: Locale; domain: PlatformStateDomain; value: string }) {
+  const states: PlatformStateTable[string] = PLATFORM_STATES[domain];
+  const state = Object.prototype.hasOwnProperty.call(states, value) ? states[value] : null;
+  return (
+    <span className="status-tag" data-tone={state ? state.tone : "neutral"} data-status={value} data-status-domain={`platform.${domain}`}>
+      {state ? pt(locale, state.label) : <bdi dir="ltr">{value}</bdi>}
+    </span>
+  );
+}
+
 /** Effective company access: a text label (never colour alone) plus the compatibility source when it matters. */
 export function AccessPill({ locale, access }: { locale: Locale; access: AccessView }) {
   const note = access.source === "legacy_default" ? pt(locale, "access.legacy") : access.source === "invalid_state" ? pt(locale, "access.invalid") : null;
   return (
     <span className="platform-access">
-      <Badge variant={access.status === "active" ? "success" : "danger"}>{pt(locale, access.status === "active" ? "access.active" : "access.suspended")}</Badge>
+      <PlatformStatusTag locale={locale} domain="company_access" value={access.status} />
       {note && <span className="platform-access-note">{note}</span>}
     </span>
   );
@@ -347,7 +384,7 @@ export function CompanyCards({ locale, rows, label }: { locale: Locale; rows: Co
 }
 
 function InvitationState({ locale, state }: { locale: Locale; state: InvitationRowView["state"] }) {
-  return <Badge variant={state === "pending" ? "info" : "warning"}>{pt(locale, state === "pending" ? "inv.statePending" : "inv.stateExpired")}</Badge>;
+  return <PlatformStatusTag locale={locale} domain="invitation" value={state} />;
 }
 
 export function InvitationTable({ locale, rows, caption }: { locale: Locale; rows: InvitationRowView[]; caption: string }) {

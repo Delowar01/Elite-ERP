@@ -6,7 +6,8 @@
 // routes may import the platform library) and replaced rule 9 ("no platform routes yet") with the
 // console rules 9–18 below; PO-01B.1 added rules 19–20 (session changes and the audit-outage policy).
 // PO-02B made Companies and the Dashboard operational (read-only): rule 18 now covers the four
-// sections that are still previews, and rules 21–28 pin the company read model and its pages.
+// sections that are still previews, and rules 21–28 pin the company read model and its pages; rule 29
+// keeps Platform Owner state presentation in one table (the platform counterpart of the status registry).
 import { readFileSync, readdirSync, statSync, existsSync } from "node:fs";
 import { join, relative } from "node:path";
 
@@ -308,6 +309,19 @@ ok("no platform module references the customer session API or cookie (no token m
 const invitationSelect = (readModel.match(/\.select\(\{ id: inv\.id, ([^}]+) \}\)/) ?? ["", ""])[1];
 ok("the invitation listing selects exactly id, company, owner e-mail, country, created and expiry", invitationSelect === "companyName: inv.companyName, ownerEmail: inv.ownerEmailNormalized, country: inv.countryName, createdAt: inv.createdAt, expiresAt: inv.expiresAt");
 ok("the read model never inserts, updates or deletes (except through recordPlatformAudit)", !/\b(db|tx|executor)\s*\.\s*(insert|update|delete|execute)\(/.test(readModel) && (readModel.match(/recordPlatformAudit\(/g) ?? []).length === 1);
+
+// 29. Platform Owner states are presented through ONE table (PLATFORM_STATES / PlatformStatusTag in
+//     companies-kit.tsx, the platform counterpart of the design system's status registry): no company
+//     page or kit component chooses a badge variant or a tone from a value; the customer registry and
+//     its dictionary are not touched for platform states.
+const kitPath = join(root, "src/components/platform/companies-kit.tsx");
+const stateTable = (kitSrc.match(/const PLATFORM_STATES = \{([\s\S]*?)\n\} as const satisfies PlatformStateTable;/) ?? ["", ""])[1].replace(/\s+/g, " ").trim();
+ok("one table decides each Platform Owner state's tone and label: access active/suspended, invitation pending/expired, audit result success/rejected/failed",
+  stateTable === 'company_access: { active: { tone: "success", label: "access.active" }, suspended: { tone: "danger", label: "access.suspended" }, }, invitation: { pending: { tone: "info", label: "inv.statePending" }, expired: { tone: "warning", label: "inv.stateExpired" }, }, audit_result: { success: { tone: "success", label: "result.success" }, rejected: { tone: "warning", label: "result.rejected" }, failed: { tone: "danger", label: "result.failed" }, },',
+  stateTable.slice(0, 120));
+const toneByValue = [...companyPages, kitPath].flatMap((f) => [...code(f).matchAll(/<Badge\b[^>]*\svariant=\{|data-tone=\{(?!tone\}|state \? state\.tone : "neutral"\})|\stone=\{/g)].map((m) => `${rel(f)}: ${m[0]}`));
+ok("no company page or kit component chooses a badge variant or a tone from a value (the state table decides; PageState forwards a literal)", toneByValue.length === 0, toneByValue.join(", "));
+ok("platform code presents no Platform Owner state through the customer status registry or StatusBadge", !consoleCode.some((f) => /status-registry|status-badge|StatusBadge/.test(code(f))));
 
 console.log(`\n${pass}/${pass + fail} platform boundary checks passed`);
 process.exit(fail ? 1 : 0);

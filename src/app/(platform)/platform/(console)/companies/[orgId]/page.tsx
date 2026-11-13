@@ -2,11 +2,10 @@ import { cookies, headers } from "next/headers";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { CircleAlert, Pencil, Receipt, ShieldCheck, ShieldOff, UserCheck, UserCog, UserMinus, Users } from "lucide-react";
-import { AccessPill, Breadcrumbs, DetailPage, DisabledAction, FieldGrid, Ltr, MetricTile, PageState } from "@/components/platform/companies-kit";
+import { AccessPill, Breadcrumbs, DetailPage, DisabledAction, FieldGrid, Ltr, MetricTile, PageState, PlatformStatusTag } from "@/components/platform/companies-kit";
 import { CompanyTabs, type CompanyTabValue } from "@/components/platform/company-tabs";
 import { pt } from "@/components/platform/i18n";
 import { EmptyPanel, PreviewBadge } from "@/components/platform/page-kit";
-import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { Locale } from "@/lib/i18n/dict";
 import { getLocale } from "@/lib/i18n/server";
@@ -23,7 +22,6 @@ import { requirePlatformSession } from "@/lib/platform/guards";
 
 type SearchParams = Record<string, string | string[] | undefined>;
 const TABS: CompanyTabValue[] = ["overview", "access", "users", "subscription", "activity"];
-const RESULT_LABEL = { success: "result.success", rejected: "result.rejected", failed: "result.failed" } as const;
 const ACTION_LABEL: Record<string, "event.companyViewed"> = { "company.viewed": "event.companyViewed" };
 
 function sourceText(locale: Locale, source: CompanyDetail["access"]["source"]): string {
@@ -65,7 +63,7 @@ function AccessPanel({ locale, d }: { locale: Locale; d: CompanyDetail }) {
             { label: pt(locale, "field.reason"), value: d.access.reason ? <span dir="auto">{d.access.reason}</span> : pt(locale, "common.none") },
           ]}
         />
-        <p className="platform-callout mt-4" data-tone={active ? "neutral" : "warning"}>
+        <p className="platform-callout mt-4" data-tone="neutral">
           <CircleAlert className="size-4 shrink-0" aria-hidden />
           <span>{pt(locale, active ? "access.explainActive" : "access.explainSuspended")}</span>
         </p>
@@ -156,7 +154,6 @@ function ActivityPanel({ locale, d, anchored }: { locale: Locale; d: CompanyDeta
             <TableBody>
               {d.activity.rows.map((event) => {
                 const label = ACTION_LABEL[event.action];
-                const result = RESULT_LABEL[event.result as keyof typeof RESULT_LABEL];
                 return (
                   <TableRow key={event.id}>
                     <TableCell>{formatPlatformDateTime(event.at, locale)}</TableCell>
@@ -165,7 +162,7 @@ function ActivityPanel({ locale, d, anchored }: { locale: Locale; d: CompanyDeta
                     </TableCell>
                     <TableCell>{label ? pt(locale, label) : <Ltr>{event.action}</Ltr>}</TableCell>
                     <TableCell>
-                      <Badge variant={event.result === "success" ? "success" : event.result === "rejected" ? "warning" : "danger"}>{result ? pt(locale, result) : event.result}</Badge>
+                      <PlatformStatusTag locale={locale} domain="audit_result" value={event.result} />
                     </TableCell>
                     <TableCell wrap>{event.reason ? <span dir="auto">{event.reason}</span> : "—"}</TableCell>
                   </TableRow>
