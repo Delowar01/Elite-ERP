@@ -80,11 +80,15 @@
     "platform:db:apply": "tsx --conditions=react-server scripts/platform/apply-platform-sql.ts",
     "platform:db:check": "tsx --conditions=react-server scripts/platform/check-platform-db.ts",
     "platform:bootstrap": "tsx --conditions=react-server scripts/platform/bootstrap.ts",
+    "platform:preview-db": "tsx --conditions=react-server scripts/platform/preview-db.ts",
     "verify:platform-schema": "tsx --conditions=react-server verify/verify-platform-schema.mts",
     "verify:platform-boundary": "node tests/security/platform-boundary.test.mjs",
     "verify:platform-auth": "tsx --conditions=react-server verify/verify-platform-auth.mts",
     "verify:platform-bootstrap": "tsx --conditions=react-server verify/verify-platform-bootstrap.mts",
-    "verify:platform": "npm run verify:platform-boundary && npm run verify:platform-schema && npm run verify:platform-auth && npm run verify:platform-bootstrap"
+    "verify:platform-proxy": "tsx --conditions=react-server verify/verify-platform-proxy.mts",
+    "verify:platform-console": "tsx --conditions=react-server verify/verify-platform-console.mts",
+    "verify:platform-browser": "tsx --conditions=react-server verify/verify-platform-browser.mts",
+    "verify:platform": "npm run verify:platform-boundary && npm run verify:platform-proxy && npm run verify:platform-schema && npm run verify:platform-auth && npm run verify:platform-bootstrap && npm run verify:platform-console"
   },
   "dependencies": {
     "@radix-ui/react-avatar": "^1.2.2",
