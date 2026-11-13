@@ -1,5 +1,10 @@
 /**
  * Platform Owner PO-01A — schema equivalence, tenant non-interference and DB-constraint suite.
+ * Since PO-02A the reviewed platform SQL is PO01_platform_identity.sql THEN
+ * PO02A_company_foundation.sql: S is built from the pre-PO-02A (621f156) tenant shape, the PO01 file
+ * alone must still leave every tenant object untouched, and the full Drizzle schema must equal the
+ * pre-PO-02A tenant shape plus both files. PO-02A's own objects and its single tenant change (M4)
+ * are pinned in detail by verify:platform-company-schema and verify:platform-migration-safety.
  *
  *   PLATFORM_TEST_ADMIN_DATABASE_URL=postgres://postgres@127.0.0.1:<port>/<admin db with _test_only_> \
  *     npm run verify:platform-schema
@@ -15,9 +20,10 @@ import {
   disposableName,
   dropDisposableDatabase,
   pushSchema,
+  pushPreCompanyTenantSchema,
   applyPlatformMigration,
 } from "../scripts/platform/disposable-db";
-import { projectCatalog, withoutRoutines, diffProjection, checkPlatformObjects, projectionDigest } from "../scripts/platform/catalog";
+import { projectCatalog, withoutRoutines, diffProjection, checkPlatformObjects, projectionDigest, PLATFORM_SQL_PATH, PO02A_SQL_PATH } from "../scripts/platform/catalog";
 import { section, ok, rejects, sqlState, summary, describeError } from "./platform/harness";
 
 const created: string[] = [];
@@ -52,24 +58,36 @@ async function main(): Promise<number> {
   const S = await newDb("po01a_schema_s");
   const pushP = pushSchema(P.url, "full");
   ok("P: drizzle-kit push of the branch schema (tenant + platform) succeeds", pushP.ok, pushP.output.slice(-400));
-  const pushS = pushSchema(S.url, "tenant-only");
-  ok("S: drizzle-kit push of the tenant-only schema (621f156 shape) succeeds", pushS.ok, pushS.output.slice(-400));
+  const pushS = await pushPreCompanyTenantSchema(S.url);
+  ok("S: drizzle-kit push of the pre-PO-02A tenant schema (621f156 shape) succeeds", pushS.ok, pushS.output.slice(-400));
 
   const cP = await connectDisposable(P.url);
   const cS = await connectDisposable(S.url);
   try {
     const S0 = await projectCatalog(cS);
     ok("S before platform SQL has no platform objects", S0.platform.tables.length === 0 && S0.platform.functions.length === 0);
-    await applyPlatformMigration(S.url);
+    await applyPlatformMigration(S.url, [PLATFORM_SQL_PATH]);
+    const S1a = await projectCatalog(cS);
+    await applyPlatformMigration(S.url, [PO02A_SQL_PATH]);
     const S1 = await projectCatalog(cS);
     const P0 = await projectCatalog(cP);
 
     section("2. Drizzle schema ≡ reviewed SQL (tables, columns, defaults, constraints, indexes, sequences)");
-    ok("P (push) creates exactly the 4 platform tables", JSON.stringify(P0.platform.tables) === JSON.stringify(["platform_admins", "platform_audit_events", "platform_login_attempts", "platform_sessions"]), P0.platform.tables.join(","));
+    ok(
+      "P (push) creates exactly the 6 platform-owned tables (PO-01A's 4 + PO-02A's tenant_access_controls, organization_invitations)",
+      JSON.stringify(P0.platform.tables) === JSON.stringify(["organization_invitations", "platform_admins", "platform_audit_events", "platform_login_attempts", "platform_sessions", "tenant_access_controls"]),
+      P0.platform.tables.join(","),
+    );
     ok("P (push) creates no platform triggers or functions (push cannot)", P0.platform.triggers.length === 0 && P0.platform.functions.length === 0);
     const d1 = diffProjection(withoutRoutines(P0.platform), withoutRoutines(S1.platform), "drizzle-push", "reviewed-sql");
-    ok("platform projection: drizzle push == reviewed SQL (excluding routines)", d1.length === 0, d1.slice(0, 8).join("\n        "));
-    ok("column / constraint / index counts", P0.platform.columns.length === 45 && P0.platform.indexes.length === 14, `${P0.platform.columns.length} columns, ${P0.platform.constraints.length} constraints, ${P0.platform.indexes.length} indexes`);
+    ok("platform projection: drizzle push == reviewed SQL, PO01 + PO02A (excluding routines)", d1.length === 0, d1.slice(0, 8).join("\n        "));
+    // PO-01A: 45 columns, 27 constraints, 14 indexes. PO-02A adds 7 + 17 columns, 9 + 19 constraints and
+    // 7 indexes (2 primary keys, 3 unique + 1 partial on organization_invitations, the audit entity index).
+    ok(
+      "column / constraint / index counts (PO-01A 45/27/14 + PO-02A 24/28/7)",
+      P0.platform.columns.length === 69 && P0.platform.constraints.length === 55 && P0.platform.indexes.length === 21,
+      `${P0.platform.columns.length} columns, ${P0.platform.constraints.length} constraints, ${P0.platform.indexes.length} indexes`,
+    );
 
     await applyPlatformMigration(P.url);
     const P1 = await projectCatalog(cP);
@@ -78,10 +96,10 @@ async function main(): Promise<number> {
     ok("S1 has the row trigger, the truncate trigger and platform_reject_mutation()", S1.platform.triggers.length === 2 && S1.platform.functions.length === 1);
 
     section("3. No tenant object is created, altered or removed");
-    const d3 = diffProjection(S0.other, S1.other, "before-sql", "after-sql");
-    ok("applying the platform SQL leaves every non-platform object identical", d3.length === 0, d3.slice(0, 8).join("\n        "));
-    const d4 = diffProjection(P1.other, S1.other, "full-schema-push", "tenant-only-push");
-    ok("adding platform.ts to the Drizzle schema changes no tenant object", d4.length === 0, d4.slice(0, 8).join("\n        "));
+    const d3 = diffProjection(S0.other, S1a.other, "before-sql", "after-PO01-sql");
+    ok("applying the PO01 platform SQL leaves every non-platform object identical", d3.length === 0, d3.slice(0, 8).join("\n        "));
+    const d4 = diffProjection(P1.other, S1.other, "full-schema-push", "pre-PO-02A-tenant-push+sql");
+    ok("every tenant object of the full Drizzle schema equals the pre-PO-02A tenant shape + the reviewed SQL (PO-02A's M4 index included)", d4.length === 0, d4.slice(0, 8).join("\n        "));
     ok("tenant table count unchanged (67)", S1.other.tables.length === 67, String(S1.other.tables.length));
 
     section("4. Idempotency");
