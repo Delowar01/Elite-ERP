@@ -370,10 +370,18 @@ async function main() {
       if (r.method() === "POST") posts.push(r);
     };
     pageA.on("request", onReq);
-    const disabled = pageA.locator("button[aria-disabled='true'], input[aria-disabled='true']");
-    ok("companies: the invite action, search and filters are disabled controls", (await disabled.count()) >= 5 && (await pageA.getByText("Preview").first().isVisible()));
+    // PO-02B made the directory's search and filters operational (read-only, a GET form); the later-phase
+    // controls must still be disabled, name their phase and never send anything.
+    const disabled = pageA.locator("button[aria-disabled='true'], select[aria-disabled='true']");
+    ok(
+      "companies: the later-phase controls — Invite company (PO-02D), Export CSV and the Package filter (PO-04) — are disabled and name their phase",
+      (await disabled.count()) === 3 &&
+        (await pageA.getByRole("button", { name: /Invite company — Planned for PO-02D/ }).isDisabled()) &&
+        (await pageA.getByRole("button", { name: /Export CSV — Available in a later phase/ }).isDisabled()) &&
+        (await pageA.locator("select[aria-disabled='true']").isDisabled()),
+    );
     await pageA.getByRole("button", { name: /Invite company/ }).click({ force: true }).catch(() => undefined);
-    await pageA.locator(".platform-filter").first().click({ force: true }).catch(() => undefined);
+    await pageA.getByRole("button", { name: /Export CSV/ }).click({ force: true }).catch(() => undefined);
     await sleep(500);
     ok("clicking them sends no request and changes nothing", posts.length === 0 && pageA.url().endsWith("/platform/companies"));
     await pageA.locator(".platform-search-preview").click();
@@ -382,7 +390,12 @@ async function main() {
     await pageA.goto("/platform/packages");
     ok("packages: no price is shown; the pending-approval notice is", (await pageA.getByText("No package prices have been approved.", { exact: false }).isVisible()) && !(await pageA.locator("text=/\\d+\\s?SAR|SAR\\s?\\d/").count()));
     await pageA.goto("/platform/dashboard");
-    ok("dashboard: KPI tiles show “—” with 'No data yet' — no invented figure", (await pageA.locator(".platform-stat-value").count()) === 8 && (await pageA.locator(".platform-stat-value").allInnerTexts()).every((t) => t.trim() === "—"));
+    // PO-02B: the four company tiles show the read model's figures (this database has no companies or
+    // customer users, so 0); the four commercial tiles still read "—" — no figure is invented.
+    ok(
+      "dashboard: company tiles show real figures (0 here), commercial tiles “—” — no invented figure",
+      JSON.stringify((await pageA.locator(".platform-stat-value").allInnerTexts()).map((t) => t.trim())) === JSON.stringify(["0", "0", "—", "—", "0", "0", "—", "—"]),
+    );
   }
 
   section("7. Security settings: revoke one, forged requests, sign out others, expiry");

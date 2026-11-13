@@ -261,16 +261,18 @@ async function main(): Promise<void> {
     const trg = (await cL.query(`select count(*)::int as n from pg_trigger t join pg_class c on c.oid = t.tgrelid where c.relname in ('tenant_access_controls','organization_invitations') and not t.tgisinternal`)).rows[0].n;
     ok("no database function or trigger can change company access on its own (subscription expiry included)", fnRefs === 0 && trg === 0, `functions ${fnRefs}, triggers ${trg}`);
 
-    section("8. Static: the rule is wired into nothing yet; no customer auth/session code references the new objects");
+    // PO-02B: the read-only company read model (src/lib/platform/companies.ts) now reads both tables and
+    // reuses the compatibility rule; customer auth / session code still references neither (PO-02C).
+    section("8. Static: only the schema, the rule and the PO-02B read model touch the new objects; no customer auth/session code does");
     const ROOT = process.cwd();
     const files: string[] = [];
     const walk = (d: string) => { for (const f of readdirSync(join(ROOT, d))) { const p = join(d, f); if (statSync(join(ROOT, p)).isDirectory()) walk(p); else if (/\.(ts|tsx)$/.test(p)) files.push(p); } };
     walk("src");
     const refs = (re: RegExp) => files.filter((f) => re.test(readFileSync(join(ROOT, f), "utf8")));
     const tableRefs = refs(/tenantAccessControlsTable|organizationInvitationsTable|tenant_access_controls|organization_invitations/);
-    ok("only the schema module and the compatibility module reference the new tables", JSON.stringify(tableRefs.sort()) === JSON.stringify(["src/db/schema/platform-companies.ts", "src/lib/platform/company-access.ts"]), tableRefs.join(", "));
+    ok("only the schema module, the compatibility module and the PO-02B read model reference the new tables", JSON.stringify(tableRefs.sort()) === JSON.stringify(["src/db/schema/platform-companies.ts", "src/lib/platform/companies.ts", "src/lib/platform/company-access.ts"]), tableRefs.join(", "));
     const ruleRefs = refs(/(from\s+|import\(\s*)["'][^"']*platform\/company-access["']/);
-    ok("nothing imports the compatibility module yet (PO-02C wires it, separately approved)", ruleRefs.length === 0, ruleRefs.join(", "));
+    ok("only the PO-02B read model imports the compatibility module — no customer auth/session code (PO-02C wires that, separately approved)", JSON.stringify(ruleRefs) === JSON.stringify(["src/lib/platform/companies.ts"]), ruleRefs.join(", "));
   } finally {
     await cL.end().catch(() => undefined);
     await cP.end().catch(() => undefined);

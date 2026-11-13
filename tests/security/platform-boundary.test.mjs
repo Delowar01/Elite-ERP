@@ -5,6 +5,8 @@
 // change cannot silently erode them. Rules 1–8 are PO-01A's; PO-01B widened rule 3 (the console
 // routes may import the platform library) and replaced rule 9 ("no platform routes yet") with the
 // console rules 9–18 below; PO-01B.1 added rules 19–20 (session changes and the audit-outage policy).
+// PO-02B made Companies and the Dashboard operational (read-only): rule 18 now covers the four
+// sections that are still previews, and rules 21–28 pin the company read model and its pages.
 import { readFileSync, readdirSync, statSync, existsSync } from "node:fs";
 import { join, relative } from "node:path";
 
@@ -198,8 +200,9 @@ ok("platform.css styles only platform classes (or shared classes scoped under on
 //     that is not Settings carries a phase marker; no price or KPI figure is hard-coded.
 const kit = read(join(root, "src/components/platform/page-kit.tsx"));
 ok("PreviewAction, PreviewToolbar filters and search are disabled elements", /<Button type="button" variant="secondary" disabled aria-disabled="true"/.test(kit) && /<input type="search" placeholder=\{search\} disabled aria-disabled="true" \/>/.test(kit) && /className="platform-filter" disabled aria-disabled="true"/.test(kit));
-const previewPages = ["dashboard", "companies", "users", "subscribers", "packages", "activity"].map((p) => read(join(root, `src/app/(platform)/platform/(console)/${p}/page.tsx`)));
-ok("every later-phase section page is marked with its phase (PO-02 … PO-06) and calls no data source", previewPages.every((src) => /phase="PO-0[2-6]"/.test(src) && !/@\/lib\/platform\/(console|session|login|mfa|audit)|@\/db/.test(src)));
+// (PO-02B: Dashboard and Companies are operational now — rules 21–28 below cover them.)
+const previewPages = ["users", "subscribers", "packages", "activity"].map((p) => read(join(root, `src/app/(platform)/platform/(console)/${p}/page.tsx`)));
+ok("every later-phase section page is marked with its phase (PO-02 … PO-06) and calls no data source", previewPages.every((src) => /phase="PO-0[2-6]"/.test(src) && !/@\/lib\/platform\/(console|session|login|mfa|audit|companies)|@\/db/.test(src)));
 ok("no hard-coded money, price or KPI figure in console pages (values read “—”)", !consoleFiles.some((f) => /\b(SAR|ر\.س)\s?\d|\d[\d,.]*\s?(SAR|ريال)\b|value=\{?["']?\d{2,}/.test(read(f))));
 
 // ---------------------------------------------------------------------------------------------
@@ -233,6 +236,78 @@ const incidentSrc = code(join(root, "src/lib/platform/incident.ts"));
 ok("the incident line is allow-listed and never carries an error message, token, e-mail or user agent", !/\.message\b/.test(incidentSrc) && !/token|email|userAgent|jti|hash|password/i.test(incidentSrc.replace(/never a token, jti, hash, password, code, e-mail, user-agent/g, "")) && (incidentSrc.match(/console\.error\(/g) ?? []).length === 2);
 const auditSrc = code(join(root, "src/lib/platform/audit.ts"));
 ok("a failed audit INSERT surfaces as AUDIT_UNAVAILABLE (its database message is never passed on)", /catch \(err\) \{\s*throw new PlatformError\("AUDIT_UNAVAILABLE", `audit insert failed \(\$\{errorClass\(err\)\}\)`\);/.test(auditSrc));
+
+// ---------------------------------------------------------------------------------------------
+// PO-02B — the read-only company read model (src/lib/platform/companies.ts) and its pages.
+// ---------------------------------------------------------------------------------------------
+const readModelPath = join(root, "src/lib/platform/companies.ts");
+const readModel = code(readModelPath);
+const companyPages = ["companies/page.tsx", "companies/[orgId]/page.tsx", "companies/[orgId]/not-found.tsx", "dashboard/page.tsx"].map((p) => join(root, "src/app/(platform)/platform/(console)", p));
+const consoleCode = [...platformLib, ...consoleApp, ...consoleUi];
+
+// 21. Only the read model touches the customer orgs / users tables (the compatibility rule reads orgs.id only).
+const tenantTableRefs = consoleCode.filter((f) => /\b(orgsTable|usersTable)\b/.test(code(f)));
+ok("only companies.ts and company-access.ts reference orgsTable / usersTable in platform code", JSON.stringify(tenantTableRefs.map(rel).sort()) === JSON.stringify([join("src", "lib", "platform", "companies.ts"), join("src", "lib", "platform", "company-access.ts")]), tenantTableRefs.map(rel).join(", "));
+const accessSrc = code(join(root, "src/lib/platform/company-access.ts"));
+ok("company-access.ts reads orgs only for existence (orgs.id) and never the users table", (accessSrc.match(/orgsTable\.\w+/g) ?? []).every((m) => m === "orgsTable.id") && !/usersTable/.test(accessSrc));
+const rawTenantSql = consoleCode.filter((f) => /\b(from|join|update|into)\s+"?(orgs|users|sessions|customers|invoices)"?(\s|$|\))/i.test(code(f)));
+ok("no platform module names a customer table in raw SQL text", rawTenantSql.length === 0, rawTenantSql.map(rel).join(", "));
+
+// 22. The read model selects allow-listed metadata only — never whole rows, secrets or business data.
+const dbImports = (readModel.match(/import \{([^}]+)\} from "@\/db";/) ?? ["", ""])[1].split(",").map((s) => s.trim()).filter(Boolean).sort();
+ok("companies.ts imports only db, orgs, users, access controls, invitations, platform admins and the audit table from @/db", JSON.stringify(dbImports) === JSON.stringify(["db", "organizationInvitationsTable", "orgsTable", "platformAdminsTable", "platformAuditEventsTable", "tenantAccessControlsTable", "usersTable"]), dbImports.join(","));
+const columnsOf = (alias) => [...new Set([...readModel.matchAll(new RegExp(`\\b${alias}\\.(\\w+)`, "g"))].map((m) => m[1]))].sort();
+const allowed = {
+  orgsTable: ["country", "createdAt", "currency", "id", "industry", "logoUrl", "name"],
+  usersTable: ["createdAt", "email", "id", "isActive", "lastLoginAt", "name", "orgId", "role"],
+  tenantAccessControlsTable: ["accessStatus", "changedAt", "changedByPlatformAdminId", "orgId", "reason"],
+  inv: ["acceptedAt", "companyName", "countryName", "createdAt", "expiresAt", "id", "ownerEmailNormalized", "revokedAt"],
+  platformAdminsTable: ["displayName", "id"],
+  ev: ["action", "actorLabel", "createdAt", "id", "orgId", "reason", "result"],
+};
+const offAllowlist = Object.entries(allowed).flatMap(([alias, cols]) => columnsOf(alias).filter((c) => !cols.includes(c)).map((c) => `${alias}.${c}`));
+ok("every column the read model references is on its allowlist (orgs, users, access controls, invitations, admins, audit)", offAllowlist.length === 0 && columnsOf("orgsTable").length > 0, offAllowlist.join(", "));
+ok("the logo URL is only tested for presence (one boolean expression), never selected", (readModel.match(/orgsTable\.logoUrl/g) ?? []).length === 2 && /hasLogo: sql<boolean>`\(\$\{orgsTable\.logoUrl\} is not null and \$\{orgsTable\.logoUrl\} <> ''\)`/.test(readModel));
+ok("no secret, token, tax, contact, branding or settings field is named anywhere in the read model", !/tokenHash|token_hash|passwordHash|password_hash|mfaSecret|mfa_secret|mfaRecovery|recovery_codes|taxId|tax_id|vatNumber|vat_number|\baddress\b|\bphone\b|orgsTable\.email|themeOverrides|primaryColor|sealUrl|signatureUrl|printLayout|zatca|bankAccount/i.test(readModel));
+ok("no whole-row selection, relational query API, raw SQL or dynamic identifiers in the read model", !/\.select\(\s*\)|\.selectDistinct\(\s*\)|db\.query\.|sql\.raw\(|sql\.identifier\(|select \*|\.returning\(\s*\)/.test(readModel));
+
+// 23. Every exported read authorizes first, with the narrow permission, from the platform token only.
+const exportedFns = fnBodies(readModel).filter((f) => /^export async function /.test(f.body.trimStart()));
+const unauthorized = exportedFns.filter((f) => !/^\s*export async function \w+\([^)]*\)[^{]*\{\s*(const ctx = )?await authorizeCompanyRead\(req\);/.test(f.body));
+ok("every exported function of companies.ts starts with authorizeCompanyRead(req)", exportedFns.length === 5 && unauthorized.length === 0, unauthorized.map((f) => f.name).join(", ") || exportedFns.map((f) => f.name).join(","));
+ok("authorizeCompanyRead = feature flag, then the live platform session with platform.companies.read", /async function authorizeCompanyRead\(req: CompanyReadRequest\): Promise<PlatformSessionContext> \{\s*assertPlatformConsoleEnabled\(\);\s*return authorizePlatformToken\(req\.token, "platform\.companies\.read"\);\s*\}/.test(readModel));
+ok("the read model never reads cookies or headers itself (the page passes the platform cookie's token)", !/next\/headers|cookies\(\)|SESSION_COOKIE/.test(readModel));
+const guardsSrc = code(join(root, "src/lib/platform/guards.ts"));
+ok("platform.companies.read is the only new permission and grants no company change", /PLATFORM_PERMISSIONS = \["platform\.access", "platform\.sessions\.manage", "platform\.mfa\.manage", "platform\.companies\.read"\] as const;/.test(guardsSrc) && !/platform\.companies\.(write|manage|update|suspend|edit|delete|invite)/.test(consoleCode.map(code).join("\n")));
+
+// 24. A company detail view is audited under the PO-01B.1 policy, or not shown at all.
+const detailFn = fnBodies(readModel).find((f) => f.name === "getCompanyDetail")?.body ?? "";
+const at = (re) => detailFn.search(re);
+ok("getCompanyDetail: authorize → validate id → assert audit protection → read → record company.viewed → return", at(/authorizeCompanyRead\(req\)/) >= 0 && at(/authorizeCompanyRead\(req\)/) < at(/parseOrgId\(rawOrgId\)/) && at(/parseOrgId\(rawOrgId\)/) < at(/await assertPlatformAuditProtection\(\);/) && at(/await assertPlatformAuditProtection\(\);/) < at(/getTenantAccess\(orgId\)/) && at(/getTenantAccess\(orgId\)/) < at(/recordPlatformAudit\(/) && at(/recordPlatformAudit\(/) < at(/return detail;/));
+ok("the view record is exact and bounded: company.viewed on organization/<decimal id>, with the org id and request metadata", /action: "company\.viewed",\s*entityType: "organization",\s*entityId: String\(orgId\),\s*orgId,\s*result: "success",\s*\.\.\.meta,/.test(detailFn));
+ok("a failed view record is reported as an incident and re-thrown (never swallowed)", /catch \(err\) \{\s*if \(isPlatformError\(err, "AUDIT_UNAVAILABLE"\)\) reportSecurityIncident\(\{ type: "audit_write_failed", action: "company\.viewed", error: errorClass\(err\) \}\);\s*throw err;\s*\}/.test(detailFn));
+
+// 25. Every console page, at any depth, checks the platform session itself; company pages read only the read model.
+const allConsolePages = consoleApp.filter((f) => /\(console\)\/.+\/page\.tsx$/.test(f));
+const unguardedNested = allConsolePages.filter((f) => !/await requirePlatformSession\(\)/.test(read(f)));
+ok("every page.tsx under (console), nested routes included, awaits requirePlatformSession()", allConsolePages.length === 8 && unguardedNested.length === 0, unguardedNested.map(rel).join(", ") || String(allConsolePages.length));
+const pageImports = companyPages.flatMap((f) => importsOf(read(f)).filter((s) => s.startsWith("@/lib/platform/")).map((s) => `${rel(f)} → ${s}`));
+ok("company pages and the dashboard read data only through the read model (plus config, display, errors, guards)", pageImports.every((x) => /→ @\/lib\/platform\/(companies|config|display|errors|guards)$/.test(x)), pageImports.filter((x) => !/→ @\/lib\/platform\/(companies|config|display|errors|guards)$/.test(x)).join(", "));
+
+// 26. Later-phase company actions never operate: no POST, no server action, disabled controls only.
+const companyPageCode = companyPages.map(code).join("\n");
+ok("company pages hold no server action and no POST form; the only forms are GET searches of /platform/companies", !/"use server"|<form[^>]*\saction=\{|method="post"|formAction/i.test(companyPageCode) && (companyPageCode.match(/<form /g) ?? []).length === 2 && (companyPageCode.match(/<form method="get" action="\/platform\/companies" role="search"/g) ?? []).length === 2);
+const kitSrc = code(join(root, "src/components/platform/companies-kit.tsx"));
+ok("DisabledAction is a disabled element; invite, export, suspend/reactivate, edit and user management use it or PreviewAction", /<Button type="button" variant="secondary" disabled aria-disabled="true"/.test(kitSrc) && ["action.inviteCompany", "action.export", "action.suspend", "action.reactivate", "action.editCompany", "action.manageUsers"].every((k) => companyPageCode.includes(`"${k}"`)) && !/onClick|useActionState|useTransition/.test(companyPageCode + kitSrc));
+
+// 27. No impersonation: no platform code can mint, read or forward a customer session.
+const customerSessionApi = consoleCode.filter((f) => /\b(signSessionToken|verifySessionToken|issueSession|requireSession|requireRole|getSession|SESSION_COOKIE_CLEAR|lookupSessionByToken|revokeUserSessions)\b|elite_erp_session/.test(code(f)));
+ok("no platform module references the customer session API or cookie (no token minting, no impersonation)", customerSessionApi.length === 0, customerSessionApi.map(rel).join(", "));
+
+// 28. Pending invitations are read without token material and the read model writes only its audit record.
+const invitationSelect = (readModel.match(/\.select\(\{ id: inv\.id, ([^}]+) \}\)/) ?? ["", ""])[1];
+ok("the invitation listing selects exactly id, company, owner e-mail, country, created and expiry", invitationSelect === "companyName: inv.companyName, ownerEmail: inv.ownerEmailNormalized, country: inv.countryName, createdAt: inv.createdAt, expiresAt: inv.expiresAt");
+ok("the read model never inserts, updates or deletes (except through recordPlatformAudit)", !/\b(db|tx|executor)\s*\.\s*(insert|update|delete|execute)\(/.test(readModel) && (readModel.match(/recordPlatformAudit\(/g) ?? []).length === 1);
 
 console.log(`\n${pass}/${pass + fail} platform boundary checks passed`);
 process.exit(fail ? 1 : 0);
