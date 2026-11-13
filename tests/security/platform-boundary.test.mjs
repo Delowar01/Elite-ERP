@@ -7,7 +7,7 @@
 // console rules 9–18 below; PO-01B.1 added rules 19–20 (session changes and the audit-outage policy).
 // PO-02B made Companies and the Dashboard operational (read-only): rule 18 now covers the four
 // sections that are still previews, and rules 21–28 pin the company read model and its pages; rule 29
-// keeps Platform Owner state presentation in one table (the platform counterpart of the status registry).
+// keeps Platform Owner states colour-free (neutral tags from one table of labels and icons).
 import { readFileSync, readdirSync, statSync, existsSync } from "node:fs";
 import { join, relative } from "node:path";
 
@@ -310,18 +310,19 @@ const invitationSelect = (readModel.match(/\.select\(\{ id: inv\.id, ([^}]+) \}\
 ok("the invitation listing selects exactly id, company, owner e-mail, country, created and expiry", invitationSelect === "companyName: inv.companyName, ownerEmail: inv.ownerEmailNormalized, country: inv.countryName, createdAt: inv.createdAt, expiresAt: inv.expiresAt");
 ok("the read model never inserts, updates or deletes (except through recordPlatformAudit)", !/\b(db|tx|executor)\s*\.\s*(insert|update|delete|execute)\(/.test(readModel) && (readModel.match(/recordPlatformAudit\(/g) ?? []).length === 1);
 
-// 29. Platform Owner states are presented through ONE table (PLATFORM_STATES / PlatformStatusTag in
-//     companies-kit.tsx, the platform counterpart of the design system's status registry): no company
-//     page or kit component chooses a badge variant or a tone from a value; the customer registry and
-//     its dictionary are not touched for platform states.
+// 29. Status colour belongs to the design system's canonical registry alone (verify:status-registry,
+//     ui:guardrails G4). Platform Owner states are not in that customer registry, so they are neutral
+//     status tags from ONE table of labels and icons (PLATFORM_STATES / PlatformStatusTag in
+//     companies-kit.tsx); no company page or kit component chooses a badge variant or a tone from a value.
 const kitPath = join(root, "src/components/platform/companies-kit.tsx");
 const stateTable = (kitSrc.match(/const PLATFORM_STATES = \{([\s\S]*?)\n\} as const satisfies PlatformStateTable;/) ?? ["", ""])[1].replace(/\s+/g, " ").trim();
-ok("one table decides each Platform Owner state's tone and label: access active/suspended, invitation pending/expired, audit result success/rejected/failed",
-  stateTable === 'company_access: { active: { tone: "success", label: "access.active" }, suspended: { tone: "danger", label: "access.suspended" }, }, invitation: { pending: { tone: "info", label: "inv.statePending" }, expired: { tone: "warning", label: "inv.stateExpired" }, }, audit_result: { success: { tone: "success", label: "result.success" }, rejected: { tone: "warning", label: "result.rejected" }, failed: { tone: "danger", label: "result.failed" }, },',
+ok("one table of labels and icons for Platform Owner states (access active/suspended, invitation pending/expired, audit result success/rejected/failed), with no tone in it",
+  stateTable === 'company_access: { active: { label: "access.active", icon: ShieldCheck }, suspended: { label: "access.suspended", icon: ShieldOff }, }, invitation: { pending: { label: "inv.statePending", icon: Clock }, expired: { label: "inv.stateExpired", icon: CalendarX }, }, audit_result: { success: { label: "result.success", icon: CircleCheck }, rejected: { label: "result.rejected", icon: CircleMinus }, failed: { label: "result.failed", icon: CircleX }, },',
   stateTable.slice(0, 120));
-const toneByValue = [...companyPages, kitPath].flatMap((f) => [...code(f).matchAll(/<Badge\b[^>]*\svariant=\{|data-tone=\{(?!tone\}|state \? state\.tone : "neutral"\})|\stone=\{/g)].map((m) => `${rel(f)}: ${m[0]}`));
-ok("no company page or kit component chooses a badge variant or a tone from a value (the state table decides; PageState forwards a literal)", toneByValue.length === 0, toneByValue.join(", "));
-ok("platform code presents no Platform Owner state through the customer status registry or StatusBadge", !consoleCode.some((f) => /status-registry|status-badge|StatusBadge/.test(code(f))));
+ok("PlatformStatusTag renders the design system's status tag with the literal neutral tone", /<span className="status-tag" data-tone="neutral" data-status=\{value\} data-status-domain=\{`platform\.\$\{domain\}`\}>/.test(kitSrc));
+const toneByValue = [...companyPages, kitPath].flatMap((f) => [...code(f).matchAll(/<Badge\b[^>]*\svariant=\{|data-tone=\{(?!tone\})|\stone=\{/g)].map((m) => `${rel(f)}: ${m[0]}`));
+ok("no company page or kit component chooses a badge variant or a tone from a value (PageState forwards its caller's literal)", toneByValue.length === 0, toneByValue.join(", "));
+ok("platform code does not reach into the customer status registry or StatusBadge for its states", !consoleCode.some((f) => /status-registry|status-badge|StatusBadge/.test(code(f))));
 
 console.log(`\n${pass}/${pass + fail} platform boundary checks passed`);
 process.exit(fail ? 1 : 0);

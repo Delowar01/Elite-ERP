@@ -135,10 +135,10 @@ async function go(page: Page, path: string) {
   await settled(page);
   return res;
 }
-/** The status tags under a selector (PlatformStatusTag markup): text, tone, raw value and domain. */
+/** The status tags under a selector (PlatformStatusTag markup): text, tone, raw value, domain, icon. */
 async function tags(page: Page, selector: string) {
   return page.locator(selector).evaluateAll((els) =>
-    els.map((e) => ({ text: (e.textContent ?? "").trim(), tone: e.getAttribute("data-tone"), status: e.getAttribute("data-status"), domain: e.getAttribute("data-status-domain") })),
+    els.map((e) => ({ text: (e.textContent ?? "").trim(), tone: e.getAttribute("data-tone"), status: e.getAttribute("data-status"), domain: e.getAttribute("data-status-domain"), icon: e.querySelector(":scope > svg") !== null })),
   );
 }
 
@@ -232,7 +232,7 @@ async function main() {
     await page.waitForURL(/access=suspended/);
     await settled(page);
     const pills = await tags(page, ".platform-company-table tbody .platform-access .status-tag");
-    ok(`access=suspended: ${Math.min(25, suspendedTotal)} rows, every one a danger-toned Suspended status tag`, (await page.locator(".platform-company-table tbody tr").count()) === Math.min(25, suspendedTotal) && pills.length === Math.min(25, suspendedTotal) && pills.every((p) => p.text === "Suspended" && p.tone === "danger" && p.status === "suspended" && p.domain === "platform.company_access"), JSON.stringify(pills.slice(0, 2)));
+    ok(`access=suspended: ${Math.min(25, suspendedTotal)} rows, every one a neutral Suspended status tag with its icon`, (await page.locator(".platform-company-table tbody tr").count()) === Math.min(25, suspendedTotal) && pills.length === Math.min(25, suspendedTotal) && pills.every((p) => p.text === "Suspended" && p.tone === "neutral" && p.icon && p.status === "suspended" && p.domain === "platform.company_access"), JSON.stringify(pills.slice(0, 2)));
     ok("the Suspended tile is marked as the current filter", (await page.locator('a.platform-stat-link[aria-current="page"]').innerText()).includes("Suspended"));
     await go(page, "/platform/companies");
     await page.getByLabel("Country", { exact: true }).selectOption("Kuwait");
@@ -322,9 +322,8 @@ async function main() {
     await page.reload(); await settled(page);
     await page.getByRole("tab", { name: "Activity" }).click();
     ok("after a reload (a second view) the Activity tab lists the first view", (await page.getByRole("cell", { name: "Viewed company details" }).count()) >= 1 && (await viewEvents()) === n0 + 2);
-    const resultTone: Record<string, string> = { Success: "success", Rejected: "warning", Failed: "danger" };
     const results = await tags(page, "[role=tabpanel] table tbody .status-tag");
-    ok("each event's result is a status tag toned by the platform state table (Success → success)", results.some((r) => r.text === "Success") && results.every((r) => resultTone[r.text] === r.tone && r.domain === "platform.audit_result"), JSON.stringify(results.slice(0, 2)));
+    ok("each event's result is a neutral status tag with label and icon from the platform state table", results.some((r) => r.text === "Success" && r.status === "success") && results.every((r) => ["Success", "Rejected", "Failed"].includes(r.text) && r.tone === "neutral" && r.icon && r.domain === "platform.audit_result"), JSON.stringify(results.slice(0, 2)));
     for (const name of [/Suspend company/, /Edit details/, /Manage users/]) await page.getByRole("button", { name }).first().click({ force: true }).catch(() => undefined);
     await sleep(300);
     ok("clicking the disabled actions sends no request", posts.length === 0);
@@ -373,8 +372,7 @@ async function main() {
     await page.waitForURL(/view=invitations/);
     await page.getByLabel("Search invitations", { exact: true }).waitFor({ timeout: 15_000 });
     const states = await tags(page, ".platform-company-table tbody .status-tag");
-    const stateTone: Record<string, string> = { Pending: "info", Expired: "warning" };
-    ok("invitations view: INV references, Pending (info) and Expired (warning) status tags, the slot note", (await page.locator(".platform-company-table tbody tr").count()) > 0 && states.some((s) => s.text === "Pending") && states.some((s) => s.text === "Expired") && states.every((s) => stateTone[s.text] === s.tone && s.domain === "platform.invitation") && (await page.getByText("Expired invitations keep their owner email reserved until they are revoked.", { exact: false }).isVisible()), JSON.stringify(states.slice(0, 2)));
+    ok("invitations view: INV references, Pending and Expired as neutral status tags with icons, the slot note", (await page.locator(".platform-company-table tbody tr").count()) > 0 && states.some((s) => s.text === "Pending") && states.some((s) => s.text === "Expired") && states.every((s) => ["Pending", "Expired"].includes(s.text) && s.tone === "neutral" && s.icon && s.domain === "platform.invitation") && (await page.getByText("Expired invitations keep their owner email reserved until they are revoked.", { exact: false }).isVisible()), JSON.stringify(states.slice(0, 2)));
     const ref = (await page.locator(".platform-company-table tbody tr").first().locator("td").first().innerText()).trim();
     await page.getByLabel("Search invitations", { exact: true }).fill(ref);
     await page.getByRole("button", { name: "Apply" }).click();

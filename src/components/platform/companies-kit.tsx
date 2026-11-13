@@ -1,7 +1,7 @@
 import { Fragment } from "react";
 import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
-import { ChevronLeft, ChevronRight, ChevronsLeft } from "lucide-react";
+import { CalendarX, ChevronLeft, ChevronRight, ChevronsLeft, CircleCheck, CircleMinus, CircleX, Clock, ShieldCheck, ShieldOff } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -94,39 +94,40 @@ export function Interpolated({ template, values }: { template: string; values: R
   );
 }
 
-// ---- Platform Owner states: ONE table decides tone and label ------------------------------------
-// The design system's status registry (src/lib/status-registry.ts, DEV-UI-01.2) is the one place
-// that presents CUSTOMER document and record states, labelled from the customer dictionary. Platform
-// Owner states exist only in this console and are labelled from the platform dictionary, so they
-// follow the same rule here, without touching the customer registry: callers pass the domain and the
-// raw value, this table decides the tone and the label, and the tag is the design system's
-// status-tag pill (tone tokens, light and dark). No page chooses a colour (platform-boundary rule 29).
-type PlatformStateTone = "neutral" | "info" | "success" | "warning" | "danger";
-type PlatformStateDef = { readonly tone: PlatformStateTone; readonly label: PlatformStringKey };
+// ---- Platform Owner states: one table of labels and icons; no status colour --------------------
+// Status colour is decided ONLY by the design system's canonical registry (src/lib/status-registry.ts,
+// DEV-UI-01.2): verify:status-registry and ui:guardrails G4 count every other status→tone map. That
+// registry holds customer document and record states, labelled from the customer dictionary;
+// extending it is a customer design-system change outside PO-02B. Platform Owner states are therefore
+// neutral status tags that differ by label and icon, never by colour (owner decision recorded in
+// PO02B_DEVELOPMENT.md §9). Callers pass the domain and the raw value (platform-boundary rule 29).
+type PlatformStateDef = { readonly label: PlatformStringKey; readonly icon: LucideIcon };
 type PlatformStateTable = Readonly<Record<string, Readonly<Record<string, PlatformStateDef>>>>;
 const PLATFORM_STATES = {
   company_access: {
-    active: { tone: "success", label: "access.active" },
-    suspended: { tone: "danger", label: "access.suspended" },
+    active: { label: "access.active", icon: ShieldCheck },
+    suspended: { label: "access.suspended", icon: ShieldOff },
   },
   invitation: {
-    pending: { tone: "info", label: "inv.statePending" },
-    expired: { tone: "warning", label: "inv.stateExpired" },
+    pending: { label: "inv.statePending", icon: Clock },
+    expired: { label: "inv.stateExpired", icon: CalendarX },
   },
   audit_result: {
-    success: { tone: "success", label: "result.success" },
-    rejected: { tone: "warning", label: "result.rejected" },
-    failed: { tone: "danger", label: "result.failed" },
+    success: { label: "result.success", icon: CircleCheck },
+    rejected: { label: "result.rejected", icon: CircleMinus },
+    failed: { label: "result.failed", icon: CircleX },
   },
 } as const satisfies PlatformStateTable;
 export type PlatformStateDomain = keyof typeof PLATFORM_STATES;
 
-/** A Platform Owner state as a status tag. An unknown value renders neutral, showing its raw text. */
+/** A Platform Owner state as a neutral status tag: icon + label. An unknown value shows its raw text. */
 export function PlatformStatusTag({ locale, domain, value }: { locale: Locale; domain: PlatformStateDomain; value: string }) {
   const states: PlatformStateTable[string] = PLATFORM_STATES[domain];
   const state = Object.prototype.hasOwnProperty.call(states, value) ? states[value] : null;
+  const Icon = state?.icon;
   return (
-    <span className="status-tag" data-tone={state ? state.tone : "neutral"} data-status={value} data-status-domain={`platform.${domain}`}>
+    <span className="status-tag" data-tone="neutral" data-status={value} data-status-domain={`platform.${domain}`}>
+      {Icon && <Icon className="size-3" aria-hidden />}
       {state ? pt(locale, state.label) : <bdi dir="ltr">{value}</bdi>}
     </span>
   );
