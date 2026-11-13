@@ -10,7 +10,7 @@
  * database created here is dropped at the end (PLATFORM_TEST_KEEP_DATABASES=1 keeps them).
  */
 import { readFileSync, readdirSync, statSync } from "node:fs";
-import { join } from "node:path";
+import { join, posix } from "node:path";
 import { sql } from "drizzle-orm";
 import {
   connectDisposable,
@@ -271,7 +271,24 @@ async function main(): Promise<void> {
     const refs = (re: RegExp) => files.filter((f) => re.test(readFileSync(join(ROOT, f), "utf8")));
     const tableRefs = refs(/tenantAccessControlsTable|organizationInvitationsTable|tenant_access_controls|organization_invitations/);
     ok("only the schema module, the compatibility module and the PO-02B read model reference the new tables", JSON.stringify(tableRefs.sort()) === JSON.stringify(["src/db/schema/platform-companies.ts", "src/lib/platform/companies.ts", "src/lib/platform/company-access.ts"]), tableRefs.join(", "));
-    const ruleRefs = refs(/(from\s+|import\(\s*)["'][^"']*platform\/company-access["']/);
+    // Import specifiers are RESOLVED (the @/ alias and relative paths), so "./company-access" inside
+    // src/lib/platform counts exactly like "@/lib/platform/company-access" (PO-02B correction: the
+    // PO-02A pattern matched only specifiers spelled ".../platform/company-access").
+    const RULE_MODULE = "src/lib/platform/company-access";
+    const resolveSpecifier = (from: string, spec: string) =>
+      (spec.startsWith("@/") ? `src/${spec.slice(2)}` : spec.startsWith(".") ? posix.normalize(posix.join(posix.dirname(from), spec)) : spec).replace(/\.(ts|tsx)$/, "").replace(/\/index$/, "");
+    const importsRule = (from: string, text: string) =>
+      [...text.matchAll(/(?:\bfrom\s+|\bimport\s*\(\s*|\bimport\s+)["']([^"']+)["']/g)].some((m) => resolveSpecifier(from, m[1]) === RULE_MODULE);
+    ok(
+      "the import resolver recognises the alias and relative forms, and only for the rule module itself",
+      importsRule("src/lib/platform/x.ts", 'import { a } from "./company-access";') &&
+        importsRule("src/app/y/page.tsx", 'import { a } from "@/lib/platform/company-access";') &&
+        importsRule("src/lib/other/z.ts", 'const m = await import("../platform/company-access");') &&
+        importsRule("src/lib/platform/w.ts", 'export { a } from "./company-access.ts";') &&
+        !importsRule("src/app/v/page.tsx", 'import { a } from "./company-access";') &&
+        !importsRule("src/lib/platform/u.ts", 'import { a } from "./company-access-extra";'),
+    );
+    const ruleRefs = files.filter((f) => importsRule(f, readFileSync(join(ROOT, f), "utf8"))).sort();
     ok("only the PO-02B read model imports the compatibility module — no customer auth/session code (PO-02C wires that, separately approved)", JSON.stringify(ruleRefs) === JSON.stringify(["src/lib/platform/companies.ts"]), ruleRefs.join(", "));
   } finally {
     await cL.end().catch(() => undefined);
