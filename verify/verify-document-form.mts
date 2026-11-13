@@ -34,6 +34,7 @@ import { ACC01_EDITS, ACC01_NEW, acc01Drift, undoAcc01 } from "./acc01-approved-
 import { LCP_EDITS, LCP_NEW, lcpDrift, undoLcp } from "./lcp-approved-delta.mjs";
 import { PO01A_EDITS, PO01A_NEW, po01aDrift, undoPo01a } from "./po01a-approved-delta.mjs";
 import { PO01B_EDITS, PO01B_NEW, po01bDrift, undoPo01b } from "./po01b-approved-delta.mjs";
+import { PO01B1_EDITS, PO01B1_NEW, po01b1Drift, undoPo01b1 } from "./po01b1-approved-delta.mjs";
 
 const results: [boolean, string, string][] = [];
 const check = (name: string, cond: boolean, extra = "") => results.push([cond, name, extra]);
@@ -45,7 +46,10 @@ const diskRead = (p: string) => readFileSync(join(ROOT, p), "utf8");
 // so the LCP layer and every older pin read 621f156's bytes; the files PO-01A added stay out of the directory pins.
 // Platform Owner PO-01B: its recorded hunks are undone before PO-01A's (its check below proves they are each file's only
 // change), so the PO-01A layer and every older pin read PO-01A's bytes; the files PO-01B added stay out of the directory pins.
-const po01bRead = (p: string) => undoPo01b(p, diskRead(p));
+// Platform Owner PO-01B.1: its recorded hunks are undone before PO-01B's (its check below proves they are each file's only
+// change), so the PO-01B layer and every older pin read PO-01B's bytes; the file PO-01B.1 added stays out of the directory pins.
+const po01b1Read = (p: string) => undoPo01b1(p, diskRead(p));
+const po01bRead = (p: string) => undoPo01b(p, po01b1Read(p));
 const po01aRead = (p: string) => undoPo01a(p, po01bRead(p));
 const actualRead = (p: string) => undoLcp(p, po01aRead(p));
 const read = (p: string) => undoAcc01(p, actualRead(p));
@@ -352,10 +356,10 @@ const PINS = JSON.parse(read("verify/document-form-pins.json")) as Record<string
 const fileDrift = Object.entries(PINS).filter(([p, hsh]) => !p.endsWith("/**") && sha(p) !== hsh).map(([p]) => p);
 function dirHash(dir: string) {
   const files: string[] = [];
-  const walk = (d: string) => { for (const f of readdirSync(join(ROOT, d))) { const p = join(d, f); if (statSync(join(ROOT, p)).isDirectory()) walk(p); else if (!(p in ACC01_NEW) && !(p in LCP_NEW) && !(p in PO01A_NEW) && !(p in PO01B_NEW)) files.push(p); } };
+  const walk = (d: string) => { for (const f of readdirSync(join(ROOT, d))) { const p = join(d, f); if (statSync(join(ROOT, p)).isDirectory()) walk(p); else if (!(p in ACC01_NEW) && !(p in LCP_NEW) && !(p in PO01A_NEW) && !(p in PO01B_NEW) && !(p in PO01B1_NEW)) files.push(p); } };
   walk(dir);
   const hh = createHash("sha256");
-  for (const f of files.sort()) { hh.update(f + "\0"); hh.update(f in ACC01_EDITS || f in LCP_EDITS || f in PO01A_EDITS || f in PO01B_EDITS ? read(f) : readFileSync(join(ROOT, f))); }
+  for (const f of files.sort()) { hh.update(f + "\0"); hh.update(f in ACC01_EDITS || f in LCP_EDITS || f in PO01A_EDITS || f in PO01B_EDITS || f in PO01B1_EDITS ? read(f) : readFileSync(join(ROOT, f))); }
   return hh.digest("hex").slice(0, 16);
 }
 const dirDrift = Object.entries(PINS).filter(([p, hsh]) => p.endsWith("/**") && dirHash(p.slice(0, -3)) !== hsh.split(" ")[0]).map(([p]) => p);
@@ -371,9 +375,12 @@ check("the LCP design adoption's approved change: each recorded file is main's (
 const po01aDriftNow = po01aDrift((f) => { try { return po01bRead(f); } catch { return null; } });
 check("Platform Owner PO-01A's approved change: each recorded file is 621f156's plus exactly its hunks, each added file (src/lib/platform, src/db/schema/platform.ts, drizzle/platform) as recorded (verify/po01a-approved-delta.mts)",
   po01aDriftNow.length === 0 && Object.keys(PO01A_EDITS).length > 0, po01aDriftNow.join(" "));
-const po01bDriftNow = po01bDrift((f) => { try { return diskRead(f); } catch { return null; } });
+const po01bDriftNow = po01bDrift((f) => { try { return po01b1Read(f); } catch { return null; } });
 check("Platform Owner PO-01B's approved change: each recorded file is PO-01A's (92c4397) plus exactly its hunks, each added file (the /platform routes, src/components/platform, the edge gate, the console library) as recorded (verify/po01b-approved-delta.mts)",
   po01bDriftNow.length === 0 && Object.keys(PO01B_EDITS).length > 0, po01bDriftNow.join(" "));
+const po01b1DriftNow = po01b1Drift((f) => { try { return diskRead(f); } catch { return null; } });
+check("Platform Owner PO-01B.1's approved change: each recorded file is PO-01B's (340087c) plus exactly its hunks, the added file (the platform security-incident log) as recorded (verify/po01b1-approved-delta.mts)",
+  po01b1DriftNow.length === 0 && Object.keys(PO01B1_EDITS).length > 0, po01b1DriftNow.join(" "));
 const SUBMIT: Record<string, string> = {
   "sales/quotations/quotation-form.tsx": "9bdada8919ca1c68", "sales/orders/order-form.tsx": "5878b69222c20ecc", "sales/proforma/proforma-form.tsx": "298ddfd557fa4b5b",
   "sales/invoices/invoice-form.tsx": "9ac743493b5e4887", "sales/delivery-challans/dc-form.tsx": "b43736b93681d299", "sales/credit-notes/cn-form.tsx": "6e40556ff6eda6e1",
