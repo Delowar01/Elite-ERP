@@ -1,0 +1,266 @@
+/* =====================================================================================================
+   Platform Owner console layer (PO-01B). Loaded only by /platform layouts, after the production shell
+   stylesheets it reuses (mockup-parity.css, shell.css, lcp.css, auth.css), none of which it changes.
+   Rules are scoped to platform-only classes. Colours, radii, shadows, spacing and type come from the
+   existing production tokens (globals.css) — no new palette. Logical properties only, so every rule
+   mirrors under dir="rtl". Design rule: text on an orange (--primary / --accent) fill is always the
+   white --primary-foreground / --selected-item-text.
+   ===================================================================================================== */
+
+/* ---- header ---- */
+.platform-console-tag {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding-inline: var(--space-8);
+  border-radius: 9999px;
+  border: 1px solid var(--header-accent);
+  color: var(--header-ink-muted);
+  font-size: var(--text-caption);
+  line-height: var(--text-caption--line-height);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.topbar .platform-search-preview { cursor: pointer; }
+.platform-preview-chip {
+  margin-inline-start: auto;
+  flex-shrink: 0;
+  padding-inline: var(--space-6);
+  border-radius: 6px;
+  border: 1px solid var(--header-accent);
+  font-size: var(--text-caption);
+  line-height: 18px;
+  color: var(--header-ink-muted);
+}
+@media (max-width: 767.98px) {
+  .platform-console-tag { display: none; }
+}
+
+/* ---- navigation ---- */
+.platform-nav .platform-nav-divider-static { cursor: default; }
+
+/* ---- sign-in ---- */
+.platform-hero-points { list-style: none; margin: 0; padding: 0; width: 100%; display: flex; flex-direction: column; gap: var(--space-12); }
+.platform-hero-points .auth-hero-card { margin-block-start: 0; padding: var(--space-16) var(--space-20); }
+
+.platform-auth-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-6);
+  padding: var(--space-4) var(--space-12);
+  border-radius: 9999px;
+  border: 1px solid var(--border);
+  background: var(--surface-subtle);
+  color: var(--ink-muted);
+  font-size: var(--text-body-sm);
+  line-height: var(--text-body-sm--line-height);
+  font-weight: 600;
+}
+
+.platform-form-notice,
+.platform-form-error {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-8);
+  margin: 0;
+  padding: var(--space-8) var(--space-12);
+  border-radius: 8px;
+  font-size: var(--text-body-sm);
+  line-height: 18px;
+}
+.platform-form-notice { margin-block-start: var(--space-16); background: var(--info-bg); color: var(--info); border: 1px solid color-mix(in srgb, var(--info) 30%, transparent); }
+.platform-form-error { background: var(--danger-bg); color: var(--danger); border: 1px solid color-mix(in srgb, var(--danger) 30%, transparent); }
+
+.platform-password-field { position: relative; }
+.platform-password-field input { padding-inline-end: 40px; }
+.platform-password-toggle {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-end: 0;
+  width: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: transparent;
+  color: var(--ink-faint);
+  border-radius: 6px;
+  cursor: pointer;
+}
+.platform-password-toggle:hover { color: var(--ink); }
+.platform-password-toggle:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+
+.platform-step-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: var(--surface-subtle);
+  border: 1px solid var(--border);
+  color: var(--ink);
+}
+.platform-code-input { font-family: var(--font-mono); font-size: var(--text-title-sm); letter-spacing: 0.18em; }
+.platform-text-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-4) 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink-muted);
+  font: inherit;
+  cursor: pointer;
+  border-radius: 4px;
+}
+.platform-text-btn:hover { color: var(--ink); }
+.platform-text-btn:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.platform-text-btn:disabled { opacity: 0.5; cursor: default; }
+/* Arrows point along the reading direction. */
+[dir="rtl"] .platform-dir-icon { transform: scaleX(-1); }
+
+/* Margins: Tailwind's preflight already zeroes them, and these rules are unlayered, so a margin set
+   here would override the layered mt-* / mb-* utilities used beside these classes. */
+
+/* ---- page ---- */
+.platform-page { max-width: 1280px; margin-inline: auto; display: flex; flex-direction: column; gap: var(--space-20); }
+.platform-page > [data-slot="page-header"] { margin-block-end: 0; }
+
+.platform-preview-badge { display: inline-flex; align-items: center; gap: var(--space-4); }
+
+.platform-callout {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-8);
+  padding: var(--space-12) var(--space-16);
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--ink-muted);
+  font-size: var(--text-body);
+  line-height: var(--text-body--line-height);
+}
+.platform-callout[data-tone="info"] { background: var(--info-bg); color: var(--info); border-color: color-mix(in srgb, var(--info) 25%, transparent); }
+.platform-callout[data-tone="warning"] { background: var(--warning-bg); color: var(--warning); border-color: color-mix(in srgb, var(--warning) 25%, transparent); }
+.platform-callout[data-tone="neutral"] { background: var(--surface-subtle); }
+.platform-callout svg { margin-block-start: 2px; }
+
+/* KPI tiles: no invented value — "—" until the phase that supplies the data. */
+.platform-stat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: var(--space-16); }
+.platform-stat { display: flex; align-items: flex-start; gap: var(--space-12); padding: var(--space-20); }
+.platform-stat-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: var(--surface-subtle);
+  color: var(--accent-ink);
+}
+.platform-stat-label { font-size: var(--text-body-sm); line-height: var(--text-body-sm--line-height); font-weight: 500; color: var(--ink-muted); }
+.platform-stat-value { margin-block-start: var(--space-4); font-size: var(--text-display-sm); line-height: var(--text-display-sm--line-height); font-weight: 700; color: var(--ink-faint); }
+.platform-stat-note { margin-block-start: var(--space-2); font-size: var(--text-caption); line-height: var(--text-caption--line-height); color: var(--ink-faint); }
+
+/* Toolbar: search + filters, disabled in preview. */
+.platform-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-8); }
+.platform-toolbar-search {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  flex: 1 1 260px;
+  min-width: 0;
+  max-width: 420px;
+  height: var(--control-height);
+  padding-inline: var(--space-12);
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--disabled-background);
+  color: var(--disabled-text);
+}
+.platform-toolbar-search input { flex: 1; min-width: 0; border: 0; background: transparent; color: inherit; font: inherit; font-size: var(--text-body); }
+.platform-toolbar-search input::placeholder { color: var(--disabled-text); }
+.platform-toolbar-filters { display: flex; flex-wrap: wrap; gap: var(--space-8); }
+.platform-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-6);
+  height: var(--control-height);
+  padding-inline: var(--space-12);
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--disabled-background);
+  color: var(--disabled-text);
+  font-size: var(--text-body);
+  cursor: not-allowed;
+}
+
+/* Empty / error states. */
+.platform-empty { display: flex; flex-direction: column; align-items: center; text-align: center; padding: var(--space-40) var(--space-24); }
+.platform-page > .platform-empty { border: 1px dashed var(--border-strong); border-radius: 12px; background: var(--surface); }
+.platform-empty-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: var(--surface-subtle);
+  color: var(--ink-muted);
+  margin-block-end: var(--space-12);
+}
+.platform-empty-icon[data-tone="danger"] { background: var(--danger-bg); color: var(--danger); }
+.platform-empty-title { margin: 0; font-size: var(--text-title-sm); line-height: var(--text-title-sm--line-height); font-weight: 600; color: var(--ink); }
+.platform-empty-hint { margin: var(--space-4) 0 0; max-width: 460px; font-size: var(--text-body); line-height: var(--text-body--line-height); color: var(--ink-muted); }
+.platform-empty-action { margin-block-start: var(--space-20); display: flex; flex-wrap: wrap; justify-content: center; gap: var(--space-8); }
+.platform-error { border: 1px solid var(--border); border-radius: 12px; background: var(--surface); max-width: 560px; margin-inline: auto; width: 100%; }
+.platform-page table.data-table tr[data-empty-row] td { padding: 0; }
+
+/* Panels. */
+.platform-panel { padding: 0; overflow: hidden; }
+.platform-panel-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-8);
+  padding: var(--space-16) var(--space-20);
+  border-block-end: 1px solid var(--border);
+}
+.platform-panel-head h2 { display: flex; align-items: center; gap: var(--space-8); margin: 0; font-size: var(--text-title-sm); line-height: var(--text-title-sm--line-height); font-weight: 600; color: var(--ink); }
+.platform-panel-body { padding: var(--space-20); }
+.platform-panel-body > .platform-empty { padding-block: var(--space-24); }
+.platform-panel-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: var(--space-16); }
+
+/* Segments (Registered / Pending invitations) — a static preview of the companies tabs. */
+.platform-segments { display: inline-flex; align-self: flex-start; gap: var(--space-4); padding: var(--space-4); border-radius: 8px; background: var(--surface-subtle); border: 1px solid var(--border); }
+.platform-segment { padding: var(--space-6) var(--space-12); border-radius: 6px; font-size: var(--text-body); font-weight: 500; color: var(--ink-muted); }
+.platform-segment[aria-current="true"] { background: var(--surface); color: var(--ink); box-shadow: var(--shadow-xs); font-weight: 600; }
+.platform-segment[aria-disabled="true"] { color: var(--disabled-text); }
+
+/* Settings. The selected section uses the solid selected-item fill with its white foreground (the
+   design rule for text on orange), as the sidebar's active item does. */
+.platform-page .settings-nav-item[data-state="active"] { background: var(--selected-item-background); color: var(--selected-item-text); }
+.platform-tab-label { display: inline-flex; align-items: center; gap: var(--space-6); }
+.platform-settings-stack { display: flex; flex-direction: column; gap: var(--space-16); }
+.platform-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--space-16); }
+.platform-field dt { font-size: var(--text-body-sm); line-height: var(--text-body-sm--line-height); color: var(--ink-muted); }
+.platform-field dd { margin: var(--space-2) 0 0; font-size: var(--text-body); line-height: var(--text-body--line-height); font-weight: 500; color: var(--ink); overflow-wrap: anywhere; }
+.platform-fine-print { font-size: var(--text-caption); line-height: var(--text-caption--line-height); color: var(--ink-faint); }
+
+.platform-session-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.platform-session { display: flex; align-items: center; justify-content: space-between; gap: var(--space-12); padding: var(--space-12) var(--space-16); }
+.platform-session + .platform-session { border-block-start: 1px solid var(--border); }
+.platform-session[data-current] { background: var(--surface-subtle); }
+.platform-session-title { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-8); margin: 0; font-size: var(--text-body); line-height: var(--text-body--line-height); font-weight: 600; color: var(--ink); }
+.platform-session-meta { margin: var(--space-2) 0 0; font-size: var(--text-body-sm); line-height: 18px; color: var(--ink-muted); overflow-wrap: anywhere; }
+
+.platform-codes { list-style: none; margin: 0; padding: var(--space-16); display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-8) var(--space-16); border-radius: 8px; border: 1px solid var(--border); background: var(--surface-subtle); font-family: var(--font-mono); font-size: var(--text-title-sm); line-height: var(--text-title-sm--line-height); color: var(--ink); text-align: center; }
+
+.platform-locked-rows { margin: 0; display: flex; flex-direction: column; }
+.platform-locked-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-8); padding-block: var(--space-12); }
+.platform-locked-row + .platform-locked-row { border-block-start: 1px solid var(--border); }
+.platform-locked-row dt { font-size: var(--text-body); color: var(--ink); font-weight: 500; }
+.platform-locked-row dd { margin: 0; display: inline-flex; align-items: center; gap: var(--space-8); font-size: var(--text-body); color: var(--disabled-text); }

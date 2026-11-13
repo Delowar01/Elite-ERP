@@ -52,7 +52,9 @@ export const requirePlatformSession = cache(async (): Promise<PlatformSessionCon
     return await authorizePlatformToken(await platformCookie());
   } catch (err) {
     if (isPlatformError(err, "CONSOLE_DISABLED")) return notFound();
-    return redirect("/platform/login");
+    // PO-01B: via the cookie-clearing handler, which re-runs this same check before clearing — so a
+    // stale cookie is removed, a live one is never force-cleared, and no redirect loop can form.
+    return redirect("/platform/session-expired");
   }
 });
 
