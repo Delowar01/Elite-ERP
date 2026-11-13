@@ -134,6 +134,7 @@ import { LCP_BASE, LCP_EDITS, LCP_NEW, lcpDrift, undoLcp } from "./lcp-approved-
 import { PO01A_BASE, PO01A_EDITS, PO01A_NEW, po01aDrift, undoPo01a } from "./po01a-approved-delta.mjs";
 import { PO01B_BASE, PO01B_EDITS, PO01B_NEW, po01bDrift, undoPo01b } from "./po01b-approved-delta.mjs";
 import { PO01B1_BASE, PO01B1_EDITS, PO01B1_NEW, po01b1Drift, undoPo01b1 } from "./po01b1-approved-delta.mjs";
+import { PO02A_BASE, PO02A_EDITS, PO02A_NEW, po02aDrift, undoPo02a } from "./po02a-approved-delta.mjs";
 import { renderToStaticMarkup } from "react-dom/server";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
@@ -150,7 +151,10 @@ const diskRead = (p: string) => readFileSync(path.join(ROOT, p), "utf8");
 // so the PO-01A layer and every older group read PO-01A's bytes; the files PO-01B added stay out of `walk` like PO-01A's.
 // Platform Owner PO-01B.1: its recorded hunks are undone before PO-01B's (group 23 proves they are each file's only change),
 // so the PO-01B layer and every older group read PO-01B's bytes; the file PO-01B.1 added stays out of `walk` like PO-01B's.
-const po01b1Read = (p: string) => undoPo01b1(p, diskRead(p));
+// Platform Owner PO-02A: its recorded hunks are undone before PO-01B.1's (group 24 proves they are each file's only change),
+// so the PO-01B.1 layer and every older group read PO-01B.1's bytes; the files PO-02A added stay out of `walk`.
+const po02aRead = (p: string) => undoPo02a(p, diskRead(p));
+const po01b1Read = (p: string) => undoPo01b1(p, po02aRead(p));
 const po01bRead = (p: string) => undoPo01b(p, po01b1Read(p));
 const po01aRead = (p: string) => undoPo01a(p, po01bRead(p));
 const actualRead = (p: string) => undoLcp(p, po01aRead(p));
@@ -516,7 +520,7 @@ const MAIN_EDITS: Record<string, [string, string][]> = {
 /** A file's bytes for a byte-identity hash: main's approved change undone (MAIN_EDITS), every other file as it is. */
 const frozen = (f: string): string | Buffer =>
   f in MAIN_EDITS ? MAIN_EDITS[f].reduce((acc, [was, is]) => acc.replace(is, () => was), rawRead(f))
-    : f in ACC01_EDITS ? rawRead(f) : f in LCP_EDITS || f in PO01A_EDITS || f in PO01B_EDITS || f in PO01B1_EDITS ? actualRead(f) : readFileSync(path.join(ROOT, f));
+    : f in ACC01_EDITS ? rawRead(f) : f in LCP_EDITS || f in PO01A_EDITS || f in PO01B_EDITS || f in PO01B1_EDITS || f in PO02A_EDITS ? actualRead(f) : readFileSync(path.join(ROOT, f));
 
 let pass = 0;
 let fail = 0;
@@ -551,7 +555,7 @@ function walk(dir: string): string[] {
   for (const name of readdirSync(path.join(ROOT, dir)).sort()) {
     const p = path.posix.join(dir, name);
     if (statSync(path.join(ROOT, p)).isDirectory()) out.push(...walk(p));
-    else if (!(p in ACC01_NEW) && !(p in LCP_NEW) && !(p in PO01A_NEW) && !(p in PO01B_NEW) && !(p in PO01B1_NEW)) out.push(p);
+    else if (!(p in ACC01_NEW) && !(p in LCP_NEW) && !(p in PO01A_NEW) && !(p in PO01B_NEW) && !(p in PO01B1_NEW) && !(p in PO02A_NEW)) out.push(p);
   }
   return out;
 }
@@ -3140,7 +3144,7 @@ check(`ACC-01 changed its ${Object.keys(ACC01_EDITS).length} files (src/, and ve
 // No file under src/ outside the record differs from main: every other file is in the older groups' byte-identity hashes
 // (groups 4, 16 and 17), and a new file the record does not list is caught there too — `walk` leaves out only ACC01_NEW.
 check(`ACC-01 added no file under src/ but the recorded ${Object.keys(ACC01_NEW).length} (an unrecorded new file would sit in groups 16 and 17's src trees)`,
-  walk("src").length + Object.keys(ACC01_NEW).length + Object.keys(LCP_NEW).length + Object.keys(PO01A_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO01B_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO01B1_NEW).filter((f) => f.startsWith("src/")).length === (function all(d: string): number {
+  walk("src").length + Object.keys(ACC01_NEW).length + Object.keys(LCP_NEW).length + Object.keys(PO01A_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO01B_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO01B1_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO02A_NEW).filter((f) => f.startsWith("src/")).length === (function all(d: string): number {
     return readdirSync(path.join(ROOT, d)).reduce((n, name) => n + (statSync(path.join(ROOT, d, name)).isDirectory() ? all(path.posix.join(d, name)) : 1), 0);
   })("src"));
 
@@ -3210,7 +3214,7 @@ check("PO-01B's only change to the platform guard is its redirect target for an 
 // ---------- 23. Platform Owner PO-01B.1 — the approved change to frozen files ----------
 section("23. Platform Owner PO-01B.1 — session revocation and audit atomicity (the approved change to frozen files)");
 // Read as they are on disk: each changed file is PO-01B's (340087c) plus exactly its recorded hunks, the added file as recorded.
-const po01b1DriftNow = po01b1Drift((f) => (existsSync(path.join(ROOT, f)) ? diskRead(f) : null));
+const po01b1DriftNow = po01b1Drift((f) => (existsSync(path.join(ROOT, f)) ? po02aRead(f) : null));
 const PO01B1_EDITABLE = [
   "src/lib/platform/audit.ts", "src/lib/platform/errors.ts", "src/lib/platform/session.ts", "src/lib/platform/console.ts", "src/lib/platform/origin.ts",
   "src/app/(platform)/auth-actions.ts", "src/app/(platform)/security-actions.ts", "src/app/(platform)/platform.css", "src/app/(platform)/platform/(public)/login/page.tsx",
@@ -3231,6 +3235,40 @@ check("PO-01B.1 changed or added files only under src/app/(platform), src/compon
 // PO-01B), so no older pin is re-baselined: each of those layers' checks above reads its own bytes through this undo.
 const po01b1Fresh = Object.keys(PO01B1_EDITS).filter((f) => !(f in PO01A_NEW) && !(f in PO01B_NEW) && !(f in PO01B_EDITS));
 check("each file PO-01B.1 changed is one an earlier platform layer added or recorded — no customer or older frozen file gains a new approved change", po01b1Fresh.length === 0, po01b1Fresh.join(" "));
+
+// ---------- 24. Platform Owner PO-02A — the approved change to frozen files ----------
+section("24. Platform Owner PO-02A — company database foundation (the approved change to frozen files)");
+// Read as they are on disk: each changed file is PO-01B.1's (021ceb4) plus exactly its recorded hunks, each added file as recorded.
+const po02aDriftNow = po02aDrift((f) => (existsSync(path.join(ROOT, f)) ? diskRead(f) : null));
+const PO02A_EDITABLE = ["src/db/schema/index.ts", "src/db/schema/platform.ts", "src/db/schema/security.ts", "verify/verify-document-form.mts", "verify/verify-page-archetypes.mts"];
+const PO02A_NEW_SCOPE = /^(src\/db\/schema\/platform-companies\.ts|src\/lib\/platform\/[\w-]+\.ts|drizzle\/platform\/PO02A_\w+\.sql)$/;
+check(`PO-02A changed its ${Object.keys(PO02A_EDITS).length} files (the schema index, the platform schema's audit index, the M4 index in the sessions schema and the two freeze verifiers) by exactly their ${Object.values(PO02A_EDITS).flat().length} recorded hunks — undone, each file is ${PO02A_BASE.slice(0, 7)}'s to the byte — and added exactly its ${Object.keys(PO02A_NEW).length} files, as recorded (verify/po02a-approved-delta.mts)`,
+  po02aDriftNow.length === 0 && PO02A_BASE === "021ceb4d0badb425a5353282bdc506e719085dfe" &&
+    Object.keys(PO02A_EDITS).length > 0 && Object.keys(PO02A_EDITS).every((f) => PO02A_EDITABLE.includes(f)),
+  po02aDriftNow.map(rel).join(" "));
+const po02aOutside = Object.keys(PO02A_NEW).filter((f) => !PO02A_NEW_SCOPE.test(f));
+check("PO-02A added files only as the company schema module, platform library modules and the reviewed drizzle/platform/PO02A_*.sql files — no customer route, component, library, auth or session code", Object.keys(PO02A_NEW).length > 0 && po02aOutside.length === 0, po02aOutside.join(" "));
+// Line-level: the only change to the CUSTOMER sessions schema is the additive M4 index (the existing two entries reflowed).
+const codeLines = (lines: string[]) => lines.filter((l) => !/^\s*\/\//.test(l));
+const securityDelta = lineDelta(PO02A_EDITS["src/db/schema/security.ts"] ?? []);
+check("PO-02A's only change to src/db/schema/security.ts (customer sessions) is the `sql` import and the partial index sessions_org_active_idx — the two existing index entries unchanged, nothing else removed",
+  JSON.stringify(codeLines(securityDelta.removed)) === JSON.stringify(['  (t) => [index("sessions_user_idx").on(t.userId), index("sessions_token_idx").on(t.tokenHash)],']) &&
+    JSON.stringify(codeLines(securityDelta.added)) === JSON.stringify([
+      'import { sql } from "drizzle-orm";',
+      "  (t) => [",
+      '    index("sessions_user_idx").on(t.userId),',
+      '    index("sessions_token_idx").on(t.tokenHash),',
+      '    index("sessions_org_active_idx").on(t.orgId).where(sql`${t.revokedAt} IS NULL`),',
+      "  ],",
+    ]),
+  JSON.stringify(securityDelta));
+const platformDelta = lineDelta(PO02A_EDITS["src/db/schema/platform.ts"] ?? []);
+const indexDelta = lineDelta(PO02A_EDITS["src/db/schema/index.ts"] ?? []);
+check("PO-02A's only changes to the platform schema and the schema index: the audit entity index, and the export of the company schema module",
+  platformDelta.removed.length === 0 &&
+    JSON.stringify(codeLines(platformDelta.added)) === JSON.stringify(['    index("platform_audit_events_entity_idx").on(t.entityType, t.entityId, t.createdAt.desc()),']) &&
+    indexDelta.removed.length === 0 && JSON.stringify(indexDelta.added) === JSON.stringify(['export * from "./platform-companies";']),
+  JSON.stringify([platformDelta, indexDelta]));
 
 console.log("\nGroups:");
 for (const [g, [p, f]] of Object.entries(counts)) console.log(`  ${g}: ${p}/${p + f}`);
