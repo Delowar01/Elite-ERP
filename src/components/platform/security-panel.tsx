@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { Locale } from "@/lib/i18n/dict";
 import { platformSignOutAction } from "@/app/(platform)/auth-actions";
-import { regenerateRecoveryCodesAction, revokePlatformSessionAction, signOutOtherPlatformSessionsAction } from "@/app/(platform)/security-actions";
+import { emergencyEndSessionsAction, regenerateRecoveryCodesAction, revokePlatformSessionAction, signOutOtherPlatformSessionsAction } from "@/app/(platform)/security-actions";
 import { pt } from "./i18n";
 import { PlatformDialog } from "./platform-dialog";
 import { isRedirect } from "./utils";
@@ -22,6 +22,8 @@ import { isRedirect } from "./utils";
 //  • recovery-code regeneration: password + a fresh authenticator code (step-up), shown once, never
 //    stored by the browser; a failed check rotates nothing (verified in verify-platform-console);
 //  • one request at a time per control; every outcome is announced (toast / role=alert).
+//  • PO-01B.1: when the audit trail cannot record a revocation nothing is applied; the operator is
+//    told so and may explicitly choose emergency containment, which is reported as NOT audited.
 // ---------------------------------------------------------------------------------------------
 
 export type SessionView = { id: string; createdAt: string; lastSeenAt: string; expiresAt: string; ip: string | null; device: string };
@@ -68,6 +70,9 @@ export function PlatformSecurityPanel({ locale, view }: { locale: Locale; view: 
   const signOutThis = useGuardedTransition(locale);
   const othersAction = useGuardedTransition(locale);
   const [revoking, setRevoking] = useState<string | null>(null);
+  // Set when a normal revocation reported that the audit trail is unavailable (PO-01B.1).
+  const [emergency, setEmergency] = useState<null | { scope: "session"; sessionId: string } | { scope: "others" }>(null);
+  const emergencyAction = useGuardedTransition(locale);
   const revokeAction = useGuardedTransition(locale);
   const [confirmOthers, setConfirmOthers] = useState(false);
 
@@ -177,6 +182,7 @@ export function PlatformSecurityPanel({ locale, view }: { locale: Locale; view: 
                       const r = await revokePlatformSessionAction(s.id);
                       setRevoking(null);
                       if (r.ok) toast.success(pt(locale, "sec.revoked"));
+                      else if (r.auditUnavailable) setEmergency({ scope: "session", sessionId: s.id });
                       else toast.error(r.message);
                     });
                   }}
@@ -204,11 +210,46 @@ export function PlatformSecurityPanel({ locale, view }: { locale: Locale; view: 
                 const r = await signOutOtherPlatformSessionsAction();
                 setConfirmOthers(false);
                 if (r.ok) toast.success(pt(locale, "sec.signedOutOthers", { n: r.count }));
+                else if (r.auditUnavailable) setEmergency({ scope: "others" });
                 else toast.error(r.message);
               })
             }
           >
             {pt(locale, "sec.signOutOthers")}
+          </Button>
+        </div>
+      </PlatformDialog>
+
+      {/* PO-01B.1 emergency containment: only after a normal revocation reported the audit trail unavailable. */}
+      <PlatformDialog
+        open={emergency !== null}
+        onOpenChange={(open) => {
+          if (!open && !emergencyAction.pending) setEmergency(null);
+        }}
+        title={pt(locale, "sec.auditDownTitle")}
+        description={pt(locale, "sec.auditDownText")}
+        closeLabel={pt(locale, "common.close")}
+      >
+        <div className="flex flex-wrap justify-end gap-2">
+          <Button type="button" variant="secondary" onClick={() => setEmergency(null)} disabled={emergencyAction.pending}>
+            {pt(locale, "common.cancel")}
+          </Button>
+          <Button
+            type="button"
+            variant="destructive"
+            loading={emergencyAction.pending}
+            onClick={() =>
+              emergencyAction.run(async () => {
+                if (!emergency) return;
+                const r = await emergencyEndSessionsAction(emergency);
+                setEmergency(null);
+                if (!r.ok) toast.error(r.message);
+                else if (r.audited) toast.success(emergency.scope === "others" ? pt(locale, "sec.signedOutOthers", { n: r.count }) : pt(locale, "sec.revoked"));
+                else toast.warning(pt(locale, "sec.emergencyDone", { n: r.count }));
+              })
+            }
+          >
+            {emergencyAction.pending ? pt(locale, "sec.revoking") : pt(locale, "sec.emergencyEnd")}
           </Button>
         </div>
       </PlatformDialog>

@@ -71,5 +71,7 @@ export async function platformSignOutAction(): Promise<{ status: "error"; messag
     return { status: "error", message };
   }
   store.set(PLATFORM_SESSION_COOKIE, "", CLEARED);
+  // PO-01B.1: signed out, but the audit trail could not record it — say so on the sign-in page.
+  if (outcome.ok && !outcome.audited) redirect("/platform/login?ended=unaudited");
   redirect("/platform/login");
 }

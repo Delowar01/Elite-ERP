@@ -12,8 +12,19 @@ import { assertPlatformConsoleEnabled } from "./flags";
 import { authorizePlatformToken, type PlatformPermission } from "./guards";
 import { platformLogin } from "./login";
 import { consumeTotpCode, replaceRecoveryCodes } from "./mfa";
+import { errorClass, reportSecurityIncident } from "./incident";
 import { assertSameOrigin } from "./origin";
-import { listActivePlatformSessions, logoutPlatformSession, revokeAllPlatformSessions, revokePlatformSession, type PlatformSessionContext, type RequestMeta } from "./session";
+import {
+  containPlatformSessionByToken,
+  containPlatformSessions,
+  listActivePlatformSessions,
+  logoutPlatformSession,
+  reconcileUnauditedRevocations,
+  revokeAllPlatformSessions,
+  revokePlatformSession,
+  type PlatformSessionContext,
+  type RequestMeta,
+} from "./session";
 import { activeLoginBlock, recordLoginAttempt, throttleKeys } from "./throttle";
 
 // ---------------------------------------------------------------------------------------------
@@ -24,6 +35,19 @@ import { activeLoginBlock, recordLoginAttempt, throttleKeys } from "./throttle";
 //   feature flag → same-origin (CSRF) → live database session + permission
 // and returns a typed, user-safe error code. Internal failures are reported as CONFIG_ERROR
 // ("temporarily unavailable"), never with their details.
+//
+// PO-01B.1 — audit-outage policy (session.ts makes every normal session change atomic with its
+// audit record):
+//   • normal operations: if the audit record cannot be written NOTHING is applied and the caller
+//     gets AUDIT_UNAVAILABLE ("not applied because it could not be recorded");
+//   • sign-out of the current session: fail-safe — it must never leave the session usable, so when
+//     its audited logout fails the session is contained without the record, an incident is logged
+//     and the result says audited: false;
+//   • ending other sessions during an outage: only on the operator's explicit emergency request
+//     (emergencyContainmentCore), which still tries the audited path first, can only revoke the
+//     caller's own sessions, logs an incident and reports audited: false;
+//   • credential changes (recovery codes) and sign-in fail closed — never unaudited;
+//   • once the audit trail works again, unaudited revocations are recorded late, labelled as such.
 // ---------------------------------------------------------------------------------------------
 
 export type ConsoleRequest = { headers: HeaderSource; token?: string | null };
@@ -36,12 +60,25 @@ export function requestMeta(headers: HeaderSource): RequestMeta {
   return { ipAddress: clientIpFromHeaders(headers), userAgent: ua || null, requestId: randomUUID() };
 }
 
-function failure(err: unknown): ConsoleFailure {
+function failure(err: unknown, action = "platform.console"): ConsoleFailure {
+  if (isPlatformError(err, "AUDIT_UNAVAILABLE")) {
+    reportSecurityIncident({ type: "audit_write_failed", action, error: errorClass(err) });
+    return { ok: false, code: "AUDIT_UNAVAILABLE" };
+  }
   if (isPlatformError(err)) return { ok: false, code: err.code };
   // Never surface internal detail to the browser; keep a bounded server-side trace without payloads.
   const name = err instanceof Error ? err.name : "UnknownError";
   console.error(`[platform-console] internal failure: ${name}`);
   return { ok: false, code: "CONFIG_ERROR" };
+}
+
+/** Record unaudited revocations late once an audited change has just succeeded; never fails the caller. */
+async function reconcileQuietly(): Promise<void> {
+  try {
+    await reconcileUnauditedRevocations();
+  } catch {
+    // the audit trail is unavailable again — retried after the next audited change
+  }
 }
 
 async function authorizeMutation(req: ConsoleRequest, permission: PlatformPermission): Promise<PlatformSessionContext> {
@@ -62,22 +99,51 @@ export async function signInCore(input: SignInInput, req: ConsoleRequest): Promi
     assertPlatformConsoleEnabled();
     assertSameOrigin(req.headers);
     const result = await platformLogin({ ...input, ...requestMeta(req.headers) });
+    await reconcileQuietly();
     return { ok: true, token: result.token, expiresAt: result.expiresAt, method: result.method, remainingRecoveryCodes: result.remainingRecoveryCodes };
   } catch (err) {
-    return failure(err);
+    // No sign-in without its audit record; every account gets the same "temporarily unavailable".
+    if (isPlatformError(err, "AUDIT_UNAVAILABLE")) {
+      reportSecurityIncident({ type: "audit_write_failed", action: "auth.login", error: errorClass(err) });
+      return { ok: false, code: "CONFIG_ERROR" };
+    }
+    return failure(err, "auth.login");
   }
 }
 
 // ---- sign out (current session) -----------------------------------------------------------------
 
-export async function signOutCore(req: ConsoleRequest): Promise<{ ok: true } | ConsoleFailure> {
+/**
+ * Sign out the current session. Fail-safe: a sign-out never leaves the session usable. If its
+ * audited logout cannot be recorded, the session is contained without the record, an incident is
+ * logged and the result says audited: false (the action shows that to the operator).
+ */
+export async function signOutCore(req: ConsoleRequest): Promise<{ ok: true; audited: boolean } | ConsoleFailure> {
   try {
     assertPlatformConsoleEnabled();
     assertSameOrigin(req.headers);
-    await logoutPlatformSession(req.token, requestMeta(req.headers)); // idempotent; an invalid token is a no-op
-    return { ok: true };
+    const meta = requestMeta(req.headers);
+    try {
+      await logoutPlatformSession(req.token, meta); // idempotent; an invalid token is a no-op
+    } catch (err) {
+      if (!isPlatformError(err, "AUDIT_UNAVAILABLE")) throw err;
+      const contained = await containPlatformSessionByToken(req.token);
+      reportSecurityIncident({
+        type: "unaudited_session_revocation",
+        action: "session.logout",
+        actorAdminId: contained?.adminId ?? null,
+        sessionIds: contained ? [contained.sessionId] : [],
+        count: contained ? 1 : 0,
+        requestId: meta.requestId,
+        ipAddress: meta.ipAddress,
+        error: errorClass(err),
+      });
+      return { ok: true, audited: false };
+    }
+    await reconcileQuietly();
+    return { ok: true, audited: true };
   } catch (err) {
-    return failure(err);
+    return failure(err, "session.logout");
   }
 }
 
@@ -119,9 +185,10 @@ export async function revokeSessionCore(req: ConsoleRequest, sessionId: string):
     if (typeof sessionId !== "string" || !UUID.test(sessionId)) throw new PlatformError("VALIDATION_FAILED", "session id is not a UUID");
     const revoked = await revokePlatformSession(ctx, sessionId, requestMeta(req.headers));
     if (!revoked) throw new PlatformError("NOT_FOUND", "no live session with this id for the caller");
+    await reconcileQuietly();
     return { ok: true, signedOutCurrent: sessionId === ctx.sessionId };
   } catch (err) {
-    return failure(err);
+    return failure(err, "session.revoked");
   }
 }
 
@@ -129,9 +196,64 @@ export async function signOutOtherSessionsCore(req: ConsoleRequest): Promise<{ o
   try {
     const ctx = await authorizeMutation(req, "platform.sessions.manage");
     const count = await revokeAllPlatformSessions(ctx.adminId, "logout_all", { exceptSessionId: ctx.sessionId, actorLabel: ctx.displayName, meta: requestMeta(req.headers) });
+    await reconcileQuietly();
     return { ok: true, count };
   } catch (err) {
-    return failure(err);
+    return failure(err, "session.logout_all");
+  }
+}
+
+// ---- emergency containment during an audit outage ----------------------------------------------
+
+export type ContainmentTarget = { scope: "session"; sessionId: string } | { scope: "others" };
+export type ContainmentOutcome = { ok: true; audited: boolean; count: number; signedOutCurrent: boolean };
+
+/**
+ * End one of the caller's sessions, or all of their other sessions, when the operator has
+ * explicitly chosen emergency containment (the normal action reported AUDIT_UNAVAILABLE).
+ *  1. Authorized like every mutation: flag → same-origin → live session → permission.
+ *  2. The AUDITED path is tried first — containment never bypasses a working audit trail.
+ *  3. Only if that fails with AUDIT_UNAVAILABLE: the caller's own live session(s) are revoked
+ *     without the record, an incident is logged (no secrets) and the result says audited: false.
+ *     The revocation is recorded in the audit trail late once it is available again.
+ */
+export async function emergencyContainmentCore(req: ConsoleRequest, target: ContainmentTarget): Promise<ContainmentOutcome | ConsoleFailure> {
+  try {
+    const ctx = await authorizeMutation(req, "platform.sessions.manage");
+    if (target.scope === "session" && (typeof target.sessionId !== "string" || !UUID.test(target.sessionId))) {
+      throw new PlatformError("VALIDATION_FAILED", "session id is not a UUID");
+    }
+    const meta = requestMeta(req.headers);
+    try {
+      if (target.scope === "session") {
+        if (!(await revokePlatformSession(ctx, target.sessionId, meta))) throw new PlatformError("NOT_FOUND", "no live session with this id for the caller");
+        await reconcileQuietly();
+        return { ok: true, audited: true, count: 1, signedOutCurrent: target.sessionId === ctx.sessionId };
+      }
+      const count = await revokeAllPlatformSessions(ctx.adminId, "logout_all", { exceptSessionId: ctx.sessionId, actorLabel: ctx.displayName, meta });
+      await reconcileQuietly();
+      return { ok: true, audited: true, count, signedOutCurrent: false };
+    } catch (err) {
+      if (!isPlatformError(err, "AUDIT_UNAVAILABLE")) throw err;
+    }
+    const ids =
+      target.scope === "session"
+        ? await containPlatformSessions(ctx.adminId, { sessionId: target.sessionId }, target.sessionId === ctx.sessionId ? "logout" : "revoked")
+        : await containPlatformSessions(ctx.adminId, { allExcept: ctx.sessionId }, "logout_all");
+    if (target.scope === "session" && ids.length === 0) throw new PlatformError("NOT_FOUND", "no live session with this id for the caller");
+    reportSecurityIncident({
+      type: "unaudited_session_revocation",
+      action: target.scope === "session" ? "session.revoked" : "session.logout_all",
+      actorAdminId: ctx.adminId,
+      sessionIds: ids,
+      count: ids.length,
+      requestId: meta.requestId,
+      ipAddress: meta.ipAddress,
+      error: "PlatformError:AUDIT_UNAVAILABLE",
+    });
+    return { ok: true, audited: false, count: ids.length, signedOutCurrent: ids.includes(ctx.sessionId) };
+  } catch (err) {
+    return failure(err, "session.containment");
   }
 }
 
@@ -184,6 +306,6 @@ export async function regenerateRecoveryCodesCore(
     }
     return { ok: true, codes: outcome.codes };
   } catch (err) {
-    return failure(err);
+    return failure(err, "mfa.recovery_codes.regenerated");
   }
 }

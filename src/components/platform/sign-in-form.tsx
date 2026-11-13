@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useRef, useState, useTransition } from "react";
-import { ArrowLeft, ArrowRight, Eye, EyeOff, Info, KeyRound, LockKeyhole, ShieldCheck } from "lucide-react";
+import { ArrowLeft, ArrowRight, Eye, EyeOff, Info, KeyRound, LockKeyhole, ShieldCheck, TriangleAlert } from "lucide-react";
 import { toast } from "sonner";
 import { LogoLockup } from "@/components/brand/logo-lockup";
 import { Button } from "@/components/ui/button";
@@ -30,7 +30,16 @@ import { pt } from "./i18n";
 type Step = "credentials" | "second";
 type Method = "totp" | "recovery";
 
-export function PlatformSignInForm({ locale, initialMethod = "totp", ended = false }: { locale: Locale; initialMethod?: Method; ended?: boolean }) {
+export function PlatformSignInForm({
+  locale,
+  initialMethod = "totp",
+  notice = null,
+}: {
+  locale: Locale;
+  initialMethod?: Method;
+  /** A fixed notice chosen by the page: the session ended, or a sign-out the audit trail could not record (PO-01B.1). */
+  notice?: "ended" | "unaudited" | null;
+}) {
   const router = useRouter();
   const ids = useId();
   const [step, setStep] = useState<Step>("credentials");
@@ -158,7 +167,13 @@ export function PlatformSignInForm({ locale, initialMethod = "totp", ended = fal
         {pt(locale, "brand.console")}
       </span>
 
-      {ended && step === "credentials" && !error && (
+      {notice === "unaudited" && step === "credentials" && !error && (
+        <p role="status" className="platform-form-notice" data-tone="warning">
+          <TriangleAlert className="size-4 shrink-0" aria-hidden />
+          <span>{pt(locale, "login.signedOutUnaudited")}</span>
+        </p>
+      )}
+      {notice === "ended" && step === "credentials" && !error && (
         <p role="status" className="platform-form-notice">
           <Info className="size-4 shrink-0" aria-hidden />
           <span>{pt(locale, "login.ended")}</span>

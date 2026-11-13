@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { getLocale } from "@/lib/i18n/server";
 import { PLATFORM_SESSION_COOKIE, platformSessionCookieOptions } from "@/lib/platform/config";
-import { regenerateRecoveryCodesCore, revokeSessionCore, signOutOtherSessionsCore, type ConsoleFailure } from "@/lib/platform/console";
+import { emergencyContainmentCore, regenerateRecoveryCodesCore, revokeSessionCore, signOutOtherSessionsCore, type ConsoleFailure } from "@/lib/platform/console";
 import { PLATFORM_ERROR_MESSAGES } from "@/lib/platform/errors";
 
 // ---------------------------------------------------------------------------------------------
@@ -14,9 +14,11 @@ import { PLATFORM_ERROR_MESSAGES } from "@/lib/platform/errors";
 // whatever the UI rendered: the cores re-check feature flag → same-origin → live database session
 // → permission on every call (src/lib/platform/console.ts). A session that is no longer usable
 // clears the cookie and returns the browser to sign-in; other failures return a localized message.
+// PO-01B.1: a change that could not be recorded in the audit trail is not applied and is reported
+// as such (auditUnavailable), so the UI can offer the explicit emergency containment below.
 // ---------------------------------------------------------------------------------------------
 
-export type SecurityActionFailure = { ok: false; message: string };
+export type SecurityActionFailure = { ok: false; message: string; auditUnavailable?: true };
 
 const CLEARED = { ...platformSessionCookieOptions(new Date(0)), maxAge: 0 };
 
@@ -32,7 +34,8 @@ async function failed(outcome: ConsoleFailure): Promise<SecurityActionFailure> {
   }
   if (outcome.code === "CONSOLE_DISABLED") redirect("/platform/login");
   const locale = await getLocale();
-  return { ok: false, message: PLATFORM_ERROR_MESSAGES[outcome.code][locale] };
+  const message = PLATFORM_ERROR_MESSAGES[outcome.code][locale];
+  return outcome.code === "AUDIT_UNAVAILABLE" ? { ok: false, message, auditUnavailable: true } : { ok: false, message };
 }
 
 export async function revokePlatformSessionAction(sessionId: unknown): Promise<{ ok: true } | SecurityActionFailure> {
@@ -51,6 +54,33 @@ export async function signOutOtherPlatformSessionsAction(): Promise<{ ok: true; 
   if (!outcome.ok) return failed(outcome);
   revalidatePath("/platform/settings");
   return { ok: true, count: outcome.count };
+}
+
+const emergencySchema = z.discriminatedUnion("scope", [
+  z.object({ scope: z.literal("session"), sessionId: z.string().max(64) }).strict(),
+  z.object({ scope: z.literal("others") }).strict(),
+]);
+
+/**
+ * Emergency containment, on the operator's explicit request after a normal action reported that the
+ * audit trail is unavailable. The core tries the audited path first; `audited: false` means the
+ * sessions were ended WITHOUT an audit record (incident logged, recorded late) — the UI says so.
+ */
+export async function emergencyEndSessionsAction(input: unknown): Promise<{ ok: true; audited: boolean; count: number } | SecurityActionFailure> {
+  const parsed = emergencySchema.safeParse(input);
+  if (!parsed.success) {
+    const locale = await getLocale();
+    return { ok: false, message: PLATFORM_ERROR_MESSAGES.VALIDATION_FAILED[locale] };
+  }
+  const outcome = await emergencyContainmentCore(await request(), parsed.data);
+  if (!outcome.ok) return failed(outcome);
+  if (outcome.signedOutCurrent) {
+    (await cookies()).set(PLATFORM_SESSION_COOKIE, "", CLEARED);
+    if (outcome.audited) redirect("/platform/login");
+    redirect("/platform/login?ended=unaudited");
+  }
+  revalidatePath("/platform/settings");
+  return { ok: true, audited: outcome.audited, count: outcome.count };
 }
 
 const regenerateSchema = z.object({ password: z.string().max(1024), totpCode: z.string().max(16) }).strict();
