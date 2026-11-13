@@ -38,7 +38,7 @@ npm run verify:platform
 
 | Command | What it does |
 |---|---|
-| `npm run platform:db:apply` | Applies `drizzle/platform/PO01_platform_identity.sql` (idempotent), then verifies the tables and the append-only protection. |
+| `npm run platform:db:apply` | Applies `drizzle/platform/PO01_platform_identity.sql` (idempotent), then verifies the tables and the append-only protection. Since PO-02A it then applies `PO02A_company_foundation.sql` (retry-safe, shape-checked) and verifies the company objects; see [`PO02A_DEVELOPMENT.md`](./PO02A_DEVELOPMENT.md). |
 | `npm run platform:db:check` | Read-only check of the tables and the protection, judged by catalog semantics rather than trigger names. |
 | `npm run platform:bootstrap` | Interactive one-time creation of the first Platform Owner (fictional data in PO-01A). |
 | `npm run verify:platform` | `verify:platform-boundary` (static), `-schema`, `-auth` and `-bootstrap` (disposable DBs). |
