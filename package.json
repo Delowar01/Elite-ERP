@@ -81,6 +81,7 @@
     "platform:db:check": "tsx --conditions=react-server scripts/platform/check-platform-db.ts",
     "platform:bootstrap": "tsx --conditions=react-server scripts/platform/bootstrap.ts",
     "platform:preview-db": "tsx --conditions=react-server scripts/platform/preview-db.ts",
+    "platform:preview-companies": "tsx --conditions=react-server scripts/platform/preview-companies.ts",
     "verify:platform-schema": "tsx --conditions=react-server verify/verify-platform-schema.mts",
     "verify:platform-boundary": "node tests/security/platform-boundary.test.mjs",
     "verify:platform-auth": "tsx --conditions=react-server verify/verify-platform-auth.mts",
@@ -91,7 +92,9 @@
     "verify:platform-containment": "tsx --conditions=react-server verify/verify-platform-containment.mts",
     "verify:platform-company-schema": "tsx --conditions=react-server verify/verify-platform-company-schema.mts",
     "verify:platform-migration-safety": "tsx --conditions=react-server verify/verify-platform-migration-safety.mts",
-    "verify:platform": "npm run verify:platform-boundary && npm run verify:platform-proxy && npm run verify:platform-schema && npm run verify:platform-auth && npm run verify:platform-bootstrap && npm run verify:platform-console && npm run verify:platform-containment && npm run verify:platform-company-schema && npm run verify:platform-migration-safety"
+    "verify:platform-companies": "tsx --conditions=react-server verify/verify-platform-companies.mts",
+    "verify:platform-companies-browser": "tsx --conditions=react-server verify/verify-platform-companies-browser.mts",
+    "verify:platform": "npm run verify:platform-boundary && npm run verify:platform-proxy && npm run verify:platform-schema && npm run verify:platform-auth && npm run verify:platform-bootstrap && npm run verify:platform-console && npm run verify:platform-containment && npm run verify:platform-company-schema && npm run verify:platform-migration-safety && npm run verify:platform-companies"
   },
   "dependencies": {
     "@radix-ui/react-avatar": "^1.2.2",
