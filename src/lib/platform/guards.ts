@@ -15,7 +15,9 @@ import { validatePlatformSession, type PlatformSessionContext } from "./session"
 // ---------------------------------------------------------------------------------------------
 
 /** One-role allowlist for the single Platform Owner (TRD §3.1); later phases extend the list. */
-export const PLATFORM_PERMISSIONS = ["platform.access", "platform.sessions.manage", "platform.mfa.manage"] as const;
+// PO-02B: platform.companies.read — the read-only company directory, details and pending
+// invitations (allow-listed metadata only; src/lib/platform/companies.ts). It grants no change.
+export const PLATFORM_PERMISSIONS = ["platform.access", "platform.sessions.manage", "platform.mfa.manage", "platform.companies.read"] as const;
 export type PlatformPermission = (typeof PLATFORM_PERMISSIONS)[number];
 const OWNER_PERMISSIONS: ReadonlySet<string> = new Set(PLATFORM_PERMISSIONS);
 
