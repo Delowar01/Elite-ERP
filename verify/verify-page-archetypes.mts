@@ -131,6 +131,7 @@ import ts from "typescript";
 import { createElement as h } from "react";
 import { ACC01_BASE, ACC01_EDITS, ACC01_NEW, acc01Drift, undoAcc01 } from "./acc01-approved-delta.mjs";
 import { LCP_BASE, LCP_EDITS, LCP_NEW, lcpDrift, undoLcp } from "./lcp-approved-delta.mjs";
+import { PO01A_BASE, PO01A_EDITS, PO01A_NEW, po01aDrift, undoPo01a } from "./po01a-approved-delta.mjs";
 import { renderToStaticMarkup } from "react-dom/server";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
@@ -141,7 +142,10 @@ const WRITE = process.argv.includes("--write-pins");
 // LCP design adoption: `actualRead` itself undoes the LCP stage's recorded hunks first (group 20 proves they are each
 // file's only change), so every older group — ACC-01's included — reads main's bytes; `diskRead` is the file on disk.
 const diskRead = (p: string) => readFileSync(path.join(ROOT, p), "utf8");
-const actualRead = (p: string) => undoLcp(p, diskRead(p));
+// Platform Owner PO-01A: its recorded hunks are undone before the LCP layer (group 21 proves they are each file's only
+// change), so every older group reads 621f156's bytes; the files PO-01A added stay out of `walk` like ACC-01's and LCP's.
+const po01aRead = (p: string) => undoPo01a(p, diskRead(p));
+const actualRead = (p: string) => undoLcp(p, po01aRead(p));
 const rawRead = (p: string) => undoAcc01(p, actualRead(p));
 // DEV-UI-01.7 C8 final: every group but 17 reads the four files the final batch changed as the approved remediation
 // (c47c65a) left them — their FIN_EDITS hunks undone — so each older pin keeps its strength; group 17 proves those hunks
@@ -504,7 +508,7 @@ const MAIN_EDITS: Record<string, [string, string][]> = {
 /** A file's bytes for a byte-identity hash: main's approved change undone (MAIN_EDITS), every other file as it is. */
 const frozen = (f: string): string | Buffer =>
   f in MAIN_EDITS ? MAIN_EDITS[f].reduce((acc, [was, is]) => acc.replace(is, () => was), rawRead(f))
-    : f in ACC01_EDITS ? rawRead(f) : f in LCP_EDITS ? actualRead(f) : readFileSync(path.join(ROOT, f));
+    : f in ACC01_EDITS ? rawRead(f) : f in LCP_EDITS || f in PO01A_EDITS ? actualRead(f) : readFileSync(path.join(ROOT, f));
 
 let pass = 0;
 let fail = 0;
@@ -539,7 +543,7 @@ function walk(dir: string): string[] {
   for (const name of readdirSync(path.join(ROOT, dir)).sort()) {
     const p = path.posix.join(dir, name);
     if (statSync(path.join(ROOT, p)).isDirectory()) out.push(...walk(p));
-    else if (!(p in ACC01_NEW) && !(p in LCP_NEW)) out.push(p);
+    else if (!(p in ACC01_NEW) && !(p in LCP_NEW) && !(p in PO01A_NEW)) out.push(p);
   }
   return out;
 }
@@ -3128,14 +3132,14 @@ check(`ACC-01 changed its ${Object.keys(ACC01_EDITS).length} files (src/, and ve
 // No file under src/ outside the record differs from main: every other file is in the older groups' byte-identity hashes
 // (groups 4, 16 and 17), and a new file the record does not list is caught there too — `walk` leaves out only ACC01_NEW.
 check(`ACC-01 added no file under src/ but the recorded ${Object.keys(ACC01_NEW).length} (an unrecorded new file would sit in groups 16 and 17's src trees)`,
-  walk("src").length + Object.keys(ACC01_NEW).length + Object.keys(LCP_NEW).length === (function all(d: string): number {
+  walk("src").length + Object.keys(ACC01_NEW).length + Object.keys(LCP_NEW).length + Object.keys(PO01A_NEW).filter((f) => f.startsWith("src/")).length === (function all(d: string): number {
     return readdirSync(path.join(ROOT, d)).reduce((n, name) => n + (statSync(path.join(ROOT, d, name)).isDirectory() ? all(path.posix.join(d, name)) : 1), 0);
   })("src"));
 
 // ---------- 20. LCP design adoption — the approved change to frozen files ----------
 section("20. LCP design adoption — the approved change to frozen files (Elite ERP × Lead Capture Pro)");
 // Read as they are on disk: each changed file is main's (83e8093) plus exactly its recorded hunks, each added file as recorded.
-const lcpDriftNow = lcpDrift((f) => (existsSync(path.join(ROOT, f)) ? diskRead(f) : null));
+const lcpDriftNow = lcpDrift((f) => (existsSync(path.join(ROOT, f)) ? po01aRead(f) : null));
 const lcpHunks = Object.values(LCP_EDITS).flat().length;
 check(`the LCP stage changed its ${Object.keys(LCP_EDITS).length} files (src/, and the frozen verifiers it re-encodes) by exactly their ${lcpHunks} recorded hunks — each once, its main form nowhere; undone, each file is main's (${LCP_BASE.slice(0, 7)}) to the byte — and added exactly its ${Object.keys(LCP_NEW).length} files under src/, as recorded`,
   lcpDriftNow.length === 0 && Object.keys(LCP_EDITS).length > 0 && LCP_BASE === "83e8093276b36320754972f845c38f23fd28fa61" &&
@@ -3145,6 +3149,20 @@ check(`the LCP stage changed its ${Object.keys(LCP_EDITS).length} files (src/, a
 const LCP_FORBIDDEN = /^src\/(db|app\/api|app\/print|app\/uploads)\/|^src\/lib\/(inventory-|credit-note-returns|invoice-posting|purchase-posting|reversal-currency|zatca|session|auth|finance-reports|csrf|rate-limit)|\/actions\.ts$|^drizzle\//;
 const lcpBusiness = [...Object.keys(LCP_EDITS), ...Object.keys(LCP_NEW)].filter((f) => LCP_FORBIDDEN.test(f));
 check("the LCP stage touched no business, schema, posting, API, auth, print or server-action file", lcpBusiness.length === 0, lcpBusiness.join(" "));
+
+// ---------- 21. Platform Owner PO-01A — the approved change to frozen files ----------
+section("21. Platform Owner PO-01A — platform identity foundation (the approved change to frozen files)");
+// Read as they are on disk: each changed file is 621f156's plus exactly its recorded hunks, each added file as recorded.
+const po01aDriftNow = po01aDrift((f) => (existsSync(path.join(ROOT, f)) ? diskRead(f) : null));
+check(`PO-01A changed its ${Object.keys(PO01A_EDITS).length} files (the schema index and the two freeze verifiers) by exactly their ${Object.values(PO01A_EDITS).flat().length} recorded hunks — undone, each file is ${PO01A_BASE.slice(0, 7)}'s to the byte — and added exactly its ${Object.keys(PO01A_NEW).length} files, as recorded`,
+  po01aDriftNow.length === 0 && PO01A_BASE === "621f156f7b129b9c2e289bc46d314ce7587beec2" &&
+    Object.keys(PO01A_EDITS).every((f) => ["src/db/schema/index.ts", "verify/verify-document-form.mts", "verify/verify-page-archetypes.mts"].includes(f)) &&
+    Object.keys(PO01A_NEW).every((f) => /^(src\/lib\/platform\/[\w-]+\.ts|src\/db\/schema\/platform\.ts|drizzle\/platform\/[\w-]+\.sql)$/.test(f)),
+  po01aDriftNow.map(rel).join(" "));
+// PO-01A is additive and platform-only: no customer app, component, auth/session, business, print or API file changed.
+const PO01A_FORBIDDEN = /^src\/(app|components)\/|^src\/proxy\.ts$|^src\/lib\/(?!platform\/)|^src\/db\/(?!schema\/(index|platform)\.ts$)|^drizzle\/(?!platform\/)/;
+const po01aTouched = [...Object.keys(PO01A_EDITS), ...Object.keys(PO01A_NEW)].filter((f) => PO01A_FORBIDDEN.test(f));
+check("PO-01A touched no customer app, component, auth/session, business, print, API or historical-migration file", po01aTouched.length === 0, po01aTouched.join(" "));
 
 console.log("\nGroups:");
 for (const [g, [p, f]] of Object.entries(counts)) console.log(`  ${g}: ${p}/${p + f}`);
