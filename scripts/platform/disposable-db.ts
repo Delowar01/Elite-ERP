@@ -119,8 +119,7 @@ export async function applyPlatformMigration(url: string): Promise<void> {
 }
 
 /** Create a disposable DB with the full branch schema + platform SQL (triggers). */
-export async function createPlatformTestDatabase(prefix: string): Promise<{ name: string; url: string }> {
-  const name = disposableName(prefix);
+export async function createPlatformTestDatabase(prefix: string, name = disposableName(prefix)): Promise<{ name: string; url: string }> {
   const url = await createDisposableDatabase(name);
   const push = pushSchema(url, "full");
   if (!push.ok) {

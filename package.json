@@ -79,7 +79,12 @@
     "ui:guardrails": "node tests/ui-baseline/guardrails.mjs",
     "platform:db:apply": "tsx --conditions=react-server scripts/platform/apply-platform-sql.ts",
     "platform:db:check": "tsx --conditions=react-server scripts/platform/check-platform-db.ts",
-    "verify:platform-schema": "tsx --conditions=react-server verify/verify-platform-schema.mts"
+    "platform:bootstrap": "tsx --conditions=react-server scripts/platform/bootstrap.ts",
+    "verify:platform-schema": "tsx --conditions=react-server verify/verify-platform-schema.mts",
+    "verify:platform-boundary": "node tests/security/platform-boundary.test.mjs",
+    "verify:platform-auth": "tsx --conditions=react-server verify/verify-platform-auth.mts",
+    "verify:platform-bootstrap": "tsx --conditions=react-server verify/verify-platform-bootstrap.mts",
+    "verify:platform": "npm run verify:platform-boundary && npm run verify:platform-schema && npm run verify:platform-auth && npm run verify:platform-bootstrap"
   },
   "dependencies": {
     "@radix-ui/react-avatar": "^1.2.2",
