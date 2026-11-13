@@ -168,19 +168,24 @@ async function main() {
   section("3. CSRF / origin — every state-changing operation");
   {
     const t = await token(owner);
-    const bad: [string, Headers][] = [
+    // [name, headers, PLATFORM_TRUSTED_PROXY_HOPS for this case (unset = no trusted proxy)]
+    const bad: [string, Headers, string?][] = [
       ["no Origin header", new Headers({ host: HOST })],
       ["Origin of another site", browser({ origin: "https://evil.example" })],
       ["Origin 'null' (sandboxed / file)", browser({ origin: "null" })],
       ["same host, different port", browser({ origin: `https://${HOST}:8443` })],
       ["Sec-Fetch-Site: cross-site", browser({ "sec-fetch-site": "cross-site" })],
       ["Sec-Fetch-Site: same-site (sibling subdomain)", browser({ "sec-fetch-site": "same-site" })],
-      ["X-Forwarded-Host differs from Origin", browser({ "x-forwarded-host": "other.erp.test" })],
+      ["no trusted proxy: X-Forwarded-Host forged to match a foreign Origin is ignored (Host decides)", new Headers({ host: HOST, origin: "https://evil.example", "x-forwarded-host": "evil.example", "sec-fetch-site": "same-origin" })],
+      ["trusted proxy: the X-Forwarded-Host it set differs from Origin", browser({ "x-forwarded-host": "other.erp.test" }), "1"],
+      ["trusted proxy: multi-valued X-Forwarded-Host (a client value passed along) is refused", browser({ "x-forwarded-host": `evil.example, ${HOST}` }), "1"],
       ["no Host / X-Forwarded-Host at all", new Headers({ origin: `https://${HOST}` })],
     ];
     const sessionsBefore = await sessionsCount();
     const hashes = await hashesOf(owner.id);
-    for (const [name, h] of bad) {
+    for (const [name, h, hops] of bad) {
+      if (hops) process.env.PLATFORM_TRUSTED_PROXY_HOPS = hops;
+      else delete process.env.PLATFORM_TRUSTED_PROXY_HOPS;
       nextStep();
       const results = await Promise.all([
         signIn(owner, { headers: h }),
@@ -188,17 +193,35 @@ async function main() {
         console_.revokeSessionCore(reqOf(t, h), "00000000-0000-4000-8000-000000000000"),
         console_.signOutOtherSessionsCore(reqOf(t, h)),
         console_.regenerateRecoveryCodesCore(reqOf(t, h), { password: owner.password, totpCode: codeAt(owner.secret) }),
+        console_.emergencyContainmentCore(reqOf(t, h), { scope: "others" }),
       ]);
-      ok(`${name}: all five mutations → FORBIDDEN`, results.every((r) => fail(r, "FORBIDDEN")));
+      ok(`${name}: all six mutations → FORBIDDEN`, results.every((r) => fail(r, "FORBIDDEN")));
     }
+    delete process.env.PLATFORM_TRUSTED_PROXY_HOPS;
     ok("no forbidden request created a session, revoked one or rotated codes", (await sessionsCount()) === sessionsBefore && (await hashesOf(owner.id)) === hashes && (await guards.authorizePlatformToken(t)).adminId === owner.id);
-    ok("Host comparison is case-insensitive and X-Forwarded-Host (first value) is honoured", (() => {
+    const accepts = (h: Headers, hops?: string) => {
+      if (hops) process.env.PLATFORM_TRUSTED_PROXY_HOPS = hops;
       try {
-        assertSameOrigin(browser({ origin: `https://${HOST.toUpperCase()}` }));
-        assertSameOrigin(new Headers({ host: "internal:3000", "x-forwarded-host": `${HOST}, proxy.local`, origin: `https://${HOST}` }));
+        assertSameOrigin(h);
         return true;
       } catch {
         return false;
+      } finally {
+        delete process.env.PLATFORM_TRUSTED_PROXY_HOPS;
+      }
+    };
+    ok("Host comparison is case-insensitive", accepts(browser({ origin: `https://${HOST.toUpperCase()}` })));
+    ok("behind a trusted proxy, the single X-Forwarded-Host it sets is honoured (Host may be internal)", accepts(new Headers({ host: "internal:3000", "x-forwarded-host": HOST, origin: `https://${HOST}` }), "1"));
+    ok("without a trusted proxy, X-Forwarded-Host is not trusted: the same request is refused", !accepts(new Headers({ host: "internal:3000", "x-forwarded-host": HOST, origin: `https://${HOST}` })));
+    ok("a malformed PLATFORM_TRUSTED_PROXY_HOPS makes the origin check fail closed (CONFIG_ERROR)", (() => {
+      process.env.PLATFORM_TRUSTED_PROXY_HOPS = "x";
+      try {
+        assertSameOrigin(browser());
+        return false;
+      } catch (e) {
+        return isPlatformError(e, "CONFIG_ERROR");
+      } finally {
+        delete process.env.PLATFORM_TRUSTED_PROXY_HOPS;
       }
     })());
     ok("a request without Sec-Fetch-Site (older browser) is accepted when Origin matches", (() => {

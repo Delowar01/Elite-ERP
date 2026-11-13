@@ -4,7 +4,7 @@
 // Encodes the separation rules between the Platform Owner console and the customer ERP so a later
 // change cannot silently erode them. Rules 1–8 are PO-01A's; PO-01B widened rule 3 (the console
 // routes may import the platform library) and replaced rule 9 ("no platform routes yet") with the
-// console rules 9–18 below.
+// console rules 9–18 below; PO-01B.1 added rules 19–20 (session changes and the audit-outage policy).
 import { readFileSync, readdirSync, statSync, existsSync } from "node:fs";
 import { join, relative } from "node:path";
 
@@ -130,7 +130,7 @@ ok("no customer route, component or library imports any platform module", leaks.
 
 // 12. Server actions are authorized on their own (never by the UI): each exported action calls a
 //     console core, which checks flag → origin → live session → permission.
-const CORES = /\b(signInCore|signOutCore|revokeSessionCore|signOutOtherSessionsCore|regenerateRecoveryCodesCore)\(/;
+const CORES = /\b(signInCore|signOutCore|revokeSessionCore|signOutOtherSessionsCore|regenerateRecoveryCodesCore|emergencyContainmentCore)\(/;
 const actionFiles = consoleApp.filter((f) => /^\s*"use server";/.test(read(f)));
 const unguardedActions = actionFiles.flatMap((f) => {
   const src = read(f);
@@ -141,7 +141,7 @@ const unguardedActions = actionFiles.flatMap((f) => {
 });
 ok("every exported server action in src/app/(platform) runs through a console core (and exports nothing else)", actionFiles.length === 2 && unguardedActions.length === 0, unguardedActions.join(", "));
 const coreSrc = read(join(root, "src/lib/platform/console.ts"));
-ok("console mutations check the flag, then same-origin, then the live session", /async function authorizeMutation[\s\S]{0,200}assertPlatformConsoleEnabled\(\);\s*assertSameOrigin\(req\.headers\);\s*return authorizePlatformToken\(/.test(coreSrc) && (coreSrc.match(/authorizeMutation\(req,/g) ?? []).length === 3 && /signInCore[\s\S]{0,200}assertSameOrigin/.test(coreSrc) && /signOutCore[\s\S]{0,200}assertSameOrigin/.test(coreSrc));
+ok("console mutations check the flag, then same-origin, then the live session", /async function authorizeMutation[\s\S]{0,200}assertPlatformConsoleEnabled\(\);\s*assertSameOrigin\(req\.headers\);\s*return authorizePlatformToken\(/.test(coreSrc) && (coreSrc.match(/authorizeMutation\(req,/g) ?? []).length === 4 && /signInCore[\s\S]{0,200}assertSameOrigin/.test(coreSrc) && /signOutCore[\s\S]{0,200}assertSameOrigin/.test(coreSrc));
 
 // 13. Every console page, layout and handler checks the platform session or the flag itself.
 const pages = consoleApp.filter((f) => /\(console\)\/[a-z-]+\/page\.tsx$/.test(f) || /\(console\)\/layout\.tsx$/.test(f) || /\/platform\/page\.tsx$/.test(f));
@@ -168,7 +168,7 @@ ok("no console file logs credentials, codes or tokens", logged.length === 0, log
 // 15. No open redirect: every navigation target in the console is a fixed /platform path.
 const NAV = /\b(redirect|router\.replace|router\.push)\(\s*([^)]*)\)|new URL\(\s*([^,)]*)\s*,\s*request\.url\)|NextResponse\.redirect\(\s*new URL\(\s*([^,)]*)/g;
 const targets = [...consoleFiles, edgeGate].flatMap((f) => [...read(f).matchAll(NAV)].map((m) => ({ f, arg: (m[2] ?? m[3] ?? m[4] ?? "").trim() })));
-const dynamicTargets = targets.filter((t) => !/^"\/platform(\/[a-z-]+)?(\?ended=1)?"$/.test(t.arg));
+const dynamicTargets = targets.filter((t) => !/^"\/platform(\/[a-z-]+)?(\?ended=(1|unaudited))?"$/.test(t.arg));
 ok("every redirect / router navigation in the console targets a literal /platform path", targets.length >= 10 && dynamicTargets.length === 0, dynamicTargets.map((t) => `${rel(t.f)}: ${t.arg}`).join(", "));
 
 // 16. Bilingual from the first commit: every console string has native Arabic; no hard-coded copy.
@@ -201,6 +201,38 @@ ok("PreviewAction, PreviewToolbar filters and search are disabled elements", /<B
 const previewPages = ["dashboard", "companies", "users", "subscribers", "packages", "activity"].map((p) => read(join(root, `src/app/(platform)/platform/(console)/${p}/page.tsx`)));
 ok("every later-phase section page is marked with its phase (PO-02 … PO-06) and calls no data source", previewPages.every((src) => /phase="PO-0[2-6]"/.test(src) && !/@\/lib\/platform\/(console|session|login|mfa|audit)|@\/db/.test(src)));
 ok("no hard-coded money, price or KPI figure in console pages (values read “—”)", !consoleFiles.some((f) => /\b(SAR|ر\.س)\s?\d|\d[\d,.]*\s?(SAR|ريال)\b|value=\{?["']?\d{2,}/.test(read(f))));
+
+// ---------------------------------------------------------------------------------------------
+// PO-01B.1 — session changes and their audit records (atomicity and the audit-outage policy).
+// ---------------------------------------------------------------------------------------------
+const sessionSrc = code(join(root, "src/lib/platform/session.ts"));
+const fnBodies = (src) => src.split(/\n(?=(?:export )?(?:async )?function )/).map((part) => ({ name: (part.match(/function (\w+)/) ?? [])[1] ?? "", body: part }));
+
+// 19. Every revocation write is transactional with its audit record — except the two documented
+//     emergency containment functions — and nothing can clear revoked_at.
+const revokers = fnBodies(sessionSrc).filter((f) => /\.set\(\{ revokedAt/.test(f.body));
+const containment = revokers.filter((f) => /^containPlatform/.test(f.name)).map((f) => f.name).sort();
+const nonAtomic = revokers.filter((f) => !/^containPlatform/.test(f.name) && f.name !== "revokeRow" && !(/(db\.transaction|atomically)\(/.test(f.body) && /recordPlatformAudit\(/.test(f.body)));
+ok("every session revocation in session.ts writes its audit record in the same transaction (except the containment functions)", revokers.length >= 6 && nonAtomic.length === 0 && containment.join(",") === "containPlatformSessionByToken,containPlatformSessions", nonAtomic.map((f) => f.name).join(", "));
+const expiry = fnBodies(sessionSrc).find((f) => f.name === "endExpiredSession")?.body ?? "";
+ok("idle / absolute expiry revokes and audits in one transaction and is enforced by time either way", /db\.transaction\(/.test(expiry) && /revokeRow\(row\.sessionId, reason, now, tx\)/.test(expiry) && /recordPlatformAudit\([\s\S]*tx,\s*\)/.test(expiry) && (sessionSrc.match(/await endExpiredSession\(row, "(expired|idle_timeout)", now\);\s*throw new PlatformError\("SESSION_EXPIRED"/g) ?? []).length === 2);
+const unRevoke = [...platformLib, ...consoleApp, ...consoleUi].filter((f) => /revokedAt:\s*null|revoked_at\s*=\s*null/i.test(code(f)));
+ok("no platform code can clear revoked_at (a revoked session cannot regain access)", unRevoke.length === 0, unRevoke.map(rel).join(", "));
+
+// 20. The unaudited containment path is reachable only through the console, only after the audited
+//     path failed with AUDIT_UNAVAILABLE, and is always reported as an incident and as NOT audited.
+const containImporters = allSrc.filter((f) => rel(f) !== join("src", "lib", "platform", "session.ts") && /containPlatformSession/.test(code(f)));
+ok("only src/lib/platform/console.ts uses the containment functions", containImporters.length === 1 && rel(containImporters[0]) === join("src", "lib", "platform", "console.ts"), containImporters.map(rel).join(", "));
+const consoleFns = fnBodies(code(join(root, "src/lib/platform/console.ts"))).filter((f) => f.name && /containPlatformSession\w*\(/.test(f.body));
+ok("each containment in the console follows an AUDIT_UNAVAILABLE check, reports an incident and returns audited: false",
+  consoleFns.length === 2 && consoleFns.every((f) => {
+    const at = f.body.search(/containPlatformSession/);
+    return /isPlatformError\(err, "AUDIT_UNAVAILABLE"\)/.test(f.body.slice(0, at)) && /reportSecurityIncident\(\{\s*type: "unaudited_session_revocation"/.test(f.body.slice(at)) && /audited: false/.test(f.body.slice(at));
+  }), consoleFns.map((f) => f.name).join(", "));
+const incidentSrc = code(join(root, "src/lib/platform/incident.ts"));
+ok("the incident line is allow-listed and never carries an error message, token, e-mail or user agent", !/\.message\b/.test(incidentSrc) && !/token|email|userAgent|jti|hash|password/i.test(incidentSrc.replace(/never a token, jti, hash, password, code, e-mail, user-agent/g, "")) && (incidentSrc.match(/console\.error\(/g) ?? []).length === 2);
+const auditSrc = code(join(root, "src/lib/platform/audit.ts"));
+ok("a failed audit INSERT surfaces as AUDIT_UNAVAILABLE (its database message is never passed on)", /catch \(err\) \{\s*throw new PlatformError\("AUDIT_UNAVAILABLE", `audit insert failed \(\$\{errorClass\(err\)\}\)`\);/.test(auditSrc));
 
 console.log(`\n${pass}/${pass + fail} platform boundary checks passed`);
 process.exit(fail ? 1 : 0);

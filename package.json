@@ -88,7 +88,8 @@
     "verify:platform-proxy": "tsx --conditions=react-server verify/verify-platform-proxy.mts",
     "verify:platform-console": "tsx --conditions=react-server verify/verify-platform-console.mts",
     "verify:platform-browser": "tsx --conditions=react-server verify/verify-platform-browser.mts",
-    "verify:platform": "npm run verify:platform-boundary && npm run verify:platform-proxy && npm run verify:platform-schema && npm run verify:platform-auth && npm run verify:platform-bootstrap && npm run verify:platform-console"
+    "verify:platform-containment": "tsx --conditions=react-server verify/verify-platform-containment.mts",
+    "verify:platform": "npm run verify:platform-boundary && npm run verify:platform-proxy && npm run verify:platform-schema && npm run verify:platform-auth && npm run verify:platform-bootstrap && npm run verify:platform-console && npm run verify:platform-containment"
   },
   "dependencies": {
     "@radix-ui/react-avatar": "^1.2.2",

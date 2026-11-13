@@ -29,7 +29,7 @@ process.env.DATABASE_URL = databaseUrlFor(testDbName);
 Object.assign(process.env, secrets, { PLATFORM_CONSOLE_ENABLED: "true" });
 
 const { db, pool, platformAdminsTable, platformSessionsTable, platformAuditEventsTable } = await import("../src/db");
-const { eq, sql, desc, isNull } = await import("drizzle-orm");
+const { and, eq, inArray, sql, desc, isNull } = await import("drizzle-orm");
 const auth = await import("../src/lib/platform/auth");
 const mfa = await import("../src/lib/platform/mfa");
 const totp = await import("../src/lib/platform/totp");
@@ -456,6 +456,82 @@ async function main() {
     }
   }
 
+  section("7b. Audit outage (PO-01B.1): nothing applied silently, explicit emergency containment, honest sign-out");
+  {
+    // A real audit-write outage: a test-only trigger makes every INSERT into platform_audit_events fail.
+    const outage = async (on: boolean) => {
+      if (on) {
+        await db.execute(sql.raw(`create or replace function po01b1_test_only_fail_audit() returns trigger language plpgsql as $$ begin raise exception 'injected audit outage (test only)'; end $$`));
+        await db.execute(sql.raw(`create trigger po01b1_test_only_fail_audit before insert on platform_audit_events for each row execute function po01b1_test_only_fail_audit()`));
+      } else {
+        await db.execute(sql.raw(`drop trigger if exists po01b1_test_only_fail_audit on platform_audit_events`));
+        await db.execute(sql.raw(`drop function if exists po01b1_test_only_fail_audit()`));
+      }
+    };
+    // Browsers signed in before the outage (sign-in itself is refused during one). Authenticator
+    // codes, not recovery codes, so section 8 still sees the PO-01B state ("5 of 10 remaining").
+    const ctxZ = await newContext({ ip: "198.51.100.16" });
+    const pz = await signIn(ctxZ, owner);
+    const ctxZ2 = await newContext({ ip: "198.51.100.17" });
+    const pz2 = await signIn(ctxZ2, owner);
+    const ctxO = await newContext({ ip: "198.51.100.18", scale: 2 });
+    const po = await signIn(ctxO, owner);
+    const ctxO2 = await newContext({ ip: "198.51.100.19", scale: 2 });
+    const po2 = await signIn(ctxO2, owner);
+    await setPrefs(ctxO2, { locale: "ar" });
+    const out0 = A.output().length;
+    await outage(true);
+
+    await pageA.goto("/platform/settings");
+    await pageA.locator(".platform-session", { hasText: "198.51.100.16" }).getByRole("button", { name: /End session/ }).click();
+    const dlg = pageA.getByRole("dialog");
+    await dlg.getByText("The audit trail is unavailable").waitFor({ timeout: 10_000 });
+    ok("End session during an outage → a dialog says it was NOT applied and offers emergency containment", await appears(dlg.getByText("This change was not applied because it could not be recorded in the audit trail.", { exact: false })));
+    ok("…and the session is still live (nothing was applied silently)", (await pz.goto("/platform/dashboard"))?.status() === 200 && pz.url().endsWith("/platform/dashboard"));
+    await shot(pageA, "43-audit-outage-dialog-en-light-1440");
+    await dlg.getByRole("button", { name: "End without audit record" }).click();
+    ok("explicit emergency containment → a warning that the session ended WITHOUT an audit record", await appears(pageA.getByText("Sessions ended without an audit record: 1. A security incident was logged.")));
+    await pz.goto("/platform/dashboard");
+    await pz.waitForURL("**/platform/login?ended=1");
+    ok("…the contained browser is refused on its next request and its cookie cleared", !(await platformCookie(ctxZ)));
+
+    await setPrefs(ctxA, { locale: "ar", theme: "dark" });
+    await pageA.goto("/platform/settings");
+    await pageA.locator(".platform-session", { hasText: "198.51.100.17" }).getByRole("button", { name: /إنهاء الجلسة/ }).click();
+    const dlgAr = pageA.getByRole("dialog");
+    await dlgAr.getByText("سجل التدقيق غير متاح").waitFor({ timeout: 10_000 });
+    ok("Arabic: the same dialog in native Arabic", await appears(dlgAr.getByText("لم يُطبَّق هذا التغيير", { exact: false })));
+    await shot(pageA, "43-audit-outage-dialog-ar-dark-1440");
+    await dlgAr.getByRole("button", { name: "إلغاء" }).click();
+    ok("Cancel leaves that session live", (await pz2.goto("/platform/dashboard"))?.status() === 200 && pz2.url().endsWith("/platform/dashboard"));
+    await setPrefs(ctxA, { locale: "en", theme: "light" });
+
+    await po.goto("/platform/dashboard");
+    await po.locator(".topbar-utilities .topbar-profile").click();
+    await po.getByRole("menuitem", { name: "Sign out" }).click();
+    await po.waitForURL("**/platform/login?ended=unaudited");
+    ok("sign-out during an outage → signed out (cookie removed) and the sign-in page says it could not be recorded", !(await platformCookie(ctxO)) && (await appears(po.getByText("You have been signed out, but the sign-out could not be recorded in the audit trail.", { exact: false }))));
+    await shot(po, "44-unaudited-signout-en-light-1440");
+    await po2.goto("/platform/dashboard");
+    await po2.locator(".topbar-utilities .topbar-profile").click();
+    await po2.getByRole("menuitem", { name: "تسجيل الخروج" }).click();
+    await po2.waitForURL("**/platform/login?ended=unaudited");
+    ok("Arabic: the same notice in native Arabic", await appears(po2.getByText("تعذّر تدوين ذلك في سجل التدقيق", { exact: false })));
+    await shot(po2, "44-unaudited-signout-ar-light-1440");
+    const signedOut = await db.select({ id: platformSessionsTable.id }).from(platformSessionsTable).where(and(inArray(platformSessionsTable.ipAddress, ["198.51.100.18", "198.51.100.19"]), isNull(platformSessionsTable.revokedAt)));
+    ok("…both sessions are revoked server-side (a sign-out never leaves a session usable)", signedOut.length === 0);
+    const lines = A.output().slice(out0).split("\n").filter((l) => l.startsWith("[platform-security-incident]"));
+    ok(`the server logged an incident line for each containment (${lines.filter((l) => l.includes('"type":"unaudited_session_revocation"')).length}) and each refused change`, lines.filter((l) => l.includes('"type":"unaudited_session_revocation"')).length === 3 && lines.some((l) => l.includes('"type":"audit_write_failed"')));
+
+    await outage(false);
+    await pageA.goto("/platform/settings");
+    await pageA.locator(".platform-session", { hasText: "198.51.100.17" }).getByRole("button", { name: /End session/ }).click();
+    await pageA.getByText("Session ended.").waitFor({ timeout: 10_000 });
+    const late = await db.select({ id: platformAuditEventsTable.entityId }).from(platformAuditEventsTable).where(eq(platformAuditEventsTable.action, "session.revocation_recorded_late"));
+    ok("after recovery, the next audited change records the 3 unaudited revocations late — once each, labelled as such", late.length === 3 && new Set(late.map((r) => r.id)).size === 3);
+    for (const c of [ctxZ, ctxZ2, ctxO, ctxO2]) await c.close();
+  }
+
   section("8. Recovery-code regeneration: step-up, failure rotates nothing, codes shown once");
   {
     await pageA.goto("/platform/settings");
@@ -586,10 +662,10 @@ async function main() {
     ok(`server output contains no password, TOTP secret, recovery code, token or app secret (${secretsSeen.length} values checked)`, leaked.length === 0);
     ok("server output contains no connection string", !/postgres(ql)?:\/\//.test(out));
     const actions = new Set((await db.select({ a: platformAuditEventsTable.action }).from(platformAuditEventsTable)).map((r) => r.a));
-    ok("the flows were audited (login, MFA failure and replay, recovery code, revoke, logout-all, logout, idle and absolute expiry, regeneration, throttle)", ["auth.login.succeeded", "auth.mfa.failed", "auth.mfa.replay_rejected", "auth.recovery_code.used", "session.revoked", "session.logout_all", "session.logout", "session.idle_timeout", "session.expired", "mfa.recovery_codes.regenerated", "auth.login.blocked"].every((a) => actions.has(a)), [...actions].join(" "));
+    ok("the flows were audited (login, MFA failure and replay, recovery code, revoke, logout-all, logout, idle and absolute expiry, regeneration, throttle)", ["auth.login.succeeded", "auth.mfa.failed", "auth.mfa.replay_rejected", "auth.recovery_code.used", "session.revoked", "session.logout_all", "session.logout", "session.idle_timeout", "session.expired", "session.revocation_recorded_late", "mfa.recovery_codes.regenerated", "auth.login.blocked"].every((a) => actions.has(a)), [...actions].join(" "));
     const rows = await db.select({ reason: platformSessionsTable.revokedReason, n: sql<number>`count(*)::int` }).from(platformSessionsTable).groupBy(platformSessionsTable.revokedReason);
     const by: Record<string, number> = Object.fromEntries(rows.map((r) => [r.reason ?? "live", r.n]));
-    ok("every session the suite opened ended for its expected reason — logout 1, logout-all 1, revoked 2, idle 1, absolute 1 — and none is left live", by.live === undefined && by.logout === 1 && by.logout_all === 1 && by.revoked === 2 && by.idle_timeout === 1 && by.expired === 1, JSON.stringify(by));
+    ok("every session the suite opened ended for its expected reason — logout 3, logout-all 1, revoked 4, idle 1, absolute 1 — and none is left live", by.live === undefined && by.logout === 3 && by.logout_all === 1 && by.revoked === 4 && by.idle_timeout === 1 && by.expired === 1, JSON.stringify(by));
     const live = await db.select({ n: sql<number>`count(*)::int` }).from(platformSessionsTable).where(isNull(platformSessionsTable.revokedAt));
     ok("no live platform session remains after the suite", live[0].n === 0);
   }
