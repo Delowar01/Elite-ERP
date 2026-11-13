@@ -373,7 +373,9 @@ async function main() {
     await page.getByLabel("Search invitations", { exact: true }).waitFor({ timeout: 15_000 });
     const states = await tags(page, ".platform-company-table tbody .status-tag");
     ok("invitations view: INV references, Pending and Expired as neutral status tags with icons, the slot note", (await page.locator(".platform-company-table tbody tr").count()) > 0 && states.some((s) => s.text === "Pending") && states.some((s) => s.text === "Expired") && states.every((s) => ["Pending", "Expired"].includes(s.text) && s.tone === "neutral" && s.icon && s.domain === "platform.invitation") && (await page.getByText("Expired invitations keep their owner email reserved until they are revoked.", { exact: false }).isVisible()), JSON.stringify(states.slice(0, 2)));
-    const ref = (await page.locator(".platform-company-table tbody tr").first().locator("td").first().innerText()).trim();
+    const ref = (await page.locator(".platform-company-table tbody tr").first().locator(".platform-invitation-ref").innerText()).trim();
+    const heads = (await page.locator(".platform-company-table thead th").allInnerTexts()).map((h) => h.trim());
+    ok("the invitations table leads with company (INV reference beneath) and status, then owner email, country and expiry (invited date beneath)", JSON.stringify(heads) === JSON.stringify(["Company", "Status", "Owner email", "Country", "Expires"]) && /^INV-[0-9A-F]{8}$/.test(ref) && /^Invited [A-Z][a-z]{2} \d{1,2}, \d{4}$/.test((await page.locator(".platform-company-table tbody tr").first().locator("td").last().locator(".platform-cell-sub").innerText()).trim()), `${JSON.stringify(heads)} ${ref}`);
     await page.getByLabel("Search invitations", { exact: true }).fill(ref);
     await page.getByRole("button", { name: "Apply" }).click();
     await page.waitForURL(/q=INV-/);

@@ -264,7 +264,9 @@ function OwnerCell({ locale, owner, more }: { locale: Locale; owner: OwnerView |
   if (!owner) return <span className="platform-cell-sub">{pt(locale, "companies.noOwner")}</span>;
   return (
     <div className="platform-cell-owner">
-      <div dir="auto">{owner.name}</div>
+      <div>
+        <span dir="auto">{owner.name}</span>
+      </div>
       <div className="platform-cell-sub platform-email">
         <Ltr>{owner.email}</Ltr>
       </div>
@@ -395,34 +397,34 @@ export function InvitationTable({ locale, rows, caption }: { locale: Locale; row
         <caption className="sr-only">{caption}</caption>
         <TableHeader>
           <TableRow>
-            <TableHead>{pt(locale, "col.reference")}</TableHead>
             <TableHead>{pt(locale, "col.company")}</TableHead>
+            <TableHead>{pt(locale, "col.status")}</TableHead>
             <TableHead>{pt(locale, "col.ownerEmail")}</TableHead>
             <TableHead>{pt(locale, "col.country")}</TableHead>
-            <TableHead>{pt(locale, "col.invited")}</TableHead>
             <TableHead>{pt(locale, "col.expires")}</TableHead>
-            <TableHead>{pt(locale, "col.status")}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {rows.map((row) => (
             <TableRow key={row.reference + row.created}>
-              <TableCell>
-                <Ltr>{row.reference}</Ltr>
-              </TableCell>
               <TableCell wrap>
-                <div className="platform-cell-company" dir="auto">
-                  {row.companyName}
+                <div className="platform-cell-company">
+                  <span dir="auto">{row.companyName}</span>
+                  <div className="platform-cell-sub platform-invitation-ref">
+                    <Ltr>{row.reference}</Ltr>
+                  </div>
                 </div>
+              </TableCell>
+              <TableCell>
+                <InvitationState locale={locale} state={row.state} />
               </TableCell>
               <TableCell>
                 <Ltr>{row.ownerEmail}</Ltr>
               </TableCell>
               <TableCell>{row.country}</TableCell>
-              <TableCell>{row.created}</TableCell>
-              <TableCell>{row.expires}</TableCell>
               <TableCell>
-                <InvitationState locale={locale} state={row.state} />
+                <div>{row.expires}</div>
+                <div className="platform-cell-sub">{pt(locale, "inv.invitedOn", { date: row.created })}</div>
               </TableCell>
             </TableRow>
           ))}
@@ -439,8 +441,8 @@ export function InvitationCards({ locale, rows, label }: { locale: Locale; rows:
         <li key={row.reference + row.created} className="card platform-record-card">
           <div className="platform-record-head">
             <div className="min-w-0">
-              <div className="platform-record-title" dir="auto">
-                {row.companyName}
+              <div className="platform-record-title">
+                <span dir="auto">{row.companyName}</span>
               </div>
               <div className="platform-cell-sub">
                 <Ltr>{row.reference}</Ltr>

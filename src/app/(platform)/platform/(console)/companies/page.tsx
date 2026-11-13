@@ -107,7 +107,7 @@ function invitationRows(page: InvitationListPage, locale: Locale): InvitationRow
     companyName: row.companyName,
     ownerEmail: row.ownerEmail,
     country: row.country,
-    created: formatPlatformDateTime(row.createdAt, locale),
+    created: formatPlatformDate(row.createdAt, locale),
     expires: formatPlatformDateTime(row.expiresAt, locale),
     state: row.state,
   }));
