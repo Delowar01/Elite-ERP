@@ -100,8 +100,9 @@ reads are not audited. The Activity tab never shows IP addresses, user agents or
   the query; the form remounts with every query), a table on wide screens and one record card per company on phones,
   keyset pager, notes on enforcement (PO-02C) and on deferred package/subscription columns (PO-04/05). Invite
   (PO-02D), Export CSV (later) and the Package filter (PO-04) are disabled controls naming their phase.
-* `/platform/companies?view=invitations` — INV reference, company, owner e-mail, country, invited, expires, state
-  (Pending / Expired). Expired invitations still hold their e-mail slot (PO-02A unique index), as the view explains.
+* `/platform/companies?view=invitations` — company (INV reference beneath), state (Pending / Expired), owner e-mail,
+  country, expiry (invited date beneath); the same fields as record cards on phones. Expired invitations still hold
+  their e-mail slot (PO-02A unique index), as the view explains.
 * `/platform/companies/[orgId]` — breadcrumbs, access pill, disabled Suspend/Reactivate (PO-02C) and Edit details;
   tabs Overview · Access & controls · Users · Subscription (preview, PO-05) · Activity (Platform Owner events about this
   company, 20 per page). `?tab=` deep links. Unknown ids render "Company not found" inside the console (HTTP 200: the
@@ -117,6 +118,19 @@ band, chroma, ≥ 3:1). Native Arabic for every string (bilingual dictionary, ad
 breadcrumbs, pager chevrons, tab arrow keys, chart order), Latin values (e-mails, ORG/INV references, currency codes,
 ranges) isolated LTR, Arabic dates with Gregorian months and Western digits, Riyadh time.
 
+States (company access, invitation state, audit result) are the design system's status tag (`status-tag`) in its
+**neutral** tone, told apart by label and icon, never by colour. In this design system only the canonical registry
+(`src/lib/status-registry.ts`, DEV-UI-01.2) may assign a status colour — `verify:status-registry` and the
+`ui:guardrails` G4 scan report any other status→tone map — and that registry holds customer states labelled from the
+customer dictionary, so extending it is a customer design-system change outside PO-02B. One table holds the labels
+and icons (`PLATFORM_STATES` / `PlatformStatusTag` in `companies-kit.tsx`); pages pass only the domain and the value.
+
+| Domain | Value → label · icon (all neutral) |
+|---|---|
+| company access | active → Active · shield-check; suspended → Suspended · shield-off |
+| invitation | pending → Pending · clock; expired → Expired · calendar-x |
+| audit result | success → Success · circle-check; rejected → Rejected · circle-minus; failed → Failed · circle-x |
+
 ## 4. Security controls (tests/security/platform-boundary.test.mjs)
 
 Rule 18 now covers the four sections that are still previews (Users, Subscribers, Packages, Activity) and also forbids
@@ -126,31 +140,35 @@ first with `platform.companies.read`; no cookie/header access in the read model;
 fail-closed handling; every console page at any depth awaits `requirePlatformSession()`; company pages read data
 only through the read model; no server action or POST form on company pages, later-phase actions disabled; no
 platform code references the customer session API or cookie (no token minting, no impersonation); the invitation
-selection is exact and the read model writes nothing but its audit record.
+selection is exact and the read model writes nothing but its audit record. Rule 29: the label-and-icon table is pinned
+exactly (no tone in it), the tag's tone is the literal neutral, no company page or kit component chooses a badge
+variant or tone from a value, and platform code does not reach into the customer status registry.
 
 ## 5. Performance (synthetic, isolated, measured)
 
-1,014 organizations and 4,526 users (`scripts/platform/company-fixtures.ts`, plus edge cases) on PostgreSQL 16.15.
+1,014 organizations and 4,526 users (`scripts/platform/company-fixtures.ts`, plus edge cases) on PostgreSQL 16.15;
+figures from the final regression run on the committed tree (5 warm-up runs, then 60 measured runs per scenario).
 
 | Read model, in-process (60 runs each) | p50 ms | p95 ms | max ms | queries |
 |---|---:|---:|---:|---:|
-| list: first page (25) | 4.7 | 5.6 | 6.2 | 5 |
-| list: first page (50) | 5.8 | 7.3 | 7.8 | 5 |
-| list: page 10 via cursor | 6.3 | 9.1 | 10.4 | 7 |
-| list: search "Trading" | 6.5 | 8.6 | 10.2 | 5 |
-| list: owner e-mail domain | 6.3 | 7.8 | 13.6 | 5 |
-| list: suspended filter | 4.8 | 6.8 | 7.6 | 5 |
-| list: country + name sort | 5.5 | 6.0 | 6.4 | 5 |
-| invitations | 2.0 | 2.3 | 5.0 | 3 |
-| metrics | 3.7 | 4.7 | 5.6 | 6 |
-| countries | 2.3 | 2.6 | 2.9 | 2 |
-| detail (audited) | 4.6 | 6.3 | 7.6 | 7 |
+| list: first page (25) | 5.6 | 6.7 | 36.0 | 5 |
+| list: first page (50) | 5.7 | 7.6 | 8.6 | 5 |
+| list: page 10 via cursor | 6.0 | 8.5 | 15.0 | 7 |
+| list: search "Trading" | 6.7 | 7.8 | 9.9 | 5 |
+| list: owner e-mail domain | 6.6 | 7.7 | 8.4 | 5 |
+| list: suspended filter | 4.6 | 5.8 | 10.7 | 5 |
+| list: country + name sort | 5.1 | 6.0 | 7.4 | 5 |
+| invitations | 2.0 | 2.6 | 3.3 | 3 |
+| metrics | 3.5 | 4.4 | 5.5 | 6 |
+| countries | 2.0 | 3.6 | 4.7 | 2 |
+| detail (audited) | 4.4 | 7.4 | 11.9 | 7 |
 
-HTTP (production build, `next start`, full server render, 30 runs each, 1,002 organizations): directory first page
-p95 46.1 ms, page 10 p95 47.5 ms, search p95 50.7 ms, invitations p95 34.8 ms, detail p95 25.2 ms, dashboard p95
-22.7 ms. All far below the 2.5 s target (NFR-09). Query counts are independent of page size (10/25/50 → 5): no N+1.
+HTTP (production build, `next start`, full server render, 3 warm-up + 30 measured requests each, 1,002 organizations):
+directory first page p95 59.8 ms, page 10 p95 51.5 ms, search p95 51.5 ms, invitations p95 48.5 ms, detail p95
+26.5 ms, dashboard p95 23.8 ms. All far below the 2.5 s target (NFR-09). Query counts are independent of page size
+(10/25/50 → 5): no N+1; the detail view always costs 7 queries.
 
-Plans at this size are sequential scans (≈ 0.7–2.9 ms each). **Index recommendations — not applied (no schema change
+Plans at this size are sequential scans (the four captured plans execute in 0.4–1.7 ms). **Index recommendations — not applied (no schema change
 in PO-02B); for review with D-6/D-7 measurements:** `users (org_id)` (per-page user summaries; also helps tenant code),
 `orgs (created_at desc, id desc)` (newest/oldest keyset without sorting all organizations), `orgs (lower(name), id)`
 (name sort), and only if volumes grow by orders of magnitude, trigram (`pg_trgm`) indexes for substring search on
@@ -161,15 +179,34 @@ in PO-02B); for review with D-6/D-7 measurements:** `users (org_id)` (per-page u
 | Suite | Checks |
 |---|---|
 | `verify:platform-companies` (new, in `verify:platform`) | 190 |
-| `verify:platform-companies-browser` (new; needs `next build`) | 109 (48 language × theme × width audits + screenshots) |
-| `verify:platform-boundary` | 74 (52 → 74; rule 18 narrowed to the four previews) |
-| `verify:platform-company-schema` (PO-02A) | 106 (section 8 now allow-lists the read model) |
+| `verify:platform-companies-browser` (new; needs `next build`) | 111 (48 language × theme × width audits + screenshots) |
+| `verify:platform-boundary` | 78 (52 → 78; rule 18 narrowed to the four previews; rules 21–29 new) |
+| `verify:platform-company-schema` (PO-02A) | 107 (section 8 allow-lists the read model; import resolver + self-test) |
 | `verify:platform-browser` (PO-01B) | 138 (two checks restated for the operational pages) |
 | `verify:document-form` / `verify:page-archetypes` | 84 / 274 (PO-02B layer and group 25) |
+| `verify:static` (22 customer/design-system suites), security tests, `ui:guardrails` | all at baseline (see the handover) |
 
 Approved-delta tamper tests (scratch): an unrecorded guards edit, the read model selecting the company e-mail, an
 unrecorded module reading `users`, a customer file edit, a recorded rewrite of an existing translation and a recorded
-extra permission — all six caught; files restored byte-exactly.
+extra permission — all six caught; files restored byte-exactly. Rule 29 tamper tests: a state-derived callout tone, a
+re-toned table entry and a local `<Badge variant={…}>` — all three caught.
+
+### 6.1 Corrections found by the final regression
+
+The full regression on the committed tree (run before pushing) found four defects. Each was fixed in separate
+commits, and every fix was followed by a complete rerun:
+
+1. `verify:status-registry` 89/90 — a `<Badge>` variant chosen from the access status. Fixed by presenting states
+   through one table (`71a9ea6`), then made colour-free when (2) showed the table itself is a local status→tone map.
+2. `ui:guardrails` G4 0 → 2 (report-only, not a gate) — the tone table. Fixed: neutral tags, label + icon (`2b9f51b`).
+3. `verify:money-precision` 11/12 — a `maximumFractionDigits: 0` literal in the count formatter; hidden at first
+   because the `verify:static` chain stops at its first failure (`8834352`).
+4. `verify:platform-company-schema` 105/106 — the PO-02A import check matched only `…/platform/company-access`
+   spellings, so the read model's relative import was invisible (the PO-02A version had the same blind spot); now
+   resolved properly with a self-test (`7933763`).
+
+Screenshot review then moved the invitations table's state next to the company (it sat off-screen at 1440 px) and
+start-aligned Arabic names in English tables (`cfcf992`).
 
 ## 7. Change control
 
@@ -210,6 +247,10 @@ and a database that already holds organizations.
 * A detail view writes an audit row with `org_id` (`ON DELETE RESTRICT`, Schema.md §3.4), so a viewed organization
   can no longer be hard-deleted. No application path deletes organizations (three customer test scripts delete their
   own fixture organizations on disposable databases). Consistent with the no-deletion rule; owner to confirm.
+* Platform Owner states are neutral status tags (§3): Suspended is told apart by label and icon, not by a danger
+  colour. Owner decision: keep them neutral, or approve a design-system change that adds platform domains (and their
+  Arabic labels) to the canonical status registry so access, invitation and result states get status colours —
+  best decided with PO-02C, which makes suspension operational.
 * Earlier open decisions remain: D-6 migration mechanism, D-7 production measurements, D-8 legacy jti-less tokens,
   invitation package fields, suspension sign-in message, 30-day invitation ceiling, applied-file ledger.
 
@@ -238,6 +279,9 @@ OWNER DECISIONS FIXED BY THIS APPROVAL (amend before approving)
 - Step-up: suspend and reactivate require the Platform Owner's password + authenticator code (the
   PO-01B step-up), the typed company reference (ORG-xxxxxx) and a reason of 10–500 characters.
 - Reactivation never restores revoked sessions: every user signs in again.
+- Status colour: Platform Owner states stay neutral status tags (as in PO-02B). Alternative, if chosen:
+  add platform domains to the canonical status registry (src/lib/status-registry.ts + Arabic labels in
+  the customer dictionary) as the only customer design-system change of this phase, recorded in the delta.
 
 AUTHORIZATION
 PO-01A … PO-02B are accepted. I authorize PO-02C only: (1) suspend and reactivate a registered company
@@ -303,6 +347,7 @@ STEP 4 — UI (existing PlatformShell and PO-02B components; no redesign)
   failure / audit-unavailable states; focus trap, Escape, focus return; a full-height sheet on mobile.
 - Afterwards the access pill, reason, time, operator, Activity tab and directory/dashboard counts update.
 - The detail view reads access status and reason in ONE statement (PO-02B note).
+- States keep the decided status-colour policy; verify:status-registry and ui:guardrails G4 stay at baseline.
 - Invite, Edit, Export, Manage users and package/subscription controls stay disabled.
 - Native Arabic + RTL; EN/AR × light/dark × 1440/1024/390; keyboard and focus; screenshots.
 
@@ -324,8 +369,9 @@ STEP 6 — TESTS: new suite verify:platform-company-access plus extensions:
   finance smoke); companies without an access row keep working.
 - Performance: customer session lookup p95 before/after on 1,000 synthetic organizations.
 - Browser: dialogs and the "access suspended" screen across languages, themes and widths.
-- Rerun everything in STEP 1, tsc, ESLint and the build; report exact counts, failures, corrections and
-  skipped tests; never report an unexecuted test as passed.
+- Rerun everything in STEP 1, tsc, ESLint, ui:guardrails (G1–G5 against baseline) and the build; run each
+  verify:static suite on its own as well, so one failure cannot hide the next; report exact counts,
+  failures, corrections and skipped tests; never report an unexecuted test as passed.
 
 STEP 7 — CHANGE CONTROL: a PO-02C approved-delta layer recording every customer file touched hunk by
 hunk; all other customer pins unchanged; ACC-01, LCP, PO-01A, PO-01B, PO-01B.1, PO-02A and PO-02B layers
