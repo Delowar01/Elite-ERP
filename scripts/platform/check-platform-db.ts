@@ -12,7 +12,7 @@
  */
 import { Client } from "pg";
 import { assertDisposableLocalDatabaseUrl, assertDisposableLocalServer, describeTarget, UnsafeDatabaseTargetError } from "./local-db-guard";
-import { checkPlatformObjects } from "./catalog";
+import { checkCompanyFoundation, checkPlatformObjects } from "./catalog";
 
 async function main() {
   try {
@@ -24,13 +24,14 @@ async function main() {
       await assertDisposableLocalServer(client, target);
       await client.query("set default_transaction_read_only = on");
       const report = await checkPlatformObjects(client);
+      const company = await checkCompanyFoundation(client);
       console.log(`  tables: ${report.tablesPresent.join(", ") || "(none)"}`);
-      if (!report.ok) {
-        for (const f of report.findings) console.error(`  FAIL ${f}`);
+      if (!report.ok || !company.ok) {
+        for (const f of [...report.findings, ...company.findings]) console.error(`  FAIL ${f}`);
         process.exitCode = 1;
         return;
       }
-      console.log("  OK: 4 platform tables present; audit trail append-only by catalog semantics");
+      console.log("  OK: 4 platform tables present; audit trail append-only by catalog semantics; PO-02A company tables and indexes present and valid");
     } finally {
       await client.end();
     }

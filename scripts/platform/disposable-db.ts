@@ -58,6 +58,19 @@ export async function createDisposableDatabase(name: string): Promise<string> {
 
 export async function dropDisposableDatabase(name: string): Promise<void> {
   if (!isDisposableDatabaseName(name)) throw new UnsafeDatabaseTargetError("NOT_DISPOSABLE_NAME", `refusing to drop "${name}".`);
+  // A plain DROP first, retried while connections are still closing (pool.end() resolves before
+  // its sockets are gone): terminating them (WITH (FORCE)) makes their clients emit "terminating
+  // connection due to administrator command", which crashes a suite whose pool has no listener.
+  for (let attempt = 0; attempt < 30; attempt++) {
+    try {
+      await withAdmin((c) => c.query(`drop database if exists "${name}"`));
+      return;
+    } catch (err) {
+      const code = typeof err === "object" && err !== null && "code" in err ? String((err as { code: unknown }).code) : "";
+      if (code !== "55006") throw err; // object_in_use: someone is still connected
+      await new Promise((r) => setTimeout(r, 100));
+    }
+  }
   await withAdmin((c) => c.query(`drop database if exists "${name}" with (force)`));
 }
 
@@ -77,30 +90,36 @@ export async function connectDisposable(url: string): Promise<Client> {
 
 const SCHEMA_DIR = join(process.cwd(), "src", "db", "schema");
 
+/** Platform-owned schema modules: never part of a tenant-only push. */
+const PLATFORM_SCHEMA_MODULES = new Set(["platform.ts", "platform-companies.ts"]);
+
 /**
  * `drizzle-kit push` into a disposable database.
- *   full        — the branch schema (tenant tables + platform tables), i.e. src/db/schema/index.ts
- *   tenant-only — every schema module except platform.ts: the 621f156 tenant schema shape
+ *   full        — the branch schema (tenant + platform + company tables), i.e. src/db/schema/index.ts
+ *   tenant-only — every schema module except the platform-owned ones: the current tenant schema,
+ *                 which since PO-02A includes M4 (sessions_org_active_idx). For the exact pre-PO-02A
+ *                 (621f156) tenant shape use pushPreCompanyTenantSchema.
  * A throw-away config in the OS temp dir is used so the repository's drizzle.config.ts (which loads
  * .env through dotenv) is never involved; the URL reaches the child only through its environment.
  */
-export function pushSchema(url: string, mode: "full" | "tenant-only"): { ok: boolean; output: string } {
+export function pushSchema(url: string, mode: "full" | "tenant-only", opts: { verbose?: boolean } = {}): { ok: boolean; output: string } {
   assertDisposableLocalDatabaseUrl(url);
   const files =
     mode === "full"
       ? [join(SCHEMA_DIR, "index.ts")]
       : readdirSync(SCHEMA_DIR)
-          .filter((f) => f.endsWith(".ts") && f !== "index.ts" && f !== "platform.ts")
+          .filter((f) => f.endsWith(".ts") && f !== "index.ts" && !PLATFORM_SCHEMA_MODULES.has(f))
           .sort()
           .map((f) => join(SCHEMA_DIR, f));
   const dir = mkdtempSync(join(tmpdir(), "po01a-drizzle-"));
   const config = join(dir, "drizzle.push.config.ts");
   writeFileSync(
     config,
-    `export default { dialect: "postgresql", schema: ${JSON.stringify(files)}, dbCredentials: { url: process.env.DATABASE_URL as string } };\n`,
+    `export default { dialect: "postgresql", schema: ${JSON.stringify(files)}, dbCredentials: { url: process.env.DATABASE_URL as string }${opts.verbose ? ", verbose: true, strict: false" : ""} };\n`,
   );
   try {
-    const res = spawnSync(join(process.cwd(), "node_modules", ".bin", "drizzle-kit"), ["push", "--config", config], {
+    // verbose: drizzle-kit prints every statement it executes (used to show what a re-push changes).
+    const res = spawnSync(join(process.cwd(), "node_modules", ".bin", "drizzle-kit"), ["push", "--config", config, ...(opts.verbose ? ["--verbose"] : [])], {
       cwd: process.cwd(),
       env: { ...process.env, DATABASE_URL: url },
       encoding: "utf8",
@@ -113,8 +132,26 @@ export function pushSchema(url: string, mode: "full" | "tenant-only"): { ok: boo
   }
 }
 
-export async function applyPlatformMigration(url: string): Promise<void> {
-  const result = await applyPlatformSql(url);
+/**
+ * The exact pre-PO-02A tenant schema shape (621f156 = 021ceb4): the tenant-only push minus M4, the
+ * ONLY change PO-02A makes to a tenant schema module (src/db/schema/security.ts — pinned line by
+ * line by verify-page-archetypes group 24). This is what production looks like before PO-02A.
+ */
+export async function pushPreCompanyTenantSchema(url: string): Promise<{ ok: boolean; output: string }> {
+  const push = pushSchema(url, "tenant-only");
+  if (!push.ok) return push;
+  const client = await connectDisposable(url);
+  try {
+    await client.query("drop index if exists sessions_org_active_idx");
+  } finally {
+    await client.end();
+  }
+  return push;
+}
+
+/** Apply the reviewed platform SQL (default: every file, in order) and verify the result. */
+export async function applyPlatformMigration(url: string, files?: readonly string[]): Promise<void> {
+  const result = await applyPlatformSql(url, files);
   if (!result.ok) throw new Error(`platform SQL verification failed: ${result.findings.join("; ")}`);
 }
 

@@ -1,7 +1,9 @@
 /**
- * Platform Owner PO-01A — catalog projection used to prove that
- *   (a) drizzle/platform/PO01_platform_identity.sql is equivalent to src/db/schema/platform.ts, and
- *   (b) neither touches any non-platform (tenant) object.
+ * Platform Owner PO-01A / PO-02A — catalog projection used to prove that
+ *   (a) the reviewed platform SQL (drizzle/platform/PO01_platform_identity.sql, then
+ *       PO02A_company_foundation.sql) is equivalent to the Drizzle schema, and
+ *   (b) they touch no tenant object — except PO-02A's one additive index on `sessions` (M4),
+ *       which the PO-02A suites pin exactly.
  * Read-only: SELECTs against pg_catalog only.
  */
 import { createHash } from "node:crypto";
@@ -10,6 +12,22 @@ import { AUDIT_PROTECTION_QUERY, evaluateAuditProtection, type AuditProtectionRo
 
 export const PLATFORM_SQL_PATH = join(process.cwd(), "drizzle", "platform", "PO01_platform_identity.sql");
 export const PLATFORM_TABLES = ["platform_admins", "platform_sessions", "platform_login_attempts", "platform_audit_events"] as const;
+
+// PO-02A — company database foundation.
+export const PO02A_SQL_PATH = join(process.cwd(), "drizzle", "platform", "PO02A_company_foundation.sql");
+/** Production-runbook alternative for M4 (CREATE INDEX CONCURRENTLY; autocommit, statement by statement). */
+export const PO02A_M4_CONCURRENT_SQL_PATH = join(process.cwd(), "drizzle", "platform", "PO02A_m4_sessions_index_concurrently.sql");
+export const PO02A_ROLLBACK_SQL_PATH = join(process.cwd(), "drizzle", "platform", "PO02A_rollback.sql");
+/** The reviewed platform migrations, in application order. */
+export const PLATFORM_SQL_FILES = [PLATFORM_SQL_PATH, PO02A_SQL_PATH] as const;
+/** Platform-owned tables whose names do not start with platform_ (Schema.md §4.1, §5.1). */
+export const COMPANY_TABLES = ["tenant_access_controls", "organization_invitations"] as const;
+export const PLATFORM_OWNED_TABLES = [...PLATFORM_TABLES, ...COMPANY_TABLES] as const;
+/** PO-02A indexes on tables it does not own: M4 on the customer `sessions`, and the audit entity lookup. */
+export const PO02A_INDEXES = [
+  { table: "sessions", index: "sessions_org_active_idx" },
+  { table: "platform_audit_events", index: "platform_audit_events_entity_idx" },
+] as const;
 
 type Queryable = { query: (sql: string) => Promise<{ rows: Record<string, unknown>[] }> };
 
@@ -23,7 +41,8 @@ export type CatalogProjection = {
   sequences: string[];
 };
 
-const isPlatform = (name: string | null | undefined) => typeof name === "string" && name.startsWith("platform_");
+const isPlatform = (name: string | null | undefined) =>
+  typeof name === "string" && (name.startsWith("platform_") || (COMPANY_TABLES as readonly string[]).includes(name));
 
 async function rows<T>(client: Queryable, sql: string): Promise<T[]> {
   return (await client.query(sql)).rows as T[];
@@ -150,4 +169,35 @@ export async function checkPlatformObjects(client: Queryable): Promise<PlatformO
     for (const m of verdict.missing) findings.push(`audit protection missing: ${m}`);
   }
   return { ok: findings.length === 0, findings, tablesPresent: present.sort() };
+}
+
+/**
+ * PO-02A objects: the two company tables (ordinary tables) and the two indexes (present, valid,
+ * ready, on the right table). Separate from checkPlatformObjects, which stays the PO-01A readiness
+ * check the bootstrap CLI relies on.
+ */
+export async function checkCompanyFoundation(client: Queryable): Promise<{ ok: boolean; findings: string[] }> {
+  const findings: string[] = [];
+  const tables = (
+    await rows<{ t: string }>(
+      client,
+      `select c.relname as t from pg_class c join pg_namespace n on n.oid = c.relnamespace
+       where n.nspname = current_schema() and c.relkind = 'r' and c.relname in ('tenant_access_controls', 'organization_invitations')`,
+    )
+  ).map((r) => r.t);
+  for (const t of COMPANY_TABLES) if (!tables.includes(t)) findings.push(`missing table ${t}`);
+  const idx = await rows<{ i: string; t: string; ok: boolean }>(
+    client,
+    `select i.relname as i, t.relname as t, (ix.indisvalid and ix.indisready) as ok
+     from pg_index ix join pg_class i on i.oid = ix.indexrelid join pg_class t on t.oid = ix.indrelid
+     join pg_namespace n on n.oid = i.relnamespace
+     where n.nspname = current_schema() and i.relname in ('sessions_org_active_idx', 'platform_audit_events_entity_idx')`,
+  );
+  for (const want of PO02A_INDEXES) {
+    const got = idx.find((r) => r.i === want.index);
+    if (!got) findings.push(`missing index ${want.index}`);
+    else if (got.t !== want.table) findings.push(`index ${want.index} is on ${got.t}, not ${want.table}`);
+    else if (!got.ok) findings.push(`index ${want.index} is INVALID`);
+  }
+  return { ok: findings.length === 0, findings };
 }
