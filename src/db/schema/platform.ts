@@ -187,6 +187,9 @@ export const platformAuditEventsTable = pgTable(
     index("platform_audit_events_actor_idx").on(t.actorPlatformAdminId, t.createdAt.desc()),
     index("platform_audit_events_action_idx").on(t.action, t.createdAt.desc()),
     index("platform_audit_events_request_idx").on(t.requestId),
+    // PO-02A: per-entity lookups and timelines (late revocation recording, invitation / company /
+    // session history) without scanning the trail.
+    index("platform_audit_events_entity_idx").on(t.entityType, t.entityId, t.createdAt.desc()),
     check("platform_audit_events_action_chk", sql`${t.action} ~ '^[a-z][a-z0-9_]*([.][a-z][a-z0-9_]*)+$'`),
     check("platform_audit_events_result_chk", sql`${t.result} IN ('success', 'rejected', 'failed')`),
     check(

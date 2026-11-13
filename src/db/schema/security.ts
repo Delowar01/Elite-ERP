@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import { pgTable, serial, integer, text, boolean, timestamp, jsonb, index } from "drizzle-orm/pg-core";
 import { orgsTable } from "./orgs";
 import { usersTable } from "./users";
@@ -33,7 +34,13 @@ export const sessionsTable = pgTable(
     revokedAt: timestamp("revoked_at"),
     revokedReason: text("revoked_reason"), // logout | logout_all | password_change | role_change | disabled | mfa_change | expired
   },
-  (t) => [index("sessions_user_idx").on(t.userId), index("sessions_token_idx").on(t.tokenHash)],
+  (t) => [
+    index("sessions_user_idx").on(t.userId),
+    index("sessions_token_idx").on(t.tokenHash),
+    // Platform Owner PO-02A (M4): an organization's live sessions, for the org-wide revocation of
+    // PO-02C. Additive index only; no column, constraint or session behaviour changes.
+    index("sessions_org_active_idx").on(t.orgId).where(sql`${t.revokedAt} IS NULL`),
+  ],
 );
 export type Session = typeof sessionsTable.$inferSelect;
 
