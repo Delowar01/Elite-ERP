@@ -23,7 +23,9 @@ const MONTH: Record<Locale, Intl.DateTimeFormat> = {
   en: new Intl.DateTimeFormat(TAGS.en, { month: "short", year: "numeric", timeZone: ZONE }),
   ar: new Intl.DateTimeFormat(TAGS.ar, { month: "short", year: "numeric", timeZone: ZONE }),
 };
-const COUNT = new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 });
+// Counts are whole numbers (count(*)::int), so the default options print no fraction; money never
+// goes through this formatter (verify:money-precision forbids fixed fraction-digit literals in src/).
+const COUNT = new Intl.NumberFormat("en-US");
 
 const lang = (locale: Locale): Locale => (locale === "ar" ? "ar" : "en");
 

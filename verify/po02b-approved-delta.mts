@@ -129,7 +129,7 @@ export const PO02B_NEW: Record<string, string> = byPath([
   ["7be120f64a69070b", "src/components/platform/companies-kit.tsx"],
   ["743b12a7d16bc27d", "src/components/platform/company-tabs.tsx"],
   ["ffce07e9bb80dd36", "src/lib/platform/companies.ts"],
-  ["12b86978ca852742", "src/lib/platform/display.ts"],
+  ["d5fe2033794a7ba5", "src/lib/platform/display.ts"],
 ]);
 
 const h16 = (s: string) => createHash("sha256").update(s).digest("hex").slice(0, 16);
