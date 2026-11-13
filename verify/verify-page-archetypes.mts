@@ -135,6 +135,7 @@ import { PO01A_BASE, PO01A_EDITS, PO01A_NEW, po01aDrift, undoPo01a } from "./po0
 import { PO01B_BASE, PO01B_EDITS, PO01B_NEW, po01bDrift, undoPo01b } from "./po01b-approved-delta.mjs";
 import { PO01B1_BASE, PO01B1_EDITS, PO01B1_NEW, po01b1Drift, undoPo01b1 } from "./po01b1-approved-delta.mjs";
 import { PO02A_BASE, PO02A_EDITS, PO02A_NEW, po02aDrift, undoPo02a } from "./po02a-approved-delta.mjs";
+import { PO02B_BASE, PO02B_EDITS, PO02B_NEW, po02bDrift, undoPo02b } from "./po02b-approved-delta.mjs";
 import { renderToStaticMarkup } from "react-dom/server";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
@@ -153,7 +154,10 @@ const diskRead = (p: string) => readFileSync(path.join(ROOT, p), "utf8");
 // so the PO-01B layer and every older group read PO-01B's bytes; the file PO-01B.1 added stays out of `walk` like PO-01B's.
 // Platform Owner PO-02A: its recorded hunks are undone before PO-01B.1's (group 24 proves they are each file's only change),
 // so the PO-01B.1 layer and every older group read PO-01B.1's bytes; the files PO-02A added stay out of `walk`.
-const po02aRead = (p: string) => undoPo02a(p, diskRead(p));
+// Platform Owner PO-02B: its recorded hunks are undone before PO-02A's (group 25 proves they are each file's only change),
+// so the PO-02A layer and every older group read PO-02A's bytes; the files PO-02B added stay out of `walk`.
+const po02bRead = (p: string) => undoPo02b(p, diskRead(p));
+const po02aRead = (p: string) => undoPo02a(p, po02bRead(p));
 const po01b1Read = (p: string) => undoPo01b1(p, po02aRead(p));
 const po01bRead = (p: string) => undoPo01b(p, po01b1Read(p));
 const po01aRead = (p: string) => undoPo01a(p, po01bRead(p));
@@ -520,7 +524,7 @@ const MAIN_EDITS: Record<string, [string, string][]> = {
 /** A file's bytes for a byte-identity hash: main's approved change undone (MAIN_EDITS), every other file as it is. */
 const frozen = (f: string): string | Buffer =>
   f in MAIN_EDITS ? MAIN_EDITS[f].reduce((acc, [was, is]) => acc.replace(is, () => was), rawRead(f))
-    : f in ACC01_EDITS ? rawRead(f) : f in LCP_EDITS || f in PO01A_EDITS || f in PO01B_EDITS || f in PO01B1_EDITS || f in PO02A_EDITS ? actualRead(f) : readFileSync(path.join(ROOT, f));
+    : f in ACC01_EDITS ? rawRead(f) : f in LCP_EDITS || f in PO01A_EDITS || f in PO01B_EDITS || f in PO01B1_EDITS || f in PO02A_EDITS || f in PO02B_EDITS ? actualRead(f) : readFileSync(path.join(ROOT, f));
 
 let pass = 0;
 let fail = 0;
@@ -555,7 +559,7 @@ function walk(dir: string): string[] {
   for (const name of readdirSync(path.join(ROOT, dir)).sort()) {
     const p = path.posix.join(dir, name);
     if (statSync(path.join(ROOT, p)).isDirectory()) out.push(...walk(p));
-    else if (!(p in ACC01_NEW) && !(p in LCP_NEW) && !(p in PO01A_NEW) && !(p in PO01B_NEW) && !(p in PO01B1_NEW) && !(p in PO02A_NEW)) out.push(p);
+    else if (!(p in ACC01_NEW) && !(p in LCP_NEW) && !(p in PO01A_NEW) && !(p in PO01B_NEW) && !(p in PO01B1_NEW) && !(p in PO02A_NEW) && !(p in PO02B_NEW)) out.push(p);
   }
   return out;
 }
@@ -3144,7 +3148,7 @@ check(`ACC-01 changed its ${Object.keys(ACC01_EDITS).length} files (src/, and ve
 // No file under src/ outside the record differs from main: every other file is in the older groups' byte-identity hashes
 // (groups 4, 16 and 17), and a new file the record does not list is caught there too — `walk` leaves out only ACC01_NEW.
 check(`ACC-01 added no file under src/ but the recorded ${Object.keys(ACC01_NEW).length} (an unrecorded new file would sit in groups 16 and 17's src trees)`,
-  walk("src").length + Object.keys(ACC01_NEW).length + Object.keys(LCP_NEW).length + Object.keys(PO01A_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO01B_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO01B1_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO02A_NEW).filter((f) => f.startsWith("src/")).length === (function all(d: string): number {
+  walk("src").length + Object.keys(ACC01_NEW).length + Object.keys(LCP_NEW).length + Object.keys(PO01A_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO01B_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO01B1_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO02A_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO02B_NEW).filter((f) => f.startsWith("src/")).length === (function all(d: string): number {
     return readdirSync(path.join(ROOT, d)).reduce((n, name) => n + (statSync(path.join(ROOT, d, name)).isDirectory() ? all(path.posix.join(d, name)) : 1), 0);
   })("src"));
 
@@ -3239,7 +3243,7 @@ check("each file PO-01B.1 changed is one an earlier platform layer added or reco
 // ---------- 24. Platform Owner PO-02A — the approved change to frozen files ----------
 section("24. Platform Owner PO-02A — company database foundation (the approved change to frozen files)");
 // Read as they are on disk: each changed file is PO-01B.1's (021ceb4) plus exactly its recorded hunks, each added file as recorded.
-const po02aDriftNow = po02aDrift((f) => (existsSync(path.join(ROOT, f)) ? diskRead(f) : null));
+const po02aDriftNow = po02aDrift((f) => (existsSync(path.join(ROOT, f)) ? po02bRead(f) : null));
 const PO02A_EDITABLE = ["src/db/schema/index.ts", "src/db/schema/platform.ts", "src/db/schema/security.ts", "verify/verify-document-form.mts", "verify/verify-page-archetypes.mts"];
 const PO02A_NEW_SCOPE = /^(src\/db\/schema\/platform-companies\.ts|src\/lib\/platform\/[\w-]+\.ts|drizzle\/platform\/PO02A_\w+\.sql)$/;
 check(`PO-02A changed its ${Object.keys(PO02A_EDITS).length} files (the schema index, the platform schema's audit index, the M4 index in the sessions schema and the two freeze verifiers) by exactly their ${Object.values(PO02A_EDITS).flat().length} recorded hunks — undone, each file is ${PO02A_BASE.slice(0, 7)}'s to the byte — and added exactly its ${Object.keys(PO02A_NEW).length} files, as recorded (verify/po02a-approved-delta.mts)`,
@@ -3269,6 +3273,39 @@ check("PO-02A's only changes to the platform schema and the schema index: the au
     JSON.stringify(codeLines(platformDelta.added)) === JSON.stringify(['    index("platform_audit_events_entity_idx").on(t.entityType, t.entityId, t.createdAt.desc()),']) &&
     indexDelta.removed.length === 0 && JSON.stringify(indexDelta.added) === JSON.stringify(['export * from "./platform-companies";']),
   JSON.stringify([platformDelta, indexDelta]));
+
+// ---------- 25. Platform Owner PO-02B — the approved change to frozen files ----------
+section("25. Platform Owner PO-02B — read-only companies directory and details (the approved change to frozen files)");
+// Read as they are on disk: each changed file is PO-02A's (2a5674a) plus exactly its recorded hunks, each added file as recorded.
+const po02bDriftNow = po02bDrift((f) => (existsSync(path.join(ROOT, f)) ? diskRead(f) : null));
+const PO02B_EDITABLE = [
+  "src/lib/platform/guards.ts", "src/components/platform/i18n.ts", "src/app/(platform)/platform.css",
+  "src/app/(platform)/platform/(console)/companies/page.tsx", "src/app/(platform)/platform/(console)/dashboard/page.tsx",
+  "verify/verify-document-form.mts", "verify/verify-page-archetypes.mts",
+];
+check(`PO-02B changed its ${Object.keys(PO02B_EDITS).length} files (the platform permission list, the console strings and stylesheet, the Companies and Dashboard pages and the two freeze verifiers) by exactly their ${Object.values(PO02B_EDITS).flat().length} recorded hunks — undone, each file is ${PO02B_BASE.slice(0, 7)}'s to the byte — and added exactly its ${Object.keys(PO02B_NEW).length} files, as recorded (verify/po02b-approved-delta.mts)`,
+  po02bDriftNow.length === 0 && PO02B_BASE === "2a5674a422dace5fa846130dbca8c56dab02adf9" &&
+    Object.keys(PO02B_EDITS).length > 0 && Object.keys(PO02B_EDITS).every((f) => PO02B_EDITABLE.includes(f)),
+  po02bDriftNow.map(rel).join(" "));
+const PO02B_NEW_SCOPE = /^src\/(lib\/platform\/(companies|display)\.ts|components\/platform\/(companies-kit|company-tabs)\.tsx|app\/\(platform\)\/platform\/\(console\)\/companies\/\[orgId\]\/(page|not-found)\.tsx)$/;
+const po02bOutside = Object.keys(PO02B_NEW).filter((f) => !PO02B_NEW_SCOPE.test(f));
+check("PO-02B added exactly the company read model, its display helpers, two console components and the company detail route — no customer route, component, library, auth, session, schema or migration file",
+  Object.keys(PO02B_NEW).length === 6 && po02bOutside.length === 0, po02bOutside.join(" "));
+// Every file PO-02B changed was added by an earlier platform layer (PO-01A or PO-01B), so no customer or older frozen file
+// gains a new approved change, and each older layer's check above reads its own bytes through this undo.
+const po02bFresh = Object.keys(PO02B_EDITS).filter((f) => !(f in PO01A_NEW) && !(f in PO01B_NEW) && !["verify/verify-document-form.mts", "verify/verify-page-archetypes.mts"].includes(f));
+check("each file PO-02B changed is one an earlier platform layer added (PO-01A / PO-01B) — no customer or older frozen file gains a new approved change", po02bFresh.length === 0, po02bFresh.join(" "));
+const guardsDelta = lineDelta(PO02B_EDITS["src/lib/platform/guards.ts"] ?? []);
+check("PO-02B's only change to the platform guards: platform.companies.read appended to PLATFORM_PERMISSIONS (comments aside)",
+  JSON.stringify(codeLines(guardsDelta.removed)) === JSON.stringify(['export const PLATFORM_PERMISSIONS = ["platform.access", "platform.sessions.manage", "platform.mfa.manage"] as const;']) &&
+    JSON.stringify(codeLines(guardsDelta.added)) === JSON.stringify(['export const PLATFORM_PERMISSIONS = ["platform.access", "platform.sessions.manage", "platform.mfa.manage", "platform.companies.read"] as const;']),
+  JSON.stringify(guardsDelta));
+const i18nDelta = lineDelta(PO02B_EDITS["src/components/platform/i18n.ts"] ?? []);
+check("PO-02B's change to the console strings is additive: no existing entry changed or removed, every added line a bilingual entry",
+  i18nDelta.removed.length === 0 && codeLines(i18nDelta.added).length > 0 && codeLines(i18nDelta.added).every((l) => /^ {2}"[a-z][a-zA-Z.]+": \{ en: "[^"]+", ar: "[^"]+" \},$/.test(l)),
+  JSON.stringify(i18nDelta.removed));
+const cssDelta = lineDelta(PO02B_EDITS["src/app/(platform)/platform.css"] ?? []);
+check("PO-02B's change to platform.css is additive: no existing rule changed or removed", cssDelta.removed.length === 0 && cssDelta.added.length > 0, JSON.stringify(cssDelta.removed));
 
 console.log("\nGroups:");
 for (const [g, [p, f]] of Object.entries(counts)) console.log(`  ${g}: ${p}/${p + f}`);
