@@ -29,3 +29,4 @@ export * from "./user-preferences";
 export * from "./settings-completion";
 export * from "./document-attachments";
 export * from "./document-column-configs";
+export * from "./platform";

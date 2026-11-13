@@ -76,7 +76,10 @@
     "verify:settlement": "tsx --env-file-if-exists=.env --conditions=react-server verify/verify-settlement.mts",
     "verify:inventory-costing": "tsx --env-file-if-exists=.env --conditions=react-server verify/verify-inventory-costing.mts",
     "ui:baseline": "node tests/ui-baseline/run.mjs",
-    "ui:guardrails": "node tests/ui-baseline/guardrails.mjs"
+    "ui:guardrails": "node tests/ui-baseline/guardrails.mjs",
+    "platform:db:apply": "tsx --conditions=react-server scripts/platform/apply-platform-sql.ts",
+    "platform:db:check": "tsx --conditions=react-server scripts/platform/check-platform-db.ts",
+    "verify:platform-schema": "tsx --conditions=react-server verify/verify-platform-schema.mts"
   },
   "dependencies": {
     "@radix-ui/react-avatar": "^1.2.2",
