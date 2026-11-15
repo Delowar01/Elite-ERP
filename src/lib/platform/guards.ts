@@ -17,7 +17,9 @@ import { validatePlatformSession, type PlatformSessionContext } from "./session"
 /** One-role allowlist for the single Platform Owner (TRD §3.1); later phases extend the list. */
 // PO-02B: platform.companies.read — the read-only company directory, details and pending
 // invitations (allow-listed metadata only; src/lib/platform/companies.ts). It grants no change.
-export const PLATFORM_PERMISSIONS = ["platform.access", "platform.sessions.manage", "platform.mfa.manage", "platform.companies.read"] as const;
+// PO-02C: platform.companies.manage_access — suspend / reactivate one company's access, always with a
+// fresh password + TOTP step-up and an audit record (src/lib/platform/company-access-actions.ts).
+export const PLATFORM_PERMISSIONS = ["platform.access", "platform.sessions.manage", "platform.mfa.manage", "platform.companies.read", "platform.companies.manage_access"] as const;
 export type PlatformPermission = (typeof PLATFORM_PERMISSIONS)[number];
 const OWNER_PERMISSIONS: ReadonlySet<string> = new Set(PLATFORM_PERMISSIONS);
 

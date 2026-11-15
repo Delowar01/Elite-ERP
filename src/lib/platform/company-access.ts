@@ -15,9 +15,26 @@ import { db, orgsTable, tenantAccessControlsTable, type Tx } from "@/db";
 //  • Subscription state never enters this decision. Expiry, trials and payments cannot suspend a
 //    company (Schema.md §11 items 5–7, TRD §7.2); only an explicit, attributed platform action can
 //    (PO-02C), and the database refuses a suspended row without a responsible administrator.
-//  • Read-only. PO-02A wires this into nothing: the customer session / login / file / export
-//    checks that will consult it are PO-02C, under separate approval.
+//  • Read-only. PO-02A wired this into nothing. PO-02C consults it from exactly one customer
+//    module (src/lib/security/tenant-access-gate.ts: session validation, sign-in, signed files) and
+//    from the Platform Owner access action — and only while enforcement is switched on below.
+//  • Activation (PO-02C): enforcement is OFF unless TENANT_ACCESS_ENFORCEMENT is exactly
+//    "enabled". Deploying the code therefore changes nothing for customers; the switch may be set
+//    only after the PO-02A objects are installed and verified (deployment runbook, D-6). While it
+//    is off, a company cannot be suspended from the console either.
 // ---------------------------------------------------------------------------------------------
+
+/** True only when tenant-access enforcement has been explicitly switched on for this environment. */
+export function tenantAccessEnforcementEnabled(): boolean {
+  return process.env.TENANT_ACCESS_ENFORCEMENT === "enabled";
+}
+
+/**
+ * The revocation reason a suspension writes on the company's customer sessions (in the same
+ * transaction as the access change, company-access-actions.ts). The customer session check reads it
+ * only to show the access-suspended screen instead of sign-in; it never grants anything.
+ */
+export const ORG_SUSPENDED_REVOKE_REASON = "org_suspended";
 
 export const TENANT_ACCESS_STATUSES = ["active", "suspended"] as const;
 export type TenantAccessStatus = (typeof TENANT_ACCESS_STATUSES)[number];

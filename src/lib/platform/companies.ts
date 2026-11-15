@@ -5,7 +5,7 @@ import { db, orgsTable, organizationInvitationsTable, platformAdminsTable, platf
 import { assertPlatformAuditProtection, recordPlatformAudit } from "./audit";
 import { platformClock } from "./clock";
 import type { HeaderSource } from "./client-ip";
-import { effectiveTenantAccessSql, getTenantAccess, resolveTenantAccess, type TenantAccess, type TenantAccessStatus } from "./company-access";
+import { effectiveTenantAccessSql, resolveTenantAccess, tenantAccessEnforcementEnabled, type TenantAccess, type TenantAccessStatus } from "./company-access";
 import { requestMeta } from "./console";
 import { isPlatformError, PlatformError } from "./errors";
 import { assertPlatformConsoleEnabled } from "./flags";
@@ -16,7 +16,8 @@ import type { PlatformSessionContext } from "./session";
 // ---------------------------------------------------------------------------------------------
 // Platform Owner PO-02B — the READ-ONLY company read model (PR #11 PRD P-02/P-03, TRD §3.3, §8
 // listCompanies, §10; PO02A_DEVELOPMENT.md §6.1–6.2). The ONLY console module that reads the
-// customer `orgs` and `users` tables (tests/security/platform-boundary.test.mjs rule 21).
+// customer `orgs` and `users` tables (tests/security/platform-boundary.test.mjs rule 21; the access
+// rule and the PO-02C access action read orgs.id alone).
 //
 //  • Authorization first, in every exported operation: feature flag → live platform session (the
 //    PLATFORM cookie only; a customer token is never read) → `platform.companies.read`.
@@ -466,6 +467,8 @@ export type CompanyMetrics = {
   registrations: { month: string; count: number }[];
   /** The most recently registered organizations (newest first). */
   newest: { orgId: number; reference: string; name: string; createdAt: Date }[];
+  /** PO-02C: whether customer enforcement of company access is switched on in this environment. */
+  accessEnforced: boolean;
 };
 
 export const REGISTRATION_MONTHS = 6;
@@ -533,6 +536,7 @@ export async function companyMetrics(req: CompanyReadRequest): Promise<CompanyMe
       users: users[0] ?? { total: 0, active: 0 },
       registrations: riyadhMonthKeys(now, REGISTRATION_MONTHS).map((month) => ({ month, count: byMonth.get(month) ?? 0 })),
       newest: newest.map((r) => ({ orgId: r.orgId, reference: orgReference(r.orgId), name: r.name, createdAt: r.createdAt })),
+      accessEnforced: tenantAccessEnforcementEnabled(),
     };
   });
 }
@@ -552,7 +556,8 @@ export type CompanyDetail = {
   currency: string;
   createdAt: Date;
   hasLogo: boolean;
-  access: TenantAccess & { reason: string | null; changedAt: Date | null; changedBy: string | null };
+  /** PO-02C: `enforced` — whether customer enforcement of company access is switched on here. */
+  access: TenantAccess & { reason: string | null; changedAt: Date | null; changedBy: string | null; enforced: boolean };
   users: UserSummary;
   owners: OwnerSummary[];
   activity: { rows: CompanyActivityRow[]; next: string | null };
@@ -577,11 +582,12 @@ export async function getCompanyDetail(req: CompanyReadRequest, rawOrgId: unknow
   const meta = requestMeta(req.headers);
   await assertPlatformAuditProtection();
   const detail = await guarded(async () => {
-    const access = await getTenantAccess(orgId);
-    if (!access) throw new PlatformError("NOT_FOUND", "no organization with this id");
+    // PO-02C: ONE statement reads the organization, its access row and the responsible operator, so
+    // the state, reason, date and operator shown always belong to the same version of the row.
     const [org] = await db
       .select({
         ...ORG_FIELDS,
+        ...ACCESS_FIELDS,
         reason: tenantAccessControlsTable.reason,
         changedAt: tenantAccessControlsTable.changedAt,
         changedBy: platformAdminsTable.displayName,
@@ -590,7 +596,7 @@ export async function getCompanyDetail(req: CompanyReadRequest, rawOrgId: unknow
       .leftJoin(tenantAccessControlsTable, withAccess)
       .leftJoin(platformAdminsTable, eq(platformAdminsTable.id, tenantAccessControlsTable.changedByPlatformAdminId))
       .where(eq(orgsTable.id, orgId));
-    if (!org) throw new PlatformError("NOT_FOUND", "organization disappeared");
+    if (!org) throw new PlatformError("NOT_FOUND", "no organization with this id");
     if (activityAnchor !== null) {
       const [anchor] = await db.select({ id: ev.id }).from(ev).where(and(eq(ev.id, activityAnchor), eq(ev.orgId, orgId)));
       if (!anchor) throw invalid("the activity cursor does not belong to this company");
@@ -618,7 +624,7 @@ export async function getCompanyDetail(req: CompanyReadRequest, rawOrgId: unknow
       currency: org.currency,
       createdAt: org.createdAt,
       hasLogo: org.hasLogo === true,
-      access: { ...access, reason: org.reason ?? null, changedAt: org.changedAt ?? null, changedBy: org.changedBy ?? null },
+      access: { ...accessOf(org), reason: org.reason ?? null, changedAt: org.changedAt ?? null, changedBy: org.changedBy ?? null, enforced: tenantAccessEnforcementEnabled() },
       users: users.get(orgId) ?? NO_USERS,
       owners: owners.get(orgId) ?? [],
       activity: { rows, next: more ? String(rows[rows.length - 1].id) : null },

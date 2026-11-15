@@ -23,6 +23,8 @@ export const PLATFORM_ERROR_MESSAGES = {
   CONFIG_ERROR: { en: "The platform console is temporarily unavailable.", ar: "لوحة إدارة المنصة غير متاحة مؤقتًا." },
   // PO-01B.1: a change whose audit record could not be written is rolled back, never applied silently.
   AUDIT_UNAVAILABLE: { en: "This change was not applied because it could not be recorded in the audit trail.", ar: "لم يُطبَّق هذا التغيير لتعذّر تسجيله في سجل التدقيق." },
+  // PO-02C: a suspension is refused while customer enforcement is switched off (it would be recorded but not applied).
+  ENFORCEMENT_DISABLED: { en: "Company access enforcement is switched off in this environment, so a company cannot be suspended here.", ar: "تطبيق إيقاف وصول الشركات غير مفعّل في هذه البيئة، لذا لا يمكن إيقاف أي شركة هنا." },
   // Reserved for later phases (TRD §8); defined now so the code set is stable.
   COMPANY_SUSPENDED: { en: "This company's access is suspended.", ar: "تم إيقاف وصول هذه الشركة." },
   INVITE_EXPIRED: { en: "This invitation has expired.", ar: "انتهت صلاحية هذه الدعوة." },
