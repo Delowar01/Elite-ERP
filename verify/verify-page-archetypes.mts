@@ -136,6 +136,7 @@ import { PO01B_BASE, PO01B_EDITS, PO01B_NEW, po01bDrift, undoPo01b } from "./po0
 import { PO01B1_BASE, PO01B1_EDITS, PO01B1_NEW, po01b1Drift, undoPo01b1 } from "./po01b1-approved-delta.mjs";
 import { PO02A_BASE, PO02A_EDITS, PO02A_NEW, po02aDrift, undoPo02a } from "./po02a-approved-delta.mjs";
 import { PO02B_BASE, PO02B_EDITS, PO02B_NEW, po02bDrift, undoPo02b } from "./po02b-approved-delta.mjs";
+import { PO02C_BASE, PO02C_EDITS, PO02C_NEW, po02cDrift, undoPo02c } from "./po02c-approved-delta.mjs";
 import { renderToStaticMarkup } from "react-dom/server";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
@@ -156,7 +157,10 @@ const diskRead = (p: string) => readFileSync(path.join(ROOT, p), "utf8");
 // so the PO-01B.1 layer and every older group read PO-01B.1's bytes; the files PO-02A added stay out of `walk`.
 // Platform Owner PO-02B: its recorded hunks are undone before PO-02A's (group 25 proves they are each file's only change),
 // so the PO-02A layer and every older group read PO-02A's bytes; the files PO-02B added stay out of `walk`.
-const po02bRead = (p: string) => undoPo02b(p, diskRead(p));
+// Platform Owner PO-02C: its recorded hunks are undone before PO-02B's (group 26 proves they are each file's only change),
+// so the PO-02B layer and every older group read PO-02B's bytes; the files PO-02C added stay out of `walk`.
+const po02cRead = (p: string) => undoPo02c(p, diskRead(p));
+const po02bRead = (p: string) => undoPo02b(p, po02cRead(p));
 const po02aRead = (p: string) => undoPo02a(p, po02bRead(p));
 const po01b1Read = (p: string) => undoPo01b1(p, po02aRead(p));
 const po01bRead = (p: string) => undoPo01b(p, po01b1Read(p));
@@ -524,7 +528,7 @@ const MAIN_EDITS: Record<string, [string, string][]> = {
 /** A file's bytes for a byte-identity hash: main's approved change undone (MAIN_EDITS), every other file as it is. */
 const frozen = (f: string): string | Buffer =>
   f in MAIN_EDITS ? MAIN_EDITS[f].reduce((acc, [was, is]) => acc.replace(is, () => was), rawRead(f))
-    : f in ACC01_EDITS ? rawRead(f) : f in LCP_EDITS || f in PO01A_EDITS || f in PO01B_EDITS || f in PO01B1_EDITS || f in PO02A_EDITS || f in PO02B_EDITS ? actualRead(f) : readFileSync(path.join(ROOT, f));
+    : f in ACC01_EDITS ? rawRead(f) : f in LCP_EDITS || f in PO01A_EDITS || f in PO01B_EDITS || f in PO01B1_EDITS || f in PO02A_EDITS || f in PO02B_EDITS || f in PO02C_EDITS ? actualRead(f) : readFileSync(path.join(ROOT, f));
 
 let pass = 0;
 let fail = 0;
@@ -559,7 +563,7 @@ function walk(dir: string): string[] {
   for (const name of readdirSync(path.join(ROOT, dir)).sort()) {
     const p = path.posix.join(dir, name);
     if (statSync(path.join(ROOT, p)).isDirectory()) out.push(...walk(p));
-    else if (!(p in ACC01_NEW) && !(p in LCP_NEW) && !(p in PO01A_NEW) && !(p in PO01B_NEW) && !(p in PO01B1_NEW) && !(p in PO02A_NEW) && !(p in PO02B_NEW)) out.push(p);
+    else if (!(p in ACC01_NEW) && !(p in LCP_NEW) && !(p in PO01A_NEW) && !(p in PO01B_NEW) && !(p in PO01B1_NEW) && !(p in PO02A_NEW) && !(p in PO02B_NEW) && !(p in PO02C_NEW)) out.push(p);
   }
   return out;
 }
@@ -3148,7 +3152,7 @@ check(`ACC-01 changed its ${Object.keys(ACC01_EDITS).length} files (src/, and ve
 // No file under src/ outside the record differs from main: every other file is in the older groups' byte-identity hashes
 // (groups 4, 16 and 17), and a new file the record does not list is caught there too — `walk` leaves out only ACC01_NEW.
 check(`ACC-01 added no file under src/ but the recorded ${Object.keys(ACC01_NEW).length} (an unrecorded new file would sit in groups 16 and 17's src trees)`,
-  walk("src").length + Object.keys(ACC01_NEW).length + Object.keys(LCP_NEW).length + Object.keys(PO01A_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO01B_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO01B1_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO02A_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO02B_NEW).filter((f) => f.startsWith("src/")).length === (function all(d: string): number {
+  walk("src").length + Object.keys(ACC01_NEW).length + Object.keys(LCP_NEW).length + Object.keys(PO01A_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO01B_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO01B1_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO02A_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO02B_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO02C_NEW).filter((f) => f.startsWith("src/")).length === (function all(d: string): number {
     return readdirSync(path.join(ROOT, d)).reduce((n, name) => n + (statSync(path.join(ROOT, d, name)).isDirectory() ? all(path.posix.join(d, name)) : 1), 0);
   })("src"));
 
@@ -3277,7 +3281,7 @@ check("PO-02A's only changes to the platform schema and the schema index: the au
 // ---------- 25. Platform Owner PO-02B — the approved change to frozen files ----------
 section("25. Platform Owner PO-02B — read-only companies directory and details (the approved change to frozen files)");
 // Read as they are on disk: each changed file is PO-02A's (2a5674a) plus exactly its recorded hunks, each added file as recorded.
-const po02bDriftNow = po02bDrift((f) => (existsSync(path.join(ROOT, f)) ? diskRead(f) : null));
+const po02bDriftNow = po02bDrift((f) => (existsSync(path.join(ROOT, f)) ? po02cRead(f) : null));
 const PO02B_EDITABLE = [
   "src/lib/platform/guards.ts", "src/components/platform/i18n.ts", "src/app/(platform)/platform.css",
   "src/app/(platform)/platform/(console)/companies/page.tsx", "src/app/(platform)/platform/(console)/dashboard/page.tsx",
@@ -3306,6 +3310,91 @@ check("PO-02B's change to the console strings is additive: no existing entry cha
   JSON.stringify(i18nDelta.removed));
 const cssDelta = lineDelta(PO02B_EDITS["src/app/(platform)/platform.css"] ?? []);
 check("PO-02B's change to platform.css is additive: no existing rule changed or removed", cssDelta.removed.length === 0 && cssDelta.added.length > 0, JSON.stringify(cssDelta.removed));
+
+// ---------- 26. Platform Owner PO-02C — the approved change to frozen files ----------
+section("26. Platform Owner PO-02C — company access: suspend, reactivate and customer enforcement (the approved change to frozen files)");
+// Read as they are on disk: each changed file is PO-02B's (7637e4e) plus exactly its recorded hunks, each added file as recorded.
+const po02cDriftNow = po02cDrift((f) => (existsSync(path.join(ROOT, f)) ? diskRead(f) : null));
+// PO-02C is the first platform layer that changes CUSTOMER authentication — five files, each delta pinned below.
+const PO02C_CUSTOMER = ["src/lib/session.ts", "src/lib/security/session-store.ts", "src/app/(auth)/actions.ts", "src/app/uploads/[...path]/route.ts", "src/lib/i18n/dict.ts"];
+const PO02C_PLATFORM = [
+  "src/lib/platform/company-access.ts", "src/lib/platform/companies.ts", "src/lib/platform/guards.ts", "src/lib/platform/errors.ts",
+  "src/components/platform/i18n.ts", "src/components/platform/platform-dialog.tsx", "src/app/(platform)/platform.css",
+  "src/app/(platform)/platform/(console)/companies/[orgId]/page.tsx", "src/app/(platform)/platform/(console)/companies/page.tsx", "src/app/(platform)/platform/(console)/dashboard/page.tsx",
+];
+const PO02C_EDITABLE = [...PO02C_CUSTOMER, ...PO02C_PLATFORM, "verify/verify-document-form.mts", "verify/verify-page-archetypes.mts"];
+check(`PO-02C changed its ${Object.keys(PO02C_EDITS).length} files (five customer authentication files, ten platform files and the two freeze verifiers) by exactly their ${Object.values(PO02C_EDITS).flat().length} recorded hunks — undone, each file is ${PO02C_BASE.slice(0, 7)}'s to the byte — and added exactly its ${Object.keys(PO02C_NEW).length} files, as recorded (verify/po02c-approved-delta.mts)`,
+  po02cDriftNow.length === 0 && PO02C_BASE === "7637e4eaf94823209e6a57867963c4246fef40b1" &&
+    Object.keys(PO02C_EDITS).length === PO02C_EDITABLE.length && Object.keys(PO02C_EDITS).every((f) => PO02C_EDITABLE.includes(f)),
+  po02cDriftNow.map(rel).join(" "));
+const PO02C_NEW_EXPECTED = [
+  "src/app/(platform)/company-access-actions.ts", "src/app/access-suspended/page.tsx", "src/components/platform/company-access-dialog.tsx",
+  "src/lib/platform/company-access-actions.ts", "src/lib/security/tenant-access-gate.ts",
+];
+check("PO-02C added exactly the customer tenant-access gate and access-suspended screen, and the platform access action, its server actions and its dialog",
+  JSON.stringify(Object.keys(PO02C_NEW).sort()) === JSON.stringify([...PO02C_NEW_EXPECTED].sort()), Object.keys(PO02C_NEW).join(" "));
+const po02cPlatformFresh = PO02C_PLATFORM.filter((f) => !(f in PO01A_NEW) && !(f in PO01B_NEW) && !(f in PO02A_NEW) && !(f in PO02B_NEW));
+check("each platform file PO-02C changed is one an earlier platform layer added (PO-01A / PO-01B / PO-02A / PO-02B)", po02cPlatformFresh.length === 0, po02cPlatformFresh.join(" "));
+const PO02C_FORBIDDEN = /^src\/(db|app\/api|app\/print|app\/\(app\))\/|^drizzle\/|^src\/lib\/(inventory|credit-note|invoice-posting|purchase-posting|reversal-currency|zatca|finance|accounting|journal|ledger|payroll|hr|document|pdf|storage|seed-org|currency)/;
+const po02cBusiness = [...Object.keys(PO02C_EDITS), ...Object.keys(PO02C_NEW)].filter((f) => PO02C_FORBIDDEN.test(f));
+check("PO-02C touched no schema, migration, business, posting, accounting, inventory, HR, document, print, PDF, storage, API or customer app-page file", po02cBusiness.length === 0, po02cBusiness.join(" "));
+// Line level. `prose` drops comment and blank lines, so only what the code does is pinned.
+const prose = (lines: string[]) => lines.filter((l) => !/^\s*(\/\/|\*|\/\*\*)/.test(l) && l.trim() !== "");
+const storeDelta = lineDelta(PO02C_EDITS["src/lib/security/session-store.ts"] ?? []);
+check("session store: additive — one read helper (readSessionRow: the row's user, organization and end state by its token hash); nothing removed",
+  storeDelta.removed.length === 0 && JSON.stringify(prose(storeDelta.added)) === JSON.stringify([
+    "export async function readSessionRow(jti: string) {",
+    "  const [row] = await db",
+    "    .select({ userId: sessionsTable.userId, orgId: sessionsTable.orgId, revokedAt: sessionsTable.revokedAt, revokedReason: sessionsTable.revokedReason, expiresAt: sessionsTable.expiresAt })",
+    "    .from(sessionsTable)",
+    "    .where(eq(sessionsTable.tokenHash, hashJti(jti)))",
+    "    .limit(1);",
+    "  return row ?? null;",
+  ]), JSON.stringify(storeDelta));
+const uploadsDelta = lineDelta(PO02C_EDITS["src/app/uploads/[...path]/route.ts"] ?? []);
+check("uploads route: additive — the gate import and ONE check that refuses a valid signature while the company is not active; nothing removed",
+  uploadsDelta.removed.length === 0 && JSON.stringify(prose(uploadsDelta.added)) === JSON.stringify([
+    'import { orgAccessAllowed, tenantAccessEnforcementEnabled } from "@/lib/security/tenant-access-gate";',
+    '  if (signed && tenantAccessEnforcementEnabled() && !(await orgAccessAllowed(fileOrgId))) return new Response("Not found", { status: 404 });',
+  ]), JSON.stringify(uploadsDelta));
+const dictDelta = lineDelta(PO02C_EDITS["src/lib/i18n/dict.ts"] ?? []);
+check("customer dictionary: additive — nine English → native Arabic entries for the sign-in messages and the access-suspended screen; nothing removed",
+  dictDelta.removed.length === 0 && prose(dictDelta.added).length === 9 && prose(dictDelta.added).every((l) => /^ {2}"[^"]+": "[^"]*[؀-ۿ][^"]*",$/.test(l)), JSON.stringify(dictDelta.removed));
+const loginDelta = lineDelta(PO02C_EDITS["src/app/(auth)/actions.ts"] ?? []);
+const loginAdded = prose(loginDelta.added).join("\n");
+check("sign-in: the only code removed is the in-loop recovery-code consumption, now done after the access check; the access check, its two messages and issueSession's refusal are added",
+  JSON.stringify(prose(loginDelta.removed)) === JSON.stringify([
+    "          hashes.splice(i, 1);",
+    '          const { encryptField } = await import("@/lib/crypto/field-encryption");',
+    "          await db.update(usersTable).set({ mfaRecoveryCodes: encryptField(JSON.stringify(hashes)) }).where(eq(usersTable.id, user.id));",
+    '          await recordSecurityEvent({ email, orgId: user.orgId, userId: user.id, type: "mfa.recovery_used", severity: "medium" });',
+  ]) && /const decision = await orgAccessDecision\(user\.orgId\);/.test(loginAdded) && /recoveryCodes\.splice\(recoveryIndex, 1\);/.test(loginAdded) &&
+    /if \(tenantAccessEnforcementEnabled\(\) && !\(await orgAccessAllowed\(orgId\)\)\) throw new Error\(/.test(loginAdded),
+  JSON.stringify(loginDelta.removed));
+const sessionDelta = lineDelta(PO02C_EDITS["src/lib/session.ts"] ?? []);
+check("session check: the lookup now returns a state (active / suspended / unavailable / signed out); with enforcement OFF it makes exactly the previous checks (signature, isSessionValid for a jti, the active user) — the removed lines are the old null-returning forms only",
+  JSON.stringify(prose(sessionDelta.removed)) === JSON.stringify([
+    'import { isSessionValid } from "./security/session-store";',
+    "const lookupSessionByToken = cache(async (token: string): Promise<Session | null> => {",
+    "  if (!payload) return null;",
+    "  if (payload.jti && !(await isSessionValid(payload.jti))) return null;",
+    "  if (!row || !row.isActive) return null;",
+    "  return { ...row, role: row.role as Role, jti: payload.jti };",
+    "});",
+    "export async function getSession(): Promise<Session | null> {",
+    "  if (!token) return null;",
+    "  const session = await getSession();",
+    '  if (!session) redirect("/auth/clear?next=/login");',
+    "  return session;",
+  ]) && /\} else if \(!\(await isSessionValid\(payload\.jti\)\)\) \{/.test(sessionDelta.added.join("\n")) && /if \(!row \|\| !row\.isActive\) return SIGNED_OUT;/.test(sessionDelta.added.join("\n")),
+  JSON.stringify(sessionDelta.removed));
+const sessionAdded = prose(sessionDelta.added).join("\n");
+check("session check (enforcement ON): the session row is bound to the token's user AND company, the user must still belong to that company, and the company's access is checked on every request — suspended and unavailable are never a usable session",
+  /if \(!sessionRow \|\| sessionRow\.userId !== payload\.userId \|\| sessionRow\.orgId !== payload\.orgId\) return SIGNED_OUT;/.test(sessionAdded) &&
+    /if \(row\.orgId !== payload\.orgId\) return SIGNED_OUT;\n\s*const decision = await orgAccessDecision\(row\.orgId\);\n\s*if \(decision === "suspended"\) return SUSPENDED;\n\s*if \(decision === "unavailable"\) return UNAVAILABLE;/.test(sessionAdded) &&
+    /return state\.status === "active" \? state\.session : null;/.test(sessionAdded) &&
+    /if \(state\.status === "suspended" \|\| state\.status === "unavailable"\) redirect\("\/access-suspended"\);/.test(sessionAdded),
+  sessionAdded.slice(0, 300));
 
 console.log("\nGroups:");
 for (const [g, [p, f]] of Object.entries(counts)) console.log(`  ${g}: ${p}/${p + f}`);
