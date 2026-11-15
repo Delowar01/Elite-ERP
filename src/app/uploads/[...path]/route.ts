@@ -1,5 +1,6 @@
 import { getSession } from "@/lib/session";
 import { verifySignedFile } from "@/lib/security/signed-url";
+import { orgAccessAllowed, tenantAccessEnforcementEnabled } from "@/lib/security/tenant-access-gate";
 import { recordFileAccess } from "@/lib/security/audit";
 import { getRequestContext } from "@/lib/security/request-context";
 import { readBlob, BLOB_FOLDER_SET, CONTENT_TYPES, type FileExt } from "@/lib/storage/blob-storage";
@@ -44,6 +45,13 @@ export async function GET(req: Request, ctx: { params: Promise<{ path: string[] 
   const url = new URL(req.url);
   const expRaw = url.searchParams.get("exp");
   const signed = BRANDING_FOLDERS.has(folder) && verifySignedFile(pathname, expRaw, url.searchParams.get("sig"));
+
+  // PO-02C: a signature proves the link was minted, not that the company may still be served. A
+  // signed request is refused while the owning company's access is not active — and when that
+  // access cannot be read at all (fail closed). The session path below is covered by getSession(),
+  // which applies the same check. Bytes a browser already holds in its private cache (at most
+  // max-age, below) or files already downloaded cannot be recalled.
+  if (signed && tenantAccessEnforcementEnabled() && !(await orgAccessAllowed(fileOrgId))) return new Response("Not found", { status: 404 });
 
   // A signed response must not outlive its signature in the browser's own cache. With a flat
   // max-age=3600 a client that fetched the file once could keep re-serving it from cache for an hour

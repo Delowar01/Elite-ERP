@@ -48,6 +48,19 @@ export async function isSessionValid(jti: string): Promise<boolean> {
   return true;
 }
 
+/**
+ * PO-02C: the session row behind a jti with its ownership and end state, for the tenant-access gate
+ * (src/lib/session.ts), which binds it to the token's user and organization. Null when no row exists.
+ */
+export async function readSessionRow(jti: string) {
+  const [row] = await db
+    .select({ userId: sessionsTable.userId, orgId: sessionsTable.orgId, revokedAt: sessionsTable.revokedAt, revokedReason: sessionsTable.revokedReason, expiresAt: sessionsTable.expiresAt })
+    .from(sessionsTable)
+    .where(eq(sessionsTable.tokenHash, hashJti(jti)))
+    .limit(1);
+  return row ?? null;
+}
+
 /** Throttled last-activity touch (avoids a write on every request). */
 export async function touchSession(jti: string): Promise<void> {
   const hash = hashJti(jti);

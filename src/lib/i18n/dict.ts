@@ -2091,6 +2091,16 @@ const DICT: Record<string, string> = {
   "Returning…": "جارٍ الإرجاع…",
   "Goods returned to stock.": "أُعيدت البضاعة إلى المخزون.",
   "Goods returned": "البضاعة المرتجعة",
+  // PO-02C — company access suspended (sign-in message and the access-suspended screen)
+  "Your company's access is suspended. Contact your service provider.": "تم إيقاف وصول شركتك. يُرجى التواصل مع مزوّد الخدمة.",
+  "Sign-in is temporarily unavailable. Try again later.": "تسجيل الدخول غير متاح مؤقتًا. حاول مرة أخرى لاحقًا.",
+  "Company access suspended": "تم إيقاف وصول الشركة",
+  "Your company's access to Elite ERP is suspended, so its records can't be opened right now.": "تم إيقاف وصول شركتك إلى Elite ERP، لذا لا يمكن فتح سجلاتها حاليًا.",
+  "Nothing has been deleted. Your company's records are kept unchanged.": "لم يُحذف أي شيء، وسجلات شركتك محفوظة دون تغيير.",
+  "To restore access, contact your service provider. Once access is restored, sign in again.": "لاستعادة الوصول، تواصل مع مزوّد الخدمة. وبعد استعادته، سجّل الدخول من جديد.",
+  "Company access can't be confirmed": "تعذّر التحقق من وصول الشركة",
+  "Elite ERP can't confirm your company's access right now, so its records can't be opened. Try again later.": "لا يستطيع Elite ERP التحقق من وصول شركتك حاليًا، لذا لا يمكن فتح سجلاتها. حاول مرة أخرى لاحقًا.",
+  "If this continues, contact your service provider.": "إذا استمر ذلك، تواصل مع مزوّد الخدمة.",
 };
 
 export function t(locale: Locale, en: string): string {

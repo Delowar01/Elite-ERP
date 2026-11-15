@@ -11,6 +11,7 @@ import { seedOrgDefaults } from "@/lib/seed-org";
 import { recordSecurityEvent, recordAudit } from "@/lib/security/audit";
 import { validatePassword, DEFAULT_POLICY } from "@/lib/security/password-policy";
 import { createSession } from "@/lib/security/session-store";
+import { orgAccessAllowed, orgAccessDecision, tenantAccessEnforcementEnabled } from "@/lib/security/tenant-access-gate";
 import { verifyTotp } from "@/lib/security/totp";
 import { decryptField } from "@/lib/crypto/field-encryption";
 import { COUNTRIES } from "@/lib/geo/countries";
@@ -21,7 +22,14 @@ const COOKIE_MAX_AGE = 60 * 60 * 24 * 30; // 30 days
 
 export type ActionState = { error?: string } | undefined;
 
+// PO-02C: shown only AFTER the credentials (and second factor) were verified; translated in the
+// customer dictionary. Before that point every failure stays generic.
+const COMPANY_SUSPENDED_MESSAGE = "Your company's access is suspended. Contact your service provider.";
+const SIGN_IN_UNAVAILABLE_MESSAGE = "Sign-in is temporarily unavailable. Try again later.";
+
 async function issueSession(userId: number, orgId: number) {
+  // PO-02C, defence in depth: no session is ever issued for a company whose access is not active.
+  if (tenantAccessEnforcementEnabled() && !(await orgAccessAllowed(orgId))) throw new Error("session refused: company access is not active");
   const jti = await createSession(userId, orgId);
   const token = await signSessionToken({ userId, orgId, jti });
   const cookieStore = await cookies();
@@ -61,6 +69,9 @@ export async function loginAction(_prev: ActionState, formData: FormData): Promi
     return { error: "Invalid email or password." };
   }
   // MFA challenge — password is correct; require a valid TOTP or recovery code.
+  // PO-02C: a matching recovery code is only consumed once the company's access is confirmed below.
+  let recoveryCodes: string[] | null = null;
+  let recoveryIndex = -1;
   if (user.mfaEnabled) {
     if (!mfaCode) return { error: "MFA_REQUIRED" };
     const secret = decryptField(user.mfaSecret);
@@ -70,11 +81,9 @@ export async function loginAction(_prev: ActionState, formData: FormData): Promi
       const hashes: string[] = JSON.parse(decryptField(user.mfaRecoveryCodes) ?? "[]");
       for (let i = 0; i < hashes.length; i++) {
         if (await bcrypt.compare(mfaCode.toUpperCase(), hashes[i])) {
-          hashes.splice(i, 1);
-          const { encryptField } = await import("@/lib/crypto/field-encryption");
-          await db.update(usersTable).set({ mfaRecoveryCodes: encryptField(JSON.stringify(hashes)) }).where(eq(usersTable.id, user.id));
+          recoveryCodes = hashes;
+          recoveryIndex = i;
           mfaOk = true;
-          await recordSecurityEvent({ email, orgId: user.orgId, userId: user.id, type: "mfa.recovery_used", severity: "medium" });
           break;
         }
       }
@@ -83,6 +92,28 @@ export async function loginAction(_prev: ActionState, formData: FormData): Promi
       await recordSecurityEvent({ email, orgId: user.orgId, userId: user.id, type: "mfa.failed", severity: "high" });
       return { error: "MFA_INVALID" };
     }
+  }
+
+  // PO-02C: company access, checked only after authentication succeeded (so the neutral suspension
+  // message is never shown to someone who has not proven the credentials). No session is issued,
+  // no recovery code is consumed and the last-login time is not touched for a suspended company.
+  if (tenantAccessEnforcementEnabled()) {
+    const decision = await orgAccessDecision(user.orgId);
+    if (decision === "unavailable") {
+      await recordSecurityEvent({ email, orgId: user.orgId, userId: user.id, type: "login.access_unavailable", severity: "high" });
+      return { error: SIGN_IN_UNAVAILABLE_MESSAGE };
+    }
+    if (decision === "suspended") {
+      await recordSecurityEvent({ email, orgId: user.orgId, userId: user.id, type: "login.company_suspended", severity: "medium" });
+      return { error: COMPANY_SUSPENDED_MESSAGE };
+    }
+  }
+
+  if (recoveryCodes && recoveryIndex >= 0) {
+    recoveryCodes.splice(recoveryIndex, 1);
+    const { encryptField } = await import("@/lib/crypto/field-encryption");
+    await db.update(usersTable).set({ mfaRecoveryCodes: encryptField(JSON.stringify(recoveryCodes)) }).where(eq(usersTable.id, user.id));
+    await recordSecurityEvent({ email, orgId: user.orgId, userId: user.id, type: "mfa.recovery_used", severity: "medium" });
   }
 
   clearLoginRateLimit(email);
