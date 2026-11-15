@@ -94,7 +94,9 @@
     "verify:platform-migration-safety": "tsx --conditions=react-server verify/verify-platform-migration-safety.mts",
     "verify:platform-companies": "tsx --conditions=react-server verify/verify-platform-companies.mts",
     "verify:platform-companies-browser": "tsx --conditions=react-server verify/verify-platform-companies-browser.mts",
-    "verify:platform": "npm run verify:platform-boundary && npm run verify:platform-proxy && npm run verify:platform-schema && npm run verify:platform-auth && npm run verify:platform-bootstrap && npm run verify:platform-console && npm run verify:platform-containment && npm run verify:platform-company-schema && npm run verify:platform-migration-safety && npm run verify:platform-companies"
+    "verify:platform-company-access": "tsx --conditions=react-server verify/verify-platform-company-access.mts",
+    "verify:platform-company-access-browser": "tsx --conditions=react-server verify/verify-platform-company-access-browser.mts",
+    "verify:platform": "npm run verify:platform-boundary && npm run verify:platform-proxy && npm run verify:platform-schema && npm run verify:platform-auth && npm run verify:platform-bootstrap && npm run verify:platform-console && npm run verify:platform-containment && npm run verify:platform-company-schema && npm run verify:platform-migration-safety && npm run verify:platform-companies && npm run verify:platform-company-access"
   },
   "dependencies": {
     "@radix-ui/react-avatar": "^1.2.2",

@@ -240,7 +240,8 @@ async function main() {
 
   section("1. Authorization: flag → live platform session → platform.companies.read; customer tokens refused");
   {
-    ok("PLATFORM_PERMISSIONS gains exactly platform.companies.read", JSON.stringify(guards.PLATFORM_PERMISSIONS) === JSON.stringify(["platform.access", "platform.sessions.manage", "platform.mfa.manage", "platform.companies.read"]));
+    // PO-02C appends platform.companies.manage_access (the access action; verify:platform-company-access).
+    ok("PLATFORM_PERMISSIONS gains exactly platform.companies.read (and, from PO-02C, platform.companies.manage_access)", JSON.stringify(guards.PLATFORM_PERMISSIONS) === JSON.stringify(["platform.access", "platform.sessions.manage", "platform.mfa.manage", "platform.companies.read", "platform.companies.manage_access"]));
     const ctx = await guards.authorizePlatformToken(token, "platform.companies.read");
     ok("a live platform session is granted platform.companies.read", ctx.adminId === operator.id);
     await rejects("a permission outside the allowlist (platform.companies.write) → FORBIDDEN", () => guards.authorizePlatformToken(token, "platform.companies.write" as never), is("FORBIDDEN"));
@@ -283,11 +284,13 @@ async function main() {
     ok("logo presence is a boolean: true for the company with a logo, the URL itself absent", row?.hasLogo === true && !JSON.stringify(page).includes("secret-logo"));
     const detail = keep(await co.getCompanyDetail(req, String(fx.sensitive)));
     ok("detail keys are the allowlist only", keysOf(detail) === "access,activity,country,createdAt,currency,hasLogo,industry,name,orgId,owners,reference,users", keysOf(detail));
-    ok("…access {status, source, reason, changedAt, changedBy}; owners {name, email}", keysOf(detail.access) === "changedAt,changedBy,reason,source,status" && detail.owners.every((o) => keysOf(o) === "email,name"));
+    // PO-02C adds `enforced` (whether customer enforcement is switched on here — a configuration flag, not company data).
+    ok("…access {status, source, reason, changedAt, changedBy, enforced}; owners {name, email}", keysOf(detail.access) === "changedAt,changedBy,enforced,reason,source,status" && typeof detail.access.enforced === "boolean" && detail.owners.every((o) => keysOf(o) === "email,name"));
     const invs = keep(await co.listPendingInvitations(req, {}));
     ok("invitation row keys: reference, company, owner e-mail, country, created, expires, state", invs.rows.length > 0 && invs.rows.every((r) => keysOf(r) === "companyName,country,createdAt,expiresAt,ownerEmail,reference,state"));
     const metrics = keep(await co.companyMetrics(req));
-    ok("metrics keys: companies, invitations, users, registrations, newest", keysOf(metrics) === "companies,invitations,newest,registrations,users" && metrics.newest.every((n) => keysOf(n) === "createdAt,name,orgId,reference"));
+    // PO-02C adds `accessEnforced` (the same configuration flag, for the Suspended tile's note).
+    ok("metrics keys: companies, invitations, users, registrations, newest, accessEnforced", keysOf(metrics) === "accessEnforced,companies,invitations,newest,registrations,users" && typeof metrics.accessEnforced === "boolean" && metrics.newest.every((n) => keysOf(n) === "createdAt,name,orgId,reference"));
     keep(await co.listCompanyCountries(req));
     keep(await co.listCompanies(req, { size: "50" }));
     keep(await co.listCompanies(req, { q: "owner@sensitive" }));

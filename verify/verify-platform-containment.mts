@@ -21,9 +21,11 @@
  */
 import { createHash, randomBytes } from "node:crypto";
 import { execFileSync } from "node:child_process";
+import { existsSync, readFileSync } from "node:fs";
 import { decodeJwt } from "jose";
 import { createPlatformTestDatabase, databaseUrlFor, disposableName, dropDisposableDatabase } from "../scripts/platform/disposable-db";
 import { section, ok, rejects, summary, describeError } from "./platform/harness";
+import { PO02C_EDITS, PO02C_NEW, undoPo02c } from "./po02c-approved-delta.mjs";
 
 const testDbName = disposableName("po01b1_containment");
 process.env.DATABASE_URL = databaseUrlFor(testDbName);
@@ -391,8 +393,26 @@ async function main() {
     await auditOutage(false);
     await tenantSessions.revokeCurrentSession(tenantJti);
     ok("tenant revocation still works on its own (independent of the platform)", !(await tenantSessions.isSessionValid(tenantJti)));
-    const touched = execFileSync("git", ["diff", "--name-only", "621f156f7b129b9c2e289bc46d314ce7587beec2", "--", "src/lib/session.ts", "src/lib/auth.ts", "src/lib/security", "src/app/(auth)", "src/app/auth", "src/app/(app)", "src/components/layout", "src/components/ui"], { encoding: "utf8" }).trim();
-    ok("no tenant session, authentication, app-route, layout or UI-component file differs from the live ERP (621f156)", touched === "", touched);
+    // PO-02C changes the customer session check, the session store and sign-in, and adds the tenant-access gate —
+    // an approved change recorded byte for byte (verify/po02c-approved-delta.mts). So: every file in these paths
+    // that differs from the live ERP must be 621f156's text plus exactly its PO-02C hunks, or a file PO-02C added
+    // (as pinned there). Anything else that differs fails, exactly as before.
+    const LIVE = "621f156f7b129b9c2e289bc46d314ce7587beec2";
+    const TENANT_PATHS = ["src/lib/session.ts", "src/lib/auth.ts", "src/lib/security", "src/app/(auth)", "src/app/auth", "src/app/(app)", "src/components/layout", "src/components/ui"];
+    const lines = (out: string) => out.split("\n").map((l) => l.trim()).filter(Boolean);
+    const differing = [...new Set([
+      ...lines(execFileSync("git", ["diff", "--name-only", LIVE, "--", ...TENANT_PATHS], { encoding: "utf8" })),
+      ...lines(execFileSync("git", ["ls-files", "--others", "--exclude-standard", "--", ...TENANT_PATHS], { encoding: "utf8" })),
+    ])].sort();
+    const h16 = (b: Buffer | string) => createHash("sha256").update(b).digest("hex").slice(0, 16);
+    const unexplained = differing.filter((f) => {
+      if (f in PO02C_NEW) return !existsSync(f) || h16(readFileSync(f)) !== PO02C_NEW[f];
+      if (!(f in PO02C_EDITS) || !existsSync(f)) return true;
+      return undoPo02c(f, readFileSync(f, "utf8")) !== execFileSync("git", ["show", `${LIVE}:${f}`], { encoding: "utf8" });
+    });
+    ok("no tenant session, authentication, app-route, layout or UI-component file differs from the live ERP (621f156) except by PO-02C's recorded change (621f156's text plus exactly its hunks; added files as pinned)", unexplained.length === 0, unexplained.join(", "));
+    ok("…and in these paths PO-02C changed exactly sign-in, the session store and the session check, and added exactly the tenant-access gate",
+      JSON.stringify(differing) === JSON.stringify(["src/app/(auth)/actions.ts", "src/lib/security/session-store.ts", "src/lib/security/tenant-access-gate.ts", "src/lib/session.ts"]), differing.join(", "));
     const proxyDiff = execFileSync("git", ["diff", "621f156f7b129b9c2e289bc46d314ce7587beec2", "--", "src/proxy.ts"], { encoding: "utf8" });
     const changed = proxyDiff.split("\n").filter((l) => /^[+-](?![+-])/.test(l));
     ok("src/proxy.ts differs from the live ERP only by the PO-01B edge-gate import and /platform delegation (2 code lines plus a comment, nothing removed)", changed.every((l) => l.startsWith("+")) && changed.filter((l) => !/^\+\s*\/\//.test(l)).length === 2, changed.join(" | "));

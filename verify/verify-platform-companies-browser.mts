@@ -312,7 +312,9 @@ async function main() {
     await page.getByRole("tab", { name: "Overview" }).focus();
     await page.keyboard.press("ArrowRight");
     ok("keyboard: ArrowRight moves to Access & controls", await tabSelected(page, "Access & controls"));
-    ok("Access: Active by default (no access record), Suspend disabled with its phase", (await page.getByText("Default for existing companies (no access record)").isVisible()) && (await page.getByRole("button", { name: /Suspend company — Planned for PO-02C/ }).first().isDisabled()));
+    // PO-02C made Suspend operational; this suite's servers run with customer enforcement OFF (the default), so it is
+    // disabled and says why (verify:platform-company-access-browser drives the enabled dialog).
+    ok("Access: Active by default (no access record); Suspend disabled because customer enforcement is off here (PO-02C)", (await page.getByText("Default for existing companies (no access record)").isVisible()) && (await page.getByRole("button", { name: /Suspend company — Customer enforcement is switched off/ }).first().isDisabled()));
     await page.getByRole("tab", { name: "Users" }).click();
     ok("Users: 4 owners counted, the 3 oldest listed, a note says 3 of 4", (await page.locator(".platform-owner").count()) === 3 && (await page.getByText("Showing 3 of 4 owners").isVisible()) && (await page.locator(".platform-owner").first().innerText()).includes("owner1@four-owners.test"));
     await page.getByRole("tab", { name: "Subscription" }).click();

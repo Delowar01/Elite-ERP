@@ -7,7 +7,9 @@
 // console rules 9–18 below; PO-01B.1 added rules 19–20 (session changes and the audit-outage policy).
 // PO-02B made Companies and the Dashboard operational (read-only): rule 18 now covers the four
 // sections that are still previews, and rules 21–28 pin the company read model and its pages; rule 29
-// keeps Platform Owner states colour-free (neutral tags from one table of labels and icons).
+// keeps Platform Owner states colour-free (neutral tags from one table of labels and icons). PO-02C made
+// company access operational: rules 3, 11, 12, 21, 23, 24 and 26 name its exact exceptions, and rules
+// 30–36 pin the customer tenant-access gate, the access action, the dialog and the suspended screen.
 import { readFileSync, readdirSync, statSync, existsSync } from "node:fs";
 import { join, relative } from "node:path";
 
@@ -51,8 +53,10 @@ ok("src/lib/platform imports no customer session/auth/tenant/rate-limit/audit mo
 
 // 3. Only the console routes import the platform library; only the proxy imports the edge gate.
 const under = (f, d) => f.startsWith(join(root, d) + "/") || f === join(root, d);
-const importers = allSrc.filter((f) => !under(f, "src/lib/platform") && !under(f, "src/app/(platform)") && importsOf(read(f)).some((s) => s.startsWith("@/lib/platform/") || s.includes("/lib/platform/")));
-ok("outside src/lib/platform only src/app/(platform) imports the platform library", importers.length === 0, importers.map(rel).join(", "));
+// PO-02C: the one exception is the customer tenant-access gate, which imports the access rule alone (rule 30).
+const GATE = join(root, "src/lib/security/tenant-access-gate.ts");
+const importers = allSrc.filter((f) => f !== GATE && !under(f, "src/lib/platform") && !under(f, "src/app/(platform)") && importsOf(read(f)).some((s) => s.startsWith("@/lib/platform/") || s.includes("/lib/platform/")));
+ok("outside src/lib/platform only src/app/(platform) imports the platform library (and the PO-02C tenant-access gate, the access rule alone)", importers.length === 0, importers.map(rel).join(", "));
 const edgeImporters = allSrc.filter((f) => importsOf(read(f)).some((s) => s.startsWith("@/lib/platform-edge") || s.includes("/platform-edge/")));
 ok("only src/proxy.ts imports the edge gate (src/lib/platform-edge)", edgeImporters.length === 1 && rel(edgeImporters[0]) === join("src", "proxy.ts"), edgeImporters.map(rel).join(", "));
 const appToScripts = allSrc.filter((f) => importsOf(read(f)).some((s) => s.includes("scripts/platform")));
@@ -122,18 +126,18 @@ ok("edge gate reads AUTH_SECRET only to refuse a shared secret", (gateSrc.match(
 
 // 11. Console imports are allow-listed: no customer session/auth/tenant code, no direct database.
 const APP_ALLOWED = [/^next(\/|$)/, /^react$/, /^lucide-react$/, /^zod$/, /^@\/lib\/platform\//, /^@\/components\/platform\//, /^@\/components\/ui\//, /^@\/components\/brand\//, /^@\/lib\/i18n\/(server|dict)$/, /^@\/lib\/theme$/, /^@\/app\/\((app|auth)\)\/[a-z-]+\.css$/, /^@\/app\/\(platform\)\/platform\.css$/];
-const UI_ALLOWED = [/^next(\/|$)/, /^react$/, /^lucide-react$/, /^sonner$/, /^@radix-ui\/react-dialog$/, /^@\/components\/ui\//, /^@\/components\/brand\//, /^@\/components\/layout\/(brand-mark|language-switcher|theme-toggle|page-header)$/, /^@\/lib\/utils$/, /^@\/lib\/i18n\/dict$/, /^@\/lib\/theme$/, /^@\/app\/\(platform\)\/(auth|security)-actions$/, /^\.\/[a-z0-9-]+$/];
+const UI_ALLOWED = [/^next(\/|$)/, /^react$/, /^lucide-react$/, /^sonner$/, /^@radix-ui\/react-dialog$/, /^@\/components\/ui\//, /^@\/components\/brand\//, /^@\/components\/layout\/(brand-mark|language-switcher|theme-toggle|page-header)$/, /^@\/lib\/utils$/, /^@\/lib\/i18n\/dict$/, /^@\/lib\/theme$/, /^@\/app\/\(platform\)\/(auth|security|company-access)-actions$/, /^\.\/[a-z0-9-]+$/];
 const badApp = consoleApp.flatMap((f) => [...importsOf(read(f)), ...sideEffectImports(read(f))].filter((s) => !APP_ALLOWED.some((re) => re.test(s))).map((s) => `${rel(f)} → ${s}`));
 ok("src/app/(platform) imports only the platform library, console components, shared UI and i18n (no @/db, session, auth, tenant)", consoleApp.length >= 15 && badApp.length === 0, badApp.join(", "));
 const badUi = consoleUi.flatMap((f) => [...importsOf(read(f)), ...sideEffectImports(read(f))].filter((s) => !UI_ALLOWED.some((re) => re.test(s))).map((s) => `${rel(f)} → ${s}`));
 ok("src/components/platform imports no server module, no customer shell (AppShell/Sidebar/NavList) and no customer action", consoleUi.length >= 10 && badUi.length === 0, badUi.join(", "));
 const PLATFORM_MODULES = (s) => s.startsWith("@/lib/platform") || s.startsWith("@/components/platform") || s.startsWith("@/app/(platform)");
-const leaks = allSrc.filter((f) => !under(f, "src/app/(platform)") && !under(f, "src/components/platform") && !under(f, "src/lib/platform") && !under(f, "src/lib/platform-edge") && rel(f) !== join("src", "proxy.ts") && importsOf(read(f)).some(PLATFORM_MODULES));
-ok("no customer route, component or library imports any platform module", leaks.length === 0, leaks.map(rel).join(", "));
+const leaks = allSrc.filter((f) => f !== GATE && !under(f, "src/app/(platform)") && !under(f, "src/components/platform") && !under(f, "src/lib/platform") && !under(f, "src/lib/platform-edge") && rel(f) !== join("src", "proxy.ts") && importsOf(read(f)).some(PLATFORM_MODULES));
+ok("no customer route, component or library imports any platform module (except the PO-02C tenant-access gate — rule 30)", leaks.length === 0, leaks.map(rel).join(", "));
 
 // 12. Server actions are authorized on their own (never by the UI): each exported action calls a
 //     console core, which checks flag → origin → live session → permission.
-const CORES = /\b(signInCore|signOutCore|revokeSessionCore|signOutOtherSessionsCore|regenerateRecoveryCodesCore|emergencyContainmentCore)\(/;
+const CORES = /\b(signInCore|signOutCore|revokeSessionCore|signOutOtherSessionsCore|regenerateRecoveryCodesCore|emergencyContainmentCore|setCompanyAccessCore|readCompanyAccessCore)\(/;
 const actionFiles = consoleApp.filter((f) => /^\s*"use server";/.test(read(f)));
 const unguardedActions = actionFiles.flatMap((f) => {
   const src = read(f);
@@ -142,7 +146,7 @@ const unguardedActions = actionFiles.flatMap((f) => {
   const unauth = parts.filter((p) => p.startsWith("export async function") && !CORES.test(p)).map((p) => `${rel(f)}: ${p.slice(22, 60)}`);
   return [...stray, ...unauth];
 });
-ok("every exported server action in src/app/(platform) runs through a console core (and exports nothing else)", actionFiles.length === 2 && unguardedActions.length === 0, unguardedActions.join(", "));
+ok("every exported server action in src/app/(platform) runs through a console core (and exports nothing else) — auth, security and (PO-02C) company access", actionFiles.length === 3 && unguardedActions.length === 0, unguardedActions.join(", "));
 const coreSrc = read(join(root, "src/lib/platform/console.ts"));
 ok("console mutations check the flag, then same-origin, then the live session", /async function authorizeMutation[\s\S]{0,200}assertPlatformConsoleEnabled\(\);\s*assertSameOrigin\(req\.headers\);\s*return authorizePlatformToken\(/.test(coreSrc) && (coreSrc.match(/authorizeMutation\(req,/g) ?? []).length === 4 && /signInCore[\s\S]{0,200}assertSameOrigin/.test(coreSrc) && /signOutCore[\s\S]{0,200}assertSameOrigin/.test(coreSrc));
 
@@ -248,9 +252,11 @@ const consoleCode = [...platformLib, ...consoleApp, ...consoleUi];
 
 // 21. Only the read model touches the customer orgs / users tables (the compatibility rule reads orgs.id only).
 const tenantTableRefs = consoleCode.filter((f) => /\b(orgsTable|usersTable)\b/.test(code(f)));
-ok("only companies.ts and company-access.ts reference orgsTable / usersTable in platform code", JSON.stringify(tenantTableRefs.map(rel).sort()) === JSON.stringify([join("src", "lib", "platform", "companies.ts"), join("src", "lib", "platform", "company-access.ts")]), tenantTableRefs.map(rel).join(", "));
+ok("only companies.ts, company-access.ts and (PO-02C) company-access-actions.ts reference orgsTable / usersTable in platform code", JSON.stringify(tenantTableRefs.map(rel).sort()) === JSON.stringify([join("src", "lib", "platform", "companies.ts"), join("src", "lib", "platform", "company-access-actions.ts"), join("src", "lib", "platform", "company-access.ts")]), tenantTableRefs.map(rel).join(", "));
 const accessSrc = code(join(root, "src/lib/platform/company-access.ts"));
 ok("company-access.ts reads orgs only for existence (orgs.id) and never the users table", (accessSrc.match(/orgsTable\.\w+/g) ?? []).every((m) => m === "orgsTable.id") && !/usersTable/.test(accessSrc));
+const accessCore = code(join(root, "src/lib/platform/company-access-actions.ts"));
+ok("company-access-actions.ts uses orgs only by id (existence and the row lock) and never the users table", (accessCore.match(/orgsTable\.\w+/g) ?? []).length > 0 && (accessCore.match(/orgsTable\.\w+/g) ?? []).every((m) => m === "orgsTable.id") && !/usersTable/.test(accessCore));
 const rawTenantSql = consoleCode.filter((f) => /\b(from|join|update|into)\s+"?(orgs|users|sessions|customers|invoices)"?(\s|$|\))/i.test(code(f)));
 ok("no platform module names a customer table in raw SQL text", rawTenantSql.length === 0, rawTenantSql.map(rel).join(", "));
 
@@ -279,12 +285,18 @@ ok("every exported function of companies.ts starts with authorizeCompanyRead(req
 ok("authorizeCompanyRead = feature flag, then the live platform session with platform.companies.read", /async function authorizeCompanyRead\(req: CompanyReadRequest\): Promise<PlatformSessionContext> \{\s*assertPlatformConsoleEnabled\(\);\s*return authorizePlatformToken\(req\.token, "platform\.companies\.read"\);\s*\}/.test(readModel));
 ok("the read model never reads cookies or headers itself (the page passes the platform cookie's token)", !/next\/headers|cookies\(\)|SESSION_COOKIE/.test(readModel));
 const guardsSrc = code(join(root, "src/lib/platform/guards.ts"));
-ok("platform.companies.read is the only new permission and grants no company change", /PLATFORM_PERMISSIONS = \["platform\.access", "platform\.sessions\.manage", "platform\.mfa\.manage", "platform\.companies\.read"\] as const;/.test(guardsSrc) && !/platform\.companies\.(write|manage|update|suspend|edit|delete|invite)/.test(consoleCode.map(code).join("\n")));
+const manageAccessUsers = consoleCode.filter((f) => /"platform\.companies\.manage_access"/.test(code(f))).map(rel).sort();
+ok("the company permissions are exactly platform.companies.read and (PO-02C) platform.companies.manage_access, which only the access action checks; no other company permission exists",
+  /PLATFORM_PERMISSIONS = \["platform\.access", "platform\.sessions\.manage", "platform\.mfa\.manage", "platform\.companies\.read", "platform\.companies\.manage_access"\] as const;/.test(guardsSrc) &&
+    !/platform\.companies\.(write|update|suspend|edit|delete|invite|manage(?!_access\b))/.test(consoleCode.map(code).join("\n")) &&
+    JSON.stringify(manageAccessUsers) === JSON.stringify([join("src", "lib", "platform", "company-access-actions.ts"), join("src", "lib", "platform", "guards.ts")]),
+  manageAccessUsers.join(", "));
 
 // 24. A company detail view is audited under the PO-01B.1 policy, or not shown at all.
 const detailFn = fnBodies(readModel).find((f) => f.name === "getCompanyDetail")?.body ?? "";
 const at = (re) => detailFn.search(re);
-ok("getCompanyDetail: authorize → validate id → assert audit protection → read → record company.viewed → return", at(/authorizeCompanyRead\(req\)/) >= 0 && at(/authorizeCompanyRead\(req\)/) < at(/parseOrgId\(rawOrgId\)/) && at(/parseOrgId\(rawOrgId\)/) < at(/await assertPlatformAuditProtection\(\);/) && at(/await assertPlatformAuditProtection\(\);/) < at(/getTenantAccess\(orgId\)/) && at(/getTenantAccess\(orgId\)/) < at(/recordPlatformAudit\(/) && at(/recordPlatformAudit\(/) < at(/return detail;/));
+ok("getCompanyDetail: authorize → validate id → assert audit protection → read → record company.viewed → return", at(/authorizeCompanyRead\(req\)/) >= 0 && at(/authorizeCompanyRead\(req\)/) < at(/parseOrgId\(rawOrgId\)/) && at(/parseOrgId\(rawOrgId\)/) < at(/await assertPlatformAuditProtection\(\);/) && at(/await assertPlatformAuditProtection\(\);/) < at(/\.\.\.ACCESS_FIELDS,/) && at(/\.\.\.ACCESS_FIELDS,/) < at(/recordPlatformAudit\(/) && at(/recordPlatformAudit\(/) < at(/return detail;/));
+ok("PO-02C: the detail's access state, reason, change date and operator come from ONE statement (no separate access read)", !/getTenantAccess\(/.test(readModel) && (detailFn.match(/\.\.\.ACCESS_FIELDS,/g) ?? []).length === 1 && /access: \{ \.\.\.accessOf\(org\), reason: org\.reason \?\? null, changedAt: org\.changedAt \?\? null, changedBy: org\.changedBy \?\? null, enforced: tenantAccessEnforcementEnabled\(\) \},/.test(detailFn));
 ok("the view record is exact and bounded: company.viewed on organization/<decimal id>, with the org id and request metadata", /action: "company\.viewed",\s*entityType: "organization",\s*entityId: String\(orgId\),\s*orgId,\s*result: "success",\s*\.\.\.meta,/.test(detailFn));
 ok("a failed view record is reported as an incident and re-thrown (never swallowed)", /catch \(err\) \{\s*if \(isPlatformError\(err, "AUDIT_UNAVAILABLE"\)\) reportSecurityIncident\(\{ type: "audit_write_failed", action: "company\.viewed", error: errorClass\(err\) \}\);\s*throw err;\s*\}/.test(detailFn));
 
@@ -299,7 +311,8 @@ ok("company pages and the dashboard read data only through the read model (plus 
 const companyPageCode = companyPages.map(code).join("\n");
 ok("company pages hold no server action and no POST form; the only forms are GET searches of /platform/companies", !/"use server"|<form[^>]*\saction=\{|method="post"|formAction/i.test(companyPageCode) && (companyPageCode.match(/<form /g) ?? []).length === 2 && (companyPageCode.match(/<form method="get" action="\/platform\/companies" role="search"/g) ?? []).length === 2);
 const kitSrc = code(join(root, "src/components/platform/companies-kit.tsx"));
-ok("DisabledAction is a disabled element; invite, export, suspend/reactivate, edit and user management use it or PreviewAction", /<Button type="button" variant="secondary" disabled aria-disabled="true"/.test(kitSrc) && ["action.inviteCompany", "action.export", "action.suspend", "action.reactivate", "action.editCompany", "action.manageUsers"].every((k) => companyPageCode.includes(`"${k}"`)) && !/onClick|useActionState|useTransition/.test(companyPageCode + kitSrc));
+ok("DisabledAction is a disabled element; invite, export, edit and user management use it or PreviewAction; suspend / reactivate exist only as the PO-02C access dialog (header + Access tab)",
+  /<Button type="button" variant="secondary" disabled aria-disabled="true"/.test(kitSrc) && ["action.inviteCompany", "action.export", "action.editCompany", "action.manageUsers"].every((k) => companyPageCode.includes(`"${k}"`)) && !/"action\.(suspend|reactivate)"/.test(companyPageCode) && (companyPageCode.match(/<CompanyAccessControl /g) ?? []).length === 2 && !/onClick|useActionState|useTransition/.test(companyPageCode + kitSrc));
 
 // 27. No impersonation: no platform code can mint, read or forward a customer session.
 const customerSessionApi = consoleCode.filter((f) => /\b(signSessionToken|verifySessionToken|issueSession|requireSession|requireRole|getSession|SESSION_COOKIE_CLEAR|lookupSessionByToken|revokeUserSessions)\b|elite_erp_session/.test(code(f)));
@@ -323,6 +336,78 @@ ok("PlatformStatusTag renders the design system's status tag with the literal ne
 const toneByValue = [...companyPages, kitPath].flatMap((f) => [...code(f).matchAll(/<Badge\b[^>]*\svariant=\{|data-tone=\{(?!tone\})|\stone=\{/g)].map((m) => `${rel(f)}: ${m[0]}`));
 ok("no company page or kit component chooses a badge variant or a tone from a value (PageState forwards its caller's literal)", toneByValue.length === 0, toneByValue.join(", "));
 ok("platform code does not reach into the customer status registry or StatusBadge for its states", !consoleCode.some((f) => /status-registry|status-badge|StatusBadge/.test(code(f))));
+
+// ---------------------------------------------------------------------------------------------
+// PO-02C — company access: the customer tenant-access gate, the access action, its dialog and the
+// access-suspended screen.
+// ---------------------------------------------------------------------------------------------
+const gateText = read(GATE);
+const usesGate = (f) => importsOf(read(f)).some((s) => /(^|\/)security\/tenant-access-gate$/.test(s));
+
+// 30. ONE customer module consults the company-access rule, and exactly three customer files use it.
+const gateImports = [...importsOf(gateText), ...sideEffectImports(gateText)].sort();
+ok("30. the tenant-access gate imports server-only and @/lib/platform/company-access — nothing else", JSON.stringify(gateImports) === JSON.stringify(["@/lib/platform/company-access", "server-only"]), gateImports.join(", "));
+const gateUsers = allSrc.filter((f) => f !== GATE && usesGate(f)).map(rel).sort();
+ok("…exactly the session check, the sign-in actions and the uploads route use the gate", JSON.stringify(gateUsers) === JSON.stringify([join("src", "app", "(auth)", "actions.ts"), join("src", "app", "uploads", "[...path]", "route.ts"), join("src", "lib", "session.ts")].sort()), gateUsers.join(", "));
+ok("…the gate fails closed: a missing access table or column (42P01 / 42703) is 'unavailable' (denied), never a missing row", /const MISSING_OBJECT_CODES = new Set\(\["42P01", "42703"\]\);/.test(gateText) && /if \(err instanceof TenantAccessUnavailableError\) return "unavailable";/.test(gateText) && /return \(await orgAccessDecision\(orgId\)\) === "active";/.test(gateText) && /return access\?\.status === "active";/.test(gateText));
+const dialogPath = join(root, "src/components/platform/company-access-dialog.tsx");
+const dialogSrc = read(dialogPath);
+ok("…the dialog's reason limits equal the server's (10–500 characters)", /const REASON_MIN = 10;\s*const REASON_MAX = 500;/.test(dialogSrc) && /export const ACCESS_REASON_MIN = 10;\s*export const ACCESS_REASON_MAX = 500;/.test(accessCore));
+
+// 31. Off by default: deploying the code changes nothing until the switches are set explicitly.
+const envReaders = (name) => allSrc.filter((f) => new RegExp(`process\\.env\\.${name}\\b`).test(code(f))).map(rel);
+ok('31. enforcement is off unless TENANT_ACCESS_ENFORCEMENT is exactly "enabled" (read by company-access.ts alone); legacy-token rejection only when CUSTOMER_LEGACY_TOKENS is exactly "reject" (the gate alone)',
+  /return process\.env\.TENANT_ACCESS_ENFORCEMENT === "enabled";/.test(accessSrc) && JSON.stringify(envReaders("TENANT_ACCESS_ENFORCEMENT")) === JSON.stringify([join("src", "lib", "platform", "company-access.ts")]) &&
+    /return process\.env\.CUSTOMER_LEGACY_TOKENS === "reject";/.test(gateText) && JSON.stringify(envReaders("CUSTOMER_LEGACY_TOKENS")) === JSON.stringify([join("src", "lib", "security", "tenant-access-gate.ts")]),
+  JSON.stringify([envReaders("TENANT_ACCESS_ENFORCEMENT"), envReaders("CUSTOMER_LEGACY_TOKENS")]));
+
+// 32. The access change: authorization, step-up, validation and ONE transaction, in this order.
+const setFn = fnBodies(accessCore).find((f) => f.name === "setCompanyAccessCore")?.body ?? "";
+const order = [
+  /await authorizeAccessChange\(req\)/, /await assertPlatformAuditProtection\(\)/, /parseChange\(input\)/, /!tenantAccessEnforcementEnabled\(\)/, /activeLoginBlock\(keys, now\)/, /verifyPlatformPassword\(change\.password/,
+  /db\.transaction\(/, /consumeTotpCode\(tx, ctx\.adminId, change\.totpCode, now\)/, /\.for\("no key update"\)/, /\.for\("update"\)/, /new PlatformError\("CONFLICT"/, /\.insert\(tac\)/, /\.update\(sessionsTable\)/, /result: "success",?\s*\},\s*tx,?\s*\)/,
+].map((re) => setFn.search(re));
+ok("32. setCompanyAccessCore: flag/origin/session/permission → audit protection → input format → enforcement → throttle → password → ONE transaction (TOTP → org lock → access-row lock → state check → upsert → end sessions → audit record in the transaction)", order.every((p, i) => p >= 0 && (i === 0 || p > order[i - 1])), order.join(","));
+ok("…authorizeAccessChange = flag, then same-origin, then the live platform session with platform.companies.manage_access (the platform token only)", /async function authorizeAccessChange\(req: ConsoleRequest\): Promise<PlatformSessionContext> \{\s*assertPlatformConsoleEnabled\(\);\s*assertSameOrigin\(req\.headers\);\s*return authorizePlatformToken\(req\.token, "platform\.companies\.manage_access"\);\s*\}/.test(accessCore));
+ok("…a failed password or code counts against the durable throttle and is recorded as a rejected attempt; a replayed code is told apart", (setFn.match(/recordLoginAttempt\(keys, "failure", now\);\s*await rejected\(/g) ?? []).length === 2 && /totp\.reason === "replayed" \? \("replay" as const\) : \("mfa" as const\)/.test(setFn));
+
+// 33. What the access action may write.
+const tacWriters = consoleCode.filter((f) => /\.(insert|update|delete)\(\s*(tenantAccessControlsTable|tac)\b/.test(code(f))).map(rel);
+ok("33. only the access action writes tenant_access_controls (one upsert; never a delete)", JSON.stringify(tacWriters) === JSON.stringify([join("src", "lib", "platform", "company-access-actions.ts")]) && (accessCore.match(/\.insert\(tac\)/g) ?? []).length === 1 && !/\.(update|delete)\(\s*tac\b/.test(accessCore), tacWriters.join(", "));
+const sessionRefs = consoleCode.filter((f) => /\bsessionsTable\b/.test(code(f))).map(rel);
+const sessionCols = [...new Set([...accessCore.matchAll(/sessionsTable\.(\w+)/g)].map((m) => m[1]))].sort();
+ok("…only the access action references the customer sessions table, solely to END one company's live sessions (set revokedAt + revokedReason; no insert, no token hash, no un-revoke)",
+  JSON.stringify(sessionRefs) === JSON.stringify([join("src", "lib", "platform", "company-access-actions.ts")]) && (accessCore.match(/\.update\(sessionsTable\)/g) ?? []).length === 1 && !/\.(insert|delete)\(\s*sessionsTable/.test(accessCore) &&
+    /\.set\(\{ revokedAt: now, revokedReason: ORG_SUSPENDED_REVOKE_REASON \}\)/.test(accessCore) && /\.where\(and\(eq\(sessionsTable\.orgId, change\.orgId\), isNull\(sessionsTable\.revokedAt\), gt\(sessionsTable\.expiresAt, now\)\)\)/.test(accessCore) &&
+    JSON.stringify(sessionCols) === JSON.stringify(["expiresAt", "id", "orgId", "revokedAt"]),
+  `${sessionRefs.join(", ")} | ${sessionCols.join(",")}`);
+ok("…the access action never reads or writes a subscription, package or customer business table", !/subscription|package|invoice|journal|ledger|stock|employee|payroll|document/i.test(accessCore));
+
+// 34. The customer side: every request, sign-in and signed file is checked; nothing is served for a suspended company.
+const custSession = code(join(root, "src/lib/session.ts"));
+ok("34. session check (enforcement on): the session row must belong to the token's user AND company, and the company's access is checked on EVERY request after the user lookup — a missed revocation cannot grant access",
+  /sessionRow\.userId !== payload\.userId \|\| sessionRow\.orgId !== payload\.orgId\) return SIGNED_OUT;/.test(custSession) &&
+    /if \(row\.orgId !== payload\.orgId\) return SIGNED_OUT;\s*const decision = await orgAccessDecision\(row\.orgId\);\s*if \(decision === "suspended"\) return SUSPENDED;\s*if \(decision === "unavailable"\) return UNAVAILABLE;/.test(custSession));
+ok("…requireSession sends a suspended (or undeterminable) company to /access-suspended; getSession never returns a session for it", /if \(state\.status === "suspended" \|\| state\.status === "unavailable"\) redirect\("\/access-suspended"\);/.test(custSession) && /return state\.status === "active" \? state\.session : null;/.test(custSession));
+const loginSrc = code(join(root, "src/app/(auth)/actions.ts"));
+const li = (re) => loginSrc.search(re);
+ok("…sign-in: access is checked after the password and second factor, before a recovery code is consumed, the last-login time is written or a session issued; issueSession refuses a company that is not active",
+  li(/verifyPassword\(password, user\.passwordHash\)/) > 0 && li(/verifyPassword\(password, user\.passwordHash\)/) < li(/orgAccessDecision\(user\.orgId\)/) && li(/mfaOk = true/) < li(/orgAccessDecision\(user\.orgId\)/) &&
+    li(/orgAccessDecision\(user\.orgId\)/) < li(/recoveryCodes\.splice\(recoveryIndex, 1\)/) && li(/recoveryCodes\.splice\(recoveryIndex, 1\)/) < li(/lastLoginAt: new Date\(\)/) && li(/lastLoginAt: new Date\(\)/) < li(/await issueSession\(user\.id, user\.orgId\)/) &&
+    /async function issueSession\(userId: number, orgId: number\) \{\s*if \(tenantAccessEnforcementEnabled\(\) && !\(await orgAccessAllowed\(orgId\)\)\) throw new Error\(/.test(loginSrc));
+const uploadsSrc = code(join(root, "src/app/uploads/[...path]/route.ts"));
+ok("…uploads: a VALID signature is still refused (404) while the owning company is not active, before the store is read; the session path goes through getSession()",
+  /if \(signed && tenantAccessEnforcementEnabled\(\) && !\(await orgAccessAllowed\(fileOrgId\)\)\) return new Response\("Not found", \{ status: 404 \}\);/.test(uploadsSrc) && uploadsSrc.indexOf("orgAccessAllowed(fileOrgId)") < uploadsSrc.indexOf("readBlob(pathname)") && /const session = signed \? null : await getSession\(\);/.test(uploadsSrc));
+
+// 35. The access-suspended screen shows no company data.
+const suspendedPage = join(root, "src/app/access-suspended/page.tsx");
+const spImports = [...importsOf(read(suspendedPage)), ...sideEffectImports(read(suspendedPage))].sort();
+const spExpected = ["../(auth)/auth.css", "@/app/(app)/actions", "@/components/brand/logo-lockup", "@/components/ui/button", "@/lib/i18n/dict", "@/lib/i18n/server", "@/lib/session", "lucide-react", "next/navigation"].sort();
+ok("35. the access-suspended screen reads only the session STATE — no database, no platform module, no company field — and offers sign-out", JSON.stringify(spImports) === JSON.stringify(spExpected) && /<form action=\{logoutAction\}/.test(read(suspendedPage)) && !/state\.session|\borg[A-Z]\w*|\.reason\b/.test(code(suspendedPage)), spImports.join(", "));
+
+// 36. The dialog: two actions, credentials cleared after every attempt, no secret kept.
+const dialogAppImports = importsOf(dialogSrc).filter((s) => s.startsWith("@/app/"));
+ok("36. the access dialog calls only the two company-access server actions and clears the password and code after every attempt", JSON.stringify(dialogAppImports) === JSON.stringify(["@/app/(platform)/company-access-actions"]) && /changeCompanyAccessAction\(\{ orgId: String\(orgId\), target, reference: typed\.trim\(\), reason: cleanReason, password, totpCode: code \}\);\s*setPassword\(""\);\s*setTotp\(""\);/.test(dialogSrc) && /readCompanyAccessAction\(String\(orgId\)\)/.test(dialogSrc));
 
 console.log(`\n${pass}/${pass + fail} platform boundary checks passed`);
 process.exit(fail ? 1 : 0);

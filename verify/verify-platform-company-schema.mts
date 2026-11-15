@@ -262,15 +262,17 @@ async function main(): Promise<void> {
     ok("no database function or trigger can change company access on its own (subscription expiry included)", fnRefs === 0 && trg === 0, `functions ${fnRefs}, triggers ${trg}`);
 
     // PO-02B: the read-only company read model (src/lib/platform/companies.ts) now reads both tables and
-    // reuses the compatibility rule; customer auth / session code still references neither (PO-02C).
-    section("8. Static: only the schema, the rule and the PO-02B read model touch the new objects; no customer auth/session code does");
+    // reuses the compatibility rule. PO-02C: the Platform Owner access action writes the access table,
+    // and the customer side consults the rule through ONE module (the tenant-access gate) — no customer
+    // auth/session file names the new tables.
+    section("8. Static: only the schema, the rule, the PO-02B read model and the PO-02C access action touch the new objects; the customer side only through the tenant-access gate");
     const ROOT = process.cwd();
     const files: string[] = [];
     const walk = (d: string) => { for (const f of readdirSync(join(ROOT, d))) { const p = join(d, f); if (statSync(join(ROOT, p)).isDirectory()) walk(p); else if (/\.(ts|tsx)$/.test(p)) files.push(p); } };
     walk("src");
     const refs = (re: RegExp) => files.filter((f) => re.test(readFileSync(join(ROOT, f), "utf8")));
     const tableRefs = refs(/tenantAccessControlsTable|organizationInvitationsTable|tenant_access_controls|organization_invitations/);
-    ok("only the schema module, the compatibility module and the PO-02B read model reference the new tables", JSON.stringify(tableRefs.sort()) === JSON.stringify(["src/db/schema/platform-companies.ts", "src/lib/platform/companies.ts", "src/lib/platform/company-access.ts"]), tableRefs.join(", "));
+    ok("only the schema module, the compatibility module, the PO-02B read model and the PO-02C access action reference the new tables", JSON.stringify(tableRefs.sort()) === JSON.stringify(["src/db/schema/platform-companies.ts", "src/lib/platform/companies.ts", "src/lib/platform/company-access-actions.ts", "src/lib/platform/company-access.ts"]), tableRefs.join(", "));
     // Import specifiers are RESOLVED (the @/ alias and relative paths), so "./company-access" inside
     // src/lib/platform counts exactly like "@/lib/platform/company-access" (PO-02B correction: the
     // PO-02A pattern matched only specifiers spelled ".../platform/company-access").
@@ -289,7 +291,7 @@ async function main(): Promise<void> {
         !importsRule("src/lib/platform/u.ts", 'import { a } from "./company-access-extra";'),
     );
     const ruleRefs = files.filter((f) => importsRule(f, readFileSync(join(ROOT, f), "utf8"))).sort();
-    ok("only the PO-02B read model imports the compatibility module — no customer auth/session code (PO-02C wires that, separately approved)", JSON.stringify(ruleRefs) === JSON.stringify(["src/lib/platform/companies.ts"]), ruleRefs.join(", "));
+    ok("only the PO-02B read model, the PO-02C access action and the customer tenant-access gate import the compatibility module (no other customer auth/session file)", JSON.stringify(ruleRefs) === JSON.stringify(["src/lib/platform/companies.ts", "src/lib/platform/company-access-actions.ts", "src/lib/security/tenant-access-gate.ts"]), ruleRefs.join(", "));
   } finally {
     await cL.end().catch(() => undefined);
     await cP.end().catch(() => undefined);
