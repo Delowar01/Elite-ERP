@@ -8,7 +8,8 @@ import { XIcon } from "lucide-react";
 // with a LOCALIZED close label (the shared component's is fixed English) and an optional
 // non-dismissible mode for the "save your recovery codes" step, where an accidental Escape or
 // outside click would lose codes that are shown only once. Radix provides the focus trap, focus
-// return, the inert page and aria-labelledby/-describedby.
+// return, the inert page and aria-labelledby/-describedby. PO-02C: `sheet` turns the dialog into a
+// bottom sheet on phones (platform.css .platform-dialog-sheet); from 640px it is the same centred dialog.
 export function PlatformDialog({
   open,
   onOpenChange,
@@ -16,6 +17,7 @@ export function PlatformDialog({
   description,
   closeLabel,
   dismissible = true,
+  sheet = false,
   children,
 }: {
   open: boolean;
@@ -24,6 +26,7 @@ export function PlatformDialog({
   description?: string;
   closeLabel: string;
   dismissible?: boolean;
+  sheet?: boolean;
   children: React.ReactNode;
 }) {
   const block = (e: Event) => {
@@ -34,7 +37,7 @@ export function PlatformDialog({
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/80 data-[state=open]:animate-fade-up" />
         <DialogPrimitive.Content
-          className="fixed inset-0 z-50 m-auto h-fit w-[calc(100%-2rem)] max-w-lg max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-lg border border-line bg-surface-raised p-6 shadow-glass outline-none focus-visible:outline-2 focus-visible:outline-focus"
+          className={`fixed inset-0 z-50 m-auto h-fit w-[calc(100%-2rem)] max-w-lg max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-lg border border-line bg-surface-raised p-6 shadow-glass outline-none focus-visible:outline-2 focus-visible:outline-focus${sheet ? " platform-dialog-sheet" : ""}`}
           onEscapeKeyDown={block}
           onPointerDownOutside={block}
           onInteractOutside={block}

@@ -63,7 +63,7 @@ export default async function PlatformDashboardPage() {
         />
         <StatTile locale={locale} label={pt(locale, "dash.paidPlans")} icon={Wallet} note={pt(locale, "common.phase", { phase: "PO-05" })} />
         <StatTile locale={locale} label={pt(locale, "dash.trials")} icon={Timer} note={pt(locale, "common.phase", { phase: "PO-05" })} />
-        <MetricTile label={pt(locale, "dash.suspended")} value={count(m.companies.suspended)} icon={ShieldOff} href="/platform/companies?access=suspended" note={pt(locale, "metric.suspendedNote")} />
+        <MetricTile label={pt(locale, "dash.suspended")} value={count(m.companies.suspended)} icon={ShieldOff} href="/platform/companies?access=suspended" note={pt(locale, m.accessEnforced ? "metric.suspendedNote" : "metric.suspendedNoteOff")} />
         <MetricTile label={pt(locale, "dash.customerUsers")} value={count(m.users.total)} icon={Users} note={pt(locale, "companies.usersActive", { n: count(m.users.active) })} />
         <StatTile locale={locale} label={pt(locale, "dash.expiring")} icon={CalendarClock} note={pt(locale, "common.phase", { phase: "PO-05" })} />
         <StatTile locale={locale} label={pt(locale, "dash.mrr")} icon={Wallet} note={pt(locale, "dash.mrrNote")} />

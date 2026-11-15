@@ -189,7 +189,7 @@ export default async function PlatformCompaniesPage({ searchParams }: { searchPa
           value={formatPlatformCount(m.companies.suspended)}
           icon={ShieldOff}
           href="/platform/companies?access=suspended"
-          note={pt(locale, "metric.suspendedNote")}
+          note={pt(locale, m.accessEnforced ? "metric.suspendedNote" : "metric.suspendedNoteOff")}
           current={accessFilter === "suspended"}
         />
         <MetricTile
@@ -211,14 +211,14 @@ export default async function PlatformCompaniesPage({ searchParams }: { searchPa
       />
 
       {view === "registered" && companies && (
-        <RegisteredView locale={locale} result={companies} params={params} countries={countries.value} total={m.companies.total} />
+        <RegisteredView locale={locale} result={companies} params={params} countries={countries.value} total={m.companies.total} enforced={m.accessEnforced} />
       )}
       {view === "invitations" && invitations && <InvitationsView locale={locale} result={invitations} params={params} total={slots} />}
     </ConsolePage>
   );
 }
 
-function RegisteredView({ locale, result, params, countries, total }: { locale: Locale; result: Loaded<CompanyListPage>; params: SearchParams; countries: string[]; total: number }) {
+function RegisteredView({ locale, result, params, countries, total, enforced }: { locale: Locale; result: Loaded<CompanyListPage>; params: SearchParams; countries: string[]; total: number; enforced: boolean }) {
   if (!result.ok && result.code === "FORBIDDEN") return <DeniedState locale={locale} />;
   const page = result.ok ? result.value : null;
   const q = page ? (page.query.q ?? "") : raw(params.q);
@@ -329,7 +329,7 @@ function RegisteredView({ locale, result, params, countries, total }: { locale: 
           />
         </>
       )}
-      <p className="platform-fine-print">{pt(locale, "companies.accessNote")}</p>
+      <p className="platform-fine-print">{pt(locale, enforced ? "companies.accessNote" : "companies.accessNoteOff")}</p>
       <p className="platform-fine-print">{pt(locale, "companies.deferredNote")}</p>
     </>
   );

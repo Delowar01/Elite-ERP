@@ -1,8 +1,9 @@
 import { cookies, headers } from "next/headers";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { CircleAlert, Pencil, Receipt, ShieldCheck, ShieldOff, UserCheck, UserCog, UserMinus, Users } from "lucide-react";
+import { CircleAlert, Pencil, Receipt, ShieldOff, UserCheck, UserCog, UserMinus, Users } from "lucide-react";
 import { AccessPill, Breadcrumbs, DetailPage, DisabledAction, FieldGrid, Ltr, MetricTile, PageState, PlatformStatusTag } from "@/components/platform/companies-kit";
+import { CompanyAccessControl } from "@/components/platform/company-access-dialog";
 import { CompanyTabs, type CompanyTabValue } from "@/components/platform/company-tabs";
 import { pt } from "@/components/platform/i18n";
 import { EmptyPanel, PreviewBadge } from "@/components/platform/page-kit";
@@ -15,14 +16,21 @@ import { formatPlatformCount, formatPlatformDate, formatPlatformDateTime } from 
 import { isPlatformError } from "@/lib/platform/errors";
 import { requirePlatformSession } from "@/lib/platform/guards";
 
-// One company (PO-02B): read-only Overview, Access & controls, Users, Subscription (later phase) and
-// Activity, from the allow-listed read model. Loading this page is an audited view
-// ("company.viewed"): if the audit record cannot be written, no company data is rendered at all.
-// Malformed or unknown ids are a 404. Every action here belongs to a later phase and is disabled.
+// One company (PO-02B): Overview, Access & controls, Users, Subscription (later phase) and Activity,
+// from the allow-listed read model. Loading this page is an audited view ("company.viewed"): if the
+// audit record cannot be written, no company data is rendered at all. Malformed or unknown ids are
+// a 404. PO-02C: Suspend / Reactivate (header and Access & controls) open the confirmation dialog,
+// whose server action re-authorizes and steps up on its own; every other action is still disabled.
 
 type SearchParams = Record<string, string | string[] | undefined>;
 const TABS: CompanyTabValue[] = ["overview", "access", "users", "subscription", "activity"];
-const ACTION_LABEL: Record<string, "event.companyViewed"> = { "company.viewed": "event.companyViewed" };
+const ACTION_LABEL: Record<string, "event.companyViewed" | "event.companySuspended" | "event.companyReactivated" | "event.suspendRejected" | "event.reactivateRejected"> = {
+  "company.viewed": "event.companyViewed",
+  "company.suspended": "event.companySuspended",
+  "company.reactivated": "event.companyReactivated",
+  "company.suspend.rejected": "event.suspendRejected",
+  "company.reactivate.rejected": "event.reactivateRejected",
+};
 
 function sourceText(locale: Locale, source: CompanyDetail["access"]["source"]): string {
   return pt(locale, source === "access_control" ? "source.record" : source === "legacy_default" ? "source.legacy" : "source.invalid");
@@ -65,12 +73,17 @@ function AccessPanel({ locale, d }: { locale: Locale; d: CompanyDetail }) {
         />
         <p className="platform-callout mt-4" data-tone="neutral">
           <CircleAlert className="size-4 shrink-0" aria-hidden />
-          <span>{pt(locale, active ? "access.explainActive" : "access.explainSuspended")}</span>
+          <span>{pt(locale, active ? "access.explainActive" : d.access.enforced ? "access.explainSuspended" : "access.explainSuspendedOff")}</span>
         </p>
       </div>
       <div className="card platform-detail-card platform-detail-actions">
-        <DisabledAction locale={locale} label={pt(locale, active ? "action.suspend" : "action.reactivate")} icon={active ? ShieldOff : ShieldCheck} phase="PO-02C" />
+        <CompanyAccessControl locale={locale} orgId={d.orgId} reference={d.reference} companyName={d.name} status={d.access.status} enforced={d.access.enforced} noteId="company-access-enforcement" />
         <p className="platform-fine-print">{pt(locale, "access.controlsNote")}</p>
+        {!d.access.enforced && (
+          <p id="company-access-enforcement" className="platform-fine-print">
+            {pt(locale, "access.enforcementOff")}
+          </p>
+        )}
         <p className="platform-fine-print">{pt(locale, "access.independent")}</p>
       </div>
     </div>
@@ -232,7 +245,6 @@ export default async function PlatformCompanyPage({ params, searchParams }: { pa
   const d = detail;
   const requested = typeof query.tab === "string" && (TABS as string[]).includes(query.tab) ? (query.tab as CompanyTabValue) : null;
   const initial: CompanyTabValue = requested ?? (query.activity ? "activity" : "overview");
-  const active = d.access.status === "active";
 
   return (
     <DetailPage
@@ -246,7 +258,7 @@ export default async function PlatformCompanyPage({ params, searchParams }: { pa
       meta={<AccessPill locale={locale} access={{ status: d.access.status, source: d.access.source }} />}
       actions={
         <>
-          <DisabledAction locale={locale} label={pt(locale, active ? "action.suspend" : "action.reactivate")} icon={active ? ShieldOff : ShieldCheck} phase="PO-02C" />
+          <CompanyAccessControl locale={locale} orgId={d.orgId} reference={d.reference} companyName={d.name} status={d.access.status} enforced={d.access.enforced} />
           <DisabledAction locale={locale} label={pt(locale, "action.editCompany")} icon={Pencil} />
         </>
       }
