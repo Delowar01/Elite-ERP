@@ -1,0 +1,7 @@
+-- PO-02D0 evidence: output of docs/platform-owner/po02d0/sql/03_post_acceptance_drift_readonly.sql on a disposable *_test_only_* database
+-- shape: production-like tenant shape (621f156; no Platform Owner objects), fixtures: 01_legacy_audit_fixtures_fictional.sql (fictional only)
+BEGIN
+SET
+SET
+(PO-02D1 objects are not installed: nothing to check yet)
+ROLLBACK

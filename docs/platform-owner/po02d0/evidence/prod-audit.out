@@ -1,0 +1,109 @@
+-- PO-02D0 evidence: output of docs/platform-owner/po02d0/sql/02_legacy_onboarding_audit_readonly.sql on a disposable *_test_only_* database
+-- shape: production-like tenant shape (621f156; no Platform Owner objects), fixtures: 01_legacy_audit_fixtures_fictional.sql (fictional only)
+BEGIN
+SET
+SET
+--- L00 environment (server version, which Platform Owner objects exist)
+ server_version_num | platform_identity_installed | tenant_access_controls_installed | organization_invitations_installed | tenant_primary_owners_installed 
+--------------------+-----------------------------+----------------------------------+------------------------------------+---------------------------------
+ 160015             | f                           | f                                | f                                  | f
+(1 row)
+
+--- L01 population (counts only)
+ orgs | users | active_users | inactive_users 
+------+-------+--------------+----------------
+   10 |    15 |           13 |              2
+(1 row)
+
+--- L02 role values (users.role is free text; non-canonical values are not treated as owner)
+ role  | users | non_canonical 
+-------+-------+---------------
+ Owner |     1 | t
+ admin |     2 | f
+ owner |     9 | f
+ staff |     3 | f
+(4 rows)
+
+--- L03 owner classification per organization (PO-00 classes; only A is a backfill candidate)
+                class                | orgs |        org_ids        
+-------------------------------------+------+-----------------------
+ A_single_active_owner               |    4 | {9101,9108,9109,9110}
+ B_single_active_plus_inactive_owner |    1 | {9102}
+ C_multiple_active_owners            |    1 | {9103}
+ D_only_inactive_owner               |    1 | {9104}
+ E_no_users                          |    1 | {9105}
+ F_no_owner_role                     |    2 | {9106,9107}
+(6 rows)
+
+--- L04 disabled owner-role accounts
+ disabled_owner_accounts | orgs_with_a_disabled_owner 
+-------------------------+----------------------------
+                       2 | {9102,9104}
+(1 row)
+
+ orgs_whose_only_owners_are_disabled 
+-------------------------------------
+ {9104}
+(1 row)
+
+--- L05 organization/user relationship inconsistencies (a row's org differs from its user's org)
+ session_org_mismatch | live_session_org_mismatch | security_event_org_mismatch | audit_log_org_mismatch 
+----------------------+---------------------------+-----------------------------+------------------------
+                    1 |                         1 |                           1 |                      1
+(1 row)
+
+--- L06 platform access rows (organizations without a row are active by the compatibility rule)
+(tenant_access_controls is not installed: every organization is a legacy row-less company, active by the compatibility rule)
+ orgs_without_access_row 
+-------------------------
+                      10
+(1 row)
+
+--- L07 registration provenance (the live /register writes audit_logs action org.registered)
+ orgs_registered_via_register | orgs_without_registration_record 
+------------------------------+----------------------------------
+                            3 |                                7
+(1 row)
+
+  month  | registrations 
+---------+---------------
+ 2026-11 |             3
+(1 row)
+
+--- L08 case-insensitive e-mail collisions among users (block lower(email) uniqueness; confuse invitation checks)
+ collision_groups | user_id_groups 
+------------------+----------------
+                1 | {{9214,9215}}
+(1 row)
+
+--- L09 invitation states and conflicts (slot = unaccepted and unrevoked, the pending-email index predicate)
+(organization_invitations is not installed: no invitation exists)
+--- L10 users per organization (seat baseline, active + disabled; input to the Trial seat decision — not a value)
+ orgs | max_users | p50_users | p95_users 
+------+-----------+-----------+-----------
+   10 |         3 |         1 |         3
+(1 row)
+
+--- L11 MFA enrolment among active canonical owners (input to the invitee MFA decision)
+ active_owners | with_mfa 
+---------------+----------
+             7 |        1
+(1 row)
+
+--- L12 name collisions with the proposed PO-02D1 objects (expect zero rows)
+ relname | relkind 
+---------+---------
+(0 rows)
+
+--- L13 users(org_id, id) unique index feasibility and build size (id is the primary key, so duplicates are impossible)
+ users_rows | duplicate_pairs | users_total_size 
+------------+-----------------+------------------
+         15 |               0 | 48 kB
+(1 row)
+
+--- L14 PO-02A prerequisites present and valid (M4 index, invitation constraints)
+ index_name | valid 
+------------+-------
+(0 rows)
+
+ROLLBACK
