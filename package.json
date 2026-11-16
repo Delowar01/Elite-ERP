@@ -96,6 +96,7 @@
     "verify:platform-companies-browser": "tsx --conditions=react-server verify/verify-platform-companies-browser.mts",
     "verify:platform-company-access": "tsx --conditions=react-server verify/verify-platform-company-access.mts",
     "verify:platform-company-access-browser": "tsx --conditions=react-server verify/verify-platform-company-access-browser.mts",
+    "verify:platform-login-race": "tsx --conditions=react-server verify/verify-platform-login-race.mts",
     "verify:platform": "npm run verify:platform-boundary && npm run verify:platform-proxy && npm run verify:platform-schema && npm run verify:platform-auth && npm run verify:platform-bootstrap && npm run verify:platform-console && npm run verify:platform-containment && npm run verify:platform-company-schema && npm run verify:platform-migration-safety && npm run verify:platform-companies && npm run verify:platform-company-access"
   },
   "dependencies": {
