@@ -390,11 +390,31 @@ ok("34. session check (enforcement on): the session row must belong to the token
     /if \(row\.orgId !== payload\.orgId\) return SIGNED_OUT;\s*const decision = await orgAccessDecision\(row\.orgId\);\s*if \(decision === "suspended"\) return SUSPENDED;\s*if \(decision === "unavailable"\) return UNAVAILABLE;/.test(custSession));
 ok("…requireSession sends a suspended (or undeterminable) company to /access-suspended; getSession never returns a session for it", /if \(state\.status === "suspended" \|\| state\.status === "unavailable"\) redirect\("\/access-suspended"\);/.test(custSession) && /return state\.status === "active" \? state\.session : null;/.test(custSession));
 const loginSrc = code(join(root, "src/app/(auth)/actions.ts"));
-const li = (re) => loginSrc.search(re);
-ok("…sign-in: access is checked after the password and second factor, before a recovery code is consumed, the last-login time is written or a session issued; issueSession refuses a company that is not active",
-  li(/verifyPassword\(password, user\.passwordHash\)/) > 0 && li(/verifyPassword\(password, user\.passwordHash\)/) < li(/orgAccessDecision\(user\.orgId\)/) && li(/mfaOk = true/) < li(/orgAccessDecision\(user\.orgId\)/) &&
-    li(/orgAccessDecision\(user\.orgId\)/) < li(/recoveryCodes\.splice\(recoveryIndex, 1\)/) && li(/recoveryCodes\.splice\(recoveryIndex, 1\)/) < li(/lastLoginAt: new Date\(\)/) && li(/lastLoginAt: new Date\(\)/) < li(/await issueSession\(user\.id, user\.orgId\)/) &&
-    /async function issueSession\(userId: number, orgId: number\) \{\s*if \(tenantAccessEnforcementEnabled\(\) && !\(await orgAccessAllowed\(orgId\)\)\) throw new Error\(/.test(loginSrc));
+// PO-02C.1 re-pins the sign-in: the PO-02C order (credentials → access → writes) holds, and with enforcement on the
+// access check and every write are ONE transaction under the company lock. `inOrder` finds each pattern after the last.
+const loginFns = Object.fromEntries(fnBodies(loginSrc).map((f) => [f.name, f.body]));
+const inOrder = (src, res) => {
+  let at = 0;
+  for (const re of res) {
+    const i = src.slice(at).search(re);
+    if (i < 0) return false;
+    at += i + 1;
+  }
+  return true;
+};
+ok("…sign-in (enforcement on): password and second factor first; then completeSignIn's ONE transaction — company lock + access check → user-row lock + re-check → recovery code + last-login time → session row → code-used and success records — and the cookie only after it committed",
+  inOrder(loginFns.loginAction ?? "", [/verifyPassword\(password, user\.passwordHash\)/, /mfaOk = true/, /if \(!tenantAccessEnforcementEnabled\(\)\) \{/, /signIn = await completeSignIn\(email, user, recoveryHash\);/, /if \(!signIn\.ok\) \{/, /clearLoginRateLimit\(email\);\s*await setSessionCookie\(user\.id, user\.orgId, signIn\.jti\);\s*redirect\("\/dashboard"\);/]) &&
+    inOrder(loginFns.completeSignIn ?? "", [/return db\.transaction\(async \(tx\) => \{/, /if \(\(await lockOrgAccessForSessionIssue\(tx, user\.orgId\)\) !== "active"\) return \{ ok: false, reason: "suspended" \} as const;/, /\.where\(eq\(usersTable\.id, user\.id\)\)\s*\.for\("no key update"\);/, /if \(!current \|\| !current\.isActive \|\| current\.orgId !== user\.orgId\) return \{ ok: false, reason: "account" \} as const;/, /withoutRecoveryCode\(current\.mfaRecoveryCodes, recoveryHash\)/, /if \(recoveryHash && !remaining\) return \{ ok: false, reason: "code_spent" \} as const;/, /await tx\s*\.update\(usersTable\)/, /const jti = await createSession\(user\.id, user\.orgId, tx\);/, /type: "mfa\.recovery_used", severity: "medium" \}, tx\);/, /type: "login\.success", severity: "info" \}, tx\);/, /\}, READ_COMMITTED\);/]) &&
+    !/\bdb\.(insert|update|select|execute)\b/.test(loginFns.completeSignIn ?? "db.insert") && /const READ_COMMITTED = \{ isolationLevel: "read committed" \} as const;/.test(loginSrc));
+ok("…sign-in (enforcement off): the accepted sequence, except that a matched recovery code is spent atomically under the user-row lock — a second use is refused like a wrong code",
+  inOrder(loginFns.loginAction ?? "", [/if \(!tenantAccessEnforcementEnabled\(\)\) \{/, /if \(!\(await consumeRecoveryCode\(user\.id, recoveryHash\)\)\) \{/, /return \{ error: "MFA_INVALID" \};/, /type: "mfa\.recovery_used", severity: "medium" \}\);/, /clearLoginRateLimit\(email\);/, /lastLoginAt: new Date\(\)/, /type: "login\.success", severity: "info" \}\);/, /await issueSession\(user\.id, user\.orgId\);/, /redirect\("\/dashboard"\);/, /signIn = await completeSignIn\(/]) &&
+    inOrder(loginFns.consumeRecoveryCode ?? "", [/return db\.transaction\(async \(tx\) => \{/, /\.for\("no key update"\);/, /withoutRecoveryCode\(row\.codes, matchedHash\)/, /if \(!remaining\) return false;/, /await tx\.update\(usersTable\)\.set\(\{ mfaRecoveryCodes: remaining \}\)/, /\}, READ_COMMITTED\);/]) &&
+    /const i = hashes\.indexOf\(matchedHash\);\s*if \(i < 0\) return null;\s*hashes\.splice\(i, 1\);\s*return encryptField\(JSON\.stringify\(hashes\)\);/.test(loginFns.withoutRecoveryCode ?? ""));
+ok("…issueSession refuses a company that is not active — with enforcement on in ONE transaction with the session insert under the company lock; the cookie is set after it",
+  inOrder(loginFns.issueSession ?? "", [/const jti = tenantAccessEnforcementEnabled\(\)\s*\? await db\.transaction\(async \(tx\) => \{/, /if \(\(await lockOrgAccessForSessionIssue\(tx, orgId\)\) !== "active"\) throw new Error\(/, /return createSession\(userId, orgId, tx\);/, /\}, READ_COMMITTED\)/, /: await createSession\(userId, orgId\);/, /await setSessionCookie\(userId, orgId, jti\);/]));
+ok("…a failed sign-in transaction leaves nothing behind: missing access objects → 'unavailable'; any other failure → the same generic message with only its SQLSTATE or class logged (never its message); no cookie on either path",
+  inOrder(loginFns.loginAction ?? "", [/signIn = await completeSignIn\(/, /\} catch \(err\) \{/, /if \(err instanceof TenantAccessUnavailableError\) \{/, /type: "login\.access_unavailable", severity: "high" \}\);\s*return \{ error: SIGN_IN_UNAVAILABLE_MESSAGE \};/, /console\.error\(`\[auth\] sign-in could not be completed \(\$\{errorClass\(err\)\}\); nothing was applied`\);/, /\.catch\(\(\) => undefined\);\s*return \{ error: SIGN_IN_UNAVAILABLE_MESSAGE \};/, /await setSessionCookie\(/]) &&
+    !/\.message\b/.test(loginFns.errorClass ?? ".message"));
 const uploadsSrc = code(join(root, "src/app/uploads/[...path]/route.ts"));
 ok("…uploads: a VALID signature is still refused (404) while the owning company is not active, before the store is read; the session path goes through getSession()",
   /if \(signed && tenantAccessEnforcementEnabled\(\) && !\(await orgAccessAllowed\(fileOrgId\)\)\) return new Response\("Not found", \{ status: 404 \}\);/.test(uploadsSrc) && uploadsSrc.indexOf("orgAccessAllowed(fileOrgId)") < uploadsSrc.indexOf("readBlob(pathname)") && /const session = signed \? null : await getSession\(\);/.test(uploadsSrc));
@@ -408,6 +428,26 @@ ok("35. the access-suspended screen reads only the session STATE — no database
 // 36. The dialog: two actions, credentials cleared after every attempt, no secret kept.
 const dialogAppImports = importsOf(dialogSrc).filter((s) => s.startsWith("@/app/"));
 ok("36. the access dialog calls only the two company-access server actions and clears the password and code after every attempt", JSON.stringify(dialogAppImports) === JSON.stringify(["@/app/(platform)/company-access-actions"]) && /changeCompanyAccessAction\(\{ orgId: String\(orgId\), target, reference: typed\.trim\(\), reason: cleanReason, password, totpCode: code \}\);\s*setPassword\(""\);\s*setTotp\(""\);/.test(dialogSrc) && /readCompanyAccessAction\(String\(orgId\)\)/.test(dialogSrc));
+
+// 37. PO-02C.1 — one lock protocol between customer sign-in and the access action (no schema change).
+const lockFn = fnBodies(accessSrc).find((f) => f.name === "lockTenantAccessForSessionIssue")?.body ?? "";
+ok("37. session issuance reads the company's access under a SHARE lock on its organization row (statement 1), then reads the access in a separate statement (fresh snapshot after the wait) — the only lock company-access.ts takes",
+  inOrder(lockFn, [/export async function lockTenantAccessForSessionIssue\(tx: Tx, orgId: number\): Promise<TenantAccess \| null> \{/, /await tx\.select\(\{ id: orgsTable\.id \}\)\.from\(orgsTable\)\.where\(eq\(orgsTable\.id, orgId\)\)\.for\("share"\);/, /return getTenantAccess\(orgId, tx\);/]) &&
+    (accessSrc.match(/\.for\(/g) ?? []).length === 1);
+const lockUsers = (name) => allSrc.filter((f) => new RegExp(`\\b${name}\\b`).test(code(f))).map(rel).sort();
+ok("…the gate wraps it fail-closed (missing access objects → TenantAccessUnavailableError); only the sign-in actions call the wrapper",
+  /export async function lockOrgAccessForSessionIssue\(tx: SessionIssueTx, orgId: number\): Promise<"active" \| "suspended"> \{\s*try \{\s*return accessAllows\(await lockTenantAccessForSessionIssue\(tx, orgId\)\) \? "active" : "suspended";\s*\} catch \(err\) \{\s*failClosed\(err\);/.test(gateText) &&
+    /function failClosed\(err: unknown\): never \{\s*if \(MISSING_OBJECT_CODES\.has\(sqlStateOf\(err\) \?\? ""\)\) \{[\s\S]*?throw new TenantAccessUnavailableError\(\);\s*\}\s*throw err;\s*\}/.test(gateText) &&
+    JSON.stringify(lockUsers("lockTenantAccessForSessionIssue")) === JSON.stringify([join("src", "lib", "platform", "company-access.ts"), join("src", "lib", "security", "tenant-access-gate.ts")]) &&
+    JSON.stringify(lockUsers("lockOrgAccessForSessionIssue")) === JSON.stringify([join("src", "app", "(auth)", "actions.ts"), join("src", "lib", "security", "tenant-access-gate.ts")]),
+  `${lockUsers("lockTenantAccessForSessionIssue").join(", ")} | ${lockUsers("lockOrgAccessForSessionIssue").join(", ")}`);
+ok("…the access action keeps its FOR NO KEY UPDATE organization lock (not strengthened — foreign-key KEY SHARE checks of ordinary inserts stay unblocked) and runs its transaction at READ COMMITTED explicitly",
+  (accessCore.match(/\.for\("no key update"\)/g) ?? []).length === 1 && !/from\(orgsTable\)[^;]*\.for\("(update|share|key share)"\)/.test(accessCore) && /return \{ ok: true as const, sessionsEnded: ended\.length \};\s*\}, \{ isolationLevel: "read committed" \}\);/.test(accessCore));
+const sessionStoreCode = code(join(root, "src/lib/security/session-store.ts"));
+const customerAuditCode = code(join(root, "src/lib/security/audit.ts"));
+ok("…createSession and recordSecurityEvent take an optional executor (default: the autocommit db) so the sign-in transaction can pass its own",
+  /export async function createSession\(userId: number, orgId: number, executor: Tx \| typeof db = db\): Promise<string> \{[\s\S]*?await executor\.insert\(sessionsTable\)/.test(sessionStoreCode) &&
+    /export async function recordSecurityEvent\(\s*entry: \{[\s\S]*?\},\s*executor: Tx \| typeof db = db,\s*\) \{[\s\S]*?await executor\.insert\(securityEventsTable\)/.test(customerAuditCode));
 
 console.log(`\n${pass}/${pass + fail} platform boundary checks passed`);
 process.exit(fail ? 1 : 0);

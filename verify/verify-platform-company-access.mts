@@ -628,7 +628,9 @@ async function main() {
     if (EVIDENCE) writeFileSync(join(EVIDENCE, "race-validation.json"), JSON.stringify({ before: before.length, overlapping: overlap.length, after: after.length, overlappingStates: overlap.map((s) => s.state) }, null, 2));
     nextStep();
 
-    // (b) A sign-in racing the suspension: the access check passed just before the commit, the session row is written just after.
+    // (b) Defence in depth for a session row that escaped the bulk revocation (the access check passed before the commit, the
+    //     row landed after it). Since PO-02C.1 a real sign-in cannot produce one — its check and insert share one transaction
+    //     under the company lock (verify/verify-platform-login-race.mts proves it); here the row is written directly.
     const r2 = await tenantOrg("Race Sign-in Fixture Co");
     const r2u = await tenantUser(r2, "owner@race-signin.test");
     const checkedBefore = await gate.orgAccessDecision(r2);
