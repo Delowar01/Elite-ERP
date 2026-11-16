@@ -42,6 +42,11 @@ import { activeLoginBlock, recordLoginAttempt, throttleKeys } from "./throttle";
 //
 // Concurrency: two changes for one company serialize on the organization row; the second sees the
 // first's committed state and fails with CONFLICT, so a transition is recorded as successful once.
+// PO-02C.1: a customer sign-in takes a SHARE lock on the same row for its access check and session
+// insert (src/lib/platform/company-access.ts), which conflicts with this lock — so a change either
+// waits for an in-flight sign-in and then ends the session it created, or the sign-in waits for the
+// change and sees it. Both transactions run at READ COMMITTED explicitly: each statement after the
+// lock wait must see what committed during it.
 // The same TOTP code cannot approve two changes (its time step is consumed under the admin row lock).
 // Idempotency: there is no request-key table (PO-02A schema; no schema change without approval), so a
 // retried request is not recognized as a duplicate — it is refused instead (CONFLICT or a used code),
@@ -186,7 +191,7 @@ export async function setCompanyAccessCore(req: ConsoleRequest, input: CompanyAc
           tx,
         );
         return { ok: true as const, sessionsEnded: ended.length };
-      });
+      }, { isolationLevel: "read committed" });
     } catch (err) {
       // Rolled back (the code included); the attempt is still recorded.
       if (isPlatformError(err, "NOT_FOUND")) await rejected("not_found");

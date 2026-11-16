@@ -1,5 +1,5 @@
 import "server-only";
-import { getTenantAccess, ORG_SUSPENDED_REVOKE_REASON, tenantAccessEnforcementEnabled, type TenantAccess } from "@/lib/platform/company-access";
+import { getTenantAccess, lockTenantAccessForSessionIssue, ORG_SUSPENDED_REVOKE_REASON, tenantAccessEnforcementEnabled, type TenantAccess } from "@/lib/platform/company-access";
 
 // ---------------------------------------------------------------------------------------------
 // Tenant access gate (PO-02C). The ONE customer module that consults the company-access rule
@@ -50,11 +50,34 @@ export async function readOrgAccess(orgId: number): Promise<TenantAccess | null>
   try {
     return await getTenantAccess(orgId);
   } catch (err) {
-    if (MISSING_OBJECT_CODES.has(sqlStateOf(err) ?? "")) {
-      console.error("[tenant-access] access-control objects unavailable — access denied (fail closed)");
-      throw new TenantAccessUnavailableError();
-    }
-    throw err;
+    failClosed(err);
+  }
+}
+
+/** Missing access-control objects → TenantAccessUnavailableError (after the incident line); anything else unchanged. */
+function failClosed(err: unknown): never {
+  if (MISSING_OBJECT_CODES.has(sqlStateOf(err) ?? "")) {
+    console.error("[tenant-access] access-control objects unavailable — access denied (fail closed)");
+    throw new TenantAccessUnavailableError();
+  }
+  throw err;
+}
+
+/** The sign-in / session-issue transaction (its type, without this module importing the database layer). */
+export type SessionIssueTx = Parameters<typeof lockTenantAccessForSessionIssue>[0];
+
+/**
+ * PO-02C.1 — session issuance. Inside the caller's READ COMMITTED transaction, before its session
+ * insert: a SHARE lock on the company row, then its access (company-access.ts explains why the two
+ * statements serialize issuance against every suspension and reactivation). `active` lets the caller
+ * issue the session in the same transaction; `suspended` (no such company included) refuses it.
+ * Missing access-control objects throw TenantAccessUnavailableError — the transaction then rolls back.
+ */
+export async function lockOrgAccessForSessionIssue(tx: SessionIssueTx, orgId: number): Promise<"active" | "suspended"> {
+  try {
+    return accessAllows(await lockTenantAccessForSessionIssue(tx, orgId)) ? "active" : "suspended";
+  } catch (err) {
+    failClosed(err);
   }
 }
 

@@ -1,5 +1,5 @@
 import "server-only";
-import { db, auditLogsTable, securityEventsTable, fileAccessLogsTable } from "@/db";
+import { db, auditLogsTable, securityEventsTable, fileAccessLogsTable, type Tx } from "@/db";
 import { getRequestContext } from "./request-context";
 
 // ---------------------------------------------------------------------------
@@ -43,17 +43,21 @@ export async function recordAudit(
 
 export type Severity = "info" | "low" | "medium" | "high" | "critical";
 
-export async function recordSecurityEvent(entry: {
-  orgId?: number | null;
-  userId?: number | null;
-  email?: string | null;
-  type: string;
-  severity?: Severity;
-  detail?: string | null;
-  metadata?: Record<string, unknown> | null;
-}) {
+/** PO-02C.1: `executor` lets the sign-in record its events inside its own transaction; default: autocommit. */
+export async function recordSecurityEvent(
+  entry: {
+    orgId?: number | null;
+    userId?: number | null;
+    email?: string | null;
+    type: string;
+    severity?: Severity;
+    detail?: string | null;
+    metadata?: Record<string, unknown> | null;
+  },
+  executor: Tx | typeof db = db,
+) {
   const ctx = await getRequestContext();
-  await db.insert(securityEventsTable).values({
+  await executor.insert(securityEventsTable).values({
     orgId: entry.orgId ?? null,
     userId: entry.userId ?? null,
     email: entry.email ?? null,

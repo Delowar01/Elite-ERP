@@ -1,7 +1,7 @@
 import "server-only";
 import { createHash, randomBytes } from "crypto";
 import { and, desc, eq, isNull, ne } from "drizzle-orm";
-import { db, sessionsTable } from "@/db";
+import { db, sessionsTable, type Tx } from "@/db";
 import { getRequestContext } from "./request-context";
 
 // ---------------------------------------------------------------------------
@@ -17,11 +17,14 @@ function hashJti(jti: string): string {
   return createHash("sha256").update(jti).digest("hex");
 }
 
-/** Create a session row and return the random jti to embed in the JWT. */
-export async function createSession(userId: number, orgId: number): Promise<string> {
+/**
+ * Create a session row and return the random jti to embed in the JWT. PO-02C.1: `executor` lets the
+ * sign-in create it inside its own transaction (with the company's access check); default: autocommit.
+ */
+export async function createSession(userId: number, orgId: number, executor: Tx | typeof db = db): Promise<string> {
   const jti = randomBytes(24).toString("base64url");
   const ctx = await getRequestContext();
-  await db.insert(sessionsTable).values({
+  await executor.insert(sessionsTable).values({
     orgId,
     userId,
     tokenHash: hashJti(jti),

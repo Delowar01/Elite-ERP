@@ -18,6 +18,8 @@ import { db, orgsTable, tenantAccessControlsTable, type Tx } from "@/db";
 //  • Read-only. PO-02A wired this into nothing. PO-02C consults it from exactly one customer
 //    module (src/lib/security/tenant-access-gate.ts: session validation, sign-in, signed files) and
 //    from the Platform Owner access action — and only while enforcement is switched on below.
+//    PO-02C.1: session issuance reads it under a SHARE lock on the organization row (below), the
+//    one lock this module takes; it writes nothing.
 //  • Activation (PO-02C): enforcement is OFF unless TENANT_ACCESS_ENFORCEMENT is exactly
 //    "enabled". Deploying the code therefore changes nothing for customers; the switch may be set
 //    only after the PO-02A objects are installed and verified (deployment runbook, D-6). While it
@@ -72,4 +74,23 @@ export async function getTenantAccess(orgId: number, executor: Tx | typeof db = 
     .limit(1);
   if (!row) return null;
   return resolveTenantAccess(row.accessRowOrgId === null ? null : { accessStatus: row.accessStatus });
+}
+
+/**
+ * PO-02C.1 — the company's effective access for issuing a customer session, inside the caller's
+ * READ COMMITTED transaction. Statement 1 takes a SHARE lock on the organization row; statement 2
+ * reads the access with a fresh snapshot. The access action (company-access-actions.ts) holds FOR NO
+ * KEY UPDATE on the same row from before it changes the access row until it commits, and the two
+ * modes conflict, so the decision and the session insert that follows are serialized against every
+ * suspension and reactivation: a change that committed first is seen here (statement 2 starts after
+ * the lock is granted), and a change that starts later waits for this transaction, so its bulk
+ * revocation sees the new session. FOR SHARE does not conflict with the KEY SHARE locks taken by
+ * foreign-key checks, so ordinary customer inserts are never blocked by it. Null when no such
+ * organization exists.
+ */
+export async function lockTenantAccessForSessionIssue(tx: Tx, orgId: number): Promise<TenantAccess | null> {
+  if (!Number.isSafeInteger(orgId) || orgId <= 0) return null;
+  const [org] = await tx.select({ id: orgsTable.id }).from(orgsTable).where(eq(orgsTable.id, orgId)).for("share");
+  if (!org) return null;
+  return getTenantAccess(orgId, tx);
 }
