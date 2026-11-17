@@ -1,10 +1,13 @@
 /**
  * Platform Owner PO-01A — schema equivalence, tenant non-interference and DB-constraint suite.
  * Since PO-02A the reviewed platform SQL is PO01_platform_identity.sql THEN
- * PO02A_company_foundation.sql: S is built from the pre-PO-02A (621f156) tenant shape, the PO01 file
- * alone must still leave every tenant object untouched, and the full Drizzle schema must equal the
- * pre-PO-02A tenant shape plus both files. PO-02A's own objects and its single tenant change (M4)
- * are pinned in detail by verify:platform-company-schema and verify:platform-migration-safety.
+ * PO02A_company_foundation.sql, and since PO-02D1A THEN PO02D1_onboarding_foundation.sql: S is built
+ * from the pre-PO-02A (621f156) tenant shape, the PO01 file alone must still leave every tenant object
+ * untouched, and the full Drizzle schema must equal the pre-PO-02A tenant shape plus all three files.
+ * PO-02A's own objects and its single tenant change (M4) are pinned in detail by
+ * verify:platform-company-schema and verify:platform-migration-safety; PO-02D1A's objects and its single
+ * tenant change (F1, users_org_id_id_uq) by verify:platform-onboarding-schema and
+ * verify:platform-onboarding-migration-safety.
  *
  *   PLATFORM_TEST_ADMIN_DATABASE_URL=postgres://postgres@127.0.0.1:<port>/<admin db with _test_only_> \
  *     npm run verify:platform-schema
@@ -23,7 +26,7 @@ import {
   pushPreCompanyTenantSchema,
   applyPlatformMigration,
 } from "../scripts/platform/disposable-db";
-import { projectCatalog, withoutRoutines, diffProjection, checkPlatformObjects, projectionDigest, PLATFORM_SQL_PATH, PO02A_SQL_PATH } from "../scripts/platform/catalog";
+import { projectCatalog, withoutRoutines, diffProjection, checkPlatformObjects, projectionDigest, PLATFORM_SQL_PATH, PO02A_SQL_PATH, PO02D1_SQL_PATH } from "../scripts/platform/catalog";
 import { section, ok, rejects, sqlState, summary, describeError } from "./platform/harness";
 
 const created: string[] = [];
@@ -69,23 +72,28 @@ async function main(): Promise<number> {
     await applyPlatformMigration(S.url, [PLATFORM_SQL_PATH]);
     const S1a = await projectCatalog(cS);
     await applyPlatformMigration(S.url, [PO02A_SQL_PATH]);
+    await applyPlatformMigration(S.url, [PO02D1_SQL_PATH]);
     const S1 = await projectCatalog(cS);
     const P0 = await projectCatalog(cP);
 
     section("2. Drizzle schema ≡ reviewed SQL (tables, columns, defaults, constraints, indexes, sequences)");
     ok(
-      "P (push) creates exactly the 6 platform-owned tables (PO-01A's 4 + PO-02A's tenant_access_controls, organization_invitations)",
-      JSON.stringify(P0.platform.tables) === JSON.stringify(["organization_invitations", "platform_admins", "platform_audit_events", "platform_login_attempts", "platform_sessions", "tenant_access_controls"]),
+      "P (push) creates exactly the 13 platform-owned tables (PO-01A's 4 + PO-02A's tenant_access_controls, organization_invitations + PO-02D1A's 7 onboarding tables)",
+      JSON.stringify(P0.platform.tables) === JSON.stringify([
+        "organization_invitation_terms", "organization_invitations", "platform_admins", "platform_audit_events", "platform_login_attempts", "platform_sessions", "platform_settings",
+        "subscription_events", "subscription_package_versions", "subscription_packages", "tenant_access_controls", "tenant_primary_owners", "tenant_subscriptions",
+      ]),
       P0.platform.tables.join(","),
     );
     ok("P (push) creates no platform triggers or functions (push cannot)", P0.platform.triggers.length === 0 && P0.platform.functions.length === 0);
     const d1 = diffProjection(withoutRoutines(P0.platform), withoutRoutines(S1.platform), "drizzle-push", "reviewed-sql");
-    ok("platform projection: drizzle push == reviewed SQL, PO01 + PO02A (excluding routines)", d1.length === 0, d1.slice(0, 8).join("\n        "));
+    ok("platform projection: drizzle push == reviewed SQL, PO01 + PO02A + PO02D1 (excluding routines)", d1.length === 0, d1.slice(0, 8).join("\n        "));
     // PO-01A: 45 columns, 27 constraints, 14 indexes. PO-02A adds 7 + 17 columns, 9 + 19 constraints and
     // 7 indexes (2 primary keys, 3 unique + 1 partial on organization_invitations, the audit entity index).
+    // PO-02D1A adds 75 columns, 70 constraints and 22 indexes (7 primary keys, 5 unique-constraint indexes, 10 more).
     ok(
-      "column / constraint / index counts (PO-01A 45/27/14 + PO-02A 24/28/7)",
-      P0.platform.columns.length === 69 && P0.platform.constraints.length === 55 && P0.platform.indexes.length === 21,
+      "column / constraint / index counts (PO-01A 45/27/14 + PO-02A 24/28/7 + PO-02D1A 75/70/22)",
+      P0.platform.columns.length === 144 && P0.platform.constraints.length === 125 && P0.platform.indexes.length === 43,
       `${P0.platform.columns.length} columns, ${P0.platform.constraints.length} constraints, ${P0.platform.indexes.length} indexes`,
     );
 
@@ -93,13 +101,13 @@ async function main(): Promise<number> {
     const P1 = await projectCatalog(cP);
     const d2 = diffProjection(P1.platform, S1.platform, "push+sql", "sql-only");
     ok("platform projection incl. triggers + function: push+SQL == SQL-only", d2.length === 0, d2.slice(0, 8).join("\n        "));
-    ok("S1 has the row trigger, the truncate trigger and platform_reject_mutation()", S1.platform.triggers.length === 2 && S1.platform.functions.length === 1);
+    ok("S1 has the row trigger, the truncate trigger and platform_reject_mutation() — plus PO-02D1A's ten triggers and three guard functions", S1.platform.triggers.length === 12 && S1.platform.functions.length === 4);
 
     section("3. No tenant object is created, altered or removed");
     const d3 = diffProjection(S0.other, S1a.other, "before-sql", "after-PO01-sql");
     ok("applying the PO01 platform SQL leaves every non-platform object identical", d3.length === 0, d3.slice(0, 8).join("\n        "));
     const d4 = diffProjection(P1.other, S1.other, "full-schema-push", "pre-PO-02A-tenant-push+sql");
-    ok("every tenant object of the full Drizzle schema equals the pre-PO-02A tenant shape + the reviewed SQL (PO-02A's M4 index included)", d4.length === 0, d4.slice(0, 8).join("\n        "));
+    ok("every tenant object of the full Drizzle schema equals the pre-PO-02A tenant shape + the reviewed SQL (PO-02A's M4 index and PO-02D1A's F1 key included)", d4.length === 0, d4.slice(0, 8).join("\n        "));
     ok("tenant table count unchanged (67)", S1.other.tables.length === 67, String(S1.other.tables.length));
 
     section("4. Idempotency");

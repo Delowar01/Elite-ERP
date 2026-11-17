@@ -1,7 +1,8 @@
 /**
  * Platform Owner PO-01A — READ-ONLY check that the platform tables exist and that the audit trail
  * is append-only, judged by catalog semantics (table binding, timing, events, enabled state and
- * function body), never by trigger name alone.
+ * function body), never by trigger name alone. Since PO-02A also the company objects, and since
+ * PO-02D1A the onboarding objects (missing, disabled, altered or extra triggers are reported).
  *
  *   DATABASE_URL=postgres://…@127.0.0.1:<port>/<name containing _test_only_> npm run platform:db:check
  *
@@ -12,7 +13,7 @@
  */
 import { Client } from "pg";
 import { assertDisposableLocalDatabaseUrl, assertDisposableLocalServer, describeTarget, UnsafeDatabaseTargetError } from "./local-db-guard";
-import { checkCompanyFoundation, checkPlatformObjects } from "./catalog";
+import { checkCompanyFoundation, checkOnboardingFoundation, checkPlatformObjects } from "./catalog";
 
 async function main() {
   try {
@@ -25,13 +26,15 @@ async function main() {
       await client.query("set default_transaction_read_only = on");
       const report = await checkPlatformObjects(client);
       const company = await checkCompanyFoundation(client);
+      const onboarding = await checkOnboardingFoundation(client);
       console.log(`  tables: ${report.tablesPresent.join(", ") || "(none)"}`);
-      if (!report.ok || !company.ok) {
-        for (const f of [...report.findings, ...company.findings]) console.error(`  FAIL ${f}`);
+      console.log(`  onboarding rows: ${Object.entries(onboarding.rowCounts).map(([t, n]) => `${t}=${n}`).join(", ") || "(no onboarding table)"}`);
+      if (!report.ok || !company.ok || !onboarding.ok) {
+        for (const f of [...report.findings, ...company.findings, ...onboarding.findings]) console.error(`  FAIL ${f}`);
         process.exitCode = 1;
         return;
       }
-      console.log("  OK: 4 platform tables present; audit trail append-only by catalog semantics; PO-02A company tables and indexes present and valid");
+      console.log("  OK: 4 platform tables present; audit trail append-only by catalog semantics; PO-02A company tables and indexes present and valid; PO-02D1 onboarding tables, users key, guard functions and exactly ten enabled triggers present");
     } finally {
       await client.end();
     }

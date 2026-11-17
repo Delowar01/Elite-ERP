@@ -10,6 +10,8 @@
 // keeps Platform Owner states colour-free (neutral tags from one table of labels and icons). PO-02C made
 // company access operational: rules 3, 11, 12, 21, 23, 24 and 26 name its exact exceptions, and rules
 // 30–36 pin the customer tenant-access gate, the access action, the dialog and the suspended screen.
+// PO-02C.1 added rule 37 (the sign-in / access lock protocol). PO-02D1A added rules 38–41: the onboarding
+// database foundation is schema only (no code path, permission, route, flag or seed) and its SQL stays bounded.
 import { readFileSync, readdirSync, statSync, existsSync } from "node:fs";
 import { join, relative } from "node:path";
 
@@ -448,6 +450,56 @@ const customerAuditCode = code(join(root, "src/lib/security/audit.ts"));
 ok("…createSession and recordSecurityEvent take an optional executor (default: the autocommit db) so the sign-in transaction can pass its own",
   /export async function createSession\(userId: number, orgId: number, executor: Tx \| typeof db = db\): Promise<string> \{[\s\S]*?await executor\.insert\(sessionsTable\)/.test(sessionStoreCode) &&
     /export async function recordSecurityEvent\(\s*entry: \{[\s\S]*?\},\s*executor: Tx \| typeof db = db,\s*\) \{[\s\S]*?await executor\.insert\(securityEventsTable\)/.test(customerAuditCode));
+
+// ---------------------------------------------------------------------------------------------
+// PO-02D1A — the onboarding database foundation is SCHEMA ONLY: no code path, permission, route, flag or seed yet.
+// ---------------------------------------------------------------------------------------------
+// 38. Only the schema barrel imports the onboarding module; no application code names an onboarding table.
+const ONBOARDING_SCHEMA = join(root, "src/db/schema/platform-onboarding.ts");
+const onboardingImporters = allSrc.filter((f) => f !== ONBOARDING_SCHEMA && importsOf(read(f)).some((s) => /(^|\/)platform-onboarding$/.test(s))).map(rel).sort();
+ok("38. PO-02D1A: only src/db/schema/index.ts imports the onboarding schema module", JSON.stringify(onboardingImporters) === JSON.stringify([join("src", "db", "schema", "index.ts")]), onboardingImporters.join(", "));
+const ONBOARDING_NAMES = /\b(platformSettingsTable|subscriptionPackagesTable|subscriptionPackageVersionsTable|tenantPrimaryOwnersTable|tenantSubscriptionsTable|subscriptionEventsTable|organizationInvitationTermsTable|platform_settings|subscription_packages|subscription_package_versions|tenant_primary_owners|tenant_subscriptions|subscription_events|organization_invitation_terms)\b/;
+const onboardingUsers = allSrc.filter((f) => f !== ONBOARDING_SCHEMA && ONBOARDING_NAMES.test(code(f))).map(rel);
+ok("…no application code (comments ignored) names an onboarding table or its Drizzle symbol — nothing reads or writes them before PO-02D2", onboardingUsers.length === 0, onboardingUsers.join(", "));
+
+// 39. No PO-02D2 / PO-02D3 surface: the permission list, and the invitation / package / subscription routes, are unchanged.
+const d1GuardsSrc = read(join(root, "src/lib/platform/guards.ts"));
+const permsLine = (d1GuardsSrc.match(/export const PLATFORM_PERMISSIONS = \[([^\]]*)\] as const;/) ?? ["", "(not found)"])[1];
+ok("39. PO-02D1A: the platform permission list is unchanged (no package, subscription, Trial or invitation permission)", permsLine === `"platform.access", "platform.sessions.manage", "platform.mfa.manage", "platform.companies.read", "platform.companies.manage_access"`, permsLine);
+const onboardingRoutes = walk(join(root, "src/app")).map(rel).filter((p) => /\/(page|route)\.tsx?$/.test(p) && /invit|accept|onboard|subscri|packag|trial|join|regist/i.test(p)).sort();
+ok("…the only invitation-, package-, subscription- or registration-named routes are the existing /register and the two console previews (no acceptance or issuance route)",
+  JSON.stringify(onboardingRoutes) === JSON.stringify([join("src", "app", "(auth)", "register", "page.tsx"), join("src", "app", "(platform)", "platform", "(console)", "packages", "page.tsx"), join("src", "app", "(platform)", "platform", "(console)", "subscribers", "page.tsx")].sort()),
+  onboardingRoutes.join(", "));
+
+// 40. No invitation feature flag exists yet (none is activated, because none is defined).
+const flagFiles = [...allSrc, ...platformScripts].filter((f) => /PLATFORM_INVITATIONS_ENABLED|CUSTOMER_INVITE_ACCEPTANCE_ENABLED|INVITE_ONLY/.test(read(f))).map(rel);
+ok("40. PO-02D1A: no invitation feature flag (PLATFORM_INVITATIONS_ENABLED / CUSTOMER_INVITE_ACCEPTANCE_ENABLED / INVITE_ONLY) in src or scripts/platform", flagFiles.length === 0, flagFiles.join(", "));
+
+// 41. The PO-02D1 SQL: four files, none authorized for production, no seed; the foundation writes no row and alters
+//     only F1 on users; the rollback drops only PO-02D1 objects; nothing links a subscription to access control.
+const d1Files = readdirSync(join(root, "drizzle/platform")).filter((n) => n.startsWith("PO02D1_")).sort();
+const d1 = (n) => read(join(root, "drizzle/platform", n));
+const sqlCode = (text) => text.split("\n").filter((l) => !/^\s*--/.test(l)).join("\n");
+ok("41. PO-02D1A: drizzle/platform holds exactly the four PO-02D1 files, each marked NOT AUTHORIZED FOR PRODUCTION EXECUTION, and no seed file",
+  JSON.stringify(d1Files) === JSON.stringify(["PO02D1_onboarding_foundation.sql", "PO02D1_rollback.sql", "PO02D1_users_org_id_id_concurrently.sql", "PO02D1_users_org_id_id_drop.sql"]) &&
+    d1Files.every((n) => /NOT AUTHORIZED FOR PRODUCTION EXECUTION/.test(d1(n))) && !readdirSync(join(root, "drizzle/platform")).some((n) => /seed/i.test(n)),
+  d1Files.join(", "));
+const foundationSql = sqlCode(d1("PO02D1_onboarding_foundation.sql"));
+const foundationAlters = [...foundationSql.matchAll(/ALTER\s+TABLE\s+([\w.]+)\s+([^;\n]*)/gi)].map((m) => `${m[1]} ${m[2]}`.trim());
+ok("…the foundation writes no row (no INSERT / UPDATE / DELETE / TRUNCATE statement) and its only ALTER TABLE adds F1 to users (created, or attached from the runbook's index)",
+  !/^\s*(INSERT|UPDATE|DELETE|TRUNCATE)\b/im.test(foundationSql) &&
+    JSON.stringify(foundationAlters.sort()) === JSON.stringify(["public.users ADD CONSTRAINT users_org_id_id_uq UNIQUE (id, org_id)", "public.users ADD CONSTRAINT users_org_id_id_uq UNIQUE USING INDEX users_org_id_id_uq"]),
+  foundationAlters.join(" | "));
+const rollbackSql = sqlCode(d1("PO02D1_rollback.sql"));
+const drops = [...rollbackSql.matchAll(/DROP\s+(TABLE|FUNCTION)\s+IF\s+EXISTS\s+public\.(\w+)/gi)].map((m) => m[2]).sort();
+ok("…rollback step 1 drops only the seven onboarding tables and three guard functions, never CASCADE, never F1; step 2 removes only users_org_id_id_uq",
+  JSON.stringify(drops) === JSON.stringify(["organization_invitation_terms", "platform_settings", "subscription_events", "subscription_package_versions", "subscription_packages", "subscription_package_version_guard", "tenant_primary_owner_guard", "tenant_primary_owners", "tenant_subscription_guard", "tenant_subscriptions"].sort()) &&
+    !/CASCADE/i.test(rollbackSql) && !/users_org_id_id_uq/.test(rollbackSql) &&
+    JSON.stringify([...sqlCode(d1("PO02D1_users_org_id_id_drop.sql")).matchAll(/(ALTER TABLE [\w.]+ DROP CONSTRAINT \w+|DROP INDEX CONCURRENTLY IF EXISTS [\w.]+)/g)].map((m) => m[1])) === JSON.stringify(["ALTER TABLE public.users DROP CONSTRAINT users_org_id_id_uq", "DROP INDEX CONCURRENTLY IF EXISTS public.users_org_id_id_uq"]),
+  drops.join(", "));
+ok("…subscription expiry can never suspend a company: no PO-02D1 file references tenant_access_controls except the foundation's precondition column check",
+  (foundationSql.match(/tenant_access_controls/g) ?? []).length === 1 && /\('tenant_access_controls', 'org_id', 'integer'\)/.test(foundationSql) &&
+    ["PO02D1_rollback.sql", "PO02D1_users_org_id_id_concurrently.sql", "PO02D1_users_org_id_id_drop.sql"].every((n) => !/tenant_access_controls/.test(sqlCode(d1(n)))));
 
 console.log(`\n${pass}/${pass + fail} platform boundary checks passed`);
 process.exit(fail ? 1 : 0);

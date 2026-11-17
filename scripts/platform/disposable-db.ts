@@ -91,24 +91,29 @@ export async function connectDisposable(url: string): Promise<Client> {
 const SCHEMA_DIR = join(process.cwd(), "src", "db", "schema");
 
 /** Platform-owned schema modules: never part of a tenant-only push. */
-const PLATFORM_SCHEMA_MODULES = new Set(["platform.ts", "platform-companies.ts"]);
+const PLATFORM_SCHEMA_MODULES = new Set(["platform.ts", "platform-companies.ts", "platform-onboarding.ts"]);
+/** PO-02D1A's schema module: left out of a pre-onboarding push. */
+const ONBOARDING_SCHEMA_MODULE = "platform-onboarding.ts";
 
 /**
  * `drizzle-kit push` into a disposable database.
- *   full        — the branch schema (tenant + platform + company tables), i.e. src/db/schema/index.ts
- *   tenant-only — every schema module except the platform-owned ones: the current tenant schema,
- *                 which since PO-02A includes M4 (sessions_org_active_idx). For the exact pre-PO-02A
- *                 (621f156) tenant shape use pushPreCompanyTenantSchema.
+ *   full           — the branch schema (tenant + platform + company + onboarding tables), i.e. src/db/schema/index.ts
+ *   tenant-only    — every schema module except the platform-owned ones: the current tenant schema,
+ *                    which since PO-02A includes M4 (sessions_org_active_idx) and since PO-02D1A F1
+ *                    (users_org_id_id_uq). For the exact pre-PO-02A (621f156) tenant shape use
+ *                    pushPreCompanyTenantSchema.
+ *   pre-onboarding — every module except PO-02D1A's platform-onboarding.ts (tenant + platform + company
+ *                    tables, F1 included). For the exact pre-PO-02D1A branch shape use pushPreOnboardingSchema.
  * A throw-away config in the OS temp dir is used so the repository's drizzle.config.ts (which loads
  * .env through dotenv) is never involved; the URL reaches the child only through its environment.
  */
-export function pushSchema(url: string, mode: "full" | "tenant-only", opts: { verbose?: boolean } = {}): { ok: boolean; output: string } {
+export function pushSchema(url: string, mode: "full" | "tenant-only" | "pre-onboarding", opts: { verbose?: boolean } = {}): { ok: boolean; output: string } {
   assertDisposableLocalDatabaseUrl(url);
   const files =
     mode === "full"
       ? [join(SCHEMA_DIR, "index.ts")]
       : readdirSync(SCHEMA_DIR)
-          .filter((f) => f.endsWith(".ts") && f !== "index.ts" && !PLATFORM_SCHEMA_MODULES.has(f))
+          .filter((f) => f.endsWith(".ts") && f !== "index.ts" && (mode === "pre-onboarding" ? f !== ONBOARDING_SCHEMA_MODULE : !PLATFORM_SCHEMA_MODULES.has(f)))
           .sort()
           .map((f) => join(SCHEMA_DIR, f));
   const dir = mkdtempSync(join(tmpdir(), "po01a-drizzle-"));
@@ -135,7 +140,8 @@ export function pushSchema(url: string, mode: "full" | "tenant-only", opts: { ve
 /**
  * The exact pre-PO-02A tenant schema shape (621f156 = 021ceb4): the tenant-only push minus M4, the
  * ONLY change PO-02A makes to a tenant schema module (src/db/schema/security.ts — pinned line by
- * line by verify-page-archetypes group 24). This is what production looks like before PO-02A.
+ * line by verify-page-archetypes group 24), and minus F1, the ONLY change PO-02D1A makes to one
+ * (src/db/schema/users.ts — pinned by group 28). This is what production looks like before PO-02A.
  */
 export async function pushPreCompanyTenantSchema(url: string): Promise<{ ok: boolean; output: string }> {
   const push = pushSchema(url, "tenant-only");
@@ -143,6 +149,23 @@ export async function pushPreCompanyTenantSchema(url: string): Promise<{ ok: boo
   const client = await connectDisposable(url);
   try {
     await client.query("drop index if exists sessions_org_active_idx");
+    await client.query("alter table users drop constraint if exists users_org_id_id_uq");
+  } finally {
+    await client.end();
+  }
+  return push;
+}
+
+/**
+ * The exact pre-PO-02D1A branch shape (87efa15): the pre-onboarding push minus F1. The PO-01A and
+ * PO-02A tables exist without their triggers (push never creates triggers) until the reviewed SQL runs.
+ */
+export async function pushPreOnboardingSchema(url: string): Promise<{ ok: boolean; output: string }> {
+  const push = pushSchema(url, "pre-onboarding");
+  if (!push.ok) return push;
+  const client = await connectDisposable(url);
+  try {
+    await client.query("alter table users drop constraint if exists users_org_id_id_uq");
   } finally {
     await client.end();
   }

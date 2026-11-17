@@ -22,7 +22,7 @@ import {
   applyPlatformMigration,
   databaseUrlFor,
 } from "../scripts/platform/disposable-db";
-import { projectCatalog, diffProjection, checkPlatformObjects, checkCompanyFoundation, PLATFORM_SQL_PATH, PO02A_SQL_PATH } from "../scripts/platform/catalog";
+import { projectCatalog, diffProjection, checkPlatformObjects, checkCompanyFoundation, PLATFORM_SQL_PATH, PO02A_SQL_PATH, PO02D1_SQL_PATH } from "../scripts/platform/catalog";
 import { section, ok, rejects, sqlState, summary, describeError } from "./platform/harness";
 import {
   PO02A_CONSTRAINTS,
@@ -73,12 +73,17 @@ async function main(): Promise<void> {
     ok("first application creates M2, M3, M4 and the audit index", JSON.stringify(steps) === JSON.stringify(["M2 tenant_access_controls: created", "M3 organization_invitations: created", "M4 sessions_org_active_idx: created", "audit platform_audit_events_entity_idx: created"]), steps.join(" · "));
     const L1 = await projectCatalog(cL);
     const PP = await projectCatalog(cP);
+    // PO-02D1A: the full Drizzle schema (P) now also holds the onboarding objects, so the whole-branch equivalence
+    // compares P with the pre-PO-02A shape + ALL reviewed SQL (PO01, PO02A, then PO02D1) — L2; every PO-02A-only check
+    // below keeps reading L1, the state right after PO02A.
+    await applyPlatformMigration(L.url, [PO02D1_SQL_PATH]);
+    const L2 = await projectCatalog(cL);
 
     section("2. Reviewed SQL ≡ Drizzle schema (src/db/schema/platform-companies.ts, security.ts M4, platform.ts audit index)");
-    const dPlat = diffProjection(PP.platform, L1.platform, "full-drizzle-push+sql", "pre-PO-02A+reviewed-sql");
+    const dPlat = diffProjection(PP.platform, L2.platform, "full-drizzle-push+sql", "pre-PO-02A+reviewed-sql");
     ok("platform-owned projection identical (tables, columns, defaults, constraints, indexes, triggers, functions, sequences)", dPlat.length === 0, dPlat.slice(0, 6).join("\n        "));
-    const dOther = diffProjection(PP.other, L1.other, "full-drizzle-push+sql", "pre-PO-02A+reviewed-sql");
-    ok("every tenant object identical too — the M4 index included", dOther.length === 0, dOther.slice(0, 6).join("\n        "));
+    const dOther = diffProjection(PP.other, L2.other, "full-drizzle-push+sql", "pre-PO-02A+reviewed-sql");
+    ok("every tenant object identical too — the M4 index (and PO-02D1A's F1 key) included", dOther.length === 0, dOther.slice(0, 6).join("\n        "));
     const conNames = L1.platform.constraints.map((l) => l.split(" | ")).filter((p) => (PO02A_TABLES as readonly string[]).includes(p[0])).map((p) => p[1]).sort();
     ok(`exactly the ${PO02A_CONSTRAINTS.length} reviewed PO-02A constraints exist (names pinned)`, JSON.stringify(conNames) === JSON.stringify([...PO02A_CONSTRAINTS].sort()), conNames.join(","));
     const idxDefs = Object.fromEntries([...L1.platform.indexes, ...L1.other.indexes].map((l) => l.split(" | ")).map((p) => [p[1], p[2]]));
@@ -272,7 +277,17 @@ async function main(): Promise<void> {
     walk("src");
     const refs = (re: RegExp) => files.filter((f) => re.test(readFileSync(join(ROOT, f), "utf8")));
     const tableRefs = refs(/tenantAccessControlsTable|organizationInvitationsTable|tenant_access_controls|organization_invitations/);
-    ok("only the schema module, the compatibility module, the PO-02B read model and the PO-02C access action reference the new tables", JSON.stringify(tableRefs.sort()) === JSON.stringify(["src/db/schema/platform-companies.ts", "src/lib/platform/companies.ts", "src/lib/platform/company-access-actions.ts", "src/lib/platform/company-access.ts"]), tableRefs.join(", "));
+    ok("only the schema module, the compatibility module, the PO-02B read model and the PO-02C access action reference the new tables — and PO-02D1A's onboarding schema module", JSON.stringify(tableRefs.sort()) === JSON.stringify(["src/db/schema/platform-companies.ts", "src/db/schema/platform-onboarding.ts", "src/lib/platform/companies.ts", "src/lib/platform/company-access-actions.ts", "src/lib/platform/company-access.ts"]), tableRefs.join(", "));
+    // PO-02D1A: the onboarding schema module names organization_invitations only as the target of the F8 terms foreign key
+    // (one import, one foreignColumns entry) and never tenant_access_controls.
+    const onboardingSchema = readFileSync(join(ROOT, "src/db/schema/platform-onboarding.ts"), "utf8")
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/(^|[^:])\/\/.*$/gm, "$1"); // code only: comments may name the tables
+    ok("…the onboarding schema module only as the invitation-terms foreign-key target (an import and one foreignColumns entry; no access-table reference)",
+      (onboardingSchema.match(/organizationInvitationsTable/g) ?? []).length === 2 &&
+        /import \{ organizationInvitationsTable \} from "\.\/platform-companies";/.test(onboardingSchema) &&
+        /foreignColumns: \[organizationInvitationsTable\.id\]/.test(onboardingSchema) &&
+        !/tenantAccessControlsTable|tenant_access_controls|organization_invitations[^_]/.test(onboardingSchema.replace(/"organization_invitation_terms[^"]*"/g, "")));
     // Import specifiers are RESOLVED (the @/ alias and relative paths), so "./company-access" inside
     // src/lib/platform counts exactly like "@/lib/platform/company-access" (PO-02B correction: the
     // PO-02A pattern matched only specifiers spelled ".../platform/company-access").

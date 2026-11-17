@@ -19,7 +19,7 @@
  * performance at 1,000 organizations; no secret in any audit record.
  */
 import { createHash, randomBytes } from "node:crypto";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { join } from "node:path";
 import { performance } from "node:perf_hooks";
@@ -711,7 +711,20 @@ async function main() {
     ok(`every one of the ${Object.keys(before).length} other tables (orgs, users, customers, accounting, invoices, stock, HR, documents, settings …) is byte-identical after the cycle`, s.ok && r.ok && changed.length === 0 && Object.keys(before).length > 40, changed.join(", "));
     ok("…other companies' sessions are byte-identical; this company's sessions changed only in revoked_at / revoked_reason", (await sessionsElsewhere()) === beforeElsewhere && (await sessionsHereStable()) === beforeHere);
     ok("…no customer session was created by the platform (impersonation impossible): this company's session count is unchanged", Number((await q<{ n: number }>("select count(*)::int as n from sessions where org_id = $1", [d]))[0].n) === 1);
-    ok("…subscription state is not a factor: no subscription table exists yet, and none was created", !tables.some((t) => /subscription/.test(t)));
+    // PO-02D1A added the subscription schema (tables only, no rows, no code). Subscription state is still not a factor:
+    // the four subscription tables hold no row, they were inside the byte-identical set above, and no file of the access
+    // decision (comments stripped) names any onboarding table.
+    const subscriptionTables = tables.filter((t) => /subscription/.test(t)).sort();
+    const subscriptionRows = await Promise.all(subscriptionTables.map(async (t) => Number((await q<{ n: number }>(`select count(*)::int as n from "${t}"`))[0].n)));
+    const decisionFiles = ["src/lib/platform/company-access.ts", "src/lib/platform/company-access-actions.ts", "src/lib/platform/companies.ts", "src/lib/security/tenant-access-gate.ts", "src/app/(platform)/company-access-actions.ts"];
+    const stripComments = (text: string) => text.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:"'`])\/\/.*$/gm, "$1");
+    const namesOnboarding = decisionFiles.filter((f) => /subscription|platform_settings|platformSettings|tenant_primary_owners|tenantPrimaryOwners|organization_invitation_terms|organizationInvitationTerms|platform-onboarding/i.test(stripComments(readFileSync(join(process.cwd(), f), "utf8"))));
+    ok(
+      "…subscription state is not a factor: the four PO-02D1A subscription tables hold no row, were inside the byte-identical set, and no access-decision file names an onboarding table",
+      JSON.stringify(subscriptionTables) === JSON.stringify(["subscription_events", "subscription_package_versions", "subscription_packages", "tenant_subscriptions"]) &&
+        subscriptionTables.every((t) => t in before) && subscriptionRows.every((n) => n === 0) && namesOnboarding.length === 0,
+      `${subscriptionTables.join(",")} rows ${subscriptionRows.join(",")} files ${namesOnboarding.join(",")}`,
+    );
     const auditText = JSON.stringify(await q("select * from platform_audit_events"));
     const leaked = secretsSeen.filter((v) => v.length >= 8 && auditText.includes(v));
     ok("no password, TOTP secret, recovery code, platform token, customer token or session id appears in any audit record", leaked.length === 0, `${leaked.length} leaked`);

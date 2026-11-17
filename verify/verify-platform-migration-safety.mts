@@ -33,6 +33,7 @@ import {
   PO02A_SQL_PATH,
   PO02A_M4_CONCURRENT_SQL_PATH,
   PO02A_ROLLBACK_SQL_PATH,
+  PO02D1_SQL_PATH,
 } from "../scripts/platform/catalog";
 import { section, ok, rejects, sqlState, summary, describeError } from "./platform/harness";
 import { insertFixtures, tableChecksums, diffChecksums, runPo02a, runStatements, po02aObjects, newTokenHash } from "./platform/po02a-fixtures";
@@ -307,11 +308,17 @@ async function main(): Promise<void> {
 
   section("9. A later `drizzle-kit push` on the migrated database");
   {
+    // PO-02D1A: the branch schema now also declares the onboarding objects, so "the migrated database" is migrated by
+    // every reviewed file — PO02D1 included — before the push (a push before PO02D1 would create its tables without
+    // triggers: verify:platform-onboarding-migration-safety covers that order).
+    ok("the migrated database also receives the reviewed PO02D1 SQL first", await applyPlatformMigration(M.url, [PO02D1_SQL_PATH]).then(() => true, () => false));
     const before = await projectCatalog(M.c);
     const push = pushSchema(M.url, "full", { verbose: true });
     const statements = push.output.split("\n").map((l) => l.trim()).filter((l) => /^(CREATE|ALTER|DROP)\s/i.test(l));
-    const touchesPo02a = statements.filter((l) => /tenant_access_controls|organization_invitations|sessions_org_active_idx|platform_audit_events_entity_idx|"platform_/.test(l));
-    ok("push succeeds and issues no statement for any PO-02A or platform object", push.ok && touchesPo02a.length === 0, touchesPo02a.slice(0, 3).join(" | "));
+    const touchesPo02a = statements.filter((l) =>
+      /tenant_access_controls|organization_invitations|sessions_org_active_idx|platform_audit_events_entity_idx|"platform_|subscription_packages|subscription_package_versions|tenant_primary_owners|tenant_subscriptions|subscription_events|organization_invitation_terms|users_org_id_id_uq/.test(l),
+    );
+    ok("push succeeds and issues no statement for any PO-02A, PO-02D1A or platform object", push.ok && touchesPo02a.length === 0, touchesPo02a.slice(0, 3).join(" | "));
     const fkLong = statements.filter((l) => /^ALTER TABLE "([a-z_]+)" (DROP|ADD) CONSTRAINT "([a-z0-9_]{60,})"/.test(l));
     ok(
       `its only statements re-create pre-existing customer foreign keys whose generated names exceed PostgreSQL's 63-character limit (${statements.length} statements) — not PO-02A`,
