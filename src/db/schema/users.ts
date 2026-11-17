@@ -1,4 +1,4 @@
-import { pgTable, serial, integer, text, boolean, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, serial, integer, text, boolean, timestamp, unique } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { orgsTable } from "./orgs";
@@ -22,7 +22,12 @@ export const usersTable = pgTable("users", {
   passwordChangedAt: timestamp("password_changed_at").notNull().defaultNow(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
-});
+}, (t) => [
+  // Platform Owner PO-02D1A (F1): the composite key the primary-owner foreign key references, so a company's primary
+  // owner must be one of ITS users. Additive key only — id is the primary key, so it can never reject a row; no
+  // column, row or behaviour changes. Columns in table order (id, org_id): drizzle-kit re-creates any other order.
+  unique("users_org_id_id_uq").on(t.id, t.orgId),
+]);
 
 export const insertUserSchema = createInsertSchema(usersTable).omit({ id: true, createdAt: true, updatedAt: true });
 export type InsertUser = z.infer<typeof insertUserSchema>;
