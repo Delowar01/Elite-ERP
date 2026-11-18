@@ -20,7 +20,8 @@
 -- historical migrations build 59 tables against the schema's 67 (PO-00 §F.2, owner decision D-6).
 --
 -- RETRY-SAFE WITHOUT HIDING INCOMPATIBILITIES. Each object is first built from the exact DDL
--- below into a private scratch schema (po02a_reference), then:
+-- below into a private scratch schema (po02a_reference — its foreign keys point at key-only
+-- stand-ins of orgs and platform_admins inside that schema, never at the live tables), then:
 --   absent in public                 -> created in public from the same DDL      ("created")
 --   present with exactly that shape  -> left untouched (a re-run, or db:push)   ("verified")
 --   present with ANY difference      -> the migration aborts and names every difference
@@ -28,12 +29,23 @@
 --                                       validity, triggers, relation kind, row security).
 -- ONE transaction: any failure leaves nothing behind, the scratch schema included.
 --
--- LOCKING (bounded by lock_timeout; reads are never blocked):
---   - the foreign keys take SHARE ROW EXCLUSIVE on orgs and platform_admins until COMMIT
---     (writes to those tables wait for the few milliseconds the migration takes);
+-- LOCKING (measured by verify:platform-company-migration-locks; every wait bounded by lock_timeout 5 s):
+--   - first application: the two new tables' foreign keys take SHARE ROW EXCLUSIVE on orgs and
+--     platform_admins until COMMIT — reads, row locks and foreign-key checks continue; INSERT /
+--     UPDATE / DELETE on those two tables (a registration's new organization, a Platform Owner
+--     sign-in's TOTP step) wait for the milliseconds the transaction takes. The audit index build
+--     takes SHARE on platform_audit_events (audit inserts wait the same way);
 --   - CREATE INDEX on sessions takes SHARE on sessions for the duration of the build (sign-ins,
 --     sign-outs and revocations wait). For production, PO02A_m4_sessions_index_concurrently.sql
---     builds M4 first WITHOUT blocking writes; this file then finds it and only verifies it.
+--     builds M4 first WITHOUT blocking writes; this file then finds it and only verifies it;
+--   - a verify-only re-run creates nothing and takes no lock that blocks a read or write of any
+--     existing table (only ACCESS SHARE on sessions and platform_audit_events, to copy their
+--     structure into the scratch schema).
+--   PO-02D1A.1 (D-11b): the scratch reference used to reference the LIVE orgs and platform_admins,
+--   so building it took SHARE ROW EXCLUSIVE on both even on a re-run, and dropping it at the end
+--   (DROP SCHEMA ... CASCADE removes the foreign keys' triggers on the referenced tables) held
+--   ACCESS EXCLUSIVE on both until COMMIT: every read of orgs — every customer sign-in — and every
+--   Platform Owner sign-in waited. The stand-ins below remove both; the public objects are unchanged.
 --
 -- PO-02A AUTHORIZATION: loopback disposable `*_test_only_*` databases only, via
 -- `npm run platform:db:apply` (fails closed on any other target). Applying it to production is a
@@ -49,8 +61,9 @@ SET LOCAL statement_timeout = '120s';
 -- Helpers (session-temporary; never in the public schema; dropped before COMMIT).
 -- ---------------------------------------------------------------------------------------------
 
--- Canonical shape of one relation, one line per property. Index definitions are printed without
--- their schema so the public object and its scratch reference compare equal when identical.
+-- Canonical shape of one relation, one line per property. Index and constraint definitions are
+-- printed without their schema so the public object and its scratch reference compare equal when
+-- identical (the reference's foreign keys name the scratch stand-ins, the public ones the live tables).
 CREATE OR REPLACE FUNCTION pg_temp.po02a_shape(p_schema text, p_name text) RETURNS SETOF text
 LANGUAGE sql STABLE AS $fn$
   SELECT 'relation kind=' || c.relkind::text || ' persistence=' || c.relpersistence::text
@@ -71,7 +84,8 @@ LANGUAGE sql STABLE AS $fn$
   LEFT JOIN pg_collation co ON co.oid = a.attcollation AND co.collname <> 'default'
   WHERE n.nspname = p_schema AND c.relname = p_name AND a.attnum > 0 AND NOT a.attisdropped
   UNION ALL
-  SELECT 'constraint ' || con.conname || ' ' || con.contype::text || ' ' || pg_get_constraintdef(con.oid, true)
+  SELECT 'constraint ' || con.conname || ' ' || con.contype::text || ' '
+         || replace(pg_get_constraintdef(con.oid, true), p_schema || '.', '')
          || CASE WHEN con.convalidated THEN '' ELSE ' NOT VALID' END
          || CASE WHEN con.condeferrable THEN ' DEFERRABLE' ELSE '' END
   FROM pg_constraint con
@@ -235,6 +249,14 @@ $pre$;
 
 CREATE SCHEMA po02a_reference;
 
+-- Key-only stand-ins for the two EXISTING tables the new foreign keys reference (PO-02D1A.1, D-11b).
+-- The reference copies point at these (their DDL says %1$I.orgs and %1$I.platform_admins), never at the
+-- live tables, so building the reference and dropping it at the end takes no lock on orgs or
+-- platform_admins. Only the referenced primary keys matter: the shape comparison strips the schema
+-- prefix, so a public foreign key to orgs (id) compares equal to a reference one to the stand-in.
+CREATE TABLE po02a_reference.orgs (id integer NOT NULL, CONSTRAINT orgs_pkey PRIMARY KEY (id));
+CREATE TABLE po02a_reference.platform_admins (id uuid NOT NULL, CONSTRAINT platform_admins_pkey PRIMARY KEY (id));
+
 -- ---------------------------------------------------------------------------------------------
 -- M2 — tenant_access_controls (Schema.md §4.1). The platform's access decision per organization,
 -- independent of subscriptions. Every change is attributed (who, when, why); a suspended row
@@ -250,8 +272,8 @@ $ddl$CREATE TABLE %1$I.tenant_access_controls (
   created_at                   timestamptz NOT NULL DEFAULT now(),
   updated_at                   timestamptz NOT NULL DEFAULT now(),
   CONSTRAINT tenant_access_controls_pkey PRIMARY KEY (org_id),
-  CONSTRAINT tenant_access_controls_org_fk FOREIGN KEY (org_id) REFERENCES public.orgs (id) ON DELETE RESTRICT,
-  CONSTRAINT tenant_access_controls_changed_by_fk FOREIGN KEY (changed_by_platform_admin_id) REFERENCES public.platform_admins (id) ON DELETE RESTRICT,
+  CONSTRAINT tenant_access_controls_org_fk FOREIGN KEY (org_id) REFERENCES %1$I.orgs (id) ON DELETE RESTRICT,
+  CONSTRAINT tenant_access_controls_changed_by_fk FOREIGN KEY (changed_by_platform_admin_id) REFERENCES %1$I.platform_admins (id) ON DELETE RESTRICT,
   CONSTRAINT tenant_access_controls_status_chk CHECK (access_status IN ('active', 'suspended')),
   CONSTRAINT tenant_access_controls_reason_chk CHECK (reason IS NULL OR (reason = btrim(reason) AND length(reason) BETWEEN 1 AND 1000)),
   CONSTRAINT tenant_access_controls_change_attribution_chk CHECK ((changed_at IS NULL) = (changed_by_platform_admin_id IS NULL)),
@@ -287,9 +309,9 @@ $ddl$CREATE TABLE %1$I.organization_invitations (
   created_at                   timestamptz NOT NULL DEFAULT now(),
   updated_at                   timestamptz NOT NULL DEFAULT now(),
   CONSTRAINT organization_invitations_pkey PRIMARY KEY (id),
-  CONSTRAINT organization_invitations_accepted_org_fk FOREIGN KEY (accepted_org_id) REFERENCES public.orgs (id) ON DELETE RESTRICT,
-  CONSTRAINT organization_invitations_invited_by_fk FOREIGN KEY (invited_by_platform_admin_id) REFERENCES public.platform_admins (id) ON DELETE RESTRICT,
-  CONSTRAINT organization_invitations_revoked_by_fk FOREIGN KEY (revoked_by_platform_admin_id) REFERENCES public.platform_admins (id) ON DELETE RESTRICT,
+  CONSTRAINT organization_invitations_accepted_org_fk FOREIGN KEY (accepted_org_id) REFERENCES %1$I.orgs (id) ON DELETE RESTRICT,
+  CONSTRAINT organization_invitations_invited_by_fk FOREIGN KEY (invited_by_platform_admin_id) REFERENCES %1$I.platform_admins (id) ON DELETE RESTRICT,
+  CONSTRAINT organization_invitations_revoked_by_fk FOREIGN KEY (revoked_by_platform_admin_id) REFERENCES %1$I.platform_admins (id) ON DELETE RESTRICT,
   CONSTRAINT organization_invitations_token_hash_chk CHECK (token_hash ~ '^[0-9a-f]{64}$'),
   CONSTRAINT organization_invitations_owner_email_chk CHECK (
     owner_email_normalized = lower(btrim(owner_email_normalized))

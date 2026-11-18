@@ -139,6 +139,7 @@ import { PO02B_BASE, PO02B_EDITS, PO02B_NEW, po02bDrift, undoPo02b } from "./po0
 import { PO02C_BASE, PO02C_EDITS, PO02C_NEW, po02cDrift, undoPo02c } from "./po02c-approved-delta.mjs";
 import { PO02C1_BASE, PO02C1_EDITS, PO02C1_NEW, po02c1Drift, undoPo02c1 } from "./po02c1-approved-delta.mjs";
 import { PO02D1A_BASE, PO02D1A_EDITS, PO02D1A_NEW, po02d1aDrift, undoPo02d1a } from "./po02d1a-approved-delta.mjs";
+import { PO02D1A1_BASE, PO02D1A1_EDITS, PO02D1A1_NEW, po02d1a1Drift, undoPo02d1a1 } from "./po02d1a1-approved-delta.mjs";
 import { renderToStaticMarkup } from "react-dom/server";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
@@ -165,7 +166,11 @@ const diskRead = (p: string) => readFileSync(path.join(ROOT, p), "utf8");
 // so the PO-02C layer — its added-file pins included — and every older group read PO-02C's bytes; it added no file.
 // Platform Owner PO-02D1A: its recorded hunks are undone before PO-02C.1's (group 28 proves they are each file's only change),
 // so the PO-02C.1 layer and every older group read PO-02D0's (87efa15) bytes; the files PO-02D1A added stay out of `walk`.
-const po02d1aRead = (p: string) => undoPo02d1a(p, diskRead(p));
+// Platform Owner PO-02D1A.1: its recorded hunks are undone before PO-02D1A's (group 29 proves they are each file's only
+// change), so the PO-02D1A layer and every older group — PO-02A's pin of the reviewed PO-02A SQL included — read
+// PO-02D1A's (43b0611) bytes; it added no file.
+const po02d1a1Read = (p: string) => undoPo02d1a1(p, diskRead(p));
+const po02d1aRead = (p: string) => undoPo02d1a(p, po02d1a1Read(p));
 const po02c1Read = (p: string) => undoPo02c1(p, po02d1aRead(p));
 const po02cRead = (p: string) => undoPo02c(p, po02c1Read(p));
 const po02bRead = (p: string) => undoPo02b(p, po02cRead(p));
@@ -536,7 +541,7 @@ const MAIN_EDITS: Record<string, [string, string][]> = {
 /** A file's bytes for a byte-identity hash: main's approved change undone (MAIN_EDITS), every other file as it is. */
 const frozen = (f: string): string | Buffer =>
   f in MAIN_EDITS ? MAIN_EDITS[f].reduce((acc, [was, is]) => acc.replace(is, () => was), rawRead(f))
-    : f in ACC01_EDITS ? rawRead(f) : f in LCP_EDITS || f in PO01A_EDITS || f in PO01B_EDITS || f in PO01B1_EDITS || f in PO02A_EDITS || f in PO02B_EDITS || f in PO02C_EDITS || f in PO02C1_EDITS || f in PO02D1A_EDITS ? actualRead(f) : readFileSync(path.join(ROOT, f));
+    : f in ACC01_EDITS ? rawRead(f) : f in LCP_EDITS || f in PO01A_EDITS || f in PO01B_EDITS || f in PO01B1_EDITS || f in PO02A_EDITS || f in PO02B_EDITS || f in PO02C_EDITS || f in PO02C1_EDITS || f in PO02D1A_EDITS || f in PO02D1A1_EDITS ? actualRead(f) : readFileSync(path.join(ROOT, f));
 
 let pass = 0;
 let fail = 0;
@@ -571,7 +576,7 @@ function walk(dir: string): string[] {
   for (const name of readdirSync(path.join(ROOT, dir)).sort()) {
     const p = path.posix.join(dir, name);
     if (statSync(path.join(ROOT, p)).isDirectory()) out.push(...walk(p));
-    else if (!(p in ACC01_NEW) && !(p in LCP_NEW) && !(p in PO01A_NEW) && !(p in PO01B_NEW) && !(p in PO01B1_NEW) && !(p in PO02A_NEW) && !(p in PO02B_NEW) && !(p in PO02C_NEW) && !(p in PO02C1_NEW) && !(p in PO02D1A_NEW)) out.push(p);
+    else if (!(p in ACC01_NEW) && !(p in LCP_NEW) && !(p in PO01A_NEW) && !(p in PO01B_NEW) && !(p in PO01B1_NEW) && !(p in PO02A_NEW) && !(p in PO02B_NEW) && !(p in PO02C_NEW) && !(p in PO02C1_NEW) && !(p in PO02D1A_NEW) && !(p in PO02D1A1_NEW)) out.push(p);
   }
   return out;
 }
@@ -3160,7 +3165,7 @@ check(`ACC-01 changed its ${Object.keys(ACC01_EDITS).length} files (src/, and ve
 // No file under src/ outside the record differs from main: every other file is in the older groups' byte-identity hashes
 // (groups 4, 16 and 17), and a new file the record does not list is caught there too — `walk` leaves out only ACC01_NEW.
 check(`ACC-01 added no file under src/ but the recorded ${Object.keys(ACC01_NEW).length} (an unrecorded new file would sit in groups 16 and 17's src trees)`,
-  walk("src").length + Object.keys(ACC01_NEW).length + Object.keys(LCP_NEW).length + Object.keys(PO01A_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO01B_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO01B1_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO02A_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO02B_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO02C_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO02C1_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO02D1A_NEW).filter((f) => f.startsWith("src/")).length === (function all(d: string): number {
+  walk("src").length + Object.keys(ACC01_NEW).length + Object.keys(LCP_NEW).length + Object.keys(PO01A_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO01B_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO01B1_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO02A_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO02B_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO02C_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO02C1_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO02D1A_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO02D1A1_NEW).filter((f) => f.startsWith("src/")).length === (function all(d: string): number {
     return readdirSync(path.join(ROOT, d)).reduce((n, name) => n + (statSync(path.join(ROOT, d, name)).isDirectory() ? all(path.posix.join(d, name)) : 1), 0);
   })("src"));
 
@@ -3530,8 +3535,8 @@ check("sign-in (enforcement off): the accepted sequence with one change — a ma
 
 // ---------- 28. Platform Owner PO-02D1A — the approved change to frozen files ----------
 section("28. Platform Owner PO-02D1A — onboarding database foundation, schema only (the approved change to frozen files)");
-// Read as they are on disk: each changed file is PO-02D0's (87efa15) plus exactly its recorded hunks, each added file as recorded.
-const po02d1aDriftNow = po02d1aDrift((f) => (existsSync(path.join(ROOT, f)) ? diskRead(f) : null));
+// Read with PO-02D1A.1's hunks undone (group 29): each changed file is PO-02D0's (87efa15) plus exactly its recorded hunks, each added file as recorded.
+const po02d1aDriftNow = po02d1aDrift((f) => (existsSync(path.join(ROOT, f)) ? po02d1a1Read(f) : null));
 const PO02D1A_EDITABLE = ["src/db/schema/index.ts", "src/db/schema/users.ts", "verify/verify-document-form.mts", "verify/verify-page-archetypes.mts"];
 const PO02D1A_ADDED = ["drizzle/platform/PO02D1_onboarding_foundation.sql", "drizzle/platform/PO02D1_rollback.sql", "drizzle/platform/PO02D1_users_org_id_id_concurrently.sql", "drizzle/platform/PO02D1_users_org_id_id_drop.sql", "src/db/schema/platform-onboarding.ts"];
 check(`PO-02D1A changed its ${Object.keys(PO02D1A_EDITS).length} files (the schema index, the customer users schema's F1 key and the two freeze verifiers) by exactly their ${Object.values(PO02D1A_EDITS).flat().length} recorded hunks — undone, each file is ${PO02D1A_BASE.slice(0, 7)}'s to the byte — and added exactly its ${Object.keys(PO02D1A_NEW).length} files (the onboarding schema module and the four reviewed PO02D1 SQL files), as recorded (verify/po02d1a-approved-delta.mts)`,
@@ -3551,6 +3556,48 @@ const onboardingModule = diskRead("src/db/schema/platform-onboarding.ts");
 check("…the onboarding schema module imports only drizzle-orm and the existing orgs, users, platform and company schema modules (no application code)",
   JSON.stringify([...onboardingModule.matchAll(/^import [^"]*"([^"]+)";$/gm)].map((m) => m[1]).sort()) === JSON.stringify(["./orgs", "./platform", "./platform-companies", "./users", "drizzle-orm", "drizzle-orm/pg-core"]),
   [...onboardingModule.matchAll(/^import [^"]*"([^"]+)";$/gm)].map((m) => m[1]).join(", "));
+
+// ---------- 29. Platform Owner PO-02D1A.1 — the approved change to frozen files ----------
+section("29. Platform Owner PO-02D1A.1 — PO-02A migration lock-safety correction (the approved change to frozen files)");
+// Read as they are on disk: each changed file is PO-02D1A's (43b0611) plus exactly its recorded hunks; no file added.
+const po02d1a1DriftNow = po02d1a1Drift((f) => (existsSync(path.join(ROOT, f)) ? diskRead(f) : null));
+const PO02A_SQL_FILE = "drizzle/platform/PO02A_company_foundation.sql";
+const PO02D1A1_EDITABLE = [PO02A_SQL_FILE, "verify/verify-document-form.mts", "verify/verify-page-archetypes.mts"];
+check(`PO-02D1A.1 changed its ${Object.keys(PO02D1A1_EDITS).length} files (the reviewed PO-02A SQL and the two freeze verifiers) by exactly their ${Object.values(PO02D1A1_EDITS).flat().length} recorded hunks — undone, each file is ${PO02D1A1_BASE.slice(0, 7)}'s to the byte, the PO-02A SQL the approved one PO-02A pinned — and added no file (verify/po02d1a1-approved-delta.mts)`,
+  po02d1a1DriftNow.length === 0 && PO02D1A1_BASE === "43b0611f7b9162cf0ca820fab9ace4b17504d2ca" && Object.keys(PO02D1A1_NEW).length === 0 &&
+    JSON.stringify(Object.keys(PO02D1A1_EDITS).sort()) === JSON.stringify([...PO02D1A1_EDITABLE].sort()) &&
+    h16(undoPo02d1a1(PO02A_SQL_FILE, diskRead(PO02A_SQL_FILE))) === PO02A_NEW[PO02A_SQL_FILE],
+  po02d1a1DriftNow.map(rel).join(" "));
+// Line-level: apart from comments, the PO-02A SQL change is the lock-safety design only.
+const sqlCodeLines = (lines: string[]) => lines.filter((l) => !/^\s*--/.test(l) && l.trim() !== "");
+const po02aSqlDelta = lineDelta(PO02D1A1_EDITS[PO02A_SQL_FILE] ?? []);
+const FK_TARGETS: [string, string, string][] = [
+  ["tenant_access_controls_org_fk", "org_id", "orgs"],
+  ["tenant_access_controls_changed_by_fk", "changed_by_platform_admin_id", "platform_admins"],
+  ["organization_invitations_accepted_org_fk", "accepted_org_id", "orgs"],
+  ["organization_invitations_invited_by_fk", "invited_by_platform_admin_id", "platform_admins"],
+  ["organization_invitations_revoked_by_fk", "revoked_by_platform_admin_id", "platform_admins"],
+];
+const fkLine = (schema: string) => ([name, col, target]: [string, string, string]) => `  CONSTRAINT ${name} FOREIGN KEY (${col}) REFERENCES ${schema}.${target} (id) ON DELETE RESTRICT,`;
+check("PO-02D1A.1's only executable change to the PO-02A SQL: the shape strips the schema prefix from constraint definitions (as it already did for indexes), two key-only stand-ins (orgs, platform_admins) are created in the scratch schema, and the five foreign keys of the DDL templates name %1$I instead of public — no column, default, check, index, name or ON DELETE rule changed",
+  JSON.stringify(sqlCodeLines(po02aSqlDelta.removed)) === JSON.stringify([
+    "  SELECT 'constraint ' || con.conname || ' ' || con.contype::text || ' ' || pg_get_constraintdef(con.oid, true)",
+    ...FK_TARGETS.map(fkLine("public")),
+  ]) &&
+    JSON.stringify(sqlCodeLines(po02aSqlDelta.added)) === JSON.stringify([
+      "  SELECT 'constraint ' || con.conname || ' ' || con.contype::text || ' '",
+      "         || replace(pg_get_constraintdef(con.oid, true), p_schema || '.', '')",
+      "CREATE TABLE po02a_reference.orgs (id integer NOT NULL, CONSTRAINT orgs_pkey PRIMARY KEY (id));",
+      "CREATE TABLE po02a_reference.platform_admins (id uuid NOT NULL, CONSTRAINT platform_admins_pkey PRIMARY KEY (id));",
+      ...FK_TARGETS.map(fkLine("%1$I")),
+    ]),
+  JSON.stringify({ removed: sqlCodeLines(po02aSqlDelta.removed), added: sqlCodeLines(po02aSqlDelta.added) }));
+const po02aSqlNow = diskRead(PO02A_SQL_FILE);
+check("…and the corrected PO-02A SQL keeps the lock-safety design: no DDL template references a live table (no `REFERENCES public.`), the stand-ins are created right after the scratch schema, and the scratch schema is still dropped before COMMIT",
+  !/REFERENCES public\./.test(po02aSqlNow) && (po02aSqlNow.match(/REFERENCES %1\$I\.(orgs|platform_admins) \(id\)/g) ?? []).length === 5 &&
+    /CREATE SCHEMA po02a_reference;\n(?:--[^\n]*\n|\n)*CREATE TABLE po02a_reference\.orgs \(id integer NOT NULL, CONSTRAINT orgs_pkey PRIMARY KEY \(id\)\);\nCREATE TABLE po02a_reference\.platform_admins \(id uuid NOT NULL, CONSTRAINT platform_admins_pkey PRIMARY KEY \(id\)\);/.test(po02aSqlNow) &&
+    /DROP SCHEMA po02a_reference CASCADE;[\s\S]*\nCOMMIT;\s*$/.test(po02aSqlNow),
+  "");
 
 console.log("\nGroups:");
 for (const [g, [p, f]] of Object.entries(counts)) console.log(`  ${g}: ${p}/${p + f}`);

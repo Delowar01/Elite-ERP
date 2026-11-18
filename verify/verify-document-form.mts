@@ -40,6 +40,7 @@ import { PO02B_EDITS, PO02B_NEW, po02bDrift, undoPo02b } from "./po02b-approved-
 import { PO02C_EDITS, PO02C_NEW, po02cDrift, undoPo02c } from "./po02c-approved-delta.mjs";
 import { PO02C1_EDITS, PO02C1_NEW, po02c1Drift, undoPo02c1 } from "./po02c1-approved-delta.mjs";
 import { PO02D1A_EDITS, PO02D1A_NEW, po02d1aDrift, undoPo02d1a } from "./po02d1a-approved-delta.mjs";
+import { PO02D1A1_EDITS, PO02D1A1_NEW, po02d1a1Drift, undoPo02d1a1 } from "./po02d1a1-approved-delta.mjs";
 
 const results: [boolean, string, string][] = [];
 const check = (name: string, cond: boolean, extra = "") => results.push([cond, name, extra]);
@@ -64,7 +65,11 @@ const diskRead = (p: string) => readFileSync(join(ROOT, p), "utf8");
 // Platform Owner PO-02D1A: its recorded hunks are undone before PO-02C.1's (its check below proves they are each file's only
 // change), so the PO-02C.1 layer and every older pin read PO-02D0's (87efa15) bytes; the files PO-02D1A added (the onboarding
 // schema module and the reviewed drizzle/platform/PO02D1_*.sql) stay out of the directory pins.
-const po02d1aRead = (p: string) => undoPo02d1a(p, diskRead(p));
+// Platform Owner PO-02D1A.1: its recorded hunks are undone before PO-02D1A's (its check below proves they are each file's
+// only change), so the PO-02D1A layer and every older pin — PO-02A's pin of the reviewed PO-02A SQL included — read
+// PO-02D1A's (43b0611) bytes; it added no file under src/ or drizzle/.
+const po02d1a1Read = (p: string) => undoPo02d1a1(p, diskRead(p));
+const po02d1aRead = (p: string) => undoPo02d1a(p, po02d1a1Read(p));
 const po02c1Read = (p: string) => undoPo02c1(p, po02d1aRead(p));
 const po02cRead = (p: string) => undoPo02c(p, po02c1Read(p));
 const po02bRead = (p: string) => undoPo02b(p, po02cRead(p));
@@ -377,10 +382,10 @@ const PINS = JSON.parse(read("verify/document-form-pins.json")) as Record<string
 const fileDrift = Object.entries(PINS).filter(([p, hsh]) => !p.endsWith("/**") && sha(p) !== hsh).map(([p]) => p);
 function dirHash(dir: string) {
   const files: string[] = [];
-  const walk = (d: string) => { for (const f of readdirSync(join(ROOT, d))) { const p = join(d, f); if (statSync(join(ROOT, p)).isDirectory()) walk(p); else if (!(p in ACC01_NEW) && !(p in LCP_NEW) && !(p in PO01A_NEW) && !(p in PO01B_NEW) && !(p in PO01B1_NEW) && !(p in PO02A_NEW) && !(p in PO02B_NEW) && !(p in PO02C_NEW) && !(p in PO02C1_NEW) && !(p in PO02D1A_NEW)) files.push(p); } };
+  const walk = (d: string) => { for (const f of readdirSync(join(ROOT, d))) { const p = join(d, f); if (statSync(join(ROOT, p)).isDirectory()) walk(p); else if (!(p in ACC01_NEW) && !(p in LCP_NEW) && !(p in PO01A_NEW) && !(p in PO01B_NEW) && !(p in PO01B1_NEW) && !(p in PO02A_NEW) && !(p in PO02B_NEW) && !(p in PO02C_NEW) && !(p in PO02C1_NEW) && !(p in PO02D1A_NEW) && !(p in PO02D1A1_NEW)) files.push(p); } };
   walk(dir);
   const hh = createHash("sha256");
-  for (const f of files.sort()) { hh.update(f + "\0"); hh.update(f in ACC01_EDITS || f in LCP_EDITS || f in PO01A_EDITS || f in PO01B_EDITS || f in PO01B1_EDITS || f in PO02A_EDITS || f in PO02B_EDITS || f in PO02C_EDITS || f in PO02C1_EDITS || f in PO02D1A_EDITS ? read(f) : readFileSync(join(ROOT, f))); }
+  for (const f of files.sort()) { hh.update(f + "\0"); hh.update(f in ACC01_EDITS || f in LCP_EDITS || f in PO01A_EDITS || f in PO01B_EDITS || f in PO01B1_EDITS || f in PO02A_EDITS || f in PO02B_EDITS || f in PO02C_EDITS || f in PO02C1_EDITS || f in PO02D1A_EDITS || f in PO02D1A1_EDITS ? read(f) : readFileSync(join(ROOT, f))); }
   return hh.digest("hex").slice(0, 16);
 }
 const dirDrift = Object.entries(PINS).filter(([p, hsh]) => p.endsWith("/**") && dirHash(p.slice(0, -3)) !== hsh.split(" ")[0]).map(([p]) => p);
@@ -414,9 +419,12 @@ check("Platform Owner PO-02C's approved change: each recorded file is PO-02B's (
 const po02c1DriftNow = po02c1Drift((f) => { try { return po02d1aRead(f); } catch { return null; } });
 check("Platform Owner PO-02C.1's approved change: each recorded file is PO-02C's (ea94337) plus exactly its hunks — sign-in, the session store, the security-event writer and the tenant-access gate included — and no file added (verify/po02c1-approved-delta.mts)",
   po02c1DriftNow.length === 0 && Object.keys(PO02C1_EDITS).length > 0 && Object.keys(PO02C1_NEW).length === 0, po02c1DriftNow.join(" "));
-const po02d1aDriftNow = po02d1aDrift((f) => { try { return diskRead(f); } catch { return null; } });
+const po02d1aDriftNow = po02d1aDrift((f) => { try { return po02d1a1Read(f); } catch { return null; } });
 check("Platform Owner PO-02D1A's approved change: each recorded file is PO-02D0's (87efa15) plus exactly its hunks — the schema index and the customer users schema's F1 key included — and each added file (the onboarding schema module, the four reviewed drizzle/platform/PO02D1_*.sql files) as recorded (verify/po02d1a-approved-delta.mts)",
   po02d1aDriftNow.length === 0 && Object.keys(PO02D1A_EDITS).length > 0 && Object.keys(PO02D1A_NEW).length === 5, po02d1aDriftNow.join(" "));
+const po02d1a1DriftNow = po02d1a1Drift((f) => { try { return diskRead(f); } catch { return null; } });
+check("Platform Owner PO-02D1A.1's approved change: each recorded file is PO-02D1A's (43b0611) plus exactly its hunks — the reviewed PO-02A SQL's lock-safety correction (key-only stand-ins in its scratch schema) and the two freeze verifiers — and no file added (verify/po02d1a1-approved-delta.mts)",
+  po02d1a1DriftNow.length === 0 && Object.keys(PO02D1A1_EDITS).length === 3 && "drizzle/platform/PO02A_company_foundation.sql" in PO02D1A1_EDITS && Object.keys(PO02D1A1_NEW).length === 0, po02d1a1DriftNow.join(" "));
 const SUBMIT: Record<string, string> = {
   "sales/quotations/quotation-form.tsx": "9bdada8919ca1c68", "sales/orders/order-form.tsx": "5878b69222c20ecc", "sales/proforma/proforma-form.tsx": "298ddfd557fa4b5b",
   "sales/invoices/invoice-form.tsx": "9ac743493b5e4887", "sales/delivery-challans/dc-form.tsx": "b43736b93681d299", "sales/credit-notes/cn-form.tsx": "6e40556ff6eda6e1",
