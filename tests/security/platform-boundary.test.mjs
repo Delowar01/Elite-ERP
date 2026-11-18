@@ -12,6 +12,8 @@
 // 30–36 pin the customer tenant-access gate, the access action, the dialog and the suspended screen.
 // PO-02C.1 added rule 37 (the sign-in / access lock protocol). PO-02D1A added rules 38–41: the onboarding
 // database foundation is schema only (no code path, permission, route, flag or seed) and its SQL stays bounded.
+// PO-02D1A.1 added rule 42: the reviewed foundations' scratch references never point at a live table (D-11b), the
+// release preflight is read-only, and the customer db:push command is unchanged.
 import { readFileSync, readdirSync, statSync, existsSync } from "node:fs";
 import { join, relative } from "node:path";
 
@@ -500,6 +502,38 @@ ok("…rollback step 1 drops only the seven onboarding tables and three guard fu
 ok("…subscription expiry can never suspend a company: no PO-02D1 file references tenant_access_controls except the foundation's precondition column check",
   (foundationSql.match(/tenant_access_controls/g) ?? []).length === 1 && /\('tenant_access_controls', 'org_id', 'integer'\)/.test(foundationSql) &&
     ["PO02D1_rollback.sql", "PO02D1_users_org_id_id_concurrently.sql", "PO02D1_users_org_id_id_drop.sql"].every((n) => !/tenant_access_controls/.test(sqlCode(d1(n)))));
+
+// 42. PO-02D1A.1 (D-11b) — the reviewed foundations' scratch references never point at a live table: every foreign key in
+//     their DDL templates references %1$I.<table> — a key-only stand-in (or a table the reference itself creates) when
+//     the template builds the scratch reference, the live table only when it is formatted with public — so building and
+//     dropping the reference takes no lock on any existing table; and the shape comparison strips the schema prefix.
+for (const [file, schema, standIns] of [
+  ["PO02A_company_foundation.sql", "po02a_reference", ["orgs", "platform_admins"]],
+  ["PO02D1_onboarding_foundation.sql", "po02d1_reference", ["orgs", "users", "platform_admins", "organization_invitations"]],
+]) {
+  const text = read(join(root, "drizzle/platform", file));
+  const code = sqlCode(text);
+  const templates = code.split("$ddl$").filter((_, i) => i % 2 === 1);
+  const created = templates.flatMap((x) => [...x.matchAll(/CREATE TABLE %1\$I\.(\w+)/g)].map((m) => m[1]));
+  const refs = templates.flatMap((x) => [...x.matchAll(/REFERENCES\s+([^\s(]+)/g)].map((m) => m[1]));
+  const strays = refs.filter((r) => !r.startsWith("%1$I.") || ![...standIns, ...created].includes(r.slice(5)));
+  ok(`42. PO-02D1A.1: ${file} — every foreign key in its DDL templates references %1$I.<table>, a stand-in or a table the reference creates (${refs.length} keys), never public.<table>`,
+    code.split("$ddl$").length % 2 === 1 && refs.length > 0 && strays.length === 0 && !/REFERENCES\s+public\./i.test(code), strays.join(", "));
+  const at = code.indexOf(`CREATE SCHEMA ${schema};`);
+  const firstTemplate = code.indexOf("$ddl$", at);
+  const standInAt = standIns.map((s) => code.indexOf(`CREATE TABLE ${schema}.${s} (`));
+  ok(`…its key-only stand-ins (${standIns.join(", ")}) are created inside ${schema} after CREATE SCHEMA and before the first template; the scratch schema is dropped before COMMIT`,
+    at > 0 && standInAt.every((i) => i > at && i < firstTemplate) && new RegExp(`DROP SCHEMA ${schema} CASCADE;[\\s\\S]*\\nCOMMIT;\\s*$`).test(code), standInAt.join(","));
+  ok("…and its shape comparison strips the schema prefix from constraint definitions (a reference key to a stand-in equals a public key to the live table)",
+    /\|\| replace\(pg_get_constraintdef\(con\.oid, true\), p_schema \|\| '\.', ''\)/.test(code));
+}
+const preflightSrc = read(join(root, "scripts/platform/release-preflight.ts"));
+ok("…the release preflight opens its session READ ONLY (verified before its first query), never applies drizzle-kit's plan, and is guarded like every platform script",
+  /options: "-c default_transaction_read_only=on/.test(preflightSrc) && /current_setting\('default_transaction_read_only'\)/.test(preflightSrc) && !/\.apply\(/.test(preflightSrc) &&
+    /assertDisposableLocalDatabaseUrl\(databaseUrl\)/.test(preflightSrc) && /assertDisposableLocalServer\(client, target\)/.test(preflightSrc));
+const pkgScripts = JSON.parse(read(join(root, "package.json"))).scripts;
+ok("…the customer db:push command is unchanged (gating it is an owner decision, documented in PO02D1A1_MIGRATION_HARDENING.md)",
+  pkgScripts["db:push"] === "drizzle-kit push && npm run db:harden" && pkgScripts["db:migrate"] === "drizzle-kit migrate" && pkgScripts["platform:db:preflight"] === "tsx --conditions=react-server scripts/platform/release-preflight.ts");
 
 console.log(`\n${pass}/${pass + fail} platform boundary checks passed`);
 process.exit(fail ? 1 : 0);
