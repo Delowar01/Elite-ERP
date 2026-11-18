@@ -104,7 +104,8 @@
     "verify:platform-onboarding-migration-safety": "tsx --conditions=react-server verify/verify-platform-onboarding-migration-safety.mts",
     "verify:platform-company-migration-locks": "tsx --conditions=react-server verify/verify-platform-company-migration-locks.mts",
     "verify:platform-release-preflight": "tsx --conditions=react-server verify/verify-platform-release-preflight.mts",
-    "verify:platform": "npm run verify:platform-boundary && npm run verify:platform-proxy && npm run verify:platform-schema && npm run verify:platform-auth && npm run verify:platform-bootstrap && npm run verify:platform-console && npm run verify:platform-containment && npm run verify:platform-company-schema && npm run verify:platform-migration-safety && npm run verify:platform-company-migration-locks && npm run verify:platform-onboarding-schema && npm run verify:platform-onboarding-migration-safety && npm run verify:platform-release-preflight && npm run verify:platform-companies && npm run verify:platform-company-access"
+    "verify:platform-onboarding-seed": "tsx --conditions=react-server verify/verify-platform-onboarding-seed.mts",
+    "verify:platform": "npm run verify:platform-boundary && npm run verify:platform-proxy && npm run verify:platform-schema && npm run verify:platform-auth && npm run verify:platform-bootstrap && npm run verify:platform-console && npm run verify:platform-containment && npm run verify:platform-company-schema && npm run verify:platform-migration-safety && npm run verify:platform-company-migration-locks && npm run verify:platform-onboarding-schema && npm run verify:platform-onboarding-migration-safety && npm run verify:platform-release-preflight && npm run verify:platform-onboarding-seed && npm run verify:platform-companies && npm run verify:platform-company-access"
   },
   "dependencies": {
     "@radix-ui/react-avatar": "^1.2.2",
