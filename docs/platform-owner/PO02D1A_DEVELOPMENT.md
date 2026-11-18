@@ -5,6 +5,10 @@
 > Trial length, seats, storage or module labels, so those values stay **unconfigured**. Nothing here ran against
 > production; every database used was a loopback, disposable `*_test_only_*` database holding fictional rows only.
 > The SQL files are marked **NOT AUTHORIZED FOR PRODUCTION EXECUTION** (decisions D-6 and D-7 remain open).
+>
+> **Superseded in part by PO-02D1A.1** (`PO02D1A1_MIGRATION_HARDENING.md`): D-11b (§A finding 2, §K-2) is corrected on
+> the branch; the H-2 recovery in §K-1 is incomplete — an interrupted push also drops four customer foreign keys
+> (H-3), which must be restored before the reviewed SQL — and `npm run platform:db:preflight` now detects every state.
 
 ---
 
