@@ -140,6 +140,7 @@ import { PO02C_BASE, PO02C_EDITS, PO02C_NEW, po02cDrift, undoPo02c } from "./po0
 import { PO02C1_BASE, PO02C1_EDITS, PO02C1_NEW, po02c1Drift, undoPo02c1 } from "./po02c1-approved-delta.mjs";
 import { PO02D1A_BASE, PO02D1A_EDITS, PO02D1A_NEW, po02d1aDrift, undoPo02d1a } from "./po02d1a-approved-delta.mjs";
 import { PO02D1A1_BASE, PO02D1A1_EDITS, PO02D1A1_NEW, po02d1a1Drift, undoPo02d1a1 } from "./po02d1a1-approved-delta.mjs";
+import { PO02D1B_BASE, PO02D1B_EDITS, PO02D1B_NEW, po02d1bDrift, undoPo02d1b } from "./po02d1b-approved-delta.mjs";
 import { renderToStaticMarkup } from "react-dom/server";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
@@ -169,7 +170,11 @@ const diskRead = (p: string) => readFileSync(path.join(ROOT, p), "utf8");
 // Platform Owner PO-02D1A.1: its recorded hunks are undone before PO-02D1A's (group 29 proves they are each file's only
 // change), so the PO-02D1A layer and every older group — PO-02A's pin of the reviewed PO-02A SQL included — read
 // PO-02D1A's (43b0611) bytes; it added no file.
-const po02d1a1Read = (p: string) => undoPo02d1a1(p, diskRead(p));
+// Platform Owner PO-02D1B: its recorded hunks are undone before PO-02D1A.1's (group 30 proves they are each file's only
+// change), so the PO-02D1A.1 layer and every older group read PO-02D1A.1's (2416ca7) bytes; the two reviewed seed SQL
+// files it added stay out of `walk`.
+const po02d1bRead = (p: string) => undoPo02d1b(p, diskRead(p));
+const po02d1a1Read = (p: string) => undoPo02d1a1(p, po02d1bRead(p));
 const po02d1aRead = (p: string) => undoPo02d1a(p, po02d1a1Read(p));
 const po02c1Read = (p: string) => undoPo02c1(p, po02d1aRead(p));
 const po02cRead = (p: string) => undoPo02c(p, po02c1Read(p));
@@ -541,7 +546,7 @@ const MAIN_EDITS: Record<string, [string, string][]> = {
 /** A file's bytes for a byte-identity hash: main's approved change undone (MAIN_EDITS), every other file as it is. */
 const frozen = (f: string): string | Buffer =>
   f in MAIN_EDITS ? MAIN_EDITS[f].reduce((acc, [was, is]) => acc.replace(is, () => was), rawRead(f))
-    : f in ACC01_EDITS ? rawRead(f) : f in LCP_EDITS || f in PO01A_EDITS || f in PO01B_EDITS || f in PO01B1_EDITS || f in PO02A_EDITS || f in PO02B_EDITS || f in PO02C_EDITS || f in PO02C1_EDITS || f in PO02D1A_EDITS || f in PO02D1A1_EDITS ? actualRead(f) : readFileSync(path.join(ROOT, f));
+    : f in ACC01_EDITS ? rawRead(f) : f in LCP_EDITS || f in PO01A_EDITS || f in PO01B_EDITS || f in PO01B1_EDITS || f in PO02A_EDITS || f in PO02B_EDITS || f in PO02C_EDITS || f in PO02C1_EDITS || f in PO02D1A_EDITS || f in PO02D1A1_EDITS || f in PO02D1B_EDITS ? actualRead(f) : readFileSync(path.join(ROOT, f));
 
 let pass = 0;
 let fail = 0;
@@ -576,7 +581,7 @@ function walk(dir: string): string[] {
   for (const name of readdirSync(path.join(ROOT, dir)).sort()) {
     const p = path.posix.join(dir, name);
     if (statSync(path.join(ROOT, p)).isDirectory()) out.push(...walk(p));
-    else if (!(p in ACC01_NEW) && !(p in LCP_NEW) && !(p in PO01A_NEW) && !(p in PO01B_NEW) && !(p in PO01B1_NEW) && !(p in PO02A_NEW) && !(p in PO02B_NEW) && !(p in PO02C_NEW) && !(p in PO02C1_NEW) && !(p in PO02D1A_NEW) && !(p in PO02D1A1_NEW)) out.push(p);
+    else if (!(p in ACC01_NEW) && !(p in LCP_NEW) && !(p in PO01A_NEW) && !(p in PO01B_NEW) && !(p in PO01B1_NEW) && !(p in PO02A_NEW) && !(p in PO02B_NEW) && !(p in PO02C_NEW) && !(p in PO02C1_NEW) && !(p in PO02D1A_NEW) && !(p in PO02D1A1_NEW) && !(p in PO02D1B_NEW)) out.push(p);
   }
   return out;
 }
@@ -3165,7 +3170,7 @@ check(`ACC-01 changed its ${Object.keys(ACC01_EDITS).length} files (src/, and ve
 // No file under src/ outside the record differs from main: every other file is in the older groups' byte-identity hashes
 // (groups 4, 16 and 17), and a new file the record does not list is caught there too — `walk` leaves out only ACC01_NEW.
 check(`ACC-01 added no file under src/ but the recorded ${Object.keys(ACC01_NEW).length} (an unrecorded new file would sit in groups 16 and 17's src trees)`,
-  walk("src").length + Object.keys(ACC01_NEW).length + Object.keys(LCP_NEW).length + Object.keys(PO01A_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO01B_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO01B1_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO02A_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO02B_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO02C_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO02C1_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO02D1A_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO02D1A1_NEW).filter((f) => f.startsWith("src/")).length === (function all(d: string): number {
+  walk("src").length + Object.keys(ACC01_NEW).length + Object.keys(LCP_NEW).length + Object.keys(PO01A_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO01B_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO01B1_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO02A_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO02B_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO02C_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO02C1_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO02D1A_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO02D1A1_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO02D1B_NEW).filter((f) => f.startsWith("src/")).length === (function all(d: string): number {
     return readdirSync(path.join(ROOT, d)).reduce((n, name) => n + (statSync(path.join(ROOT, d, name)).isDirectory() ? all(path.posix.join(d, name)) : 1), 0);
   })("src"));
 
@@ -3559,8 +3564,8 @@ check("…the onboarding schema module imports only drizzle-orm and the existing
 
 // ---------- 29. Platform Owner PO-02D1A.1 — the approved change to frozen files ----------
 section("29. Platform Owner PO-02D1A.1 — PO-02A migration lock-safety correction (the approved change to frozen files)");
-// Read as they are on disk: each changed file is PO-02D1A's (43b0611) plus exactly its recorded hunks; no file added.
-const po02d1a1DriftNow = po02d1a1Drift((f) => (existsSync(path.join(ROOT, f)) ? diskRead(f) : null));
+// Read with PO-02D1B's hunks undone (group 30): each changed file is PO-02D1A's (43b0611) plus exactly its recorded hunks; no file added.
+const po02d1a1DriftNow = po02d1a1Drift((f) => (existsSync(path.join(ROOT, f)) ? po02d1bRead(f) : null));
 const PO02A_SQL_FILE = "drizzle/platform/PO02A_company_foundation.sql";
 const PO02D1A1_EDITABLE = [PO02A_SQL_FILE, "verify/verify-document-form.mts", "verify/verify-page-archetypes.mts"];
 check(`PO-02D1A.1 changed its ${Object.keys(PO02D1A1_EDITS).length} files (the reviewed PO-02A SQL and the two freeze verifiers) by exactly their ${Object.values(PO02D1A1_EDITS).flat().length} recorded hunks — undone, each file is ${PO02D1A1_BASE.slice(0, 7)}'s to the byte, the PO-02A SQL the approved one PO-02A pinned — and added no file (verify/po02d1a1-approved-delta.mts)`,
@@ -3598,6 +3603,19 @@ check("…and the corrected PO-02A SQL keeps the lock-safety design: no DDL temp
     /CREATE SCHEMA po02a_reference;\n(?:--[^\n]*\n|\n)*CREATE TABLE po02a_reference\.orgs \(id integer NOT NULL, CONSTRAINT orgs_pkey PRIMARY KEY \(id\)\);\nCREATE TABLE po02a_reference\.platform_admins \(id uuid NOT NULL, CONSTRAINT platform_admins_pkey PRIMARY KEY \(id\)\);/.test(po02aSqlNow) &&
     /DROP SCHEMA po02a_reference CASCADE;[\s\S]*\nCOMMIT;\s*$/.test(po02aSqlNow),
   "");
+
+// ---------- 30. Platform Owner PO-02D1B — the approved change to frozen files ----------
+section("30. Platform Owner PO-02D1B — default Trial and platform settings seed, data only (the approved change to frozen files)");
+// Read as they are on disk: each changed file is PO-02D1A.1's (2416ca7) plus exactly its recorded hunks, each added file as recorded.
+const po02d1bDriftNow = po02d1bDrift((f) => (existsSync(path.join(ROOT, f)) ? diskRead(f) : null));
+const PO02D1B_EDITABLE = ["verify/verify-document-form.mts", "verify/verify-page-archetypes.mts"];
+const PO02D1B_ADDED = ["drizzle/platform/PO02D1B_seed_rollback.sql", "drizzle/platform/PO02D1B_seed_trial_and_settings.sql"];
+check(`PO-02D1B changed only the two freeze verifiers by exactly their ${Object.values(PO02D1B_EDITS).flat().length} recorded hunks — undone, each is ${PO02D1B_BASE.slice(0, 7)}'s to the byte — and added exactly the two reviewed seed SQL files, as recorded (verify/po02d1b-approved-delta.mts)`,
+  po02d1bDriftNow.length === 0 && PO02D1B_BASE === "2416ca70d61f2810f7354023f1604bb2a6195aa3" &&
+    JSON.stringify(Object.keys(PO02D1B_EDITS).sort()) === JSON.stringify([...PO02D1B_EDITABLE].sort()) && JSON.stringify(Object.keys(PO02D1B_NEW).sort()) === JSON.stringify(PO02D1B_ADDED),
+  po02d1bDriftNow.map(rel).join(" "));
+check("…no application, schema-module, UI, route, auth, session or customer file is changed or added by PO-02D1B (nothing under src/)",
+  Object.keys(PO02D1B_EDITS).every((f) => f.startsWith("verify/")) && Object.keys(PO02D1B_NEW).every((f) => f.startsWith("drizzle/platform/PO02D1B_")), "");
 
 console.log("\nGroups:");
 for (const [g, [p, f]] of Object.entries(counts)) console.log(`  ${g}: ${p}/${p + f}`);

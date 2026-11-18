@@ -13,7 +13,9 @@
 // PO-02C.1 added rule 37 (the sign-in / access lock protocol). PO-02D1A added rules 38–41: the onboarding
 // database foundation is schema only (no code path, permission, route, flag or seed) and its SQL stays bounded.
 // PO-02D1A.1 added rule 42: the reviewed foundations' scratch references never point at a live table (D-11b), the
-// release preflight is read-only, and the customer db:push command is unchanged.
+// release preflight is read-only, and the customer db:push command is unchanged. PO-02D1B narrowed rule 41's "no seed
+// file" to "no seed file but PO-02D1B's two reviewed ones" and added rule 43 (the seed is data-only, development-only
+// and narrowly scoped; its rollback suspends exactly one trigger for one statement).
 import { readFileSync, readdirSync, statSync, existsSync } from "node:fs";
 import { join, relative } from "node:path";
 
@@ -482,10 +484,12 @@ ok("40. PO-02D1A: no invitation feature flag (PLATFORM_INVITATIONS_ENABLED / CUS
 const d1Files = readdirSync(join(root, "drizzle/platform")).filter((n) => n.startsWith("PO02D1_")).sort();
 const d1 = (n) => read(join(root, "drizzle/platform", n));
 const sqlCode = (text) => text.split("\n").filter((l) => !/^\s*--/.test(l)).join("\n");
-ok("41. PO-02D1A: drizzle/platform holds exactly the four PO-02D1 files, each marked NOT AUTHORIZED FOR PRODUCTION EXECUTION, and no seed file",
+// PO-02D1B: the "no seed file" clause now admits exactly PO-02D1B's two reviewed seed files (rule 43 pins their content).
+const seedFiles = readdirSync(join(root, "drizzle/platform")).filter((n) => /seed/i.test(n)).sort();
+ok("41. PO-02D1A: drizzle/platform holds exactly the four PO-02D1 files, each marked NOT AUTHORIZED FOR PRODUCTION EXECUTION, and no seed file but PO-02D1B's two reviewed ones (seed and its rollback, rule 43)",
   JSON.stringify(d1Files) === JSON.stringify(["PO02D1_onboarding_foundation.sql", "PO02D1_rollback.sql", "PO02D1_users_org_id_id_concurrently.sql", "PO02D1_users_org_id_id_drop.sql"]) &&
-    d1Files.every((n) => /NOT AUTHORIZED FOR PRODUCTION EXECUTION/.test(d1(n))) && !readdirSync(join(root, "drizzle/platform")).some((n) => /seed/i.test(n)),
-  d1Files.join(", "));
+    d1Files.every((n) => /NOT AUTHORIZED FOR PRODUCTION EXECUTION/.test(d1(n))) && JSON.stringify(seedFiles) === JSON.stringify(["PO02D1B_seed_rollback.sql", "PO02D1B_seed_trial_and_settings.sql"]),
+  `${d1Files.join(", ")} | seed files: ${seedFiles.join(", ")}`);
 const foundationSql = sqlCode(d1("PO02D1_onboarding_foundation.sql"));
 const foundationAlters = [...foundationSql.matchAll(/ALTER\s+TABLE\s+([\w.]+)\s+([^;\n]*)/gi)].map((m) => `${m[1]} ${m[2]}`.trim());
 ok("…the foundation writes no row (no INSERT / UPDATE / DELETE / TRUNCATE statement) and its only ALTER TABLE adds F1 to users (created, or attached from the runbook's index)",
@@ -534,6 +538,47 @@ ok("…the release preflight opens its session READ ONLY (verified before its fi
 const pkgScripts = JSON.parse(read(join(root, "package.json"))).scripts;
 ok("…the customer db:push command is unchanged (gating it is an owner decision, documented in PO02D1A1_MIGRATION_HARDENING.md)",
   pkgScripts["db:push"] === "drizzle-kit push && npm run db:harden" && pkgScripts["db:migrate"] === "drizzle-kit migrate" && pkgScripts["platform:db:preflight"] === "tsx --conditions=react-server scripts/platform/release-preflight.ts");
+
+// 43. PO-02D1B — the default Trial / platform settings seed is data-only, development-only and narrowly scoped.
+//     Statement-level checks (line starts): both files also carry reviewed trigger definitions as string literals.
+const SEED_FILE = "drizzle/platform/PO02D1B_seed_trial_and_settings.sql";
+const SEED_RB_FILE = "drizzle/platform/PO02D1B_seed_rollback.sql";
+const seedSql = read(join(root, SEED_FILE));
+const seedRbSql = read(join(root, SEED_RB_FILE));
+const seedCode = sqlCode(seedSql);
+const seedRbCode = sqlCode(seedRbSql);
+const dmlOf = (codeText) => [...codeText.matchAll(/^\s*(INSERT\s+INTO|UPDATE|DELETE\s+FROM|TRUNCATE(?:\s+TABLE)?)\s+([\w.]+)/gim)].map((m) => `${m[1].toUpperCase().replace(/\s+/g, " ")} ${m[2]}`);
+const uniq = (xs) => [...new Set(xs)].sort();
+const oneTxn = (codeText) => (codeText.match(/^BEGIN;$/gm) ?? []).length === 1 && (codeText.match(/^COMMIT;$/gm) ?? []).length === 1 && /\nCOMMIT;\s*$/.test(codeText);
+const targetGuard = (codeText) => /position\('_test_only_' IN current_database\(\)\) = 0/.test(codeText) && /host\(inet_server_addr\(\)\) NOT IN \('127\.0\.0\.1', '::1'\)/.test(codeText) && /listen_addresses/.test(codeText);
+ok("43. PO-02D1B: both seed files are marked NOT AUTHORIZED FOR PRODUCTION EXECUTION, run as ONE transaction each, and refuse by themselves any database that is not a loopback-only disposable *_test_only_* database",
+  [seedSql, seedRbSql].every((s) => /NOT AUTHORIZED FOR PRODUCTION EXECUTION/.test(s)) && oneTxn(seedCode) && oneTxn(seedRbCode) && targetGuard(seedCode) && targetGuard(seedRbCode));
+ok("…the seed writes ONLY the three catalog tables and one audit record (INSERT only — no UPDATE, DELETE or TRUNCATE; no schema change; no customer, subscription, primary-owner or invitation table)",
+  JSON.stringify(uniq(dmlOf(seedCode))) === JSON.stringify(["INSERT INTO public.platform_audit_events", "INSERT INTO public.platform_settings", "INSERT INTO public.subscription_package_versions", "INSERT INTO public.subscription_packages"]) &&
+    !/^\s*(CREATE|ALTER|DROP)\s+(TABLE|INDEX|TRIGGER|SCHEMA|VIEW|SEQUENCE)\b/im.test(seedCode) && !/DISABLE\s+TRIGGER|session_replication_role/i.test(seedCode),
+  uniq(dmlOf(seedCode)).join(" | "));
+const disables = [...seedRbCode.matchAll(/^\s*ALTER TABLE ([\w.]+) (DISABLE|ENABLE) TRIGGER (\w+);$/gim)].map((m) => `${m[2].toUpperCase()} ${m[1]}.${m[3]}`);
+ok("…the rollback deletes ONLY the three seed records (by exact identity) and appends one audit record; no schema object is created, altered or dropped except ONE scoped trigger suspension",
+  JSON.stringify(uniq(dmlOf(seedRbCode))) === JSON.stringify(["DELETE FROM public.platform_settings", "DELETE FROM public.subscription_package_versions", "DELETE FROM public.subscription_packages", "INSERT INTO public.platform_audit_events"]) &&
+    !/^\s*(CREATE|DROP)\s+(TABLE|INDEX|TRIGGER|SCHEMA|VIEW|SEQUENCE)\b/im.test(seedRbCode) && (seedRbCode.match(/^\s*ALTER\s+TABLE\b/gim) ?? []).length === 2,
+  uniq(dmlOf(seedRbCode)).join(" | "));
+const allPlatformSql = readdirSync(join(root, "drizzle/platform")).map((n) => sqlCode(read(join(root, "drizzle/platform", n)))).join("\n");
+ok("…that suspension is the ONLY trigger bypass in the reviewed SQL: exactly one DISABLE and one ENABLE of subscription_package_versions_guard, never ALL/USER triggers, never the audit trail, never session_replication_role",
+  JSON.stringify(disables) === JSON.stringify(["DISABLE public.subscription_package_versions.subscription_package_versions_guard", "ENABLE public.subscription_package_versions.subscription_package_versions_guard"]) &&
+    (allPlatformSql.match(/DISABLE\s+TRIGGER/gi) ?? []).length === 1 && !/DISABLE\s+TRIGGER\s+(ALL|USER)\b/i.test(allPlatformSql) && !/session_replication_role/i.test(allPlatformSql) &&
+    !/ALTER\s+TABLE\s+(public\.)?platform_audit_events/i.test(allPlatformSql),
+  disables.join(" | "));
+const approvedBlock = (s) => { const i = s.indexOf("CREATE FUNCTION pg_temp.po02d1b_approved()"); const o = s.indexOf("$fn$", i); return i < 0 ? "" : s.slice(i, s.indexOf("$fn$;", o + 4) + 5); };
+ok("…the approved values are written once per file and identically in both (the owner's 14 days / 3 seats / 5 GB / SAR 0.00 / grace 0 / alerts on)",
+  approvedBlock(seedSql).length > 500 && approvedBlock(seedSql) === approvedBlock(seedRbSql) &&
+    ["'default_trial_days', 14", "'grace_days', 0", "'expiry_alerts_enabled', true", "'included_seats', 3", "'storage_allowance_gb', 5", "'trial_days', 14", "'monthly_price', '0.00'", "'annual_price', '0.00'", "'currency_code', 'SAR'"].every((x) => approvedBlock(seedSql).includes(x)));
+const seedRunner = read(join(root, "scripts/platform/trial-seed.ts"));
+ok("…the seed runs only through the guarded runner: both guard steps, then the release preflight (PUSH_SAFE and REVIEWED_SQL_COMPLETE) before any write connection; it never pushes or migrates",
+  /assertDisposableLocalDatabaseUrl\(databaseUrl\)/.test(seedRunner) && /assertDisposableLocalServer\(client, target\)/.test(seedRunner) &&
+    seedRunner.indexOf("await runPreflight(databaseUrl)") > 0 && seedRunner.indexOf("await runPreflight(databaseUrl)") < seedRunner.indexOf("new Client(") &&
+    /preflight\.verdict !== "PUSH_SAFE" \|\| preflight\.state !== "REVIEWED_SQL_COMPLETE"/.test(seedRunner) && !/drizzle-kit|pushSchema|db:push|db:migrate/.test(seedRunner.replace(/\/\*[\s\S]*?\*\//g, "")));
+const seedUsers = allSrc.filter((f) => /PO02D1B|trial-seed|platform:db:seed/.test(read(f))).map(rel);
+ok("…no application code runs or references the seed (nothing in src/), and no new permission, route or flag exists (rules 39–40 unchanged)", seedUsers.length === 0, seedUsers.join(", "));
 
 console.log(`\n${pass}/${pass + fail} platform boundary checks passed`);
 process.exit(fail ? 1 : 0);

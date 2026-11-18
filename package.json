@@ -83,6 +83,8 @@
     "platform:preview-db": "tsx --conditions=react-server scripts/platform/preview-db.ts",
     "platform:preview-companies": "tsx --conditions=react-server scripts/platform/preview-companies.ts",
     "platform:db:preflight": "tsx --conditions=react-server scripts/platform/release-preflight.ts",
+    "platform:db:seed": "tsx --conditions=react-server scripts/platform/trial-seed.ts",
+    "platform:db:seed-rollback": "tsx --conditions=react-server scripts/platform/trial-seed.ts --rollback",
     "verify:platform-schema": "tsx --conditions=react-server verify/verify-platform-schema.mts",
     "verify:platform-boundary": "node tests/security/platform-boundary.test.mjs",
     "verify:platform-auth": "tsx --conditions=react-server verify/verify-platform-auth.mts",

@@ -416,7 +416,7 @@ async function main(): Promise<void> {
       inviteOnly.join(", "),
     );
     const sqlDir = readdirSync(join(ROOT, "drizzle", "platform")).sort();
-    ok("drizzle/platform holds the four PO-02D1 files and NO seed file", JSON.stringify(sqlDir.filter((x) => x.startsWith("PO02D1_"))) === JSON.stringify(["PO02D1_onboarding_foundation.sql", "PO02D1_rollback.sql", "PO02D1_users_org_id_id_concurrently.sql", "PO02D1_users_org_id_id_drop.sql"]), sqlDir.join(","));
+    ok("drizzle/platform holds the four PO-02D1 files, none of them a seed (PO-02D1B's two seed files are boundary rules 41 and 43)", JSON.stringify(sqlDir.filter((x) => x.startsWith("PO02D1_"))) === JSON.stringify(["PO02D1_onboarding_foundation.sql", "PO02D1_rollback.sql", "PO02D1_users_org_id_id_concurrently.sql", "PO02D1_users_org_id_id_drop.sql"]), sqlDir.join(","));
     const foundation = readFileSync(join(ROOT, "drizzle/platform/PO02D1_onboarding_foundation.sql"), "utf8");
     ok("the foundation file writes no row (no INSERT, UPDATE or DELETE statement) and contains no psql meta-command", !/^\s*(INSERT|UPDATE|DELETE)\b/im.test(foundation) && !/^\\/m.test(foundation));
     ok("every PO-02D1 SQL file says it is NOT authorized for production execution",
