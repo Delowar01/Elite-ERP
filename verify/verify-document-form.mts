@@ -42,6 +42,7 @@ import { PO02C1_EDITS, PO02C1_NEW, po02c1Drift, undoPo02c1 } from "./po02c1-appr
 import { PO02D1A_EDITS, PO02D1A_NEW, po02d1aDrift, undoPo02d1a } from "./po02d1a-approved-delta.mjs";
 import { PO02D1A1_EDITS, PO02D1A1_NEW, po02d1a1Drift, undoPo02d1a1 } from "./po02d1a1-approved-delta.mjs";
 import { PO02D1B_EDITS, PO02D1B_NEW, po02d1bDrift, undoPo02d1b } from "./po02d1b-approved-delta.mjs";
+import { PO02D2_EDITS, PO02D2_NEW, po02d2Drift, undoPo02d2 } from "./po02d2-approved-delta.mjs";
 
 const results: [boolean, string, string][] = [];
 const check = (name: string, cond: boolean, extra = "") => results.push([cond, name, extra]);
@@ -72,7 +73,11 @@ const diskRead = (p: string) => readFileSync(join(ROOT, p), "utf8");
 // Platform Owner PO-02D1B: its recorded hunks are undone before PO-02D1A.1's (its check below proves they are each file's
 // only change), so the PO-02D1A.1 layer and every older pin read PO-02D1A.1's (2416ca7) bytes; the two reviewed seed SQL
 // files PO-02D1B added stay out of the directory pins.
-const po02d1bRead = (p: string) => undoPo02d1b(p, diskRead(p));
+// Platform Owner PO-02D2: its recorded hunks are undone before PO-02D1B's (its check below proves they are each file's
+// only change), so the PO-02D1B layer and every older pin read PO-02D1B's (1cbbbc1) bytes; the seven invitation files
+// PO-02D2 added stay out of the directory pins.
+const po02d2Read = (p: string) => undoPo02d2(p, diskRead(p));
+const po02d1bRead = (p: string) => undoPo02d1b(p, po02d2Read(p));
 const po02d1a1Read = (p: string) => undoPo02d1a1(p, po02d1bRead(p));
 const po02d1aRead = (p: string) => undoPo02d1a(p, po02d1a1Read(p));
 const po02c1Read = (p: string) => undoPo02c1(p, po02d1aRead(p));
@@ -387,10 +392,10 @@ const PINS = JSON.parse(read("verify/document-form-pins.json")) as Record<string
 const fileDrift = Object.entries(PINS).filter(([p, hsh]) => !p.endsWith("/**") && sha(p) !== hsh).map(([p]) => p);
 function dirHash(dir: string) {
   const files: string[] = [];
-  const walk = (d: string) => { for (const f of readdirSync(join(ROOT, d))) { const p = join(d, f); if (statSync(join(ROOT, p)).isDirectory()) walk(p); else if (!(p in ACC01_NEW) && !(p in LCP_NEW) && !(p in PO01A_NEW) && !(p in PO01B_NEW) && !(p in PO01B1_NEW) && !(p in PO02A_NEW) && !(p in PO02B_NEW) && !(p in PO02C_NEW) && !(p in PO02C1_NEW) && !(p in PO02D1A_NEW) && !(p in PO02D1A1_NEW) && !(p in PO02D1B_NEW)) files.push(p); } };
+  const walk = (d: string) => { for (const f of readdirSync(join(ROOT, d))) { const p = join(d, f); if (statSync(join(ROOT, p)).isDirectory()) walk(p); else if (!(p in ACC01_NEW) && !(p in LCP_NEW) && !(p in PO01A_NEW) && !(p in PO01B_NEW) && !(p in PO01B1_NEW) && !(p in PO02A_NEW) && !(p in PO02B_NEW) && !(p in PO02C_NEW) && !(p in PO02C1_NEW) && !(p in PO02D1A_NEW) && !(p in PO02D1A1_NEW) && !(p in PO02D1B_NEW) && !(p in PO02D2_NEW)) files.push(p); } };
   walk(dir);
   const hh = createHash("sha256");
-  for (const f of files.sort()) { hh.update(f + "\0"); hh.update(f in ACC01_EDITS || f in LCP_EDITS || f in PO01A_EDITS || f in PO01B_EDITS || f in PO01B1_EDITS || f in PO02A_EDITS || f in PO02B_EDITS || f in PO02C_EDITS || f in PO02C1_EDITS || f in PO02D1A_EDITS || f in PO02D1A1_EDITS || f in PO02D1B_EDITS ? read(f) : readFileSync(join(ROOT, f))); }
+  for (const f of files.sort()) { hh.update(f + "\0"); hh.update(f in ACC01_EDITS || f in LCP_EDITS || f in PO01A_EDITS || f in PO01B_EDITS || f in PO01B1_EDITS || f in PO02A_EDITS || f in PO02B_EDITS || f in PO02C_EDITS || f in PO02C1_EDITS || f in PO02D1A_EDITS || f in PO02D1A1_EDITS || f in PO02D1B_EDITS || f in PO02D2_EDITS ? read(f) : readFileSync(join(ROOT, f))); }
   return hh.digest("hex").slice(0, 16);
 }
 const dirDrift = Object.entries(PINS).filter(([p, hsh]) => p.endsWith("/**") && dirHash(p.slice(0, -3)) !== hsh.split(" ")[0]).map(([p]) => p);
@@ -430,9 +435,12 @@ check("Platform Owner PO-02D1A's approved change: each recorded file is PO-02D0'
 const po02d1a1DriftNow = po02d1a1Drift((f) => { try { return po02d1bRead(f); } catch { return null; } });
 check("Platform Owner PO-02D1A.1's approved change: each recorded file is PO-02D1A's (43b0611) plus exactly its hunks — the reviewed PO-02A SQL's lock-safety correction (key-only stand-ins in its scratch schema) and the two freeze verifiers — and no file added (verify/po02d1a1-approved-delta.mts)",
   po02d1a1DriftNow.length === 0 && Object.keys(PO02D1A1_EDITS).length === 3 && "drizzle/platform/PO02A_company_foundation.sql" in PO02D1A1_EDITS && Object.keys(PO02D1A1_NEW).length === 0, po02d1a1DriftNow.join(" "));
-const po02d1bDriftNow = po02d1bDrift((f) => { try { return diskRead(f); } catch { return null; } });
+const po02d1bDriftNow = po02d1bDrift((f) => { try { return po02d2Read(f); } catch { return null; } });
 check("Platform Owner PO-02D1B's approved change: the two freeze verifiers are PO-02D1A.1's (2416ca7) plus exactly their hunks, and the two added reviewed seed SQL files (drizzle/platform/PO02D1B_seed_trial_and_settings.sql and its rollback) as recorded (verify/po02d1b-approved-delta.mts)",
   po02d1bDriftNow.length === 0 && Object.keys(PO02D1B_EDITS).length === 2 && Object.keys(PO02D1B_NEW).length === 2 && Object.keys(PO02D1B_NEW).every((f) => f.startsWith("drizzle/platform/PO02D1B_")), po02d1bDriftNow.join(" "));
+const po02d2DriftNow = po02d2Drift((f) => { try { return diskRead(f); } catch { return null; } });
+check("Platform Owner PO-02D2's approved change: each recorded file is PO-02D1B's (1cbbbc1) plus exactly its hunks — the invitation flag, error code and permission, the pending list's opt-in id, the console strings, stylesheet, status table, dialog focus return, the Companies and Dashboard pages and the two freeze verifiers — and the seven added invitation files (service, read model, actions, dialogs, history kit, detail page and its not-found) as recorded (verify/po02d2-approved-delta.mts)",
+  po02d2DriftNow.length === 0 && JSON.stringify(Object.keys(PO02D2_EDITS).sort()) === JSON.stringify(["src/app/(platform)/platform.css", "src/app/(platform)/platform/(console)/companies/page.tsx", "src/app/(platform)/platform/(console)/dashboard/page.tsx", "src/components/platform/companies-kit.tsx", "src/components/platform/i18n.ts", "src/components/platform/platform-dialog.tsx", "src/lib/platform/companies.ts", "src/lib/platform/errors.ts", "src/lib/platform/flags.ts", "src/lib/platform/guards.ts", "verify/verify-document-form.mts", "verify/verify-page-archetypes.mts"]) && JSON.stringify(Object.keys(PO02D2_NEW).sort()) === JSON.stringify(["src/app/(platform)/invitation-actions.ts", "src/app/(platform)/platform/(console)/companies/invitations/[invitationId]/not-found.tsx", "src/app/(platform)/platform/(console)/companies/invitations/[invitationId]/page.tsx", "src/components/platform/invitation-dialogs.tsx", "src/components/platform/invitations-kit.tsx", "src/lib/platform/invitation-actions.ts", "src/lib/platform/invitations.ts"]), po02d2DriftNow.join(" "));
 const SUBMIT: Record<string, string> = {
   "sales/quotations/quotation-form.tsx": "9bdada8919ca1c68", "sales/orders/order-form.tsx": "5878b69222c20ecc", "sales/proforma/proforma-form.tsx": "298ddfd557fa4b5b",
   "sales/invoices/invoice-form.tsx": "9ac743493b5e4887", "sales/delivery-challans/dc-form.tsx": "b43736b93681d299", "sales/credit-notes/cn-form.tsx": "6e40556ff6eda6e1",

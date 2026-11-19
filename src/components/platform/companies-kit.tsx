@@ -1,7 +1,7 @@
 import { Fragment } from "react";
 import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
-import { CalendarX, ChevronLeft, ChevronRight, ChevronsLeft, CircleCheck, CircleMinus, CircleX, Clock, ShieldCheck, ShieldOff } from "lucide-react";
+import { CalendarX, ChevronLeft, ChevronRight, ChevronsLeft, CircleCheck, CircleMinus, CircleX, Clock, MailCheck, MailX, ShieldCheck, ShieldOff } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -34,7 +34,9 @@ export type CompanyRowView = {
   created: string;
   lastSignIn: string | null;
 };
-export type InvitationRowView = { reference: string; companyName: string; ownerEmail: string; country: string; created: string; expires: string; state: "pending" | "expired" };
+// PO-02D2: `href` (the invitation's detail and history) and `actions` (Re-issue / Revoke) are set only while
+// invitation administration is enabled; without them the table and cards render exactly as in PO-02B.
+export type InvitationRowView = { reference: string; companyName: string; ownerEmail: string; country: string; created: string; expires: string; state: "pending" | "expired"; href?: string; actions?: React.ReactNode };
 
 /** A detail page: breadcrumbs above the page's one <h1> header (whose description may hold LTR islands). */
 export function DetailPage({
@@ -111,6 +113,8 @@ const PLATFORM_STATES = {
   invitation: {
     pending: { label: "inv.statePending", icon: Clock },
     expired: { label: "inv.stateExpired", icon: CalendarX },
+    revoked: { label: "inv.stateRevoked", icon: MailX },
+    accepted: { label: "inv.stateAccepted", icon: MailCheck },
   },
   audit_result: {
     success: { label: "result.success", icon: CircleCheck },
@@ -206,15 +210,18 @@ export function Breadcrumbs({ locale, items }: { locale: Locale; items: { label:
 }
 
 /** The Registered / Pending invitations switch: real links, the current one marked for assistive tech. */
-export function ViewSegments({ label, items }: { label: string; items: { label: string; href: string; current: boolean; count: string }[] }) {
+// PO-02D2: `count` is optional (the invitation history segment has none).
+export function ViewSegments({ label, items }: { label: string; items: { label: string; href: string; current: boolean; count?: string }[] }) {
   return (
     <nav aria-label={label} className="platform-segments">
       {items.map((item) => (
         <Link key={item.href} href={item.href} className="platform-segment" aria-current={item.current ? "page" : undefined}>
           {item.label}
-          <span className="platform-segment-count">
-            <Ltr>{item.count}</Ltr>
-          </span>
+          {item.count !== undefined && (
+            <span className="platform-segment-count">
+              <Ltr>{item.count}</Ltr>
+            </span>
+          )}
         </Link>
       ))}
     </nav>
@@ -391,6 +398,7 @@ function InvitationState({ locale, state }: { locale: Locale; state: InvitationR
 }
 
 export function InvitationTable({ locale, rows, caption }: { locale: Locale; rows: InvitationRowView[]; caption: string }) {
+  const withActions = rows.some((row) => row.actions);
   return (
     <div className="platform-company-table">
       <Table list>
@@ -402,6 +410,7 @@ export function InvitationTable({ locale, rows, caption }: { locale: Locale; row
             <TableHead>{pt(locale, "col.ownerEmail")}</TableHead>
             <TableHead>{pt(locale, "col.country")}</TableHead>
             <TableHead>{pt(locale, "col.expires")}</TableHead>
+            {withActions && <TableHead>{pt(locale, "inv.actions")}</TableHead>}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -409,7 +418,13 @@ export function InvitationTable({ locale, rows, caption }: { locale: Locale; row
             <TableRow key={row.reference + row.created}>
               <TableCell wrap>
                 <div className="platform-cell-company">
-                  <span dir="auto">{row.companyName}</span>
+                  {row.href ? (
+                    <Link href={row.href} className="platform-company-link" dir="auto">
+                      {row.companyName}
+                    </Link>
+                  ) : (
+                    <span dir="auto">{row.companyName}</span>
+                  )}
                   <div className="platform-cell-sub platform-invitation-ref">
                     <Ltr>{row.reference}</Ltr>
                   </div>
@@ -426,6 +441,7 @@ export function InvitationTable({ locale, rows, caption }: { locale: Locale; row
                 <div>{row.expires}</div>
                 <div className="platform-cell-sub">{pt(locale, "inv.invitedOn", { date: row.created })}</div>
               </TableCell>
+              {withActions && <TableCell>{row.actions}</TableCell>}
             </TableRow>
           ))}
         </TableBody>
@@ -442,7 +458,13 @@ export function InvitationCards({ locale, rows, label }: { locale: Locale; rows:
           <div className="platform-record-head">
             <div className="min-w-0">
               <div className="platform-record-title">
-                <span dir="auto">{row.companyName}</span>
+                {row.href ? (
+                  <Link href={row.href} className="platform-company-link" dir="auto">
+                    {row.companyName}
+                  </Link>
+                ) : (
+                  <span dir="auto">{row.companyName}</span>
+                )}
               </div>
               <div className="platform-cell-sub">
                 <Ltr>{row.reference}</Ltr>
@@ -470,6 +492,7 @@ export function InvitationCards({ locale, rows, label }: { locale: Locale; rows:
               <dd>{row.expires}</dd>
             </div>
           </dl>
+          {row.actions && <div className="platform-record-actions">{row.actions}</div>}
         </li>
       ))}
     </ul>

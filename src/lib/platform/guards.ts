@@ -19,7 +19,10 @@ import { validatePlatformSession, type PlatformSessionContext } from "./session"
 // invitations (allow-listed metadata only; src/lib/platform/companies.ts). It grants no change.
 // PO-02C: platform.companies.manage_access — suspend / reactivate one company's access, always with a
 // fresh password + TOTP step-up and an audit record (src/lib/platform/company-access-actions.ts).
-export const PLATFORM_PERMISSIONS = ["platform.access", "platform.sessions.manage", "platform.mfa.manage", "platform.companies.read", "platform.companies.manage_access"] as const;
+// PO-02D2: platform.companies.invite — create, revoke and re-issue company invitations (copy-link only;
+// create and re-issue need password + fresh TOTP, revoke a fresh TOTP and a reason; audited in the same
+// transaction — src/lib/platform/invitation-actions.ts). It grants no acceptance and no customer data.
+export const PLATFORM_PERMISSIONS = ["platform.access", "platform.sessions.manage", "platform.mfa.manage", "platform.companies.read", "platform.companies.manage_access", "platform.companies.invite"] as const;
 export type PlatformPermission = (typeof PLATFORM_PERMISSIONS)[number];
 const OWNER_PERMISSIONS: ReadonlySet<string> = new Set(PLATFORM_PERMISSIONS);
 

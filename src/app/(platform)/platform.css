@@ -420,6 +420,30 @@ a.platform-pager-link:focus-visible { outline: 2px solid var(--focus); outline-o
   .platform-dialog-sheet .platform-dialog-actions { flex-direction: column-reverse; align-items: stretch; }
 }
 
+/* ---- PO-02D2: company invitation administration (create · revoke · re-issue · one-time link · history) ---- */
+.platform-invite-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-16); }
+@media (min-width: 640px) { .platform-invite-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.platform-terms { margin: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-12) var(--space-16); padding: var(--space-12) var(--space-16); border: 1px solid var(--border); border-radius: 8px; background: var(--surface-subtle); }
+.platform-terms dt { font-size: var(--text-caption); line-height: var(--text-caption--line-height); color: var(--ink-muted); }
+.platform-terms dd { margin: var(--space-2) 0 0; font-size: var(--text-body-sm); line-height: var(--text-body-sm--line-height); font-weight: 500; color: var(--ink); overflow-wrap: anywhere; }
+/* The one-time link: a read-only, monospace, left-to-right field with its Copy button; stacked on phones. */
+.platform-link-panel { display: flex; flex-direction: column; gap: var(--space-16); }
+.platform-link-row { display: flex; align-items: stretch; gap: var(--space-8); }
+.platform-link-row > input { flex: 1 1 auto; min-width: 0; }
+.platform-link-field { font-family: var(--font-mono); font-size: var(--text-body-sm); }
+.platform-invite-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-8); }
+.platform-record-actions { padding-block-start: var(--space-12); border-block-start: 1px solid var(--border); }
+.platform-timeline { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.platform-timeline-item { display: flex; flex-direction: column; gap: var(--space-4); padding-block: var(--space-12); padding-inline-start: var(--space-16); border-inline-start: 2px solid var(--border); }
+.platform-timeline-head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-8); }
+.platform-timeline-label { font-weight: 600; color: var(--ink); overflow-wrap: anywhere; }
+.platform-timeline-reason { margin: 0; font-size: var(--text-body-sm); line-height: var(--text-body-sm--line-height); color: var(--ink); overflow-wrap: anywhere; }
+@media (max-width: 639.98px) {
+  .platform-link-row { flex-direction: column; }
+  .platform-link-row > button { min-height: 44px; }
+  .platform-terms { grid-template-columns: minmax(0, 1fr); }
+}
+
 .platform-locked-rows { margin: 0; display: flex; flex-direction: column; }
 .platform-locked-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-8); padding-block: var(--space-12); }
 .platform-locked-row + .platform-locked-row { border-block-start: 1px solid var(--border); }

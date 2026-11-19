@@ -1,7 +1,7 @@
 import { cookies, headers } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { BadgeCheck, Building2, Download, Info, MailPlus, SearchX, ShieldOff, UserPlus } from "lucide-react";
+import { BadgeCheck, Building2, Download, History, Info, MailPlus, SearchX, ShieldOff, UserPlus } from "lucide-react";
 import {
   CompanyCards,
   CompanyTable,
@@ -17,6 +17,8 @@ import {
   type InvitationRowView,
 } from "@/components/platform/companies-kit";
 import { pt } from "@/components/platform/i18n";
+import { CreateInvitationControl, InvitationRowActions } from "@/components/platform/invitation-dialogs";
+import { InvitationHistoryCards, InvitationHistoryTable, type InvitationHistoryRowView } from "@/components/platform/invitations-kit";
 import { ConsolePage, DeniedState, EmptyPanel, PreviewAction } from "@/components/platform/page-kit";
 import { Button } from "@/components/ui/button";
 import type { Locale } from "@/lib/i18n/dict";
@@ -36,21 +38,27 @@ import {
 import { PLATFORM_SESSION_COOKIE } from "@/lib/platform/config";
 import { formatPlatformCount, formatPlatformDate, formatPlatformDateTime } from "@/lib/platform/display";
 import { isPlatformError } from "@/lib/platform/errors";
+import { isPlatformInvitationsEnabled } from "@/lib/platform/flags";
 import { requirePlatformSession } from "@/lib/platform/guards";
+import { INVITATION_LIFECYCLE_STATES, listInvitationHistory, type InvitationHistoryPage } from "@/lib/platform/invitations";
 
 // Companies (PO-02B): the read-only directory of registered organizations and, as a separate
 // view, the company invitations that still hold a pending e-mail slot. Server-rendered: search,
 // filters and pages are plain GET links and forms (the URL keeps the query), and every value comes
 // from the allow-listed read model (src/lib/platform/companies.ts), which re-authorizes each read.
 // Invitations, suspension / reactivation, editing and export are later phases: disabled here.
+// PO-02D2 — only while PLATFORM_INVITATIONS_ENABLED is exactly "true" (with the console flag): the
+// working Invite company control, Re-issue / Revoke / History on each pending invitation, and a third
+// view, the invitation history (every state). With the flag off this page is exactly PO-02B's.
 
 type SearchParams = Record<string, string | string[] | undefined>;
-type View = "registered" | "invitations";
+type View = "registered" | "invitations" | "history";
 type Loaded<T> = { ok: true; value: T } | { ok: false; code: "FORBIDDEN" | "VALIDATION_FAILED" };
 
 const PAGE_SIZES = [10, COMPANY_PAGE_SIZE_DEFAULT, 50];
 const SORT_LABEL = { newest: "sort.newest", oldest: "sort.oldest", name: "sort.name" } as const;
 const STATE_LABEL = { pending: "inv.statePending", expired: "inv.stateExpired" } as const;
+const HISTORY_STATE_LABEL = { pending: "inv.statePending", expired: "inv.stateExpired", revoked: "inv.stateRevoked", accepted: "inv.stateAccepted" } as const;
 
 /** Session problems go to the cookie-clearing handler; denial and bad input become page states; anything else → error boundary. */
 async function load<T>(read: () => Promise<T>) {
@@ -68,7 +76,7 @@ async function load<T>(read: () => Promise<T>) {
 /** Directory links: always /platform/companies, with only the given (already validated) parameters. */
 function directoryHref(view: View, params: Record<string, string | null | undefined>): string {
   const query = new URLSearchParams();
-  if (view === "invitations") query.set("view", "invitations");
+  if (view !== "registered") query.set("view", view);
   for (const [key, value] of Object.entries(params)) if (value) query.set(key, value);
   const text = query.toString();
   return text ? `/platform/companies?${text}` : "/platform/companies";
@@ -101,7 +109,7 @@ function companyRows(page: CompanyListPage, locale: Locale): CompanyRowView[] {
   }));
 }
 
-function invitationRows(page: InvitationListPage, locale: Locale): InvitationRowView[] {
+function invitationRows(page: InvitationListPage, locale: Locale, manage: boolean): InvitationRowView[] {
   return page.rows.map((row) => ({
     reference: row.reference,
     companyName: row.companyName,
@@ -110,6 +118,28 @@ function invitationRows(page: InvitationListPage, locale: Locale): InvitationRow
     created: formatPlatformDate(row.createdAt, locale),
     expires: formatPlatformDateTime(row.expiresAt, locale),
     state: row.state,
+    // PO-02D2: the row's id comes only from the opt-in read (listPendingInvitations … { withId }).
+    ...(manage && row.id
+      ? {
+          href: `/platform/companies/invitations/${row.id}`,
+          actions: <InvitationRowActions locale={locale} target={{ id: row.id, reference: row.reference, companyName: row.companyName, ownerEmail: row.ownerEmail, state: row.state }} />,
+        }
+      : {}),
+  }));
+}
+
+function historyRows(page: InvitationHistoryPage, locale: Locale): InvitationHistoryRowView[] {
+  return page.rows.map((row) => ({
+    id: row.id,
+    href: `/platform/companies/invitations/${row.id}`,
+    reference: row.reference,
+    companyName: row.companyName,
+    ownerEmail: row.ownerEmail,
+    country: row.country,
+    state: row.state,
+    created: formatPlatformDate(row.createdAt, locale),
+    expires: formatPlatformDateTime(row.expiresAt, locale),
+    ended: row.revokedAt ? formatPlatformDateTime(row.revokedAt, locale) : row.acceptedAt ? formatPlatformDateTime(row.acceptedAt, locale) : null,
   }));
 }
 
@@ -133,13 +163,15 @@ export default async function PlatformCompaniesPage({ searchParams }: { searchPa
   await requirePlatformSession();
   const [locale, params, store, requestHeaders] = await Promise.all([getLocale(), searchParams, cookies(), headers()]);
   const req = { headers: requestHeaders, token: store.get(PLATFORM_SESSION_COOKIE)?.value ?? null };
-  const view: View = params.view === "invitations" ? "invitations" : "registered";
+  const manage = isPlatformInvitationsEnabled();
+  const view: View = params.view === "invitations" ? "invitations" : params.view === "history" && manage ? "history" : "registered";
 
-  const [metrics, countries, companies, invitations] = await Promise.all([
+  const [metrics, countries, companies, invitations, history] = await Promise.all([
     load(() => companyMetrics(req)),
     load(() => listCompanyCountries(req)),
     view === "registered" ? load(() => listCompanies(req, params)) : Promise.resolve(null),
-    view === "invitations" ? load(() => listPendingInvitations(req, params)) : Promise.resolve(null),
+    view === "invitations" ? load(() => listPendingInvitations(req, params, { withId: manage })) : Promise.resolve(null),
+    view === "history" ? load(() => listInvitationHistory(req, { q: params.q, state: params.state, after: params.after })) : Promise.resolve(null),
   ]);
 
   const header = {
@@ -148,7 +180,7 @@ export default async function PlatformCompaniesPage({ searchParams }: { searchPa
     description: pt(locale, "companies.desc"),
     actions: (
       <>
-        <PreviewAction locale={locale} label={pt(locale, "action.inviteCompany")} icon={UserPlus} phase="PO-02D" />
+        {manage ? <CreateInvitationControl locale={locale} /> : <PreviewAction locale={locale} label={pt(locale, "action.inviteCompany")} icon={UserPlus} phase="PO-02D" />}
         <DisabledAction locale={locale} label={pt(locale, "action.export")} icon={Download} />
       </>
     ),
@@ -207,13 +239,15 @@ export default async function PlatformCompaniesPage({ searchParams }: { searchPa
         items={[
           { label: pt(locale, "companies.registered"), href: "/platform/companies", current: view === "registered", count: formatPlatformCount(m.companies.total) },
           { label: pt(locale, "companies.pending"), href: "/platform/companies?view=invitations", current: view === "invitations", count: formatPlatformCount(slots) },
+          ...(manage ? [{ label: pt(locale, "companies.history"), href: "/platform/companies?view=history", current: view === "history" }] : []),
         ]}
       />
 
       {view === "registered" && companies && (
         <RegisteredView locale={locale} result={companies} params={params} countries={countries.value} total={m.companies.total} enforced={m.accessEnforced} />
       )}
-      {view === "invitations" && invitations && <InvitationsView locale={locale} result={invitations} params={params} total={slots} />}
+      {view === "invitations" && invitations && <InvitationsView locale={locale} result={invitations} params={params} total={slots} manage={manage} />}
+      {view === "history" && history && <HistoryView locale={locale} result={history} params={params} />}
     </ConsolePage>
   );
 }
@@ -335,7 +369,7 @@ function RegisteredView({ locale, result, params, countries, total, enforced }: 
   );
 }
 
-function InvitationsView({ locale, result, params, total }: { locale: Locale; result: Loaded<InvitationListPage>; params: SearchParams; total: number }) {
+function InvitationsView({ locale, result, params, total, manage }: { locale: Locale; result: Loaded<InvitationListPage>; params: SearchParams; total: number; manage: boolean }) {
   if (!result.ok && result.code === "FORBIDDEN") return <DeniedState locale={locale} />;
   const page = result.ok ? result.value : null;
   const q = page ? (page.query.q ?? "") : raw(params.q);
@@ -343,13 +377,13 @@ function InvitationsView({ locale, result, params, total }: { locale: Locale; re
   const size = page ? page.query.size : COMPANY_PAGE_SIZE_DEFAULT;
   const base = page ? { q: page.query.q, state: page.query.state, size: page.query.size === COMPANY_PAGE_SIZE_DEFAULT ? null : String(page.query.size) } : {};
   const filtered = !!(page && (page.query.q || page.query.state));
-  const rows = page ? invitationRows(page, locale) : [];
+  const rows = page ? invitationRows(page, locale, manage) : [];
 
   return (
     <>
       <p className="platform-callout" data-tone="info">
         <Info className="size-4 shrink-0" aria-hidden />
-        <span>{pt(locale, "inv.slotNote")}</span>
+        <span>{pt(locale, manage ? "inv.slotNoteAdmin" : "inv.slotNote")}</span>
       </p>
       <form method="get" action="/platform/companies" role="search" key={JSON.stringify([q, state, size])} aria-label={pt(locale, "companies.filters")} className="card platform-filters">
         <input type="hidden" name="view" value="invitations" />
@@ -393,7 +427,7 @@ function InvitationsView({ locale, result, params, total }: { locale: Locale; re
           {filtered || total > 0 ? (
             <EmptyPanel icon={SearchX} message={pt(locale, "inv.noneMatch")} hint={pt(locale, "companies.noneMatchHint")} />
           ) : (
-            <EmptyPanel icon={MailPlus} message={pt(locale, "inv.empty")} hint={pt(locale, "inv.emptyHint")} />
+            <EmptyPanel icon={MailPlus} message={pt(locale, "inv.empty")} hint={pt(locale, manage ? "inv.emptyHintAdmin" : "inv.emptyHint")} />
           )}
         </div>
       ) : (
@@ -407,6 +441,85 @@ function InvitationsView({ locale, result, params, total }: { locale: Locale; re
             prevHref={page.prev ? directoryHref("invitations", { ...base, before: page.prev }) : null}
             nextHref={page.next ? directoryHref("invitations", { ...base, after: page.next }) : null}
           />
+        </>
+      )}
+    </>
+  );
+}
+
+/** PO-02D2 — every invitation (pending, expired, revoked, accepted), newest first; forward keyset pages. No link is ever shown here. */
+function HistoryView({ locale, result, params }: { locale: Locale; result: Loaded<InvitationHistoryPage>; params: SearchParams }) {
+  if (!result.ok && result.code === "FORBIDDEN") return <DeniedState locale={locale} />;
+  const page = result.ok ? result.value : null;
+  const q = page ? (page.q ?? "") : raw(params.q);
+  const state = page ? (page.state ?? "") : raw(params.state, 20);
+  const base = page ? { q: page.q, state: page.state } : {};
+  const rows = page ? historyRows(page, locale) : [];
+
+  return (
+    <>
+      <p className="platform-callout" data-tone="info">
+        <Info className="size-4 shrink-0" aria-hidden />
+        <span>{pt(locale, "hist.note")}</span>
+      </p>
+      <form method="get" action="/platform/companies" role="search" key={JSON.stringify([q, state])} aria-label={pt(locale, "companies.filters")} className="card platform-filters">
+        <input type="hidden" name="view" value="history" />
+        <div className="platform-filter-field platform-filter-search">
+          <label htmlFor="history-q">{pt(locale, "inv.searchLabel")}</label>
+          <input id="history-q" name="q" type="search" className="platform-input" maxLength={SEARCH_MAX_LENGTH} defaultValue={q} placeholder={pt(locale, "inv.searchPlaceholder")} autoComplete="off" dir="auto" />
+        </div>
+        <div className="platform-filter-field">
+          <label htmlFor="history-state">{pt(locale, "filter.status")}</label>
+          <select id="history-state" name="state" className="platform-select" defaultValue={state}>
+            <option value="">{pt(locale, "filter.all")}</option>
+            {INVITATION_LIFECYCLE_STATES.map((value) => (
+              <option key={value} value={value}>
+                {pt(locale, HISTORY_STATE_LABEL[value])}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="platform-filter-actions">
+          <Button type="submit">{pt(locale, "action.apply")}</Button>
+          <Link href="/platform/companies?view=history" className="platform-inline-link">
+            {pt(locale, "action.clear")}
+          </Link>
+        </div>
+      </form>
+
+      {!page ? (
+        <InvalidQuery locale={locale} view="history" />
+      ) : rows.length === 0 ? (
+        <div className="card">
+          {page.q || page.state || page.total > 0 ? (
+            <EmptyPanel icon={SearchX} message={pt(locale, "inv.noneMatch")} hint={pt(locale, "companies.noneMatchHint")} />
+          ) : (
+            <EmptyPanel icon={History} message={pt(locale, "hist.empty")} hint={pt(locale, "inv.emptyHintAdmin")} />
+          )}
+        </div>
+      ) : (
+        <>
+          <InvitationHistoryTable locale={locale} rows={rows} caption={pt(locale, "companies.history")} />
+          <InvitationHistoryCards locale={locale} rows={rows} label={pt(locale, "companies.history")} />
+          <nav className="platform-pager" aria-label={pt(locale, "pager.label")}>
+            <p className="platform-pager-summary">{summary(locale, page.offset, rows.length, page.total)}</p>
+            <div className="platform-pager-links">
+              {page.offset > 0 && (
+                <Link className="platform-pager-link" href={directoryHref("history", base)}>
+                  {pt(locale, "hist.first")}
+                </Link>
+              )}
+              {page.next ? (
+                <Link className="platform-pager-link" href={directoryHref("history", { ...base, after: page.next })} rel="next">
+                  {pt(locale, "hist.older")}
+                </Link>
+              ) : (
+                <span className="platform-pager-link" aria-disabled="true">
+                  {pt(locale, "hist.older")}
+                </span>
+              )}
+            </div>
+          </nav>
         </>
       )}
     </>

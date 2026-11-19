@@ -10,6 +10,8 @@ import { XIcon } from "lucide-react";
 // outside click would lose codes that are shown only once. Radix provides the focus trap, focus
 // return, the inert page and aria-labelledby/-describedby. PO-02C: `sheet` turns the dialog into a
 // bottom sheet on phones (platform.css .platform-dialog-sheet); from 640px it is the same centred dialog.
+// PO-02D2: `returnFocus` — the control that opened a dialog with no Radix Trigger (its own button, or one of
+// several): focus goes back to it on close while it is still on the page. Without it, behaviour is unchanged.
 export function PlatformDialog({
   open,
   onOpenChange,
@@ -18,6 +20,7 @@ export function PlatformDialog({
   closeLabel,
   dismissible = true,
   sheet = false,
+  returnFocus,
   children,
 }: {
   open: boolean;
@@ -27,6 +30,7 @@ export function PlatformDialog({
   closeLabel: string;
   dismissible?: boolean;
   sheet?: boolean;
+  returnFocus?: React.RefObject<HTMLElement | null>;
   children: React.ReactNode;
 }) {
   const block = (e: Event) => {
@@ -41,6 +45,17 @@ export function PlatformDialog({
           onEscapeKeyDown={block}
           onPointerDownOutside={block}
           onInteractOutside={block}
+          {...(returnFocus
+            ? {
+                onCloseAutoFocus: (e: Event) => {
+                  const el = returnFocus.current;
+                  if (el?.isConnected) {
+                    e.preventDefault();
+                    el.focus();
+                  }
+                },
+              }
+            : {})}
           {...(description ? {} : { "aria-describedby": undefined })}
         >
           <DialogPrimitive.Title className="text-lg font-semibold tracking-tight text-ink pe-8">{title}</DialogPrimitive.Title>

@@ -240,8 +240,9 @@ async function main() {
 
   section("1. Authorization: flag → live platform session → platform.companies.read; customer tokens refused");
   {
-    // PO-02C appends platform.companies.manage_access (the access action; verify:platform-company-access).
-    ok("PLATFORM_PERMISSIONS gains exactly platform.companies.read (and, from PO-02C, platform.companies.manage_access)", JSON.stringify(guards.PLATFORM_PERMISSIONS) === JSON.stringify(["platform.access", "platform.sessions.manage", "platform.mfa.manage", "platform.companies.read", "platform.companies.manage_access"]));
+    // PO-02C appends platform.companies.manage_access (the access action; verify:platform-company-access); PO-02D2 appends
+    // platform.companies.invite (the invitation service; verify:platform-invitations).
+    ok("PLATFORM_PERMISSIONS gains exactly platform.companies.read (and, from PO-02C, platform.companies.manage_access; from PO-02D2, platform.companies.invite)", JSON.stringify(guards.PLATFORM_PERMISSIONS) === JSON.stringify(["platform.access", "platform.sessions.manage", "platform.mfa.manage", "platform.companies.read", "platform.companies.manage_access", "platform.companies.invite"]));
     const ctx = await guards.authorizePlatformToken(token, "platform.companies.read");
     ok("a live platform session is granted platform.companies.read", ctx.adminId === operator.id);
     await rejects("a permission outside the allowlist (platform.companies.write) → FORBIDDEN", () => guards.authorizePlatformToken(token, "platform.companies.write" as never), is("FORBIDDEN"));

@@ -15,7 +15,10 @@
 // PO-02D1A.1 added rule 42: the reviewed foundations' scratch references never point at a live table (D-11b), the
 // release preflight is read-only, and the customer db:push command is unchanged. PO-02D1B narrowed rule 41's "no seed
 // file" to "no seed file but PO-02D1B's two reviewed ones" and added rule 43 (the seed is data-only, development-only
-// and narrowly scoped; its rollback suspends exactly one trigger for one statement).
+// and narrowly scoped; its rollback suspends exactly one trigger for one statement). PO-02D2 made company invitation
+// administration operational (create · revoke · re-issue · one-time copy link) behind PLATFORM_INVITATIONS_ENABLED:
+// rules 11, 12, 21, 23, 25, 26, 29, 38, 39 and 40 name its exact exceptions (no acceptance route, no other flag, no
+// subscription write), and rule 44 pins the invitation service, its token handling and its transactions.
 import { readFileSync, readdirSync, statSync, existsSync } from "node:fs";
 import { join, relative } from "node:path";
 
@@ -132,10 +135,12 @@ ok("edge gate reads AUTH_SECRET only to refuse a shared secret", (gateSrc.match(
 
 // 11. Console imports are allow-listed: no customer session/auth/tenant code, no direct database.
 const APP_ALLOWED = [/^next(\/|$)/, /^react$/, /^lucide-react$/, /^zod$/, /^@\/lib\/platform\//, /^@\/components\/platform\//, /^@\/components\/ui\//, /^@\/components\/brand\//, /^@\/lib\/i18n\/(server|dict)$/, /^@\/lib\/theme$/, /^@\/app\/\((app|auth)\)\/[a-z-]+\.css$/, /^@\/app\/\(platform\)\/platform\.css$/];
-const UI_ALLOWED = [/^next(\/|$)/, /^react$/, /^lucide-react$/, /^sonner$/, /^@radix-ui\/react-dialog$/, /^@\/components\/ui\//, /^@\/components\/brand\//, /^@\/components\/layout\/(brand-mark|language-switcher|theme-toggle|page-header)$/, /^@\/lib\/utils$/, /^@\/lib\/i18n\/dict$/, /^@\/lib\/theme$/, /^@\/app\/\(platform\)\/(auth|security|company-access)-actions$/, /^\.\/[a-z0-9-]+$/];
+const UI_ALLOWED = [/^next(\/|$)/, /^react$/, /^lucide-react$/, /^sonner$/, /^@radix-ui\/react-dialog$/, /^@\/components\/ui\//, /^@\/components\/brand\//, /^@\/components\/layout\/(brand-mark|language-switcher|theme-toggle|page-header)$/, /^@\/lib\/utils$/, /^@\/lib\/i18n\/dict$/, /^@\/lib\/theme$/, /^@\/app\/\(platform\)\/(auth|security|company-access|invitation)-actions$/, /^\.\/[a-z0-9-]+$/];
+// PO-02D2: the invitation dialog alone may also import the two client-safe catalogues /register uses (pure data, no imports).
+const UI_ALLOWED_FOR = { [join(root, "src/components/platform/invitation-dialogs.tsx")]: [/^@\/lib\/geo\/countries$/, /^@\/lib\/currency\/currencies$/] };
 const badApp = consoleApp.flatMap((f) => [...importsOf(read(f)), ...sideEffectImports(read(f))].filter((s) => !APP_ALLOWED.some((re) => re.test(s))).map((s) => `${rel(f)} → ${s}`));
 ok("src/app/(platform) imports only the platform library, console components, shared UI and i18n (no @/db, session, auth, tenant)", consoleApp.length >= 15 && badApp.length === 0, badApp.join(", "));
-const badUi = consoleUi.flatMap((f) => [...importsOf(read(f)), ...sideEffectImports(read(f))].filter((s) => !UI_ALLOWED.some((re) => re.test(s))).map((s) => `${rel(f)} → ${s}`));
+const badUi = consoleUi.flatMap((f) => [...importsOf(read(f)), ...sideEffectImports(read(f))].filter((s) => ![...UI_ALLOWED, ...(UI_ALLOWED_FOR[f] ?? [])].some((re) => re.test(s))).map((s) => `${rel(f)} → ${s}`));
 ok("src/components/platform imports no server module, no customer shell (AppShell/Sidebar/NavList) and no customer action", consoleUi.length >= 10 && badUi.length === 0, badUi.join(", "));
 const PLATFORM_MODULES = (s) => s.startsWith("@/lib/platform") || s.startsWith("@/components/platform") || s.startsWith("@/app/(platform)");
 const leaks = allSrc.filter((f) => f !== GATE && !under(f, "src/app/(platform)") && !under(f, "src/components/platform") && !under(f, "src/lib/platform") && !under(f, "src/lib/platform-edge") && rel(f) !== join("src", "proxy.ts") && importsOf(read(f)).some(PLATFORM_MODULES));
@@ -143,7 +148,8 @@ ok("no customer route, component or library imports any platform module (except 
 
 // 12. Server actions are authorized on their own (never by the UI): each exported action calls a
 //     console core, which checks flag → origin → live session → permission.
-const CORES = /\b(signInCore|signOutCore|revokeSessionCore|signOutOtherSessionsCore|regenerateRecoveryCodesCore|emergencyContainmentCore|setCompanyAccessCore|readCompanyAccessCore)\(/;
+// PO-02D2: the five invitation cores (src/lib/platform/invitation-actions.ts) join the list; rule 44 pins their order.
+const CORES = /\b(signInCore|signOutCore|revokeSessionCore|signOutOtherSessionsCore|regenerateRecoveryCodesCore|emergencyContainmentCore|setCompanyAccessCore|readCompanyAccessCore|previewCompanyInvitation|createCompanyInvitation|revokeCompanyInvitation|reissueCompanyInvitation|readCompanyInvitation)\(/;
 const actionFiles = consoleApp.filter((f) => /^\s*"use server";/.test(read(f)));
 const unguardedActions = actionFiles.flatMap((f) => {
   const src = read(f);
@@ -152,7 +158,7 @@ const unguardedActions = actionFiles.flatMap((f) => {
   const unauth = parts.filter((p) => p.startsWith("export async function") && !CORES.test(p)).map((p) => `${rel(f)}: ${p.slice(22, 60)}`);
   return [...stray, ...unauth];
 });
-ok("every exported server action in src/app/(platform) runs through a console core (and exports nothing else) — auth, security and (PO-02C) company access", actionFiles.length === 3 && unguardedActions.length === 0, unguardedActions.join(", "));
+ok("every exported server action in src/app/(platform) runs through a console core (and exports nothing else) — auth, security, (PO-02C) company access and (PO-02D2) invitations", actionFiles.length === 4 && unguardedActions.length === 0, unguardedActions.join(", "));
 const coreSrc = read(join(root, "src/lib/platform/console.ts"));
 ok("console mutations check the flag, then same-origin, then the live session", /async function authorizeMutation[\s\S]{0,200}assertPlatformConsoleEnabled\(\);\s*assertSameOrigin\(req\.headers\);\s*return authorizePlatformToken\(/.test(coreSrc) && (coreSrc.match(/authorizeMutation\(req,/g) ?? []).length === 4 && /signInCore[\s\S]{0,200}assertSameOrigin/.test(coreSrc) && /signOutCore[\s\S]{0,200}assertSameOrigin/.test(coreSrc));
 
@@ -253,12 +259,17 @@ ok("a failed audit INSERT surfaces as AUDIT_UNAVAILABLE (its database message is
 // ---------------------------------------------------------------------------------------------
 const readModelPath = join(root, "src/lib/platform/companies.ts");
 const readModel = code(readModelPath);
-const companyPages = ["companies/page.tsx", "companies/[orgId]/page.tsx", "companies/[orgId]/not-found.tsx", "dashboard/page.tsx"].map((p) => join(root, "src/app/(platform)/platform/(console)", p));
+// PO-02D2: the invitation detail page and its not-found join the company pages (rules 25 and 26 cover them too).
+const companyPages = ["companies/page.tsx", "companies/[orgId]/page.tsx", "companies/[orgId]/not-found.tsx", "companies/invitations/[invitationId]/page.tsx", "companies/invitations/[invitationId]/not-found.tsx", "dashboard/page.tsx"].map((p) => join(root, "src/app/(platform)/platform/(console)", p));
 const consoleCode = [...platformLib, ...consoleApp, ...consoleUi];
 
 // 21. Only the read model touches the customer orgs / users tables (the compatibility rule reads orgs.id only).
 const tenantTableRefs = consoleCode.filter((f) => /\b(orgsTable|usersTable)\b/.test(code(f)));
-ok("only companies.ts, company-access.ts and (PO-02C) company-access-actions.ts reference orgsTable / usersTable in platform code", JSON.stringify(tenantTableRefs.map(rel).sort()) === JSON.stringify([join("src", "lib", "platform", "companies.ts"), join("src", "lib", "platform", "company-access-actions.ts"), join("src", "lib", "platform", "company-access.ts")]), tenantTableRefs.map(rel).join(", "));
+ok("only companies.ts, company-access.ts, (PO-02C) company-access-actions.ts and (PO-02D2) invitations.ts reference orgsTable / usersTable in platform code", JSON.stringify(tenantTableRefs.map(rel).sort()) === JSON.stringify([join("src", "lib", "platform", "companies.ts"), join("src", "lib", "platform", "company-access-actions.ts"), join("src", "lib", "platform", "company-access.ts"), join("src", "lib", "platform", "invitations.ts")]), tenantTableRefs.map(rel).join(", "));
+const invitationsLibCode = code(join(root, "src/lib/platform/invitations.ts"));
+ok("…PO-02D2: invitations.ts reads users.email only (the case-insensitive collision check) and orgs.name only (the name collision count), and writes neither",
+  JSON.stringify([...new Set(invitationsLibCode.match(/usersTable\.\w+/g) ?? [])]) === JSON.stringify(["usersTable.email"]) && JSON.stringify([...new Set(invitationsLibCode.match(/orgsTable\.\w+/g) ?? [])]) === JSON.stringify(["orgsTable.name"]) &&
+    !/\.(insert|update|delete)\((usersTable|orgsTable)\)/.test(invitationsLibCode + code(join(root, "src/lib/platform/invitation-actions.ts"))) && !/\b(usersTable|orgsTable)\b/.test(code(join(root, "src/lib/platform/invitation-actions.ts"))));
 const accessSrc = code(join(root, "src/lib/platform/company-access.ts"));
 ok("company-access.ts reads orgs only for existence (orgs.id) and never the users table", (accessSrc.match(/orgsTable\.\w+/g) ?? []).every((m) => m === "orgsTable.id") && !/usersTable/.test(accessSrc));
 const accessCore = code(join(root, "src/lib/platform/company-access-actions.ts"));
@@ -292,11 +303,13 @@ ok("authorizeCompanyRead = feature flag, then the live platform session with pla
 ok("the read model never reads cookies or headers itself (the page passes the platform cookie's token)", !/next\/headers|cookies\(\)|SESSION_COOKIE/.test(readModel));
 const guardsSrc = code(join(root, "src/lib/platform/guards.ts"));
 const manageAccessUsers = consoleCode.filter((f) => /"platform\.companies\.manage_access"/.test(code(f))).map(rel).sort();
-ok("the company permissions are exactly platform.companies.read and (PO-02C) platform.companies.manage_access, which only the access action checks; no other company permission exists",
-  /PLATFORM_PERMISSIONS = \["platform\.access", "platform\.sessions\.manage", "platform\.mfa\.manage", "platform\.companies\.read", "platform\.companies\.manage_access"\] as const;/.test(guardsSrc) &&
-    !/platform\.companies\.(write|update|suspend|edit|delete|invite|manage(?!_access\b))/.test(consoleCode.map(code).join("\n")) &&
-    JSON.stringify(manageAccessUsers) === JSON.stringify([join("src", "lib", "platform", "company-access-actions.ts"), join("src", "lib", "platform", "guards.ts")]),
-  manageAccessUsers.join(", "));
+const inviteUsers = consoleCode.filter((f) => /"platform\.companies\.invite"/.test(code(f))).map(rel).sort();
+ok("the company permissions are exactly platform.companies.read, (PO-02C) platform.companies.manage_access — which only the access action checks — and (PO-02D2) platform.companies.invite, which only the invitation service checks; no other company permission exists",
+  /PLATFORM_PERMISSIONS = \["platform\.access", "platform\.sessions\.manage", "platform\.mfa\.manage", "platform\.companies\.read", "platform\.companies\.manage_access", "platform\.companies\.invite"\] as const;/.test(guardsSrc) &&
+    !/platform\.companies\.(write|update|suspend|edit|delete|accept|manage(?!_access\b)|invite(?!"))/.test(consoleCode.map(code).join("\n")) &&
+    JSON.stringify(manageAccessUsers) === JSON.stringify([join("src", "lib", "platform", "company-access-actions.ts"), join("src", "lib", "platform", "guards.ts")]) &&
+    JSON.stringify(inviteUsers) === JSON.stringify([join("src", "lib", "platform", "guards.ts"), join("src", "lib", "platform", "invitation-actions.ts")]),
+  `${manageAccessUsers.join(", ")} | ${inviteUsers.join(", ")}`);
 
 // 24. A company detail view is audited under the PO-01B.1 policy, or not shown at all.
 const detailFn = fnBodies(readModel).find((f) => f.name === "getCompanyDetail")?.body ?? "";
@@ -309,13 +322,14 @@ ok("a failed view record is reported as an incident and re-thrown (never swallow
 // 25. Every console page, at any depth, checks the platform session itself; company pages read only the read model.
 const allConsolePages = consoleApp.filter((f) => /\(console\)\/.+\/page\.tsx$/.test(f));
 const unguardedNested = allConsolePages.filter((f) => !/await requirePlatformSession\(\)/.test(read(f)));
-ok("every page.tsx under (console), nested routes included, awaits requirePlatformSession()", allConsolePages.length === 8 && unguardedNested.length === 0, unguardedNested.map(rel).join(", ") || String(allConsolePages.length));
+ok("every page.tsx under (console), nested routes included, awaits requirePlatformSession() — nine since PO-02D2 added the invitation detail", allConsolePages.length === 9 && unguardedNested.length === 0, unguardedNested.map(rel).join(", ") || String(allConsolePages.length));
 const pageImports = companyPages.flatMap((f) => importsOf(read(f)).filter((s) => s.startsWith("@/lib/platform/")).map((s) => `${rel(f)} → ${s}`));
-ok("company pages and the dashboard read data only through the read model (plus config, display, errors, guards)", pageImports.every((x) => /→ @\/lib\/platform\/(companies|config|display|errors|guards)$/.test(x)), pageImports.filter((x) => !/→ @\/lib\/platform\/(companies|config|display|errors|guards)$/.test(x)).join(", "));
+// PO-02D2: plus the invitation flag (flags) and the invitation history read model (invitations) — never the mutation cores.
+ok("company pages and the dashboard read data only through the read models (companies, PO-02D2 invitations) plus config, display, errors, flags, guards", pageImports.every((x) => /→ @\/lib\/platform\/(companies|config|display|errors|flags|guards|invitations)$/.test(x)), pageImports.filter((x) => !/→ @\/lib\/platform\/(companies|config|display|errors|flags|guards|invitations)$/.test(x)).join(", "));
 
 // 26. Later-phase company actions never operate: no POST, no server action, disabled controls only.
 const companyPageCode = companyPages.map(code).join("\n");
-ok("company pages hold no server action and no POST form; the only forms are GET searches of /platform/companies", !/"use server"|<form[^>]*\saction=\{|method="post"|formAction/i.test(companyPageCode) && (companyPageCode.match(/<form /g) ?? []).length === 2 && (companyPageCode.match(/<form method="get" action="\/platform\/companies" role="search"/g) ?? []).length === 2);
+ok("company pages hold no server action and no POST form; the only forms are GET searches of /platform/companies (three since PO-02D2's history view)", !/"use server"|<form[^>]*\saction=\{|method="post"|formAction/i.test(companyPageCode) && (companyPageCode.match(/<form /g) ?? []).length === 3 && (companyPageCode.match(/<form method="get" action="\/platform\/companies" role="search"/g) ?? []).length === 3);
 const kitSrc = code(join(root, "src/components/platform/companies-kit.tsx"));
 ok("DisabledAction is a disabled element; invite, export, edit and user management use it or PreviewAction; suspend / reactivate exist only as the PO-02C access dialog (header + Access tab)",
   /<Button type="button" variant="secondary" disabled aria-disabled="true"/.test(kitSrc) && ["action.inviteCompany", "action.export", "action.editCompany", "action.manageUsers"].every((k) => companyPageCode.includes(`"${k}"`)) && !/"action\.(suspend|reactivate)"/.test(companyPageCode) && (companyPageCode.match(/<CompanyAccessControl /g) ?? []).length === 2 && !/onClick|useActionState|useTransition/.test(companyPageCode + kitSrc));
@@ -335,8 +349,8 @@ ok("the read model never inserts, updates or deletes (except through recordPlatf
 //     companies-kit.tsx); no company page or kit component chooses a badge variant or a tone from a value.
 const kitPath = join(root, "src/components/platform/companies-kit.tsx");
 const stateTable = (kitSrc.match(/const PLATFORM_STATES = \{([\s\S]*?)\n\} as const satisfies PlatformStateTable;/) ?? ["", ""])[1].replace(/\s+/g, " ").trim();
-ok("one table of labels and icons for Platform Owner states (access active/suspended, invitation pending/expired, audit result success/rejected/failed), with no tone in it",
-  stateTable === 'company_access: { active: { label: "access.active", icon: ShieldCheck }, suspended: { label: "access.suspended", icon: ShieldOff }, }, invitation: { pending: { label: "inv.statePending", icon: Clock }, expired: { label: "inv.stateExpired", icon: CalendarX }, }, audit_result: { success: { label: "result.success", icon: CircleCheck }, rejected: { label: "result.rejected", icon: CircleMinus }, failed: { label: "result.failed", icon: CircleX }, },',
+ok("one table of labels and icons for Platform Owner states (access active/suspended, invitation pending/expired and — PO-02D2 — revoked/accepted, audit result success/rejected/failed), with no tone in it",
+  stateTable === 'company_access: { active: { label: "access.active", icon: ShieldCheck }, suspended: { label: "access.suspended", icon: ShieldOff }, }, invitation: { pending: { label: "inv.statePending", icon: Clock }, expired: { label: "inv.stateExpired", icon: CalendarX }, revoked: { label: "inv.stateRevoked", icon: MailX }, accepted: { label: "inv.stateAccepted", icon: MailCheck }, }, audit_result: { success: { label: "result.success", icon: CircleCheck }, rejected: { label: "result.rejected", icon: CircleMinus }, failed: { label: "result.failed", icon: CircleX }, },',
   stateTable.slice(0, 120));
 ok("PlatformStatusTag renders the design system's status tag with the literal neutral tone", /<span className="status-tag" data-tone="neutral" data-status=\{value\} data-status-domain=\{`platform\.\$\{domain\}`\}>/.test(kitSrc));
 const toneByValue = [...companyPages, kitPath].flatMap((f) => [...code(f).matchAll(/<Badge\b[^>]*\svariant=\{|data-tone=\{(?!tone\})|\stone=\{/g)].map((m) => `${rel(f)}: ${m[0]}`));
@@ -463,21 +477,36 @@ const ONBOARDING_SCHEMA = join(root, "src/db/schema/platform-onboarding.ts");
 const onboardingImporters = allSrc.filter((f) => f !== ONBOARDING_SCHEMA && importsOf(read(f)).some((s) => /(^|\/)platform-onboarding$/.test(s))).map(rel).sort();
 ok("38. PO-02D1A: only src/db/schema/index.ts imports the onboarding schema module", JSON.stringify(onboardingImporters) === JSON.stringify([join("src", "db", "schema", "index.ts")]), onboardingImporters.join(", "));
 const ONBOARDING_NAMES = /\b(platformSettingsTable|subscriptionPackagesTable|subscriptionPackageVersionsTable|tenantPrimaryOwnersTable|tenantSubscriptionsTable|subscriptionEventsTable|organizationInvitationTermsTable|platform_settings|subscription_packages|subscription_package_versions|tenant_primary_owners|tenant_subscriptions|subscription_events|organization_invitation_terms)\b/;
-const onboardingUsers = allSrc.filter((f) => f !== ONBOARDING_SCHEMA && ONBOARDING_NAMES.test(code(f))).map(rel);
-ok("…no application code (comments ignored) names an onboarding table or its Drizzle symbol — nothing reads or writes them before PO-02D2", onboardingUsers.length === 0, onboardingUsers.join(", "));
+const onboardingUsers = allSrc.filter((f) => f !== ONBOARDING_SCHEMA && ONBOARDING_NAMES.test(code(f))).map(rel).sort();
+// PO-02D2: exactly the invitation read model and service name onboarding tables — the published Trial (packages and
+// versions, read) and the invitation terms (written with the invitation) — and nothing names settings, subscriptions,
+// subscription events or primary owners.
+const SUBSCRIPTION_NAMES = /\b(platformSettingsTable|tenantPrimaryOwnersTable|tenantSubscriptionsTable|subscriptionEventsTable|platform_settings|tenant_primary_owners|tenant_subscriptions|subscription_events)\b/;
+ok("…no application code (comments ignored) names an onboarding table or its Drizzle symbol except (PO-02D2) invitations.ts and invitation-actions.ts — and none names settings, subscriptions, subscription events or primary owners",
+  JSON.stringify(onboardingUsers) === JSON.stringify([join("src", "lib", "platform", "invitation-actions.ts"), join("src", "lib", "platform", "invitations.ts")]) && !allSrc.some((f) => f !== ONBOARDING_SCHEMA && SUBSCRIPTION_NAMES.test(code(f))),
+  onboardingUsers.join(", "));
 
 // 39. No PO-02D2 / PO-02D3 surface: the permission list, and the invitation / package / subscription routes, are unchanged.
 const d1GuardsSrc = read(join(root, "src/lib/platform/guards.ts"));
 const permsLine = (d1GuardsSrc.match(/export const PLATFORM_PERMISSIONS = \[([^\]]*)\] as const;/) ?? ["", "(not found)"])[1];
-ok("39. PO-02D1A: the platform permission list is unchanged (no package, subscription, Trial or invitation permission)", permsLine === `"platform.access", "platform.sessions.manage", "platform.mfa.manage", "platform.companies.read", "platform.companies.manage_access"`, permsLine);
+ok("39. PO-02D1A: the platform permission list is unchanged except (PO-02D2) platform.companies.invite — no package, subscription, Trial or acceptance permission", permsLine === `"platform.access", "platform.sessions.manage", "platform.mfa.manage", "platform.companies.read", "platform.companies.manage_access", "platform.companies.invite"`, permsLine);
 const onboardingRoutes = walk(join(root, "src/app")).map(rel).filter((p) => /\/(page|route)\.tsx?$/.test(p) && /invit|accept|onboard|subscri|packag|trial|join|regist/i.test(p)).sort();
-ok("…the only invitation-, package-, subscription- or registration-named routes are the existing /register and the two console previews (no acceptance or issuance route)",
-  JSON.stringify(onboardingRoutes) === JSON.stringify([join("src", "app", "(auth)", "register", "page.tsx"), join("src", "app", "(platform)", "platform", "(console)", "packages", "page.tsx"), join("src", "app", "(platform)", "platform", "(console)", "subscribers", "page.tsx")].sort()),
+ok("…the only invitation-, package-, subscription- or registration-named routes are the existing /register, the two console previews and (PO-02D2) the console invitation detail — no acceptance route (/register/accept does not exist)",
+  JSON.stringify(onboardingRoutes) === JSON.stringify([join("src", "app", "(auth)", "register", "page.tsx"), join("src", "app", "(platform)", "platform", "(console)", "companies", "invitations", "[invitationId]", "page.tsx"), join("src", "app", "(platform)", "platform", "(console)", "packages", "page.tsx"), join("src", "app", "(platform)", "platform", "(console)", "subscribers", "page.tsx")].sort()) &&
+    !existsSync(join(root, "src/app/(auth)/register/accept")) && !walk(join(root, "src/app")).some((f) => /[\\/]accept[\\/]/.test(rel(f))),
   onboardingRoutes.join(", "));
 
 // 40. No invitation feature flag exists yet (none is activated, because none is defined).
-const flagFiles = [...allSrc, ...platformScripts].filter((f) => /PLATFORM_INVITATIONS_ENABLED|CUSTOMER_INVITE_ACCEPTANCE_ENABLED|INVITE_ONLY/.test(read(f))).map(rel);
-ok("40. PO-02D1A: no invitation feature flag (PLATFORM_INVITATIONS_ENABLED / CUSTOMER_INVITE_ACCEPTANCE_ENABLED / INVITE_ONLY) in src or scripts/platform", flagFiles.length === 0, flagFiles.join(", "));
+// PO-02D2: PLATFORM_INVITATIONS_ENABLED now exists — read (code, comments ignored) ONLY in src/lib/platform/flags.ts, as the
+// exact string "true", together with the console flag; the acceptance and invite-only flags still do not exist anywhere.
+const flagFiles = [...allSrc, ...platformScripts].filter((f) => /CUSTOMER_INVITE_ACCEPTANCE_ENABLED|INVITE_ONLY/.test(read(f))).map(rel);
+const invitationFlagReaders = [...allSrc, ...platformScripts].filter((f) => /PLATFORM_INVITATIONS_ENABLED/.test(code(f))).map(rel);
+const flagsSrc = code(join(root, "src/lib/platform/flags.ts"));
+ok("40. PO-02D1A: no acceptance or invite-only flag (CUSTOMER_INVITE_ACCEPTANCE_ENABLED / INVITE_ONLY) in src or scripts/platform; (PO-02D2) PLATFORM_INVITATIONS_ENABLED is read only in flags.ts, only as === \"true\" and only after the console flag",
+  flagFiles.length === 0 && JSON.stringify(invitationFlagReaders) === JSON.stringify([join("src", "lib", "platform", "flags.ts")]) &&
+    /return isPlatformConsoleEnabled\(\) && process\.env\.PLATFORM_INVITATIONS_ENABLED === "true";/.test(flagsSrc) && /assertPlatformConsoleEnabled\(\);\s*if \(process\.env\.PLATFORM_INVITATIONS_ENABLED !== "true"\) throw new PlatformError\("INVITATIONS_DISABLED"/.test(flagsSrc) &&
+    (flagsSrc.match(/process\.env\.PLATFORM_INVITATIONS_ENABLED/g) ?? []).length === 2,
+  `${flagFiles.join(", ")} | ${invitationFlagReaders.join(", ")}`);
 
 // 41. The PO-02D1 SQL: four files, none authorized for production, no seed; the foundation writes no row and alters
 //     only F1 on users; the rollback drops only PO-02D1 objects; nothing links a subscription to access control.
@@ -578,7 +607,77 @@ ok("…the seed runs only through the guarded runner: both guard steps, then the
     seedRunner.indexOf("await runPreflight(databaseUrl)") > 0 && seedRunner.indexOf("await runPreflight(databaseUrl)") < seedRunner.indexOf("new Client(") &&
     /preflight\.verdict !== "PUSH_SAFE" \|\| preflight\.state !== "REVIEWED_SQL_COMPLETE"/.test(seedRunner) && !/drizzle-kit|pushSchema|db:push|db:migrate/.test(seedRunner.replace(/\/\*[\s\S]*?\*\//g, "")));
 const seedUsers = allSrc.filter((f) => /PO02D1B|trial-seed|platform:db:seed/.test(read(f))).map(rel);
-ok("…no application code runs or references the seed (nothing in src/), and no new permission, route or flag exists (rules 39–40 unchanged)", seedUsers.length === 0, seedUsers.join(", "));
+ok("…no application code runs or references the seed (nothing in src/), and no permission, route or flag exists beyond those rules 39–40 name (PO-02D2's, narrowly)", seedUsers.length === 0, seedUsers.join(", "));
+
+
+// ---------------------------------------------------------------------------------------------
+// 44. PO-02D2 — company invitation administration: one service writes invitations, the token never leaves the creating
+//     response, every change is authorized in the PO-02C order and is ONE audited transaction; nothing is delivered.
+// ---------------------------------------------------------------------------------------------
+const INV_ACTIONS = join(root, "src/lib/platform/invitation-actions.ts");
+const INV_LIB = join(root, "src/lib/platform/invitations.ts");
+const INV_WRAPPERS = join(root, "src/app/(platform)/invitation-actions.ts");
+const INV_DIALOGS = join(root, "src/components/platform/invitation-dialogs.tsx");
+const invActions = code(INV_ACTIONS);
+const invLib = code(INV_LIB);
+const invWriters = consoleCode.filter((f) => /\.(insert|update|delete)\((inv|terms|organizationInvitationsTable|organizationInvitationTermsTable)\)/.test(code(f))).map(rel).sort();
+ok("44. PO-02D2: only invitation-actions.ts writes invitations and their terms — one insert of each, one revocation update, no delete, never an acceptance",
+  JSON.stringify(invWriters) === JSON.stringify([rel(INV_ACTIONS)]) && (invActions.match(/\.insert\(inv\)/g) ?? []).length === 1 && (invActions.match(/\.insert\(terms\)/g) ?? []).length === 1 &&
+    (invActions.match(/\.update\(inv\)/g) ?? []).length === 1 && /\.update\(inv\)\s*\.set\(\{ revokedAt: notBeforeCreation\(now\), revokedByPlatformAdminId: adminId, updatedAt: notBeforeCreation\(now\) \}\)/.test(invActions) &&
+    !/\.delete\(/.test(invActions) && !/\.set\(\{[^}]*accepted/i.test(invActions),
+  invWriters.join(", "));
+ok("…the read model writes nothing but its view record (invitation.viewed, once), and every read authorizes with platform.companies.read after both flags",
+  !/\b(db|tx|executor)\s*\.\s*(insert|update|delete)\(/.test(invLib) && (invLib.match(/recordPlatformAudit\(/g) ?? []).length === 1 && /action: "invitation\.viewed"/.test(invLib) &&
+    /async function authorizeInvitationRead\(req: ConsoleRequest\): Promise<PlatformSessionContext> \{\s*assertPlatformInvitationsEnabled\(\);\s*return authorizePlatformToken\(req\.token, "platform\.companies\.read"\);\s*\}/.test(invLib) &&
+    (invLib.match(/await authorizeInvitationRead\(req\)/g) ?? []).length === 2);
+const TOKEN_ANYWHERE = /\binv\.tokenHash\b|organizationInvitationsTable\.tokenHash|token_hash|tokenHash:\s*inv\./;
+ok("…the token is 32 random bytes (base64url) made in one place; only its sha256 is stored, by the one insert; no platform code selects or names the stored hash column",
+  /export function newInvitationToken\(\): \{ token: string; tokenHash: string \} \{\s*const token = randomBytes\(32\)\.toString\("base64url"\);/.test(invLib) && /createHash\("sha256"\)\.update\(token, "utf8"\)\.digest\("hex"\)/.test(invLib) &&
+    (invActions.match(/newInvitationToken\(\)/g) ?? []).length === 1 && (invActions.match(/\btokenHash\b/g) ?? []).length === 2 && !consoleCode.some((f) => TOKEN_ANYWHERE.test(code(f))));
+const originReaders = [...allSrc, ...platformScripts].filter((f) => /CUSTOMER_PUBLIC_ORIGIN/.test(code(f))).map(rel);
+ok("…the link is built only by create and re-issue, from CUSTOMER_PUBLIC_ORIGIN (read only in invitations.ts, https or an explicitly approved loopback) — never from Host, X-Forwarded-* or Origin; the token rides in the fragment",
+  JSON.stringify(originReaders) === JSON.stringify([rel(INV_LIB)]) && (invActions.match(/const origin = customerPublicOrigin\(\);/g) ?? []).length === 2 && (invActions.match(/link: invitationLink\(origin, outcome\.token\)/g) ?? []).length === 2 &&
+    /return `\$\{origin\}\/register\/accept#t=\$\{token\}`;/.test(invLib) && /process\.env\.PLATFORM_INVITATIONS_LOOPBACK_ORIGIN === "true"/.test(invLib) && !/headers\.get\(|x-forwarded/i.test(invLib + invActions));
+const invFns = fnBodies(read(INV_ACTIONS)).filter((f) => /^export async function /.test(f.body.trimStart()));
+const unordered = invFns.filter((f) => !/^\s*export async function \w+\(req: ConsoleRequest, [^)]*\)[^{]*\{\s*(const action = "[a-z.]+";\s*)?try \{\s*(const ctx = )?await authorizeInvitationChange\(req\);/.test(f.body));
+ok("…every exported core starts with authorizeInvitationChange(req) = both flags → same-origin → the live platform session with platform.companies.invite",
+  invFns.length === 5 && unordered.length === 0 && /async function authorizeInvitationChange\(req: ConsoleRequest\): Promise<PlatformSessionContext> \{\s*assertPlatformInvitationsEnabled\(\);\s*assertSameOrigin\(req\.headers\);\s*return authorizePlatformToken\(req\.token, "platform\.companies\.invite"\);\s*\}/.test(invActions),
+  unordered.map((f) => f.name).join(", ") || invFns.map((f) => f.name).join(","));
+const changeFn = (name) => invFns.find((f) => f.name === name)?.body ?? "";
+const stepUpOrder = (body, withPassword) => inOrder(body, [
+  /await authorizeInvitationChange\(req\)/,
+  /await assertPlatformAuditProtection\(\)/,
+  withPassword ? /stepUpPassword\(input\.password\)/ : /normalizeInvitationReason\(input\.reason\)/,
+  /stepUpCode\(input\.totpCode\)/,
+  /throttleKeys\(ctx\.email, meta\.ipAddress\)/,
+  new RegExp(`await stepUpOutsideTransaction\\(ctx, keys, ${withPassword ? "password" : "null"}, now, rejected\\)`),
+  /await db\.transaction\(/,
+  /const totp = await consumeTotpCode\(tx, ctx\.adminId, totpCode, now\);/,
+  /await lockInvitationEmail\(tx, /,
+  /recordPlatformAudit\(/,
+  /\{ isolationLevel: "read committed" \}/,
+  /await recordLoginAttempt\(keys, "failure", now\);/,
+]);
+ok("…create and re-issue: audit protection → format → password step-up (throttled) → ONE read-committed transaction that consumes the TOTP code first, then takes the owner e-mail lock, then writes with its audit; revoke the same with the code and a reason instead of a password",
+  stepUpOrder(changeFn("createCompanyInvitation"), true) && stepUpOrder(changeFn("reissueCompanyInvitation"), true) && stepUpOrder(changeFn("revokeCompanyInvitation"), false) &&
+    (invActions.match(/db\.transaction\(/g) ?? []).length === 3 && (invActions.match(/\{ isolationLevel: "read committed" \}/g) ?? []).length === 3 &&
+    (invActions.match(/recordPlatformAudit\(/g) ?? []).length === 8 && (invActions.match(/\},\s*tx,?\s*\)/g) ?? []).length === 5);
+ok("…the e-mail lock is a transaction-scoped advisory lock on the normalized owner e-mail; one pending invitation per e-mail stays enforced by PO-02A's partial unique index (a 23505 is CONFLICT)",
+  /pg_advisory_xact_lock\(hashtextextended\(\$\{`platform-invitation-email:\$\{ownerEmail\}`\}, 0\)\)/.test(invLib) && /if \(pgCode\(err\) === "23505"\) throw new PlatformError\("CONFLICT"/.test(invActions));
+ok("…the hourly limit is counted from committed rows (creates and re-issues of the operator, a rolling hour) before the step-up and again inside the transaction — never from process memory",
+  /export const INVITATION_RATE_LIMIT = \{ windowMs: 60 \* 60 \* 1000, max: 20 \} as const;/.test(invLib) && /\.from\(inv\)\s*\.where\(and\(eq\(inv\.invitedByPlatformAdminId, adminId\), sql`\$\{inv\.createdAt\} > \$\{since\.toISOString\(\)\}::timestamptz`\)\)/.test(invLib) &&
+    (invActions.match(/recentInvitationsBy\(db, ctx\.adminId, now\)\) >= INVITATION_RATE_LIMIT\.max/g) ?? []).length === 2 && (invActions.match(/recentInvitationsBy\(tx, ctx\.adminId, now\)\) >= INVITATION_RATE_LIMIT\.max/g) ?? []).length === 2 &&
+    !/new Map\(|new Set\(|globalThis/.test(invActions));
+const invModules = [INV_ACTIONS, INV_LIB, INV_WRAPPERS, INV_DIALOGS, join(root, "src/components/platform/invitations-kit.tsx")];
+const invImports = invModules.flatMap((f) => [...importsOf(read(f)), ...sideEffectImports(read(f))]);
+ok("…no delivery: the invitation modules import no mail, SMS, messaging or HTTP client and call no fetch / XMLHttpRequest / sendBeacon / WebSocket (copy-link only)",
+  invImports.every((spec) => /^(@\/|\.\/|next\/|react$|zod$|lucide-react$|drizzle-orm$|node:crypto$|server-only$)/.test(spec)) && !invModules.some((f) => /\bfetch\(|XMLHttpRequest|sendBeacon|WebSocket/.test(code(f))),
+  invImports.filter((spec) => !/^(@\/|\.\/|next\/|react$|zod$|lucide-react$|drizzle-orm$|node:crypto$|server-only$)/.test(spec)).join(", "));
+const wrappers = code(INV_WRAPPERS);
+const dialogs = code(INV_DIALOGS);
+ok("…the link reaches the browser only in the create / re-issue action responses and lives only in the dialog's state (no storage, cookie, URL or log); no action revalidates the page under an open dialog; every action input is a strict schema",
+  (wrappers.match(/link: outcome\.link/g) ?? []).length === 2 && !/revalidatePath|revalidateTag|console\./.test(wrappers) && (wrappers.match(/\.strict\(\)/g) ?? []).length === 4 &&
+    !/localStorage|sessionStorage|indexedDB|document\.cookie|pushState|replaceState|location\.|console\./.test(dialogs) && (dialogs.match(/result\.link/g) ?? []).length === 2);
 
 console.log(`\n${pass}/${pass + fail} platform boundary checks passed`);
 process.exit(fail ? 1 : 0);

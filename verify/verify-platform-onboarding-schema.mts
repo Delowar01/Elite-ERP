@@ -406,9 +406,18 @@ async function main(): Promise<void> {
     walk("src");
     const src = (fl: string) => readFileSync(join(ROOT, fl), "utf8");
     const refs = files.filter((fl) => /platformSettingsTable|subscriptionPackagesTable|subscriptionPackageVersionsTable|tenantPrimaryOwnersTable|tenantSubscriptionsTable|subscriptionEventsTable|organizationInvitationTermsTable|platform_settings|subscription_packages|subscription_package_versions|tenant_primary_owners|tenant_subscriptions|subscription_events|organization_invitation_terms/.test(src(fl)));
-    ok("no application code reads or writes the onboarding tables — only the schema module declares them", JSON.stringify(refs.sort()) === JSON.stringify(["src/db/schema/platform-onboarding.ts"]), refs.join(", "));
-    const flags = files.filter((fl) => /PLATFORM_INVITATIONS_ENABLED|CUSTOMER_INVITE_ACCEPTANCE_ENABLED/.test(src(fl)));
-    ok("no invitation feature flag exists (PLATFORM_INVITATIONS_ENABLED / CUSTOMER_INVITE_ACCEPTANCE_ENABLED appear nowhere in src)", flags.length === 0, flags.join(", "));
+    // PO-02D2: the invitation read model and service read the published default Trial (packages, versions) and write the
+    // invitation terms; nothing else reads or writes an onboarding table, and nothing names settings, subscriptions,
+    // subscription events or primary owners.
+    ok("no application code reads or writes the onboarding tables — only the schema module declares them, and (PO-02D2) the invitation read model and service use the Trial catalog and the invitation terms",
+      JSON.stringify(refs.sort()) === JSON.stringify(["src/db/schema/platform-onboarding.ts", "src/lib/platform/invitation-actions.ts", "src/lib/platform/invitations.ts"]) &&
+        ["src/lib/platform/invitation-actions.ts", "src/lib/platform/invitations.ts"].every((fl) => !/platformSettingsTable|tenantPrimaryOwnersTable|tenantSubscriptionsTable|subscriptionEventsTable|platform_settings|tenant_primary_owners|tenant_subscriptions|subscription_events/.test(stripComments(src(fl)))),
+      refs.join(", "));
+    // PO-02D2: PLATFORM_INVITATIONS_ENABLED exists — read (comments aside) only in src/lib/platform/flags.ts; the acceptance
+    // flag still appears nowhere.
+    const acceptanceFlag = files.filter((fl) => /CUSTOMER_INVITE_ACCEPTANCE_ENABLED/.test(src(fl)));
+    const invitationFlag = files.filter((fl) => /PLATFORM_INVITATIONS_ENABLED/.test(stripComments(src(fl))));
+    ok("no acceptance flag exists (CUSTOMER_INVITE_ACCEPTANCE_ENABLED appears nowhere in src); (PO-02D2) PLATFORM_INVITATIONS_ENABLED is read only in src/lib/platform/flags.ts", acceptanceFlag.length === 0 && JSON.stringify(invitationFlag) === JSON.stringify(["src/lib/platform/flags.ts"]), [...acceptanceFlag, ...invitationFlag].join(", "));
     const inviteOnly = files.filter((fl) => /invite_only|inviteOnly/.test(stripComments(src(fl)))).sort();
     ok(
       "invite-only appears in code only as PO-01B's existing read-only Settings label (no column, no setting, no logic)",

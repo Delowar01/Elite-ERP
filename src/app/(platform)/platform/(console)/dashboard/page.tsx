@@ -4,12 +4,14 @@ import { redirect } from "next/navigation";
 import { Activity, BadgeCheck, Building2, CalendarClock, Clock, PieChart, ShieldOff, Timer, UserPlus, Users, Wallet } from "lucide-react";
 import { Ltr, MetricTile, RegistrationsChart } from "@/components/platform/companies-kit";
 import { pt } from "@/components/platform/i18n";
+import { CreateInvitationControl } from "@/components/platform/invitation-dialogs";
 import { ConsolePage, DeniedState, EmptyPanel, Panel, PreviewAction, PreviewBadge, StatGrid, StatTile } from "@/components/platform/page-kit";
 import { getLocale } from "@/lib/i18n/server";
 import { companyMetrics, REGISTRATION_MONTHS, type CompanyMetrics } from "@/lib/platform/companies";
 import { PLATFORM_SESSION_COOKIE } from "@/lib/platform/config";
 import { formatPlatformCount, formatPlatformDate, formatPlatformMonth } from "@/lib/platform/display";
 import { isPlatformError } from "@/lib/platform/errors";
+import { isPlatformInvitationsEnabled } from "@/lib/platform/flags";
 import { requirePlatformSession } from "@/lib/platform/guards";
 
 // Platform overview (PR #11 UI spec UI-01). PO-02B makes the COMPANY indicators real — totals by
@@ -33,7 +35,8 @@ export default async function PlatformDashboardPage() {
     locale,
     title: pt(locale, "dash.title"),
     description: pt(locale, "dash.desc"),
-    actions: <PreviewAction locale={locale} label={pt(locale, "action.inviteCompany")} icon={UserPlus} phase="PO-02D" />,
+    // PO-02D2: the working Invite company control only while PLATFORM_INVITATIONS_ENABLED is "true"; otherwise the PO-02B preview.
+    actions: isPlatformInvitationsEnabled() ? <CreateInvitationControl locale={locale} /> : <PreviewAction locale={locale} label={pt(locale, "action.inviteCompany")} icon={UserPlus} phase="PO-02D" />,
   };
   if (!metrics) {
     return (

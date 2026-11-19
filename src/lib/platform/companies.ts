@@ -375,7 +375,7 @@ export async function listCompanyCountries(req: CompanyReadRequest): Promise<str
 // ---- pending company invitations (read-only) ---------------------------------------------------
 
 export type InvitationListQuery = { q: string | null; state: InvitationState | null; size: number };
-export type InvitationListRow = { reference: string; companyName: string; ownerEmail: string; country: string; createdAt: Date; expiresAt: Date; state: InvitationState };
+export type InvitationListRow = { reference: string; companyName: string; ownerEmail: string; country: string; createdAt: Date; expiresAt: Date; state: InvitationState; id?: string };
 export type InvitationListPage = { query: InvitationListQuery; rows: InvitationListRow[]; total: number; offset: number; next: string | null; prev: string | null };
 export type InvitationListInput = { q?: unknown; state?: unknown; size?: unknown; after?: unknown; before?: unknown };
 
@@ -398,8 +398,11 @@ function invitationSearch(term: string): SQL {
  * Invitations that still hold their pending e-mail slot (not accepted, not revoked), newest first,
  * with the derived state pending / expired. Never selects the token hash (or any token material),
  * and offers no operation: creating, resending, revoking and accepting invitations is PO-02D.
+ * PO-02D2: `withId` (asked for only while invitation administration is enabled) adds each row's
+ * invitation id — the key its Re-issue / Revoke / History actions use; without it the rows are exactly
+ * the PO-02B shape.
  */
-export async function listPendingInvitations(req: CompanyReadRequest, input: InvitationListInput = {}): Promise<InvitationListPage> {
+export async function listPendingInvitations(req: CompanyReadRequest, input: InvitationListInput = {}, options: { withId?: boolean } = {}): Promise<InvitationListPage> {
   await authorizeCompanyRead(req);
   const query: InvitationListQuery = {
     q: boundedText(input.q, "q", SEARCH_MAX_LENGTH),
@@ -442,6 +445,7 @@ export async function listPendingInvitations(req: CompanyReadRequest, input: Inv
       query,
       offset,
       rows: page.rows.map((r) => ({
+        ...(options.withId ? { id: r.id } : {}),
         reference: invitationReference(r.id),
         companyName: r.companyName,
         ownerEmail: r.ownerEmail,

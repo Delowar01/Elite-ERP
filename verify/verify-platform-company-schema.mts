@@ -277,7 +277,10 @@ async function main(): Promise<void> {
     walk("src");
     const refs = (re: RegExp) => files.filter((f) => re.test(readFileSync(join(ROOT, f), "utf8")));
     const tableRefs = refs(/tenantAccessControlsTable|organizationInvitationsTable|tenant_access_controls|organization_invitations/);
-    ok("only the schema module, the compatibility module, the PO-02B read model and the PO-02C access action reference the new tables — and PO-02D1A's onboarding schema module", JSON.stringify(tableRefs.sort()) === JSON.stringify(["src/db/schema/platform-companies.ts", "src/db/schema/platform-onboarding.ts", "src/lib/platform/companies.ts", "src/lib/platform/company-access-actions.ts", "src/lib/platform/company-access.ts"]), tableRefs.join(", "));
+    // PO-02D2: plus the invitation read model and service (src/lib/platform/invitations.ts, invitation-actions.ts), which
+    // name the invitation table only — never the access table.
+    ok("only the schema module, the compatibility module, the PO-02B read model and the PO-02C access action reference the new tables — and PO-02D1A's onboarding schema module, and (PO-02D2) the invitation read model and service", JSON.stringify(tableRefs.sort()) === JSON.stringify(["src/db/schema/platform-companies.ts", "src/db/schema/platform-onboarding.ts", "src/lib/platform/companies.ts", "src/lib/platform/company-access-actions.ts", "src/lib/platform/company-access.ts", "src/lib/platform/invitation-actions.ts", "src/lib/platform/invitations.ts"]), tableRefs.join(", "));
+    ok("…PO-02D2: the invitation modules name the invitation table only (never tenant_access_controls)", ["src/lib/platform/invitation-actions.ts", "src/lib/platform/invitations.ts"].every((f) => !/tenantAccessControlsTable|tenant_access_controls/.test(readFileSync(join(ROOT, f), "utf8"))));
     // PO-02D1A: the onboarding schema module names organization_invitations only as the target of the F8 terms foreign key
     // (one import, one foreignColumns entry) and never tenant_access_controls.
     const onboardingSchema = readFileSync(join(ROOT, "src/db/schema/platform-onboarding.ts"), "utf8")
