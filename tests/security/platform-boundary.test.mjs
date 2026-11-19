@@ -18,7 +18,12 @@
 // and narrowly scoped; its rollback suspends exactly one trigger for one statement). PO-02D2 made company invitation
 // administration operational (create · revoke · re-issue · one-time copy link) behind PLATFORM_INVITATIONS_ENABLED:
 // rules 11, 12, 21, 23, 25, 26, 29, 38, 39 and 40 name its exact exceptions (no acceptance route, no other flag, no
-// subscription write), and rule 44 pins the invitation service, its token handling and its transactions.
+// subscription write), and rule 44 pins the invitation service, its token handling and its transactions. PO-02D3 made
+// invitation acceptance operational behind CUSTOMER_INVITE_ACCEPTANCE_ENABLED (default off): rules 3, 11's customer twin,
+// 33, 38, 39, 40 and 44 name its exact exceptions (the one onboarding bridge, the new company's access row, its primary
+// owner / Trial subscription / event, the /register/accept route, the acceptance flag, the acceptance itself and the
+// digest lookup), and rule 45 pins the acceptance flow: the bridge, the route and its token handling, the ONE
+// transaction and its writes, the durable throttle, the shared organization bootstrap and the customer audit executor.
 import { readFileSync, readdirSync, statSync, existsSync } from "node:fs";
 import { join, relative } from "node:path";
 
@@ -64,8 +69,10 @@ ok("src/lib/platform imports no customer session/auth/tenant/rate-limit/audit mo
 const under = (f, d) => f.startsWith(join(root, d) + "/") || f === join(root, d);
 // PO-02C: the one exception is the customer tenant-access gate, which imports the access rule alone (rule 30).
 const GATE = join(root, "src/lib/security/tenant-access-gate.ts");
-const importers = allSrc.filter((f) => f !== GATE && !under(f, "src/lib/platform") && !under(f, "src/app/(platform)") && importsOf(read(f)).some((s) => s.startsWith("@/lib/platform/") || s.includes("/lib/platform/")));
-ok("outside src/lib/platform only src/app/(platform) imports the platform library (and the PO-02C tenant-access gate, the access rule alone)", importers.length === 0, importers.map(rel).join(", "));
+// PO-02D3: the onboarding bridge is the ONE customer module that reaches the platform acceptance core (rule 45 pins its imports).
+const ACCEPTANCE_BRIDGE = join(root, "src/lib/onboarding/invitation-acceptance.ts");
+const importers = allSrc.filter((f) => f !== GATE && f !== ACCEPTANCE_BRIDGE && !under(f, "src/lib/platform") && !under(f, "src/app/(platform)") && importsOf(read(f)).some((s) => s.startsWith("@/lib/platform/") || s.includes("/lib/platform/")));
+ok("outside src/lib/platform only src/app/(platform) imports the platform library (and the PO-02C tenant-access gate, the access rule alone; and the PO-02D3 onboarding bridge, the acceptance core alone — rule 45)", importers.length === 0, importers.map(rel).join(", "));
 const edgeImporters = allSrc.filter((f) => importsOf(read(f)).some((s) => s.startsWith("@/lib/platform-edge") || s.includes("/platform-edge/")));
 ok("only src/proxy.ts imports the edge gate (src/lib/platform-edge)", edgeImporters.length === 1 && rel(edgeImporters[0]) === join("src", "proxy.ts"), edgeImporters.map(rel).join(", "));
 const appToScripts = allSrc.filter((f) => importsOf(read(f)).some((s) => s.includes("scripts/platform")));
@@ -143,8 +150,8 @@ ok("src/app/(platform) imports only the platform library, console components, sh
 const badUi = consoleUi.flatMap((f) => [...importsOf(read(f)), ...sideEffectImports(read(f))].filter((s) => ![...UI_ALLOWED, ...(UI_ALLOWED_FOR[f] ?? [])].some((re) => re.test(s))).map((s) => `${rel(f)} → ${s}`));
 ok("src/components/platform imports no server module, no customer shell (AppShell/Sidebar/NavList) and no customer action", consoleUi.length >= 10 && badUi.length === 0, badUi.join(", "));
 const PLATFORM_MODULES = (s) => s.startsWith("@/lib/platform") || s.startsWith("@/components/platform") || s.startsWith("@/app/(platform)");
-const leaks = allSrc.filter((f) => f !== GATE && !under(f, "src/app/(platform)") && !under(f, "src/components/platform") && !under(f, "src/lib/platform") && !under(f, "src/lib/platform-edge") && rel(f) !== join("src", "proxy.ts") && importsOf(read(f)).some(PLATFORM_MODULES));
-ok("no customer route, component or library imports any platform module (except the PO-02C tenant-access gate — rule 30)", leaks.length === 0, leaks.map(rel).join(", "));
+const leaks = allSrc.filter((f) => f !== GATE && f !== ACCEPTANCE_BRIDGE && !under(f, "src/app/(platform)") && !under(f, "src/components/platform") && !under(f, "src/lib/platform") && !under(f, "src/lib/platform-edge") && rel(f) !== join("src", "proxy.ts") && importsOf(read(f)).some(PLATFORM_MODULES));
+ok("no customer route, component or library imports any platform module (except the PO-02C tenant-access gate — rule 30 — and the PO-02D3 onboarding bridge — rule 45)", leaks.length === 0, leaks.map(rel).join(", "));
 
 // 12. Server actions are authorized on their own (never by the UI): each exported action calls a
 //     console core, which checks flag → origin → live session → permission.
@@ -393,7 +400,13 @@ ok("…a failed password or code counts against the durable throttle and is reco
 
 // 33. What the access action may write.
 const tacWriters = consoleCode.filter((f) => /\.(insert|update|delete)\(\s*(tenantAccessControlsTable|tac)\b/.test(code(f))).map(rel);
-ok("33. only the access action writes tenant_access_controls (one upsert; never a delete)", JSON.stringify(tacWriters) === JSON.stringify([join("src", "lib", "platform", "company-access-actions.ts")]) && (accessCore.match(/\.insert\(tac\)/g) ?? []).length === 1 && !/\.(update|delete)\(\s*tac\b/.test(accessCore), tacWriters.join(", "));
+// PO-02D3: and the acceptance core — ONE insert, the new company's active row, inside the acceptance transaction; never an update or a delete.
+const ACCEPT_CORE = join(root, "src/lib/platform/invitation-acceptance.ts");
+const acceptCore = code(ACCEPT_CORE);
+ok("33. only the access action writes tenant_access_controls (one upsert; never a delete) — and (PO-02D3) the acceptance core: one insert of the new company's active row, nothing else",
+  JSON.stringify(tacWriters) === JSON.stringify([join("src", "lib", "platform", "company-access-actions.ts"), join("src", "lib", "platform", "invitation-acceptance.ts")]) && (accessCore.match(/\.insert\(tac\)/g) ?? []).length === 1 && !/\.(update|delete)\(\s*tac\b/.test(accessCore) &&
+    (acceptCore.match(/\.insert\(tenantAccessControlsTable\)/g) ?? []).length === 1 && /\.insert\(tenantAccessControlsTable\)\.values\(\{ orgId: ids\.orgId, accessStatus: "active", createdAt: now, updatedAt: now \}\)/.test(acceptCore) && !/\.(update|delete)\(\s*tenantAccessControlsTable/.test(acceptCore),
+  tacWriters.join(", "));
 const sessionRefs = consoleCode.filter((f) => /\bsessionsTable\b/.test(code(f))).map(rel);
 const sessionCols = [...new Set([...accessCore.matchAll(/sessionsTable\.(\w+)/g)].map((m) => m[1]))].sort();
 ok("…only the access action references the customer sessions table, solely to END one company's live sessions (set revokedAt + revokedReason; no insert, no token hash, no un-revoke)",
@@ -482,31 +495,46 @@ const onboardingUsers = allSrc.filter((f) => f !== ONBOARDING_SCHEMA && ONBOARDI
 // versions, read) and the invitation terms (written with the invitation) — and nothing names settings, subscriptions,
 // subscription events or primary owners.
 const SUBSCRIPTION_NAMES = /\b(platformSettingsTable|tenantPrimaryOwnersTable|tenantSubscriptionsTable|subscriptionEventsTable|platform_settings|tenant_primary_owners|tenant_subscriptions|subscription_events)\b/;
-ok("…no application code (comments ignored) names an onboarding table or its Drizzle symbol except (PO-02D2) invitations.ts and invitation-actions.ts — and none names settings, subscriptions, subscription events or primary owners",
-  JSON.stringify(onboardingUsers) === JSON.stringify([join("src", "lib", "platform", "invitation-actions.ts"), join("src", "lib", "platform", "invitations.ts")]) && !allSrc.some((f) => f !== ONBOARDING_SCHEMA && SUBSCRIPTION_NAMES.test(code(f))),
-  onboardingUsers.join(", "));
+// PO-02D3: and the acceptance core — the ONE writer of a company's primary owner, Trial subscription and subscription
+// event (one insert each, rule 45), reading the invitation's published Trial version; still nothing names platform settings.
+const subscriptionNamers = allSrc.filter((f) => f !== ONBOARDING_SCHEMA && SUBSCRIPTION_NAMES.test(code(f))).map(rel);
+ok("…no application code (comments ignored) names an onboarding table or its Drizzle symbol except (PO-02D2) invitations.ts and invitation-actions.ts and (PO-02D3) the acceptance core — the only one naming primary owners, subscriptions or subscription events; nothing names platform settings",
+  JSON.stringify(onboardingUsers) === JSON.stringify([join("src", "lib", "platform", "invitation-acceptance.ts"), join("src", "lib", "platform", "invitation-actions.ts"), join("src", "lib", "platform", "invitations.ts")]) &&
+    JSON.stringify(subscriptionNamers) === JSON.stringify([join("src", "lib", "platform", "invitation-acceptance.ts")]) && !allSrc.some((f) => f !== ONBOARDING_SCHEMA && /\b(platformSettingsTable|platform_settings)\b/.test(code(f))),
+  `${onboardingUsers.join(", ")} | ${subscriptionNamers.join(", ")}`);
 
-// 39. No PO-02D2 / PO-02D3 surface: the permission list, and the invitation / package / subscription routes, are unchanged.
+// 39. No permission and no route but the named ones: PO-02D2's console invitation detail and PO-02D3's /register/accept.
 const d1GuardsSrc = read(join(root, "src/lib/platform/guards.ts"));
 const permsLine = (d1GuardsSrc.match(/export const PLATFORM_PERMISSIONS = \[([^\]]*)\] as const;/) ?? ["", "(not found)"])[1];
 ok("39. PO-02D1A: the platform permission list is unchanged except (PO-02D2) platform.companies.invite — no package, subscription, Trial or acceptance permission", permsLine === `"platform.access", "platform.sessions.manage", "platform.mfa.manage", "platform.companies.read", "platform.companies.manage_access", "platform.companies.invite"`, permsLine);
 const onboardingRoutes = walk(join(root, "src/app")).map(rel).filter((p) => /\/(page|route)\.tsx?$/.test(p) && /invit|accept|onboard|subscri|packag|trial|join|regist/i.test(p)).sort();
-ok("…the only invitation-, package-, subscription- or registration-named routes are the existing /register, the two console previews and (PO-02D2) the console invitation detail — no acceptance route (/register/accept does not exist)",
-  JSON.stringify(onboardingRoutes) === JSON.stringify([join("src", "app", "(auth)", "register", "page.tsx"), join("src", "app", "(platform)", "platform", "(console)", "companies", "invitations", "[invitationId]", "page.tsx"), join("src", "app", "(platform)", "platform", "(console)", "packages", "page.tsx"), join("src", "app", "(platform)", "platform", "(console)", "subscribers", "page.tsx")].sort()) &&
-    !existsSync(join(root, "src/app/(auth)/register/accept")) && !walk(join(root, "src/app")).some((f) => /[\\/]accept[\\/]/.test(rel(f))),
-  onboardingRoutes.join(", "));
+// PO-02D3: plus /register/accept — in a route group of its own, (invite), which holds exactly its four files (no layout,
+// so the (auth) layout's signed-in redirect can never carry the link's fragment to another URL).
+const ACCEPT_ROUTE_FILES = ["accept-invitation.tsx", "actions.ts", "copy.ts", "page.tsx"].map((n) => join("src", "app", "(invite)", "register", "accept", n));
+const acceptDirFiles = walk(join(root, "src/app")).map(rel).filter((p) => /[\\/]accept[\\/]/.test(p)).sort();
+const inviteGroup = existsSync(join(root, "src/app/(invite)")) ? walk(join(root, "src/app/(invite)")).map(rel).sort() : [];
+ok("…the only invitation-, package-, subscription- or registration-named routes are the existing /register, the two console previews, (PO-02D2) the console invitation detail and (PO-02D3) /register/accept — in its own route group (invite) holding exactly its four files; nothing under src/app/(auth)/register/accept",
+  JSON.stringify(onboardingRoutes) === JSON.stringify([join("src", "app", "(auth)", "register", "page.tsx"), join("src", "app", "(invite)", "register", "accept", "page.tsx"), join("src", "app", "(platform)", "platform", "(console)", "companies", "invitations", "[invitationId]", "page.tsx"), join("src", "app", "(platform)", "platform", "(console)", "packages", "page.tsx"), join("src", "app", "(platform)", "platform", "(console)", "subscribers", "page.tsx")].sort()) &&
+    !existsSync(join(root, "src/app/(auth)/register/accept")) && JSON.stringify(acceptDirFiles) === JSON.stringify(ACCEPT_ROUTE_FILES) && JSON.stringify(inviteGroup) === JSON.stringify(ACCEPT_ROUTE_FILES),
+  `${onboardingRoutes.join(", ")} | ${acceptDirFiles.join(", ")}`);
 
-// 40. No invitation feature flag exists yet (none is activated, because none is defined).
+// 40. No invitation feature flag but the named ones (none is activated by default).
 // PO-02D2: PLATFORM_INVITATIONS_ENABLED now exists — read (code, comments ignored) ONLY in src/lib/platform/flags.ts, as the
 // exact string "true", together with the console flag; the acceptance and invite-only flags still do not exist anywhere.
-const flagFiles = [...allSrc, ...platformScripts].filter((f) => /CUSTOMER_INVITE_ACCEPTANCE_ENABLED|INVITE_ONLY/.test(read(f))).map(rel);
+// PO-02D3: CUSTOMER_INVITE_ACCEPTANCE_ENABLED now exists — read (code, comments ignored) ONLY in flags.ts, once, as the exact
+// string "true", and independent of the console flags; INVITE_ONLY still exists nowhere (public registration stays open).
+const flagFiles = [...allSrc, ...platformScripts].filter((f) => /INVITE_ONLY/.test(read(f))).map(rel);
+const acceptanceFlagCode = [...allSrc, ...platformScripts].filter((f) => /CUSTOMER_INVITE_ACCEPTANCE_ENABLED/.test(code(f))).map(rel);
 const invitationFlagReaders = [...allSrc, ...platformScripts].filter((f) => /PLATFORM_INVITATIONS_ENABLED/.test(code(f))).map(rel);
 const flagsSrc = code(join(root, "src/lib/platform/flags.ts"));
-ok("40. PO-02D1A: no acceptance or invite-only flag (CUSTOMER_INVITE_ACCEPTANCE_ENABLED / INVITE_ONLY) in src or scripts/platform; (PO-02D2) PLATFORM_INVITATIONS_ENABLED is read only in flags.ts, only as === \"true\" and only after the console flag",
+ok("40. PO-02D1A: no invite-only flag (INVITE_ONLY) in src or scripts/platform; (PO-02D2) PLATFORM_INVITATIONS_ENABLED is read only in flags.ts, only as === \"true\" and only after the console flag; (PO-02D3) CUSTOMER_INVITE_ACCEPTANCE_ENABLED is read only in flags.ts, once, only as === \"true\", without the console flags",
   flagFiles.length === 0 && JSON.stringify(invitationFlagReaders) === JSON.stringify([join("src", "lib", "platform", "flags.ts")]) &&
     /return isPlatformConsoleEnabled\(\) && process\.env\.PLATFORM_INVITATIONS_ENABLED === "true";/.test(flagsSrc) && /assertPlatformConsoleEnabled\(\);\s*if \(process\.env\.PLATFORM_INVITATIONS_ENABLED !== "true"\) throw new PlatformError\("INVITATIONS_DISABLED"/.test(flagsSrc) &&
-    (flagsSrc.match(/process\.env\.PLATFORM_INVITATIONS_ENABLED/g) ?? []).length === 2,
-  `${flagFiles.join(", ")} | ${invitationFlagReaders.join(", ")}`);
+    (flagsSrc.match(/process\.env\.PLATFORM_INVITATIONS_ENABLED/g) ?? []).length === 2 &&
+    JSON.stringify(acceptanceFlagCode) === JSON.stringify([join("src", "lib", "platform", "flags.ts")]) && (flagsSrc.match(/process\.env\.CUSTOMER_INVITE_ACCEPTANCE_ENABLED/g) ?? []).length === 1 &&
+    /export function isCustomerInviteAcceptanceEnabled\(\): boolean \{\s*return process\.env\.CUSTOMER_INVITE_ACCEPTANCE_ENABLED === "true";\s*\}/.test(flagsSrc) &&
+    /export function assertCustomerInviteAcceptanceEnabled\(\): void \{\s*if \(!isCustomerInviteAcceptanceEnabled\(\)\) throw new PlatformError\("ACCEPTANCE_DISABLED", /.test(flagsSrc),
+  `${flagFiles.join(", ")} | ${invitationFlagReaders.join(", ")} | ${acceptanceFlagCode.join(", ")}`);
 
 // 41. The PO-02D1 SQL: four files, none authorized for production, no seed; the foundation writes no row and alters
 //     only F1 on users; the rollback drops only PO-02D1 objects; nothing links a subscription to access control.
@@ -621,8 +649,12 @@ const INV_DIALOGS = join(root, "src/components/platform/invitation-dialogs.tsx")
 const invActions = code(INV_ACTIONS);
 const invLib = code(INV_LIB);
 const invWriters = consoleCode.filter((f) => /\.(insert|update|delete)\((inv|terms|organizationInvitationsTable|organizationInvitationTermsTable)\)/.test(code(f))).map(rel).sort();
-ok("44. PO-02D2: only invitation-actions.ts writes invitations and their terms — one insert of each, one revocation update, no delete, never an acceptance",
-  JSON.stringify(invWriters) === JSON.stringify([rel(INV_ACTIONS)]) && (invActions.match(/\.insert\(inv\)/g) ?? []).length === 1 && (invActions.match(/\.insert\(terms\)/g) ?? []).length === 1 &&
+// PO-02D3: and the acceptance core — exactly ONE update, the acceptance itself (accepted_at + accepted_org_id, only while
+// neither accepted nor revoked); it never inserts, revokes or deletes an invitation and never writes the terms.
+ok("44. PO-02D2: only invitation-actions.ts writes invitations and their terms — one insert of each, one revocation update, no delete, never an acceptance; (PO-02D3) the acceptance core writes one thing: the acceptance",
+  JSON.stringify(invWriters) === JSON.stringify([rel(ACCEPT_CORE), rel(INV_ACTIONS)].sort()) &&
+    (acceptCore.match(/\.update\(inv\)/g) ?? []).length === 1 && /\.update\(inv\)\s*\.set\(\{ acceptedAt: now, acceptedOrgId: ids\.orgId, updatedAt: now \}\)\s*\.where\(and\(eq\(inv\.id, current\.id\), isNull\(inv\.acceptedAt\), isNull\(inv\.revokedAt\)\)\)/.test(acceptCore) &&
+    !/\.(insert|delete)\(\s*(inv|terms|organizationInvitationsTable|organizationInvitationTermsTable)\)/.test(acceptCore) && !/\.update\(\s*(terms|organizationInvitationTermsTable)\)/.test(acceptCore) && !/\.set\(\{[^}]*revoked/i.test(acceptCore) && (invActions.match(/\.insert\(inv\)/g) ?? []).length === 1 && (invActions.match(/\.insert\(terms\)/g) ?? []).length === 1 &&
     (invActions.match(/\.update\(inv\)/g) ?? []).length === 1 && /\.update\(inv\)\s*\.set\(\{ revokedAt: notBeforeCreation\(now\), revokedByPlatformAdminId: adminId, updatedAt: notBeforeCreation\(now\) \}\)/.test(invActions) &&
     !/\.delete\(/.test(invActions) && !/\.set\(\{[^}]*accepted/i.test(invActions),
   invWriters.join(", "));
@@ -631,9 +663,13 @@ ok("…the read model writes nothing but its view record (invitation.viewed, onc
     /async function authorizeInvitationRead\(req: ConsoleRequest\): Promise<PlatformSessionContext> \{\s*assertPlatformInvitationsEnabled\(\);\s*return authorizePlatformToken\(req\.token, "platform\.companies\.read"\);\s*\}/.test(invLib) &&
     (invLib.match(/await authorizeInvitationRead\(req\)/g) ?? []).length === 2);
 const TOKEN_ANYWHERE = /\binv\.tokenHash\b|organizationInvitationsTable\.tokenHash|token_hash|tokenHash:\s*inv\./;
-ok("…the token is 32 random bytes (base64url) made in one place; only its sha256 is stored, by the one insert; no platform code selects or names the stored hash column",
+// PO-02D3: the acceptance core is the one exception — it finds an invitation by the sha256 of the PRESENTED token and
+// re-checks that digest under the row lock; the digest is never returned to a caller, logged or audited (rule 45).
+ok("…the token is 32 random bytes (base64url) made in one place; only its sha256 is stored, by the one insert; no platform code selects or names the stored hash column — except (PO-02D3) the acceptance core's one lookup by the presented token's digest and its in-transaction re-check",
   /export function newInvitationToken\(\): \{ token: string; tokenHash: string \} \{\s*const token = randomBytes\(32\)\.toString\("base64url"\);/.test(invLib) && /createHash\("sha256"\)\.update\(token, "utf8"\)\.digest\("hex"\)/.test(invLib) &&
-    (invActions.match(/newInvitationToken\(\)/g) ?? []).length === 1 && (invActions.match(/\btokenHash\b/g) ?? []).length === 2 && !consoleCode.some((f) => TOKEN_ANYWHERE.test(code(f))));
+    (invActions.match(/newInvitationToken\(\)/g) ?? []).length === 1 && (invActions.match(/\btokenHash\b/g) ?? []).length === 2 && !consoleCode.filter((f) => f !== ACCEPT_CORE).some((f) => TOKEN_ANYWHERE.test(code(f))) &&
+    (acceptCore.match(/\binv\.tokenHash\b/g) ?? []).length === 2 && /const tokenHash = invitationTokenHash\(token\);\s*const \[row\] = await db\.select\(INVITATION_COLUMNS\)\.from\(inv\)\.where\(eq\(inv\.tokenHash, tokenHash\)\)\.limit\(1\);/.test(acceptCore) &&
+    /tokenHash: inv\.tokenHash,/.test(acceptCore) && /if \(!current \|\| current\.tokenHash !== pre\.tokenHash\) throw new AcceptanceRefusal\("invalid", "changed"\);/.test(acceptCore));
 const originReaders = [...allSrc, ...platformScripts].filter((f) => /CUSTOMER_PUBLIC_ORIGIN/.test(code(f))).map(rel);
 ok("…the link is built only by create and re-issue, from CUSTOMER_PUBLIC_ORIGIN (read only in invitations.ts, https or an explicitly approved loopback) — never from Host, X-Forwarded-* or Origin; the token rides in the fragment",
   JSON.stringify(originReaders) === JSON.stringify([rel(INV_LIB)]) && (invActions.match(/const origin = customerPublicOrigin\(\);/g) ?? []).length === 2 && (invActions.match(/link: invitationLink\(origin, outcome\.token\)/g) ?? []).length === 2 &&
@@ -678,6 +714,100 @@ const dialogs = code(INV_DIALOGS);
 ok("…the link reaches the browser only in the create / re-issue action responses and lives only in the dialog's state (no storage, cookie, URL or log); no action revalidates the page under an open dialog; every action input is a strict schema",
   (wrappers.match(/link: outcome\.link/g) ?? []).length === 2 && !/revalidatePath|revalidateTag|console\./.test(wrappers) && (wrappers.match(/\.strict\(\)/g) ?? []).length === 4 &&
     !/localStorage|sessionStorage|indexedDB|document\.cookie|pushState|replaceState|location\.|console\./.test(dialogs) && (dialogs.match(/result\.link/g) ?? []).length === 2);
+
+// ---------------------------------------------------------------------------------------------
+// 45. PO-02D3 — invitation acceptance (development only, CUSTOMER_INVITE_ACCEPTANCE_ENABLED): ONE customer bridge reaches the
+//     platform core; the route never renders a token or invitation data; the token lives in the browser's memory only and
+//     travels only in the two same-origin actions' bodies; acceptance is ONE transaction in a fixed lock order that writes
+//     exactly the new company's rows; the throttle is durable; nothing is delivered and no session is issued.
+// ---------------------------------------------------------------------------------------------
+const BRIDGE_IMPORTS = ["./acceptance-types", "@/lib/auth", "@/lib/org-bootstrap", "@/lib/platform/invitation-acceptance", "@/lib/security/audit", "@/lib/security/password-policy", "next/headers", "server-only"];
+const bridgeSrc = read(ACCEPTANCE_BRIDGE);
+const bridgeImports = [...new Set([...importsOf(bridgeSrc), ...sideEffectImports(bridgeSrc)])].sort();
+const coreImporters = allSrc.filter((f) => importsOf(read(f)).some((s) => s === "@/lib/platform/invitation-acceptance" || (under(f, "src/lib/platform") && s === "./invitation-acceptance"))).map(rel);
+ok("45. PO-02D3: the onboarding bridge imports exactly server-only, next/headers, the password hash, the password policy, the shared bootstrap, the customer audit writer, its types and ONE platform module — the acceptance core — and nothing else imports that core",
+  JSON.stringify(bridgeImports) === JSON.stringify(BRIDGE_IMPORTS) && JSON.stringify(coreImporters) === JSON.stringify([rel(ACCEPTANCE_BRIDGE)]),
+  `${bridgeImports.join(", ")} | ${coreImporters.join(", ")}`);
+const ROUTE_IMPORTS = {
+  "accept-invitation.tsx": ["./actions", "./copy", "@/app/(app)/actions", "@/components/brand/logo-lockup", "@/components/ui/button", "@/components/ui/input", "@/components/ui/label", "@/lib/i18n/dict", "@/lib/onboarding/acceptance-types", "lucide-react", "react"],
+  "actions.ts": ["@/lib/onboarding/acceptance-types", "@/lib/onboarding/invitation-acceptance", "zod"],
+  "copy.ts": ["@/lib/i18n/dict"],
+  "page.tsx": ["../../../(auth)/auth.css", "./accept-invitation", "@/lib/i18n/server", "@/lib/onboarding/invitation-acceptance", "@/lib/session", "next"],
+};
+const badRouteImports = Object.entries(ROUTE_IMPORTS).filter(([n, want]) => {
+  const src = read(join(root, "src/app/(invite)/register/accept", n));
+  return JSON.stringify([...new Set([...importsOf(src), ...sideEffectImports(src)])].sort()) !== JSON.stringify(want);
+}).map(([n]) => n);
+ok("…the /register/accept route imports only the bridge (page, actions), its types, the UI kit, the dictionary, the session read (page: signed-in check), the sign-out action (client) and the auth stylesheet — no platform module and no database",
+  badRouteImports.length === 0, badRouteImports.join(", "));
+const acceptPage = code(join(root, "src/app/(invite)/register/accept/page.tsx"));
+ok("…the page renders per request (force-dynamic), is not indexed (noindex, nofollow, nocache), sends no referrer, checks the flag first and hands the client only the mode — never a token or invitation data",
+  /export const dynamic = "force-dynamic";/.test(acceptPage) && /robots: \{ index: false, follow: false, nocache: true \}/.test(acceptPage) && /referrer: "no-referrer"/.test(acceptPage) &&
+    inOrder(acceptPage, [/if \(!invitationAcceptanceAvailable\(\)\) return <AcceptInvitation initialLocale=\{locale\} mode="disabled" \/>;/, /const signedIn = Boolean\(await getSession\(\)\);/, /return <AcceptInvitation initialLocale=\{locale\} mode=\{signedIn \? "signed-in" : "ready"\} \/>;/]) &&
+    (acceptPage.match(/<AcceptInvitation /g) ?? []).length === 2);
+const acceptClient = code(join(root, "src/app/(invite)/register/accept/accept-invitation.tsx"));
+ok("…the client reads the fragment once (#t=… only — never the query), removes it from the address bar and its history entry at once, tells Next.js's router (replaceState without state) and only THEN checks the link; the token lives in a ref, never in React state, and is dropped on pagehide",
+  (acceptClient.match(/TOKEN_FRAGMENT\.exec\(window\.location\.hash\)/g) ?? []).length === 1 && !/searchParams|useSearchParams|URLSearchParams/.test(acceptClient) &&
+    inOrder(acceptClient, [/const match = TOKEN_FRAGMENT\.exec\(window\.location\.hash\);/, /window\.history\.replaceState\(window\.history\.state, "", clean\);/, /window\.setTimeout\(\(\) => \{\s*window\.history\.replaceState\(null, "", clean\);\s*if \(mode === "ready"\) void validateLink\(token\.current\)\.then\(applyCheck\);/]) &&
+    /const token = useRef<string \| null>\(null\);/.test(acceptClient) && !/setToken|useState<string \| null>/.test(acceptClient) && /const onHide = \(\) => \{\s*token\.current = null;\s*\};/.test(acceptClient) && /window\.addEventListener\("pagehide", onHide\);/.test(acceptClient));
+ok("…no storage, no log, no other request: no localStorage / sessionStorage / indexedDB, no console call, document.cookie written once and only for the language; the token travels only as the `token` field of the two server actions",
+  !/\b(localStorage|sessionStorage|indexedDB)\b/.test(acceptClient) && !/console\./.test(acceptClient) && (acceptClient.match(/document\.cookie/g) ?? []).length === 1 && /document\.cookie = `\$\{LOCALE_COOKIE\}=\$\{locale\}; /.test(acceptClient) &&
+    (acceptClient.match(/token: (held|token\.current \?\? "")/g) ?? []).length === 2 && !/fetch\(|XMLHttpRequest|sendBeacon|WebSocket/.test(acceptClient));
+ok("…one acceptance request at a time, even for two submits in one instant (a ref set synchronously); a page restored from the back/forward cache, or given a second link, reloads instead of reviving the old one",
+  /if \(inFlight\.current \|\| submitting \|\| view\.kind !== "form"\) return;/.test(acceptClient) && inOrder(acceptClient, [/inFlight\.current = true;/, /await acceptInvitationAction\(/, /inFlight\.current = false;/]) &&
+    /if \(event\.persisted\) window\.location\.reload\(\);/.test(acceptClient) && /if \(window\.location\.hash\.startsWith\("#t="\)\) window\.location\.reload\(\);/.test(acceptClient));
+const acceptActions = code(join(root, "src/app/(invite)/register/accept/actions.ts"));
+ok("…the route's server actions: exactly two (check, accept), each a strict schema whose refusal is an 'invalid' link; no redirect, revalidation, cookie, header read or log",
+  /^\s*"use server";/.test(acceptActions) && (acceptActions.match(/export async function \w+/g) ?? []).length === 2 && (acceptActions.match(/\.strict\(\)/g) ?? []).length === 2 &&
+    (acceptActions.match(/return \{ ok: false, reason: "invalid" \};/g) ?? []).length === 2 && !/redirect\(|revalidatePath|revalidateTag|cookies\(|headers\(|console\./.test(acceptActions));
+ok("…every request: flag → configuration → same origin → the canonical customer origin → the protected audit trail → the per-IP block, before any token is read",
+  inOrder(acceptCore, [/if \(!isCustomerInviteAcceptanceEnabled\(\)\) throw new AcceptanceRefusal\("disabled", "flag"\);/, /origin = customerPublicOrigin\(\);/, /platformSigningKey\(\);/, /assertSameOrigin\(headers\);/, /if \(headers\.get\("origin"\) !== origin\) throw new AcceptanceRefusal\("unavailable", "origin"\);/, /await assertPlatformAuditProtection\(\);/, /if \(await activeAcceptanceBlock\(ipKeys, platformClock\.now\(\)\)\) throw new AcceptanceRefusal\("throttled", "ip_blocked"\);/, /async function resolveUsable\(/]));
+const acceptFn = fnBodies(read(ACCEPT_CORE)).find((f) => f.name === "acceptInvitation")?.body ?? "";
+ok("…acceptance is ONE read-committed transaction in a fixed lock order: owner e-mail lock → invitation row FOR UPDATE → the decision time → state, terms and e-mail checks again → bootstrap (callback) → access row → primary owner → Trial subscription → its event → the acceptance → platform audit (in the transaction) → customer evidence (callback); after COMMIT only the throttle's success mark",
+  inOrder(acceptFn, [/const pre = await resolveUsable\(ctx, input\.token\);/, /await db\.transaction\(/, /await lockInvitationEmail\(tx, pre\.row\.ownerEmail\);/, /\.for\("update"\)/, /const now = platformClock\.now\(\);/, /const t = await loadTerms\(tx, current\.id\);/, /if \(await customerEmailInUse\(tx, current\.ownerEmail\)\)/, /await hooks\.bootstrap\(tx, facts\)/, /\.insert\(tenantAccessControlsTable\)/, /\.insert\(tenantPrimaryOwnersTable\)/, /\.insert\(tenantSubscriptionsTable\)/, /\.insert\(subscriptionEventsTable\)/, /\.update\(inv\)/, /await recordPlatformAudit\(/, /\},\s*tx,\s*\);/, /await hooks\.evidence\(tx, /, /\{ isolationLevel: "read committed" \}/, /await recordAcceptanceAttempt\(pre\.keys, "success", result\.decidedAt\)/]) &&
+    (acceptFn.match(/db\.transaction\(/g) ?? []).length === 1);
+ok("…what the core writes: one insert each into tenant_access_controls, tenant_primary_owners, tenant_subscriptions and subscription_events, and the acceptance update — never a delete, never orgs, users, packages, versions, terms or settings (the company and its owner come from the shared bootstrap callback)",
+  (acceptCore.match(/\.insert\(/g) ?? []).length === 4 && ["tenantAccessControlsTable", "tenantPrimaryOwnersTable", "tenantSubscriptionsTable", "subscriptionEventsTable"].every((tb) => (acceptCore.match(new RegExp(`\\.insert\\(${tb}\\)`, "g")) ?? []).length === 1) &&
+    (acceptCore.match(/\.update\(/g) ?? []).length === 1 && !/\.delete\(/.test(acceptCore) && !/\b(orgsTable|usersTable|platformSettingsTable)\b/.test(acceptCore));
+ok("…the Trial comes from the invitation's OWN terms row and the published version it names (never the current default Trial): a published Trial version on the trial cycle at SAR 0, snapshotted; start = the Riyadh business day of the decision, inclusive end = start + days − 1; no payment, no enforcement",
+  /\.where\(eq\(terms\.invitationId, invitationId\)\)/.test(acceptCore) && /row\.publishState !== "published" \|\| !row\.termsIsTrial \|\| !row\.versionIsTrial \|\| !row\.packageIsTrial \|\| row\.cycle !== "trial"/.test(acceptCore) && /Number\(row\.price\) !== 0/.test(acceptCore) &&
+    !/isDefaultTrial|is_default_trial/.test(acceptCore) && /packageVersionId: t\.versionId,\s*versionState: "published",\s*isTrial: true,\s*cycle: "trial",\s*lifecycleState: "trialing",/.test(acceptCore) &&
+    /const startDate = riyadhBusinessDate\(now\);\s*const endDate = addDays\(startDate, t\.trialDays - 1\);/.test(acceptCore) && /priceSnapshotSar: t\.price,\s*seatsSnapshot: t\.seats,\s*storageSnapshotGb: t\.storageGb,\s*moduleGroupsSnapshot: t\.modules,\s*assignmentSource: "invitation_acceptance",/.test(acceptCore) &&
+    !/payment|invoice|suspend|enforce/i.test(acceptCore.replace(/AcceptanceRefusal|refusal/g, "")));
+const throttleSrc = code(join(root, "src/lib/platform/acceptance-throttle.ts"));
+ok("…the public throttle is durable: it writes only platform_login_attempts (two inserts — a success, a failure — never an update or delete), keyed by acceptance-only digest purposes (never a sign-in key), and keeps nothing in process memory",
+  (throttleSrc.match(/\.insert\(/g) ?? []).length === 2 && (throttleSrc.match(/\.insert\(t\)/g) ?? []).length === 2 && !/\.(update|delete)\(/.test(throttleSrc) && /const t = platformLoginAttemptsTable;/.test(throttleSrc) &&
+    /platformKeyedDigest\("invite-accept-email", ownerEmail\)/.test(throttleSrc) && /platformKeyedDigest\("invite-accept-ip", ip\)/.test(throttleSrc) && !/"login-(email|ip)"/.test(throttleSrc) && !/new Map\(|new Set\(|globalThis/.test(throttleSrc) &&
+    /export function platformKeyedDigest\(purpose: "login-email" \| "login-ip" \| "invite-accept-email" \| "invite-accept-ip", value: string\): string \{/.test(code(join(root, "src/lib/platform/config.ts"))));
+const acceptModules = [ACCEPT_CORE, join(root, "src/lib/platform/acceptance-throttle.ts"), ACCEPTANCE_BRIDGE, join(root, "src/lib/onboarding/acceptance-types.ts"), join(root, "src/lib/org-bootstrap.ts"), ...ACCEPT_ROUTE_FILES.map((f) => join(root, f))];
+ok("…no delivery and no session: the acceptance modules import no mail, SMS, messaging or HTTP client, call no fetch / XMLHttpRequest / sendBeacon / WebSocket, and never issue a session or touch a cookie store",
+  !acceptModules.some((f) => /nodemailer|@sendgrid|twilio|whatsapp|mailgun|postmark|\bsmtp\b|axios|\bfetch\(|XMLHttpRequest|sendBeacon|WebSocket/i.test(code(f))) &&
+    !acceptModules.some((f) => /issueSession|createSession|signSessionToken|cookies\(\)/.test(code(f))));
+const bootstrapSrc = code(join(root, "src/lib/org-bootstrap.ts"));
+const registerSrc = code(join(root, "src/app/(auth)/actions.ts"));
+ok("…ONE organization bootstrap (organization, base currency confirmed → owner → seedOrgDefaults, in the caller's transaction, refusing a non-normalized e-mail), used by exactly /register and the bridge; /register's transaction is exactly that call, and its audit, security event and session still follow COMMIT",
+  inOrder(bootstrapSrc, [/if \(fields\.ownerEmail !== fields\.ownerEmail\.trim\(\)\.toLowerCase\(\)\)/, /\.insert\(orgsTable\)/, /baseCurrencyConfirmedAt: new Date\(\)/, /\.insert\(usersTable\)/, /await seedOrgDefaults\(tx, org\.id, fields\.country\);/]) && !/db\.transaction|\bdb\./.test(bootstrapSrc) &&
+    inOrder(registerSrc, [/const passwordHash = await hashPassword\(password\);/, /await db\.transaction\(async \(tx\) =>\s*bootstrapOrganization\(tx, \{ orgName, country, currency, ownerName: name, ownerEmail: email, passwordHash \}\),\s*\);/, /await recordAudit\(\{ orgId, userId, userName: name \}, \{ action: "org\.registered"/, /await recordSecurityEvent\(\{ email, orgId, userId, type: "account\.created"/, /await issueSession\(userId, orgId\);/]) &&
+    JSON.stringify(allSrc.filter((f) => f !== join(root, "src/lib/org-bootstrap.ts") && /\bbootstrapOrganization\(/.test(code(f))).map(rel).sort()) === JSON.stringify([join("src", "app", "(auth)", "actions.ts"), rel(ACCEPTANCE_BRIDGE)].sort()));
+/** Top-level argument counts of every call `name(…)` in source (comments removed; a declaration is skipped). */
+const callArity = (src, name) => [...src.matchAll(new RegExp(`(function\\s+)?\\b${name}\\(`, "g"))].filter((m) => !m[1]).map((m) => {
+  let depth = 0, commas = 0, tail = false, quote = null, i = m.index + m[0].length;
+  for (; i < src.length; i++) {
+    const ch = src[i];
+    if (quote) { if (ch === "\\") i++; else if (ch === quote) quote = null; continue; }
+    if (ch === '"' || ch === "'" || ch === "`") { quote = ch; tail = true; continue; }
+    if ("([{".includes(ch)) { depth++; tail = true; continue; }
+    if (")]}".includes(ch)) { if (depth === 0) break; depth--; continue; }
+    if (ch === "," && depth === 0) { commas++; tail = false; continue; }
+    if (!/\s/.test(ch)) tail = true;
+  }
+  return commas + (tail ? 1 : 0);
+});
+const auditExecutorCallers = allSrc.filter((f) => callArity(code(f), "recordAudit").some((n) => n > 2)).map(rel);
+ok("…the customer audit writer takes an optional transaction executor (default db, so every existing caller writes exactly as before), and only the bridge passes one — its customer evidence is inside the acceptance transaction",
+  /executor: Tx \| typeof db = db,\s*\) \{\s*const ctx = await getRequestContext\(\);\s*await executor\.insert\(auditLogsTable\)/.test(code(join(root, "src/lib/security/audit.ts"))) && JSON.stringify(auditExecutorCallers) === JSON.stringify([rel(ACCEPTANCE_BRIDGE)]) &&
+    inOrder(code(ACCEPTANCE_BRIDGE), [/evidence: async \(tx, f\) => \{/, /await recordAudit\(/, /\},\s*tx,\s*\);/, /await recordSecurityEvent\(\{[^}]*\}, tx\);/]),
+  auditExecutorCallers.join(", "));
 
 console.log(`\n${pass}/${pass + fail} platform boundary checks passed`);
 process.exit(fail ? 1 : 0);

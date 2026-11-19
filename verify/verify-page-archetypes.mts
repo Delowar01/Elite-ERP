@@ -142,6 +142,7 @@ import { PO02D1A_BASE, PO02D1A_EDITS, PO02D1A_NEW, po02d1aDrift, undoPo02d1a } f
 import { PO02D1A1_BASE, PO02D1A1_EDITS, PO02D1A1_NEW, po02d1a1Drift, undoPo02d1a1 } from "./po02d1a1-approved-delta.mjs";
 import { PO02D1B_BASE, PO02D1B_EDITS, PO02D1B_NEW, po02d1bDrift, undoPo02d1b } from "./po02d1b-approved-delta.mjs";
 import { PO02D2_BASE, PO02D2_EDITS, PO02D2_NEW, po02d2Drift, undoPo02d2 } from "./po02d2-approved-delta.mjs";
+import { PO02D3_BASE, PO02D3_EDITS, PO02D3_NEW, po02d3Drift, undoPo02d3 } from "./po02d3-approved-delta.mjs";
 import { renderToStaticMarkup } from "react-dom/server";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
@@ -177,7 +178,11 @@ const diskRead = (p: string) => readFileSync(path.join(ROOT, p), "utf8");
 // Platform Owner PO-02D2: its recorded hunks are undone before PO-02D1B's (group 31 proves they are each file's only
 // change), so the PO-02D1B layer and every older group read PO-02D1B's (1cbbbc1) bytes; the seven invitation files it
 // added stay out of `walk`.
-const po02d2Read = (p: string) => undoPo02d2(p, diskRead(p));
+// Platform Owner PO-02D3: its recorded hunks are undone before PO-02D2's (group 32 proves they are each file's only
+// change), so the PO-02D2 layer and every older group read PO-02D2's (49510ec) bytes; the nine acceptance files it added
+// stay out of `walk`.
+const po02d3Read = (p: string) => undoPo02d3(p, diskRead(p));
+const po02d2Read = (p: string) => undoPo02d2(p, po02d3Read(p));
 const po02d1bRead = (p: string) => undoPo02d1b(p, po02d2Read(p));
 const po02d1a1Read = (p: string) => undoPo02d1a1(p, po02d1bRead(p));
 const po02d1aRead = (p: string) => undoPo02d1a(p, po02d1a1Read(p));
@@ -551,7 +556,7 @@ const MAIN_EDITS: Record<string, [string, string][]> = {
 /** A file's bytes for a byte-identity hash: main's approved change undone (MAIN_EDITS), every other file as it is. */
 const frozen = (f: string): string | Buffer =>
   f in MAIN_EDITS ? MAIN_EDITS[f].reduce((acc, [was, is]) => acc.replace(is, () => was), rawRead(f))
-    : f in ACC01_EDITS ? rawRead(f) : f in LCP_EDITS || f in PO01A_EDITS || f in PO01B_EDITS || f in PO01B1_EDITS || f in PO02A_EDITS || f in PO02B_EDITS || f in PO02C_EDITS || f in PO02C1_EDITS || f in PO02D1A_EDITS || f in PO02D1A1_EDITS || f in PO02D1B_EDITS || f in PO02D2_EDITS ? actualRead(f) : readFileSync(path.join(ROOT, f));
+    : f in ACC01_EDITS ? rawRead(f) : f in LCP_EDITS || f in PO01A_EDITS || f in PO01B_EDITS || f in PO01B1_EDITS || f in PO02A_EDITS || f in PO02B_EDITS || f in PO02C_EDITS || f in PO02C1_EDITS || f in PO02D1A_EDITS || f in PO02D1A1_EDITS || f in PO02D1B_EDITS || f in PO02D2_EDITS || f in PO02D3_EDITS ? actualRead(f) : readFileSync(path.join(ROOT, f));
 
 let pass = 0;
 let fail = 0;
@@ -586,7 +591,7 @@ function walk(dir: string): string[] {
   for (const name of readdirSync(path.join(ROOT, dir)).sort()) {
     const p = path.posix.join(dir, name);
     if (statSync(path.join(ROOT, p)).isDirectory()) out.push(...walk(p));
-    else if (!(p in ACC01_NEW) && !(p in LCP_NEW) && !(p in PO01A_NEW) && !(p in PO01B_NEW) && !(p in PO01B1_NEW) && !(p in PO02A_NEW) && !(p in PO02B_NEW) && !(p in PO02C_NEW) && !(p in PO02C1_NEW) && !(p in PO02D1A_NEW) && !(p in PO02D1A1_NEW) && !(p in PO02D1B_NEW) && !(p in PO02D2_NEW)) out.push(p);
+    else if (!(p in ACC01_NEW) && !(p in LCP_NEW) && !(p in PO01A_NEW) && !(p in PO01B_NEW) && !(p in PO01B1_NEW) && !(p in PO02A_NEW) && !(p in PO02B_NEW) && !(p in PO02C_NEW) && !(p in PO02C1_NEW) && !(p in PO02D1A_NEW) && !(p in PO02D1A1_NEW) && !(p in PO02D1B_NEW) && !(p in PO02D2_NEW) && !(p in PO02D3_NEW)) out.push(p);
   }
   return out;
 }
@@ -3175,7 +3180,7 @@ check(`ACC-01 changed its ${Object.keys(ACC01_EDITS).length} files (src/, and ve
 // No file under src/ outside the record differs from main: every other file is in the older groups' byte-identity hashes
 // (groups 4, 16 and 17), and a new file the record does not list is caught there too — `walk` leaves out only ACC01_NEW.
 check(`ACC-01 added no file under src/ but the recorded ${Object.keys(ACC01_NEW).length} (an unrecorded new file would sit in groups 16 and 17's src trees)`,
-  walk("src").length + Object.keys(ACC01_NEW).length + Object.keys(LCP_NEW).length + Object.keys(PO01A_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO01B_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO01B1_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO02A_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO02B_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO02C_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO02C1_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO02D1A_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO02D1A1_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO02D1B_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO02D2_NEW).filter((f) => f.startsWith("src/")).length === (function all(d: string): number {
+  walk("src").length + Object.keys(ACC01_NEW).length + Object.keys(LCP_NEW).length + Object.keys(PO01A_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO01B_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO01B1_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO02A_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO02B_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO02C_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO02C1_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO02D1A_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO02D1A1_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO02D1B_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO02D2_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO02D3_NEW).filter((f) => f.startsWith("src/")).length === (function all(d: string): number {
     return readdirSync(path.join(ROOT, d)).reduce((n, name) => n + (statSync(path.join(ROOT, d, name)).isDirectory() ? all(path.posix.join(d, name)) : 1), 0);
   })("src"));
 
@@ -3624,8 +3629,8 @@ check("…no application, schema-module, UI, route, auth, session or customer fi
 
 // ---------- 31. Platform Owner PO-02D2 — the approved change to frozen files ----------
 section("31. Platform Owner PO-02D2 — company invitation administration (the approved change to frozen files)");
-// Read as they are on disk: each changed file is PO-02D1B's (1cbbbc1) plus exactly its recorded hunks, each added file as recorded.
-const po02d2DriftNow = po02d2Drift((f) => (existsSync(path.join(ROOT, f)) ? diskRead(f) : null));
+// Read with PO-02D3's hunks undone (group 32): each changed file is PO-02D1B's (1cbbbc1) plus exactly its recorded hunks, each added file as recorded.
+const po02d2DriftNow = po02d2Drift((f) => (existsSync(path.join(ROOT, f)) ? po02d3Read(f) : null));
 const PO02D2_EDITABLE = ["src/app/(platform)/platform.css", "src/app/(platform)/platform/(console)/companies/page.tsx", "src/app/(platform)/platform/(console)/dashboard/page.tsx", "src/components/platform/companies-kit.tsx", "src/components/platform/i18n.ts", "src/components/platform/platform-dialog.tsx", "src/lib/platform/companies.ts", "src/lib/platform/errors.ts", "src/lib/platform/flags.ts", "src/lib/platform/guards.ts", "verify/verify-document-form.mts", "verify/verify-page-archetypes.mts"];
 const PO02D2_ADDED = ["src/app/(platform)/invitation-actions.ts", "src/app/(platform)/platform/(console)/companies/invitations/[invitationId]/not-found.tsx", "src/app/(platform)/platform/(console)/companies/invitations/[invitationId]/page.tsx", "src/components/platform/invitation-dialogs.tsx", "src/components/platform/invitations-kit.tsx", "src/lib/platform/invitation-actions.ts", "src/lib/platform/invitations.ts"];
 check(`PO-02D2 changed exactly its ${PO02D2_EDITABLE.length} files by exactly their ${Object.values(PO02D2_EDITS).flat().length} recorded hunks — undone, each is ${PO02D2_BASE.slice(0, 7)}'s to the byte — and added exactly the ${PO02D2_ADDED.length} invitation files, as recorded (verify/po02d2-approved-delta.mts)`,
@@ -3636,6 +3641,25 @@ check("…every changed or added application file is Platform Owner code (src/li
   [...Object.keys(PO02D2_EDITS), ...Object.keys(PO02D2_NEW)].filter((f) => f.startsWith("src/")).every((f) => /^src\/(lib\/platform|components\/platform|app\/\(platform\))\//.test(f)) && Object.keys(PO02D2_EDITS).filter((f) => !f.startsWith("src/")).every((f) => f.startsWith("verify/")) && Object.keys(PO02D2_NEW).every((f) => f.startsWith("src/")), "");
 check("…no acceptance route exists (src/app/(auth)/register/accept is absent; the only new route is the console invitation detail)",
   !existsSync(path.join(ROOT, "src/app/(auth)/register/accept")) && Object.keys(PO02D2_NEW).filter((f) => /\/page\.tsx$/.test(f)).join() === "src/app/(platform)/platform/(console)/companies/invitations/[invitationId]/page.tsx", "");
+
+// ---------- 32. Platform Owner PO-02D3 — the approved change to frozen files ----------
+section("32. Platform Owner PO-02D3 — company invitation acceptance and automatic Trial onboarding (the approved change to frozen files)");
+// Read as they are on disk: each changed file is PO-02D2's (49510ec) plus exactly its recorded hunks, each added file as recorded.
+const po02d3DriftNow = po02d3Drift((f) => (existsSync(path.join(ROOT, f)) ? diskRead(f) : null));
+const PO02D3_EDITABLE = ["src/app/(auth)/actions.ts", "src/lib/platform/config.ts", "src/lib/platform/errors.ts", "src/lib/platform/flags.ts", "src/lib/security/audit.ts", "verify/verify-document-form.mts", "verify/verify-page-archetypes.mts"];
+const PO02D3_ADDED = ["src/app/(invite)/register/accept/accept-invitation.tsx", "src/app/(invite)/register/accept/actions.ts", "src/app/(invite)/register/accept/copy.ts", "src/app/(invite)/register/accept/page.tsx", "src/lib/onboarding/acceptance-types.ts", "src/lib/onboarding/invitation-acceptance.ts", "src/lib/org-bootstrap.ts", "src/lib/platform/acceptance-throttle.ts", "src/lib/platform/invitation-acceptance.ts"];
+check(`PO-02D3 changed exactly its ${PO02D3_EDITABLE.length} files by exactly their ${Object.values(PO02D3_EDITS).flat().length} recorded hunks — undone, each is ${PO02D3_BASE.slice(0, 7)}'s to the byte — and added exactly the ${PO02D3_ADDED.length} acceptance files, as recorded (verify/po02d3-approved-delta.mts)`,
+  po02d3DriftNow.length === 0 && PO02D3_BASE === "49510ec209cc214546f46ff59d379936ad75c91f" &&
+    JSON.stringify(Object.keys(PO02D3_EDITS).sort()) === JSON.stringify(PO02D3_EDITABLE) && JSON.stringify(Object.keys(PO02D3_NEW).sort()) === JSON.stringify(PO02D3_ADDED),
+  po02d3DriftNow.map(rel).join(" "));
+check("…exactly two customer files change, each narrowly — the registration action (its three-statement transaction is now the shared bootstrap; verify:platform-invitation-acceptance A30 proves the rows identical) and the customer audit writer (an optional transaction executor, default unchanged); every other changed or added application file is platform code, the shared bootstrap, the onboarding bridge or the acceptance route",
+  Object.keys(PO02D3_EDITS).filter((f) => f.startsWith("src/") && !f.startsWith("src/lib/platform/")).join() === "src/app/(auth)/actions.ts,src/lib/security/audit.ts" &&
+    Object.keys(PO02D3_NEW).every((f) => /^src\/(lib\/platform\/|lib\/onboarding\/|lib\/org-bootstrap\.ts$|app\/\(invite\)\/register\/accept\/)/.test(f)) &&
+    Object.keys(PO02D3_EDITS).filter((f) => !f.startsWith("src/")).every((f) => f.startsWith("verify/")), "");
+check("…the only new route is /register/accept, in a route group of its own, (invite), with no layout; nothing under src/app/(auth) is added, and /register's page and layout are unchanged",
+  Object.keys(PO02D3_NEW).filter((f) => /\/(page|layout|route|loading|error|not-found)\.tsx?$/.test(f)).join() === "src/app/(invite)/register/accept/page.tsx" &&
+    !existsSync(path.join(ROOT, "src/app/(invite)/layout.tsx")) && !existsSync(path.join(ROOT, "src/app/(auth)/register/accept")) &&
+    ![...Object.keys(PO02D3_EDITS), ...Object.keys(PO02D3_NEW)].some((f) => f.startsWith("src/app/(auth)/") && f !== "src/app/(auth)/actions.ts"), "");
 
 console.log("\nGroups:");
 for (const [g, [p, f]] of Object.entries(counts)) console.log(`  ${g}: ${p}/${p + f}`);

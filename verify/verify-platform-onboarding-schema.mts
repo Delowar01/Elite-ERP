@@ -409,15 +409,22 @@ async function main(): Promise<void> {
     // PO-02D2: the invitation read model and service read the published default Trial (packages, versions) and write the
     // invitation terms; nothing else reads or writes an onboarding table, and nothing names settings, subscriptions,
     // subscription events or primary owners.
-    ok("no application code reads or writes the onboarding tables — only the schema module declares them, and (PO-02D2) the invitation read model and service use the Trial catalog and the invitation terms",
-      JSON.stringify(refs.sort()) === JSON.stringify(["src/db/schema/platform-onboarding.ts", "src/lib/platform/invitation-actions.ts", "src/lib/platform/invitations.ts"]) &&
-        ["src/lib/platform/invitation-actions.ts", "src/lib/platform/invitations.ts"].every((fl) => !/platformSettingsTable|tenantPrimaryOwnersTable|tenantSubscriptionsTable|subscriptionEventsTable|platform_settings|tenant_primary_owners|tenant_subscriptions|subscription_events/.test(stripComments(src(fl)))),
+    // PO-02D3: plus the acceptance core (src/lib/platform/invitation-acceptance.ts) — it reads the invitation's terms and the
+    // published version they name, and writes ONE primary owner, ONE Trial subscription and ONE subscription event for the
+    // new company (verify:platform-boundary rule 45); it never names platform settings.
+    ok("no application code reads or writes the onboarding tables — only the schema module declares them, (PO-02D2) the invitation read model and service use the Trial catalog and the invitation terms, and (PO-02D3) the acceptance core assigns the Trial",
+      JSON.stringify(refs.sort()) === JSON.stringify(["src/db/schema/platform-onboarding.ts", "src/lib/platform/invitation-acceptance.ts", "src/lib/platform/invitation-actions.ts", "src/lib/platform/invitations.ts"]) &&
+        ["src/lib/platform/invitation-actions.ts", "src/lib/platform/invitations.ts"].every((fl) => !/platformSettingsTable|tenantPrimaryOwnersTable|tenantSubscriptionsTable|subscriptionEventsTable|platform_settings|tenant_primary_owners|tenant_subscriptions|subscription_events/.test(stripComments(src(fl)))) &&
+        !/platformSettingsTable|platform_settings/.test(stripComments(src("src/lib/platform/invitation-acceptance.ts"))) &&
+        ["tenantPrimaryOwnersTable", "tenantSubscriptionsTable", "subscriptionEventsTable"].every((tb) => (stripComments(src("src/lib/platform/invitation-acceptance.ts")).match(new RegExp(`\\.insert\\(${tb}\\)`, "g")) ?? []).length === 1) &&
+        !/\.(update|delete)\((tenantPrimaryOwnersTable|tenantSubscriptionsTable|subscriptionEventsTable|subscriptionPackagesTable|subscriptionPackageVersionsTable|organizationInvitationTermsTable)\)/.test(stripComments(src("src/lib/platform/invitation-acceptance.ts"))),
       refs.join(", "));
     // PO-02D2: PLATFORM_INVITATIONS_ENABLED exists — read (comments aside) only in src/lib/platform/flags.ts; the acceptance
     // flag still appears nowhere.
-    const acceptanceFlag = files.filter((fl) => /CUSTOMER_INVITE_ACCEPTANCE_ENABLED/.test(src(fl)));
+    // PO-02D3: CUSTOMER_INVITE_ACCEPTANCE_ENABLED now exists too — read (comments aside) only in src/lib/platform/flags.ts.
+    const acceptanceFlag = files.filter((fl) => /CUSTOMER_INVITE_ACCEPTANCE_ENABLED/.test(stripComments(src(fl))));
     const invitationFlag = files.filter((fl) => /PLATFORM_INVITATIONS_ENABLED/.test(stripComments(src(fl))));
-    ok("no acceptance flag exists (CUSTOMER_INVITE_ACCEPTANCE_ENABLED appears nowhere in src); (PO-02D2) PLATFORM_INVITATIONS_ENABLED is read only in src/lib/platform/flags.ts", acceptanceFlag.length === 0 && JSON.stringify(invitationFlag) === JSON.stringify(["src/lib/platform/flags.ts"]), [...acceptanceFlag, ...invitationFlag].join(", "));
+    ok("(PO-02D3) the acceptance flag CUSTOMER_INVITE_ACCEPTANCE_ENABLED is read only in src/lib/platform/flags.ts; (PO-02D2) PLATFORM_INVITATIONS_ENABLED is read only in src/lib/platform/flags.ts", JSON.stringify(acceptanceFlag) === JSON.stringify(["src/lib/platform/flags.ts"]) && JSON.stringify(invitationFlag) === JSON.stringify(["src/lib/platform/flags.ts"]), [...acceptanceFlag, ...invitationFlag].join(", "));
     const inviteOnly = files.filter((fl) => /invite_only|inviteOnly/.test(stripComments(src(fl)))).sort();
     ok(
       "invite-only appears in code only as PO-01B's existing read-only Settings label (no column, no setting, no logic)",

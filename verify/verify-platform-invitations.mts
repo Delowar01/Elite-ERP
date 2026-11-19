@@ -355,8 +355,13 @@ async function main() {
     ok("#23 …with both flags exactly \"true\" the feature is on", flags.isPlatformInvitationsEnabled());
     ok("#23 …no invitation written and no second-factor code spent by any refused call", (await invCount()) === n0 && (await lastStep(op)) === step0);
     const flagSrc = stripComments(read("src/lib/platform/flags.ts"));
+    // PO-02D3: flags.ts now also holds the acceptance flag, independent of this one: the invitation flag's own functions
+    // still never read an acceptance flag, the acceptance flag's never read this one, and nothing touches suspension.
+    const flagFn = (name: string) => (flagSrc.match(new RegExp(`export function ${name}\\(\\)[^{]*\\{[^}]*\\}`)) ?? [""])[0];
     ok("#23 the flag is read only as the exact string \"true\", and never enables an acceptance flag or changes the suspension flag",
-      /process\.env\.PLATFORM_INVITATIONS_ENABLED === "true"/.test(flagSrc) && !/ACCEPT|TENANT_ACCESS_ENFORCEMENT/.test(flagSrc));
+      /process\.env\.PLATFORM_INVITATIONS_ENABLED === "true"/.test(flagSrc) && !/TENANT_ACCESS_ENFORCEMENT/.test(flagSrc) &&
+        ["isPlatformInvitationsEnabled", "assertPlatformInvitationsEnabled"].every((f) => flagFn(f) !== "" && !/ACCEPT/.test(flagFn(f))) &&
+        ["isCustomerInviteAcceptanceEnabled", "assertCustomerInviteAcceptanceEnabled"].every((f) => flagFn(f) !== "" && !/PLATFORM_INVITATIONS_ENABLED|isPlatformInvitationsEnabled|isPlatformConsoleEnabled/.test(flagFn(f))));
   }
 
   // ------------------------------------------------------------------------------------------------

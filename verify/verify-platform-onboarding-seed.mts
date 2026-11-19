@@ -261,8 +261,18 @@ async function main(): Promise<void> {
       same([...matrixModules].sort(), Object.keys(ROLE_MATRIX_GROUPS).sort()) && Object.values(ROLE_MATRIX_GROUPS).flat().every((g) => (TRIAL_MODULE_GROUPS as readonly string[]).includes(g)), matrixModules.join(", "));
     const uncoveredByMatrix = [...TRIAL_MODULE_GROUPS].filter((g) => !Object.values(ROLE_MATRIX_GROUPS).flat().includes(g));
     ok("#8 …every snapshot group is a role-matrix module except Dashboard, which no role gate restricts (every role sees it)", same(uncoveredByMatrix, ["Dashboard"]), uncoveredByMatrix.join(","));
+    // PO-02D3: the acceptance core copies the invitation's version module groups into the new subscription's
+    // DISPLAY-ONLY snapshot (and their count into its event) — exactly three references; nothing reads a snapshot back
+    // and nothing grants, hides or blocks access by module (still no entitlement code anywhere).
+    const ACCEPT_CORE = join("src", "lib", "platform", "invitation-acceptance.ts");
     const readers = srcFiles().filter((f) => f !== join("src", "db", "schema", "platform-onboarding.ts") && /module_groups|moduleGroups|entitlement/i.test(readFileSync(join(ROOT, f), "utf8")));
-    ok("#8 no entitlement registry exists and nothing in src/ reads module groups (display-only snapshot; no access is granted, hidden or blocked)", readers.length === 0, readers.join(" "));
+    const coreText = readFileSync(join(ROOT, ACCEPT_CORE), "utf8");
+    const snapshotReaders = srcFiles().filter((f) => f !== join("src", "db", "schema", "platform-onboarding.ts") && /moduleGroupsSnapshot|module_groups_snapshot/.test(readFileSync(join(ROOT, f), "utf8")));
+    ok("#8 no entitlement registry exists and nothing in src/ reads module groups (display-only snapshot; no access is granted, hidden or blocked) — but (PO-02D3) the acceptance core, which only copies a version's groups into the new subscription's snapshot",
+      JSON.stringify(readers) === JSON.stringify([ACCEPT_CORE]) && !/entitlement/i.test(coreText) && (coreText.match(/module_?groups/gi) ?? []).length === 3 &&
+        /modules: versions\.moduleGroups,/.test(coreText) && /moduleGroupsSnapshot: t\.modules,/.test(coreText) && /moduleGroups: t\.modules\.length,/.test(coreText) &&
+        JSON.stringify(snapshotReaders) === JSON.stringify([ACCEPT_CORE]),
+      `${readers.join(" ")} | ${snapshotReaders.join(" ")}`);
     const block = (sql: string, start: string) => {
       const i = sql.indexOf(start);
       return i < 0 ? "" : sql.slice(i, sql.indexOf("$fn$;", sql.indexOf("$fn$", i) + 4) + 5);

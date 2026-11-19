@@ -107,7 +107,10 @@
     "verify:platform-onboarding-seed": "tsx --conditions=react-server verify/verify-platform-onboarding-seed.mts",
     "verify:platform-invitations": "tsx --conditions=react-server verify/verify-platform-invitations.mts",
     "verify:platform-invitations-browser": "tsx --conditions=react-server verify/verify-platform-invitations-browser.mts",
-    "verify:platform": "npm run verify:platform-boundary && npm run verify:platform-proxy && npm run verify:platform-schema && npm run verify:platform-auth && npm run verify:platform-bootstrap && npm run verify:platform-console && npm run verify:platform-containment && npm run verify:platform-company-schema && npm run verify:platform-migration-safety && npm run verify:platform-company-migration-locks && npm run verify:platform-onboarding-schema && npm run verify:platform-onboarding-migration-safety && npm run verify:platform-release-preflight && npm run verify:platform-onboarding-seed && npm run verify:platform-companies && npm run verify:platform-company-access && npm run verify:platform-invitations"
+    "verify:platform-email-uniqueness": "tsx --conditions=react-server verify/verify-platform-email-uniqueness.mts",
+    "verify:platform-invitation-acceptance": "tsx --conditions=react-server verify/verify-platform-invitation-acceptance.mts",
+    "verify:platform-invitation-acceptance-browser": "tsx --conditions=react-server verify/verify-platform-invitation-acceptance-browser.mts",
+    "verify:platform": "npm run verify:platform-boundary && npm run verify:platform-proxy && npm run verify:platform-schema && npm run verify:platform-auth && npm run verify:platform-bootstrap && npm run verify:platform-console && npm run verify:platform-containment && npm run verify:platform-company-schema && npm run verify:platform-migration-safety && npm run verify:platform-company-migration-locks && npm run verify:platform-onboarding-schema && npm run verify:platform-onboarding-migration-safety && npm run verify:platform-release-preflight && npm run verify:platform-onboarding-seed && npm run verify:platform-companies && npm run verify:platform-company-access && npm run verify:platform-invitations && npm run verify:platform-email-uniqueness && npm run verify:platform-invitation-acceptance"
   },
   "dependencies": {
     "@radix-ui/react-avatar": "^1.2.2",
