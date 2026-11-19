@@ -211,7 +211,7 @@ export function AcceptInvitation({ initialLocale, mode }: { initialLocale: Local
 
           {(view.kind === "reading" || view.kind === "checking") && (
             <div className="flex flex-col gap-3">
-              <h1 ref={heading} tabIndex={-1} className="text-display font-bold tracking-tight outline-none">{c("Accept your invitation")}</h1>
+              <h1 ref={heading} tabIndex={-1} className="text-display font-bold tracking-tight outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus">{c("Accept your invitation")}</h1>
               <p className="flex items-center gap-2 text-ink-muted text-body-lg" role="status">
                 <LoaderCircle className="size-4 animate-spin" aria-hidden />
                 {c("Checking your invitation…")}
@@ -260,7 +260,7 @@ export function AcceptInvitation({ initialLocale, mode }: { initialLocale: Local
 
           {view.kind === "form" && (
             <div className="flex flex-col">
-              <h1 ref={heading} tabIndex={-1} className="text-display font-bold tracking-tight outline-none">{c("Accept your invitation")}</h1>
+              <h1 ref={heading} tabIndex={-1} className="text-display font-bold tracking-tight outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus">{c("Accept your invitation")}</h1>
               <p className="text-ink-muted text-body-lg mt-2 mb-6">{c("You've been invited to set up your company on Elite ERP.")}</p>
 
               <section aria-labelledby="company-heading" className="rounded-lg border border-line bg-surface-raised p-4">
@@ -359,7 +359,7 @@ function Notice({ heading, icon, title, body, children }: { heading: React.RefOb
       <span className="mb-5 inline-flex size-12 items-center justify-center rounded-full border border-line bg-surface-raised text-ink-muted" aria-hidden="true">
         <Icon className="size-5" />
       </span>
-      <h1 ref={heading} tabIndex={-1} className="text-display font-bold tracking-tight outline-none">{title}</h1>
+      <h1 ref={heading} tabIndex={-1} className="text-display font-bold tracking-tight outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus">{title}</h1>
       <p className="text-ink-muted text-body-lg mt-2">{body}</p>
       {children}
     </div>

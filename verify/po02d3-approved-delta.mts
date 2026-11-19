@@ -94,7 +94,7 @@ export const PO02D3_BASE_SHA: Record<string, string> = byPath([
 ]);
 /** The files PO-02D3 added under src/ (sha256, 16 hex). */
 export const PO02D3_NEW: Record<string, string> = byPath([
-  ["bdf3c30472726ee4", "src/app/(invite)/register/accept/accept-invitation.tsx"],
+  ["78b9e11c8e17b6fa", "src/app/(invite)/register/accept/accept-invitation.tsx"],
   ["a4f559a0f94a520e", "src/app/(invite)/register/accept/actions.ts"],
   ["9cd03644bdad91aa", "src/app/(invite)/register/accept/copy.ts"],
   ["be62d1c744ab5159", "src/app/(invite)/register/accept/page.tsx"],
