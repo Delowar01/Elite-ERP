@@ -13,6 +13,10 @@ import { getRequestContext } from "./request-context";
 
 export type AuditActor = { orgId: number | null; userId: number | null; userName?: string | null };
 
+/**
+ * PO-02D3: `executor` lets invitation acceptance record the audit entry inside its own transaction (so a failed
+ * acceptance leaves no success record); default: autocommit, exactly as every existing caller writes it.
+ */
 export async function recordAudit(
   actor: AuditActor,
   entry: {
@@ -22,9 +26,10 @@ export async function recordAudit(
     previousValue?: unknown;
     newValue?: unknown;
   },
+  executor: Tx | typeof db = db,
 ) {
   const ctx = await getRequestContext();
-  await db.insert(auditLogsTable).values({
+  await executor.insert(auditLogsTable).values({
     orgId: actor.orgId,
     userId: actor.userId,
     userName: actor.userName ?? null,

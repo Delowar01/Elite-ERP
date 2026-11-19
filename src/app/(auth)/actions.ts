@@ -4,10 +4,10 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
-import { usersTable, orgsTable } from "@/db/schema";
+import { usersTable } from "@/db/schema";
 import { hashPassword, verifyPassword, signSessionToken, SESSION_COOKIE } from "@/lib/auth";
 import { checkLoginRateLimit, clearLoginRateLimit } from "@/lib/rate-limit";
-import { seedOrgDefaults } from "@/lib/seed-org";
+import { bootstrapOrganization } from "@/lib/org-bootstrap";
 import { recordSecurityEvent, recordAudit } from "@/lib/security/audit";
 import { validatePassword, DEFAULT_POLICY } from "@/lib/security/password-policy";
 import { createSession } from "@/lib/security/session-store";
@@ -255,20 +255,11 @@ export async function registerAction(_prev: ActionState, formData: FormData): Pr
 
   const passwordHash = await hashPassword(password);
 
-  const { userId, orgId } = await db.transaction(async (tx) => {
-    const [org] = await tx
-      .insert(orgsTable)
-      // Stamped now because the question was just answered — this org never needs the one-time
-      // base-currency confirmation, which exists only for orgs created before it was asked.
-      .values({ name: orgName, country, currency, baseCurrencyConfirmedAt: new Date() })
-      .returning();
-    const [user] = await tx
-      .insert(usersTable)
-      .values({ orgId: org.id, email, passwordHash, name, role: "owner" })
-      .returning();
-    await seedOrgDefaults(tx, org.id, country);
-    return { userId: user.id, orgId: org.id };
-  });
+  // PO-02D3: the same three statements, now in the one shared bootstrap (src/lib/org-bootstrap.ts) that invitation
+  // acceptance also uses — organization, owner, seedOrgDefaults, in this transaction; behaviour unchanged.
+  const { userId, orgId } = await db.transaction(async (tx) =>
+    bootstrapOrganization(tx, { orgName, country, currency, ownerName: name, ownerEmail: email, passwordHash }),
+  );
 
   await recordAudit({ orgId, userId, userName: name }, { action: "org.registered", entityType: "org", entityId: orgId, newValue: { orgName, ownerEmail: email, country, currency } });
   await recordSecurityEvent({ email, orgId, userId, type: "account.created", severity: "info", detail: "organization owner" });
