@@ -62,9 +62,10 @@ export function platformSigningKey(): Uint8Array {
 
 /**
  * Keyed, purpose-separated digest (HMAC-SHA-256 under a sub-key derived from the platform secret).
- * Used for throttle keys so submitted e-mails and client IPs are never stored in plaintext.
+ * Used for throttle keys so submitted e-mails and client IPs are never stored in plaintext. PO-02D3: the
+ * public invitation-acceptance throttle has its own purposes, so its keys can never match a sign-in key.
  */
-export function platformKeyedDigest(purpose: "login-email" | "login-ip", value: string): string {
+export function platformKeyedDigest(purpose: "login-email" | "login-ip" | "invite-accept-email" | "invite-accept-ip", value: string): string {
   const subKey = createHmac("sha256", platformSigningKey()).update(`elite-erp/platform/${purpose}/v1`).digest();
   return createHmac("sha256", subKey).update(value, "utf8").digest("hex");
 }

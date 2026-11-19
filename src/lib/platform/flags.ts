@@ -3,8 +3,9 @@ import { PlatformError } from "./errors";
 
 /**
  * Feature flag for the whole Platform Owner console. Default OFF: only the exact string "true"
- * enables it, so a missing, empty or misspelled value fails closed. Every later flag (PO-02D2's
- * PLATFORM_INVITATIONS_ENABLED, below) requires it as well.
+ * enables it, so a missing, empty or misspelled value fails closed. Every later console flag (PO-02D2's
+ * PLATFORM_INVITATIONS_ENABLED, below) requires it as well; PO-02D3's customer-facing acceptance flag
+ * (CUSTOMER_INVITE_ACCEPTANCE_ENABLED, next) is independent of it.
  */
 export function isPlatformConsoleEnabled(): boolean {
   return process.env.PLATFORM_CONSOLE_ENABLED === "true";
@@ -12,6 +13,19 @@ export function isPlatformConsoleEnabled(): boolean {
 
 export function assertPlatformConsoleEnabled(): void {
   if (!isPlatformConsoleEnabled()) throw new PlatformError("CONSOLE_DISABLED", "PLATFORM_CONSOLE_ENABLED is not \"true\"");
+}
+
+/**
+ * PO-02D3 — public invitation acceptance (/register/accept). Default OFF (A-1, provisional): only the exact
+ * string "true" enables it. Independent of the console flags — acceptance is a customer-facing route — and it
+ * changes nothing else: /register stays open, and no session, delivery or enforcement is switched on by it.
+ */
+export function isCustomerInviteAcceptanceEnabled(): boolean {
+  return process.env.CUSTOMER_INVITE_ACCEPTANCE_ENABLED === "true";
+}
+
+export function assertCustomerInviteAcceptanceEnabled(): void {
+  if (!isCustomerInviteAcceptanceEnabled()) throw new PlatformError("ACCEPTANCE_DISABLED", "CUSTOMER_INVITE_ACCEPTANCE_ENABLED is not \"true\"");
 }
 
 /**

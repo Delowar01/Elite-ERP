@@ -27,6 +27,8 @@ export const PLATFORM_ERROR_MESSAGES = {
   ENFORCEMENT_DISABLED: { en: "Company access enforcement is switched off in this environment, so a company cannot be suspended here.", ar: "تطبيق إيقاف وصول الشركات غير مفعّل في هذه البيئة، لذا لا يمكن إيقاف أي شركة هنا." },
   // PO-02D2: invitation administration is refused while PLATFORM_INVITATIONS_ENABLED is not exactly "true".
   INVITATIONS_DISABLED: { en: "Company invitations are switched off in this environment.", ar: "دعوات الشركات غير مفعّلة في هذه البيئة." },
+  // PO-02D3: public invitation acceptance is refused while CUSTOMER_INVITE_ACCEPTANCE_ENABLED is not exactly "true".
+  ACCEPTANCE_DISABLED: { en: "Invitation acceptance is not available in this environment.", ar: "قبول الدعوات غير متاح في هذه البيئة." },
   // Reserved for later phases (TRD §8); defined now so the code set is stable.
   COMPANY_SUSPENDED: { en: "This company's access is suspended.", ar: "تم إيقاف وصول هذه الشركة." },
   INVITE_EXPIRED: { en: "This invitation has expired.", ar: "انتهت صلاحية هذه الدعوة." },
