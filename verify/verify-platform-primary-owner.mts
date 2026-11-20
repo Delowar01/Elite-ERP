@@ -217,8 +217,13 @@ try {
     ok("N2 nothing in src deletes a user (no ORM delete, no raw DELETE FROM users)", writers(/\.delete\(\s*usersTable\s*\)/).length === 0 && writers(/\bdelete\s+from\s+"?users"?\b/i).length === 0);
     const roleWriters = files.filter((f) => /\.update\(\s*usersTable\s*\)\s*\.set\(\{[^}]*\brole\b/.test(code(f).replace(/\s+/g, " "))).map(rel);
     const activeWriters = files.filter((f) => /\.update\(\s*usersTable\s*\)\s*\.set\(\{[^}]*\bisActive\b/.test(code(f).replace(/\s+/g, " "))).map(rel);
-    ok("N3 users.role and users.is_active are written by the Team-change service ONLY (one update each)",
-      same(roleWriters, ["src/lib/team/member-changes.ts"]) && same(activeWriters, ["src/lib/team/member-changes.ts"]), `${roleWriters} | ${activeWriters}`);
+    // PO-03B: the status write moved into the shared customer-user mutation service (used by the Team actions AND the
+    // Platform Owner user controls); the role write stays in the Team-change service. Still exactly one writer each.
+    const activeWriterCode = code(join(ROOT, "src/lib/team/customer-user-core.ts"));
+    ok("N3 users.role is written by the Team-change service ONLY and users.is_active by the shared customer-user mutation service ONLY (PO-03B) — one update each",
+      same(roleWriters, ["src/lib/team/member-changes.ts"]) && same(activeWriters, ["src/lib/team/customer-user-core.ts"]) &&
+        (activeWriterCode.match(/\.update\(\s*usersTable\s*\)/g) ?? []).length === 1 && (code(join(ROOT, "src/lib/team/member-changes.ts")).match(/\.update\(\s*usersTable\s*\)/g) ?? []).length === 1,
+      `${roleWriters} | ${activeWriters}`);
     ok("N4 nothing updates users.org_id (no ORM .set({ orgId }) on users, no raw UPDATE users … org_id)",
       !files.some((f) => /\.update\(\s*usersTable\s*\)\s*\.set\(\{[^}]*\borgId\b/.test(code(f).replace(/\s+/g, " "))) && writers(/\bupdate\s+"?users"?\s+set\b/i).length === 0);
     ok("N5 the only writer of a primary-owner mapping is the PO-02D3 acceptance core (one insert); nothing updates or deletes one",
