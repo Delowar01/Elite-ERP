@@ -17,8 +17,10 @@ import { userInvitationsTable } from "@/db/staged/platform-user-invitations";
 //  • Allowance = the CURRENT subscription's immutable seats_snapshot (superseded_at IS NULL; at most one per company).
 //    Without a current subscription there is NO allowance: nothing is inferred from the package catalogue and no
 //    subscription is created (legacy and /register companies stay unsubscribed — Schema §11.7, decision R-2).
-//  • Display only. `enforced` is always false: nothing refuses, blocks or hides a user because of these numbers
-//    (enforcement is a later, separately approved phase — docs/platform-owner/PO03A_DEVELOPMENT.md §H.4).
+//  • Read-only. PO-03D: `enforced` says whether these numbers are ENFORCED for the company — true only when the caller
+//    says enforcement is on (CUSTOMER_SEAT_ENFORCEMENT_ENABLED, read by the caller, never here) AND the company has a
+//    current subscription. The enforcing check itself is src/lib/platform/seat-enforcement.ts, under the company lock;
+//    nothing here refuses, blocks or hides a user.
 //  • Writes nothing and locks nothing. The staged rollout is asked of the catalog explicitly (to_regclass on the
 //    unqualified names); a failing query is never turned into "no subscription" — errors propagate.
 // ---------------------------------------------------------------------------------------------
@@ -56,12 +58,12 @@ export type SeatAccounting = {
   /** occupied − seats when above the allowance, else 0 */
   overBy: number;
   overLimit: boolean;
-  /** PO-03A: display only. */
-  enforced: false;
+  /** PO-03D: true only while enforcement is on (the caller's input) AND the company has a current subscription. */
+  enforced: boolean;
 };
 
 /** The pure rule (one place): who occupies a seat and how the allowance compares. */
-export function computeSeatAccounting(orgId: number, users: { total: number; active: number }, pendingInvitations: number, allowance: SeatAllowance): SeatAccounting {
+export function computeSeatAccounting(orgId: number, users: { total: number; active: number }, pendingInvitations: number, allowance: SeatAllowance, enforcement = false): SeatAccounting {
   const total = Math.max(0, Math.trunc(users.total));
   const active = Math.min(total, Math.max(0, Math.trunc(users.active)));
   const pending = Math.max(0, Math.trunc(pendingInvitations));
@@ -77,7 +79,7 @@ export function computeSeatAccounting(orgId: number, users: { total: number; act
     remaining: seats === null ? null : Math.max(0, seats - occupied),
     overBy,
     overLimit: overBy > 0,
-    enforced: false,
+    enforced: enforcement === true && seats !== null,
   };
 }
 
@@ -171,8 +173,9 @@ export async function userInvitationReservationsInstalled(executor: Executor = d
  * PO-03C — the seats reserved by pending customer-user invitations, per company: open (unaccepted, unrevoked) and
  * unexpired at `at`, and only when no customer user holds the e-mail (any letter case) — such an invitation can never
  * be accepted, and its person may already be counted as a user. Read-only, no lock; nothing where the table is absent.
+ * PO-03D: `onlyIds` narrows the count to the given invitations — the SAME rule, for the enforcing check's exclusions.
  */
-async function pendingReservations(executor: Executor, orgIds: number[], at: Date): Promise<Map<number, number>> {
+async function pendingReservations(executor: Executor, orgIds: number[], at: Date, onlyIds?: readonly string[]): Promise<Map<number, number>> {
   if (!(await userInvitationReservationsInstalled(executor))) return new Map();
   const ui = userInvitationsTable;
   const rows = await executor
@@ -185,6 +188,7 @@ async function pendingReservations(executor: Executor, orgIds: number[], at: Dat
         isNull(ui.revokedAt),
         sql`${ui.expiresAt} > ${at.toISOString()}::timestamptz`,
         sql`not exists (select 1 from ${usersTable} u where lower(u.email) = ${ui.emailNormalized})`,
+        ...(onlyIds ? [inArray(ui.id, [...onlyIds])] : []),
       ),
     )
     .groupBy(ui.orgId);
@@ -192,11 +196,21 @@ async function pendingReservations(executor: Executor, orgIds: number[], at: Dat
 }
 
 /**
+ * PO-03D — how many of the given invitations currently reserve one of THIS company's seats (the same rule as the
+ * count): the invitations a transaction is about to replace or convert, so the enforcing check never counts a seat twice.
+ */
+export async function reservationsAmong(executor: Executor, orgId: number, invitationIds: readonly string[], at: Date): Promise<number> {
+  const ids = [...new Set(invitationIds)];
+  if (!ids.length) return 0;
+  return (await pendingReservations(executor, [orgId], at, ids)).get(orgId) ?? 0;
+}
+
+/**
  * One company's seat accounting. The caller decides WHICH company: the customer gate passes the session's own
  * organization only; the platform read model passes the authorized company detail's id. PO-03C: pending invitations
- * are counted at `at` (default: now).
+ * are counted at `at` (default: now). PO-03D: `enforcement` is the caller's reading of the enforcement switch.
  */
-export async function readSeatAccounting(executor: Executor, orgId: number, at: Date = new Date()): Promise<SeatAccounting> {
+export async function readSeatAccounting(executor: Executor, orgId: number, at: Date = new Date(), enforcement = false): Promise<SeatAccounting> {
   if (!Number.isSafeInteger(orgId) || orgId <= 0) throw new Error("readSeatAccounting: invalid organization id");
   const [counts] = await executor
     .select({ total: sql<number>`count(*)::int`, active: sql<number>`(count(*) filter (where ${usersTable.isActive}))::int` })
@@ -204,7 +218,7 @@ export async function readSeatAccounting(executor: Executor, orgId: number, at: 
     .where(eq(usersTable.orgId, orgId));
   const allowance = await currentAllowance(executor, orgId);
   const pending = (await pendingReservations(executor, [orgId], at)).get(orgId) ?? 0;
-  return computeSeatAccounting(orgId, { total: Number(counts?.total ?? 0), active: Number(counts?.active ?? 0) }, pending, allowance);
+  return computeSeatAccounting(orgId, { total: Number(counts?.total ?? 0), active: Number(counts?.active ?? 0) }, pending, allowance, enforcement);
 }
 
 /**
@@ -213,7 +227,7 @@ export async function readSeatAccounting(executor: Executor, orgId: number, at: 
  * allowances; PO-03C: the invitation-table probe and the reservations). Display only; the caller passes the companies
  * of the rows it is showing.
  */
-export async function readSeatAccountingForCompanies(executor: Executor, orgIds: number[], at: Date = new Date()): Promise<Map<number, SeatAccounting>> {
+export async function readSeatAccountingForCompanies(executor: Executor, orgIds: number[], at: Date = new Date(), enforcement = false): Promise<Map<number, SeatAccounting>> {
   const ids = [...new Set(orgIds.filter((id) => Number.isSafeInteger(id) && id > 0))];
   if (!ids.length) return new Map();
   const counts = await executor
@@ -227,7 +241,7 @@ export async function readSeatAccountingForCompanies(executor: Executor, orgIds:
   return new Map(
     ids.map((orgId) => {
       const c = byOrg.get(orgId);
-      return [orgId, computeSeatAccounting(orgId, { total: Number(c?.total ?? 0), active: Number(c?.active ?? 0) }, reserved.get(orgId) ?? 0, allowances.get(orgId) ?? { state: "none" })];
+      return [orgId, computeSeatAccounting(orgId, { total: Number(c?.total ?? 0), active: Number(c?.active ?? 0) }, reserved.get(orgId) ?? 0, allowances.get(orgId) ?? { state: "none" }, enforcement)];
     }),
   );
 }

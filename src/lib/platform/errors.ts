@@ -39,6 +39,9 @@ export const PLATFORM_ERROR_MESSAGES = {
   // PO-03C (sub-batch C): customer-user invitations — switched off by default, and a staged table.
   USER_INVITATIONS_DISABLED: { en: "User invitations are switched off in this environment.", ar: "دعوات المستخدمين متوقفة في هذه البيئة." },
   USER_INVITATIONS_NOT_INSTALLED: { en: "User invitations are not set up in this environment's database.", ar: "دعوات المستخدمين غير مُعدّة في قاعدة بيانات هذه البيئة." },
+  // PO-03D: user-seat enforcement (src/lib/platform/seat-enforcement.ts) — only while CUSTOMER_SEAT_ENFORCEMENT_ENABLED is "true".
+  SUBSCRIPTION_REQUIRED: { en: "This company has no current subscription, so no user can be invited until one is assigned.", ar: "لا يوجد لهذه الشركة اشتراك حالي، لذا لا يمكن دعوة أي مستخدم حتى يُخصَّص لها اشتراك." },
+  SEAT_ENFORCEMENT_UNAVAILABLE: { en: "User limits can't be checked right now, so nothing was changed. Try again later.", ar: "يتعذّر التحقق من حدود المستخدمين حاليًا، لذا لم يُغيَّر أي شيء. حاول مرة أخرى لاحقًا." },
   // Reserved for later phases (TRD §8); defined now so the code set is stable.
   COMPANY_SUSPENDED: { en: "This company's access is suspended.", ar: "تم إيقاف وصول هذه الشركة." },
   INVITE_EXPIRED: { en: "This invitation has expired.", ar: "انتهت صلاحية هذه الدعوة." },

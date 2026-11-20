@@ -5,7 +5,8 @@ import { PlatformError } from "./errors";
  * Feature flag for the whole Platform Owner console. Default OFF: only the exact string "true"
  * enables it, so a missing, empty or misspelled value fails closed. Every later console flag (PO-02D2's
  * PLATFORM_INVITATIONS_ENABLED and PO-03C's PLATFORM_USER_INVITATIONS_ENABLED, below) requires it as well; PO-02D3's
- * customer-facing acceptance flag (CUSTOMER_INVITE_ACCEPTANCE_ENABLED, next) is independent of it.
+ * customer-facing acceptance flag (CUSTOMER_INVITE_ACCEPTANCE_ENABLED, next) is independent of it, and so is PO-03D's
+ * CUSTOMER_SEAT_ENFORCEMENT_ENABLED (at the end).
  */
 export function isPlatformConsoleEnabled(): boolean {
   return process.env.PLATFORM_CONSOLE_ENABLED === "true";
@@ -55,4 +56,15 @@ export function isPlatformUserInvitationsEnabled(): boolean {
 export function assertPlatformUserInvitationsEnabled(): void {
   assertPlatformConsoleEnabled();
   if (process.env.PLATFORM_USER_INVITATIONS_ENABLED !== "true") throw new PlatformError("USER_INVITATIONS_DISABLED", "PLATFORM_USER_INVITATIONS_ENABLED is not \"true\"");
+}
+
+/**
+ * PO-03D — user-seat enforcement: the current subscription's seats_snapshot limits every path that adds a customer user
+ * or reserves a seat (user-invitation create, re-issue and acceptance; the customer Team "add member"). Default OFF
+ * (provisional — the specifications ask for the owner's consent before any active company's seats are capped): only the
+ * exact string "true" enables it. Independent of the console flags. While it is off, seats are counted and shown and
+ * never enforced, exactly as before PO-03D.
+ */
+export function isCustomerSeatEnforcementEnabled(): boolean {
+  return process.env.CUSTOMER_SEAT_ENFORCEMENT_ENABLED === "true";
 }

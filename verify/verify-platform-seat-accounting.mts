@@ -298,10 +298,13 @@ try {
     // PO-03B: the customer-user read model (src/lib/platform/customer-users.ts) reads it too — one batch read per directory
     // page and one for a user page, display only; the user controls never read it (N5).
     // PO-03C (sub-batch C): the user-invitation write core reads it for the create PREVIEW only (display: seats refuse nothing).
-    ok("N1 only the Team ownership gate, the console read model, (PO-03B) the customer-user read model and (PO-03C) the user-invitation preview use the seat service", same(importers, ["src/lib/platform/companies.ts", "src/lib/platform/customer-users.ts", "src/lib/platform/user-invitation-actions.ts", "src/lib/team/ownership-gate.ts"]), importers.join(", "));
-    ok("N2 no seat-enforcement function exists anywhere (assertUserSeatAvailable is a later, separately approved phase)", !files.some((f) => /assertUserSeatAvailable|enforceSeat|seatLimitExceeded/i.test(code(f))));
-    ok("N3 the service declares itself display-only (`enforced: false`, a literal type) and the gate exposes reads only",
-      /enforced: false;/.test(code(join(ROOT, "src/lib/platform/seat-accounting.ts"))) && same([...code(join(ROOT, "src/lib/team/ownership-gate.ts")).matchAll(/^export (?:async )?(?:function|class) (\w+)/gm)].map((m) => m[1]).sort(), ["TeamProtectionUnavailableError", "lockPrimaryOwnerForTeamChange", "readTeamOwnershipSummary"]));
+    // PO-03D (sub-batch B): and the seat-enforcement core (src/lib/platform/seat-enforcement.ts) — the SAME numbers, read
+    // fresh under the company lock by the ONE enforcing check (assertUserSeatAvailable).
+    ok("N1 only the Team ownership gate, the console read model, (PO-03B) the customer-user read model, (PO-03C) the user-invitation preview and (PO-03D) the seat-enforcement core use the seat service", same(importers, ["src/lib/platform/companies.ts", "src/lib/platform/customer-users.ts", "src/lib/platform/seat-enforcement.ts", "src/lib/platform/user-invitation-actions.ts", "src/lib/team/ownership-gate.ts"]), importers.join(", "));
+    // PO-03D: enforcement exists now — exactly ONE function, in exactly one module; the accounting itself stays read-only.
+    ok("N2 (PO-03D) the only seat-enforcement function is assertUserSeatAvailable, defined once, in src/lib/platform/seat-enforcement.ts", same(files.filter((f) => /function (assertUserSeatAvailable|enforceSeat|seatLimitExceeded)\b/i.test(code(f))).map(rel), ["src/lib/platform/seat-enforcement.ts"]) && !files.some((f) => /enforceSeat|seatLimitExceeded/i.test(code(f))));
+    ok("N3 the service is read-only and says `enforced` only from the caller's switch AND a subscription (PO-03D: `enforced: boolean`, never an environment read here) and the gate exposes reads only",
+      /enforced: boolean;/.test(code(join(ROOT, "src/lib/platform/seat-accounting.ts"))) && /enforced: enforcement === true && seats !== null,/.test(code(join(ROOT, "src/lib/platform/seat-accounting.ts"))) && !/process\.env/.test(code(join(ROOT, "src/lib/platform/seat-accounting.ts"))) && same([...code(join(ROOT, "src/lib/team/ownership-gate.ts")).matchAll(/^export (?:async )?(?:function|class) (\w+)/gm)].map((m) => m[1]).sort(), ["TeamProtectionUnavailableError", "lockPrimaryOwnerForTeamChange", "readTeamOwnershipSummary"]));
     const before = await seats.readSeatAccounting(db, T.orgId);
     await newUser(T.orgId, "staff");
     const second = await acceptedCompany();
