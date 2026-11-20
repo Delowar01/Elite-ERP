@@ -93,6 +93,11 @@ async function capture<T>(fn: () => Promise<T>): Promise<{ value: T; queries: Ca
 const allCaptured: Captured[] = [];
 const relationsOf = (text: string) => [...text.matchAll(/\b(?:from|join|into|update)\s+"?([a-z_][a-z0-9_]*)"?/gi)].map((m) => m[1].toLowerCase()).filter((r) => !["unnest", "lateral", "select"].includes(r));
 const READ_RELATIONS = new Set(["orgs", "users", "tenant_access_controls", "organization_invitations", "platform_admins", "platform_audit_events", "platform_sessions"]);
+// PO-03A: the company DETAIL's Users & seats reads the primary-owner mapping and the current subscription with its version
+// and package, through the shared read-only cores — the detail alone (the list, countries, invitations and metrics
+// still read none of them; `po03aReaders` below records which probes did).
+const PO03A_DETAIL_RELATIONS = new Set(["tenant_primary_owners", "tenant_subscriptions", "subscription_package_versions", "subscription_packages"]);
+const po03aReaders: string[] = [];
 /** The read model's own statements (the session guard's lookups of platform_sessions / platform_admins are not company reads). */
 const isCompanyRead = (x: Captured) => relationsOf(x.text).some((r) => ["orgs", "users", "tenant_access_controls", "organization_invitations", "platform_audit_events"].includes(r));
 const FORBIDDEN_COLUMNS = /"(password_hash|mfa_secret|mfa_recovery_codes|mfa_secret_encrypted|mfa_recovery_hashes|token_hash|tax_id|vat_number|address|phone|theme_overrides|primary_color|accent_color|seal_url|signature_url|custom_layout_url|default_bank_account_id|zatca_[a-z_]+)"|"orgs"\."email"/;
@@ -284,7 +289,14 @@ async function main() {
     ok("…access {status, source}, users {total, active, owners, lastSignInAt}, owner {name, email}", !!row && keysOf(row.access) === "source,status" && keysOf(row.users) === "active,lastSignInAt,owners,total" && !!row.primaryOwner && keysOf(row.primaryOwner) === "email,name");
     ok("logo presence is a boolean: true for the company with a logo, the URL itself absent", row?.hasLogo === true && !JSON.stringify(page).includes("secret-logo"));
     const detail = keep(await co.getCompanyDetail(req, String(fx.sensitive)));
-    ok("detail keys are the allowlist only", keysOf(detail) === "access,activity,country,createdAt,currency,hasLogo,industry,name,orgId,owners,reference,users", keysOf(detail));
+    // PO-03A adds `seats` (the shared seat accounting: counts and the subscription's seat snapshot) and `primaryOwner`
+    // (the mapped owner's name and e-mail, or a state) — allow-listed down to their keys.
+    ok("detail keys are the allowlist only", keysOf(detail) === "access,activity,country,createdAt,currency,hasLogo,industry,name,orgId,owners,primaryOwner,reference,seats,users", keysOf(detail));
+    ok("(PO-03A) …seats {orgId, users {total, active, disabled}, pendingInvitations, occupied, allowance, remaining, overBy, overLimit, enforced: false}; primaryOwner {state[, name, email, activeOwner]}",
+      !!detail.seats && keysOf(detail.seats) === "allowance,enforced,occupied,orgId,overBy,overLimit,pendingInvitations,remaining,users" && keysOf(detail.seats.users) === "active,disabled,total" && detail.seats.enforced === false &&
+        detail.seats.orgId === fx.sensitive && ["assigned", "none", "not_installed"].includes(detail.seats.allowance.state) &&
+        (detail.primaryOwner.state === "designated" ? keysOf(detail.primaryOwner) === "activeOwner,email,name,state" : keysOf(detail.primaryOwner) === "state"),
+      `${detail.seats ? keysOf(detail.seats) : "no seats"} | ${keysOf(detail.primaryOwner)}`);
     // PO-02C adds `enforced` (whether customer enforcement is switched on here — a configuration flag, not company data).
     ok("…access {status, source, reason, changedAt, changedBy, enforced}; owners {name, email}", keysOf(detail.access) === "changedAt,changedBy,enforced,reason,source,status" && typeof detail.access.enforced === "boolean" && detail.owners.every((o) => keysOf(o) === "email,name"));
     const invs = keep(await co.listPendingInvitations(req, {}));
@@ -311,7 +323,8 @@ async function main() {
       const { queries } = await capture(probe);
       allCaptured.push(...queries);
       const relations = [...new Set(queries.flatMap((x) => relationsOf(x.text)))].sort();
-      ok(`${name}: reads only ${relations.join(", ")} (no customer business table, no customer sessions)`, relations.length > 0 && relations.every((r) => READ_RELATIONS.has(r)), relations.join(","));
+      if (relations.some((r) => PO03A_DETAIL_RELATIONS.has(r))) po03aReaders.push(name);
+      ok(`${name}: reads only ${relations.join(", ")} (no customer business table, no customer sessions)`, relations.length > 0 && relations.every((r) => READ_RELATIONS.has(r) || (name === "detail" && PO03A_DETAIL_RELATIONS.has(r))), relations.join(","));
       const reads = queries.filter(isCompanyRead);
       const bad = reads.filter((x) => FORBIDDEN_COLUMNS.test(x.text));
       ok(`${name}: its ${reads.length} company queries name no secret, contact, tax, branding or settings column`, reads.length > 0 && bad.length === 0, bad.map((x) => x.text.slice(0, 120)).join(" | "));
@@ -697,7 +710,8 @@ async function main() {
     const leaked = Object.entries(SENSITIVE).filter(([, v]) => scan.includes(v));
     ok(`no sensitive value appears in any read-model output (${Object.keys(SENSITIVE).length} markers, ${outputs.length} outputs)`, leaked.length === 0, leaked.map(([k]) => k).join(", "));
     const rels = [...new Set(allCaptured.flatMap((x) => relationsOf(x.text)))].sort();
-    ok(`over the whole suite the read model touched only: ${rels.join(", ")}`, rels.every((r) => READ_RELATIONS.has(r)) && !rels.includes("customers") && !rels.includes("sessions"));
+    ok(`over the whole suite the read model touched only: ${rels.join(", ")}`, rels.every((r) => READ_RELATIONS.has(r) || PO03A_DETAIL_RELATIONS.has(r)) && !rels.includes("customers") && !rels.includes("sessions"));
+    ok("(PO-03A) only the company detail read the primary-owner mapping and the subscription tables — the list, countries, invitations and metrics never did", JSON.stringify(po03aReaders) === JSON.stringify(["detail"]), po03aReaders.join(", "));
     ok("orgs, users, customer sessions, customers, access controls and invitations are byte-identical (read-only)", (await checksum("orgs")) === before.orgs && (await checksum("users")) === before.users && (await checksum("sessions")) === before.sessions && (await checksum("customers")) === before.customers && (await checksum("tenant_access_controls")) === before.tac && (await checksum("organization_invitations")) === before.inv);
     const audits = await q<{ action: string; n: number }>("select action, count(*)::int n from platform_audit_events group by action order by action");
     ok("the only rows the read model added are company.viewed audit records", audits.filter((r) => r.action.startsWith("company.")).every((r) => r.action === "company.viewed"));

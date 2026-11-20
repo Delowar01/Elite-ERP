@@ -24,6 +24,10 @@
 // owner / Trial subscription / event, the /register/accept route, the acceptance flag, the acceptance itself and the
 // digest lookup), and rule 45 pins the acceptance flow: the bridge, the route and its token handling, the ONE
 // transaction and its writes, the durable throttle, the shared organization bootstrap and the customer audit executor.
+// PO-03A added primary-owner protection (O-3) and read-only user-seat accounting: rules 3, 11's customer twin, 21 and 38
+// name their exact exceptions (the ONE Team ownership gate; the seat service's user counts; the primary-owner and seat
+// cores naming their onboarding tables), and rule 46 pins the Team-change transaction and its lock order, the read-only
+// cores, the gate and its callers, the activity executor, and that nothing enforces seats or writes a mapping.
 import { readFileSync, readdirSync, statSync, existsSync } from "node:fs";
 import { join, relative } from "node:path";
 
@@ -71,8 +75,10 @@ const under = (f, d) => f.startsWith(join(root, d) + "/") || f === join(root, d)
 const GATE = join(root, "src/lib/security/tenant-access-gate.ts");
 // PO-02D3: the onboarding bridge is the ONE customer module that reaches the platform acceptance core (rule 45 pins its imports).
 const ACCEPTANCE_BRIDGE = join(root, "src/lib/onboarding/invitation-acceptance.ts");
-const importers = allSrc.filter((f) => f !== GATE && f !== ACCEPTANCE_BRIDGE && !under(f, "src/lib/platform") && !under(f, "src/app/(platform)") && importsOf(read(f)).some((s) => s.startsWith("@/lib/platform/") || s.includes("/lib/platform/")));
-ok("outside src/lib/platform only src/app/(platform) imports the platform library (and the PO-02C tenant-access gate, the access rule alone; and the PO-02D3 onboarding bridge, the acceptance core alone — rule 45)", importers.length === 0, importers.map(rel).join(", "));
+// PO-03A: the Team ownership gate is the ONE customer module that reaches the primary-owner and seat cores (rule 46 pins its imports).
+const OWNERSHIP_GATE = join(root, "src/lib/team/ownership-gate.ts");
+const importers = allSrc.filter((f) => f !== GATE && f !== ACCEPTANCE_BRIDGE && f !== OWNERSHIP_GATE && !under(f, "src/lib/platform") && !under(f, "src/app/(platform)") && importsOf(read(f)).some((s) => s.startsWith("@/lib/platform/") || s.includes("/lib/platform/")));
+ok("outside src/lib/platform only src/app/(platform) imports the platform library (and the PO-02C tenant-access gate, the access rule alone; the PO-02D3 onboarding bridge, the acceptance core alone — rule 45; and the PO-03A Team ownership gate, the primary-owner and seat cores alone — rule 46)", importers.length === 0, importers.map(rel).join(", "));
 const edgeImporters = allSrc.filter((f) => importsOf(read(f)).some((s) => s.startsWith("@/lib/platform-edge") || s.includes("/platform-edge/")));
 ok("only src/proxy.ts imports the edge gate (src/lib/platform-edge)", edgeImporters.length === 1 && rel(edgeImporters[0]) === join("src", "proxy.ts"), edgeImporters.map(rel).join(", "));
 const appToScripts = allSrc.filter((f) => importsOf(read(f)).some((s) => s.includes("scripts/platform")));
@@ -150,8 +156,8 @@ ok("src/app/(platform) imports only the platform library, console components, sh
 const badUi = consoleUi.flatMap((f) => [...importsOf(read(f)), ...sideEffectImports(read(f))].filter((s) => ![...UI_ALLOWED, ...(UI_ALLOWED_FOR[f] ?? [])].some((re) => re.test(s))).map((s) => `${rel(f)} → ${s}`));
 ok("src/components/platform imports no server module, no customer shell (AppShell/Sidebar/NavList) and no customer action", consoleUi.length >= 10 && badUi.length === 0, badUi.join(", "));
 const PLATFORM_MODULES = (s) => s.startsWith("@/lib/platform") || s.startsWith("@/components/platform") || s.startsWith("@/app/(platform)");
-const leaks = allSrc.filter((f) => f !== GATE && f !== ACCEPTANCE_BRIDGE && !under(f, "src/app/(platform)") && !under(f, "src/components/platform") && !under(f, "src/lib/platform") && !under(f, "src/lib/platform-edge") && rel(f) !== join("src", "proxy.ts") && importsOf(read(f)).some(PLATFORM_MODULES));
-ok("no customer route, component or library imports any platform module (except the PO-02C tenant-access gate — rule 30 — and the PO-02D3 onboarding bridge — rule 45)", leaks.length === 0, leaks.map(rel).join(", "));
+const leaks = allSrc.filter((f) => f !== GATE && f !== ACCEPTANCE_BRIDGE && f !== OWNERSHIP_GATE && !under(f, "src/app/(platform)") && !under(f, "src/components/platform") && !under(f, "src/lib/platform") && !under(f, "src/lib/platform-edge") && rel(f) !== join("src", "proxy.ts") && importsOf(read(f)).some(PLATFORM_MODULES));
+ok("no customer route, component or library imports any platform module (except the PO-02C tenant-access gate — rule 30 —, the PO-02D3 onboarding bridge — rule 45 — and the PO-03A Team ownership gate — rule 46)", leaks.length === 0, leaks.map(rel).join(", "));
 
 // 12. Server actions are authorized on their own (never by the UI): each exported action calls a
 //     console core, which checks flag → origin → live session → permission.
@@ -272,7 +278,8 @@ const consoleCode = [...platformLib, ...consoleApp, ...consoleUi];
 
 // 21. Only the read model touches the customer orgs / users tables (the compatibility rule reads orgs.id only).
 const tenantTableRefs = consoleCode.filter((f) => /\b(orgsTable|usersTable)\b/.test(code(f)));
-ok("only companies.ts, company-access.ts, (PO-02C) company-access-actions.ts and (PO-02D2) invitations.ts reference orgsTable / usersTable in platform code", JSON.stringify(tenantTableRefs.map(rel).sort()) === JSON.stringify([join("src", "lib", "platform", "companies.ts"), join("src", "lib", "platform", "company-access-actions.ts"), join("src", "lib", "platform", "company-access.ts"), join("src", "lib", "platform", "invitations.ts")]), tenantTableRefs.map(rel).join(", "));
+// PO-03A: and the seat service, which counts one company's users (orgId, isActive only — rule 46) and writes nothing.
+ok("only companies.ts, company-access.ts, (PO-02C) company-access-actions.ts, (PO-02D2) invitations.ts and (PO-03A) seat-accounting.ts reference orgsTable / usersTable in platform code", JSON.stringify(tenantTableRefs.map(rel).sort()) === JSON.stringify([join("src", "lib", "platform", "companies.ts"), join("src", "lib", "platform", "company-access-actions.ts"), join("src", "lib", "platform", "company-access.ts"), join("src", "lib", "platform", "invitations.ts"), join("src", "lib", "platform", "seat-accounting.ts")]), tenantTableRefs.map(rel).join(", "));
 const invitationsLibCode = code(join(root, "src/lib/platform/invitations.ts"));
 ok("…PO-02D2: invitations.ts reads users.email only (the case-insensitive collision check) and orgs.name only (the name collision count), and writes neither",
   JSON.stringify([...new Set(invitationsLibCode.match(/usersTable\.\w+/g) ?? [])]) === JSON.stringify(["usersTable.email"]) && JSON.stringify([...new Set(invitationsLibCode.match(/orgsTable\.\w+/g) ?? [])]) === JSON.stringify(["orgsTable.name"]) &&
@@ -497,11 +504,16 @@ const onboardingUsers = allSrc.filter((f) => f !== ONBOARDING_SCHEMA && ONBOARDI
 const SUBSCRIPTION_NAMES = /\b(platformSettingsTable|tenantPrimaryOwnersTable|tenantSubscriptionsTable|subscriptionEventsTable|platform_settings|tenant_primary_owners|tenant_subscriptions|subscription_events)\b/;
 // PO-02D3: and the acceptance core — the ONE writer of a company's primary owner, Trial subscription and subscription
 // event (one insert each, rule 45), reading the invitation's published Trial version; still nothing names platform settings.
-const subscriptionNamers = allSrc.filter((f) => f !== ONBOARDING_SCHEMA && SUBSCRIPTION_NAMES.test(code(f))).map(rel);
-ok("…no application code (comments ignored) names an onboarding table or its Drizzle symbol except (PO-02D2) invitations.ts and invitation-actions.ts and (PO-02D3) the acceptance core — the only one naming primary owners, subscriptions or subscription events; nothing names platform settings",
-  JSON.stringify(onboardingUsers) === JSON.stringify([join("src", "lib", "platform", "invitation-acceptance.ts"), join("src", "lib", "platform", "invitation-actions.ts"), join("src", "lib", "platform", "invitations.ts")]) &&
-    JSON.stringify(subscriptionNamers) === JSON.stringify([join("src", "lib", "platform", "invitation-acceptance.ts")]) && !allSrc.some((f) => f !== ONBOARDING_SCHEMA && /\b(platformSettingsTable|platform_settings)\b/.test(code(f))),
-  `${onboardingUsers.join(", ")} | ${subscriptionNamers.join(", ")}`);
+// PO-03A: and the two READ-ONLY cores — primary-owners.ts names the primary-owner table alone, seat-accounting.ts the
+// subscription, version and package tables alone (rule 46 proves both write nothing); still nothing names platform settings.
+const subscriptionNamers = allSrc.filter((f) => f !== ONBOARDING_SCHEMA && SUBSCRIPTION_NAMES.test(code(f))).map(rel).sort();
+const namesIn = (f) => [...new Set(code(join(root, f)).match(new RegExp(ONBOARDING_NAMES.source, "g")) ?? [])].sort();
+ok("…no application code (comments ignored) names an onboarding table or its Drizzle symbol except (PO-02D2) invitations.ts and invitation-actions.ts, (PO-02D3) the acceptance core and (PO-03A) the read-only primary-owner and seat cores; nothing names platform settings",
+  JSON.stringify(onboardingUsers) === JSON.stringify([join("src", "lib", "platform", "invitation-acceptance.ts"), join("src", "lib", "platform", "invitation-actions.ts"), join("src", "lib", "platform", "invitations.ts"), join("src", "lib", "platform", "primary-owners.ts"), join("src", "lib", "platform", "seat-accounting.ts")]) &&
+    JSON.stringify(subscriptionNamers) === JSON.stringify([join("src", "lib", "platform", "invitation-acceptance.ts"), join("src", "lib", "platform", "primary-owners.ts"), join("src", "lib", "platform", "seat-accounting.ts")]) && !allSrc.some((f) => f !== ONBOARDING_SCHEMA && /\b(platformSettingsTable|platform_settings)\b/.test(code(f))) &&
+    JSON.stringify(namesIn("src/lib/platform/primary-owners.ts")) === JSON.stringify(["tenantPrimaryOwnersTable", "tenant_primary_owners"]) &&
+    JSON.stringify(namesIn("src/lib/platform/seat-accounting.ts")) === JSON.stringify(["subscriptionPackageVersionsTable", "subscriptionPackagesTable", "subscription_package_versions", "subscription_packages", "tenantSubscriptionsTable", "tenant_subscriptions"]),
+  `${onboardingUsers.join(", ")} | ${subscriptionNamers.join(", ")} | ${namesIn("src/lib/platform/primary-owners.ts")} | ${namesIn("src/lib/platform/seat-accounting.ts")}`);
 
 // 39. No permission and no route but the named ones: PO-02D2's console invitation detail and PO-02D3's /register/accept.
 const d1GuardsSrc = read(join(root, "src/lib/platform/guards.ts"));
@@ -808,6 +820,81 @@ ok("…the customer audit writer takes an optional transaction executor (default
   /executor: Tx \| typeof db = db,\s*\) \{\s*const ctx = await getRequestContext\(\);\s*await executor\.insert\(auditLogsTable\)/.test(code(join(root, "src/lib/security/audit.ts"))) && JSON.stringify(auditExecutorCallers) === JSON.stringify([rel(ACCEPTANCE_BRIDGE)]) &&
     inOrder(code(ACCEPTANCE_BRIDGE), [/evidence: async \(tx, f\) => \{/, /await recordAudit\(/, /\},\s*tx,\s*\);/, /await recordSecurityEvent\(\{[^}]*\}, tx\);/]),
   auditExecutorCallers.join(", "));
+
+// ---------------------------------------------------------------------------------------------
+// 46. PO-03A — primary-owner protection (O-3) and READ-ONLY user-seat accounting: ONE customer gate reaches the two
+//     read-only platform cores; every Team change that can affect ownership is ONE read-committed transaction in a fixed
+//     lock order (company row → user rows by id → mapping) that writes only the user's role or status and its activity
+//     record; nothing enforces seats, writes a mapping or reads a new flag.
+// ---------------------------------------------------------------------------------------------
+const PO_CORE = join(root, "src/lib/platform/primary-owners.ts");
+const SEAT_CORE = join(root, "src/lib/platform/seat-accounting.ts");
+const TEAM_SERVICE = join(root, "src/lib/team/member-changes.ts");
+const TEAM_PAGE = join(root, "src/app/(app)/settings/organization/page.tsx");
+const TEAM_ACTIONS = join(root, "src/app/(app)/settings/team/actions.ts");
+const gateSrc46 = read(OWNERSHIP_GATE);
+const ownershipGateImports = [...new Set([...importsOf(gateSrc46), ...sideEffectImports(gateSrc46)])].sort();
+const coreUsers46 = (spec, local) => allSrc.filter((f) => importsOf(read(f)).some((s) => s === spec || (under(f, "src/lib/platform") && s === local))).map(rel).sort();
+ok("46. PO-03A: the Team ownership gate imports exactly server-only, the database handle, its types and the TWO read-only platform cores; outside src/lib/platform nothing else imports either core, inside it only the company read model does",
+  JSON.stringify(ownershipGateImports) === JSON.stringify(["./seat-summary-types", "@/db", "@/lib/platform/primary-owners", "@/lib/platform/seat-accounting", "server-only"]) &&
+    JSON.stringify(coreUsers46("@/lib/platform/primary-owners", "./primary-owners")) === JSON.stringify([join("src", "lib", "platform", "companies.ts"), rel(OWNERSHIP_GATE)].sort()) &&
+    JSON.stringify(coreUsers46("@/lib/platform/seat-accounting", "./seat-accounting")) === JSON.stringify([join("src", "lib", "platform", "companies.ts"), rel(OWNERSHIP_GATE)].sort()),
+  `${ownershipGateImports.join(", ")} | ${coreUsers46("@/lib/platform/primary-owners", "./primary-owners")} | ${coreUsers46("@/lib/platform/seat-accounting", "./seat-accounting")}`);
+const gateCallers = allSrc.filter((f) => importsOf(read(f)).some((s) => s === "@/lib/team/ownership-gate" || (under(f, "src/lib/team") && s === "./ownership-gate"))).map(rel).sort();
+ok("…the gate has exactly two callers, always for the signed-in user's OWN company: the Team-change service (inside its transaction) and the Business Settings page (session.orgId)",
+  JSON.stringify(gateCallers) === JSON.stringify([join("src", "app", "(app)", "settings", "organization", "page.tsx"), rel(TEAM_SERVICE)].sort()) &&
+    (code(TEAM_PAGE).match(/readTeamOwnershipSummary\(/g) ?? []).length === 1 && /readTeamOwnershipSummary\(session\.orgId\)/.test(code(TEAM_PAGE)) &&
+    (code(TEAM_SERVICE).match(/lockPrimaryOwnerForTeamChange\(/g) ?? []).length === 1 && /lockPrimaryOwnerForTeamChange\(tx, session\.orgId\)/.test(code(TEAM_SERVICE)),
+  gateCallers.join(", "));
+const poCore = code(PO_CORE);
+const seatCore = code(SEAT_CORE);
+ok("…both platform cores are server-only and READ-ONLY: no insert, update or delete, no environment read; the seat core takes no lock; the primary-owner core takes exactly one, FOR SHARE, in lockPrimaryOwnerMapping; the foundation is asked of the catalog (to_regclass on the unqualified names)",
+  [poCore, seatCore].every((s) => /^import "server-only";/.test(s.trim()) && !/\.(insert|update|delete)\(|\b(insert\s+into|delete\s+from)\b|process\.env/i.test(s)) && !/\.for\(/.test(seatCore) &&
+    (poCore.match(/\.for\(/g) ?? []).length === 1 && /export async function lockPrimaryOwnerMapping\(tx: Tx, orgId: number\)[\s\S]*?\.limit\(2\)\.for\("share"\);/.test(poCore) &&
+    /to_regclass\('tenant_primary_owners'\) is not null as present/.test(poCore) && /to_regclass\('tenant_subscriptions'\)[\s\S]*to_regclass\('subscription_package_versions'\)[\s\S]*to_regclass\('subscription_packages'\)/.test(seatCore) &&
+    JSON.stringify(importsOf(poCore).sort()) === JSON.stringify(["./flags", "@/db", "drizzle-orm"]) && JSON.stringify(importsOf(seatCore).sort()) === JSON.stringify(["@/db", "drizzle-orm"]));
+ok("…seat accounting is display only: `enforced: false`, pending invitations counted as 0 (none exists), the current subscription's seats snapshot as the only allowance — and no seat-enforcement function exists anywhere",
+  /enforced: false;/.test(seatCore) && /enforced: false,/.test(seatCore) && /computeSeatAccounting\(orgId, \{ total: Number\(counts\?\.total \?\? 0\), active: Number\(counts\?\.active \?\? 0\) \}, 0, allowance\)/.test(seatCore) &&
+    /seats: sub\.seatsSnapshot,/.test(seatCore) && /\.where\(and\(eq\(sub\.orgId, orgId\), isNull\(sub\.supersededAt\)\)\)/.test(seatCore) &&
+    !allSrc.some((f) => /assertUserSeatAvailable|enforceSeat|seatLimitExceeded/i.test(code(f))));
+const teamSvc = code(TEAM_SERVICE);
+const lockFn46 = fnBodies(read(TEAM_SERVICE)).find((f) => f.name === "lockTeamChange")?.body ?? "";
+ok("…a Team change is ONE read-committed transaction: bounded lock wait → the company row FOR NO KEY UPDATE → the actor's and target's user rows of THIS company, by ascending id, FOR NO KEY UPDATE → the primary-owner mapping (gate, FOR SHARE) — then the checks on the locked rows",
+  inOrder(lockFn46, [/select set_config\('lock_timeout', \$\{TEAM_LOCK_TIMEOUT\}, true\)/, /\.from\(orgsTable\)\.where\(eq\(orgsTable\.id, session\.orgId\)\)\.for\("no key update"\)/, /\.where\(and\(eq\(usersTable\.orgId, session\.orgId\), inArray\(usersTable\.id, \[session\.userId, targetId\]\)\)\)\s*\.orderBy\(asc\(usersTable\.id\)\)\s*\.for\("no key update"\)/, /await lockPrimaryOwnerForTeamChange\(tx, session\.orgId\)/]) &&
+    (teamSvc.match(/db\.transaction\(/g) ?? []).length === 1 && /\}, READ_COMMITTED\);/.test(teamSvc) && /export const TEAM_LOCK_TIMEOUT = "5s";/.test(teamSvc) && (teamSvc.match(/\.for\(/g) ?? []).length === 2);
+ok("…what a Team change writes: the target's role or status only (two updates, each scoped to the id AND the company), its activity record in the same transaction, and — for a refused change to the primary owner — one security event; never an insert into users, a delete, an organization change or a mapping write",
+  (teamSvc.match(/\.update\(usersTable\)/g) ?? []).length === 2 && /\.set\(\{ role, updatedAt: new Date\(\) \}\)\.where\(and\(eq\(usersTable\.id, target\.id\), eq\(usersTable\.orgId, session\.orgId\)\)\)/.test(teamSvc) &&
+    /\.set\(\{ isActive, updatedAt: new Date\(\) \}\)\.where\(and\(eq\(usersTable\.id, target\.id\), eq\(usersTable\.orgId, session\.orgId\)\)\)/.test(teamSvc) && !/\.(insert|delete)\(|orgId:\s*[^,}]+,?\s*updatedAt/.test(teamSvc) &&
+    !/tenantPrimaryOwnersTable|tenant_primary_owners/.test(teamSvc) && callArity(teamSvc, "logActivity").length === 2 && callArity(teamSvc, "logActivity").every((n) => n === 3) &&
+    (teamSvc.match(/recordSecurityEvent\(/g) ?? []).length === 1 && /type: "team\.primary_owner_protected", severity: "medium"/.test(teamSvc) && callArity(teamSvc, "recordSecurityEvent").every((n) => n === 2));
+ok("…the rules on the locked rows: the actor is still an active owner or admin of the company, the target belongs to it, the existing role rules, the primary owner keeps the owner role and stays active, and the last active owner is never removed",
+  /if \(!actor \|\| !actor\.isActive \|\| !MANAGERS\.includes\(actor\.role as Role\)\) throw new TeamRefusal\("notManager"\);/.test(teamSvc) && /if \(!target\) throw new TeamRefusal\("notFound"\);/.test(teamSvc) &&
+    /if \(!canAssignRole\(actor\.role, role\)\) throw new TeamRefusal\("aboveOwn"\);/.test(teamSvc) && /if \(!canAssignRole\(actor\.role, target\.role as Role\)\) throw new TeamRefusal\("memberRole"\);/.test(teamSvc) &&
+    /if \(target\.id === primaryOwnerId && role !== "owner"\) await protectedOwnerRefusal\(tx, session, target\.id, "role_change"\);/.test(teamSvc) &&
+    /if \(target\.id === primaryOwnerId\) await protectedOwnerRefusal\(tx, session, target\.id, "deactivation"\);/.test(teamSvc) &&
+    (teamSvc.match(/throw new TeamRefusal\("lastOwner"\)/g) ?? []).length === 2);
+const teamActions = code(TEAM_ACTIONS);
+ok("…the two Team actions authorize (requireRole owner/admin) and hand the change to the service — they no longer write users themselves; adding a member is unchanged",
+  /export async function changeRoleAction\(userId: number, role: Role\): Promise<ActionResult> \{\s*const session = await requireRole\("owner", "admin"\);\s*const result = await changeTeamMemberRole\(session, userId, role, await getLocale\(\)\);\s*if \(!result\.error\) revalidatePath\(PATH\);\s*return result;\s*\}/.test(teamActions) &&
+    /export async function toggleMemberActiveAction\(userId: number, isActive: boolean\): Promise<ActionResult> \{\s*const session = await requireRole\("owner", "admin"\);\s*const result = await setTeamMemberActive\(session, userId, isActive, await getLocale\(\)\);\s*if \(!result\.error\) revalidatePath\(PATH\);\s*return result;\s*\}/.test(teamActions) &&
+    (teamActions.match(/\.update\(usersTable\)/g) ?? []).length === 0 && (teamActions.match(/\.insert\(usersTable\)/g) ?? []).length === 1);
+const activityExecutorCallers = allSrc.filter((f) => callArity(code(f), "logActivity").some((n) => n > 2)).map(rel);
+ok("…the activity writer takes an optional transaction executor (default db, every existing caller unchanged) and only the Team-change service passes one",
+  /executor: Tx \| typeof db = db,\s*\) \{\s*await executor\.insert\(activityLogsTable\)/.test(code(join(root, "src/lib/activity.ts"))) && JSON.stringify(activityExecutorCallers) === JSON.stringify([rel(TEAM_SERVICE)]),
+  activityExecutorCallers.join(", "));
+const po03aModules = [OWNERSHIP_GATE, TEAM_SERVICE, PO_CORE, SEAT_CORE, join(root, "src/lib/team/seat-summary-types.ts"), join(root, "src/app/(app)/settings/team/seat-summary.tsx")];
+ok("…no new flag or environment read: the PO-03A modules read no process.env (the only feature they consult is the existing acceptance flag, through flags.ts)",
+  po03aModules.every((f) => !/process\.env/.test(code(f))) && (poCore.match(/isCustomerInviteAcceptanceEnabled\(\)/g) ?? []).length === 1);
+const detailPage = code(join(root, "src/app/(platform)/platform/(console)/companies/[orgId]/page.tsx"));
+const seatsPanel = (detailPage.match(/function SeatsPanel\([\s\S]*?\n\}\n/) ?? [""])[0];
+const readModel46 = code(join(root, "src/lib/platform/companies.ts"));
+ok("…the console's Users & seats is display only (no form, button, link or action) and the read model gets it from the shared cores alone — the mapped user's name, e-mail, role and status, nothing more",
+  seatsPanel.length > 0 && !/<form|<button|<Link|action=|onClick|"use server"/.test(seatsPanel) && /readSeatAccounting\(db, orgId\)/.test(readModel46) && /readPrimaryOwnerMapping\(db, orgId\)/.test(readModel46) &&
+    /\.select\(\{ name: usersTable\.name, email: usersTable\.email, role: usersTable\.role, isActive: usersTable\.isActive \}\)/.test(readModel46));
+const teamPanel = code(join(root, "src/app/(app)/settings/team/team-panel.tsx"));
+ok("…the Team panel never offers a demotion or a deactivation of the primary owner (only changes that restore it) — the server refuses them anyway",
+  /\.filter\(\(r\) => r !== member\.role && \(member\.id !== primaryOwnerId \|\| r === "owner"\)\)/.test(teamPanel) && /\{!\(member\.id === primaryOwnerId && member\.isActive\) && \(/.test(teamPanel) &&
+    /<DropdownMenuItem disabled data-testid="team-primary-owner-protected">/.test(teamPanel));
 
 console.log(`\n${pass}/${pass + fail} platform boundary checks passed`);
 process.exit(fail ? 1 : 0);

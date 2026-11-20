@@ -28,6 +28,7 @@ import { section, ok, rejects, summary, describeError } from "./platform/harness
 import { PO02C_EDITS, PO02C_NEW, undoPo02c } from "./po02c-approved-delta.mjs";
 import { PO02C1_EDITS, undoPo02c1 } from "./po02c1-approved-delta.mjs";
 import { PO02D3_EDITS, undoPo02d3 } from "./po02d3-approved-delta.mjs";
+import { PO03A_EDITS, PO03A_NEW, undoPo03a } from "./po03a-approved-delta.mjs";
 
 const testDbName = disposableName("po01b1_containment");
 process.env.DATABASE_URL = databaseUrlFor(testDbName);
@@ -403,6 +404,10 @@ async function main() {
     // PO-02D3 changes two more of these files narrowly — the registration action (its transaction is the shared
     // bootstrap) and the customer audit writer (an optional transaction executor) — recorded byte for byte
     // (verify/po02d3-approved-delta.mts): its hunks are undone first, so each file must still reduce to 621f156's text.
+    // PO-03A changes three Team files in these paths — the two Team member actions (now the locked Team-change
+    // service), the Team panel (seat card, primary-owner badge, protected menu) and the Business Settings page that hosts
+    // it — and adds the seat card (verify/po03a-approved-delta.mts): its hunks are undone before PO-02D3's, and the added
+    // file must be exactly as pinned there. No session, authentication, layout or UI-component file is among them.
     const LIVE = "621f156f7b129b9c2e289bc46d314ce7587beec2";
     const TENANT_PATHS = ["src/lib/session.ts", "src/lib/auth.ts", "src/lib/security", "src/app/(auth)", "src/app/auth", "src/app/(app)", "src/components/layout", "src/components/ui"];
     const lines = (out: string) => out.split("\n").map((l) => l.trim()).filter(Boolean);
@@ -412,14 +417,15 @@ async function main() {
     ])].sort();
     const h16 = (b: Buffer | string) => createHash("sha256").update(b).digest("hex").slice(0, 16);
     const unexplained = differing.filter((f) => {
-      const text = existsSync(f) ? undoPo02c1(f, undoPo02d3(f, readFileSync(f, "utf8"))) : null;
+      const text = existsSync(f) ? undoPo02c1(f, undoPo02d3(f, undoPo03a(f, readFileSync(f, "utf8")))) : null;
       if (f in PO02C_NEW) return text === null || h16(text) !== PO02C_NEW[f];
-      if ((!(f in PO02C_EDITS) && !(f in PO02C1_EDITS) && !(f in PO02D3_EDITS)) || text === null) return true;
+      if (f in PO03A_NEW) return text === null || h16(text) !== PO03A_NEW[f];
+      if ((!(f in PO02C_EDITS) && !(f in PO02C1_EDITS) && !(f in PO02D3_EDITS) && !(f in PO03A_EDITS)) || text === null) return true;
       return undoPo02c(f, text) !== execFileSync("git", ["show", `${LIVE}:${f}`], { encoding: "utf8" });
     });
-    ok("no tenant session, authentication, app-route, layout or UI-component file differs from the live ERP (621f156) except by PO-02C's, PO-02C.1's and PO-02D3's recorded changes (621f156's text plus exactly their hunks; added files as pinned)", unexplained.length === 0, unexplained.join(", "));
-    ok("…and in these paths PO-02C changed exactly sign-in, the session store and the session check and added exactly the tenant-access gate; PO-02C.1 also changed the security-event writer",
-      JSON.stringify(differing) === JSON.stringify(["src/app/(auth)/actions.ts", "src/lib/security/audit.ts", "src/lib/security/session-store.ts", "src/lib/security/tenant-access-gate.ts", "src/lib/session.ts"]), differing.join(", "));
+    ok("no tenant session, authentication, app-route, layout or UI-component file differs from the live ERP (621f156) except by PO-02C's, PO-02C.1's, PO-02D3's and PO-03A's recorded changes (621f156's text plus exactly their hunks; added files as pinned)", unexplained.length === 0, unexplained.join(", "));
+    ok("…and in these paths PO-02C changed exactly sign-in, the session store and the session check and added exactly the tenant-access gate; PO-02C.1 also changed the security-event writer; PO-03A changed exactly the two Team member actions, the Team panel and the Business Settings page and added exactly the seat card",
+      JSON.stringify(differing) === JSON.stringify(["src/app/(app)/settings/organization/page.tsx", "src/app/(app)/settings/team/actions.ts", "src/app/(app)/settings/team/seat-summary.tsx", "src/app/(app)/settings/team/team-panel.tsx", "src/app/(auth)/actions.ts", "src/lib/security/audit.ts", "src/lib/security/session-store.ts", "src/lib/security/tenant-access-gate.ts", "src/lib/session.ts"]), differing.join(", "));
     const proxyDiff = execFileSync("git", ["diff", "621f156f7b129b9c2e289bc46d314ce7587beec2", "--", "src/proxy.ts"], { encoding: "utf8" });
     const changed = proxyDiff.split("\n").filter((l) => /^[+-](?![+-])/.test(l));
     ok("src/proxy.ts differs from the live ERP only by the PO-01B edge-gate import and /platform delegation (2 code lines plus a comment, nothing removed)", changed.every((l) => l.startsWith("+")) && changed.filter((l) => !/^\+\s*\/\//.test(l)).length === 2, changed.join(" | "));

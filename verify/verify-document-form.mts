@@ -44,6 +44,7 @@ import { PO02D1A1_EDITS, PO02D1A1_NEW, po02d1a1Drift, undoPo02d1a1 } from "./po0
 import { PO02D1B_EDITS, PO02D1B_NEW, po02d1bDrift, undoPo02d1b } from "./po02d1b-approved-delta.mjs";
 import { PO02D2_EDITS, PO02D2_NEW, po02d2Drift, undoPo02d2 } from "./po02d2-approved-delta.mjs";
 import { PO02D3_EDITS, PO02D3_NEW, po02d3Drift, undoPo02d3 } from "./po02d3-approved-delta.mjs";
+import { PO03A_EDITS, PO03A_NEW, po03aDrift, undoPo03a } from "./po03a-approved-delta.mjs";
 
 const results: [boolean, string, string][] = [];
 const check = (name: string, cond: boolean, extra = "") => results.push([cond, name, extra]);
@@ -81,7 +82,12 @@ const diskRead = (p: string) => readFileSync(join(ROOT, p), "utf8");
 // only change), so the PO-02D2 layer and every older pin read PO-02D2's (49510ec) bytes; the nine acceptance files
 // PO-02D3 added (the shared organization bootstrap, the onboarding bridge, the /register/accept route and the platform
 // acceptance core and throttle) stay out of the directory pins.
-const po02d3Read = (p: string) => undoPo02d3(p, diskRead(p));
+// Platform Owner PO-03A: its recorded hunks are undone before PO-02D3's (its check below proves they are each file's
+// only change), so the PO-02D3 layer and every older pin read PO-02D3's (1d036d6) bytes; the six files PO-03A added
+// (the primary-owner and seat cores, the Team ownership gate, the Team-change service, its types and the seat card) stay
+// out of the directory pins.
+const po03aRead = (p: string) => undoPo03a(p, diskRead(p));
+const po02d3Read = (p: string) => undoPo02d3(p, po03aRead(p));
 const po02d2Read = (p: string) => undoPo02d2(p, po02d3Read(p));
 const po02d1bRead = (p: string) => undoPo02d1b(p, po02d2Read(p));
 const po02d1a1Read = (p: string) => undoPo02d1a1(p, po02d1bRead(p));
@@ -398,10 +404,10 @@ const PINS = JSON.parse(read("verify/document-form-pins.json")) as Record<string
 const fileDrift = Object.entries(PINS).filter(([p, hsh]) => !p.endsWith("/**") && sha(p) !== hsh).map(([p]) => p);
 function dirHash(dir: string) {
   const files: string[] = [];
-  const walk = (d: string) => { for (const f of readdirSync(join(ROOT, d))) { const p = join(d, f); if (statSync(join(ROOT, p)).isDirectory()) walk(p); else if (!(p in ACC01_NEW) && !(p in LCP_NEW) && !(p in PO01A_NEW) && !(p in PO01B_NEW) && !(p in PO01B1_NEW) && !(p in PO02A_NEW) && !(p in PO02B_NEW) && !(p in PO02C_NEW) && !(p in PO02C1_NEW) && !(p in PO02D1A_NEW) && !(p in PO02D1A1_NEW) && !(p in PO02D1B_NEW) && !(p in PO02D2_NEW) && !(p in PO02D3_NEW)) files.push(p); } };
+  const walk = (d: string) => { for (const f of readdirSync(join(ROOT, d))) { const p = join(d, f); if (statSync(join(ROOT, p)).isDirectory()) walk(p); else if (!(p in ACC01_NEW) && !(p in LCP_NEW) && !(p in PO01A_NEW) && !(p in PO01B_NEW) && !(p in PO01B1_NEW) && !(p in PO02A_NEW) && !(p in PO02B_NEW) && !(p in PO02C_NEW) && !(p in PO02C1_NEW) && !(p in PO02D1A_NEW) && !(p in PO02D1A1_NEW) && !(p in PO02D1B_NEW) && !(p in PO02D2_NEW) && !(p in PO02D3_NEW) && !(p in PO03A_NEW)) files.push(p); } };
   walk(dir);
   const hh = createHash("sha256");
-  for (const f of files.sort()) { hh.update(f + "\0"); hh.update(f in ACC01_EDITS || f in LCP_EDITS || f in PO01A_EDITS || f in PO01B_EDITS || f in PO01B1_EDITS || f in PO02A_EDITS || f in PO02B_EDITS || f in PO02C_EDITS || f in PO02C1_EDITS || f in PO02D1A_EDITS || f in PO02D1A1_EDITS || f in PO02D1B_EDITS || f in PO02D2_EDITS || f in PO02D3_EDITS ? read(f) : readFileSync(join(ROOT, f))); }
+  for (const f of files.sort()) { hh.update(f + "\0"); hh.update(f in ACC01_EDITS || f in LCP_EDITS || f in PO01A_EDITS || f in PO01B_EDITS || f in PO01B1_EDITS || f in PO02A_EDITS || f in PO02B_EDITS || f in PO02C_EDITS || f in PO02C1_EDITS || f in PO02D1A_EDITS || f in PO02D1A1_EDITS || f in PO02D1B_EDITS || f in PO02D2_EDITS || f in PO02D3_EDITS || f in PO03A_EDITS ? read(f) : readFileSync(join(ROOT, f))); }
   return hh.digest("hex").slice(0, 16);
 }
 const dirDrift = Object.entries(PINS).filter(([p, hsh]) => p.endsWith("/**") && dirHash(p.slice(0, -3)) !== hsh.split(" ")[0]).map(([p]) => p);
@@ -447,9 +453,13 @@ check("Platform Owner PO-02D1B's approved change: the two freeze verifiers are P
 const po02d2DriftNow = po02d2Drift((f) => { try { return po02d3Read(f); } catch { return null; } });
 check("Platform Owner PO-02D2's approved change: each recorded file is PO-02D1B's (1cbbbc1) plus exactly its hunks — the invitation flag, error code and permission, the pending list's opt-in id, the console strings, stylesheet, status table, dialog focus return, the Companies and Dashboard pages and the two freeze verifiers — and the seven added invitation files (service, read model, actions, dialogs, history kit, detail page and its not-found) as recorded (verify/po02d2-approved-delta.mts)",
   po02d2DriftNow.length === 0 && JSON.stringify(Object.keys(PO02D2_EDITS).sort()) === JSON.stringify(["src/app/(platform)/platform.css", "src/app/(platform)/platform/(console)/companies/page.tsx", "src/app/(platform)/platform/(console)/dashboard/page.tsx", "src/components/platform/companies-kit.tsx", "src/components/platform/i18n.ts", "src/components/platform/platform-dialog.tsx", "src/lib/platform/companies.ts", "src/lib/platform/errors.ts", "src/lib/platform/flags.ts", "src/lib/platform/guards.ts", "verify/verify-document-form.mts", "verify/verify-page-archetypes.mts"]) && JSON.stringify(Object.keys(PO02D2_NEW).sort()) === JSON.stringify(["src/app/(platform)/invitation-actions.ts", "src/app/(platform)/platform/(console)/companies/invitations/[invitationId]/not-found.tsx", "src/app/(platform)/platform/(console)/companies/invitations/[invitationId]/page.tsx", "src/components/platform/invitation-dialogs.tsx", "src/components/platform/invitations-kit.tsx", "src/lib/platform/invitation-actions.ts", "src/lib/platform/invitations.ts"]), po02d2DriftNow.join(" "));
-const po02d3DriftNow = po02d3Drift((f) => { try { return diskRead(f); } catch { return null; } });
+const po02d3DriftNow = po02d3Drift((f) => { try { return po03aRead(f); } catch { return null; } });
 check("Platform Owner PO-02D3's approved change: each recorded file is PO-02D2's (49510ec) plus exactly its hunks — the customer registration action (its transaction now the shared organization bootstrap), the customer audit writer (an optional transaction executor, default unchanged), the platform flags, error codes and keyed-digest purposes, and the two freeze verifiers — and the nine added acceptance files (the shared bootstrap, the onboarding bridge and its types, the /register/accept page, client, actions and copy, the platform acceptance core and its throttle) as recorded (verify/po02d3-approved-delta.mts)",
   po02d3DriftNow.length === 0 && JSON.stringify(Object.keys(PO02D3_EDITS).sort()) === JSON.stringify(["src/app/(auth)/actions.ts", "src/lib/platform/config.ts", "src/lib/platform/errors.ts", "src/lib/platform/flags.ts", "src/lib/security/audit.ts", "verify/verify-document-form.mts", "verify/verify-page-archetypes.mts"]) && JSON.stringify(Object.keys(PO02D3_NEW).sort()) === JSON.stringify(["src/app/(invite)/register/accept/accept-invitation.tsx", "src/app/(invite)/register/accept/actions.ts", "src/app/(invite)/register/accept/copy.ts", "src/app/(invite)/register/accept/page.tsx", "src/lib/onboarding/acceptance-types.ts", "src/lib/onboarding/invitation-acceptance.ts", "src/lib/org-bootstrap.ts", "src/lib/platform/acceptance-throttle.ts", "src/lib/platform/invitation-acceptance.ts"]), po02d3DriftNow.join(" "));
+const po03aDriftNow = po03aDrift((f) => { try { return diskRead(f); } catch { return null; } });
+check("Platform Owner PO-03A's approved change: each recorded file is PO-02D3's (1d036d6) plus exactly its hunks — the two Team actions (now the locked Team-change service), the Team panel (seat card, primary-owner badge, protected menu), the Business Settings page (the session's own ownership summary), the activity writer (an optional transaction executor, default unchanged), the shared dictionary (new strings), the console company detail and read model (Users & seats) and its strings, and the two freeze verifiers — and the six added files (the primary-owner and seat cores, the Team ownership gate, the Team-change service, its types and the seat card) as recorded (verify/po03a-approved-delta.mts)",
+  po03aDriftNow.length === 0 && JSON.stringify(Object.keys(PO03A_EDITS).sort()) === JSON.stringify(["src/app/(app)/settings/organization/page.tsx", "src/app/(app)/settings/team/actions.ts", "src/app/(app)/settings/team/team-panel.tsx", "src/app/(platform)/platform/(console)/companies/[orgId]/page.tsx", "src/components/platform/i18n.ts", "src/lib/activity.ts", "src/lib/i18n/dict.ts", "src/lib/platform/companies.ts", "verify/verify-document-form.mts", "verify/verify-page-archetypes.mts"]) && JSON.stringify(Object.keys(PO03A_NEW).sort()) === JSON.stringify(["src/app/(app)/settings/team/seat-summary.tsx", "src/lib/platform/primary-owners.ts", "src/lib/platform/seat-accounting.ts", "src/lib/team/member-changes.ts", "src/lib/team/ownership-gate.ts", "src/lib/team/seat-summary-types.ts"]),
+  po03aDriftNow.join(" "));
 const SUBMIT: Record<string, string> = {
   "sales/quotations/quotation-form.tsx": "9bdada8919ca1c68", "sales/orders/order-form.tsx": "5878b69222c20ecc", "sales/proforma/proforma-form.tsx": "298ddfd557fa4b5b",
   "sales/invoices/invoice-form.tsx": "9ac743493b5e4887", "sales/delivery-challans/dc-form.tsx": "b43736b93681d299", "sales/credit-notes/cn-form.tsx": "6e40556ff6eda6e1",
