@@ -71,6 +71,10 @@
 6. **A reporting correction.** The PO-03B handover quoted `verify:static` as "77/77": that is the line of the chain's
    last suite (lcp-design), not the chain's total. The chain stops on the first failing suite and every suite was also
    run alone, so that result stands; this document gives the total — **1,914 checks in 22 suites** (§K).
+7. **The Invite user dialog's "Check details" step is taller than a 900-pixel-high window** (screenshot 12): its two
+   buttons are reached by scrolling inside the dialog. The shared `PlatformDialog` scrolls as a whole
+   (`max-h-[calc(100dvh-2rem)] overflow-y-auto`), so this works and the browser suite drives it, but the buttons are not
+   pinned. A sticky action bar would change the shared dialog for every console dialog; not done here.
 
 ---
 
