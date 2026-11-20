@@ -161,7 +161,7 @@ type InviteErrors = { name?: string; email?: string; role?: string; stepUp?: str
 
 /** Notices from the read-only check; returns whether the invitation can be created as entered. */
 function previewBlocks(p: UserInvitationPreviewView): boolean {
-  return p.company.access !== "active" || !!p.pendingReference || p.emailInUse || !!p.companyInvitationReference || p.rateLimited;
+  return p.company.access !== "active" || !!p.pendingReference || p.emailInUse || !!p.companyInvitationReference || p.rateLimited || p.seatRefusal !== null;
 }
 
 export function InviteUserControl({ locale, orgId, companyName }: { locale: Locale; orgId: number; companyName: string }) {
@@ -320,7 +320,7 @@ export function InviteUserControl({ locale, orgId, companyName }: { locale: Loca
                       {p.seats.seats === null
                         ? pt(locale, "uinv.seatsNoAllowance", { now: p.seats.occupied, after: p.seats.after.occupied })
                         : pt(locale, "uinv.seatsAfter", { now: p.seats.occupied, after: p.seats.after.occupied, seats: p.seats.seats })}
-                      {p.seats.after.overBy > 0 && ` ${pt(locale, "uinv.seatsOver", { n: p.seats.after.overBy })}`}
+                      {p.seatsEnforced ? ` ${pt(locale, "uinv.seatsEnforced")}` : p.seats.after.overBy > 0 && ` ${pt(locale, "uinv.seatsOver", { n: p.seats.after.overBy })}`}
                     </li>
                   )}
                   <li>{pt(locale, "uinv.effectRecorded")}</li>
@@ -332,6 +332,9 @@ export function InviteUserControl({ locale, orgId, companyName }: { locale: Loca
                     {p.emailInUse && <li className="platform-form-error">{pt(locale, "uinv.blockEmailInUse")}</li>}
                     {p.companyInvitationReference && <li className="platform-form-error">{pt(locale, "uinv.blockCompanyInvitation", { reference: isolate(p.companyInvitationReference) })}</li>}
                     {p.rateLimited && <li className="platform-form-error">{pt(locale, "uinv.blockRate")}</li>}
+                    {p.seatRefusal === "seat_limit" && <li className="platform-form-error">{pt(locale, "uinv.blockSeatLimit")}</li>}
+                    {p.seatRefusal === "no_subscription" && <li className="platform-form-error">{pt(locale, "uinv.blockNoSubscription")}</li>}
+                    {p.seatRefusal === "unavailable" && <li className="platform-form-error">{pt(locale, "uinv.blockSeatsUnavailable")}</li>}
                   </ul>
                 )}
                 {p.expiredReference && !previewBlocks(p) && (

@@ -98,6 +98,8 @@ function userRows(page: CustomerUserListPage, locale: Locale): UserRowView[] {
           occupied: formatPlatformCount(row.seats.occupied),
           seats: row.seats.seats === null ? null : formatPlatformCount(row.seats.seats),
           overBy: row.seats.overLimit && row.seats.seats !== null ? formatPlatformCount(row.seats.occupied - row.seats.seats) : null,
+          enforced: row.seats.enforced,
+          full: row.seats.full,
         }
       : null,
     lastSignIn: row.lastSignInAt ? formatPlatformDate(row.lastSignInAt, locale) : null,

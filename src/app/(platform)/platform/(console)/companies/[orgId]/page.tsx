@@ -9,13 +9,14 @@ import { pt } from "@/components/platform/i18n";
 import { EmptyPanel, PreviewBadge } from "@/components/platform/page-kit";
 import { PrimaryOwnerTransfer } from "@/components/platform/primary-owner-transfer";
 import { InviteUserControl, UserInvitationRowActions } from "@/components/platform/user-invitation-dialogs";
+import { SeatBreakdown, SeatLimitText } from "@/components/platform/users-kit";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { Locale } from "@/lib/i18n/dict";
 import { getLocale } from "@/lib/i18n/server";
 import { getCompanyDetail, type CompanyDetail } from "@/lib/platform/companies";
 import { PLATFORM_SESSION_COOKIE } from "@/lib/platform/config";
-import { formatPlatformCount, formatPlatformDate, formatPlatformDateTime } from "@/lib/platform/display";
+import { formatPlatformCount, formatPlatformDate, formatPlatformDateTime, seatBreakdownView, seatLimitState } from "@/lib/platform/display";
 import { isPlatformError } from "@/lib/platform/errors";
 import { requirePlatformSession } from "@/lib/platform/guards";
 import { listCompanyUserInvitations, type CompanyUserInvitations } from "@/lib/platform/user-invitations";
@@ -104,7 +105,8 @@ function AccessPanel({ locale, d }: { locale: Locale; d: CompanyDetail }) {
   );
 }
 
-// PO-03A: read-only Users & seats — the shared seat accounting and the primary-owner mapping. Nothing is enforced.
+// PO-03A: read-only Users & seats — the shared seat accounting and the primary-owner mapping. PO-03D: who occupies the
+// seats, and whether the user limit is enforced (only while enforcement is on AND the company has a subscription).
 const count = (value: number) => <Ltr>{formatPlatformCount(value)}</Ltr>;
 const isolated = (value: string) => <bdi>{value}</bdi>;
 
@@ -119,6 +121,7 @@ function SeatsPanel({ locale, d }: { locale: Locale; d: CompanyDetail }) {
       label: pt(locale, "seats.occupied"),
       value: a.state === "assigned" ? <Interpolated template={pt(locale, "seats.occupiedOf")} values={{ occupied: count(s.occupied), seats: count(a.seats) }} /> : count(s.occupied),
     });
+    items.push({ label: pt(locale, "seats.breakdownLabel"), value: <SeatBreakdown locale={locale} view={seatBreakdownView(s)} /> });
     items.push({
       label: pt(locale, "seats.allowance"),
       value:
@@ -136,6 +139,7 @@ function SeatsPanel({ locale, d }: { locale: Locale; d: CompanyDetail }) {
     items.push({ label: pt(locale, "seats.activeUsers"), value: count(s.users.active) });
     items.push({ label: pt(locale, "seats.disabledUsers"), value: count(s.users.disabled) });
   }
+  items.push({ label: pt(locale, "seats.enforcementLabel"), value: <SeatLimitText locale={locale} state={seatLimitState(s)} /> });
   items.push({
     label: pt(locale, "seats.primaryOwner"),
     value:
@@ -165,12 +169,18 @@ function SeatsPanel({ locale, d }: { locale: Locale; d: CompanyDetail }) {
           <p className="platform-callout mt-4" data-tone="neutral">
             <CircleAlert className="size-4 shrink-0" aria-hidden />
             <span>
-              <Interpolated template={pt(locale, "seats.overBy")} values={{ n: count(s.overBy) }} />
+              <Interpolated template={pt(locale, s.enforced ? "seats.overByEnforced" : "seats.overBy")} values={{ n: count(s.overBy) }} />
             </span>
           </p>
         )}
+        {s && s.enforced && !s.overLimit && s.remaining === 0 && (
+          <p className="platform-callout mt-4" data-tone="neutral" data-testid="seats-limit-reached">
+            <CircleAlert className="size-4 shrink-0" aria-hidden />
+            <span>{pt(locale, "seats.limitReached")}</span>
+          </p>
+        )}
         {legacy && <p className="platform-fine-print mt-4">{pt(locale, "seats.legacyNote")}</p>}
-        <p className="platform-fine-print mt-4">{pt(locale, "seats.note")}</p>
+        <p className="platform-fine-print mt-4">{pt(locale, s?.enforced ? "seats.noteEnforced" : "seats.note")}</p>
       </div>
     </section>
   );

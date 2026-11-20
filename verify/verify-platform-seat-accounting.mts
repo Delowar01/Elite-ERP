@@ -305,8 +305,10 @@ try {
     ok("N1 only the Team ownership gate, the console read model, (PO-03B) the customer-user read model, (PO-03C) the user-invitation preview and (PO-03D) the seat-enforcement core and the acceptance preview use the seat service", same(importers, ["src/lib/platform/companies.ts", "src/lib/platform/customer-users.ts", "src/lib/platform/seat-enforcement.ts", "src/lib/platform/user-invitation-acceptance.ts", "src/lib/platform/user-invitation-actions.ts", "src/lib/team/ownership-gate.ts"]), importers.join(", "));
     // PO-03D: enforcement exists now — exactly ONE function, in exactly one module; the accounting itself stays read-only.
     ok("N2 (PO-03D) the only seat-enforcement function is assertUserSeatAvailable, defined once, in src/lib/platform/seat-enforcement.ts", same(files.filter((f) => /function (assertUserSeatAvailable|enforceSeat|seatLimitExceeded)\b/i.test(code(f))).map(rel), ["src/lib/platform/seat-enforcement.ts"]) && !files.some((f) => /enforceSeat|seatLimitExceeded/i.test(code(f))));
-    ok("N3 the service is read-only and says `enforced` only from the caller's switch AND a subscription (PO-03D: `enforced: boolean`, never an environment read here) and the gate exposes reads only",
-      /enforced: boolean;/.test(code(join(ROOT, "src/lib/platform/seat-accounting.ts"))) && /enforced: enforcement === true && seats !== null,/.test(code(join(ROOT, "src/lib/platform/seat-accounting.ts"))) && !/process\.env/.test(code(join(ROOT, "src/lib/platform/seat-accounting.ts"))) && same([...code(join(ROOT, "src/lib/team/ownership-gate.ts")).matchAll(/^export (?:async )?(?:function|class) (\w+)/gm)].map((m) => m[1]).sort(), ["TeamProtectionUnavailableError", "lockPrimaryOwnerForTeamChange", "readTeamOwnershipSummary"]));
+    // PO-03D (sub-batch C): the gate also exposes the Add Member's lock, its seat check and their refusal type — calls
+    // through to the platform's ONE enforcing check (seat-enforcement.ts); the accounting itself stays read-only.
+    ok("N3 the service is read-only and says `enforced` only from the caller's switch AND a subscription (PO-03D: `enforced: boolean`, never an environment read here) and the gate exposes reads only — plus (PO-03D) the Add Member's lock, seat check and refusal type",
+      /enforced: boolean;/.test(code(join(ROOT, "src/lib/platform/seat-accounting.ts"))) && /enforced: enforcement === true && seats !== null,/.test(code(join(ROOT, "src/lib/platform/seat-accounting.ts"))) && !/process\.env/.test(code(join(ROOT, "src/lib/platform/seat-accounting.ts"))) && same([...code(join(ROOT, "src/lib/team/ownership-gate.ts")).matchAll(/^export (?:async )?(?:function|class) (\w+)/gm)].map((m) => m[1]).sort(), ["TeamProtectionUnavailableError", "TeamSeatRefusal", "assertTeamMemberSeat", "lockPrimaryOwnerForTeamChange", "lockTeamMemberAdd", "readTeamOwnershipSummary"]));
     const before = await seats.readSeatAccounting(db, T.orgId);
     await newUser(T.orgId, "staff");
     const second = await acceptedCompany();
@@ -351,8 +353,9 @@ try {
     ok("T1 each Team summary holds only its own company's counts (1 user vs the neighbour's 6; the neighbour has no subscription and no owner mapping)",
       g.seats.available && g.seats.users.total === 1 && g.primaryOwner.state === "designated" && g.primaryOwner.userId === A.ownerId &&
         gB.seats.available && gB.seats.users.total === 6 && gB.seats.allowance.state === "none" && gB.primaryOwner.state === "not_designated");
-    ok("T2 the Team summary's shape is exactly the allowlist (counts, allowance, the primary owner's user id)",
-      same(Object.keys(g).sort(), ["primaryOwner", "seats"]) && g.seats.available && same(Object.keys(g.seats).sort(), ["allowance", "available", "occupied", "overBy", "remaining", "users"]) &&
+    // PO-03D: plus the pending-invitation count (the breakdown) and whether the limit is enforced — counts and a flag only.
+    ok("T2 the Team summary's shape is exactly the allowlist (counts, allowance, the primary owner's user id; PO-03D: the pending count and `enforced`)",
+      same(Object.keys(g).sort(), ["primaryOwner", "seats"]) && g.seats.available && same(Object.keys(g.seats).sort(), ["allowance", "available", "enforced", "occupied", "overBy", "pending", "remaining", "users"]) &&
         same(Object.keys(g.seats.allowance).sort(), ["endDate", "isTrial", "packageName", "seats", "state", "versionNumber"]) && same(Object.keys(g.primaryOwner).sort(), ["state", "userId"]));
     ok("T3 the console's Users & seats part names only the primary owner's name and e-mail — no hash, MFA, session or business value",
       d.primaryOwner.state === "designated" && same(Object.keys(d.primaryOwner).sort(), ["activeOwner", "email", "name", "state"]) && !/\$2[aby]\$|mfa|password|session|token/i.test(dJson) && !dJson.includes(MARK) && !gJson.includes(MARK));

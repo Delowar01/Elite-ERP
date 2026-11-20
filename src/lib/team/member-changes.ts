@@ -23,8 +23,8 @@ import { TeamProtectionUnavailableError } from "./ownership-gate";
 
 // ---------------------------------------------------------------------------------------------
 // Team changes that can affect a company's ownership (PO-03A, decision O-3): a member's ROLE and whether the member
-// is ACTIVE. The two Team actions (src/app/(app)/settings/team/actions.ts) call these after requireRole; adding a
-// member is unchanged and does not come through here.
+// is ACTIVE. The two Team actions (src/app/(app)/settings/team/actions.ts) call these after requireRole. PO-03D: adding a
+// member is src/lib/team/member-add.ts (the shared seat lock order and seat check), which reuses these messages.
 //
 // Each change is ONE READ COMMITTED transaction with a fixed lock order — the same for every customer-user mutation:
 //   1. the company row (orgs) FOR NO KEY UPDATE — serializes every Team change of the company. It is the row and

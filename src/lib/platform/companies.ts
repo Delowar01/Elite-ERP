@@ -8,7 +8,7 @@ import type { HeaderSource } from "./client-ip";
 import { effectiveTenantAccessSql, resolveTenantAccess, tenantAccessEnforcementEnabled, type TenantAccess, type TenantAccessStatus } from "./company-access";
 import { requestMeta } from "./console";
 import { isPlatformError, PlatformError } from "./errors";
-import { assertPlatformConsoleEnabled } from "./flags";
+import { assertPlatformConsoleEnabled, isCustomerSeatEnforcementEnabled } from "./flags";
 import { authorizePlatformToken } from "./guards";
 import { errorClass, reportSecurityIncident } from "./incident";
 import { primaryOwnerFoundation, readPrimaryOwnerMapping } from "./primary-owners";
@@ -587,7 +587,8 @@ export type PrimaryOwnerView =
  * including the access controls — is still served. Only the mapped user's name, e-mail, role and status are read.
  */
 async function ownershipOf(orgId: number): Promise<{ seats: SeatAccounting | null; primaryOwner: PrimaryOwnerView }> {
-  const seats = await readSeatAccounting(db, orgId).catch((err: unknown) => {
+  // PO-03D: `enforced` only while seat enforcement is on AND the company has a current subscription.
+  const seats = await readSeatAccounting(db, orgId, platformClock.now(), isCustomerSeatEnforcementEnabled()).catch((err: unknown) => {
     console.error(`[platform-companies] seat accounting unavailable: ${errorClass(err)}`);
     return null;
   });

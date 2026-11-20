@@ -6,16 +6,17 @@ import { verifyPlatformPassword } from "./auth";
 import { assertPlatformAuditProtection, recordPlatformAudit } from "./audit";
 import { platformClock } from "./clock";
 import { orgReference } from "./companies";
-import { lockTenantAccessForSessionIssue, getTenantAccess } from "./company-access";
+import { getTenantAccess } from "./company-access";
 import { requestMeta, type ConsoleRequest } from "./console";
 import { isPlatformError, PlatformError, type PlatformErrorCode } from "./errors";
-import { assertPlatformUserInvitationsEnabled, isCustomerUserInviteAcceptanceEnabled } from "./flags";
+import { assertPlatformUserInvitationsEnabled, isCustomerSeatEnforcementEnabled, isCustomerUserInviteAcceptanceEnabled } from "./flags";
 import { authorizePlatformToken } from "./guards";
 import { errorClass, reportSecurityIncident } from "./incident";
 import { customerEmailInUse, customerPublicOrigin, lockInvitationEmail, newInvitationToken } from "./invitations";
 import { consumeTotpCode } from "./mfa";
 import { assertSameOrigin } from "./origin";
 import { readSeatAccounting, type SeatAccounting } from "./seat-accounting";
+import { assertUserSeatAvailable, isSeatRefusal, lockCompanyForSeatChange, previewUserSeat, type CompanySeatLock, type SeatDecision, type SeatRefusalCode, type SeatVerdict } from "./seat-enforcement";
 import type { PlatformSessionContext } from "./session";
 import { activeLoginBlock, recordLoginAttempt, throttleKeys, type ThrottleKeys } from "./throttle";
 import {
@@ -41,8 +42,9 @@ import {
 
 // ---------------------------------------------------------------------------------------------
 // Platform Owner PO-03C (sub-batch C) — create, revoke and re-issue CUSTOMER-USER invitations. The ONLY code that writes
-// user_invitations. It creates no user, session or subscription, sends nothing (no e-mail, SMS, WhatsApp or other
-// delivery: copy link only), implements no acceptance and enforces no seat limit (both PO-04).
+// user_invitations. It creates no user, session or subscription and sends nothing (no e-mail, SMS, WhatsApp or other
+// delivery: copy link only). PO-03D: acceptance is /join/accept (user-invitation-acceptance.ts), and create and re-issue
+// apply the shared seat check while CUSTOMER_SEAT_ENFORCEMENT_ENABLED is on (below).
 //
 // Every change is accepted only in this order (the PO-02D2 order):
 //   1. both flags (PLATFORM_CONSOLE_ENABLED and PLATFORM_USER_INVITATIONS_ENABLED, each exactly "true")
@@ -52,13 +54,15 @@ import {
 //   → request FORMAT (no database; a malformed request spends no second-factor code)
 //   → read-only pre-checks, so a request that must fail spends nothing either: the hourly limit, the company (it
 //     exists and its access is active), an unexpired invitation for the e-mail, a customer user with the e-mail (any
-//     letter case, any company), a pending COMPANY invitation for the e-mail; the invitation's state (revoke / re-issue)
+//     letter case, any company), a pending COMPANY invitation for the e-mail; the invitation's state (revoke / re-issue);
+//     (PO-03D) the company's seats, while enforcement is on
 //   → 5. step-up: the durable throttle shared with sign-in, the password (create and re-issue only), then — inside the
 //     transaction — a fresh TOTP code consumed with replay protection
 //   → 6. ONE READ COMMITTED transaction, lock order: platform_admins row (the TOTP compare-and-set) → the e-mail's
-//     advisory lock (THE SAME lock as company invitations: one queue per e-mail across both kinds) → the company row FOR
-//     SHARE with its access re-read (a suspension waits for, or is seen by, this transaction — the PO-02C.1 lock) →
-//     user_invitations row(s) FOR UPDATE → insert. Every pre-check is repeated authoritatively here; the change and its
+//     advisory lock (THE SAME lock as company invitations: one queue per e-mail across both kinds) → (PO-03D) the company
+//     row FOR NO KEY UPDATE, taken directly and with a bounded wait — the seat lock of seat-enforcement.ts, which also
+//     serializes with a suspension (the access action holds the same row in the same mode) — with its access re-read →
+//     user_invitations row(s) FOR UPDATE → (PO-03D) the shared seat check → insert. Every pre-check is repeated authoritatively here; the change and its
 //     audit record commit together, so an audit failure rolls the whole operation back (AUDIT_UNAVAILABLE) and a
 //     disconnection before COMMIT leaves nothing.
 //
@@ -67,9 +71,13 @@ import {
 // limit is exact (the operator's row serializes every create and re-issue; the count reads committed rows). A response
 // lost after COMMIT cannot be recovered — the link is never stored — so the operator re-issues it.
 //
-// Seats: an open, unexpired invitation RESERVES a seat (seat-accounting.ts counts it). Nothing here refuses because of
-// seats: the preview shows the company's seats after the invitation (display only). Enforcement — under the company row
-// lock, at create and at acceptance — is PO-04.
+// Seats: an open, unexpired invitation RESERVES a seat (seat-accounting.ts counts it). PO-03D: while
+// CUSTOMER_SEAT_ENFORCEMENT_ENABLED is on, create and re-issue are refused beyond the company's seats by the ONE shared
+// check (assertUserSeatAvailable), under the company row lock, on fresh values: a re-issue replaces its source's
+// reservation (a pending source: no new seat; an expired or revoked one: a new seat); a company without a current
+// subscription is refused (SUBSCRIPTION_REQUIRED — never read as unlimited); an unreadable foundation refuses everything
+// (SEAT_ENFORCEMENT_UNAVAILABLE). Switched off (the default), the seats are shown and nothing is refused because of
+// them, as in PO-03C. A lock wait beyond the bound or a deadlock answers CHANGE_IN_PROGRESS; nothing is applied.
 // ---------------------------------------------------------------------------------------------
 
 const TOTP_SHAPE = /^\d{6}$/;
@@ -100,8 +108,10 @@ export type UserInvitationPreview = {
   emailInUse: boolean;
   companyInvitationReference: string | null;
   rateLimited: boolean;
-  /** The company's seats now (display only — nothing is refused because of them). */
+  /** The company's seats now (`enforced` only while enforcement is on and the company has a subscription). */
   seats: SeatAccounting | null;
+  /** PO-03D: what the shared seat check would answer for one more invitation (null: allowed, or enforcement is off). */
+  seatRefusal: SeatRefusalCode | null;
 };
 export type UserInvitationCurrent = { ok: true; id: string; reference: string; state: UserInvitationState; orgId: number; companyName: string; name: string; email: string; role: UserInvitationRole; expiresAt: Date };
 
@@ -213,13 +223,45 @@ const createdAfter = (fields: UserInvitationFields, reference: string, expiresAt
  * The checks every create and re-issue repeats inside its transaction, after the e-mail and company locks: the
  * company's access is active, no customer user has the e-mail, no pending company invitation holds it.
  */
-async function lockedChecks(tx: Tx, fields: UserInvitationFields, now: Date) {
-  const access = await lockTenantAccessForSessionIssue(tx, fields.orgId);
+/**
+ * Under the e-mail lock: the company row FOR NO KEY UPDATE (PO-03D — the seat lock, taken directly, never upgraded from a
+ * weaker one; it conflicts with the access action's lock on the same row, so a suspension waits for, or is seen by, this
+ * transaction), its access read fresh after the lock, then the e-mail checks. Returns the lock for the seat check.
+ */
+async function lockedChecks(tx: Tx, fields: UserInvitationFields, now: Date): Promise<CompanySeatLock> {
+  const lock = await lockCompanyForSeatChange(tx, fields.orgId);
+  if (!lock) throw new PlatformError("NOT_FOUND", "no company with this id");
+  const access = await getTenantAccess(lock.orgId, tx);
   if (!access) throw new PlatformError("NOT_FOUND", "no company with this id");
   if (access.status !== "active") throw new PlatformError("COMPANY_SUSPENDED", "the company's access is suspended");
   if (await customerEmailInUse(tx, fields.email)) throw new PlatformError("EMAIL_CONFLICT", "a customer user has this e-mail");
   const companyInvitation = await pendingCompanyInvitationFor(tx, fields.email, now);
   if (companyInvitation) throw new UserInvitationRefusal("CONFLICT", "a pending company invitation holds this e-mail", { companyInvitationReference: companyInvitation });
+  return lock;
+}
+
+/** PO-03D: the audit stage of a seat refusal. */
+const SEAT_STAGE: Record<SeatRefusalCode, string> = { SEAT_LIMIT: "seat_limit", SUBSCRIPTION_REQUIRED: "no_subscription", SEAT_ENFORCEMENT_UNAVAILABLE: "seat_check_unavailable" };
+
+/** PO-03D: the seat decision as the audit records it (counts only). */
+function seatEvidence(seat: SeatDecision) {
+  return seat.enforced ? { enforced: true, seats: seat.seats, occupied: seat.occupiedAfter } : { enforced: false, reason: seat.reason };
+}
+
+/** PO-03D: a refused read-only seat pre-check — audited, then the typed refusal (a request that must fail spends nothing). */
+async function seatPreCheck(verdict: SeatVerdict, rejected: (stage: string) => Promise<unknown>): Promise<void> {
+  if (verdict.ok) return;
+  await rejected(SEAT_STAGE[verdict.code]);
+  throw new PlatformError(verdict.code, "the company's seats refuse this invitation");
+}
+
+/** PO-03D: a lock wait beyond the bound (55P03) or a deadlock (40P01), also when wrapped — nothing was applied. */
+function lockConflict(err: unknown): boolean {
+  for (let e: unknown = err, depth = 0; e && depth < 5; e = (e as { cause?: unknown }).cause, depth++) {
+    const code = (e as { code?: unknown }).code;
+    if (code === "55P03" || code === "40P01") return true;
+  }
+  return false;
 }
 
 // ---- preview and current state (read-only; no step-up) -------------------------------------------
@@ -242,8 +284,9 @@ export async function previewUserInvitation(req: ConsoleRequest, input: UserInvi
       customerEmailInUse(db, fields.email),
       pendingCompanyInvitationFor(db, fields.email, now),
       recentUserInvitationsBy(db, ctx.adminId, now),
-      readSeatAccounting(db, fields.orgId, now).catch(() => null),
+      readSeatAccounting(db, fields.orgId, now, isCustomerSeatEnforcementEnabled()).catch(() => null),
     ]);
+    const seatCheck = await previewUserSeat(db, fields.orgId, 1, { path: "invitation_create", at: now }).catch((): SeatVerdict => ({ ok: false, code: "SEAT_ENFORCEMENT_UNAVAILABLE", seats: null, occupiedBefore: null }));
     const unexpired = holder && holder.expiresAt.getTime() > now.getTime();
     return {
       ok: true,
@@ -255,6 +298,7 @@ export async function previewUserInvitation(req: ConsoleRequest, input: UserInvi
       companyInvitationReference,
       rateLimited: recent >= USER_INVITATION_RATE_LIMIT.max,
       seats,
+      seatRefusal: seatCheck.ok ? null : seatCheck.code,
     };
   } catch (err) {
     return failure(err, "user_invitation.preview");
@@ -335,6 +379,8 @@ export async function createUserInvitation(req: ConsoleRequest, input: CreateUse
       await rejected("company_invitation_conflict", { companyInvitation });
       throw new UserInvitationRefusal("CONFLICT", "a pending company invitation holds this e-mail", { companyInvitationReference: companyInvitation });
     }
+    // PO-03D: the company's seats (reads nothing while enforcement is off).
+    await seatPreCheck(await previewUserSeat(db, fields.orgId, 1, { path: "invitation_create", at: now }), rejected);
 
     const keys = throttleKeys(ctx.email, meta.ipAddress);
     await stepUpOutsideTransaction(ctx, keys, password, now, rejected);
@@ -348,7 +394,7 @@ export async function createUserInvitation(req: ConsoleRequest, input: CreateUse
           if (!totp.ok) return { ok: false as const, stage: totp.reason === "replayed" ? ("replay" as const) : ("mfa" as const) };
           await lockInvitationEmail(tx, fields.email);
           if ((await recentUserInvitationsBy(tx, ctx.adminId, now)) >= USER_INVITATION_RATE_LIMIT.max) throw new PlatformError("RATE_LIMITED", "hourly user-invitation limit reached");
-          await lockedChecks(tx, fields, now);
+          const lock = await lockedChecks(tx, fields, now);
           const current = await userInvitationSlotHolder(tx, fields.email, true);
           if (current && current.expiresAt.getTime() > now.getTime()) {
             throw new UserInvitationRefusal("CONFLICT", "an unexpired invitation holds this e-mail", { pendingReference: userInvitationReference(current.id) });
@@ -359,6 +405,8 @@ export async function createUserInvitation(req: ConsoleRequest, input: CreateUse
             await revokeRow(tx, current.id, ctx.adminId, now);
             replacedReference = userInvitationReference(current.id);
           }
+          // PO-03D: the shared seat check — under the company lock, after the rows this transaction replaces.
+          const seat = await assertUserSeatAvailable(tx, lock, 1, { path: "invitation_create", at: now });
           const created = await insertUserInvitation(tx, fields, ctx.adminId, now);
           const reference = userInvitationReference(created.id);
           if (current && replacedReference) {
@@ -368,7 +416,7 @@ export async function createUserInvitation(req: ConsoleRequest, input: CreateUse
             );
           }
           await recordPlatformAudit(
-            { ...base, entityId: created.id, action, after: { ...createdAfter(fields, reference, created.expiresAt), ...(replacedReference ? { replaces: replacedReference } : {}) }, result: "success" },
+            { ...base, entityId: created.id, action, after: { ...createdAfter(fields, reference, created.expiresAt), ...(replacedReference ? { replaces: replacedReference } : {}), seats: seatEvidence(seat) }, result: "success" },
             tx,
           );
           return { ok: true as const, id: created.id, token: created.token, expiresAt: created.expiresAt, replacedReference };
@@ -383,6 +431,11 @@ export async function createUserInvitation(req: ConsoleRequest, input: CreateUse
       else if (isPlatformError(err, "EMAIL_CONFLICT")) await rejected("email_conflict");
       else if (isPlatformError(err, "COMPANY_SUSPENDED")) await rejected("company_suspended");
       else if (isPlatformError(err, "RATE_LIMITED")) await rejected("rate_limit");
+      else if (isSeatRefusal(err)) await rejected(SEAT_STAGE[err.code]);
+      else if (lockConflict(err)) {
+        await rejected("busy");
+        throw new PlatformError("CHANGE_IN_PROGRESS", "a lock wait or a deadlock; nothing was applied");
+      }
       throw err;
     }
     if (!outcome.ok) {
@@ -510,6 +563,8 @@ export async function reissueUserInvitation(req: ConsoleRequest, input: ReissueU
       await rejected("pending_conflict", { pending: pendingReference });
       throw new UserInvitationRefusal("CONFLICT", "another unexpired invitation holds this e-mail", { pendingReference });
     }
+    // PO-03D: the company's seats — the source's own reservation is replaced (reads nothing while enforcement is off).
+    await seatPreCheck(await previewUserSeat(db, fields.orgId, 1, { path: "invitation_reissue", at: now, replacingInvitationIds: [id] }), rejected);
 
     const keys = throttleKeys(ctx.email, meta.ipAddress);
     await stepUpOutsideTransaction(ctx, keys, password, now, rejected);
@@ -522,8 +577,8 @@ export async function reissueUserInvitation(req: ConsoleRequest, input: ReissueU
           if (!totp.ok) return { ok: false as const, stage: totp.reason === "replayed" ? ("replay" as const) : ("mfa" as const) };
           await lockInvitationEmail(tx, fields.email);
           if ((await recentUserInvitationsBy(tx, ctx.adminId, now)) >= USER_INVITATION_RATE_LIMIT.max) throw new PlatformError("RATE_LIMITED", "hourly user-invitation limit reached");
-          // The shared lock order: the company row (FOR SHARE) BEFORE any invitation row.
-          await lockedChecks(tx, fields, now);
+          // The shared lock order: the company row (PO-03D: FOR NO KEY UPDATE, the seat lock) BEFORE any invitation row.
+          const lock = await lockedChecks(tx, fields, now);
           const [old] = await tx.select({ acceptedAt: uinv.acceptedAt, revokedAt: uinv.revokedAt, expiresAt: uinv.expiresAt }).from(uinv).where(eq(uinv.id, id)).for("update");
           if (!old) throw new PlatformError("NOT_FOUND", "no user invitation with this id");
           if (old.acceptedAt) throw new PlatformError("INVITE_USED", "the invitation was accepted");
@@ -536,6 +591,8 @@ export async function reissueUserInvitation(req: ConsoleRequest, input: ReissueU
           }
           const toRevoke = current ? [{ id: current.id, orgId: current.orgId, state: current.id === id ? previousState : ("expired" as const) }] : [];
           for (const r of toRevoke) await revokeRow(tx, r.id, ctx.adminId, now);
+          // PO-03D: the shared seat check — the source's reservation replaced (a pending source needs no new seat).
+          const seat = await assertUserSeatAvailable(tx, lock, 1, { path: "invitation_reissue", at: now, replacingInvitationIds: [id] });
           const created = await insertUserInvitation(tx, fields, ctx.adminId, now);
           const reference = userInvitationReference(created.id);
           for (const r of toRevoke) {
@@ -544,7 +601,7 @@ export async function reissueUserInvitation(req: ConsoleRequest, input: ReissueU
               tx,
             );
           }
-          await recordPlatformAudit({ ...base, entityId: created.id, action, after: { ...createdAfter(fields, reference, created.expiresAt), replaces: previousReference, previousState }, result: "success" }, tx);
+          await recordPlatformAudit({ ...base, entityId: created.id, action, after: { ...createdAfter(fields, reference, created.expiresAt), replaces: previousReference, previousState, seats: seatEvidence(seat) }, result: "success" }, tx);
           return { ok: true as const, id: created.id, token: created.token, expiresAt: created.expiresAt, previousReference };
         },
         { isolationLevel: "read committed" },
@@ -556,6 +613,11 @@ export async function reissueUserInvitation(req: ConsoleRequest, input: ReissueU
       else if (isPlatformError(err, "EMAIL_CONFLICT")) await rejected("email_conflict");
       else if (isPlatformError(err, "COMPANY_SUSPENDED")) await rejected("company_suspended");
       else if (isPlatformError(err, "RATE_LIMITED")) await rejected("rate_limit");
+      else if (isSeatRefusal(err)) await rejected(SEAT_STAGE[err.code]);
+      else if (lockConflict(err)) {
+        await rejected("busy");
+        throw new PlatformError("CHANGE_IN_PROGRESS", "a lock wait or a deadlock; nothing was applied");
+      }
       throw err;
     }
     if (!outcome.ok) {

@@ -7,13 +7,13 @@ import { CustomerUserControls } from "@/components/platform/customer-user-contro
 import { CustomerUserRoleControl } from "@/components/platform/customer-user-role-control";
 import { pt } from "@/components/platform/i18n";
 import { EmptyPanel } from "@/components/platform/page-kit";
-import { AccountStatus, MfaText, RoleText } from "@/components/platform/users-kit";
+import { AccountStatus, MfaText, RoleText, SeatBreakdown, SeatLimitText } from "@/components/platform/users-kit";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { Locale } from "@/lib/i18n/dict";
 import { getLocale } from "@/lib/i18n/server";
 import { PLATFORM_SESSION_COOKIE } from "@/lib/platform/config";
 import { USER_ACTIVITY_LIMIT, getCustomerUserDetail, type CustomerUserDetail } from "@/lib/platform/customer-users";
-import { formatPlatformCount, formatPlatformDate, formatPlatformDateTime } from "@/lib/platform/display";
+import { formatPlatformCount, formatPlatformDate, formatPlatformDateTime, seatBreakdownView, seatLimitState } from "@/lib/platform/display";
 import { isPlatformError } from "@/lib/platform/errors";
 import { requirePlatformSession } from "@/lib/platform/guards";
 
@@ -158,6 +158,7 @@ function SeatsPanel({ locale, d }: { locale: Locale; d: CustomerUserDetail }) {
       label: pt(locale, "seats.occupied"),
       value: a.state === "assigned" ? <Interpolated template={pt(locale, "seats.occupiedOf")} values={{ occupied: count(s.occupied), seats: count(a.seats) }} /> : count(s.occupied),
     });
+    items.push({ label: pt(locale, "seats.breakdownLabel"), value: <SeatBreakdown locale={locale} view={seatBreakdownView(s)} /> });
     items.push({
       label: pt(locale, "seats.allowance"),
       value:
@@ -174,6 +175,7 @@ function SeatsPanel({ locale, d }: { locale: Locale; d: CustomerUserDetail }) {
     items.push({ label: pt(locale, "seats.activeUsers"), value: count(s.users.active) });
     items.push({ label: pt(locale, "seats.disabledUsers"), value: count(s.users.disabled) });
   }
+  items.push({ label: pt(locale, "seats.enforcementLabel"), value: <SeatLimitText locale={locale} state={seatLimitState(s)} /> });
   return (
     <section className="card platform-panel" aria-labelledby="user-seats" data-testid="user-seats">
       <div className="platform-panel-head">
@@ -185,11 +187,17 @@ function SeatsPanel({ locale, d }: { locale: Locale; d: CustomerUserDetail }) {
           <p className="platform-callout mt-4" data-tone="neutral">
             <CircleAlert className="size-4 shrink-0" aria-hidden />
             <span>
-              <Interpolated template={pt(locale, "seats.overBy")} values={{ n: count(s.overBy) }} />
+              <Interpolated template={pt(locale, s.enforced ? "seats.overByEnforced" : "seats.overBy")} values={{ n: count(s.overBy) }} />
             </span>
           </p>
         )}
-        <p className="platform-fine-print mt-4">{pt(locale, "seats.note")}</p>
+        {s && s.enforced && !s.overLimit && s.remaining === 0 && (
+          <p className="platform-callout mt-4" data-tone="neutral" data-testid="seats-limit-reached">
+            <CircleAlert className="size-4 shrink-0" aria-hidden />
+            <span>{pt(locale, "seats.limitReached")}</span>
+          </p>
+        )}
+        <p className="platform-fine-print mt-4">{pt(locale, s?.enforced ? "seats.noteEnforced" : "seats.note")}</p>
       </div>
     </section>
   );

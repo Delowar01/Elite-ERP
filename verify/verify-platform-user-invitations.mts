@@ -46,6 +46,10 @@ process.env.CUSTOMER_PUBLIC_ORIGIN = "https://erp.example.test";
 delete process.env.PLATFORM_INVITATIONS_ENABLED;
 delete process.env.CUSTOMER_INVITE_ACCEPTANCE_ENABLED;
 delete process.env.CUSTOMER_LEGACY_TOKENS;
+// PO-03D: this suite verifies the administration with seat enforcement OFF (its default); enforcement on every path is
+// verify:platform-seat-paths, acceptance verify:platform-user-acceptance.
+delete process.env.CUSTOMER_SEAT_ENFORCEMENT_ENABLED;
+delete process.env.CUSTOMER_USER_INVITE_ACCEPTANCE_ENABLED;
 
 const sqlText = readFileSync(SQL_FILE, "utf8");
 const rollbackText = readFileSync(ROLLBACK_FILE, "utf8");
@@ -255,7 +259,9 @@ async function until(cond: () => Promise<boolean>, timeoutMs = 10_000): Promise<
   return false;
 }
 const EMAIL_LOCK = /pg_advisory_xact_lock/i;
-const ORG_SHARE = /from "orgs"[\s\S]*for share/i;
+// PO-03D (sub-batch C): create and re-issue now take the company row FOR NO KEY UPDATE directly (the seat lock), no longer
+// FOR SHARE — the same row, so a suspension still serializes with them.
+const ORG_LOCKED = /from "orgs"[\s\S]*for no key update/i;
 
 async function failingInsert(table: "platform_audit_events" | "user_invitations", on: boolean) {
   const fn = `po03c_test_only_fail_${table}`;
@@ -624,7 +630,7 @@ async function main() {
     await held3.client.query(`insert into tenant_access_controls (org_id, access_status, reason, changed_by_platform_admin_id, changed_at) values ($1, 'suspended', 'Fixture: suspended during the race', $2, now())`, [C, operator.id]);
     nextStep();
     const pc = actions.createUserInvitation(req(operator), { orgId: String(C), name: "Racer", email: "racer@uinv-fixture.test", role: "staff", password: STRONG, totpCode: codeFor(operator) });
-    const waits = await until(async () => (await lockWaiters(ORG_SHARE)) >= 1);
+    const waits = await until(async () => (await lockWaiters(ORG_LOCKED)) >= 1);
     await held3.release(true);
     const kc = await pc;
     ok("K3 a create waiting on the company row while a suspension commits sees the suspension (COMPANY_SUSPENDED); no invitation is written", waits && codeOf(kc) === "COMPANY_SUSPENDED" && (await openFor("racer@uinv-fixture.test")) === 0);
@@ -718,7 +724,7 @@ async function main() {
     const preview = await actions.previewUserInvitation(req(operator), { orgId: String(Tco), name: "Preview", email: "preview.only@uinv-fixture.test", role: "staff" });
     ok("T6 the create preview reports the company's seats (display only) and creates nothing", preview.ok && preview.seats?.occupied === 3 && (await openFor("preview.only@uinv-fixture.test")) === 0);
     const over = await create(operator, { orgId: Tco, email: "over.limit@uinv-fixture.test" });
-    ok("T7 an invitation into a company already at its allowance is still created (seats are not enforced — PO-04)", over.ok && (await seats.readSeatAccounting(db, Tco)).overBy === 1, `${codeOf(over)} overBy=${(await seats.readSeatAccounting(db, Tco)).overBy}`);
+    ok("T7 with seat enforcement switched off (the default), an invitation into a company already at its allowance is still created (PO-03D enforces it when switched on — verify:platform-seat-paths)", over.ok && (await seats.readSeatAccounting(db, Tco)).overBy === 1, `${codeOf(over)} overBy=${(await seats.readSeatAccounting(db, Tco)).overBy}`);
     const seatSrc = readFileSync(join(ROOT, "src/lib/platform/seat-accounting.ts"), "utf8");
     ok("T8 seat accounting stays read-only: no insert, update, delete or lock; no enforcement function exists", !/\.(insert|update|delete)\(|\.for\(|for update|for share/i.test(seatSrc.replace(/\/\/.*$/gm, "")) && !/assertUserSeatAvailable|enforceSeat|seatLimitExceeded/.test(seatSrc));
     void expired;

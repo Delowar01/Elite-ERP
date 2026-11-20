@@ -3,6 +3,7 @@ import { eq, sql } from "drizzle-orm";
 import { db, orgsTable, type Tx } from "@/db";
 import { PlatformError } from "./errors";
 import { isCustomerSeatEnforcementEnabled } from "./flags";
+import { lockInvitationEmail } from "./invitations";
 import { readSeatAccounting, reservationsAmong, type SeatAccounting } from "./seat-accounting";
 
 // ---------------------------------------------------------------------------------------------
@@ -78,6 +79,18 @@ export async function lockCompanyForSeatChange(tx: Tx, orgId: number): Promise<C
   const [org] = await tx.select({ id: orgsTable.id }).from(orgsTable).where(eq(orgsTable.id, orgId)).for("no key update");
   if (!org) return null;
   return { orgId: org.id } as CompanySeatLock;
+}
+
+/**
+ * PO-03D (sub-batch C) — the shared lock order for a path that adds ONE customer user whose e-mail it knows (the Team's
+ * Add Member, through the Team ownership gate): bounded waits → the e-mail advisory lock (the key of company invitations,
+ * user invitations and their acceptance alike, so the same e-mail queues across every path) → the company row FOR NO
+ * KEY UPDATE. Null when no such company exists.
+ */
+export async function lockSeatChangeForEmail(tx: Tx, orgId: number, email: string): Promise<CompanySeatLock | null> {
+  await boundSeatLockWait(tx);
+  await lockInvitationEmail(tx, email);
+  return lockCompanyForSeatChange(tx, orgId);
 }
 
 /**

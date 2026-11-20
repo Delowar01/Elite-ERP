@@ -2,6 +2,7 @@ import "server-only";
 import { db, type Tx } from "@/db";
 import { lockPrimaryOwnerMapping, primaryOwnerFoundation, primaryOwnerMappingsExpected, readPrimaryOwnerMapping } from "@/lib/platform/primary-owners";
 import { readSeatAccounting } from "@/lib/platform/seat-accounting";
+import { assertUserSeatAvailable, isSeatRefusal, lockSeatChangeForEmail, seatEnforcementEnabled, type CompanySeatLock } from "@/lib/platform/seat-enforcement";
 import type { TeamOwnershipSummary, TeamPrimaryOwner, TeamSeatSummary } from "./seat-summary-types";
 
 // ---------------------------------------------------------------------------------------------
@@ -15,7 +16,11 @@ import type { TeamOwnershipSummary, TeamPrimaryOwner, TeamSeatSummary } from "./
 //    incident line — a missing TABLE is never read as a missing ROW. Where the table does not exist at all and no
 //    feature creates mappings, no mapping can exist: the company is "not designated", and the Team works as before.
 //  • The summary is display only. Anything unreadable is shown as unavailable — never as "no subscription" or
-//    "not designated".
+//    "not designated". PO-03D: it says "enforced" only while CUSTOMER_SEAT_ENFORCEMENT_ENABLED is on AND the company
+//    has a current subscription.
+//  • PO-03D (sub-batch C): the Team's Add Member (src/lib/team/member-add.ts) takes its locks and the ONE shared seat
+//    check of the platform's seat-enforcement core through here — the lock order and the rule are the platform's; the
+//    Team side keeps its own authority checks, messages and evidence.
 // ---------------------------------------------------------------------------------------------
 
 /** The primary-owner check could not be made (missing foundation objects, or a feature that needs them is on). */
@@ -79,13 +84,13 @@ function errorClass(err: unknown): string {
 
 async function seatSummary(orgId: number): Promise<TeamSeatSummary> {
   try {
-    const s = await readSeatAccounting(db, orgId);
+    const s = await readSeatAccounting(db, orgId, new Date(), seatEnforcementEnabled());
     if (s.allowance.state === "not_installed" && primaryOwnerMappingsExpected()) return { available: false };
     const allowance: Extract<TeamSeatSummary, { available: true }>["allowance"] =
       s.allowance.state === "assigned"
         ? { state: "assigned", seats: s.allowance.seats, packageName: s.allowance.packageName, versionNumber: s.allowance.versionNumber, isTrial: s.allowance.isTrial, endDate: s.allowance.endDate }
         : { state: "none" };
-    return { available: true, users: s.users, occupied: s.occupied, allowance, remaining: s.remaining, overBy: s.overBy };
+    return { available: true, users: s.users, pending: s.pendingInvitations, occupied: s.occupied, allowance, remaining: s.remaining, overBy: s.overBy, enforced: s.enforced };
   } catch (err) {
     console.error(`[team-ownership] seat summary unavailable: ${errorClass(err)}`);
     return { available: false };
@@ -100,6 +105,39 @@ async function primaryOwnerSummary(orgId: number): Promise<TeamPrimaryOwner> {
   } catch (err) {
     console.error(`[team-ownership] primary owner unavailable: ${errorClass(err)}`);
     return { state: "unavailable" };
+  }
+}
+
+// ---- PO-03D: the Add Member seat check -------------------------------------------------------------
+
+/** The Add Member's seat refusal: the company's user limit is reached, or the check could not be made (fail closed). */
+export class TeamSeatRefusal extends Error {
+  constructor(readonly reason: "limit" | "unavailable") {
+    super(`team seat refusal (${reason})`);
+    this.name = "TeamSeatRefusal";
+  }
+}
+
+export type TeamSeatLock = CompanySeatLock;
+
+/**
+ * Inside the Add Member transaction, first: bounded waits → the e-mail advisory lock → the company row FOR NO KEY UPDATE
+ * (the seat lock). Null when the company does not exist.
+ */
+export async function lockTeamMemberAdd(tx: Tx, orgId: number, email: string): Promise<TeamSeatLock | null> {
+  return lockSeatChangeForEmail(tx, orgId, email);
+}
+
+/**
+ * The ONE shared seat check for one new member, under the company lock (fresh values). A company without a current
+ * subscription keeps the legacy rule (allowed); while enforcement is off nothing is read or refused.
+ */
+export async function assertTeamMemberSeat(tx: Tx, lock: TeamSeatLock, at: Date): Promise<void> {
+  try {
+    await assertUserSeatAvailable(tx, lock, 1, { path: "team_add", at });
+  } catch (err) {
+    if (isSeatRefusal(err)) throw new TeamSeatRefusal(err.code === "SEAT_LIMIT" ? "limit" : "unavailable");
+    throw err;
   }
 }
 

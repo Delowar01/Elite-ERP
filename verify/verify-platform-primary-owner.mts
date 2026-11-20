@@ -214,8 +214,10 @@ try {
     const writers = (re: RegExp) => files.filter((f) => re.test(code(f))).map(rel).sort();
     // PO-03D (sub-batch A): plus the user-invitation acceptance bridge — the invitee's own account (admin or staff, never an
     // owner), inside the acceptance transaction (verify:platform-user-acceptance; boundary rule 50).
-    ok("N1 exactly three modules insert users: the shared organization bootstrap, the Team add-member action and (PO-03D) the user-invitation acceptance bridge",
-      same(writers(/\.insert\(\s*usersTable\s*\)/), ["src/app/(app)/settings/team/actions.ts", "src/lib/onboarding/user-invitation-acceptance.ts", "src/lib/org-bootstrap.ts"]), writers(/\.insert\(\s*usersTable\s*\)/).join(", "));
+    // PO-03D (sub-batch C): the Team's add-member insert moved from the action into the Add Member service
+    // (src/lib/team/member-add.ts — the shared seat lock order and seat check, boundary rule 50).
+    ok("N1 exactly three modules insert users: the shared organization bootstrap, the Team add-member path ((PO-03D) the Add Member service) and (PO-03D) the user-invitation acceptance bridge",
+      same(writers(/\.insert\(\s*usersTable\s*\)/), ["src/lib/onboarding/user-invitation-acceptance.ts", "src/lib/org-bootstrap.ts", "src/lib/team/member-add.ts"]), writers(/\.insert\(\s*usersTable\s*\)/).join(", "));
     ok("N2 nothing in src deletes a user (no ORM delete, no raw DELETE FROM users)", writers(/\.delete\(\s*usersTable\s*\)/).length === 0 && writers(/\bdelete\s+from\s+"?users"?\b/i).length === 0);
     const roleWriters = files.filter((f) => /\.update\(\s*usersTable\s*\)\s*\.set\(\{[^}]*\brole\b/.test(code(f).replace(/\s+/g, " "))).map(rel);
     const activeWriters = files.filter((f) => /\.update\(\s*usersTable\s*\)\s*\.set\(\{[^}]*\bisActive\b/.test(code(f).replace(/\s+/g, " "))).map(rel);

@@ -2132,6 +2132,23 @@ const DICT: Record<string, string> = {
   "Disabled users: {n}": "المستخدمون المعطّلون: {n}",
   "Seat limits are not enforced yet. Active and disabled accounts both occupy a seat.": "لا تُطبَّق حدود المقاعد بعد. يشغل كل حساب مقعدًا، نشطًا كان أو معطّلًا.",
   "Seat information is unavailable right now.": "معلومات المقاعد غير متاحة حاليًا.",
+  // PO-03D — the Team's Add Member (the existing messages, now localized, and the shared seat check) and the seat summary
+  // while user limits are enforced
+  "Name, email, and password are required.": "الاسم والبريد الإلكتروني وكلمة المرور مطلوبة.",
+  "Password must be at least 8 characters.": "يجب ألا تقل كلمة المرور عن 8 أحرف.",
+  "A user with this email already exists.": "يوجد مستخدم بهذا البريد الإلكتروني بالفعل.",
+  "This company has reached its user limit. Nothing was changed. Free a seat, or ask your Elite ERP contact about more seats.": "بلغت هذه الشركة حد المستخدمين، ولم يتغيّر شيء. حرّر مقعدًا، أو تواصل مع جهة الاتصال لديك في Elite ERP بشأن مقاعد إضافية.",
+  "User limits can't be checked right now. Nothing was changed. Try again later.": "يتعذّر التحقق من حدود المستخدمين حاليًا، ولم يتغيّر شيء. حاول مرة أخرى لاحقًا.",
+  "1 user": "مستخدم واحد",
+  "{n} users": "{n} من المستخدمين",
+  "1 pending invitation": "دعوة معلّقة واحدة",
+  "{n} pending invitations": "{n} من الدعوات المعلّقة",
+  "{users} + {pending} = {occupied} of {seats} seats occupied": "{users} + {pending} = المقاعد المشغولة: {occupied} من {seats}",
+  "{users} + {pending} = {occupied} of 1 seat occupied": "{users} + {pending} = المقاعد المشغولة: {occupied} من 1",
+  "{users} + {pending} = {occupied} occupied": "{users} + {pending} = المقاعد المشغولة: {occupied}",
+  "The user limit is reached: no member can be added until a seat is freed.": "تم بلوغ حد المستخدمين: لا يمكن إضافة عضو حتى يتحرّر مقعد.",
+  "Above the user limit: existing members keep their access, but no member can be added.": "تجاوزت الشركة حد المستخدمين: يحتفظ الأعضاء الحاليون بوصولهم، لكن لا يمكن إضافة عضو.",
+  "User limits are enforced. Active and disabled accounts both occupy a seat, and so does each pending invitation until it is revoked or expires.": "تُطبَّق حدود المستخدمين. يشغل كل حساب نشط أو معطّل مقعدًا، وكذلك كل دعوة معلّقة حتى تُلغى أو تنتهي صلاحيتها.",
 };
 
 export function t(locale: Locale, en: string): string {

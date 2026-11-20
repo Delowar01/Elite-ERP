@@ -12,7 +12,11 @@ import { pt, type PlatformStringKey } from "./i18n";
 // (companies-kit.tsx, rule 29); Latin-only values (e-mails, USR / ORG references, counts) are isolated left-to-right.
 // ---------------------------------------------------------------------------------------------
 
-export type UserSeatsView = { occupied: string; seats: string | null; overBy: string | null } | null;
+/** PO-03D: `enforced` (the limit applies) and `full` (no seat left) add a limit note under the numbers. */
+export type UserSeatsView = { occupied: string; seats: string | null; overBy: string | null; enforced: boolean; full: boolean } | null;
+/** PO-03D: who occupies a company's seats, as finished numbers (built on the server: src/lib/platform/display.ts). */
+export type SeatBreakdownView = { users: number; usersText: string; pending: number; pendingText: string; occupiedText: string; seats: number | null; seatsText: string | null };
+export type SeatLimitState = "enforced" | "subscription_required" | "unavailable" | "not_enforced";
 export type UserRowView = {
   userId: number;
   href: string;
@@ -74,11 +78,25 @@ export function SeatCell({ locale, seats }: { locale: Locale; seats: UserSeatsVi
       </div>
       {over && (
         <div className="platform-cell-sub">
-          <Interpolated template={pt(locale, "cu.seatsOver")} values={{ n: over }} />
+          <Interpolated template={pt(locale, seats.enforced ? "cu.seatsOverEnforced" : "cu.seatsOver")} values={{ n: over }} />
         </div>
       )}
+      {!over && seats.enforced && seats.full && <div className="platform-cell-sub">{pt(locale, "cu.seatsFull")}</div>}
     </div>
   );
+}
+
+/** PO-03D: "2 users + 1 pending invitation = 3 of 3 seats occupied" (counts isolated left-to-right). */
+export function SeatBreakdown({ locale, view }: { locale: Locale; view: SeatBreakdownView }) {
+  const users = view.users === 1 ? pt(locale, "seats.usersOne") : <Interpolated template={pt(locale, "seats.usersMany")} values={{ n: <Ltr>{view.usersText}</Ltr> }} />;
+  const pending = view.pending === 1 ? pt(locale, "seats.pendingOne") : <Interpolated template={pt(locale, "seats.pendingMany")} values={{ n: <Ltr>{view.pendingText}</Ltr> }} />;
+  const template = view.seats === null ? pt(locale, "seats.breakdown") : pt(locale, view.seats === 1 ? "seats.breakdownOfOne" : "seats.breakdownOf");
+  return <Interpolated template={template} values={{ users, pending, occupied: <Ltr>{view.occupiedText}</Ltr>, seats: view.seatsText === null ? null : <Ltr>{view.seatsText}</Ltr> }} />;
+}
+
+/** PO-03D: the "User limit" value — "Enforced" never appears without a subscription, a readable foundation and the switch. */
+export function SeatLimitText({ locale, state }: { locale: Locale; state: SeatLimitState }) {
+  return <>{pt(locale, state === "enforced" ? "seats.enforced" : state === "subscription_required" ? "seats.subscriptionRequired" : state === "unavailable" ? "seats.enforcementUnavailable" : "seats.notEnforced")}</>;
 }
 
 function UserCell({ row }: { row: UserRowView }) {

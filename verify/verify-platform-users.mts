@@ -367,7 +367,8 @@ async function main() {
     const { value: page, texts } = await capture(() => users.listCustomerUsers(readReq(operator), { org: String(A), sort: "name" }));
     const rowKeys = Object.keys(page.rows[0] ?? {}).sort();
     ok("A1 a directory row holds exactly: id, reference, name, e-mail, role, status, MFA on/off, last sign-in, created, company, primary-owner flag, seat usage", same(rowKeys, ["company", "createdAt", "email", "isActive", "lastSignInAt", "mfaEnabled", "name", "primaryOwner", "reference", "role", "seats", "userId"]), rowKeys.join(","));
-    ok("A2 …the company is id, reference and name; the seat usage is occupied, allowance, over-limit and allowance state", same(Object.keys(page.rows[0].company).sort(), ["name", "orgId", "reference"]) && same(Object.keys(page.rows[0].seats ?? {}).sort(), ["allowance", "occupied", "overLimit", "seats"]));
+    // PO-03D (sub-batch C): plus whether the limit is enforced and full (two flags — the row's "Limit reached" note).
+    ok("A2 …the company is id, reference and name; the seat usage is occupied, allowance, over-limit and allowance state (PO-03D: and the enforced / full flags)", same(Object.keys(page.rows[0].company).sort(), ["name", "orgId", "reference"]) && same(Object.keys(page.rows[0].seats ?? {}).sort(), ["allowance", "enforced", "full", "occupied", "overLimit", "seats"]));
     const detail = await capture(() => users.getCustomerUserDetail(readReq(operator), String(aAdmin)));
     ok("A3 the detail adds only the change marker, the last-active-owner rule, the live session COUNT, the company's seat accounting and the Platform Owner events", same(Object.keys(detail.value).sort(), ["activity", "company", "createdAt", "email", "isActive", "lastActiveOwner", "lastSignInAt", "liveSessions", "mfaEnabled", "name", "primaryOwner", "reference", "role", "seats", "userId", "version"]));
     const state = await capture(() => users.readCustomerUserState(readReq(operator), String(aAdmin)));

@@ -30,8 +30,12 @@ export type UserInvitationPreviewView = {
   emailInUse: boolean;
   companyInvitationReference: string | null;
   rateLimited: boolean;
-  /** The company's seats now and after this invitation (display only — nothing is refused because of them). */
+  /** The company's seats now and after this invitation. */
   seats: (UserInvitationSeatsView & { after: UserInvitationSeatsView }) | null;
+  /** PO-03D: the company's user limit applies (enforcement on AND a current subscription) — never true otherwise. */
+  seatsEnforced: boolean;
+  /** PO-03D: why the shared seat check would refuse this invitation (null: it would not). */
+  seatRefusal: "seat_limit" | "no_subscription" | "unavailable" | null;
 };
 export type UserInvitationLinkView = { ok: true; reference: string; link: string; expires: string; replacedReference: string | null; acceptanceOpen: boolean };
 export type UserInvitationCurrentView = { ok: true; state: "pending" | "expired" | "revoked" | "accepted"; reference: string; companyName: string; name: string; email: string; role: "admin" | "staff"; expires: string };
@@ -92,6 +96,8 @@ export async function previewUserInvitationAction(input: unknown): Promise<UserI
     companyInvitationReference: outcome.companyInvitationReference,
     rateLimited: outcome.rateLimited,
     seats: s ? { ...seatsOf(s.occupied), after: seatsOf(s.occupied + 1) } : null,
+    seatsEnforced: s?.enforced === true,
+    seatRefusal: outcome.seatRefusal === null ? null : outcome.seatRefusal === "SEAT_LIMIT" ? "seat_limit" : outcome.seatRefusal === "SUBSCRIPTION_REQUIRED" ? "no_subscription" : "unavailable",
   };
 }
 

@@ -7,7 +7,7 @@ import type { HeaderSource } from "./client-ip";
 import { escapeLikePattern, orgReference } from "./companies";
 import { requestMeta } from "./console";
 import { isPlatformError, PlatformError } from "./errors";
-import { assertPlatformConsoleEnabled } from "./flags";
+import { assertPlatformConsoleEnabled, isCustomerSeatEnforcementEnabled } from "./flags";
 import { authorizePlatformToken } from "./guards";
 import { errorClass, reportSecurityIncident } from "./incident";
 import { primaryOwnerFoundation, readPrimaryOwnerMapping, readPrimaryOwnerUserIds } from "./primary-owners";
@@ -150,8 +150,16 @@ const USER_FIELDS = {
 const withCompany = eq(orgsTable.id, usersTable.orgId);
 
 /** Seat usage as one row shows it: occupied seats against the current subscription's allowance (display only). */
-export type SeatUsageView = { occupied: number; seats: number | null; overLimit: boolean; allowance: "assigned" | "none" | "not_installed" };
-const seatUsage = (s: SeatAccounting): SeatUsageView => ({ occupied: s.occupied, seats: s.allowance.state === "assigned" ? s.allowance.seats : null, overLimit: s.overLimit, allowance: s.allowance.state });
+/** PO-03D: `enforced` (the limit applies) and `full` (no seat left — reached or exceeded) for the row's limit note. */
+export type SeatUsageView = { occupied: number; seats: number | null; overLimit: boolean; allowance: "assigned" | "none" | "not_installed"; enforced: boolean; full: boolean };
+const seatUsage = (s: SeatAccounting): SeatUsageView => ({
+  occupied: s.occupied,
+  seats: s.allowance.state === "assigned" ? s.allowance.seats : null,
+  overLimit: s.overLimit,
+  allowance: s.allowance.state,
+  enforced: s.enforced,
+  full: s.allowance.state === "assigned" && s.remaining === 0,
+});
 
 /** Whether a user is the company's mapped primary owner — or why that cannot be said. */
 export type PrimaryOwnerFlag = "yes" | "no" | "not_installed" | "unavailable";
@@ -168,7 +176,8 @@ async function primaryOwnersOf(orgIds: number[]): Promise<{ state: "installed"; 
 
 async function seatsOf(orgIds: number[]): Promise<Map<number, SeatAccounting> | null> {
   try {
-    return await readSeatAccountingForCompanies(db, orgIds);
+    // PO-03D: `enforced` only while seat enforcement is on AND the company has a current subscription.
+    return await readSeatAccountingForCompanies(db, orgIds, platformClock.now(), isCustomerSeatEnforcementEnabled());
   } catch (err) {
     console.error(`[platform-users] seat accounting unavailable: ${errorClass(err)}`);
     return null;
@@ -391,7 +400,7 @@ export async function getCustomerUserDetail(req: CustomerUserReadRequest, rawUse
     const [protection, liveSessions, seats, activity] = await Promise.all([
       protectionOf(u),
       liveSessionCount(u.userId, u.orgId),
-      readSeatAccounting(db, u.orgId).catch((err: unknown) => {
+      readSeatAccounting(db, u.orgId, platformClock.now(), isCustomerSeatEnforcementEnabled()).catch((err: unknown) => {
         console.error(`[platform-users] seat accounting unavailable: ${errorClass(err)}`);
         return null;
       }),

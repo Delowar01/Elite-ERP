@@ -1,5 +1,6 @@
 import "server-only";
 import type { Locale } from "@/lib/i18n/dict";
+import { isCustomerSeatEnforcementEnabled } from "./flags";
 
 // ---------------------------------------------------------------------------------------------
 // Server-side display formatting for the console's company screens (PO-02B), matching Settings:
@@ -46,4 +47,37 @@ export function formatPlatformMonth(key: string, locale: Locale): string {
 /** Whole counts with Western digits and "," grouping in both languages. */
 export function formatPlatformCount(value: number): string {
   return COUNT.format(value);
+}
+
+// ---- PO-03D: how a company's seats read (display only — the enforcing check is seat-enforcement.ts) -----------------
+
+/** Who occupies the seats, as finished numbers: "2 users + 1 pending invitation = 3 of 3 seats occupied". */
+export type SeatBreakdownView = { users: number; usersText: string; pending: number; pendingText: string; occupiedText: string; seats: number | null; seatsText: string | null };
+
+type SeatFacts = { users: { total: number }; pendingInvitations: number; occupied: number; enforced: boolean; allowance: { state: "assigned"; seats: number } | { state: "none" } | { state: "not_installed" } };
+
+export function seatBreakdownView(s: SeatFacts): SeatBreakdownView {
+  const seats = s.allowance.state === "assigned" ? s.allowance.seats : null;
+  return {
+    users: s.users.total,
+    usersText: formatPlatformCount(s.users.total),
+    pending: s.pendingInvitations,
+    pendingText: formatPlatformCount(s.pendingInvitations),
+    occupiedText: formatPlatformCount(s.occupied),
+    seats,
+    seatsText: seats === null ? null : formatPlatformCount(seats),
+  };
+}
+
+/**
+ * What the "User limit" row says. "enforced" ONLY while enforcement is on AND the company has a current subscription
+ * (the accounting's own `enforced`); with enforcement on, a company without one cannot be invited into, and an unreadable
+ * foundation refuses every addition. Off, the limit is shown only.
+ */
+export type SeatLimitState = "enforced" | "subscription_required" | "unavailable" | "not_enforced";
+export function seatLimitState(s: SeatFacts | null): SeatLimitState {
+  if (s?.enforced) return "enforced";
+  if (!isCustomerSeatEnforcementEnabled()) return "not_enforced";
+  if (!s || s.allowance.state === "not_installed") return "unavailable";
+  return s.allowance.state === "none" ? "subscription_required" : "not_enforced";
 }

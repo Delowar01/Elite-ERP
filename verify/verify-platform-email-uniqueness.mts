@@ -119,15 +119,18 @@ async function main(): Promise<number> {
     const inserters = files.filter((f) => /\.insert\(usersTable\)/.test(readFileSync(f, "utf8"))).map(rel).sort();
     // PO-03D (sub-batch A): plus the user-invitation acceptance bridge — the invitee's own account, under the SAME e-mail
     // advisory lock and lower(email) check (verify:platform-user-acceptance K6–K8).
-    ok("exactly three modules insert users: the shared organization bootstrap, the team-member action and (PO-03D) the user-invitation acceptance bridge",
-      JSON.stringify(inserters) === JSON.stringify(["src/app/(app)/settings/team/actions.ts", "src/lib/onboarding/user-invitation-acceptance.ts", "src/lib/org-bootstrap.ts"]), inserters.join(", "));
+    // PO-03D (sub-batch C): the team-member insert moved, unchanged in what it writes, from the action into the Team's Add
+    // Member service (src/lib/team/member-add.ts) — under the same e-mail lock and a lower(email) re-check.
+    ok("exactly three modules insert users: the shared organization bootstrap, the team-member path ((PO-03D) the Add Member service) and (PO-03D) the user-invitation acceptance bridge",
+      JSON.stringify(inserters) === JSON.stringify(["src/lib/onboarding/user-invitation-acceptance.ts", "src/lib/org-bootstrap.ts", "src/lib/team/member-add.ts"]), inserters.join(", "));
     const emailUpdates = files.filter((f) => /\.update\(usersTable\)\s*\.set\(\{[^}]*\bemail\b/.test(readFileSync(f, "utf8"))).map(rel);
     ok("no code path changes an existing users.email (no UPDATE … SET email anywhere in src)", emailUpdates.length === 0, emailUpdates.join(", "));
     const rawUserWrites = files.filter((f) => /\b(insert\s+into|update)\s+"?users"?\b/i.test(readFileSync(f, "utf8"))).map(rel);
     ok("no raw SQL in src inserts into or updates users", rawUserWrites.length === 0, rawUserWrites.join(", "));
     const team = readFileSync(join(ROOT, "src/app/(app)/settings/team/actions.ts"), "utf8");
-    ok("the team-member action normalizes: String(email).trim().toLowerCase() before its insert",
-      /const email = String\(formData\.get\("email"\) \?\? ""\)\.trim\(\)\.toLowerCase\(\);[\s\S]*\.insert\(usersTable\)/.test(team));
+    const memberAddSrc = readFileSync(join(ROOT, "src/lib/team/member-add.ts"), "utf8");
+    ok("the team-member path normalizes: String(email) in the action, then .trim().toLowerCase() (PO-03D: in the Add Member service) before its insert",
+      /email: String\(formData\.get\("email"\) \?\? ""\),/.test(team) && /const email = input\.email\.trim\(\)\.toLowerCase\(\);[\s\S]*\.insert\(usersTable\)/.test(memberAddSrc));
     const auth = readFileSync(join(ROOT, "src/app/(auth)/actions.ts"), "utf8");
     ok("/register normalizes: String(email).trim().toLowerCase() before bootstrapOrganization",
       /export async function registerAction[\s\S]*?const email = String\(formData\.get\("email"\) \?\? ""\)\.trim\(\)\.toLowerCase\(\);[\s\S]*?bootstrapOrganization\(tx,/.test(auth));
