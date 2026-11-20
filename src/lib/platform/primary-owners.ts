@@ -1,5 +1,5 @@
 import "server-only";
-import { eq, sql } from "drizzle-orm";
+import { eq, inArray, sql } from "drizzle-orm";
 import { db, tenantPrimaryOwnersTable, type Tx } from "@/db";
 import { isCustomerInviteAcceptanceEnabled } from "./flags";
 
@@ -63,4 +63,25 @@ export async function readPrimaryOwnerMapping(executor: Executor, orgId: number)
   if (!Number.isSafeInteger(orgId) || orgId <= 0) return null;
   const rows = await executor.select({ userId: tenantPrimaryOwnersTable.userId }).from(tenantPrimaryOwnersTable).where(eq(tenantPrimaryOwnersTable.orgId, orgId)).limit(2);
   return single(rows);
+}
+
+/**
+ * PO-03B — the mapped primary owners of several companies as committed (no lock), for a directory page: ONE query,
+ * company id → user id. Display only, never a decision. The caller asks primaryOwnerFoundation() first (an absent
+ * table is "not installed", never an error turned into "not designated").
+ */
+export async function readPrimaryOwnerUserIds(executor: Executor, orgIds: number[]): Promise<Map<number, number>> {
+  const ids = [...new Set(orgIds.filter((id) => Number.isSafeInteger(id) && id > 0))];
+  if (!ids.length) return new Map();
+  const rows = await executor
+    .select({ orgId: tenantPrimaryOwnersTable.orgId, userId: tenantPrimaryOwnersTable.userId })
+    .from(tenantPrimaryOwnersTable)
+    .where(inArray(tenantPrimaryOwnersTable.orgId, ids));
+  const out = new Map<number, number>();
+  for (const r of rows) {
+    // org_id is the primary key: a repeated company means the foundation is not what PO-02D1 installed — fail closed.
+    if (out.has(r.orgId)) throw new Error("tenant_primary_owners holds more than one row for one company");
+    out.set(r.orgId, r.userId);
+  }
+  return out;
 }

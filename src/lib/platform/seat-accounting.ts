@@ -1,11 +1,12 @@
 import "server-only";
-import { and, eq, isNull, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import { db, subscriptionPackagesTable, subscriptionPackageVersionsTable, tenantSubscriptionsTable, usersTable, type Tx } from "@/db";
 
 // ---------------------------------------------------------------------------------------------
 // Platform Owner PO-03A — READ-ONLY user-seat accounting: THE one service that counts a company's seats.
-// Used by the customer Team page (through src/lib/team/ownership-gate.ts, for the session's own company only) and by
-// the Platform Owner company detail (companies.ts, behind platform.companies.read).
+// Used by the customer Team page (through src/lib/team/ownership-gate.ts, for the session's own company only), by
+// the Platform Owner company detail (companies.ts, behind platform.companies.read) and (PO-03B) by the Platform Owner
+// user directory (customer-users.ts, behind platform.users.read — readSeatAccountingForCompanies, the same rule).
 //
 //  • Occupied seats = every customer user of the company, active AND disabled, plus pending customer-user invitations.
 //    Customer-user invitations do not exist yet (PO-00 M6), so that term is 0 — none is fabricated.
@@ -94,6 +95,25 @@ const sub = tenantSubscriptionsTable;
 const ver = subscriptionPackageVersionsTable;
 const pkg = subscriptionPackagesTable;
 
+// The allowance columns of a current subscription — one list for the single-company and the directory reads.
+const ALLOWANCE_FIELDS = {
+  seats: sub.seatsSnapshot,
+  isTrial: sub.isTrial,
+  cycle: sub.cycle,
+  lifecycleState: sub.lifecycleState,
+  startDate: sub.startDate,
+  endDate: sub.endDate,
+  versionNumber: ver.versionNumber,
+  packageName: pkg.name,
+};
+type AllowanceRow = { seats: number; isTrial: boolean; cycle: string; lifecycleState: string; startDate: string; endDate: string; versionNumber: number; packageName: string };
+
+/** A current subscription row → its allowance; a missing or non-positive seats snapshot is a malformed foundation. */
+function assignedAllowance(r: AllowanceRow): SeatAllowance {
+  if (!Number.isSafeInteger(r.seats) || r.seats <= 0) throw new Error("the current subscription has no valid seats snapshot");
+  return { state: "assigned", seats: r.seats, packageName: r.packageName, versionNumber: r.versionNumber, isTrial: r.isTrial, cycle: r.cycle, lifecycleState: r.lifecycleState, startDate: r.startDate, endDate: r.endDate };
+}
+
 /** The company's current subscription allowance as committed (no lock). */
 async function currentAllowance(executor: Executor, orgId: number): Promise<SeatAllowance> {
   const foundation = await subscriptionFoundation(executor);
@@ -101,16 +121,7 @@ async function currentAllowance(executor: Executor, orgId: number): Promise<Seat
   // Only some of the tables: not what PO-02D1 installs (one transaction) — never guessed around.
   if (foundation === "partial") throw new Error("the subscription foundation is only partly installed");
   const rows = await executor
-    .select({
-      seats: sub.seatsSnapshot,
-      isTrial: sub.isTrial,
-      cycle: sub.cycle,
-      lifecycleState: sub.lifecycleState,
-      startDate: sub.startDate,
-      endDate: sub.endDate,
-      versionNumber: ver.versionNumber,
-      packageName: pkg.name,
-    })
+    .select(ALLOWANCE_FIELDS)
     .from(sub)
     .innerJoin(ver, eq(ver.id, sub.packageVersionId))
     .innerJoin(pkg, eq(pkg.id, ver.packageId))
@@ -120,8 +131,28 @@ async function currentAllowance(executor: Executor, orgId: number): Promise<Seat
   if (rows.length > 1) throw new Error("more than one current subscription for one company");
   const r = rows[0];
   if (!r) return { state: "none" };
-  if (!Number.isSafeInteger(r.seats) || r.seats <= 0) throw new Error("the current subscription has no valid seats snapshot");
-  return { state: "assigned", seats: r.seats, packageName: r.packageName, versionNumber: r.versionNumber, isTrial: r.isTrial, cycle: r.cycle, lifecycleState: r.lifecycleState, startDate: r.startDate, endDate: r.endDate };
+  return assignedAllowance(r);
+}
+
+/** PO-03B — the current allowances of several companies as committed (no lock): one probe and one query. */
+async function currentAllowances(executor: Executor, orgIds: number[]): Promise<Map<number, SeatAllowance>> {
+  const foundation = await subscriptionFoundation(executor);
+  if (foundation === "absent") return new Map(orgIds.map((id) => [id, { state: "not_installed" } as SeatAllowance]));
+  if (foundation === "partial") throw new Error("the subscription foundation is only partly installed");
+  const rows = await executor
+    .select({ orgId: sub.orgId, ...ALLOWANCE_FIELDS })
+    .from(sub)
+    .innerJoin(ver, eq(ver.id, sub.packageVersionId))
+    .innerJoin(pkg, eq(pkg.id, ver.packageId))
+    .where(and(inArray(sub.orgId, orgIds), isNull(sub.supersededAt)));
+  const out = new Map<number, SeatAllowance>(orgIds.map((id) => [id, { state: "none" } as SeatAllowance]));
+  const seen = new Set<number>();
+  for (const r of rows) {
+    if (seen.has(r.orgId)) throw new Error("more than one current subscription for one company");
+    seen.add(r.orgId);
+    out.set(r.orgId, assignedAllowance(r));
+  }
+  return out;
 }
 
 /**
@@ -136,4 +167,27 @@ export async function readSeatAccounting(executor: Executor, orgId: number): Pro
     .where(eq(usersTable.orgId, orgId));
   const allowance = await currentAllowance(executor, orgId);
   return computeSeatAccounting(orgId, { total: Number(counts?.total ?? 0), active: Number(counts?.active ?? 0) }, 0, allowance);
+}
+
+/**
+ * PO-03B — the seat accounting of several companies at once, for the Platform Owner user directory: the same rule
+ * (computeSeatAccounting), a fixed number of queries whatever the page size (counts, the foundation probe, the
+ * allowances). Display only; the caller passes the companies of the rows it is showing.
+ */
+export async function readSeatAccountingForCompanies(executor: Executor, orgIds: number[]): Promise<Map<number, SeatAccounting>> {
+  const ids = [...new Set(orgIds.filter((id) => Number.isSafeInteger(id) && id > 0))];
+  if (!ids.length) return new Map();
+  const counts = await executor
+    .select({ orgId: usersTable.orgId, total: sql<number>`count(*)::int`, active: sql<number>`(count(*) filter (where ${usersTable.isActive}))::int` })
+    .from(usersTable)
+    .where(inArray(usersTable.orgId, ids))
+    .groupBy(usersTable.orgId);
+  const allowances = await currentAllowances(executor, ids);
+  const byOrg = new Map(counts.map((c) => [c.orgId, c]));
+  return new Map(
+    ids.map((orgId) => {
+      const c = byOrg.get(orgId);
+      return [orgId, computeSeatAccounting(orgId, { total: Number(c?.total ?? 0), active: Number(c?.active ?? 0) }, 0, allowances.get(orgId) ?? { state: "none" })];
+    }),
+  );
 }

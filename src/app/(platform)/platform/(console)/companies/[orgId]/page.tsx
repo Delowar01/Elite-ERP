@@ -7,6 +7,7 @@ import { CompanyAccessControl } from "@/components/platform/company-access-dialo
 import { CompanyTabs, type CompanyTabValue } from "@/components/platform/company-tabs";
 import { pt } from "@/components/platform/i18n";
 import { EmptyPanel, PreviewBadge } from "@/components/platform/page-kit";
+import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { Locale } from "@/lib/i18n/dict";
 import { getLocale } from "@/lib/i18n/server";
@@ -175,7 +176,13 @@ function UsersPanel({ locale, d }: { locale: Locale; d: CompanyDetail }) {
       <section className="card platform-panel" aria-labelledby="company-owners">
         <div className="platform-panel-head">
           <h2 id="company-owners">{pt(locale, "users.owners")}</h2>
-          <DisabledAction locale={locale} label={pt(locale, "action.manageUsers")} icon={Users} phase="PO-03" />
+          {/* PO-03B: the company's users in the console's user directory (its own controls live on each user's page). */}
+          <Button asChild variant="secondary">
+            <Link href={`/platform/users?org=${d.orgId}`}>
+              <Users aria-hidden />
+              {pt(locale, "action.manageUsers")}
+            </Link>
+          </Button>
         </div>
         <div className="platform-panel-body">
           {d.owners.length ? (

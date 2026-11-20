@@ -22,7 +22,12 @@ import { validatePlatformSession, type PlatformSessionContext } from "./session"
 // PO-02D2: platform.companies.invite — create, revoke and re-issue company invitations (copy-link only;
 // create and re-issue need password + fresh TOTP, revoke a fresh TOTP and a reason; audited in the same
 // transaction — src/lib/platform/invitation-actions.ts). It grants no acceptance and no customer data.
-export const PLATFORM_PERMISSIONS = ["platform.access", "platform.sessions.manage", "platform.mfa.manage", "platform.companies.read", "platform.companies.manage_access", "platform.companies.invite"] as const;
+// PO-03B: platform.users.read — the customer-user directory and the audited user detail (allow-listed fields only;
+// src/lib/platform/customer-users.ts). platform.users.manage — disable / enable a customer user and revoke a customer
+// user's sessions, always with a reason and a fresh TOTP code, under the shared customer-user lock order and owner
+// rules, audited in the same transaction (src/lib/platform/customer-user-actions.ts). Neither grants impersonation,
+// password resets, role changes or ownership transfer.
+export const PLATFORM_PERMISSIONS = ["platform.access", "platform.sessions.manage", "platform.mfa.manage", "platform.companies.read", "platform.companies.manage_access", "platform.companies.invite", "platform.users.read", "platform.users.manage"] as const;
 export type PlatformPermission = (typeof PLATFORM_PERMISSIONS)[number];
 const OWNER_PERMISSIONS: ReadonlySet<string> = new Set(PLATFORM_PERMISSIONS);
 

@@ -1,7 +1,7 @@
 import { Fragment } from "react";
 import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
-import { CalendarX, ChevronLeft, ChevronRight, ChevronsLeft, CircleCheck, CircleMinus, CircleX, Clock, MailCheck, MailX, ShieldCheck, ShieldOff } from "lucide-react";
+import { CalendarX, ChevronLeft, ChevronRight, ChevronsLeft, CircleCheck, CircleMinus, CircleX, Clock, Crown, MailCheck, MailX, ShieldCheck, ShieldOff, UserCheck, UserX } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -120,6 +120,14 @@ const PLATFORM_STATES = {
     success: { label: "result.success", icon: CircleCheck },
     rejected: { label: "result.rejected", icon: CircleMinus },
     failed: { label: "result.failed", icon: CircleX },
+  },
+  // PO-03B: a customer user account and its primary-owner designation (the console's user directory and detail).
+  user_account: {
+    active: { label: "cu.statusActive", icon: UserCheck },
+    disabled: { label: "cu.statusDisabled", icon: UserX },
+  },
+  user_designation: {
+    primary_owner: { label: "cu.primaryOwner", icon: Crown },
   },
 } as const satisfies PlatformStateTable;
 export type PlatformStateDomain = keyof typeof PLATFORM_STATES;

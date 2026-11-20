@@ -29,6 +29,10 @@ export const PLATFORM_ERROR_MESSAGES = {
   INVITATIONS_DISABLED: { en: "Company invitations are switched off in this environment.", ar: "دعوات الشركات غير مفعّلة في هذه البيئة." },
   // PO-02D3: public invitation acceptance is refused while CUSTOMER_INVITE_ACCEPTANCE_ENABLED is not exactly "true".
   ACCEPTANCE_DISABLED: { en: "Invitation acceptance is not available in this environment.", ar: "قبول الدعوات غير متاح في هذه البيئة." },
+  // PO-03B: the Platform Owner user controls (src/lib/platform/customer-user-actions.ts).
+  LAST_ACTIVE_OWNER: { en: "The company must keep at least one active owner, so this account can't be disabled.", ar: "يجب أن تحتفظ الشركة بمالك نشط واحد على الأقل، لذا لا يمكن تعطيل هذا الحساب." },
+  OWNER_PROTECTION_UNAVAILABLE: { en: "Owner protection can't be checked right now, so nothing was changed. Try again later.", ar: "يتعذّر التحقق من حماية المالك حاليًا، لذا لم يُغيَّر أي شيء. حاول مرة أخرى لاحقًا." },
+  CHANGE_IN_PROGRESS: { en: "Another change to this company's users is in progress. Nothing was changed. Try again in a moment.", ar: "يجري تغيير آخر على مستخدمي هذه الشركة. لم يُغيَّر أي شيء. حاول مرة أخرى بعد قليل." },
   // Reserved for later phases (TRD §8); defined now so the code set is stable.
   COMPANY_SUSPENDED: { en: "This company's access is suspended.", ar: "تم إيقاف وصول هذه الشركة." },
   INVITE_EXPIRED: { en: "This invitation has expired.", ar: "انتهت صلاحية هذه الدعوة." },
