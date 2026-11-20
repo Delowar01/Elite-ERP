@@ -2,7 +2,7 @@ import { cookies, headers } from "next/headers";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { CircleAlert, Pencil, Receipt, ShieldOff, UserCheck, UserCog, UserMinus, Users } from "lucide-react";
-import { AccessPill, Breadcrumbs, DetailPage, DisabledAction, FieldGrid, Ltr, MetricTile, PageState, PlatformStatusTag } from "@/components/platform/companies-kit";
+import { AccessPill, Breadcrumbs, DetailPage, DisabledAction, FieldGrid, Interpolated, Ltr, MetricTile, PageState, PlatformStatusTag } from "@/components/platform/companies-kit";
 import { CompanyAccessControl } from "@/components/platform/company-access-dialog";
 import { CompanyTabs, type CompanyTabValue } from "@/components/platform/company-tabs";
 import { pt } from "@/components/platform/i18n";
@@ -90,6 +90,78 @@ function AccessPanel({ locale, d }: { locale: Locale; d: CompanyDetail }) {
   );
 }
 
+// PO-03A: read-only Users & seats — the shared seat accounting and the primary-owner mapping. Nothing is enforced.
+const count = (value: number) => <Ltr>{formatPlatformCount(value)}</Ltr>;
+const isolated = (value: string) => <bdi>{value}</bdi>;
+
+function SeatsPanel({ locale, d }: { locale: Locale; d: CompanyDetail }) {
+  const s = d.seats;
+  const owner = d.primaryOwner;
+  const items: { label: string; value: React.ReactNode }[] = [];
+  if (!s) items.push({ label: pt(locale, "seats.occupied"), value: pt(locale, "seats.unavailable") });
+  else {
+    const a = s.allowance;
+    items.push({
+      label: pt(locale, "seats.occupied"),
+      value: a.state === "assigned" ? <Interpolated template={pt(locale, "seats.occupiedOf")} values={{ occupied: count(s.occupied), seats: count(a.seats) }} /> : count(s.occupied),
+    });
+    items.push({
+      label: pt(locale, "seats.allowance"),
+      value:
+        a.state === "assigned" ? (
+          <>
+            <Interpolated template={pt(locale, "seats.allowanceFrom")} values={{ seats: count(a.seats), package: isolated(a.packageName), version: count(a.versionNumber) }} />
+            <span className="platform-cell-sub">{pt(locale, "seats.until", { date: formatPlatformDate(new Date(`${a.endDate}T12:00:00Z`), locale) })}</span>
+          </>
+        ) : (
+          pt(locale, a.state === "none" ? "seats.noSubscription" : "seats.notInstalled")
+        ),
+    });
+    // Above the allowance, Remaining is 0 and the callout below states the (informational) excess once.
+    if (a.state === "assigned") items.push({ label: pt(locale, "seats.remaining"), value: count(s.remaining ?? 0) });
+    items.push({ label: pt(locale, "seats.activeUsers"), value: count(s.users.active) });
+    items.push({ label: pt(locale, "seats.disabledUsers"), value: count(s.users.disabled) });
+  }
+  items.push({
+    label: pt(locale, "seats.primaryOwner"),
+    value:
+      owner.state === "designated" ? (
+        <>
+          <span className="platform-owner-name" dir="auto">
+            {owner.name}
+          </span>
+          <span className="platform-cell-sub">
+            <Ltr>{owner.email}</Ltr>
+          </span>
+          {!owner.activeOwner && <span className="platform-cell-sub">{pt(locale, "seats.ownerDrift")}</span>}
+        </>
+      ) : (
+        pt(locale, owner.state === "not_designated" ? "seats.notDesignated" : owner.state === "not_installed" ? "seats.ownerNotInstalled" : "seats.ownerUnavailable")
+      ),
+  });
+  const legacy = owner.state === "not_designated" && s?.allowance.state === "none";
+  return (
+    <section className="card platform-panel" aria-labelledby="company-seats" data-testid="company-seats">
+      <div className="platform-panel-head">
+        <h2 id="company-seats">{pt(locale, "seats.title")}</h2>
+      </div>
+      <div className="platform-panel-body">
+        <FieldGrid items={items} />
+        {s?.overLimit && (
+          <p className="platform-callout mt-4" data-tone="neutral">
+            <CircleAlert className="size-4 shrink-0" aria-hidden />
+            <span>
+              <Interpolated template={pt(locale, "seats.overBy")} values={{ n: count(s.overBy) }} />
+            </span>
+          </p>
+        )}
+        {legacy && <p className="platform-fine-print mt-4">{pt(locale, "seats.legacyNote")}</p>}
+        <p className="platform-fine-print mt-4">{pt(locale, "seats.note")}</p>
+      </div>
+    </section>
+  );
+}
+
 function UsersPanel({ locale, d }: { locale: Locale; d: CompanyDetail }) {
   return (
     <div className="platform-settings-stack">
@@ -99,6 +171,7 @@ function UsersPanel({ locale, d }: { locale: Locale; d: CompanyDetail }) {
         <MetricTile label={pt(locale, "users.inactive")} value={formatPlatformCount(d.users.total - d.users.active)} icon={UserMinus} />
         <MetricTile label={pt(locale, "users.owners")} value={formatPlatformCount(d.users.owners)} icon={UserCog} />
       </div>
+      <SeatsPanel locale={locale} d={d} />
       <section className="card platform-panel" aria-labelledby="company-owners">
         <div className="platform-panel-head">
           <h2 id="company-owners">{pt(locale, "users.owners")}</h2>

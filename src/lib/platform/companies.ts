@@ -11,6 +11,8 @@ import { isPlatformError, PlatformError } from "./errors";
 import { assertPlatformConsoleEnabled } from "./flags";
 import { authorizePlatformToken } from "./guards";
 import { errorClass, reportSecurityIncident } from "./incident";
+import { primaryOwnerFoundation, readPrimaryOwnerMapping } from "./primary-owners";
+import { readSeatAccounting, type SeatAccounting } from "./seat-accounting";
 import type { PlatformSessionContext } from "./session";
 
 // ---------------------------------------------------------------------------------------------
@@ -564,8 +566,50 @@ export type CompanyDetail = {
   access: TenantAccess & { reason: string | null; changedAt: Date | null; changedBy: string | null; enforced: boolean };
   users: UserSummary;
   owners: OwnerSummary[];
+  /** PO-03A: read-only user-seat accounting (the shared service); null = could not be read (shown as unavailable). */
+  seats: SeatAccounting | null;
+  /** PO-03A: the primary-owner mapping (O-2: legacy companies are never guessed from role = owner). */
+  primaryOwner: PrimaryOwnerView;
   activity: { rows: CompanyActivityRow[]; next: string | null };
 };
+
+export type PrimaryOwnerView =
+  /** Mapped; `activeOwner` false would be drift (R02): the mapped user is no longer an active owner. */
+  | { state: "designated"; name: string; email: string; activeOwner: boolean }
+  | { state: "not_designated" }
+  /** The mapping table does not exist in this database (staged rollout). */
+  | { state: "not_installed" }
+  | { state: "unavailable" };
+
+/**
+ * PO-03A — the Users & seats part of the detail. Display only and fail-soft: if the seat or mapping read fails, that
+ * part alone is shown as unavailable (never as "no subscription" or "not designated") and the rest of the detail —
+ * including the access controls — is still served. Only the mapped user's name, e-mail, role and status are read.
+ */
+async function ownershipOf(orgId: number): Promise<{ seats: SeatAccounting | null; primaryOwner: PrimaryOwnerView }> {
+  const seats = await readSeatAccounting(db, orgId).catch((err: unknown) => {
+    console.error(`[platform-companies] seat accounting unavailable: ${errorClass(err)}`);
+    return null;
+  });
+  let primaryOwner: PrimaryOwnerView;
+  try {
+    if ((await primaryOwnerFoundation(db)) === "absent") primaryOwner = { state: "not_installed" };
+    else {
+      const mapping = await readPrimaryOwnerMapping(db, orgId);
+      const [user] = mapping
+        ? await db
+            .select({ name: usersTable.name, email: usersTable.email, role: usersTable.role, isActive: usersTable.isActive })
+            .from(usersTable)
+            .where(and(eq(usersTable.id, mapping.userId), eq(usersTable.orgId, orgId)))
+        : [];
+      primaryOwner = !mapping ? { state: "not_designated" } : user ? { state: "designated", name: user.name, email: user.email, activeOwner: user.role === "owner" && user.isActive } : { state: "unavailable" };
+    }
+  } catch (err) {
+    console.error(`[platform-companies] primary owner unavailable: ${errorClass(err)}`);
+    primaryOwner = { state: "unavailable" };
+  }
+  return { seats, primaryOwner };
+}
 
 const ev = platformAuditEventsTable;
 
@@ -607,9 +651,10 @@ export async function getCompanyDetail(req: CompanyReadRequest, rawOrgId: unknow
     }
     const position =
       activityAnchor === null ? [] : [sql`(${ev.createdAt}, ${ev.id}) < (select ${ev.createdAt}, ${ev.id} from ${ev} where ${ev.id} = ${activityAnchor} and ${ev.orgId} = ${orgId})`];
-    const [users, owners, activity] = await Promise.all([
+    const [users, owners, ownership, activity] = await Promise.all([
       userSummaries([orgId]),
       ownerSummaries([orgId], DETAIL_OWNER_LIMIT),
+      ownershipOf(orgId),
       db
         .select({ id: ev.id, at: ev.createdAt, actor: ev.actorLabel, action: ev.action, result: ev.result, reason: ev.reason })
         .from(ev)
@@ -631,6 +676,8 @@ export async function getCompanyDetail(req: CompanyReadRequest, rawOrgId: unknow
       access: { ...accessOf(org), reason: org.reason ?? null, changedAt: org.changedAt ?? null, changedBy: org.changedBy ?? null, enforced: tenantAccessEnforcementEnabled() },
       users: users.get(orgId) ?? NO_USERS,
       owners: owners.get(orgId) ?? [],
+      seats: ownership.seats,
+      primaryOwner: ownership.primaryOwner,
       activity: { rows, next: more ? String(rows[rows.length - 1].id) : null },
     };
   });
