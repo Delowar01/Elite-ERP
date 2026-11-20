@@ -403,7 +403,9 @@ async function main() {
   ok("U3 success: the link panel shows the reference and the link — the configured origin, /join/accept, the token (43 base64url characters) in the fragment",
     !!inv1 && link1.startsWith(`${CUSTOMER_ORIGIN}/join/accept#t=`) && /^[A-Za-z0-9_-]{43}$/.test(token1) && linkPanelText.includes(referenceOf(inv1.id)), `${link1.slice(0, 40)}… ${linkPanelText.slice(0, 80)}`);
   ok("U3 …the database holds only sha256 of that token (normalized e-mail, the staff role, this company)", !!row1 && row1.token_hash === sha256(token1) && row1.email_normalized === "reem.staff@cedar-fixture.test" && row1.requested_role === "staff" && row1.org_id === T);
-  ok("U3 …the panel says the link can't be used yet and was not sent", /can.t be used yet/i.test(linkPanelText) && /Nothing was emailed or messaged/.test(linkPanelText) && /shown only now/.test(linkPanelText), linkPanelText.slice(0, 200));
+  // PO-03D: acceptance exists now, behind its own switch — this server leaves CUSTOMER_USER_INVITE_ACCEPTANCE_ENABLED unset,
+  // so the panel says the link can't be used while that switch is off here (never that it works).
+  ok("U3 …the panel says the link can't be used while user-invitation acceptance is switched off here, and was not sent", /can.t be used while user-invitation acceptance is switched off here/i.test(linkPanelText) && !/opens this link to choose a password/i.test(linkPanelText) && /Nothing was emailed or messaged/.test(linkPanelText) && /shown only now/.test(linkPanelText), linkPanelText.slice(0, 200));
   await shot(page, "13-invite-link-once-en-light-1440", "viewport");
   await dialog.getByRole("button", { name: "Copy link" }).click();
   const copied = await eventually(async () => /Link copied/.test(await dialog.innerText()));
@@ -482,7 +484,7 @@ async function main() {
   const viewsBefore = await auditCount("user_invitation.viewed", inv1!.id);
   const detail1 = await payloads(page, `/platform/users/invitations/${inv1!.id}`);
   const detailText = plain(await page.locator("main").innerText());
-  ok("U6 the detail: name, company, e-mail, role, invited by, expiry, the not-yet-acceptable warning and the history (Invited)", /Reem Fictional/.test(detailText) && /Fictional Cedar Analytics/.test(detailText) && /reem\.staff@cedar-fixture\.test/.test(detailText) && /can.t be accepted yet/.test(detailText) && /Fictional operator/.test(detailText), detailText.slice(0, 240));
+  ok("U6 the detail: name, company, e-mail, role, invited by, expiry, the switched-off-acceptance warning (PO-03D's copy; this server has acceptance off) and the history (Invited)", /Reem Fictional/.test(detailText) && /Fictional Cedar Analytics/.test(detailText) && /reem\.staff@cedar-fixture\.test/.test(detailText) && /can.t be accepted while user-invitation acceptance is switched off here/.test(detailText) && /Fictional operator/.test(detailText), detailText.slice(0, 240));
   ok("U6 opening it is recorded (user_invitation.viewed)", (await auditCount("user_invitation.viewed", inv1!.id)) >= viewsBefore + 1);
   ok("U6 the page's HTML and RSC payload hold no token, digest, link, password hash, MFA envelope or bcrypt-shaped string", leaksIn(detail1.html).length === 0 && leaksIn(detail1.rsc).length === 0, [...leaksIn(detail1.html), ...leaksIn(detail1.rsc)].join(","));
   await shot(page, "40-detail-pending-en-light-1440");
