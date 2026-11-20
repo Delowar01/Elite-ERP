@@ -41,7 +41,7 @@
 | A — transfer and roles | done (`723ce95`). `verify:platform-owner-transfer` **50/50**, `verify:platform-roles-browser` **36/36** (§C, §D). |
 | B — Team session correction | done (`62d5109`). `verify:platform-team-sessions` **28/28** (§E). |
 | C — user invitations | done (`3ac0b14`). `verify:platform-user-invitations` **73/73**, `verify:platform-user-invitations-browser` **57/57**, 48 screenshots (§F–§J). |
-| Change control | done (`e07c581`). One PO-03C approved-delta layer for A + B + C: 15 files, 69 hunks, 14 added files; both freeze verifiers hooked; boundary rule 49 (10 checks); **23 tamper cases, every one caught** (§K). |
+| Change control | done (`e07c581`). One PO-03C approved-delta layer for A + B + C: 15 files, 69 hunks, 14 added files; both freeze verifiers hooked. (Boundary rule 49, 10 checks, and the K4 barrier were committed with C in `3ac0b14`.) **23 tamper cases, every one caught** (§K). |
 | Full regression | **green** at `353e02b` (one run, 08:19–09:10Z): every suite passes; `next build` compiles and generates all 71 pages, then stops at the Next.js advisory gate, which was not bypassed (§K) |
 | This document | done |
 | **STOP gate** | **STOPPED.** Prompt 4 is not started. No merge, deployment, PR change, production access, real account or real message. |
@@ -99,7 +99,7 @@ Each commit is reviewable on its own; none was amended, squashed or force-pushed
 | `tests/security/platform-boundary.test.mjs` | rules 46/47 extended by name |
 | `package.json` | the suite's script |
 
-### B.2 Sub-batch A (`723ce95`) — 22 files
+### B.2 Sub-batch A (`723ce95`) — 20 files
 
 | File | Change |
 |---|---|
