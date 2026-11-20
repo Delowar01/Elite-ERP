@@ -28,6 +28,9 @@ import { TeamSeatSummary } from "./seat-summary";
 
 const ROLE_LABELS: Record<Role, string> = { owner: "Owner", admin: "Admin", staff: "Staff" };
 
+/** Exactly what the panel renders — the props are serialized to the browser, so no authentication field belongs here. */
+export type TeamMember = Pick<User, "id" | "name" | "email" | "role" | "isActive">;
+
 export function TeamPanel({
   locale,
   members,
@@ -36,7 +39,7 @@ export function TeamPanel({
   ownership,
 }: {
   locale: Locale;
-  members: User[];
+  members: TeamMember[];
   currentUserId: number;
   currentUserRole: Role;
   ownership: TeamOwnershipSummary;

@@ -42,7 +42,13 @@ export default async function OrganizationSettingsPage({ searchParams }: { searc
     .from(bankAccountsTable)
     .where(eq(bankAccountsTable.orgId, session.orgId))
     .orderBy(asc(bankAccountsTable.name));
-  const members = await db.select().from(usersTable).where(eq(usersTable.orgId, session.orgId)).orderBy(asc(usersTable.name));
+  // Security: only the fields the Team panel renders. The rows are serialized to the browser, so never select the
+  // password hash or the MFA secret / recovery-code envelopes here.
+  const members = await db
+    .select({ id: usersTable.id, name: usersTable.name, email: usersTable.email, role: usersTable.role, isActive: usersTable.isActive })
+    .from(usersTable)
+    .where(eq(usersTable.orgId, session.orgId))
+    .orderBy(asc(usersTable.name));
   // PO-03A: the read-only user-seat summary and the primary owner — of the session's own company only.
   const ownership = await readTeamOwnershipSummary(session.orgId);
 
