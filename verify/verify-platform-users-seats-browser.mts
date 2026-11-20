@@ -19,7 +19,6 @@
  * audits and screenshots · W12 Arabic RTL with left-to-right numbers.
  */
 import { createRequire } from "node:module";
-import { randomBytes } from "node:crypto";
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import type { Browser, BrowserContext, Page } from "playwright";
