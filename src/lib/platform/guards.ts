@@ -27,7 +27,11 @@ import { validatePlatformSession, type PlatformSessionContext } from "./session"
 // user's sessions, always with a reason and a fresh TOTP code, under the shared customer-user lock order and owner
 // rules, audited in the same transaction (src/lib/platform/customer-user-actions.ts). Neither grants impersonation,
 // password resets, role changes or ownership transfer.
-export const PLATFORM_PERMISSIONS = ["platform.access", "platform.sessions.manage", "platform.mfa.manage", "platform.companies.read", "platform.companies.manage_access", "platform.companies.invite", "platform.users.read", "platform.users.manage"] as const;
+// PO-03C: platform.users.manage_roles — change a customer user's role (owner / admin / staff) and transfer a company's
+// primary ownership, always with a reason and a fresh TOTP code, through the shared customer-user service under the
+// PO-03A lock order, ending the affected accounts' sessions and audited in the same transaction
+// (src/lib/platform/customer-user-actions.ts). It grants no impersonation, password reset or custom role.
+export const PLATFORM_PERMISSIONS = ["platform.access", "platform.sessions.manage", "platform.mfa.manage", "platform.companies.read", "platform.companies.manage_access", "platform.companies.invite", "platform.users.read", "platform.users.manage", "platform.users.manage_roles"] as const;
 export type PlatformPermission = (typeof PLATFORM_PERMISSIONS)[number];
 const OWNER_PERMISSIONS: ReadonlySet<string> = new Set(PLATFORM_PERMISSIONS);
 

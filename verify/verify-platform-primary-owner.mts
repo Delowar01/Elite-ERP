@@ -228,9 +228,14 @@ try {
       `${roleWriters} | ${activeWriters}`);
     ok("N4 nothing updates users.org_id (no ORM .set({ orgId }) on users, no raw UPDATE users … org_id)",
       !files.some((f) => /\.update\(\s*usersTable\s*\)\s*\.set\(\{[^}]*\borgId\b/.test(code(f).replace(/\s+/g, " "))) && writers(/\bupdate\s+"?users"?\s+set\b/i).length === 0);
-    ok("N5 the only writer of a primary-owner mapping is the PO-02D3 acceptance core (one insert); nothing updates or deletes one",
-      same(writers(/\.insert\(\s*tenantPrimaryOwnersTable\s*\)/), ["src/lib/platform/invitation-acceptance.ts"]) && writers(/\.(update|delete)\(\s*tenantPrimaryOwnersTable\s*\)/).length === 0 &&
-        writers(/\b(insert\s+into|update|delete\s+from)\s+"?tenant_primary_owners"?/i).length === 0);
+    // PO-03C: the primary-owner transfer (src/lib/platform/customer-user-actions.ts) moves an existing mapping with ONE
+    // update, scoped by company AND previous owner; the mapping's guard re-checks the new user. Still no delete anywhere.
+    const transferCode = code(join(ROOT, "src/lib/platform/customer-user-actions.ts"));
+    ok("N5 the only writers of a primary-owner mapping are the PO-02D3 acceptance core (one insert) and (PO-03C) the primary-owner transfer (one update, by company AND previous owner); nothing else updates one and nothing deletes one",
+      same(writers(/\.insert\(\s*tenantPrimaryOwnersTable\s*\)/), ["src/lib/platform/invitation-acceptance.ts"]) && same(writers(/\.update\(\s*tenantPrimaryOwnersTable\s*\)/), ["src/lib/platform/customer-user-actions.ts"]) &&
+        (transferCode.match(/\.update\(\s*tenantPrimaryOwnersTable\s*\)/g) ?? []).length === 1 &&
+        /\.update\(tenantPrimaryOwnersTable\)\s*\.set\(\{ userId: to\.id, assignedAt: now, assignedByPlatformAdminId: ctx\.adminId \}\)\s*\.where\(and\(eq\(tenantPrimaryOwnersTable\.orgId, orgId\), eq\(tenantPrimaryOwnersTable\.userId, from\.id\)\)\)/.test(transferCode) &&
+        writers(/\.delete\(\s*tenantPrimaryOwnersTable\s*\)/).length === 0 && writers(/\b(insert\s+into|update|delete\s+from)\s+"?tenant_primary_owners"?/i).length === 0);
     ok("N6 the Team actions no longer write users themselves for role or status (they call the service)",
       /changeTeamMemberRole\(session, userId, role, await getLocale\(\)\)/.test(code(join(ROOT, "src/app/(app)/settings/team/actions.ts"))) &&
         /setTeamMemberActive\(session, userId, isActive, await getLocale\(\)\)/.test(code(join(ROOT, "src/app/(app)/settings/team/actions.ts"))) &&

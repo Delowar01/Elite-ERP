@@ -7,6 +7,7 @@ import { CompanyAccessControl } from "@/components/platform/company-access-dialo
 import { CompanyTabs, type CompanyTabValue } from "@/components/platform/company-tabs";
 import { pt } from "@/components/platform/i18n";
 import { EmptyPanel, PreviewBadge } from "@/components/platform/page-kit";
+import { PrimaryOwnerTransfer } from "@/components/platform/primary-owner-transfer";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { Locale } from "@/lib/i18n/dict";
@@ -22,15 +23,22 @@ import { requirePlatformSession } from "@/lib/platform/guards";
 // audit record cannot be written, no company data is rendered at all. Malformed or unknown ids are
 // a 404. PO-02C: Suspend / Reactivate (header and Access & controls) open the confirmation dialog,
 // whose server action re-authorizes and steps up on its own; every other action is still disabled.
+// PO-03C: the Users tab's Primary owner panel opens the primary-owner transfer (its own server action,
+// re-authorized and stepped up on its own); a company with no designated primary owner is never transferred.
 
 type SearchParams = Record<string, string | string[] | undefined>;
 const TABS: CompanyTabValue[] = ["overview", "access", "users", "subscription", "activity"];
-const ACTION_LABEL: Record<string, "event.companyViewed" | "event.companySuspended" | "event.companyReactivated" | "event.suspendRejected" | "event.reactivateRejected"> = {
+const ACTION_LABEL: Record<
+  string,
+  "event.companyViewed" | "event.companySuspended" | "event.companyReactivated" | "event.suspendRejected" | "event.reactivateRejected" | "event.ownerTransferred" | "event.ownerTransferRejected"
+> = {
   "company.viewed": "event.companyViewed",
   "company.suspended": "event.companySuspended",
   "company.reactivated": "event.companyReactivated",
   "company.suspend.rejected": "event.suspendRejected",
   "company.reactivate.rejected": "event.reactivateRejected",
+  "company.primary_owner_transferred": "event.ownerTransferred",
+  "company.primary_owner_transfer.rejected": "event.ownerTransferRejected",
 };
 
 function sourceText(locale: Locale, source: CompanyDetail["access"]["source"]): string {
@@ -163,6 +171,36 @@ function SeatsPanel({ locale, d }: { locale: Locale; d: CompanyDetail }) {
   );
 }
 
+/** PO-03C: the primary-owner transfer. The dialog re-reads the company's owners; the server re-checks everything. */
+function PrimaryOwnerPanel({ locale, d }: { locale: Locale; d: CompanyDetail }) {
+  const owner = d.primaryOwner;
+  const blocked = owner.state === "designated" ? null : owner.state === "not_designated" ? "transfer.notDesignated" : owner.state === "not_installed" ? "transfer.notInstalled" : "transfer.unavailable";
+  return (
+    <section className="card platform-panel" aria-labelledby="company-primary-owner" data-testid="company-primary-owner">
+      <div className="platform-panel-head">
+        <h2 id="company-primary-owner">{pt(locale, "transfer.panel")}</h2>
+      </div>
+      <div className="platform-panel-body platform-detail-actions">
+        <PrimaryOwnerTransfer
+          locale={locale}
+          orgId={d.orgId}
+          companyName={d.name}
+          designation={owner.state}
+          primaryEmail={owner.state === "designated" ? owner.email : null}
+          noteId={blocked ? "company-transfer-note" : undefined}
+        />
+        {blocked && (
+          <p id="company-transfer-note" className="platform-callout" data-tone="neutral" data-testid="company-transfer-note">
+            <CircleAlert className="size-4 shrink-0" aria-hidden />
+            <span>{pt(locale, blocked)}</span>
+          </p>
+        )}
+        <p className="platform-fine-print">{pt(locale, "transfer.panelNote")}</p>
+      </div>
+    </section>
+  );
+}
+
 function UsersPanel({ locale, d }: { locale: Locale; d: CompanyDetail }) {
   return (
     <div className="platform-settings-stack">
@@ -173,6 +211,7 @@ function UsersPanel({ locale, d }: { locale: Locale; d: CompanyDetail }) {
         <MetricTile label={pt(locale, "users.owners")} value={formatPlatformCount(d.users.owners)} icon={UserCog} />
       </div>
       <SeatsPanel locale={locale} d={d} />
+      <PrimaryOwnerPanel locale={locale} d={d} />
       <section className="card platform-panel" aria-labelledby="company-owners">
         <div className="platform-panel-head">
           <h2 id="company-owners">{pt(locale, "users.owners")}</h2>

@@ -8,8 +8,8 @@ import { canAssignRole } from "@/lib/tenant";
 import {
   CUSTOMER_USER_LOCK_TIMEOUT,
   deactivationBlock,
+  demotionBlock,
   endCustomerUserSessions,
-  hasOtherActiveOwner,
   lockCompanyPrimaryOwner,
   lockCompanyUsers,
   ROLE_CHANGE_REVOKE_REASON,
@@ -171,9 +171,11 @@ export async function changeTeamMemberRole(session: Session, userId: number, rol
     // The same rules again, on the rows as they are now (a stale page, or a change that committed meanwhile).
     if (!canAssignRole(actor.role, role)) throw new TeamRefusal("aboveOwn");
     if (!canAssignRole(actor.role, target.role as Role)) throw new TeamRefusal("memberRole");
-    // O-3: the primary owner stays an owner (a request that leaves them an owner changes nothing protected).
-    if (target.id === primaryOwnerId && role !== "owner") await protectedOwnerRefusal(tx, session, target.id, "role_change");
-    if (target.role === "owner" && target.isActive && role !== "owner" && !(await hasOtherActiveOwner(tx, session.orgId, target.id))) throw new TeamRefusal("lastOwner");
+    // O-3: the primary owner stays an owner (a request that leaves them an owner changes nothing protected), and the
+    // last active owner is never demoted — PO-03C: the shared rule the console's role control applies too.
+    const block = await demotionBlock(tx, target, primaryOwnerId, role);
+    if (block === "primary_owner") await protectedOwnerRefusal(tx, session, target.id, "role_change");
+    if (block === "last_owner") throw new TeamRefusal("lastOwner");
     await setCustomerUserRole(tx, target, role);
     // PO-03C: a real role change invalidates the member's sessions (an unchanged role changes nothing else).
     if (role !== target.role) await endMemberSessions(tx, session, target, "role_changed");

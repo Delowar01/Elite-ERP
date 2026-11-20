@@ -155,8 +155,9 @@ ok("edge gate reads AUTH_SECRET only to refuse a shared secret", (gateSrc.match(
 
 // 11. Console imports are allow-listed: no customer session/auth/tenant code, no direct database.
 const APP_ALLOWED = [/^next(\/|$)/, /^react$/, /^lucide-react$/, /^zod$/, /^@\/lib\/platform\//, /^@\/components\/platform\//, /^@\/components\/ui\//, /^@\/components\/brand\//, /^@\/lib\/i18n\/(server|dict)$/, /^@\/lib\/theme$/, /^@\/app\/\((app|auth)\)\/[a-z-]+\.css$/, /^@\/app\/\(platform\)\/platform\.css$/];
-const UI_ALLOWED = [/^next(\/|$)/, /^react$/, /^lucide-react$/, /^sonner$/, /^@radix-ui\/react-dialog$/, /^@\/components\/ui\//, /^@\/components\/brand\//, /^@\/components\/layout\/(brand-mark|language-switcher|theme-toggle|page-header)$/, /^@\/lib\/utils$/, /^@\/lib\/i18n\/dict$/, /^@\/lib\/theme$/, /^@\/app\/\(platform\)\/(auth|security|company-access|invitation|customer-user)-actions$/, /^\.\/[a-z0-9-]+$/];
+const UI_ALLOWED = [/^next(\/|$)/, /^react$/, /^lucide-react$/, /^sonner$/, /^@radix-ui\/react-dialog$/, /^@\/components\/ui\//, /^@\/components\/brand\//, /^@\/components\/layout\/(brand-mark|language-switcher|theme-toggle|page-header)$/, /^@\/lib\/utils$/, /^@\/lib\/i18n\/dict$/, /^@\/lib\/theme$/, /^@\/app\/\(platform\)\/(auth|security|company-access|invitation|customer-user|customer-user-role)-actions$/, /^\.\/[a-z0-9-]+$/];
 // PO-03B: (customer-user)-actions — the user controls (src/components/platform/customer-user-controls.tsx) call only their own three server actions (rule 47).
+// PO-03C: (customer-user-role)-actions — the role control and the primary-owner transfer call only their own four server actions (rule 48).
 // PO-02D2: the invitation dialog alone may also import the two client-safe catalogues /register uses (pure data, no imports).
 const UI_ALLOWED_FOR = { [join(root, "src/components/platform/invitation-dialogs.tsx")]: [/^@\/lib\/geo\/countries$/, /^@\/lib\/currency\/currencies$/] };
 const badApp = consoleApp.flatMap((f) => [...importsOf(read(f)), ...sideEffectImports(read(f))].filter((s) => !APP_ALLOWED.some((re) => re.test(s))).map((s) => `${rel(f)} → ${s}`));
@@ -171,7 +172,8 @@ ok("no customer route, component or library imports any platform module (except 
 //     console core, which checks flag → origin → live session → permission.
 // PO-02D2: the five invitation cores (src/lib/platform/invitation-actions.ts) join the list; rule 44 pins their order.
 // PO-03B: the three customer-user cores (src/lib/platform/customer-user-actions.ts) join the list; rule 47 pins their order.
-const CORES = /\b(signInCore|signOutCore|revokeSessionCore|signOutOtherSessionsCore|regenerateRecoveryCodesCore|emergencyContainmentCore|setCompanyAccessCore|readCompanyAccessCore|previewCompanyInvitation|createCompanyInvitation|revokeCompanyInvitation|reissueCompanyInvitation|readCompanyInvitation|readCustomerUserStateCore|setCustomerUserStatusCore|revokeCustomerUserSessionsCore)\(/;
+// PO-03C: the four role / primary-owner transfer cores (the same module) join the list; rule 48 pins their order.
+const CORES = /\b(signInCore|signOutCore|revokeSessionCore|signOutOtherSessionsCore|regenerateRecoveryCodesCore|emergencyContainmentCore|setCompanyAccessCore|readCompanyAccessCore|previewCompanyInvitation|createCompanyInvitation|revokeCompanyInvitation|reissueCompanyInvitation|readCompanyInvitation|readCustomerUserStateCore|setCustomerUserStatusCore|revokeCustomerUserSessionsCore|readCustomerUserRoleStateCore|changeCustomerUserRoleCore|readPrimaryOwnerTransferOptionsCore|transferPrimaryOwnerCore)\(/;
 const actionFiles = consoleApp.filter((f) => /^\s*"use server";/.test(read(f)));
 const unguardedActions = actionFiles.flatMap((f) => {
   const src = read(f);
@@ -180,7 +182,7 @@ const unguardedActions = actionFiles.flatMap((f) => {
   const unauth = parts.filter((p) => p.startsWith("export async function") && !CORES.test(p)).map((p) => `${rel(f)}: ${p.slice(22, 60)}`);
   return [...stray, ...unauth];
 });
-ok("every exported server action in src/app/(platform) runs through a console core (and exports nothing else) — auth, security, (PO-02C) company access, (PO-02D2) invitations and (PO-03B) customer users", actionFiles.length === 5 && unguardedActions.length === 0, unguardedActions.join(", "));
+ok("every exported server action in src/app/(platform) runs through a console core (and exports nothing else) — auth, security, (PO-02C) company access, (PO-02D2) invitations, (PO-03B) customer users and (PO-03C) customer-user roles and the primary-owner transfer", actionFiles.length === 6 && unguardedActions.length === 0, unguardedActions.join(", ") || actionFiles.map(rel).join(", "));
 const coreSrc = read(join(root, "src/lib/platform/console.ts"));
 ok("console mutations check the flag, then same-origin, then the live session", /async function authorizeMutation[\s\S]{0,200}assertPlatformConsoleEnabled\(\);\s*assertSameOrigin\(req\.headers\);\s*return authorizePlatformToken\(/.test(coreSrc) && (coreSrc.match(/authorizeMutation\(req,/g) ?? []).length === 4 && /signInCore[\s\S]{0,200}assertSameOrigin/.test(coreSrc) && /signOutCore[\s\S]{0,200}assertSameOrigin/.test(coreSrc));
 
@@ -332,7 +334,8 @@ const manageAccessUsers = consoleCode.filter((f) => /"platform\.companies\.manag
 const inviteUsers = consoleCode.filter((f) => /"platform\.companies\.invite"/.test(code(f))).map(rel).sort();
 ok("the company permissions are exactly platform.companies.read, (PO-02C) platform.companies.manage_access — which only the access action checks — and (PO-02D2) platform.companies.invite, which only the invitation service checks; no other company permission exists",
   // PO-03B: plus platform.users.read and platform.users.manage (rule 47 pins the modules that check them).
-  /PLATFORM_PERMISSIONS = \["platform\.access", "platform\.sessions\.manage", "platform\.mfa\.manage", "platform\.companies\.read", "platform\.companies\.manage_access", "platform\.companies\.invite", "platform\.users\.read", "platform\.users\.manage"\] as const;/.test(guardsSrc) &&
+  // PO-03C: plus platform.users.manage_roles (rule 48 pins the modules that check it).
+  /PLATFORM_PERMISSIONS = \["platform\.access", "platform\.sessions\.manage", "platform\.mfa\.manage", "platform\.companies\.read", "platform\.companies\.manage_access", "platform\.companies\.invite", "platform\.users\.read", "platform\.users\.manage", "platform\.users\.manage_roles"\] as const;/.test(guardsSrc) &&
     !/platform\.companies\.(write|update|suspend|edit|delete|accept|manage(?!_access\b)|invite(?!"))/.test(consoleCode.map(code).join("\n")) &&
     JSON.stringify(manageAccessUsers) === JSON.stringify([join("src", "lib", "platform", "company-access-actions.ts"), join("src", "lib", "platform", "guards.ts")]) &&
     JSON.stringify(inviteUsers) === JSON.stringify([join("src", "lib", "platform", "guards.ts"), join("src", "lib", "platform", "invitation-actions.ts")]),
@@ -523,11 +526,14 @@ const SUBSCRIPTION_NAMES = /\b(platformSettingsTable|tenantPrimaryOwnersTable|te
 // event (one insert each, rule 45), reading the invitation's published Trial version; still nothing names platform settings.
 // PO-03A: and the two READ-ONLY cores — primary-owners.ts names the primary-owner table alone, seat-accounting.ts the
 // subscription, version and package tables alone (rule 46 proves both write nothing); still nothing names platform settings.
+// PO-03C: and the user controls — customer-user-actions.ts names the primary-owner table's Drizzle symbol alone, for the
+// transfer's ONE mapping UPDATE (by company AND previous owner — rule 48); it names no other onboarding table.
 const subscriptionNamers = allSrc.filter((f) => f !== ONBOARDING_SCHEMA && SUBSCRIPTION_NAMES.test(code(f))).map(rel).sort();
 const namesIn = (f) => [...new Set(code(join(root, f)).match(new RegExp(ONBOARDING_NAMES.source, "g")) ?? [])].sort();
-ok("…no application code (comments ignored) names an onboarding table or its Drizzle symbol except (PO-02D2) invitations.ts and invitation-actions.ts, (PO-02D3) the acceptance core and (PO-03A) the read-only primary-owner and seat cores; nothing names platform settings",
-  JSON.stringify(onboardingUsers) === JSON.stringify([join("src", "lib", "platform", "invitation-acceptance.ts"), join("src", "lib", "platform", "invitation-actions.ts"), join("src", "lib", "platform", "invitations.ts"), join("src", "lib", "platform", "primary-owners.ts"), join("src", "lib", "platform", "seat-accounting.ts")]) &&
-    JSON.stringify(subscriptionNamers) === JSON.stringify([join("src", "lib", "platform", "invitation-acceptance.ts"), join("src", "lib", "platform", "primary-owners.ts"), join("src", "lib", "platform", "seat-accounting.ts")]) && !allSrc.some((f) => f !== ONBOARDING_SCHEMA && /\b(platformSettingsTable|platform_settings)\b/.test(code(f))) &&
+ok("…no application code (comments ignored) names an onboarding table or its Drizzle symbol except (PO-02D2) invitations.ts and invitation-actions.ts, (PO-02D3) the acceptance core, (PO-03A) the read-only primary-owner and seat cores and (PO-03C) the transfer core's primary-owner mapping; nothing names platform settings",
+  JSON.stringify(onboardingUsers) === JSON.stringify([join("src", "lib", "platform", "customer-user-actions.ts"), join("src", "lib", "platform", "invitation-acceptance.ts"), join("src", "lib", "platform", "invitation-actions.ts"), join("src", "lib", "platform", "invitations.ts"), join("src", "lib", "platform", "primary-owners.ts"), join("src", "lib", "platform", "seat-accounting.ts")]) &&
+    JSON.stringify(subscriptionNamers) === JSON.stringify([join("src", "lib", "platform", "customer-user-actions.ts"), join("src", "lib", "platform", "invitation-acceptance.ts"), join("src", "lib", "platform", "primary-owners.ts"), join("src", "lib", "platform", "seat-accounting.ts")]) && !allSrc.some((f) => f !== ONBOARDING_SCHEMA && /\b(platformSettingsTable|platform_settings)\b/.test(code(f))) &&
+    JSON.stringify(namesIn("src/lib/platform/customer-user-actions.ts")) === JSON.stringify(["tenantPrimaryOwnersTable"]) &&
     JSON.stringify(namesIn("src/lib/platform/primary-owners.ts")) === JSON.stringify(["tenantPrimaryOwnersTable", "tenant_primary_owners"]) &&
     JSON.stringify(namesIn("src/lib/platform/seat-accounting.ts")) === JSON.stringify(["subscriptionPackageVersionsTable", "subscriptionPackagesTable", "subscription_package_versions", "subscription_packages", "tenantSubscriptionsTable", "tenant_subscriptions"]),
   `${onboardingUsers.join(", ")} | ${subscriptionNamers.join(", ")} | ${namesIn("src/lib/platform/primary-owners.ts")} | ${namesIn("src/lib/platform/seat-accounting.ts")}`);
@@ -535,7 +541,7 @@ ok("…no application code (comments ignored) names an onboarding table or its D
 // 39. No permission and no route but the named ones: PO-02D2's console invitation detail and PO-02D3's /register/accept.
 const d1GuardsSrc = read(join(root, "src/lib/platform/guards.ts"));
 const permsLine = (d1GuardsSrc.match(/export const PLATFORM_PERMISSIONS = \[([^\]]*)\] as const;/) ?? ["", "(not found)"])[1];
-ok("39. PO-02D1A: the platform permission list is unchanged except (PO-02D2) platform.companies.invite and (PO-03B) platform.users.read / platform.users.manage — no package, subscription, Trial or acceptance permission", permsLine === `"platform.access", "platform.sessions.manage", "platform.mfa.manage", "platform.companies.read", "platform.companies.manage_access", "platform.companies.invite", "platform.users.read", "platform.users.manage"`, permsLine);
+ok("39. PO-02D1A: the platform permission list is unchanged except (PO-02D2) platform.companies.invite, (PO-03B) platform.users.read / platform.users.manage and (PO-03C) platform.users.manage_roles — no package, subscription, Trial or acceptance permission", permsLine === `"platform.access", "platform.sessions.manage", "platform.mfa.manage", "platform.companies.read", "platform.companies.manage_access", "platform.companies.invite", "platform.users.read", "platform.users.manage", "platform.users.manage_roles"`, permsLine);
 const onboardingRoutes = walk(join(root, "src/app")).map(rel).filter((p) => /\/(page|route)\.tsx?$/.test(p) && /invit|accept|onboard|subscri|packag|trial|join|regist/i.test(p)).sort();
 // PO-02D3: plus /register/accept — in a route group of its own, (invite), which holds exactly its four files (no layout,
 // so the (auth) layout's signed-in redirect can never carry the link's fragment to another URL).
@@ -906,14 +912,16 @@ ok("…what a Team change writes: the target's role or status only (one update e
     (teamSvc.match(/recordSecurityEvent\(/g) ?? []).length === 2 && /type: "team\.primary_owner_protected", severity: "medium"/.test(teamSvc) && /type: "team\.member_sessions_ended"/.test(teamSvc) && callArity(teamSvc, "recordSecurityEvent").every((n) => n === 2) &&
     (teamSvc.match(/endCustomerUserSessions\(/g) ?? []).length === 1 && /if \(role !== target\.role\) await endMemberSessions\(tx, session, target, "role_changed"\);/.test(teamSvc) &&
     /await endMemberSessions\(tx, session, target, isActive \? "reactivated" : "deactivated"\);/.test(teamSvc));
-ok("…the rules on the locked rows: the actor is still an active owner or admin of the company, the target belongs to it, the existing role rules, the primary owner keeps the owner role and stays active, and the last active owner is never removed",
+// PO-03C: the role rule (primary owner keeps the owner role; the last active owner is never demoted) is the shared service's
+// demotionBlock — the console's role control applies the same — exactly as the inline rule it replaces.
+ok("…the rules on the locked rows: the actor is still an active owner or admin of the company, the target belongs to it, the existing role rules, the primary owner keeps the owner role and stays active, and the last active owner is never removed (PO-03C: the role rule through the shared demotionBlock)",
   /if \(!actor \|\| !actor\.isActive \|\| !MANAGERS\.includes\(actor\.role as Role\)\) throw new TeamRefusal\("notManager"\);/.test(teamSvc) && /if \(!target\) throw new TeamRefusal\("notFound"\);/.test(teamSvc) &&
     /if \(!canAssignRole\(actor\.role, role\)\) throw new TeamRefusal\("aboveOwn"\);/.test(teamSvc) && /if \(!canAssignRole\(actor\.role, target\.role as Role\)\) throw new TeamRefusal\("memberRole"\);/.test(teamSvc) &&
-    /if \(target\.id === primaryOwnerId && role !== "owner"\) await protectedOwnerRefusal\(tx, session, target\.id, "role_change"\);/.test(teamSvc) &&
+    /const block = await demotionBlock\(tx, target, primaryOwnerId, role\);\s*if \(block === "primary_owner"\) await protectedOwnerRefusal\(tx, session, target\.id, "role_change"\);\s*if \(block === "last_owner"\) throw new TeamRefusal\("lastOwner"\);\s*await setCustomerUserRole\(tx, target, role\);/.test(teamSvc) && !/hasOtherActiveOwner/.test(teamSvc) &&
     // PO-03B: the deactivation rules are the shared service's deactivationBlock (the platform controls apply the same).
     /if \(!isActive\) \{\s*(\/\/[^\n]*\s*)?const block = await deactivationBlock\(tx, target, primaryOwnerId\);\s*if \(block === "primary_owner"\) await protectedOwnerRefusal\(tx, session, target\.id, "deactivation"\);\s*if \(block === "last_owner"\) throw new TeamRefusal\("lastOwner"\);\s*\}/.test(read(TEAM_SERVICE)) &&
     /if \(target\.id === primaryOwnerId\) return "primary_owner";\s*(\/\/[^\n]*\s*)?if \(target\.role === "owner" && !\(await hasOtherActiveOwner\(tx, target\.orgId, target\.id\)\)\) return "last_owner";\s*return null;/.test(read(CUSTOMER_CORE)) &&
-    /if \(target\.role === "owner" && target\.isActive && role !== "owner" && !\(await hasOtherActiveOwner\(tx, session\.orgId, target\.id\)\)\) throw new TeamRefusal\("lastOwner"\);/.test(teamSvc) &&
+    /export async function demotionBlock\(tx: Tx, target: LockedCustomerUser, primaryOwnerId: number \| null, role: CustomerRole\): Promise<"primary_owner" \| "last_owner" \| null> \{\s*if \(role === "owner"\) return null;\s*if \(target\.id === primaryOwnerId\) return "primary_owner";\s*if \(target\.role === "owner" && target\.isActive && !\(await hasOtherActiveOwner\(tx, target\.orgId, target\.id\)\)\) return "last_owner";\s*return null;\s*\}/.test(customerCore) &&
     (teamSvc.match(/throw new TeamRefusal\("lastOwner"\)/g) ?? []).length === 2);
 const teamActions = code(TEAM_ACTIONS);
 ok("…the two Team actions authorize (requireRole owner/admin) and hand the change to the service — they no longer write users themselves; adding a member is unchanged",
@@ -958,7 +966,8 @@ const coreImports47 = [...new Set([...importsOf(read(CUSTOMER_CORE)), ...sideEff
 const coreNames47 = (read(USERS_ACTIONS).match(/import \{([^}]*)\} from "@\/lib\/team\/customer-user-core";/) ?? ["", ""])[1].split(",").map((x) => x.trim()).filter(Boolean).sort();
 ok("47. PO-03B: ONE platform module reaches customer code — customer-user-actions.ts, which imports exactly the shared customer-user service (its lock, rule, status, session-end and evidence functions); that service is imported by it and the Team-change service only, and imports only server-only, drizzle-orm, @/db and the Team ownership gate (no session, auth, tenant or customer security module)",
   JSON.stringify(teamImporters47) === JSON.stringify([rel(USERS_ACTIONS)]) && JSON.stringify(importsOf(read(USERS_ACTIONS)).filter((x) => x.startsWith("@/lib/team/"))) === JSON.stringify(["@/lib/team/customer-user-core"]) &&
-    JSON.stringify(coreNames47) === JSON.stringify(["PLATFORM_REVOKED_REASON", "USER_DISABLED_REVOKE_REASON", "USER_REENABLED_REVOKE_REASON", "companyOfCustomerUser", "deactivationBlock", "endCustomerUserSessions", "isOwnerProtectionUnavailable", "lockCompanyUsers", "lockCustomerUsers", "recordPlatformChangeEvidence", "setCustomerUserActive"]) &&
+    // PO-03C: plus the role list and type, the role-change and transfer session reasons, the shared role rule and the ONE role write.
+    JSON.stringify(coreNames47) === JSON.stringify(["CUSTOMER_ROLES", "OWNER_TRANSFER_REVOKE_REASON", "PLATFORM_REVOKED_REASON", "ROLE_CHANGE_REVOKE_REASON", "USER_DISABLED_REVOKE_REASON", "USER_REENABLED_REVOKE_REASON", "companyOfCustomerUser", "deactivationBlock", "demotionBlock", "endCustomerUserSessions", "isOwnerProtectionUnavailable", "lockCompanyUsers", "lockCustomerUsers", "recordPlatformChangeEvidence", "setCustomerUserActive", "setCustomerUserRole", "type CustomerRole"]) &&
     JSON.stringify(coreImporters47) === JSON.stringify([rel(USERS_ACTIONS), rel(TEAM_SERVICE)].sort()) &&
     JSON.stringify(coreImports47) === JSON.stringify(["./ownership-gate", "@/db", "drizzle-orm", "server-only"]),
   `${teamImporters47.join(", ")} | ${coreNames47.join(",")} | ${coreImporters47.join(", ")} | ${coreImports47.join(", ")}`);
@@ -978,11 +987,16 @@ const revokeFn47 = fnBodies(usersActions).find((f) => f.name === "revokeCustomer
 ok("…session revocation: the same authorization, audit protection, input format, company lookup and throttle → ONE read-committed transaction: TOTP → company → user (the shared lock order) → that user's live sessions ended → customer evidence → the platform audit record, in the transaction; the account itself is not changed",
   inOrder(revokeFn47, [/await authorizeUserManagement\(req\)/, /await assertPlatformAuditProtection\(\)/, /parseCustomerUserId\(input\.userId\)/, /parseReason\(input\.reason\)/, /parseCode\(input\.totpCode\)/, /await companyOfCustomerUser\(db, userId\)/, /activeLoginBlock\(keys, now\)/, /db\.transaction\(/, /consumeTotpCode\(tx, ctx\.adminId, totpCode, now\)/, /await lockCompanyUsers\(tx, orgId, \[userId\]\)/, /await endCustomerUserSessions\(tx, user, PLATFORM_REVOKED_REASON, now\)/, /await recordPlatformChangeEvidence\(tx, user, \{ type: "sessions\.revoked_by_platform", sessionsEnded \}\)/, /result: "success" \}, tx\)/, /\{ isolationLevel: "read committed" \}/]) &&
     !/setCustomerUserActive/.test(revokeFn47));
-ok("…the user controls name no customer table and write nothing themselves (every write is the shared service's or the platform audit record); a failed or replayed code counts against the throttle and is recorded, and every refusal decided in the transaction is recorded after the rollback",
-  !/\b(usersTable|orgsTable|sessionsTable|securityEventsTable)\b/.test(usersActions) && !/\b(db|tx)\s*\.\s*(insert|update|delete|execute)\(/.test(usersActions) &&
-    (usersActions.match(/await recordLoginAttempt\(keys, "failure", now\);\s*await rejected\(outcome\.stage\);/g) ?? []).length === 2 &&
-    (usersActions.match(/const refused = refusal\(err\);\s*if \(refused\) \{\s*await rejected\(refused\.stage\);\s*throw refused\.error;\s*\}/g) ?? []).length === 2 &&
-    (usersActions.match(/totp\.reason === "replayed" \? \("replay" as const\) : \("mfa" as const\)/g) ?? []).length === 2);
+// PO-03C: the transfer core makes the module's ONE own write — the primary-owner mapping's UPDATE, by company AND
+// previous owner (rule 48 pins it); the role and transfer cores record failures and refusals the same way (2 → 4).
+const transferFn47 = fnBodies(usersActions).find((f) => f.name === "transferPrimaryOwnerCore")?.body ?? "";
+ok("…the user controls name no customer table and write nothing themselves (every write is the shared service's or the platform audit record — PO-03C: except the transfer's ONE primary-owner mapping UPDATE); a failed or replayed code counts against the throttle and is recorded, and every refusal decided in the transaction is recorded after the rollback",
+  !/\b(usersTable|orgsTable|sessionsTable|securityEventsTable)\b/.test(usersActions) && (usersActions.match(/\b(db|tx)\s*\.\s*(insert|update|delete|execute)\(/g) ?? []).length === 1 &&
+    /\btx\s*\.update\(tenantPrimaryOwnersTable\)\s*\.set\(\{ userId: to\.id, assignedAt: now, assignedByPlatformAdminId: ctx\.adminId \}\)\s*\.where\(and\(eq\(tenantPrimaryOwnersTable\.orgId, orgId\), eq\(tenantPrimaryOwnersTable\.userId, from\.id\)\)\)/.test(transferFn47) &&
+    !/\b(db|tx)\s*\.\s*(insert|update|delete|execute)\(/.test(statusFn47 + revokeFn47) &&
+    (usersActions.match(/await recordLoginAttempt\(keys, "failure", now\);\s*await rejected\(outcome\.stage\);/g) ?? []).length === 4 &&
+    (usersActions.match(/const refused = refusal\(err\);\s*if \(refused\) \{\s*await rejected\(refused\.stage\);\s*throw refused\.error;\s*\}/g) ?? []).length === 4 &&
+    (usersActions.match(/totp\.reason === "replayed" \? \("replay" as const\) : \("mfa" as const\)/g) ?? []).length === 4);
 const usersReadFns47 = fnBodies(usersRead).filter((f) => /^export async function /.test(f.body.trimStart()));
 const colsOf47 = (alias) => [...new Set([...usersRead.matchAll(new RegExp(`\\b${alias}\\.(\\w+)`, "g"))].map((m) => m[1]))].sort();
 const allowed47 = {
@@ -992,10 +1006,12 @@ const allowed47 = {
   ev: ["action", "actorLabel", "createdAt", "entityId", "entityType", "id", "reason", "result"],
 };
 const off47 = Object.entries(allowed47).flatMap(([alias, cols]) => colsOf47(alias).filter((c) => !cols.includes(c)).map((c) => `${alias}.${c}`));
-ok("…the customer-user read model: every export authorizes first (platform.users.read; the controls' live-state read platform.users.manage), every column is on its allowlist, no secret, token or network field is named, no whole row is selected, and it writes only the audited detail view's record",
-  usersReadFns47.length === 4 && usersReadFns47.every((f) => /^\s*export async function \w+\([^)]*\)[^{]*\{\s*(const ctx = )?await authorizeUserRead\(req, "platform\.users\.(read|manage)"\);/.test(f.body)) &&
+ok("…the customer-user read model: every export authorizes first (platform.users.read; the controls' live-state read platform.users.manage; PO-03C the role state and the transfer options platform.users.manage_roles), every column is on its allowlist, no secret, token or network field is named, no whole row is selected, and it writes only the audited detail view's record",
+  usersReadFns47.length === 6 && usersReadFns47.every((f) => /^\s*export async function \w+\([^)]*\)[^{]*\{\s*(const ctx = )?await authorizeUserRead\(req, "platform\.users\.(read|manage|manage_roles)"\);/.test(f.body)) &&
     (usersRead.match(/authorizeUserRead\(req, "platform\.users\.manage"\)/g) ?? []).length === 1 &&
-    /async function authorizeUserRead\(req: CustomerUserReadRequest, permission: "platform\.users\.read" \| "platform\.users\.manage"\): Promise<PlatformSessionContext> \{\s*assertPlatformConsoleEnabled\(\);\s*return authorizePlatformToken\(req\.token, permission\);\s*\}/.test(usersRead) &&
+    (usersRead.match(/authorizeUserRead\(req, "platform\.users\.manage_roles"\)/g) ?? []).length === 2 &&
+    ["readCustomerUserRoleState", "readPrimaryOwnerTransferOptions"].every((name) => /authorizeUserRead\(req, "platform\.users\.manage_roles"\)/.test(fnBodies(usersRead).find((f) => f.name === name)?.body ?? "")) &&
+    /async function authorizeUserRead\(req: CustomerUserReadRequest, permission: "platform\.users\.read" \| "platform\.users\.manage" \| "platform\.users\.manage_roles"\): Promise<PlatformSessionContext> \{\s*assertPlatformConsoleEnabled\(\);\s*return authorizePlatformToken\(req\.token, permission\);\s*\}/.test(usersRead) &&
     off47.length === 0 && colsOf47("usersTable").length > 0 &&
     !/passwordHash|password_hash|passwordChangedAt|mfaSecret|mfa_secret|mfaRecovery|recovery_codes|tokenHash|token_hash|userAgent|user_agent|ipAddress|ip_address/.test(usersRead) &&
     !/\.select\(\s*\)|\.selectDistinct\(\s*\)|db\.query\.|sql\.raw\(|sql\.identifier\(|select \*|\.returning\(/.test(usersRead) &&
@@ -1008,11 +1024,13 @@ ok("…the user detail is an audited view: authorize → validate the id → aud
     /catch \(err\) \{\s*if \(isPlatformError\(err, "AUDIT_UNAVAILABLE"\)\) reportSecurityIncident\(\{ type: "audit_write_failed", action: "customer_user\.viewed", error: errorClass\(err\) \}\);\s*throw err;\s*\}/.test(detailFn47), order47.join(","));
 const usersReadPerm47 = consoleCode.filter((f) => /"platform\.users\.read"/.test(code(f))).map(rel).sort();
 const usersManagePerm47 = consoleCode.filter((f) => /"platform\.users\.manage"/.test(code(f))).map(rel).sort();
-ok("…platform.users.read is checked only by the read model; platform.users.manage only by the user controls and the read model's live-state read; no other users permission exists",
+const usersRolesPerm47 = consoleCode.filter((f) => /"platform\.users\.manage_roles"/.test(code(f))).map(rel).sort();
+ok("…platform.users.read is checked only by the read model; platform.users.manage only by the user controls and the read model's live-state read; (PO-03C) platform.users.manage_roles only by the role / transfer controls and their two reads; no other users permission exists",
   JSON.stringify(usersReadPerm47) === JSON.stringify([join("src", "lib", "platform", "customer-users.ts"), join("src", "lib", "platform", "guards.ts")]) &&
     JSON.stringify(usersManagePerm47) === JSON.stringify([join("src", "lib", "platform", "customer-user-actions.ts"), join("src", "lib", "platform", "customer-users.ts"), join("src", "lib", "platform", "guards.ts")]) &&
-    !/platform\.users\.(?!read"|manage")/.test(consoleCode.map(code).join("\n")),
-  `${usersReadPerm47.join(", ")} | ${usersManagePerm47.join(", ")}`);
+    JSON.stringify(usersRolesPerm47) === JSON.stringify([join("src", "lib", "platform", "customer-user-actions.ts"), join("src", "lib", "platform", "customer-users.ts"), join("src", "lib", "platform", "guards.ts")]) &&
+    !/platform\.users\.(?!read"|manage"|manage_roles")/.test(consoleCode.map(code).join("\n")),
+  `${usersReadPerm47.join(", ")} | ${usersManagePerm47.join(", ")} | ${usersRolesPerm47.join(", ")}`);
 const usersServer47 = read(USERS_SERVER_ACTIONS);
 const controls47 = read(USERS_CONTROLS);
 ok("…the three customer-user server actions each validate a strict schema and call their core; the controls import only them, keep the server's reason limits and clear the code after every attempt",
@@ -1039,6 +1057,56 @@ const teamPage47 = code(TEAM_PAGE);
 ok("…the customer Team page sends only the five member fields its panel renders (the TFX hotfix, carried): the query names exactly id, name, email, role and isActive, and TeamPanel takes TeamMember[]",
   /const members = await db\s*\.select\(\{ id: usersTable\.id, name: usersTable\.name, email: usersTable\.email, role: usersTable\.role, isActive: usersTable\.isActive \}\)\s*\.from\(usersTable\)\s*\.where\(eq\(usersTable\.orgId, session\.orgId\)\)/.test(teamPage47) &&
     !/db\.select\(\)\.from\(usersTable\)/.test(teamPage47) && /export type TeamMember = Pick<User, "id" \| "name" \| "email" \| "role" \| "isActive">;/.test(teamPanel) && /members: TeamMember\[\];/.test(teamPanel));
+
+// ---------------------------------------------------------------------------------------------
+// 48. PO-03C (sub-batch A) — customer-user roles and the primary-owner transfer, behind platform.users.manage_roles:
+//     the same authorization, throttle and ONE read-committed transaction as the PO-03B controls, the shared service's
+//     lock order, role write, owner rule and session end, the transfer's ONE mapping write, both accounts' sessions
+//     ended, and the customer evidence and platform audit in the transaction. No custom role, no impersonation.
+// ---------------------------------------------------------------------------------------------
+const ROLE_SERVER_ACTIONS = join(root, "src/app/(platform)/customer-user-role-actions.ts");
+const ROLE_CONTROL = join(root, "src/components/platform/customer-user-role-control.tsx");
+const TRANSFER_CONTROL = join(root, "src/components/platform/primary-owner-transfer.tsx");
+const roleFn48 = fnBodies(usersActions).find((f) => f.name === "changeCustomerUserRoleCore")?.body ?? "";
+ok("48. PO-03C: a role change — flag → same-origin → live session → platform.users.manage_roles → audit protection → input format (id, company, role, reason, code, version) → the user's company must be the page's company (else NOT_FOUND: no cross-company substitution) → throttle → ONE read-committed transaction: TOTP (replay-protected) → company → user → mapping (the shared lock order) → version → same role refused → the shared owner rule (demotionBlock) → the ONE role write → that user's sessions ended (role_change) → customer evidence → the platform audit record, in the transaction",
+  inOrder(roleFn48, [/await authorizeRoleManagement\(req\)/, /await assertPlatformAuditProtection\(\)/, /parseCustomerUserId\(input\.userId\)/, /parseCompanyIdParam\(input\.orgId\)/, /parseRole\(input\.role\)/, /parseReason\(input\.reason\)/, /parseCode\(input\.totpCode\)/, /parseVersion\(input\.version, "account"\)/, /await companyOfCustomerUser\(db, userId\)/, /if \(orgId === null \|\| orgId !== expectedOrgId\) \{\s*await rejected\("not_found"\);\s*throw new PlatformError\("NOT_FOUND"/, /activeLoginBlock\(keys, now\)/, /db\.transaction\(/, /consumeTotpCode\(tx, ctx\.adminId, totpCode, now\)/, /await lockCustomerUsers\(tx, orgId, \[userId\]\)/, /if \(user\.version !== version\) throw new PlatformError\("VERSION_CONFLICT"/, /if \(user\.role === role\) throw new PlatformError\("CONFLICT"/, /const block = await demotionBlock\(tx, user, locked\.primaryOwnerId, role\);/, /if \(block === "primary_owner"\) throw new PlatformError\("LAST_PRIMARY_OWNER"/, /if \(block === "last_owner"\) throw new PlatformError\("LAST_ACTIVE_OWNER"/, /await setCustomerUserRole\(tx, user, role\);/, /await endCustomerUserSessions\(tx, user, ROLE_CHANGE_REVOKE_REASON, now\)/, /await recordPlatformChangeEvidence\(tx, user, \{ type: "account\.role_changed_by_platform", sessionsEnded, detail: \{ fromRole: user\.role, toRole: role \} \}\)/, /result: "success" \}, tx\)/, /\{ isolationLevel: "read committed" \}/]) &&
+    /async function authorizeRoleManagement\(req: ConsoleRequest\): Promise<PlatformSessionContext> \{\s*assertPlatformConsoleEnabled\(\);\s*assertSameOrigin\(req\.headers\);\s*return authorizePlatformToken\(req\.token, "platform\.users\.manage_roles"\);\s*\}/.test(usersActions) &&
+    (usersActions.match(/await authorizeRoleManagement\(req\)/g) ?? []).length === 2 &&
+    /function parseRole\(value: unknown\): CustomerRole \{\s*if \(typeof value !== "string" \|\| !\(CUSTOMER_ROLES as readonly string\[\]\)\.includes\(value\)\) throw invalid\(/.test(usersActions));
+ok("…a primary-owner transfer — the same authorization, audit protection and input format (company, both ids, both versions, reason, code) → the same account and another company's account refused before any code → throttle → ONE read-committed transaction: TOTP → company → BOTH users by ascending id → mapping (the shared lock order) → a company with no mapping refused (OWNER_NOT_DESIGNATED: never inferred) → the mapping still names the page's owner → the target is of this company → both versions → the target is active → the target becomes owner → the ONE mapping UPDATE (by company AND previous owner, exactly one row) → the previous owner becomes admin → BOTH accounts' sessions ended (owner_transfer) → both accounts' evidence → the platform audit record, in the transaction",
+  inOrder(transferFn47, [/await authorizeRoleManagement\(req\)/, /await assertPlatformAuditProtection\(\)/, /parseCompanyIdParam\(input\.orgId\)/, /parseCustomerUserId\(input\.fromUserId\)/, /parseCustomerUserId\(input\.toUserId\)/, /parseVersion\(input\.fromVersion,/, /parseVersion\(input\.toVersion,/, /parseReason\(input\.reason\)/, /parseCode\(input\.totpCode\)/, /if \(fromUserId === toUserId\) \{\s*await rejected\("same_owner"\);\s*throw new PlatformError\("TRANSFER_TARGET_INVALID"/, /await companyOfCustomerUser\(db, toUserId\)/, /await rejected\("other_company"\);\s*throw new PlatformError\("TRANSFER_TARGET_INVALID"/, /activeLoginBlock\(keys, now\)/, /db\.transaction\(/, /consumeTotpCode\(tx, ctx\.adminId, totpCode, now\)/, /await lockCustomerUsers\(tx, orgId, \[fromUserId, toUserId\]\)/, /if \(locked\.primaryOwnerId === null\) throw new PlatformError\("OWNER_NOT_DESIGNATED"/, /if \(locked\.primaryOwnerId !== fromUserId\) throw new PlatformError\("VERSION_CONFLICT"/, /if \(!to\) throw new PlatformError\("TRANSFER_TARGET_INVALID"/, /from\.version !== fromVersion \|\| to\.version !== toVersion\) throw new PlatformError\("VERSION_CONFLICT"/, /if \(!to\.isActive\) throw new PlatformError\("TRANSFER_TARGET_INVALID"/, /if \(to\.role !== "owner"\) await setCustomerUserRole\(tx, to, "owner"\);/, /\.update\(tenantPrimaryOwnersTable\)/, /if \(moved\.length !== 1\) throw new PlatformError\("VERSION_CONFLICT"/, /if \(from\.role !== "admin"\) await setCustomerUserRole\(tx, from, "admin"\);/, /await endCustomerUserSessions\(tx, from, OWNER_TRANSFER_REVOKE_REASON, now\)/, /await endCustomerUserSessions\(tx, to, OWNER_TRANSFER_REVOKE_REASON, now\)/, /await recordPlatformChangeEvidence\(tx, from, \{ type: "account\.ownership_transferred_by_platform", sessionsEnded: endedFrom, detail: \{ fromRole: from\.role, toRole: "admin", primary: "released" \} \}\)/, /await recordPlatformChangeEvidence\(tx, to, \{ type: "account\.ownership_transferred_by_platform", sessionsEnded: endedTo, detail: \{ fromRole: to\.role, toRole: "owner", primary: "gained" \} \}\)/, /result: "success",\s*\},\s*tx,\s*\)/, /\{ isolationLevel: "read committed" \}/]) &&
+    !/\.(insert|delete)\(\s*tenantPrimaryOwnersTable/.test(usersActions) && (usersActions.match(/tenantPrimaryOwnersTable/g) ?? []).length === 5);
+ok("…the shared service: the three ERP roles only (no custom role), the role-change and transfer session reasons, and the two customer-visible evidence types; nothing in the console offers impersonation or a role editor",
+  /export const CUSTOMER_ROLES: readonly CustomerRole\[\] = \["owner", "admin", "staff"\];/.test(customerCore) && /export type CustomerRole = "owner" \| "admin" \| "staff";/.test(customerCore) &&
+    /export const ROLE_CHANGE_REVOKE_REASON = "role_change";/.test(customerCore) && /export const OWNER_TRANSFER_REVOKE_REASON = "owner_transfer";/.test(customerCore) &&
+    /\| "account\.role_changed_by_platform"\s*\| "account\.ownership_transferred_by_platform";/.test(customerCore) &&
+    !consoleCode.concat(consoleUi).some((f) => /impersonat|loginAs|signInAs|customRole|roleEditor|createRole\(/i.test(code(f))));
+const roleServer48 = read(ROLE_SERVER_ACTIONS);
+ok("…the four role / transfer server actions each validate input (a strict schema for both changes: the role is an enum of the three ERP roles) and call their core; they return only roles, states, change markers, counts and the directory's allow-listed names and e-mails",
+  (roleServer48.match(/^export async function /gm) ?? []).length === 4 && (roleServer48.match(/\.strict\(\)/g) ?? []).length === 2 &&
+    /role: z\.enum\(\["owner", "admin", "staff"\]\)/.test(roleServer48) &&
+    /changeCustomerUserRoleCore\(await request\(\), \{ \.\.\.parsed\.data, totpCode: parsed\.data\.totpCode\.replace\(/.test(roleServer48) && /transferPrimaryOwnerCore\(await request\(\), \{ \.\.\.parsed\.data, totpCode: parsed\.data\.totpCode\.replace\(/.test(roleServer48) &&
+    /readCustomerUserRoleStateCore\(await request\(\), parsed\.data\)/.test(roleServer48) && /readPrimaryOwnerTransferOptionsCore\(await request\(\), parsed\.data\)/.test(roleServer48) &&
+    /const candidateView = \(c: TransferCandidateView\): TransferCandidateView => \(\{ userId: c\.userId, name: c\.name, email: c\.email, role: c\.role, version: c\.version \}\);/.test(roleServer48) &&
+    !/passwordHash|mfaSecret|tokenHash|jti|ipAddress|userAgent/.test(roleServer48));
+const roleUi48 = read(ROLE_CONTROL);
+const transferUi48 = read(TRANSFER_CONTROL);
+ok("…the role control and the transfer dialog import only their own server actions, keep the server's reason limits, read the CURRENT state when they open (a stale page offers a refresh), send the versions they confirmed against, clear the code after every attempt and never offer a role outside the three",
+  [roleUi48, transferUi48].every((src) => JSON.stringify(importsOf(src).filter((x) => x.startsWith("@/app/"))) === JSON.stringify(["@/app/(platform)/customer-user-role-actions"]) && /const REASON_MIN = 10;\s*const REASON_MAX = 500;/.test(src)) &&
+    /await readCustomerUserRoleStateAction\(String\(userId\)\)/.test(roleUi48) && /if \(s\.version !== version \|\| s\.role !== role \|\| s\.orgId !== orgId \|\| s\.isActive !== isActive\) return setPhase\(\{ kind: "changed" \}\);/.test(roleUi48) &&
+    /await changeCustomerUserRoleAction\(\{ userId: String\(userId\), orgId: String\(orgId\), role: target, reason: cleanReason, totpCode, version \}\);\s*setCode\(""\);/.test(roleUi48) &&
+    /const ROLES: readonly Role\[\] = \["owner", "admin", "staff"\];/.test(roleUi48) &&
+    /await readPrimaryOwnerTransferOptionsAction\(String\(orgId\)\)/.test(transferUi48) && /if \(o\.primaryOwner\.email !== primaryEmail\) return setPhase\(\{ kind: "changed" \}\);/.test(transferUi48) &&
+    /fromVersion: from\.version,\s*toVersion: to\.version,/.test(transferUi48) && /\}\);\s*setCode\(""\);\s*if \(r\.ok\) setPhase\(\{ kind: "done", message: pt\(locale, "transfer\.done"/.test(transferUi48) &&
+    ![roleUi48, transferUi48].some((src) => /<Badge\b[^>]*\svariant=\{|data-tone=\{|\stone=\{|status-registry|StatusBadge/.test(src)));
+const companyPage48 = code(join(root, "src/app/(platform)/platform/(console)/companies/[orgId]/page.tsx"));
+const userPage48 = code(join(root, "src/app/(platform)/platform/(console)/users/[userId]/page.tsx"));
+ok("…the pages only place the controls: the company's Users tab gets a Primary owner panel with the transfer (a company that is not designated gets the explanation, never a working control), the user's Account controls get Change role; both audit actions have their labels",
+  /<PrimaryOwnerPanel locale=\{locale\} d=\{d\} \/>/.test(companyPage48) && /designation=\{owner\.state\}\s*primaryEmail=\{owner\.state === "designated" \? owner\.email : null\}/.test(companyPage48) &&
+    /"company\.primary_owner_transferred": "event\.ownerTransferred",\s*"company\.primary_owner_transfer\.rejected": "event\.ownerTransferRejected",/.test(companyPage48) &&
+    /<CustomerUserRoleControl\s+locale=\{locale\}\s+userId=\{d\.userId\}\s+orgId=\{d\.company\.orgId\}/.test(userPage48) &&
+    /"customer_user\.role_changed": "event\.userRoleChanged",\s*"customer_user\.role_change\.rejected": "event\.userRoleRejected",/.test(userPage48) &&
+    !/"use server"|<form[^>]*\saction=\{|method="post"|formAction/i.test(companyPage48 + userPage48));
 
 console.log(`\n${pass}/${pass + fail} platform boundary checks passed`);
 process.exit(fail ? 1 : 0);

@@ -10,8 +10,8 @@ import { lockPrimaryOwnerForTeamChange, TeamProtectionUnavailableError } from ".
 //   • the Platform Owner user controls (src/lib/platform/customer-user-actions.ts — disable / enable and session
 //     revocation from the console; the ONE platform module that imports this file).
 // Neither has its own lock order, owner rule, status write or session revocation: both call these. PO-03C adds the ONE
-// role write (setCustomerUserRole), used by the Team role change; every Team role or status change now ends the
-// affected account's sessions in the same transaction.
+// role write (setCustomerUserRole), used by the Team role change, the console's role control and the primary-owner
+// transfer; every role or status change now ends the affected account's sessions in the same transaction.
 //
 // The lock order (PO-03A §F.1), inside the caller's ONE READ COMMITTED transaction:
 //   1. a bounded lock wait (this transaction only);
@@ -34,8 +34,9 @@ export const CUSTOMER_USER_LOCK_TIMEOUT = "5s";
 export const USER_DISABLED_REVOKE_REASON = "disabled";
 export const USER_REENABLED_REVOKE_REASON = "reenabled";
 export const PLATFORM_REVOKED_REASON = "platform_revoked";
-/** PO-03C: a role change ends the account's sessions. */
+/** PO-03C: a role change ends the account's sessions (Team or console), and so does a primary-owner transfer (both accounts). */
 export const ROLE_CHANGE_REVOKE_REASON = "role_change";
+export const OWNER_TRANSFER_REVOKE_REASON = "owner_transfer";
 
 /** The three customer roles (the ERP's role model; no custom roles). */
 export type CustomerRole = "owner" | "admin" | "staff";
@@ -110,15 +111,28 @@ export async function deactivationBlock(tx: Tx, target: LockedCustomerUser, prim
   return null;
 }
 
+/**
+ * Why changing `target`'s role to `role` must be refused, or null — ONE rule (PO-03C) for the Team role change and the
+ * console's role control: the mapped primary owner never leaves the owner role (a primary-owner transfer moves the
+ * designation first), and the company's last active owner is never demoted.
+ */
+export async function demotionBlock(tx: Tx, target: LockedCustomerUser, primaryOwnerId: number | null, role: CustomerRole): Promise<"primary_owner" | "last_owner" | null> {
+  if (role === "owner") return null;
+  if (target.id === primaryOwnerId) return "primary_owner";
+  if (target.role === "owner" && target.isActive && !(await hasOtherActiveOwner(tx, target.orgId, target.id))) return "last_owner";
+  return null;
+}
+
 /** The user's status — scoped to the id AND the company it was locked in. */
 export async function setCustomerUserActive(tx: Tx, user: LockedCustomerUser, isActive: boolean): Promise<void> {
   await tx.update(usersTable).set({ isActive, updatedAt: new Date() }).where(and(eq(usersTable.id, user.id), eq(usersTable.orgId, user.orgId)));
 }
 
 /**
- * The user's role — the ONE role write (PO-03C), scoped to the id AND the company it was locked in. The caller (the
- * Team-change service) checks every rule on the locked rows before calling it, and ends the account's sessions after
- * it (a role change invalidates the sessions issued under the old role).
+ * The user's role — the ONE role write (PO-03C), scoped to the id AND the company it was locked in. The callers (the
+ * Team-change service, the console's role control and the primary-owner transfer) check every rule on the locked rows
+ * before calling it, and end the account's sessions after it (a role change invalidates the sessions issued under the
+ * old role).
  */
 export async function setCustomerUserRole(tx: Tx, user: LockedCustomerUser, role: CustomerRole): Promise<void> {
   await tx.update(usersTable).set({ role, updatedAt: new Date() }).where(and(eq(usersTable.id, user.id), eq(usersTable.orgId, user.orgId)));
@@ -137,6 +151,14 @@ export async function endCustomerUserSessions(tx: Tx, user: LockedCustomerUser, 
   return ended.length;
 }
 
+/** The customer-visible evidence types of a platform change (PO-03B: status and sessions; PO-03C: role and transfer). */
+export type PlatformChangeEvidenceType =
+  | "account.disabled_by_platform"
+  | "account.enabled_by_platform"
+  | "sessions.revoked_by_platform"
+  | "account.role_changed_by_platform"
+  | "account.ownership_transferred_by_platform";
+
 /**
  * The customer's own security evidence for a change made by the platform operator, in the caller's transaction. It
  * names the affected account and what happened — never the operator's identity or reason (those are in the platform
@@ -147,7 +169,12 @@ export async function endCustomerUserSessions(tx: Tx, user: LockedCustomerUser, 
 export async function recordPlatformChangeEvidence(
   tx: Tx,
   user: LockedCustomerUser,
-  change: { type: "account.disabled_by_platform" | "account.enabled_by_platform" | "sessions.revoked_by_platform"; sessionsEnded: number },
+  change: {
+    type: PlatformChangeEvidenceType;
+    sessionsEnded: number;
+    /** PO-03C: the role change it records (role control and transfer) and, for a transfer, which side this account is on. */
+    detail?: { fromRole: string; toRole: CustomerRole; primary?: "gained" | "released" };
+  },
 ): Promise<void> {
   const [row] = await tx.select({ email: usersTable.email }).from(usersTable).where(and(eq(usersTable.id, user.id), eq(usersTable.orgId, user.orgId)));
   await tx.insert(securityEventsTable).values({
@@ -157,7 +184,7 @@ export async function recordPlatformChangeEvidence(
     type: change.type,
     severity: change.type === "account.enabled_by_platform" ? "info" : "medium",
     detail: "platform_operator",
-    metadata: { sessionsEnded: change.sessionsEnded },
+    metadata: { sessionsEnded: change.sessionsEnded, ...(change.detail ?? {}) },
     ipAddress: null,
     userAgent: null,
     browser: null,

@@ -41,7 +41,7 @@ import type { PlatformSessionContext } from "./session";
 export type CustomerUserReadRequest = { headers: HeaderSource; token?: string | null };
 
 /** feature flag → configuration → live platform session → the given users permission */
-async function authorizeUserRead(req: CustomerUserReadRequest, permission: "platform.users.read" | "platform.users.manage"): Promise<PlatformSessionContext> {
+async function authorizeUserRead(req: CustomerUserReadRequest, permission: "platform.users.read" | "platform.users.manage" | "platform.users.manage_roles"): Promise<PlatformSessionContext> {
   assertPlatformConsoleEnabled();
   return authorizePlatformToken(req.token, permission);
 }
@@ -457,5 +457,89 @@ export async function readCustomerUserState(req: CustomerUserReadRequest, rawUse
     if (!u) throw new PlatformError("NOT_FOUND", "no customer user with this id");
     const [protection, liveSessions] = await Promise.all([protectionOf(u), liveSessionCount(u.userId, u.orgId)]);
     return { userId: u.userId, isActive: u.isActive, version: u.version, primaryOwner: protection.primaryOwner, lastActiveOwner: protection.lastActiveOwner, liveSessions };
+  });
+}
+
+// ---- PO-03C: what the role control and the primary-owner transfer confirm against ---------------------------------
+
+export type CustomerUserRoleState = { userId: number; orgId: number; role: string; isActive: boolean; version: string; primaryOwner: PrimaryOwnerFlag; lastActiveOwner: boolean };
+
+/**
+ * One account as it is NOW, for the role control's confirmation (PO-03C): its company, role, status and change marker
+ * plus the owner rules. Read-only and unaudited (like the live-state read); platform.users.manage_roles.
+ */
+export async function readCustomerUserRoleState(req: CustomerUserReadRequest, rawUserId: unknown): Promise<CustomerUserRoleState> {
+  await authorizeUserRead(req, "platform.users.manage_roles");
+  const userId = parseCustomerUserId(rawUserId);
+  return guarded(async () => {
+    const [u] = await db
+      .select({ userId: usersTable.id, orgId: usersTable.orgId, role: usersTable.role, isActive: usersTable.isActive, version: VERSION })
+      .from(usersTable)
+      .where(eq(usersTable.id, userId))
+      .limit(1);
+    if (!u) throw new PlatformError("NOT_FOUND", "no customer user with this id");
+    const protection = await protectionOf(u);
+    return { userId: u.userId, orgId: u.orgId, role: u.role, isActive: u.isActive, version: u.version, primaryOwner: protection.primaryOwner, lastActiveOwner: protection.lastActiveOwner };
+  });
+}
+
+/** One account in the transfer dialog — the same allow-listed identity fields as the directory, plus its change marker. */
+export type TransferCandidate = { userId: number; name: string; email: string; role: string; version: string };
+export type PrimaryOwnerTransferOptions = {
+  orgId: number;
+  companyName: string;
+  /** designated: a mapping exists; not_designated: a legacy company (never inferred); not_installed / unavailable: the foundation. */
+  designation: "designated" | "not_designated" | "not_installed" | "unavailable";
+  primaryOwner: TransferCandidate | null;
+  /** The company's ACTIVE users other than the primary owner, by name — the only possible new primary owners. */
+  candidates: TransferCandidate[];
+  truncated: boolean;
+};
+export const TRANSFER_CANDIDATE_LIMIT = 200;
+
+/** Parses a company id from the URL / form: a canonical positive decimal; anything else is NOT_FOUND (one answer). */
+export function parseCompanyIdParam(value: unknown): number {
+  const text = typeof value === "number" ? String(value) : value;
+  if (typeof text !== "string" || !/^[1-9][0-9]{0,9}$/.test(text)) throw new PlatformError("NOT_FOUND", "no company with this id");
+  const id = Number(text);
+  if (!Number.isSafeInteger(id) || id > 2_147_483_647) throw new PlatformError("NOT_FOUND", "no company with this id");
+  return id;
+}
+
+/**
+ * The primary-owner transfer's options for one company, as they are NOW (PO-03C): the current primary owner (or why there
+ * is none — a legacy company's owner is never inferred) and the active users who could receive the designation.
+ * Read-only and unaudited (the transfer itself is audited); platform.users.manage_roles.
+ */
+export async function readPrimaryOwnerTransferOptions(req: CustomerUserReadRequest, rawOrgId: unknown): Promise<PrimaryOwnerTransferOptions> {
+  await authorizeUserRead(req, "platform.users.manage_roles");
+  const orgId = parseCompanyIdParam(rawOrgId);
+  return guarded(async () => {
+    const [company] = await db.select({ id: orgsTable.id, name: orgsTable.name }).from(orgsTable).where(eq(orgsTable.id, orgId)).limit(1);
+    if (!company) throw new PlatformError("NOT_FOUND", "no company with this id");
+    let designation: PrimaryOwnerTransferOptions["designation"];
+    let primaryUserId: number | null = null;
+    try {
+      if ((await primaryOwnerFoundation(db)) === "absent") designation = "not_installed";
+      else {
+        primaryUserId = (await readPrimaryOwnerMapping(db, orgId))?.userId ?? null;
+        designation = primaryUserId === null ? "not_designated" : "designated";
+      }
+    } catch (err) {
+      console.error(`[platform-users] primary owner unavailable: ${errorClass(err)}`);
+      designation = "unavailable";
+    }
+    const pick = { userId: usersTable.id, name: usersTable.name, email: usersTable.email, role: usersTable.role, version: VERSION };
+    const primaryOwner = primaryUserId === null ? null : ((await db.select(pick).from(usersTable).where(and(eq(usersTable.id, primaryUserId), eq(usersTable.orgId, orgId))).limit(1))[0] ?? null);
+    const rows =
+      designation === "designated"
+        ? await db
+            .select(pick)
+            .from(usersTable)
+            .where(and(eq(usersTable.orgId, orgId), eq(usersTable.isActive, true), ne(usersTable.id, primaryUserId ?? 0)))
+            .orderBy(usersTable.name, usersTable.id)
+            .limit(TRANSFER_CANDIDATE_LIMIT + 1)
+        : [];
+    return { orgId, companyName: company.name, designation, primaryOwner, candidates: rows.slice(0, TRANSFER_CANDIDATE_LIMIT), truncated: rows.length > TRANSFER_CANDIDATE_LIMIT };
   });
 }

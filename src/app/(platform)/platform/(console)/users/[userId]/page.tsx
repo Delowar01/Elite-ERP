@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { CircleAlert, History, ShieldOff } from "lucide-react";
 import { Breadcrumbs, DetailPage, FieldGrid, Interpolated, Ltr, PageState, PlatformStatusTag } from "@/components/platform/companies-kit";
 import { CustomerUserControls } from "@/components/platform/customer-user-controls";
+import { CustomerUserRoleControl } from "@/components/platform/customer-user-role-control";
 import { pt } from "@/components/platform/i18n";
 import { EmptyPanel } from "@/components/platform/page-kit";
 import { AccountStatus, MfaText, RoleText } from "@/components/platform/users-kit";
@@ -17,12 +18,21 @@ import { isPlatformError } from "@/lib/platform/errors";
 import { requirePlatformSession } from "@/lib/platform/guards";
 
 // One customer user (PO-03B): the account's allow-listed details, its company and seat usage, the account controls
-// (disable / enable, sign out everywhere) and the Platform Owner events about it. Loading this page is an audited view
-// ("customer_user.viewed"): if the audit record cannot be written, no account data is rendered at all. Malformed or
-// unknown ids are a 404. The controls' server actions re-authorize and step up on their own; nothing here can sign in
-// as the user, reset a password, change a role or transfer ownership.
+// (disable / enable, sign out everywhere; PO-03C: change role) and the Platform Owner events about it. Loading this page
+// is an audited view ("customer_user.viewed"): if the audit record cannot be written, no account data is rendered at
+// all. Malformed or unknown ids are a 404. The controls' server actions re-authorize and step up on their own; nothing
+// here can sign in as the user, reset a password or define a custom role (the primary-owner transfer is the company's).
 
-type ActivityKey = "event.userViewed" | "event.userDisabled" | "event.userEnabled" | "event.userSessionsRevoked" | "event.userDisableRejected" | "event.userEnableRejected" | "event.userRevokeRejected";
+type ActivityKey =
+  | "event.userViewed"
+  | "event.userDisabled"
+  | "event.userEnabled"
+  | "event.userSessionsRevoked"
+  | "event.userDisableRejected"
+  | "event.userEnableRejected"
+  | "event.userRevokeRejected"
+  | "event.userRoleChanged"
+  | "event.userRoleRejected";
 const ACTION_LABEL: Record<string, ActivityKey> = {
   "customer_user.viewed": "event.userViewed",
   "customer_user.disabled": "event.userDisabled",
@@ -31,6 +41,8 @@ const ACTION_LABEL: Record<string, ActivityKey> = {
   "customer_user.disable.rejected": "event.userDisableRejected",
   "customer_user.enable.rejected": "event.userEnableRejected",
   "customer_user.sessions_revoke.rejected": "event.userRevokeRejected",
+  "customer_user.role_changed": "event.userRoleChanged",
+  "customer_user.role_change.rejected": "event.userRoleRejected",
 };
 
 const count = (value: number) => <Ltr>{formatPlatformCount(value)}</Ltr>;
@@ -78,8 +90,17 @@ function AccountPanel({ locale, d }: { locale: Locale; d: CustomerUserDetail }) 
   );
 }
 
+/** PO-03C: why no role change is possible for this account (the role control applies the same rule; the server too). */
+function roleNote(d: CustomerUserDetail): "cu.roleProtectedPrimary" | "cu.roleProtectedLast" | "cu.roleProtectionUnknown" | null {
+  if (d.primaryOwner === "unavailable") return "cu.roleProtectionUnknown";
+  if (d.role !== "owner") return null;
+  if (d.primaryOwner === "yes") return "cu.roleProtectedPrimary";
+  return d.isActive && d.lastActiveOwner ? "cu.roleProtectedLast" : null;
+}
+
 function ControlsPanel({ locale, d }: { locale: Locale; d: CustomerUserDetail }) {
   const protectedNote = d.isActive ? (d.primaryOwner === "yes" ? "cu.protectedPrimary" : d.lastActiveOwner ? "cu.protectedLast" : d.primaryOwner === "unavailable" ? "cu.protectionUnknown" : null) : null;
+  const roleBlocked = roleNote(d);
   return (
     <section className="card platform-panel" aria-labelledby="user-controls" data-testid="user-controls">
       <div className="platform-panel-head">
@@ -95,10 +116,27 @@ function ControlsPanel({ locale, d }: { locale: Locale; d: CustomerUserDetail })
           protection={{ primaryOwner: d.primaryOwner, lastActiveOwner: d.lastActiveOwner }}
           noteId={protectedNote ? "user-protection-note" : undefined}
         />
+        <CustomerUserRoleControl
+          locale={locale}
+          userId={d.userId}
+          orgId={d.company.orgId}
+          name={d.name}
+          role={d.role}
+          isActive={d.isActive}
+          version={d.version}
+          protection={{ primaryOwner: d.primaryOwner, lastActiveOwner: d.lastActiveOwner }}
+          noteId={roleBlocked ? "user-role-note" : undefined}
+        />
         {protectedNote && (
           <p id="user-protection-note" className="platform-callout" data-tone="neutral" data-testid="user-protection-note">
             <CircleAlert className="size-4 shrink-0" aria-hidden />
             <span>{pt(locale, protectedNote)}</span>
+          </p>
+        )}
+        {roleBlocked && (
+          <p id="user-role-note" className="platform-callout" data-tone="neutral" data-testid="user-role-note">
+            <CircleAlert className="size-4 shrink-0" aria-hidden />
+            <span>{pt(locale, roleBlocked)}</span>
           </p>
         )}
         {d.liveSessions === 0 && <p className="platform-fine-print">{pt(locale, "cu.noSessions")}</p>}
