@@ -144,6 +144,7 @@ import { PO02D1B_BASE, PO02D1B_EDITS, PO02D1B_NEW, po02d1bDrift, undoPo02d1b } f
 import { PO02D2_BASE, PO02D2_EDITS, PO02D2_NEW, po02d2Drift, undoPo02d2 } from "./po02d2-approved-delta.mjs";
 import { PO02D3_BASE, PO02D3_EDITS, PO02D3_NEW, po02d3Drift, undoPo02d3 } from "./po02d3-approved-delta.mjs";
 import { PO03A_BASE, PO03A_EDITS, PO03A_NEW, po03aDrift, undoPo03a } from "./po03a-approved-delta.mjs";
+import { PO03B_BASE, PO03B_EDITS, PO03B_NEW, po03bDrift, undoPo03b } from "./po03b-approved-delta.mjs";
 import { renderToStaticMarkup } from "react-dom/server";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
@@ -186,7 +187,12 @@ const diskRead = (p: string) => readFileSync(path.join(ROOT, p), "utf8");
 // change), so the PO-02D3 layer and every older group read PO-02D3's (1d036d6) bytes; the six files it added (the
 // primary-owner and seat cores, the Team ownership gate, the Team-change service, the summary types and the seat card)
 // stay out of `walk`.
-const po03aRead = (p: string) => undoPo03a(p, diskRead(p));
+// Platform Owner PO-03B: its recorded hunks are undone before PO-03A's (group 34 proves they are each file's only
+// change), so the PO-03A layer — its added-file pins included — and every older group read PO-03A's (dca3362) bytes; the
+// eight files it added (the shared customer-user service, the user read model, controls and server actions, the users
+// kit, the controls dialog and the user page with its not-found) stay out of `walk`.
+const po03bRead = (p: string) => undoPo03b(p, diskRead(p));
+const po03aRead = (p: string) => undoPo03a(p, po03bRead(p));
 const po02d3Read = (p: string) => undoPo02d3(p, po03aRead(p));
 const po02d2Read = (p: string) => undoPo02d2(p, po02d3Read(p));
 const po02d1bRead = (p: string) => undoPo02d1b(p, po02d2Read(p));
@@ -562,7 +568,7 @@ const MAIN_EDITS: Record<string, [string, string][]> = {
 /** A file's bytes for a byte-identity hash: main's approved change undone (MAIN_EDITS), every other file as it is. */
 const frozen = (f: string): string | Buffer =>
   f in MAIN_EDITS ? MAIN_EDITS[f].reduce((acc, [was, is]) => acc.replace(is, () => was), rawRead(f))
-    : f in ACC01_EDITS ? rawRead(f) : f in LCP_EDITS || f in PO01A_EDITS || f in PO01B_EDITS || f in PO01B1_EDITS || f in PO02A_EDITS || f in PO02B_EDITS || f in PO02C_EDITS || f in PO02C1_EDITS || f in PO02D1A_EDITS || f in PO02D1A1_EDITS || f in PO02D1B_EDITS || f in PO02D2_EDITS || f in PO02D3_EDITS || f in PO03A_EDITS ? actualRead(f) : readFileSync(path.join(ROOT, f));
+    : f in ACC01_EDITS ? rawRead(f) : f in LCP_EDITS || f in PO01A_EDITS || f in PO01B_EDITS || f in PO01B1_EDITS || f in PO02A_EDITS || f in PO02B_EDITS || f in PO02C_EDITS || f in PO02C1_EDITS || f in PO02D1A_EDITS || f in PO02D1A1_EDITS || f in PO02D1B_EDITS || f in PO02D2_EDITS || f in PO02D3_EDITS || f in PO03A_EDITS || f in PO03B_EDITS ? actualRead(f) : readFileSync(path.join(ROOT, f));
 
 let pass = 0;
 let fail = 0;
@@ -597,7 +603,7 @@ function walk(dir: string): string[] {
   for (const name of readdirSync(path.join(ROOT, dir)).sort()) {
     const p = path.posix.join(dir, name);
     if (statSync(path.join(ROOT, p)).isDirectory()) out.push(...walk(p));
-    else if (!(p in ACC01_NEW) && !(p in LCP_NEW) && !(p in PO01A_NEW) && !(p in PO01B_NEW) && !(p in PO01B1_NEW) && !(p in PO02A_NEW) && !(p in PO02B_NEW) && !(p in PO02C_NEW) && !(p in PO02C1_NEW) && !(p in PO02D1A_NEW) && !(p in PO02D1A1_NEW) && !(p in PO02D1B_NEW) && !(p in PO02D2_NEW) && !(p in PO02D3_NEW) && !(p in PO03A_NEW)) out.push(p);
+    else if (!(p in ACC01_NEW) && !(p in LCP_NEW) && !(p in PO01A_NEW) && !(p in PO01B_NEW) && !(p in PO01B1_NEW) && !(p in PO02A_NEW) && !(p in PO02B_NEW) && !(p in PO02C_NEW) && !(p in PO02C1_NEW) && !(p in PO02D1A_NEW) && !(p in PO02D1A1_NEW) && !(p in PO02D1B_NEW) && !(p in PO02D2_NEW) && !(p in PO02D3_NEW) && !(p in PO03A_NEW) && !(p in PO03B_NEW)) out.push(p);
   }
   return out;
 }
@@ -3186,7 +3192,7 @@ check(`ACC-01 changed its ${Object.keys(ACC01_EDITS).length} files (src/, and ve
 // No file under src/ outside the record differs from main: every other file is in the older groups' byte-identity hashes
 // (groups 4, 16 and 17), and a new file the record does not list is caught there too — `walk` leaves out only ACC01_NEW.
 check(`ACC-01 added no file under src/ but the recorded ${Object.keys(ACC01_NEW).length} (an unrecorded new file would sit in groups 16 and 17's src trees)`,
-  walk("src").length + Object.keys(ACC01_NEW).length + Object.keys(LCP_NEW).length + Object.keys(PO01A_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO01B_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO01B1_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO02A_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO02B_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO02C_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO02C1_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO02D1A_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO02D1A1_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO02D1B_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO02D2_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO02D3_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO03A_NEW).filter((f) => f.startsWith("src/")).length === (function all(d: string): number {
+  walk("src").length + Object.keys(ACC01_NEW).length + Object.keys(LCP_NEW).length + Object.keys(PO01A_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO01B_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO01B1_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO02A_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO02B_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO02C_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO02C1_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO02D1A_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO02D1A1_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO02D1B_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO02D2_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO02D3_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO03A_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO03B_NEW).filter((f) => f.startsWith("src/")).length === (function all(d: string): number {
     return readdirSync(path.join(ROOT, d)).reduce((n, name) => n + (statSync(path.join(ROOT, d, name)).isDirectory() ? all(path.posix.join(d, name)) : 1), 0);
   })("src"));
 
@@ -3669,8 +3675,8 @@ check("…the only new route is /register/accept, in a route group of its own, (
 
 // ---------- 33. Platform Owner PO-03A — the approved change to frozen files ----------
 section("33. Platform Owner PO-03A — primary-owner protection and read-only user-seat accounting (the approved change to frozen files)");
-// Read as they are on disk: each changed file is PO-02D3's (1d036d6) plus exactly its recorded hunks, each added file as recorded.
-const po03aDriftNow = po03aDrift((f) => (existsSync(path.join(ROOT, f)) ? diskRead(f) : null));
+// Read with PO-03B's hunks undone (group 34): each changed file is PO-02D3's (1d036d6) plus exactly its recorded hunks, each added file as recorded.
+const po03aDriftNow = po03aDrift((f) => (existsSync(path.join(ROOT, f)) ? po03bRead(f) : null));
 const PO03A_EDITABLE = ["src/app/(app)/settings/organization/page.tsx", "src/app/(app)/settings/team/actions.ts", "src/app/(app)/settings/team/team-panel.tsx", "src/app/(platform)/platform/(console)/companies/[orgId]/page.tsx", "src/components/platform/i18n.ts", "src/lib/activity.ts", "src/lib/i18n/dict.ts", "src/lib/platform/companies.ts", "verify/verify-document-form.mts", "verify/verify-page-archetypes.mts"];
 const PO03A_ADDED = ["src/app/(app)/settings/team/seat-summary.tsx", "src/lib/platform/primary-owners.ts", "src/lib/platform/seat-accounting.ts", "src/lib/team/member-changes.ts", "src/lib/team/ownership-gate.ts", "src/lib/team/seat-summary-types.ts"];
 check(`PO-03A changed exactly its ${PO03A_EDITABLE.length} files by exactly their ${Object.values(PO03A_EDITS).flat().length} recorded hunks — undone, each is ${PO03A_BASE.slice(0, 7)}'s to the byte — and added exactly its ${PO03A_ADDED.length} files, as recorded (verify/po03a-approved-delta.mts)`,
@@ -3684,6 +3690,25 @@ check("…the customer changes are the Team area alone — its two actions, its 
     ![...Object.keys(PO03A_EDITS), ...Object.keys(PO03A_NEW)].some((f) => /^src\/(app\/\(auth\)|app\/\(invite\)|db\/|lib\/(session|auth)\.ts|lib\/security\/)/.test(f) || f.startsWith("drizzle/")), "");
 check("…no route, page, layout or permission is added: the new files are libraries and one display component; the Team tab and the console company detail stay the only screens that change",
   Object.keys(PO03A_NEW).every((f) => !/\/(page|layout|route|loading|error|not-found)\.tsx?$/.test(f)) && Object.keys(PO03A_EDITS).filter((f) => /\/page\.tsx$/.test(f)).sort().join() === "src/app/(app)/settings/organization/page.tsx,src/app/(platform)/platform/(console)/companies/[orgId]/page.tsx", "");
+
+// ---------- 34. Platform Owner PO-03B — the approved change to frozen files ----------
+section("34. Platform Owner PO-03B — Platform Owner user management and the Team-field allowlist carried from the TFX hotfix (the approved change to frozen files)");
+// Read as they are on disk: each changed file is PO-03A's (dca3362) plus exactly its recorded hunks, each added file as recorded.
+const po03bDriftNow = po03bDrift((f) => (existsSync(path.join(ROOT, f)) ? diskRead(f) : null));
+const PO03B_EDITABLE = ["src/app/(app)/settings/organization/page.tsx", "src/app/(app)/settings/team/team-panel.tsx", "src/app/(platform)/platform.css", "src/app/(platform)/platform/(console)/companies/[orgId]/page.tsx", "src/app/(platform)/platform/(console)/users/page.tsx", "src/components/platform/companies-kit.tsx", "src/components/platform/i18n.ts", "src/lib/platform/errors.ts", "src/lib/platform/guards.ts", "src/lib/platform/primary-owners.ts", "src/lib/platform/seat-accounting.ts", "src/lib/team/member-changes.ts", "verify/verify-document-form.mts", "verify/verify-page-archetypes.mts"];
+const PO03B_ADDED = ["src/app/(platform)/customer-user-actions.ts", "src/app/(platform)/platform/(console)/users/[userId]/not-found.tsx", "src/app/(platform)/platform/(console)/users/[userId]/page.tsx", "src/components/platform/customer-user-controls.tsx", "src/components/platform/users-kit.tsx", "src/lib/platform/customer-user-actions.ts", "src/lib/platform/customer-users.ts", "src/lib/team/customer-user-core.ts"];
+check(`PO-03B changed exactly its ${PO03B_EDITABLE.length} files by exactly their ${Object.values(PO03B_EDITS).flat().length} recorded hunks — undone, each is ${PO03B_BASE.slice(0, 7)}'s to the byte — and added exactly its ${PO03B_ADDED.length} files, as recorded (verify/po03b-approved-delta.mts)`,
+  po03bDriftNow.length === 0 && PO03B_BASE === "dca33623d7e007866fadca301faea8801f190f46" &&
+    JSON.stringify(Object.keys(PO03B_EDITS).sort()) === JSON.stringify(PO03B_EDITABLE) && JSON.stringify(Object.keys(PO03B_NEW).sort()) === JSON.stringify(PO03B_ADDED),
+  po03bDriftNow.map(rel).join(" "));
+check("…the customer changes are the Team area alone — the Business Settings page's member query names exactly the five fields the panel renders, the panel takes exactly that shape (the TFX hotfix, carried) and the Team-change service now calls the shared customer-user service (same lock order, same rules); no auth, session, sign-in, registration, MFA, schema, SQL or business file",
+  JSON.stringify(Object.keys(PO03B_EDITS).filter((f) => f.startsWith("src/") && !/^src\/(lib\/platform|components\/platform|app\/\(platform\))\//.test(f)).sort()) === JSON.stringify(["src/app/(app)/settings/organization/page.tsx", "src/app/(app)/settings/team/team-panel.tsx", "src/lib/team/member-changes.ts"]) &&
+    Object.keys(PO03B_NEW).filter((f) => !/^src\/(lib\/platform|components\/platform|app\/\(platform\))\//.test(f)).join() === "src/lib/team/customer-user-core.ts" &&
+    Object.keys(PO03B_EDITS).filter((f) => !f.startsWith("src/")).every((f) => f.startsWith("verify/")) &&
+    ![...Object.keys(PO03B_EDITS), ...Object.keys(PO03B_NEW)].some((f) => /^src\/(app\/\(auth\)|app\/\(invite\)|db\/|lib\/(session|auth)\.ts|lib\/security\/)/.test(f) || f.startsWith("drizzle/")), "");
+check("…the only new route is the console's user page (and its not-found) under /platform/users; the only pages that change are the Business Settings page, the console Users page and the console company detail",
+  Object.keys(PO03B_NEW).filter((f) => /\/(page|layout|route|loading|error|not-found)\.tsx?$/.test(f)).sort().join() === "src/app/(platform)/platform/(console)/users/[userId]/not-found.tsx,src/app/(platform)/platform/(console)/users/[userId]/page.tsx" &&
+    Object.keys(PO03B_EDITS).filter((f) => /\/page\.tsx$/.test(f)).sort().join() === "src/app/(app)/settings/organization/page.tsx,src/app/(platform)/platform/(console)/companies/[orgId]/page.tsx,src/app/(platform)/platform/(console)/users/page.tsx", "");
 
 console.log("\nGroups:");
 for (const [g, [p, f]] of Object.entries(counts)) console.log(`  ${g}: ${p}/${p + f}`);
