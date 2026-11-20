@@ -9,7 +9,7 @@ import { orgReference } from "./companies";
 import { lockTenantAccessForSessionIssue, getTenantAccess } from "./company-access";
 import { requestMeta, type ConsoleRequest } from "./console";
 import { isPlatformError, PlatformError, type PlatformErrorCode } from "./errors";
-import { assertPlatformUserInvitationsEnabled } from "./flags";
+import { assertPlatformUserInvitationsEnabled, isCustomerUserInviteAcceptanceEnabled } from "./flags";
 import { authorizePlatformToken } from "./guards";
 import { errorClass, reportSecurityIncident } from "./incident";
 import { customerEmailInUse, customerPublicOrigin, lockInvitationEmail, newInvitationToken } from "./invitations";
@@ -87,8 +87,9 @@ class UserInvitationRefusal extends PlatformError {
 }
 
 export type UserInvitationFailure = { ok: false; code: PlatformErrorCode; pendingReference?: string; companyInvitationReference?: string };
-export type UserInvitationCreated = { ok: true; id: string; reference: string; link: string; expiresAt: Date; replacedReference: string | null };
-export type UserInvitationReissued = { ok: true; id: string; reference: string; previousReference: string; link: string; expiresAt: Date };
+/** PO-03D: `acceptanceOpen` — whether the link can be accepted here (CUSTOMER_USER_INVITE_ACCEPTANCE_ENABLED), so the dialog says so. */
+export type UserInvitationCreated = { ok: true; id: string; reference: string; link: string; expiresAt: Date; replacedReference: string | null; acceptanceOpen: boolean };
+export type UserInvitationReissued = { ok: true; id: string; reference: string; previousReference: string; link: string; expiresAt: Date; acceptanceOpen: boolean };
 export type UserInvitationRevoked = { ok: true; id: string; reference: string; revokedAt: Date };
 export type UserInvitationPreview = {
   ok: true;
@@ -389,7 +390,7 @@ export async function createUserInvitation(req: ConsoleRequest, input: CreateUse
       await rejected(outcome.stage);
       throw new PlatformError("MFA_INVALID", "step-up second factor failed");
     }
-    return { ok: true, id: outcome.id, reference: userInvitationReference(outcome.id), link: userInvitationLink(origin, outcome.token), expiresAt: outcome.expiresAt, replacedReference: outcome.replacedReference };
+    return { ok: true, id: outcome.id, reference: userInvitationReference(outcome.id), link: userInvitationLink(origin, outcome.token), expiresAt: outcome.expiresAt, replacedReference: outcome.replacedReference, acceptanceOpen: isCustomerUserInviteAcceptanceEnabled() };
   } catch (err) {
     return failure(err, action);
   }
@@ -562,7 +563,7 @@ export async function reissueUserInvitation(req: ConsoleRequest, input: ReissueU
       await rejected(outcome.stage);
       throw new PlatformError("MFA_INVALID", "step-up second factor failed");
     }
-    return { ok: true, id: outcome.id, reference: userInvitationReference(outcome.id), previousReference: outcome.previousReference, link: userInvitationLink(origin, outcome.token), expiresAt: outcome.expiresAt };
+    return { ok: true, id: outcome.id, reference: userInvitationReference(outcome.id), previousReference: outcome.previousReference, link: userInvitationLink(origin, outcome.token), expiresAt: outcome.expiresAt, acceptanceOpen: isCustomerUserInviteAcceptanceEnabled() };
   } catch (err) {
     return failure(err, action);
   }

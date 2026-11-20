@@ -16,7 +16,8 @@ import type { PlatformSessionContext } from "./session";
 // ---------------------------------------------------------------------------------------------
 // Platform Owner PO-03C (sub-batch C) — customer-user invitations: the shared rules and the READ model. An invitation
 // asks a NEW person to join an EXISTING company as admin or staff (never owner). It is copy-link only: nothing is
-// sent (no e-mail, SMS or WhatsApp), and nothing accepts it yet — acceptance, and seat enforcement with it, is PO-04.
+// sent (no e-mail, SMS or WhatsApp). PO-03D: the invitee accepts it at /join/accept (user-invitation-acceptance.ts) while
+// CUSTOMER_USER_INVITE_ACCEPTANCE_ENABLED is on; seats are enforced by seat-enforcement.ts while its own switch is on.
 //
 //  • The table is STAGED (src/db/staged/platform-user-invitations.ts; drizzle/platform/PO03C_user_invitations.sql,
 //    outside the platform SQL chain): every read and write first asks the catalog whether it exists and fails closed
@@ -56,8 +57,8 @@ export function userInvitationReference(invitationId: string): string {
 }
 
 /**
- * The one-time link. The token travels in the FRAGMENT, which browsers never send to a server. The path is NOT served
- * by this build: user-invitation acceptance is PO-04, so the link is only ever copied, never usable yet.
+ * The one-time link. The token travels in the FRAGMENT, which browsers never send to a server. PO-03D: the path is served
+ * by src/app/(invite)/join/accept, which accepts the link only while CUSTOMER_USER_INVITE_ACCEPTANCE_ENABLED is on.
  */
 export function userInvitationLink(origin: string, token: string): string {
   return `${origin}/join/accept#t=${token}`;

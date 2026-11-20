@@ -13,7 +13,7 @@ import { getLocale } from "@/lib/i18n/server";
 import { PLATFORM_SESSION_COOKIE } from "@/lib/platform/config";
 import { formatPlatformCount, formatPlatformDateTime } from "@/lib/platform/display";
 import { isPlatformError } from "@/lib/platform/errors";
-import { isPlatformUserInvitationsEnabled } from "@/lib/platform/flags";
+import { isCustomerUserInviteAcceptanceEnabled, isPlatformUserInvitationsEnabled } from "@/lib/platform/flags";
 import { requirePlatformSession } from "@/lib/platform/guards";
 import { listUserInvitations, USER_INVITATION_STATES, type UserInvitationPage, type UserInvitationRow } from "@/lib/platform/user-invitations";
 
@@ -162,7 +162,7 @@ export default async function PlatformUserInvitationsPage({ searchParams }: { se
   const header = {
     locale,
     title: pt(locale, "uinv.title"),
-    description: pt(locale, "uinv.subtitle"),
+    description: pt(locale, isCustomerUserInviteAcceptanceEnabled() ? "uinv.subtitleOpen" : "uinv.subtitle"),
     actions: page?.company ? <InviteUserControl locale={locale} orgId={page.company.orgId} companyName={page.company.name} /> : undefined,
   };
   if (failure === "FORBIDDEN") {

@@ -5,8 +5,8 @@ import { PlatformError } from "./errors";
  * Feature flag for the whole Platform Owner console. Default OFF: only the exact string "true"
  * enables it, so a missing, empty or misspelled value fails closed. Every later console flag (PO-02D2's
  * PLATFORM_INVITATIONS_ENABLED and PO-03C's PLATFORM_USER_INVITATIONS_ENABLED, below) requires it as well; PO-02D3's
- * customer-facing acceptance flag (CUSTOMER_INVITE_ACCEPTANCE_ENABLED, next) is independent of it, and so is PO-03D's
- * CUSTOMER_SEAT_ENFORCEMENT_ENABLED (at the end).
+ * customer-facing acceptance flag (CUSTOMER_INVITE_ACCEPTANCE_ENABLED, next) is independent of it, and so are PO-03D's
+ * CUSTOMER_SEAT_ENFORCEMENT_ENABLED and CUSTOMER_USER_INVITE_ACCEPTANCE_ENABLED (at the end).
  */
 export function isPlatformConsoleEnabled(): boolean {
   return process.env.PLATFORM_CONSOLE_ENABLED === "true";
@@ -67,4 +67,14 @@ export function assertPlatformUserInvitationsEnabled(): void {
  */
 export function isCustomerSeatEnforcementEnabled(): boolean {
   return process.env.CUSTOMER_SEAT_ENFORCEMENT_ENABLED === "true";
+}
+
+/**
+ * PO-03D — public customer-user invitation acceptance (/join/accept). Default OFF (provisional, pending owner approval):
+ * only the exact string "true" enables it. Independent of the console flags — acceptance is a customer-facing route —
+ * and of CUSTOMER_INVITE_ACCEPTANCE_ENABLED (company invitations). It needs the staged user_invitations table as well,
+ * issues no session and sends nothing.
+ */
+export function isCustomerUserInviteAcceptanceEnabled(): boolean {
+  return process.env.CUSTOMER_USER_INVITE_ACCEPTANCE_ENABLED === "true";
 }

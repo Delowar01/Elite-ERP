@@ -117,8 +117,10 @@ async function main(): Promise<number> {
     const files = srcFiles();
     const rel = (f: string) => relative(ROOT, f);
     const inserters = files.filter((f) => /\.insert\(usersTable\)/.test(readFileSync(f, "utf8"))).map(rel).sort();
-    ok("exactly two modules insert users: the shared organization bootstrap and the team-member action",
-      JSON.stringify(inserters) === JSON.stringify(["src/app/(app)/settings/team/actions.ts", "src/lib/org-bootstrap.ts"]), inserters.join(", "));
+    // PO-03D (sub-batch A): plus the user-invitation acceptance bridge — the invitee's own account, under the SAME e-mail
+    // advisory lock and lower(email) check (verify:platform-user-acceptance K6–K8).
+    ok("exactly three modules insert users: the shared organization bootstrap, the team-member action and (PO-03D) the user-invitation acceptance bridge",
+      JSON.stringify(inserters) === JSON.stringify(["src/app/(app)/settings/team/actions.ts", "src/lib/onboarding/user-invitation-acceptance.ts", "src/lib/org-bootstrap.ts"]), inserters.join(", "));
     const emailUpdates = files.filter((f) => /\.update\(usersTable\)\s*\.set\(\{[^}]*\bemail\b/.test(readFileSync(f, "utf8"))).map(rel);
     ok("no code path changes an existing users.email (no UPDATE … SET email anywhere in src)", emailUpdates.length === 0, emailUpdates.join(", "));
     const rawUserWrites = files.filter((f) => /\b(insert\s+into|update)\s+"?users"?\b/i.test(readFileSync(f, "utf8"))).map(rel);

@@ -33,7 +33,7 @@ export type UserInvitationPreviewView = {
   /** The company's seats now and after this invitation (display only — nothing is refused because of them). */
   seats: (UserInvitationSeatsView & { after: UserInvitationSeatsView }) | null;
 };
-export type UserInvitationLinkView = { ok: true; reference: string; link: string; expires: string; replacedReference: string | null };
+export type UserInvitationLinkView = { ok: true; reference: string; link: string; expires: string; replacedReference: string | null; acceptanceOpen: boolean };
 export type UserInvitationCurrentView = { ok: true; state: "pending" | "expired" | "revoked" | "accepted"; reference: string; companyName: string; name: string; email: string; role: "admin" | "staff"; expires: string };
 
 const CLEARED = { ...platformSessionCookieOptions(new Date(0)), maxAge: 0 };
@@ -102,7 +102,7 @@ export async function createUserInvitationAction(input: unknown): Promise<UserIn
   const outcome = await createUserInvitation(await request(), { ...parsed.data, totpCode: code(parsed.data.totpCode) });
   if (!outcome.ok) return failed(outcome);
   const locale = await getLocale();
-  return { ok: true, reference: outcome.reference, link: outcome.link, expires: formatPlatformDateTime(outcome.expiresAt, locale), replacedReference: outcome.replacedReference };
+  return { ok: true, reference: outcome.reference, link: outcome.link, expires: formatPlatformDateTime(outcome.expiresAt, locale), replacedReference: outcome.replacedReference, acceptanceOpen: outcome.acceptanceOpen };
 }
 
 /** Revoke one pending or expired user invitation (a fresh TOTP code and a reason). */
@@ -121,7 +121,7 @@ export async function reissueUserInvitationAction(input: unknown): Promise<(User
   const outcome = await reissueUserInvitation(await request(), { ...parsed.data, totpCode: code(parsed.data.totpCode) });
   if (!outcome.ok) return failed(outcome);
   const locale = await getLocale();
-  return { ok: true, reference: outcome.reference, previousReference: outcome.previousReference, link: outcome.link, expires: formatPlatformDateTime(outcome.expiresAt, locale), replacedReference: outcome.previousReference };
+  return { ok: true, reference: outcome.reference, previousReference: outcome.previousReference, link: outcome.link, expires: formatPlatformDateTime(outcome.expiresAt, locale), replacedReference: outcome.previousReference, acceptanceOpen: outcome.acceptanceOpen };
 }
 
 /** One user invitation's state as it is now — a dialog acts on this, not on what the page showed. */

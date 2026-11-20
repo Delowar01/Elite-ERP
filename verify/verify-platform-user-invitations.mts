@@ -377,7 +377,7 @@ async function main() {
         (await sqlState(`truncate user_invitations`)) === "P0001" &&
         (await sqlState(`insert into user_invitations (org_id, name, email_normalized, requested_role, token_hash, invited_by_platform_admin_id) values ($1, 'X', 'guard.probe@uinv-fixture.test', 'admin', $2, $3)`, [B, sha256("e"), adm])) === "23505");
     const otherUser = Number((await one<{ id: number }>(`select id from users where org_id = $1 limit 1`, [B]))!.id);
-    ok("S8 …acceptance (PO-04, not built) can only ever name a user of the invitation's OWN company; a revoked or accepted invitation is final",
+    ok("S8 …acceptance (PO-03D's /join/accept — verify:platform-user-acceptance) can only ever name a user of the invitation's OWN company; a revoked or accepted invitation is final",
       (await sqlState(`update user_invitations set accepted_at = $3, accepted_user_id = $2 where id = $1`, [probe, otherUser, new Date(nowMs)])) === "23514" &&
         (await sqlState(`update user_invitations set revoked_at = $3, revoked_by_platform_admin_id = $2 where id = $1`, [probe, adm, new Date(nowMs)])) === "OK" &&
         (await sqlState(`update user_invitations set revoked_at = $2 where id = $1`, [probe, new Date(nowMs)])) === "23514");
@@ -561,7 +561,7 @@ async function main() {
     await q(`update user_invitations set accepted_at = $3, accepted_user_id = $2 where id = $1`, [acc, accUser, new Date(nowMs)]);
     const rAcc = await revoke(operator, acc);
     const iAcc = await reissue(operator, acc);
-    ok("R5 an accepted invitation (written directly — acceptance is PO-04) can be neither revoked nor re-issued (INVITE_USED)", codeOf(rAcc) === "INVITE_USED" && codeOf(iAcc) === "INVITE_USED");
+    ok("R5 an accepted invitation (written directly here; PO-03D's acceptance is verified in verify:platform-user-acceptance) can be neither revoked nor re-issued (INVITE_USED)", codeOf(rAcc) === "INVITE_USED" && codeOf(iAcc) === "INVITE_USED");
     const unknownId = await revoke(operator, "00000000-0000-4000-8000-000000000000");
     const malformedId = await revoke(operator, "not-a-uuid");
     ok("R6 an unknown or malformed invitation id is NOT_FOUND", codeOf(unknownId) === "NOT_FOUND" && codeOf(malformedId) === "NOT_FOUND");
@@ -725,15 +725,22 @@ async function main() {
   }
 
   // ===================================================================================================================
-  section("O. No outbound communication; no acceptance");
+  section("O. No outbound communication; acceptance only through PO-03D's /join/accept");
   {
     // Code only (comments state what is NOT done, and name the channels).
     const files = ["src/lib/platform/user-invitations.ts", "src/lib/platform/user-invitation-actions.ts", "src/app/(platform)/user-invitation-actions.ts"].map((f) => readFileSync(join(ROOT, f), "utf8").replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:"'`])\/\/.*$/gm, "$1"));
     ok("O1 the invitation code sends nothing: no mail, SMS or WhatsApp library, no network call", files.every((s) => !/nodemailer|twilio|whatsapp|sendgrid|mailgun|resend|sendMail|smtp|\bfetch\(|https?\.request\(/i.test(s)));
     const appFiles = (dir: string): string[] => readdirSync(dir, { withFileTypes: true }).flatMap((d) => (d.isDirectory() ? appFiles(join(dir, d.name)) : [join(dir, d.name)]));
     const routes = appFiles(join(ROOT, "src/app")).filter((f) => /\/(page|route)\.tsx?$/.test(f) && /join|accept/i.test(f.slice(join(ROOT, "src/app").length)));
-    ok("O2 no acceptance route exists for user invitations: the link's /join/accept is served by no page or route (only PO-02D3's /register/accept exists)", routes.every((f) => /register\/accept/.test(f)) && !appFiles(join(ROOT, "src")).some((f) => /\.(ts|tsx)$/.test(f) && !/user-invitations\.ts$/.test(f) && readFileSync(f, "utf8").includes("/join/accept")));
-    ok("O3 nothing writes accepted_at or accepted_user_id (acceptance is PO-04): no update or insert of the invitation names them", !files.some((s) => /\.set\(\{[^}]*\baccepted(At|UserId)\b|\.values\(\{[^}]*\baccepted(At|UserId)\b|accepted_at\s*=|accepted_user_id\s*=/.test(s.replace(/\/\/.*$/gm, ""))));
+    // PO-03D (sub-batch A): /join/accept now serves the link — ONE page, behind CUSTOMER_USER_INVITE_ACCEPTANCE_ENABLED (its
+    // flow is verified in verify:platform-user-acceptance and pinned by boundary rule 50).
+    const stripComments = (s: string) => s.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:"'`])\/\/.*$/gm, "$1");
+    const joinRoutes = routes.filter((f) => !/register\/accept/.test(f)).map((f) => f.slice(ROOT.length + 1));
+    const pathNamers = appFiles(join(ROOT, "src")).filter((f) => /\.(ts|tsx)$/.test(f) && stripComments(readFileSync(f, "utf8")).includes("/join/accept")).map((f) => f.slice(ROOT.length + 1)).sort();
+    ok("O2 the link's /join/accept is served by exactly ONE page — PO-03D's (invite)/join/accept, behind its own switch — and besides PO-02D3's /register/accept no acceptance route exists; in code (comments ignored) only the link builder (user-invitations.ts) and the customer proxy's exact-path pass name the path",
+      JSON.stringify(joinRoutes) === JSON.stringify([join("src", "app", "(invite)", "join", "accept", "page.tsx")]) && JSON.stringify(pathNamers) === JSON.stringify([join("src", "lib", "platform", "user-invitations.ts"), join("src", "proxy.ts")].sort()),
+      `${joinRoutes.join(", ")} | ${pathNamers.join(", ")}`);
+    ok("O3 the invitation administration writes neither accepted_at nor accepted_user_id (only PO-03D's acceptance core does — verify:platform-user-acceptance): no update or insert of the invitation here names them", !files.some((s) => /\.set\(\{[^}]*\baccepted(At|UserId)\b|\.values\(\{[^}]*\baccepted(At|UserId)\b|accepted_at\s*=|accepted_user_id\s*=/.test(s.replace(/\/\/.*$/gm, ""))));
   }
 
   // ===================================================================================================================

@@ -7,6 +7,9 @@ const SESSION_COOKIE = process.env.NODE_ENV === "production" ? "__Host-elite_erp
 const AUTH_ROUTES = ["/login", "/register"];
 // Paths that must ALWAYS run (they clear cookies / recover the session), never redirected by us.
 const ALWAYS_ALLOW = ["/auth/clear"];
+// PO-03D: the public user-invitation acceptance page — exactly this path (no prefix), rendered like an auth route. It
+// decides for itself (switched off, signed in, ready) and never sees the token, which travels in the URL fragment.
+const PUBLIC_INVITE_PATHS = new Set(["/join/accept"]);
 
 const CLEAR_COOKIE = {
   httpOnly: true,
@@ -52,6 +55,7 @@ export async function proxy(request: NextRequest) {
   // loop. A genuinely usable session is redirected to /dashboard by the (auth) layout after a
   // full check (incl. server-side revocation); an unusable-but-present cookie is cleared there.
   if (isAuthRoute) return pass();
+  if (PUBLIC_INVITE_PATHS.has(pathname)) return pass();
 
   // Root decides for itself (its page runs a full getSession()).
   if (pathname === "/") return pass();

@@ -121,9 +121,9 @@ function LinkPanel({ locale, result, title, onDone }: { locale: Locale; result: 
           )}
         </span>
       </p>
-      <p className="platform-callout" data-tone="warning">
-        <TriangleAlert className="size-4 shrink-0" aria-hidden />
-        <span>{pt(locale, "uinv.notActive")}</span>
+      <p className="platform-callout" data-tone={result.acceptanceOpen ? "info" : "warning"}>
+        {result.acceptanceOpen ? <Info className="size-4 shrink-0" aria-hidden /> : <TriangleAlert className="size-4 shrink-0" aria-hidden />}
+        <span>{pt(locale, result.acceptanceOpen ? "uinv.linkActive" : "uinv.notActive")}</span>
       </p>
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="user-invitation-link">{pt(locale, "link.label")}</Label>

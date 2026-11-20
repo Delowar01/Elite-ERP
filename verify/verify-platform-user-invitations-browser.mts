@@ -20,11 +20,12 @@
  * any code is spent (already invited, e-mail in use, suspended company) · U5 the list (filters, search, a company's
  * own) · U6 the detail (an audited view, no token anywhere) · U7 revoke · U8 re-issue (a new link once, the lineage) ·
  * U9 a stale page is told to refresh · U10 English / Arabic × light / dark × 1440 / 1024 / 768 / 390 / 360 with layout
- * audits and the dialogs in Arabic on a phone · U11 payloads and direct POSTs · U12 nothing is sent, nothing accepts.
+ * audits and the dialogs in Arabic on a phone · U11 payloads and direct POSTs · U12 nothing is sent, and with PO-03D's
+ * acceptance switched off nothing accepts (/join/accept answers only "not available").
  */
 import { createRequire } from "node:module";
 import { mkdirSync, readFileSync } from "node:fs";
-import { createHash, randomBytes, randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { join } from "node:path";
 import type { Browser, BrowserContext, Page } from "playwright";
 import { connectDisposable, createPlatformTestDatabase, databaseUrlFor, disposableName, dropDisposableDatabase } from "../scripts/platform/disposable-db";
@@ -50,6 +51,8 @@ process.env.CUSTOMER_PUBLIC_ORIGIN = CUSTOMER_ORIGIN;
 process.env.PLATFORM_USER_INVITATIONS_ENABLED = "true"; // this process only (U9 calls the core); each server gets its own value
 delete process.env.PLATFORM_INVITATIONS_ENABLED;
 delete process.env.CUSTOMER_INVITE_ACCEPTANCE_ENABLED;
+delete process.env.CUSTOMER_USER_INVITE_ACCEPTANCE_ENABLED;
+delete process.env.CUSTOMER_SEAT_ENFORCEMENT_ENABLED;
 
 let created = false;
 await createPlatformTestDatabase("po03c_uinv_browser", testDbName);
@@ -281,6 +284,8 @@ async function serve(flagOn: boolean): Promise<Server> {
     PLATFORM_USER_INVITATIONS_ENABLED: flagOn ? "true" : undefined,
     PLATFORM_INVITATIONS_ENABLED: undefined,
     CUSTOMER_INVITE_ACCEPTANCE_ENABLED: undefined,
+    CUSTOMER_USER_INVITE_ACCEPTANCE_ENABLED: undefined,
+    CUSTOMER_SEAT_ENFORCEMENT_ENABLED: undefined,
     TENANT_ACCESS_ENFORCEMENT: "enabled",
   });
   return s;
@@ -643,15 +648,17 @@ async function main() {
     `${anon.status} ${revokeAnon.status} ${cross.status} ${extra.status} ${owner.status}`);
 
   // ============================================================================================================
-  section("U12 Nothing is sent; nothing accepts");
-  // Without a customer session the proxy sends every non-public path to the customer sign-in; the link's path must be
-  // treated exactly like a path that does not exist (no page, no route — and the token, in the fragment, never reaches a server).
+  section("U12 Nothing is sent; with acceptance switched off, nothing accepts");
+  // PO-03D (sub-batch A): /join/accept now exists — the user-invitation acceptance page, behind its own switch
+  // (CUSTOMER_USER_INVITE_ACCEPTANCE_ENABLED, unset here). Switched off, it renders only the "isn't available" notice: no
+  // form, no invitation data — and the token, in the fragment, never reaches a server. Its flow is verified by
+  // verify:platform-user-acceptance, boundary rule 50 and the PO-03D browser suite.
   const join = await fetch(`${A.url}/join/accept`, { redirect: "manual" });
-  const unknown = await fetch(`${A.url}/no-such-page-${randomBytes(4).toString("hex")}`, { redirect: "manual" });
-  const where = (r: Response) => (r.headers.get("location") ?? "").replace(/^https?:\/\/[^/]+/, "").replace(/[?#].*$/, "");
-  ok("U12 the link's path is served by nothing: /join/accept answers exactly as a path that does not exist (user-invitation acceptance is PO-04)",
-    join.status === unknown.status && where(join) === where(unknown) && (join.status === 404 || (join.status >= 300 && join.status < 400 && where(join) === "/login")),
-    `${join.status}→${where(join)} vs ${unknown.status}→${where(unknown)}`);
+  const joinHtml = await join.text();
+  ok("U12 with acceptance switched off, the link's page answers only 'not available': no form, no invitation data, not indexed, no referrer, not stored",
+    join.status === 200 && joinHtml.includes("Invitation acceptance isn") && !joinHtml.includes("Accept and join") && !/type="password"/.test(joinHtml) && !joinHtml.includes("cedar-fixture.test") &&
+      /<meta name="robots" content="[^"]*noindex[^"]*nofollow/.test(joinHtml) && /<meta name="referrer" content="no-referrer"/.test(joinHtml) && /no-store/.test(join.headers.get("cache-control") ?? ""),
+    `${join.status} ${join.headers.get("cache-control")}`);
   const hosts = [...requestedHosts];
   ok("U12 the browser only ever talked to the console's own origin (nothing to the customer origin, a mail or messaging service)", hosts.length > 0 && hosts.every((h) => h === `localhost:${PORT}`), hosts.join(", "));
   ok("U12 no invitation was accepted and no user was created by any of this", (await num(`select count(*)::int as n from user_invitations where accepted_at is not null`)) === 0 && (await num(`select count(*)::int as n from users where lower(email) in ('reem.staff@cedar-fixture.test', 'salma.admin@cedar-fixture.test')`)) === 0);

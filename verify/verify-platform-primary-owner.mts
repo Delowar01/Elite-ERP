@@ -212,8 +212,10 @@ try {
     const rel = (p: string) => relative(ROOT, p);
     const code = (p: string) => readFileSync(p, "utf8").replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:"'`])\/\/.*$/gm, "$1");
     const writers = (re: RegExp) => files.filter((f) => re.test(code(f))).map(rel).sort();
-    ok("N1 exactly two modules insert users: the shared organization bootstrap and the Team add-member action",
-      same(writers(/\.insert\(\s*usersTable\s*\)/), ["src/app/(app)/settings/team/actions.ts", "src/lib/org-bootstrap.ts"]), writers(/\.insert\(\s*usersTable\s*\)/).join(", "));
+    // PO-03D (sub-batch A): plus the user-invitation acceptance bridge — the invitee's own account (admin or staff, never an
+    // owner), inside the acceptance transaction (verify:platform-user-acceptance; boundary rule 50).
+    ok("N1 exactly three modules insert users: the shared organization bootstrap, the Team add-member action and (PO-03D) the user-invitation acceptance bridge",
+      same(writers(/\.insert\(\s*usersTable\s*\)/), ["src/app/(app)/settings/team/actions.ts", "src/lib/onboarding/user-invitation-acceptance.ts", "src/lib/org-bootstrap.ts"]), writers(/\.insert\(\s*usersTable\s*\)/).join(", "));
     ok("N2 nothing in src deletes a user (no ORM delete, no raw DELETE FROM users)", writers(/\.delete\(\s*usersTable\s*\)/).length === 0 && writers(/\bdelete\s+from\s+"?users"?\b/i).length === 0);
     const roleWriters = files.filter((f) => /\.update\(\s*usersTable\s*\)\s*\.set\(\{[^}]*\brole\b/.test(code(f).replace(/\s+/g, " "))).map(rel);
     const activeWriters = files.filter((f) => /\.update\(\s*usersTable\s*\)\s*\.set\(\{[^}]*\bisActive\b/.test(code(f).replace(/\s+/g, " "))).map(rel);
@@ -244,8 +246,10 @@ try {
     // chain): its symbol appears only in that declaration, the user-invitation read model and write core, and the seat
     // core — which counts an open, unexpired invitation as a pending seat (display only; verify:platform-user-invitations T).
     const uinvFiles = files.filter((f) => /\buser_invitations\b|\buserInvitationsTable\b/.test(code(f))).map((f) => relative(ROOT, f)).sort();
-    ok("N7 the customer-user invitation system is only the staged table (PO-03C): its declaration, read model, write core and the seat core name it — nothing else (no Team or customer code); a pending invitation occupies a seat only in the display",
-      same(uinvFiles, ["src/db/staged/platform-user-invitations.ts", "src/lib/platform/seat-accounting.ts", "src/lib/platform/user-invitation-actions.ts", "src/lib/platform/user-invitations.ts"]), uinvFiles.join(", "));
+    // PO-03D (sub-batch A): and the acceptance core, which turns an open invitation into its user (the reserved seat replaced,
+    // never counted twice); seats are enforced only with CUSTOMER_SEAT_ENFORCEMENT_ENABLED (seat-enforcement.ts).
+    ok("N7 the customer-user invitation system is only the staged table (PO-03C): its declaration, read model, write core, the seat core and (PO-03D) the acceptance core name it — nothing else (no Team or customer code)",
+      same(uinvFiles, ["src/db/staged/platform-user-invitations.ts", "src/lib/platform/seat-accounting.ts", "src/lib/platform/user-invitation-acceptance.ts", "src/lib/platform/user-invitation-actions.ts", "src/lib/platform/user-invitations.ts"]), uinvFiles.join(", "));
   }
 
   // =====================================================================================================================

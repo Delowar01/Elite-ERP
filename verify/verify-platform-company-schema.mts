@@ -322,7 +322,10 @@ async function main(): Promise<void> {
     // PO-03C (sub-batch C): plus the user-invitation write core, which reads a company's effective access (getTenantAccess)
     // and takes the PO-02C.1 SHARE lock (lockTenantAccessForSessionIssue) so that a create or re-issue and a suspension
     // serialize — both through the module, never the access table itself (verify:platform-boundary rules 37 and 49).
-    ok("only the PO-02B read model, the PO-02C access action, the customer tenant-access gate and (PO-03C) the user-invitation write core import the compatibility module (no other customer auth/session file)", JSON.stringify(ruleRefs) === JSON.stringify(["src/lib/platform/companies.ts", "src/lib/platform/company-access-actions.ts", "src/lib/platform/user-invitation-actions.ts", "src/lib/security/tenant-access-gate.ts"]), ruleRefs.join(", "));
+    // PO-03D (sub-batch A): plus the user-invitation ACCEPTANCE core, which reads the company's effective access
+    // (getTenantAccess) twice — for the preview, and again inside the acceptance transaction after the company row lock —
+    // through the module, never the access table itself (verify:platform-boundary rule 50).
+    ok("only the PO-02B read model, the PO-02C access action, the customer tenant-access gate, (PO-03C) the user-invitation write core and (PO-03D) the user-invitation acceptance core import the compatibility module (no other customer auth/session file)", JSON.stringify(ruleRefs) === JSON.stringify(["src/lib/platform/companies.ts", "src/lib/platform/company-access-actions.ts", "src/lib/platform/user-invitation-acceptance.ts", "src/lib/platform/user-invitation-actions.ts", "src/lib/security/tenant-access-gate.ts"]), ruleRefs.join(", "));
   } finally {
     await cL.end().catch(() => undefined);
     await cP.end().catch(() => undefined);

@@ -1,7 +1,7 @@
 import { cookies, headers } from "next/headers";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { CircleAlert, Database, ShieldOff, TriangleAlert } from "lucide-react";
+import { CircleAlert, Database, Info, ShieldOff, TriangleAlert } from "lucide-react";
 import { Breadcrumbs, DetailPage, FieldGrid, Ltr, PageState, PlatformStatusTag } from "@/components/platform/companies-kit";
 import { pt, type PlatformStringKey } from "@/components/platform/i18n";
 import { InvitationTimeline, type InvitationEventView } from "@/components/platform/invitations-kit";
@@ -11,7 +11,7 @@ import { getLocale } from "@/lib/i18n/server";
 import { PLATFORM_SESSION_COOKIE } from "@/lib/platform/config";
 import { formatPlatformDateTime } from "@/lib/platform/display";
 import { isPlatformError } from "@/lib/platform/errors";
-import { isPlatformUserInvitationsEnabled } from "@/lib/platform/flags";
+import { isCustomerUserInviteAcceptanceEnabled, isPlatformUserInvitationsEnabled } from "@/lib/platform/flags";
 import { requirePlatformSession } from "@/lib/platform/guards";
 import { getUserInvitationDetail, type UserInvitationDetail } from "@/lib/platform/user-invitations";
 
@@ -114,10 +114,19 @@ export default async function PlatformUserInvitationPage({ params }: { params: R
       meta={<PlatformStatusTag locale={locale} domain="invitation" value={d.state} />}
       actions={d.state !== "accepted" ? <UserInvitationRowActions locale={locale} target={target} /> : undefined}
     >
-      <p className="platform-callout" data-tone="warning">
-        <TriangleAlert className="size-4 shrink-0" aria-hidden />
-        <span>{pt(locale, "uinv.noAcceptance")}</span>
-      </p>
+      {!isCustomerUserInviteAcceptanceEnabled() ? (
+        <p className="platform-callout" data-tone="warning">
+          <TriangleAlert className="size-4 shrink-0" aria-hidden />
+          <span>{pt(locale, "uinv.noAcceptance")}</span>
+        </p>
+      ) : (
+        d.state === "pending" && (
+          <p className="platform-callout" data-tone="info">
+            <Info className="size-4 shrink-0" aria-hidden />
+            <span>{pt(locale, "uinv.acceptanceOpen")}</span>
+          </p>
+        )
+      )}
       <section className="card platform-panel" aria-labelledby="user-invitation-details">
         <div className="platform-panel-head">
           <h2 id="user-invitation-details">{pt(locale, "inv.details")}</h2>
