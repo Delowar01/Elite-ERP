@@ -1,12 +1,13 @@
 import "server-only";
-import { and, asc, eq, inArray, ne, sql } from "drizzle-orm";
-import { db, orgsTable, usersTable, type Role, type Tx } from "@/db";
+import { and, eq } from "drizzle-orm";
+import { db, usersTable, type Role, type Tx } from "@/db";
 import { logActivity } from "@/lib/activity";
 import { t, type Locale } from "@/lib/i18n/dict";
 import { recordSecurityEvent } from "@/lib/security/audit";
 import type { Session } from "@/lib/session";
 import { canAssignRole } from "@/lib/tenant";
-import { lockPrimaryOwnerForTeamChange, TeamProtectionUnavailableError } from "./ownership-gate";
+import { CUSTOMER_USER_LOCK_TIMEOUT, deactivationBlock, hasOtherActiveOwner, lockCompanyPrimaryOwner, lockCompanyUsers, setCustomerUserActive } from "./customer-user-core";
+import { TeamProtectionUnavailableError } from "./ownership-gate";
 
 // ---------------------------------------------------------------------------------------------
 // Team changes that can affect a company's ownership (PO-03A, decision O-3): a member's ROLE and whether the member
@@ -32,7 +33,10 @@ import { lockPrimaryOwnerForTeamChange, TeamProtectionUnavailableError } from ".
 export type TeamChangeResult = { error?: string };
 
 const READ_COMMITTED = { isolationLevel: "read committed" } as const;
-export const TEAM_LOCK_TIMEOUT = "5s";
+// PO-03B: the lock order, the owner rules and the status write live in the shared customer-user mutation service
+// (./customer-user-core.ts), which the Platform Owner user controls use too; this service keeps the Team-specific
+// parts — the acting member's authority, the role rules, the localized answers and the activity record.
+export const TEAM_LOCK_TIMEOUT = CUSTOMER_USER_LOCK_TIMEOUT;
 const VALID_ROLES: Role[] = ["owner", "admin", "staff"];
 const MANAGERS: Role[] = ["owner", "admin"];
 
@@ -65,35 +69,16 @@ class TeamRefusal extends Error {
   }
 }
 
-type LockedUser = { id: number; orgId: number; role: string; isActive: boolean };
-
-/** Steps 1–3 and the actor/target part of step 4. */
+/** Steps 1–3 (shared core), the actor/target checks on the locked rows, then step 4 (shared core). */
 async function lockTeamChange(tx: Tx, session: Session, targetId: number) {
-  await tx.execute(sql`select set_config('lock_timeout', ${TEAM_LOCK_TIMEOUT}, true)`);
-  const [company] = await tx.select({ id: orgsTable.id }).from(orgsTable).where(eq(orgsTable.id, session.orgId)).for("no key update");
-  if (!company) throw new TeamRefusal("notManager");
-  const rows: LockedUser[] = await tx
-    .select({ id: usersTable.id, orgId: usersTable.orgId, role: usersTable.role, isActive: usersTable.isActive })
-    .from(usersTable)
-    .where(and(eq(usersTable.orgId, session.orgId), inArray(usersTable.id, [session.userId, targetId])))
-    .orderBy(asc(usersTable.id))
-    .for("no key update");
+  const rows = await lockCompanyUsers(tx, session.orgId, [session.userId, targetId]);
+  if (!rows) throw new TeamRefusal("notManager");
   const actor = rows.find((r) => r.id === session.userId);
   const target = rows.find((r) => r.id === targetId);
   if (!actor || !actor.isActive || !MANAGERS.includes(actor.role as Role)) throw new TeamRefusal("notManager");
   if (!target) throw new TeamRefusal("notFound");
-  const primary = await lockPrimaryOwnerForTeamChange(tx, session.orgId);
-  return { actor: { ...actor, role: actor.role as Role }, target, primaryOwnerId: primary?.userId ?? null };
-}
-
-/** Whether the company keeps another active owner besides `exceptUserId` (read under the company-row lock). */
-async function hasOtherActiveOwner(tx: Tx, orgId: number, exceptUserId: number): Promise<boolean> {
-  const others = await tx
-    .select({ id: usersTable.id })
-    .from(usersTable)
-    .where(and(eq(usersTable.orgId, orgId), eq(usersTable.role, "owner"), eq(usersTable.isActive, true), ne(usersTable.id, exceptUserId)))
-    .limit(1);
-  return others.length > 0;
+  const primaryOwnerId = await lockCompanyPrimaryOwner(tx, session.orgId);
+  return { actor: { ...actor, role: actor.role as Role }, target, primaryOwnerId };
 }
 
 async function protectedOwnerRefusal(tx: Tx, session: Session, targetId: number, change: "role_change" | "deactivation"): Promise<never> {
@@ -171,11 +156,12 @@ export async function setTeamMemberActive(session: Session, userId: number, isAc
   return runTeamChange(locale, async (tx) => {
     const { target, primaryOwnerId } = await lockTeamChange(tx, session, userId);
     if (!isActive) {
-      if (target.id === primaryOwnerId) await protectedOwnerRefusal(tx, session, target.id, "deactivation");
-      // Never allow the company's last active owner to be deactivated — it would lock everyone out.
-      if (target.role === "owner" && !(await hasOtherActiveOwner(tx, session.orgId, target.id))) throw new TeamRefusal("lastOwner");
+      // The shared rules (the platform controls apply the same): never the primary owner, never the last active owner.
+      const block = await deactivationBlock(tx, target, primaryOwnerId);
+      if (block === "primary_owner") await protectedOwnerRefusal(tx, session, target.id, "deactivation");
+      if (block === "last_owner") throw new TeamRefusal("lastOwner");
     }
-    await tx.update(usersTable).set({ isActive, updatedAt: new Date() }).where(and(eq(usersTable.id, target.id), eq(usersTable.orgId, session.orgId)));
+    await setCustomerUserActive(tx, target, isActive);
     await logActivity(
       session,
       { type: isActive ? "team.member-activated" : "team.member-deactivated", description: `Marked a team member ${isActive ? "active" : "inactive"}`, entityType: "user", entityId: target.id },
