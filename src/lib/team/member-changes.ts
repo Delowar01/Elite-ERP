@@ -1,12 +1,24 @@
 import "server-only";
-import { and, eq } from "drizzle-orm";
-import { db, usersTable, type Role, type Tx } from "@/db";
+import { db, type Role, type Tx } from "@/db";
 import { logActivity } from "@/lib/activity";
 import { t, type Locale } from "@/lib/i18n/dict";
 import { recordSecurityEvent } from "@/lib/security/audit";
 import type { Session } from "@/lib/session";
 import { canAssignRole } from "@/lib/tenant";
-import { CUSTOMER_USER_LOCK_TIMEOUT, deactivationBlock, hasOtherActiveOwner, lockCompanyPrimaryOwner, lockCompanyUsers, setCustomerUserActive } from "./customer-user-core";
+import {
+  CUSTOMER_USER_LOCK_TIMEOUT,
+  deactivationBlock,
+  endCustomerUserSessions,
+  hasOtherActiveOwner,
+  lockCompanyPrimaryOwner,
+  lockCompanyUsers,
+  ROLE_CHANGE_REVOKE_REASON,
+  setCustomerUserActive,
+  setCustomerUserRole,
+  USER_DISABLED_REVOKE_REASON,
+  USER_REENABLED_REVOKE_REASON,
+  type LockedCustomerUser,
+} from "./customer-user-core";
 import { TeamProtectionUnavailableError } from "./ownership-gate";
 
 // ---------------------------------------------------------------------------------------------
@@ -25,6 +37,11 @@ import { TeamProtectionUnavailableError } from "./ownership-gate";
 //   4. every check again on the locked rows (the actor is still an active owner or admin of this company; the
 //      target belongs to it; role rules; the primary owner; the last active owner);
 //   5. the update, then 6. its activity record — in the same transaction.
+// PO-03C (sub-batch B): a deactivation ends the member's live sessions in that same transaction (reason "disabled"), a
+// reactivation ends any session left from before (reason "reenabled" — a reactivated member signs in again; nothing is
+// revived), and a role change ends the member's sessions (reason "role_change"), so no session issued under the old
+// role or status outlives the change. When sessions were ended, the customer's own security log records it
+// (team.member_sessions_ended) in the same transaction. Every other member's sessions are untouched.
 // A lock wait longer than TEAM_LOCK_TIMEOUT, a deadlock or any failure rolls everything back and answers a clear,
 // localized message; nothing is ever half-applied. A refused change to the primary owner commits exactly one
 // security event (team.primary_owner_protected) and nothing else.
@@ -97,6 +114,20 @@ function sqlStateOf(err: unknown): string | undefined {
   return undefined;
 }
 
+/**
+ * PO-03C: ends the target member's live sessions for a role or status change and records it in the customer's own
+ * security log when any were ended — inside the change's transaction (so a failure rolls the change back too).
+ */
+async function endMemberSessions(tx: Tx, session: Session, target: LockedCustomerUser, cause: "deactivated" | "reactivated" | "role_changed"): Promise<void> {
+  const reason = cause === "deactivated" ? USER_DISABLED_REVOKE_REASON : cause === "reactivated" ? USER_REENABLED_REVOKE_REASON : ROLE_CHANGE_REVOKE_REASON;
+  const ended = await endCustomerUserSessions(tx, target, reason, new Date());
+  if (ended === 0) return;
+  await recordSecurityEvent(
+    { orgId: session.orgId, userId: session.userId, email: session.email, type: "team.member_sessions_ended", severity: cause === "reactivated" ? "info" : "medium", detail: cause, metadata: { targetUserId: target.id, sessionsEnded: ended } },
+    tx,
+  );
+}
+
 /** Runs one Team change; every outcome is a localized result, and only a completed change has any effect. */
 async function runTeamChange(locale: Locale, work: (tx: Tx) => Promise<void>): Promise<TeamChangeResult> {
   const message = (key: MessageKey) => ({ error: t(locale, TEAM_MESSAGES[key]) });
@@ -143,7 +174,9 @@ export async function changeTeamMemberRole(session: Session, userId: number, rol
     // O-3: the primary owner stays an owner (a request that leaves them an owner changes nothing protected).
     if (target.id === primaryOwnerId && role !== "owner") await protectedOwnerRefusal(tx, session, target.id, "role_change");
     if (target.role === "owner" && target.isActive && role !== "owner" && !(await hasOtherActiveOwner(tx, session.orgId, target.id))) throw new TeamRefusal("lastOwner");
-    await tx.update(usersTable).set({ role, updatedAt: new Date() }).where(and(eq(usersTable.id, target.id), eq(usersTable.orgId, session.orgId)));
+    await setCustomerUserRole(tx, target, role);
+    // PO-03C: a real role change invalidates the member's sessions (an unchanged role changes nothing else).
+    if (role !== target.role) await endMemberSessions(tx, session, target, "role_changed");
     await logActivity(session, { type: "team.role-changed", description: `Changed a team member's role to ${role}`, entityType: "user", entityId: target.id }, tx);
   });
 }
@@ -162,6 +195,8 @@ export async function setTeamMemberActive(session: Session, userId: number, isAc
       if (block === "last_owner") throw new TeamRefusal("lastOwner");
     }
     await setCustomerUserActive(tx, target, isActive);
+    // PO-03C: deactivation ends the member's sessions; reactivation ends any left from before (a new sign-in is required).
+    await endMemberSessions(tx, session, target, isActive ? "reactivated" : "deactivated");
     await logActivity(
       session,
       { type: isActive ? "team.member-activated" : "team.member-deactivated", description: `Marked a team member ${isActive ? "active" : "inactive"}`, entityType: "user", entityId: target.id },

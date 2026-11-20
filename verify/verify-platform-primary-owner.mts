@@ -220,9 +220,11 @@ try {
     // PO-03B: the status write moved into the shared customer-user mutation service (used by the Team actions AND the
     // Platform Owner user controls); the role write stays in the Team-change service. Still exactly one writer each.
     const activeWriterCode = code(join(ROOT, "src/lib/team/customer-user-core.ts"));
-    ok("N3 users.role is written by the Team-change service ONLY and users.is_active by the shared customer-user mutation service ONLY (PO-03B) — one update each",
-      same(roleWriters, ["src/lib/team/member-changes.ts"]) && same(activeWriters, ["src/lib/team/customer-user-core.ts"]) &&
-        (activeWriterCode.match(/\.update\(\s*usersTable\s*\)/g) ?? []).length === 1 && (code(join(ROOT, "src/lib/team/member-changes.ts")).match(/\.update\(\s*usersTable\s*\)/g) ?? []).length === 1,
+    // PO-03C: the role write moved into the same shared service (setCustomerUserRole — used by the Team role change, the
+    // console's role control and the primary-owner transfer). Still exactly one writer of each column, one update each.
+    ok("N3 users.role and users.is_active are each written by the shared customer-user mutation service ONLY (PO-03B the status, PO-03C the role) — one update each; the Team-change service writes users no more",
+      same(roleWriters, ["src/lib/team/customer-user-core.ts"]) && same(activeWriters, ["src/lib/team/customer-user-core.ts"]) &&
+        (activeWriterCode.match(/\.update\(\s*usersTable\s*\)/g) ?? []).length === 2 && (code(join(ROOT, "src/lib/team/member-changes.ts")).match(/\.update\(\s*usersTable\s*\)/g) ?? []).length === 0,
       `${roleWriters} | ${activeWriters}`);
     ok("N4 nothing updates users.org_id (no ORM .set({ orgId }) on users, no raw UPDATE users … org_id)",
       !files.some((f) => /\.update\(\s*usersTable\s*\)\s*\.set\(\{[^}]*\borgId\b/.test(code(f).replace(/\s+/g, " "))) && writers(/\bupdate\s+"?users"?\s+set\b/i).length === 0);

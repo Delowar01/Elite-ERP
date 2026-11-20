@@ -9,7 +9,9 @@ import { lockPrimaryOwnerForTeamChange, TeamProtectionUnavailableError } from ".
 //   • the customer Team-change service (src/lib/team/member-changes.ts — the Team tab's role and status actions), and
 //   • the Platform Owner user controls (src/lib/platform/customer-user-actions.ts — disable / enable and session
 //     revocation from the console; the ONE platform module that imports this file).
-// Neither has its own lock order, owner rule, status write or session revocation: both call these.
+// Neither has its own lock order, owner rule, status write or session revocation: both call these. PO-03C adds the ONE
+// role write (setCustomerUserRole), used by the Team role change; every Team role or status change now ends the
+// affected account's sessions in the same transaction.
 //
 // The lock order (PO-03A §F.1), inside the caller's ONE READ COMMITTED transaction:
 //   1. a bounded lock wait (this transaction only);
@@ -28,10 +30,16 @@ import { lockPrimaryOwnerForTeamChange, TeamProtectionUnavailableError } from ".
 
 export const CUSTOMER_USER_LOCK_TIMEOUT = "5s";
 
-/** Session end reasons written by the platform controls (the customer's own reasons are unchanged). */
+/** Session end reasons (the documented values of sessions.revoked_reason). PO-03C: the Team actions use them too. */
 export const USER_DISABLED_REVOKE_REASON = "disabled";
 export const USER_REENABLED_REVOKE_REASON = "reenabled";
 export const PLATFORM_REVOKED_REASON = "platform_revoked";
+/** PO-03C: a role change ends the account's sessions. */
+export const ROLE_CHANGE_REVOKE_REASON = "role_change";
+
+/** The three customer roles (the ERP's role model; no custom roles). */
+export type CustomerRole = "owner" | "admin" | "staff";
+export const CUSTOMER_ROLES: readonly CustomerRole[] = ["owner", "admin", "staff"];
 
 /**
  * The account row's change marker: its exact updated_at, to the microsecond, as text. Every status, role or password
@@ -105,6 +113,15 @@ export async function deactivationBlock(tx: Tx, target: LockedCustomerUser, prim
 /** The user's status — scoped to the id AND the company it was locked in. */
 export async function setCustomerUserActive(tx: Tx, user: LockedCustomerUser, isActive: boolean): Promise<void> {
   await tx.update(usersTable).set({ isActive, updatedAt: new Date() }).where(and(eq(usersTable.id, user.id), eq(usersTable.orgId, user.orgId)));
+}
+
+/**
+ * The user's role — the ONE role write (PO-03C), scoped to the id AND the company it was locked in. The caller (the
+ * Team-change service) checks every rule on the locked rows before calling it, and ends the account's sessions after
+ * it (a role change invalidates the sessions issued under the old role).
+ */
+export async function setCustomerUserRole(tx: Tx, user: LockedCustomerUser, role: CustomerRole): Promise<void> {
+  await tx.update(usersTable).set({ role, updatedAt: new Date() }).where(and(eq(usersTable.id, user.id), eq(usersTable.orgId, user.orgId)));
 }
 
 /**

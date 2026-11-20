@@ -704,7 +704,9 @@ async function main() {
     const r1 = await inCustomerRequest(() => changes.changeTeamMemberRole(s, member, "admin", "en"));
     const r2 = await inCustomerRequest(() => changes.setTeamMemberActive(s, member, false, "en"));
     ok("N1 role change and deactivation by the owner succeed", same(r1, {}) && same(r2, {}) && (await userRow(member))!.role === "admin" && !(await userRow(member))!.is_active);
-    ok("N2 …a Team deactivation leaves session rows as before (the customer behaviour is unchanged) and every request is refused for the inactive account", (await n(`select count(*)::int as n from sessions where user_id = $1 and revoked_at is null`, [member])) === 1 && (await stateOf(mSession.token)) !== "active");
+    // PO-03C (sub-batch B): a Team role change ends the member's sessions and so does a deactivation — no session row is
+    // left live (before PO-03C a Team deactivation left them; verify:platform-team-sessions tests each step on its own).
+    ok("N2 …PO-03C: the role change ended the member's session (reason role_change), the deactivation left no live session, and every request is refused for the inactive account", (await n(`select count(*)::int as n from sessions where user_id = $1 and revoked_at is null`, [member])) === 0 && (await n(`select count(*)::int as n from sessions where user_id = $1 and revoked_reason = 'role_change'`, [member])) === 1 && (await stateOf(mSession.token)) !== "active");
     const r3 = await inCustomerRequest(() => changes.setTeamMemberActive(s, member, true, "en"));
     const prim = await inCustomerRequest(() => changes.setTeamMemberActive(s, aPrimary, false, "en"));
     const admin = await customerSession.resolveSessionToken((await sessionFor(A, aAdmin)).token);
