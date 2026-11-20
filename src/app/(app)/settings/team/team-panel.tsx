@@ -20,9 +20,11 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { t, type Locale } from "@/lib/i18n/dict";
+import type { TeamOwnershipSummary } from "@/lib/team/seat-summary-types";
 import { useConfirm } from "../../_shared/confirm-provider";
 import type { User, Role } from "@/db";
 import { addTeamMemberAction, changeRoleAction, toggleMemberActiveAction } from "./actions";
+import { TeamSeatSummary } from "./seat-summary";
 
 const ROLE_LABELS: Record<Role, string> = { owner: "Owner", admin: "Admin", staff: "Staff" };
 
@@ -31,11 +33,13 @@ export function TeamPanel({
   members,
   currentUserId,
   currentUserRole,
+  ownership,
 }: {
   locale: Locale;
   members: User[];
   currentUserId: number;
   currentUserRole: Role;
+  ownership: TeamOwnershipSummary;
 }) {
   const [adding, setAdding] = useState(false);
   const [role, setRole] = useState<Role>("staff");
@@ -43,6 +47,10 @@ export function TeamPanel({
   const confirm = useConfirm();
 
   const assignableRoles: Role[] = currentUserRole === "owner" ? ["owner", "admin", "staff"] : ["admin", "staff"];
+  // PO-03A: the primary owner keeps the owner role and stays active — the server refuses anything else, so the
+  // menu offers only the changes that restore it (never a demotion or a deactivation).
+  const primaryOwnerId = ownership.primaryOwner.state === "designated" ? ownership.primaryOwner.userId : null;
+  const primaryOwnerName = members.find((m) => m.id === primaryOwnerId)?.name ?? null;
 
   function submitAdd(formData: FormData) {
     formData.set("role", role);
@@ -98,6 +106,7 @@ export function TeamPanel({
   return (
     <div className="flex flex-col gap-4">
       <SectionHeader level={2} title={t(locale, "Team")} />
+      <TeamSeatSummary locale={locale} ownership={ownership} primaryOwnerName={primaryOwnerName} />
       <Table density="compact">
         <TableHeader>
           <TableRow>
@@ -115,6 +124,11 @@ export function TeamPanel({
               <TableCell className="text-ink-muted font-mono text-xs">{member.email}</TableCell>
               <TableCell>
                 <Badge variant={member.role === "owner" ? "info" : "neutral"}>{t(locale, ROLE_LABELS[member.role as Role])}</Badge>
+                {member.id === primaryOwnerId && (
+                  <Badge variant="neutral" className="ms-1.5" data-testid="team-primary-owner-badge">
+                    {t(locale, "Primary owner")}
+                  </Badge>
+                )}
               </TableCell>
               <TableCell>
                 <StatusBadge domain="active_flag" status={member.isActive ? "active" : "inactive"} locale={locale} />
@@ -128,8 +142,13 @@ export function TeamPanel({
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
+                      {member.id === primaryOwnerId && (
+                        <DropdownMenuItem disabled data-testid="team-primary-owner-protected">
+                          {t(locale, "The primary owner's role and access are protected.")}
+                        </DropdownMenuItem>
+                      )}
                       {assignableRoles
-                        .filter((r) => r !== member.role)
+                        .filter((r) => r !== member.role && (member.id !== primaryOwnerId || r === "owner"))
                         .map((r) => (
                           <DropdownMenuItem
                             key={r}
@@ -143,17 +162,21 @@ export function TeamPanel({
                             {t(locale, "Make")} {t(locale, ROLE_LABELS[r])}
                           </DropdownMenuItem>
                         ))}
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        className="cursor-pointer"
-                        onSelect={() =>
-                          member.isActive
-                            ? ask("team.remove", member.name, () => toggleMemberActiveAction(member.id, false), [], "Deactivate")
-                            : run(() => toggleMemberActiveAction(member.id, true))
-                        }
-                      >
-                        {member.isActive ? t(locale, "Deactivate") : t(locale, "Activate")}
-                      </DropdownMenuItem>
+                      {!(member.id === primaryOwnerId && member.isActive) && (
+                        <>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            className="cursor-pointer"
+                            onSelect={() =>
+                              member.isActive
+                                ? ask("team.remove", member.name, () => toggleMemberActiveAction(member.id, false), [], "Deactivate")
+                                : run(() => toggleMemberActiveAction(member.id, true))
+                            }
+                          >
+                            {member.isActive ? t(locale, "Deactivate") : t(locale, "Activate")}
+                          </DropdownMenuItem>
+                        </>
+                      )}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 )}

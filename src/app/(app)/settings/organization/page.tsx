@@ -12,6 +12,7 @@ import { NumberFormatPanel } from "./number-format-panel";
 import { RolesPermissionsPanel } from "./reference-panels";
 import { ZatcaPanel } from "./zatca-panel";
 import { TeamPanel } from "../team/team-panel";
+import { readTeamOwnershipSummary } from "@/lib/team/ownership-gate";
 
 // Print Layout, Seal & Signature, and Terms & Conditions are managed under Preset Management,
 // not Business Settings (they are per-document presets, not company profile fields).
@@ -42,6 +43,8 @@ export default async function OrganizationSettingsPage({ searchParams }: { searc
     .where(eq(bankAccountsTable.orgId, session.orgId))
     .orderBy(asc(bankAccountsTable.name));
   const members = await db.select().from(usersTable).where(eq(usersTable.orgId, session.orgId)).orderBy(asc(usersTable.name));
+  // PO-03A: the read-only user-seat summary and the primary owner — of the session's own company only.
+  const ownership = await readTeamOwnershipSummary(session.orgId);
 
   return (
     <div className="max-w-5xl mx-auto">
@@ -94,7 +97,7 @@ export default async function OrganizationSettingsPage({ searchParams }: { searc
           <NumberFormatPanel locale={locale} org={org} />
         </SettingsNavContent>
         <SettingsNavContent value="team">
-          <TeamPanel locale={locale} members={members} currentUserId={session.userId} currentUserRole={session.role} />
+          <TeamPanel locale={locale} members={members} currentUserId={session.userId} currentUserRole={session.role} ownership={ownership} />
         </SettingsNavContent>
         <SettingsNavContent value="roles-permissions">
           <RolesPermissionsPanel locale={locale} />

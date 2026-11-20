@@ -1,0 +1,185 @@
+import "server-only";
+import { and, asc, eq, inArray, ne, sql } from "drizzle-orm";
+import { db, orgsTable, usersTable, type Role, type Tx } from "@/db";
+import { logActivity } from "@/lib/activity";
+import { t, type Locale } from "@/lib/i18n/dict";
+import { recordSecurityEvent } from "@/lib/security/audit";
+import type { Session } from "@/lib/session";
+import { canAssignRole } from "@/lib/tenant";
+import { lockPrimaryOwnerForTeamChange, TeamProtectionUnavailableError } from "./ownership-gate";
+
+// ---------------------------------------------------------------------------------------------
+// Team changes that can affect a company's ownership (PO-03A, decision O-3): a member's ROLE and whether the member
+// is ACTIVE. The two Team actions (src/app/(app)/settings/team/actions.ts) call these after requireRole; adding a
+// member is unchanged and does not come through here.
+//
+// Each change is ONE READ COMMITTED transaction with a fixed lock order — the same for every customer-user mutation:
+//   1. the company row (orgs) FOR NO KEY UPDATE — serializes every Team change of the company. It is the row and
+//      the mode of the PO-02C access change (they queue), it conflicts with the FOR SHARE that PO-02C.1 session
+//      issuance takes, and it never blocks the KEY SHARE locks of ordinary foreign-key inserts;
+//   2. the actor's and the target's user rows FOR NO KEY UPDATE, in ascending id order, of THIS company only;
+//   3. the primary-owner mapping FOR SHARE (through the ownership gate), read after the user rows — the mapping's
+//      guard trigger locks the user row it names before it accepts a write, so no mapping can appear for a user this
+//      transaction holds without being seen here;
+//   4. every check again on the locked rows (the actor is still an active owner or admin of this company; the
+//      target belongs to it; role rules; the primary owner; the last active owner);
+//   5. the update, then 6. its activity record — in the same transaction.
+// A lock wait longer than TEAM_LOCK_TIMEOUT, a deadlock or any failure rolls everything back and answers a clear,
+// localized message; nothing is ever half-applied. A refused change to the primary owner commits exactly one
+// security event (team.primary_owner_protected) and nothing else.
+// ---------------------------------------------------------------------------------------------
+
+export type TeamChangeResult = { error?: string };
+
+const READ_COMMITTED = { isolationLevel: "read committed" } as const;
+export const TEAM_LOCK_TIMEOUT = "5s";
+const VALID_ROLES: Role[] = ["owner", "admin", "staff"];
+const MANAGERS: Role[] = ["owner", "admin"];
+
+/** English is the dictionary key (src/lib/i18n/dict.ts holds the Saudi Arabic); the first seven are the existing messages. */
+export const TEAM_MESSAGES = {
+  invalidRole: "Invalid role.",
+  aboveOwn: "You can't assign a role above your own.",
+  ownRole: "You can't change your own role.",
+  notFound: "User not found.",
+  memberRole: "You can't change this member's role.",
+  ownAccount: "You can't deactivate your own account.",
+  lastOwner: "The organization must keep at least one active owner.",
+  notManager: "You no longer have permission to manage the team.",
+  primaryRole: "This member is the company's primary owner. Their role can't be changed.",
+  primaryDeactivate: "This member is the company's primary owner and can't be deactivated.",
+  busy: "Another change to this team is in progress. Try again in a moment.",
+  unavailable: "Team changes are unavailable right now. Nothing was changed. Try again later.",
+  failed: "The change couldn't be saved. Nothing was changed.",
+} as const;
+type MessageKey = keyof typeof TEAM_MESSAGES;
+
+/** A refusal decided inside the transaction (it rolls back unless `commit` — only the protected-owner event). */
+class TeamRefusal extends Error {
+  constructor(
+    readonly key: MessageKey,
+    readonly commit = false,
+  ) {
+    super(key);
+    this.name = "TeamRefusal";
+  }
+}
+
+type LockedUser = { id: number; orgId: number; role: string; isActive: boolean };
+
+/** Steps 1–3 and the actor/target part of step 4. */
+async function lockTeamChange(tx: Tx, session: Session, targetId: number) {
+  await tx.execute(sql`select set_config('lock_timeout', ${TEAM_LOCK_TIMEOUT}, true)`);
+  const [company] = await tx.select({ id: orgsTable.id }).from(orgsTable).where(eq(orgsTable.id, session.orgId)).for("no key update");
+  if (!company) throw new TeamRefusal("notManager");
+  const rows: LockedUser[] = await tx
+    .select({ id: usersTable.id, orgId: usersTable.orgId, role: usersTable.role, isActive: usersTable.isActive })
+    .from(usersTable)
+    .where(and(eq(usersTable.orgId, session.orgId), inArray(usersTable.id, [session.userId, targetId])))
+    .orderBy(asc(usersTable.id))
+    .for("no key update");
+  const actor = rows.find((r) => r.id === session.userId);
+  const target = rows.find((r) => r.id === targetId);
+  if (!actor || !actor.isActive || !MANAGERS.includes(actor.role as Role)) throw new TeamRefusal("notManager");
+  if (!target) throw new TeamRefusal("notFound");
+  const primary = await lockPrimaryOwnerForTeamChange(tx, session.orgId);
+  return { actor: { ...actor, role: actor.role as Role }, target, primaryOwnerId: primary?.userId ?? null };
+}
+
+/** Whether the company keeps another active owner besides `exceptUserId` (read under the company-row lock). */
+async function hasOtherActiveOwner(tx: Tx, orgId: number, exceptUserId: number): Promise<boolean> {
+  const others = await tx
+    .select({ id: usersTable.id })
+    .from(usersTable)
+    .where(and(eq(usersTable.orgId, orgId), eq(usersTable.role, "owner"), eq(usersTable.isActive, true), ne(usersTable.id, exceptUserId)))
+    .limit(1);
+  return others.length > 0;
+}
+
+async function protectedOwnerRefusal(tx: Tx, session: Session, targetId: number, change: "role_change" | "deactivation"): Promise<never> {
+  await recordSecurityEvent(
+    { orgId: session.orgId, userId: session.userId, email: session.email, type: "team.primary_owner_protected", severity: "medium", detail: change, metadata: { targetUserId: targetId } },
+    tx,
+  );
+  throw new TeamRefusal(change === "role_change" ? "primaryRole" : "primaryDeactivate", true);
+}
+
+function sqlStateOf(err: unknown): string | undefined {
+  for (let e: unknown = err, depth = 0; e && depth < 4; e = (e as { cause?: unknown }).cause, depth++) {
+    const code = (e as { code?: unknown }).code;
+    if (typeof code === "string") return code;
+  }
+  return undefined;
+}
+
+/** Runs one Team change; every outcome is a localized result, and only a completed change has any effect. */
+async function runTeamChange(locale: Locale, work: (tx: Tx) => Promise<void>): Promise<TeamChangeResult> {
+  const message = (key: MessageKey) => ({ error: t(locale, TEAM_MESSAGES[key]) });
+  let committedRefusal: TeamRefusal | null = null;
+  try {
+    await db.transaction(async (tx) => {
+      try {
+        await work(tx);
+      } catch (err) {
+        // The protected-owner refusal keeps its one security event: return normally so the transaction commits it.
+        if (err instanceof TeamRefusal && err.commit) {
+          committedRefusal = err;
+          return;
+        }
+        throw err;
+      }
+    }, READ_COMMITTED);
+  } catch (err) {
+    if (err instanceof TeamRefusal) return message(err.key);
+    if (err instanceof TeamProtectionUnavailableError) return message("unavailable");
+    const code = sqlStateOf(err);
+    if (code === "55P03" || code === "40P01") return message("busy");
+    console.error(`[team] change failed (rolled back): ${code && /^[0-9A-Z]{5}$/.test(code) ? `SQLSTATE ${code}` : err instanceof Error ? err.name : "unknown"}`);
+    return message("failed");
+  }
+  const refused = committedRefusal as TeamRefusal | null;
+  return refused ? message(refused.key) : {};
+}
+
+const validUserId = (v: unknown): v is number => typeof v === "number" && Number.isSafeInteger(v) && v > 0;
+
+/** Change a member's role (owner/admin only; never your own; never above your own; never the primary owner's). */
+export async function changeTeamMemberRole(session: Session, userId: number, role: Role, locale: Locale): Promise<TeamChangeResult> {
+  // The pre-checks of the existing action, in its order and with its messages (no database access).
+  if (!VALID_ROLES.includes(role)) return { error: t(locale, TEAM_MESSAGES.invalidRole) };
+  if (!canAssignRole(session.role, role)) return { error: t(locale, TEAM_MESSAGES.aboveOwn) };
+  if (userId === session.userId) return { error: t(locale, TEAM_MESSAGES.ownRole) };
+  if (!validUserId(userId)) return { error: t(locale, TEAM_MESSAGES.notFound) };
+  return runTeamChange(locale, async (tx) => {
+    const { actor, target, primaryOwnerId } = await lockTeamChange(tx, session, userId);
+    // The same rules again, on the rows as they are now (a stale page, or a change that committed meanwhile).
+    if (!canAssignRole(actor.role, role)) throw new TeamRefusal("aboveOwn");
+    if (!canAssignRole(actor.role, target.role as Role)) throw new TeamRefusal("memberRole");
+    // O-3: the primary owner stays an owner (a request that leaves them an owner changes nothing protected).
+    if (target.id === primaryOwnerId && role !== "owner") await protectedOwnerRefusal(tx, session, target.id, "role_change");
+    if (target.role === "owner" && target.isActive && role !== "owner" && !(await hasOtherActiveOwner(tx, session.orgId, target.id))) throw new TeamRefusal("lastOwner");
+    await tx.update(usersTable).set({ role, updatedAt: new Date() }).where(and(eq(usersTable.id, target.id), eq(usersTable.orgId, session.orgId)));
+    await logActivity(session, { type: "team.role-changed", description: `Changed a team member's role to ${role}`, entityType: "user", entityId: target.id }, tx);
+  });
+}
+
+/** Activate or deactivate a member (owner/admin only; never yourself; never the primary owner; never the last active owner). */
+export async function setTeamMemberActive(session: Session, userId: number, isActive: boolean, locale: Locale): Promise<TeamChangeResult> {
+  if (userId === session.userId) return { error: t(locale, TEAM_MESSAGES.ownAccount) };
+  if (!validUserId(userId)) return { error: t(locale, TEAM_MESSAGES.notFound) };
+  if (typeof isActive !== "boolean") return { error: t(locale, TEAM_MESSAGES.failed) };
+  return runTeamChange(locale, async (tx) => {
+    const { target, primaryOwnerId } = await lockTeamChange(tx, session, userId);
+    if (!isActive) {
+      if (target.id === primaryOwnerId) await protectedOwnerRefusal(tx, session, target.id, "deactivation");
+      // Never allow the company's last active owner to be deactivated — it would lock everyone out.
+      if (target.role === "owner" && !(await hasOtherActiveOwner(tx, session.orgId, target.id))) throw new TeamRefusal("lastOwner");
+    }
+    await tx.update(usersTable).set({ isActive, updatedAt: new Date() }).where(and(eq(usersTable.id, target.id), eq(usersTable.orgId, session.orgId)));
+    await logActivity(
+      session,
+      { type: isActive ? "team.member-activated" : "team.member-deactivated", description: `Marked a team member ${isActive ? "active" : "inactive"}`, entityType: "user", entityId: target.id },
+      tx,
+    );
+  });
+}
