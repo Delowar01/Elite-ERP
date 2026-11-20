@@ -238,7 +238,7 @@ export const PO03C_NEW: Record<string, string> = byPath([
   ["12836ac5221e148e", "src/components/platform/customer-user-role-control.tsx"],
   ["3a7d4783f0d4fbee", "src/components/platform/primary-owner-transfer.tsx"],
   ["ca0f70c0a245158a", "src/components/platform/user-invitation-dialogs.tsx"],
-  ["f89d518e3440341e", "src/db/staged/platform-user-invitations.ts"],
+  ["d6e2563e4e9ab344", "src/db/staged/platform-user-invitations.ts"],
   ["affeb309c6a352c3", "src/lib/platform/user-invitation-actions.ts"],
   ["72aecb1b3e066a72", "src/lib/platform/user-invitations.ts"],
 ]);

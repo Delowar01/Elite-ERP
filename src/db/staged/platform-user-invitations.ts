@@ -34,7 +34,7 @@ export const userInvitationsTable = pgTable(
     emailNormalized: text("email_normalized").notNull(),
     requestedRole: text("requested_role").notNull(),
     tokenHash: text("token_hash").notNull(),
-    // Default 72 h (Schema.md §5.1/5.2), in PostgreSQL's canonical form (as organization_invitations).
+    // Default 72 h (Schema.md §5.1/5.2), in PostgreSQL's canonical form (the company invitations' default has the same form).
     expiresAt: timestamp("expires_at", { withTimezone: true })
       .notNull()
       .default(sql`(now() + '72:00:00'::interval)`),

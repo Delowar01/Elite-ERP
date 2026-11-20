@@ -281,7 +281,11 @@ async function main(): Promise<void> {
     // name the invitation table only — never the access table.
     // PO-02D3: plus the acceptance core (src/lib/platform/invitation-acceptance.ts): it marks the invitation accepted and
     // inserts the NEW company's one active access row, inside the acceptance transaction (verify:platform-boundary rule 45).
-    ok("only the schema module, the compatibility module, the PO-02B read model and the PO-02C access action reference the new tables — and PO-02D1A's onboarding schema module, (PO-02D2) the invitation read model and service, and (PO-02D3) the acceptance core", JSON.stringify(tableRefs.sort()) === JSON.stringify(["src/db/schema/platform-companies.ts", "src/db/schema/platform-onboarding.ts", "src/lib/platform/companies.ts", "src/lib/platform/company-access-actions.ts", "src/lib/platform/company-access.ts", "src/lib/platform/invitation-acceptance.ts", "src/lib/platform/invitation-actions.ts", "src/lib/platform/invitations.ts"]), tableRefs.join(", "));
+    // PO-03C (sub-batch C): plus the user-invitation rules (src/lib/platform/user-invitations.ts), which READ whether a
+    // pending COMPANY invitation holds an e-mail (one select of organization_invitations) — never the access table, never a
+    // write (verify:platform-boundary rule 49).
+    ok("only the schema module, the compatibility module, the PO-02B read model and the PO-02C access action reference the new tables — and PO-02D1A's onboarding schema module, (PO-02D2) the invitation read model and service, (PO-02D3) the acceptance core and (PO-03C) the user-invitation rules (read-only)", JSON.stringify(tableRefs.sort()) === JSON.stringify(["src/db/schema/platform-companies.ts", "src/db/schema/platform-onboarding.ts", "src/lib/platform/companies.ts", "src/lib/platform/company-access-actions.ts", "src/lib/platform/company-access.ts", "src/lib/platform/invitation-acceptance.ts", "src/lib/platform/invitation-actions.ts", "src/lib/platform/invitations.ts", "src/lib/platform/user-invitations.ts"]) &&
+      !/tenantAccessControlsTable|tenant_access_controls|\.(insert|update|delete)\(\s*(o|organizationInvitationsTable)\s*\)/.test(readFileSync(join(ROOT, "src/lib/platform/user-invitations.ts"), "utf8")), tableRefs.join(", "));
     const acceptanceCore = readFileSync(join(ROOT, "src/lib/platform/invitation-acceptance.ts"), "utf8");
     ok("…PO-02D3: the acceptance core writes the access table exactly once — an insert of the new company's active row — never an update or a delete, and it never changes an existing company's access",
       (acceptanceCore.match(/tenantAccessControlsTable/g) ?? []).length === 2 && (acceptanceCore.match(/\.insert\(tenantAccessControlsTable\)\.values\(\{ orgId: ids\.orgId, accessStatus: "active", createdAt: now, updatedAt: now \}\)/g) ?? []).length === 1 &&
@@ -315,7 +319,10 @@ async function main(): Promise<void> {
         !importsRule("src/lib/platform/u.ts", 'import { a } from "./company-access-extra";'),
     );
     const ruleRefs = files.filter((f) => importsRule(f, readFileSync(join(ROOT, f), "utf8"))).sort();
-    ok("only the PO-02B read model, the PO-02C access action and the customer tenant-access gate import the compatibility module (no other customer auth/session file)", JSON.stringify(ruleRefs) === JSON.stringify(["src/lib/platform/companies.ts", "src/lib/platform/company-access-actions.ts", "src/lib/security/tenant-access-gate.ts"]), ruleRefs.join(", "));
+    // PO-03C (sub-batch C): plus the user-invitation write core, which reads a company's effective access (getTenantAccess)
+    // and takes the PO-02C.1 SHARE lock (lockTenantAccessForSessionIssue) so that a create or re-issue and a suspension
+    // serialize — both through the module, never the access table itself (verify:platform-boundary rules 37 and 49).
+    ok("only the PO-02B read model, the PO-02C access action, the customer tenant-access gate and (PO-03C) the user-invitation write core import the compatibility module (no other customer auth/session file)", JSON.stringify(ruleRefs) === JSON.stringify(["src/lib/platform/companies.ts", "src/lib/platform/company-access-actions.ts", "src/lib/platform/user-invitation-actions.ts", "src/lib/security/tenant-access-gate.ts"]), ruleRefs.join(", "));
   } finally {
     await cL.end().catch(() => undefined);
     await cP.end().catch(() => undefined);
