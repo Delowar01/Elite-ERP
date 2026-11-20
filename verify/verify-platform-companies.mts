@@ -249,7 +249,9 @@ async function main() {
     // platform.companies.invite (the invitation service; verify:platform-invitations).
     // PO-03B appends platform.users.read and platform.users.manage (the customer-user directory and controls;
     // verify:platform-users).
-    ok("PLATFORM_PERMISSIONS gains exactly platform.companies.read (and, from PO-02C, platform.companies.manage_access; from PO-02D2, platform.companies.invite; from PO-03B, platform.users.read and platform.users.manage; from PO-03C, platform.users.manage_roles)", JSON.stringify(guards.PLATFORM_PERMISSIONS) === JSON.stringify(["platform.access", "platform.sessions.manage", "platform.mfa.manage", "platform.companies.read", "platform.companies.manage_access", "platform.companies.invite", "platform.users.read", "platform.users.manage", "platform.users.manage_roles"]));
+    // PO-03C appends platform.users.manage_roles (roles and the primary-owner transfer; verify:platform-owner-transfer) and,
+    // in sub-batch C, platform.users.invite (customer-user invitations; verify:platform-user-invitations).
+    ok("PLATFORM_PERMISSIONS gains exactly platform.companies.read (and, from PO-02C, platform.companies.manage_access; from PO-02D2, platform.companies.invite; from PO-03B, platform.users.read and platform.users.manage; from PO-03C, platform.users.manage_roles and platform.users.invite)", JSON.stringify(guards.PLATFORM_PERMISSIONS) === JSON.stringify(["platform.access", "platform.sessions.manage", "platform.mfa.manage", "platform.companies.read", "platform.companies.manage_access", "platform.companies.invite", "platform.users.read", "platform.users.manage", "platform.users.manage_roles", "platform.users.invite"]));
     const ctx = await guards.authorizePlatformToken(token, "platform.companies.read");
     ok("a live platform session is granted platform.companies.read", ctx.adminId === operator.id);
     await rejects("a permission outside the allowlist (platform.companies.write) → FORBIDDEN", () => guards.authorizePlatformToken(token, "platform.companies.write" as never), is("FORBIDDEN"));

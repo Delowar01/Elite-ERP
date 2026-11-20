@@ -1,13 +1,14 @@
 import { cookies, headers } from "next/headers";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { CircleAlert, Pencil, Receipt, ShieldOff, UserCheck, UserCog, UserMinus, Users } from "lucide-react";
+import { CircleAlert, MailPlus, Pencil, Receipt, ShieldOff, UserCheck, UserCog, UserMinus, Users } from "lucide-react";
 import { AccessPill, Breadcrumbs, DetailPage, DisabledAction, FieldGrid, Interpolated, Ltr, MetricTile, PageState, PlatformStatusTag } from "@/components/platform/companies-kit";
 import { CompanyAccessControl } from "@/components/platform/company-access-dialog";
 import { CompanyTabs, type CompanyTabValue } from "@/components/platform/company-tabs";
 import { pt } from "@/components/platform/i18n";
 import { EmptyPanel, PreviewBadge } from "@/components/platform/page-kit";
 import { PrimaryOwnerTransfer } from "@/components/platform/primary-owner-transfer";
+import { InviteUserControl, UserInvitationRowActions } from "@/components/platform/user-invitation-dialogs";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { Locale } from "@/lib/i18n/dict";
@@ -17,6 +18,7 @@ import { PLATFORM_SESSION_COOKIE } from "@/lib/platform/config";
 import { formatPlatformCount, formatPlatformDate, formatPlatformDateTime } from "@/lib/platform/display";
 import { isPlatformError } from "@/lib/platform/errors";
 import { requirePlatformSession } from "@/lib/platform/guards";
+import { listCompanyUserInvitations, type CompanyUserInvitations } from "@/lib/platform/user-invitations";
 
 // One company (PO-02B): Overview, Access & controls, Users, Subscription (later phase) and Activity,
 // from the allow-listed read model. Loading this page is an audited view ("company.viewed"): if the
@@ -25,6 +27,9 @@ import { requirePlatformSession } from "@/lib/platform/guards";
 // whose server action re-authorizes and steps up on its own; every other action is still disabled.
 // PO-03C: the Users tab's Primary owner panel opens the primary-owner transfer (its own server action,
 // re-authorized and stepped up on its own); a company with no designated primary owner is never transferred.
+// PO-03C (sub-batch C): the Users tab's User invitations panel — only while PLATFORM_USER_INVITATIONS_ENABLED is "true"
+// (otherwise it is absent) — lists the company's open invitations and opens Invite user (its own server action, also
+// re-authorized and stepped up on its own). A missing table or an unreadable list is a note, never a broken page.
 
 type SearchParams = Record<string, string | string[] | undefined>;
 const TABS: CompanyTabValue[] = ["overview", "access", "users", "subscription", "activity"];
@@ -201,7 +206,71 @@ function PrimaryOwnerPanel({ locale, d }: { locale: Locale; d: CompanyDetail }) 
   );
 }
 
-function UsersPanel({ locale, d }: { locale: Locale; d: CompanyDetail }) {
+// PO-03C: what the User invitations panel shows. "off" (the flag) renders nothing at all.
+type UserInvitationsView = { state: "off" } | { state: "not_installed" } | { state: "unavailable" } | { state: "ready"; data: CompanyUserInvitations };
+const INVITE_ROLE_KEY = { admin: "role.admin", staff: "role.staff" } as const;
+
+function UserInvitationsPanel({ locale, d, view }: { locale: Locale; d: CompanyDetail; view: UserInvitationsView }) {
+  if (view.state === "off") return null;
+  return (
+    <section className="card platform-panel" aria-labelledby="company-user-invitations" data-testid="company-user-invitations">
+      <div className="platform-panel-head">
+        <h2 id="company-user-invitations">{pt(locale, "uinv.panel")}</h2>
+        {view.state === "ready" && <InviteUserControl locale={locale} orgId={d.orgId} companyName={d.name} />}
+      </div>
+      <div className="platform-panel-body">
+        {view.state === "not_installed" ? (
+          <p className="platform-cell-sub">{pt(locale, "uinv.notInstalledText")}</p>
+        ) : view.state === "unavailable" ? (
+          <p className="platform-cell-sub">{pt(locale, "uinv.unavailable")}</p>
+        ) : (
+          <>
+            <h3 className="platform-subhead">{pt(locale, "uinv.open")}</h3>
+            {view.data.rows.length ? (
+              <ul className="platform-owner-list" data-testid="company-user-invitations-open">
+                {view.data.rows.map((r) => (
+                  <li key={r.id} className="platform-owner platform-uinv-item">
+                    <div className="platform-uinv-line">
+                      <Link href={`/platform/users/invitations/${r.id}`} className="platform-owner-name platform-inline-link" dir="auto">
+                        {r.name}
+                      </Link>
+                      <PlatformStatusTag locale={locale} domain="invitation" value={r.state} />
+                    </div>
+                    <span className="platform-cell-sub">
+                      <Ltr>{r.email}</Ltr> · {pt(locale, INVITE_ROLE_KEY[r.role])} ·{" "}
+                      <span className="whitespace-nowrap">
+                        <Ltr>{r.reference}</Ltr>
+                      </span>
+                    </span>
+                    <span className="platform-cell-sub">
+                      {pt(locale, "col.expires")}: {formatPlatformDateTime(r.expiresAt, locale)}
+                    </span>
+                    <div className="platform-uinv-actions">
+                      <UserInvitationRowActions locale={locale} target={{ id: r.id, reference: r.reference, email: r.email, state: r.state }} />
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="platform-cell-sub">{pt(locale, "uinv.noneOpen")}</p>
+            )}
+            {view.data.open > view.data.rows.length && (
+              <p className="platform-fine-print mt-4">{pt(locale, "users.ownersShown", { shown: formatPlatformCount(view.data.rows.length), total: formatPlatformCount(view.data.open) })}</p>
+            )}
+            <p className="mt-4">
+              <Link href={`/platform/users/invitations?org=${d.orgId}`} className="platform-inline-link">
+                <MailPlus className="inline size-4 align-text-bottom" aria-hidden /> {pt(locale, "uinv.allForCompany")} (<Ltr>{formatPlatformCount(view.data.total)}</Ltr>)
+              </Link>
+            </p>
+          </>
+        )}
+        <p className="platform-fine-print mt-4">{pt(locale, "uinv.panelNote")}</p>
+      </div>
+    </section>
+  );
+}
+
+function UsersPanel({ locale, d, invitations }: { locale: Locale; d: CompanyDetail; invitations: UserInvitationsView }) {
   return (
     <div className="platform-settings-stack">
       <div className="platform-stat-grid">
@@ -212,6 +281,7 @@ function UsersPanel({ locale, d }: { locale: Locale; d: CompanyDetail }) {
       </div>
       <SeatsPanel locale={locale} d={d} />
       <PrimaryOwnerPanel locale={locale} d={d} />
+      <UserInvitationsPanel locale={locale} d={d} view={invitations} />
       <section className="card platform-panel" aria-labelledby="company-owners">
         <div className="platform-panel-head">
           <h2 id="company-owners">{pt(locale, "users.owners")}</h2>
@@ -362,6 +432,16 @@ export default async function PlatformCompanyPage({ params, searchParams }: { pa
   }
 
   const d = detail;
+  // PO-03C: the company's open user invitations — read only when the flag is on (the read refuses first otherwise).
+  let invitations: UserInvitationsView = { state: "off" };
+  try {
+    invitations = { state: "ready", data: await listCompanyUserInvitations(req, d.orgId) };
+  } catch (err) {
+    if (isPlatformError(err, "UNAUTHORIZED") || isPlatformError(err, "SESSION_EXPIRED")) redirect("/platform/session-expired");
+    if (isPlatformError(err, "USER_INVITATIONS_DISABLED") || isPlatformError(err, "FORBIDDEN")) invitations = { state: "off" };
+    else if (isPlatformError(err, "USER_INVITATIONS_NOT_INSTALLED")) invitations = { state: "not_installed" };
+    else invitations = { state: "unavailable" };
+  }
   const requested = typeof query.tab === "string" && (TABS as string[]).includes(query.tab) ? (query.tab as CompanyTabValue) : null;
   const initial: CompanyTabValue = requested ?? (query.activity ? "activity" : "overview");
 
@@ -388,7 +468,7 @@ export default async function PlatformCompanyPage({ params, searchParams }: { pa
         tabs={[
           { value: "overview", label: pt(locale, "company.overview"), content: <OverviewPanel locale={locale} d={d} /> },
           { value: "access", label: pt(locale, "company.access"), content: <AccessPanel locale={locale} d={d} /> },
-          { value: "users", label: pt(locale, "nav.users"), content: <UsersPanel locale={locale} d={d} /> },
+          { value: "users", label: pt(locale, "nav.users"), content: <UsersPanel locale={locale} d={d} invitations={invitations} /> },
           { value: "subscription", label: pt(locale, "company.subscription"), content: <SubscriptionPanel locale={locale} /> },
           { value: "activity", label: pt(locale, "company.activity"), content: <ActivityPanel locale={locale} d={d} anchored={typeof query.activity === "string" && query.activity !== ""} /> },
         ]}

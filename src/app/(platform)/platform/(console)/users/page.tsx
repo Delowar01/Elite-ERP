@@ -1,7 +1,7 @@
 import { cookies, headers } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Info, SearchX, ShieldCheck, UserCheck, UserMinus, UserPlus, Users } from "lucide-react";
+import { Info, MailPlus, SearchX, ShieldCheck, UserCheck, UserMinus, UserPlus, Users } from "lucide-react";
 import { DisabledAction, Interpolated, Ltr, MetricTile, Pager } from "@/components/platform/companies-kit";
 import { pt } from "@/components/platform/i18n";
 import { ConsolePage, DeniedState, EmptyPanel } from "@/components/platform/page-kit";
@@ -24,6 +24,7 @@ import {
 } from "@/lib/platform/customer-users";
 import { formatPlatformCount, formatPlatformDate } from "@/lib/platform/display";
 import { isPlatformError } from "@/lib/platform/errors";
+import { isPlatformUserInvitationsEnabled } from "@/lib/platform/flags";
 import { requirePlatformSession } from "@/lib/platform/guards";
 
 // Users (PO-03B): the directory of customer users across every company. Server-rendered: search, filters, sorting
@@ -31,7 +32,8 @@ import { requirePlatformSession } from "@/lib/platform/guards";
 // read model (src/lib/platform/customer-users.ts), which re-authorizes each read with platform.users.read. Only
 // account details are shown — never a password hash, two-factor secret, recovery code, session token or customer
 // business record. A user's controls (disable / enable, sign out everywhere) live on the user's own page. Inviting
-// customer users is a later phase: disabled here.
+// customer users is a later phase: disabled here — PO-03C: while PLATFORM_USER_INVITATIONS_ENABLED is "true" the header
+// links to User invitations instead (each company's Invite user lives on that company's Users tab and the list).
 
 type SearchParams = Record<string, string | string[] | undefined>;
 type Loaded<T> = { ok: true; value: T } | { ok: false; code: "FORBIDDEN" | "VALIDATION_FAILED" };
@@ -129,7 +131,16 @@ export default async function PlatformUsersPage({ searchParams }: { searchParams
     locale,
     title: pt(locale, "nav.users"),
     description: pt(locale, "users.desc"),
-    actions: <DisabledAction locale={locale} label={pt(locale, "action.inviteUser")} icon={UserPlus} />,
+    actions: isPlatformUserInvitationsEnabled() ? (
+      <Button asChild variant="secondary">
+        <Link href="/platform/users/invitations" data-testid="users-invitations-link">
+          <MailPlus aria-hidden />
+          {pt(locale, "uinv.all")}
+        </Link>
+      </Button>
+    ) : (
+      <DisabledAction locale={locale} label={pt(locale, "action.inviteUser")} icon={UserPlus} />
+    ),
   };
   if (!metrics.ok || (!list.ok && list.code === "FORBIDDEN")) {
     return (

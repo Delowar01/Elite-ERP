@@ -31,7 +31,10 @@ import { validatePlatformSession, type PlatformSessionContext } from "./session"
 // primary ownership, always with a reason and a fresh TOTP code, through the shared customer-user service under the
 // PO-03A lock order, ending the affected accounts' sessions and audited in the same transaction
 // (src/lib/platform/customer-user-actions.ts). It grants no impersonation, password reset or custom role.
-export const PLATFORM_PERMISSIONS = ["platform.access", "platform.sessions.manage", "platform.mfa.manage", "platform.companies.read", "platform.companies.manage_access", "platform.companies.invite", "platform.users.read", "platform.users.manage", "platform.users.manage_roles"] as const;
+// PO-03C (sub-batch C): platform.users.invite — create, revoke and re-issue invitations of NEW users into EXISTING
+// companies (admin or staff only; copy-link only; behind PLATFORM_USER_INVITATIONS_ENABLED, default off, and the staged
+// user_invitations table — src/lib/platform/user-invitation-actions.ts). Acceptance does not exist (PO-04).
+export const PLATFORM_PERMISSIONS = ["platform.access", "platform.sessions.manage", "platform.mfa.manage", "platform.companies.read", "platform.companies.manage_access", "platform.companies.invite", "platform.users.read", "platform.users.manage", "platform.users.manage_roles", "platform.users.invite"] as const;
 export type PlatformPermission = (typeof PLATFORM_PERMISSIONS)[number];
 const OWNER_PERMISSIONS: ReadonlySet<string> = new Set(PLATFORM_PERMISSIONS);
 

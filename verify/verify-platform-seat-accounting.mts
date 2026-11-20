@@ -297,7 +297,8 @@ try {
     const importers = files.filter((f) => /from "(@\/lib\/platform|\.)\/seat-accounting"/.test(code(f))).map(rel).sort();
     // PO-03B: the customer-user read model (src/lib/platform/customer-users.ts) reads it too — one batch read per directory
     // page and one for a user page, display only; the user controls never read it (N5).
-    ok("N1 only the Team ownership gate, the console read model and (PO-03B) the customer-user read model use the seat service", same(importers, ["src/lib/platform/companies.ts", "src/lib/platform/customer-users.ts", "src/lib/team/ownership-gate.ts"]), importers.join(", "));
+    // PO-03C (sub-batch C): the user-invitation write core reads it for the create PREVIEW only (display: seats refuse nothing).
+    ok("N1 only the Team ownership gate, the console read model, (PO-03B) the customer-user read model and (PO-03C) the user-invitation preview use the seat service", same(importers, ["src/lib/platform/companies.ts", "src/lib/platform/customer-users.ts", "src/lib/platform/user-invitation-actions.ts", "src/lib/team/ownership-gate.ts"]), importers.join(", "));
     ok("N2 no seat-enforcement function exists anywhere (assertUserSeatAvailable is a later, separately approved phase)", !files.some((f) => /assertUserSeatAvailable|enforceSeat|seatLimitExceeded/i.test(code(f))));
     ok("N3 the service declares itself display-only (`enforced: false`, a literal type) and the gate exposes reads only",
       /enforced: false;/.test(code(join(ROOT, "src/lib/platform/seat-accounting.ts"))) && same([...code(join(ROOT, "src/lib/team/ownership-gate.ts")).matchAll(/^export (?:async )?(?:function|class) (\w+)/gm)].map((m) => m[1]).sort(), ["TeamProtectionUnavailableError", "lockPrimaryOwnerForTeamChange", "readTeamOwnershipSummary"]));

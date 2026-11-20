@@ -240,8 +240,12 @@ try {
       /changeTeamMemberRole\(session, userId, role, await getLocale\(\)\)/.test(code(join(ROOT, "src/app/(app)/settings/team/actions.ts"))) &&
         /setTeamMemberActive\(session, userId, isActive, await getLocale\(\)\)/.test(code(join(ROOT, "src/app/(app)/settings/team/actions.ts"))) &&
         (code(join(ROOT, "src/app/(app)/settings/team/actions.ts")).match(/\.update\(usersTable\)/g) ?? []).length === 0);
-    ok("N7 no customer-user invitation system exists yet (no user_invitations table or symbol) — no pending invitation can occupy a seat",
-      !files.some((f) => /\buser_invitations\b|\buserInvitationsTable\b/.test(code(f))));
+    // PO-03C (sub-batch C): customer-user invitations now exist as a STAGED table (src/db/staged, outside the platform SQL
+    // chain): its symbol appears only in that declaration, the user-invitation read model and write core, and the seat
+    // core — which counts an open, unexpired invitation as a pending seat (display only; verify:platform-user-invitations T).
+    const uinvFiles = files.filter((f) => /\buser_invitations\b|\buserInvitationsTable\b/.test(code(f))).map((f) => relative(ROOT, f)).sort();
+    ok("N7 the customer-user invitation system is only the staged table (PO-03C): its declaration, read model, write core and the seat core name it — nothing else (no Team or customer code); a pending invitation occupies a seat only in the display",
+      same(uinvFiles, ["src/db/staged/platform-user-invitations.ts", "src/lib/platform/seat-accounting.ts", "src/lib/platform/user-invitation-actions.ts", "src/lib/platform/user-invitations.ts"]), uinvFiles.join(", "));
   }
 
   // =====================================================================================================================

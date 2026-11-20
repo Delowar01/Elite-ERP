@@ -155,9 +155,10 @@ ok("edge gate reads AUTH_SECRET only to refuse a shared secret", (gateSrc.match(
 
 // 11. Console imports are allow-listed: no customer session/auth/tenant code, no direct database.
 const APP_ALLOWED = [/^next(\/|$)/, /^react$/, /^lucide-react$/, /^zod$/, /^@\/lib\/platform\//, /^@\/components\/platform\//, /^@\/components\/ui\//, /^@\/components\/brand\//, /^@\/lib\/i18n\/(server|dict)$/, /^@\/lib\/theme$/, /^@\/app\/\((app|auth)\)\/[a-z-]+\.css$/, /^@\/app\/\(platform\)\/platform\.css$/];
-const UI_ALLOWED = [/^next(\/|$)/, /^react$/, /^lucide-react$/, /^sonner$/, /^@radix-ui\/react-dialog$/, /^@\/components\/ui\//, /^@\/components\/brand\//, /^@\/components\/layout\/(brand-mark|language-switcher|theme-toggle|page-header)$/, /^@\/lib\/utils$/, /^@\/lib\/i18n\/dict$/, /^@\/lib\/theme$/, /^@\/app\/\(platform\)\/(auth|security|company-access|invitation|customer-user|customer-user-role)-actions$/, /^\.\/[a-z0-9-]+$/];
+const UI_ALLOWED = [/^next(\/|$)/, /^react$/, /^lucide-react$/, /^sonner$/, /^@radix-ui\/react-dialog$/, /^@\/components\/ui\//, /^@\/components\/brand\//, /^@\/components\/layout\/(brand-mark|language-switcher|theme-toggle|page-header)$/, /^@\/lib\/utils$/, /^@\/lib\/i18n\/dict$/, /^@\/lib\/theme$/, /^@\/app\/\(platform\)\/(auth|security|company-access|invitation|customer-user|customer-user-role|user-invitation)-actions$/, /^\.\/[a-z0-9-]+$/];
 // PO-03B: (customer-user)-actions — the user controls (src/components/platform/customer-user-controls.tsx) call only their own three server actions (rule 47).
 // PO-03C: (customer-user-role)-actions — the role control and the primary-owner transfer call only their own four server actions (rule 48).
+// PO-03C (sub-batch C): (user-invitation)-actions — the user-invitation dialogs call only their own five server actions (rule 49).
 // PO-02D2: the invitation dialog alone may also import the two client-safe catalogues /register uses (pure data, no imports).
 const UI_ALLOWED_FOR = { [join(root, "src/components/platform/invitation-dialogs.tsx")]: [/^@\/lib\/geo\/countries$/, /^@\/lib\/currency\/currencies$/] };
 const badApp = consoleApp.flatMap((f) => [...importsOf(read(f)), ...sideEffectImports(read(f))].filter((s) => !APP_ALLOWED.some((re) => re.test(s))).map((s) => `${rel(f)} → ${s}`));
@@ -173,7 +174,8 @@ ok("no customer route, component or library imports any platform module (except 
 // PO-02D2: the five invitation cores (src/lib/platform/invitation-actions.ts) join the list; rule 44 pins their order.
 // PO-03B: the three customer-user cores (src/lib/platform/customer-user-actions.ts) join the list; rule 47 pins their order.
 // PO-03C: the four role / primary-owner transfer cores (the same module) join the list; rule 48 pins their order.
-const CORES = /\b(signInCore|signOutCore|revokeSessionCore|signOutOtherSessionsCore|regenerateRecoveryCodesCore|emergencyContainmentCore|setCompanyAccessCore|readCompanyAccessCore|previewCompanyInvitation|createCompanyInvitation|revokeCompanyInvitation|reissueCompanyInvitation|readCompanyInvitation|readCustomerUserStateCore|setCustomerUserStatusCore|revokeCustomerUserSessionsCore|readCustomerUserRoleStateCore|changeCustomerUserRoleCore|readPrimaryOwnerTransferOptionsCore|transferPrimaryOwnerCore)\(/;
+// PO-03C (sub-batch C): the five user-invitation cores (src/lib/platform/user-invitation-actions.ts) join the list; rule 49 pins their order.
+const CORES = /\b(signInCore|signOutCore|revokeSessionCore|signOutOtherSessionsCore|regenerateRecoveryCodesCore|emergencyContainmentCore|setCompanyAccessCore|readCompanyAccessCore|previewCompanyInvitation|createCompanyInvitation|revokeCompanyInvitation|reissueCompanyInvitation|readCompanyInvitation|readCustomerUserStateCore|setCustomerUserStatusCore|revokeCustomerUserSessionsCore|readCustomerUserRoleStateCore|changeCustomerUserRoleCore|readPrimaryOwnerTransferOptionsCore|transferPrimaryOwnerCore|previewUserInvitation|createUserInvitation|revokeUserInvitation|reissueUserInvitation|readUserInvitation)\(/;
 const actionFiles = consoleApp.filter((f) => /^\s*"use server";/.test(read(f)));
 const unguardedActions = actionFiles.flatMap((f) => {
   const src = read(f);
@@ -182,7 +184,7 @@ const unguardedActions = actionFiles.flatMap((f) => {
   const unauth = parts.filter((p) => p.startsWith("export async function") && !CORES.test(p)).map((p) => `${rel(f)}: ${p.slice(22, 60)}`);
   return [...stray, ...unauth];
 });
-ok("every exported server action in src/app/(platform) runs through a console core (and exports nothing else) — auth, security, (PO-02C) company access, (PO-02D2) invitations, (PO-03B) customer users and (PO-03C) customer-user roles and the primary-owner transfer", actionFiles.length === 6 && unguardedActions.length === 0, unguardedActions.join(", ") || actionFiles.map(rel).join(", "));
+ok("every exported server action in src/app/(platform) runs through a console core (and exports nothing else) — auth, security, (PO-02C) company access, (PO-02D2) invitations, (PO-03B) customer users, (PO-03C) customer-user roles and the primary-owner transfer, and (PO-03C sub-batch C) customer-user invitations", actionFiles.length === 7 && unguardedActions.length === 0, unguardedActions.join(", ") || actionFiles.map(rel).join(", "));
 const coreSrc = read(join(root, "src/lib/platform/console.ts"));
 ok("console mutations check the flag, then same-origin, then the live session", /async function authorizeMutation[\s\S]{0,200}assertPlatformConsoleEnabled\(\);\s*assertSameOrigin\(req\.headers\);\s*return authorizePlatformToken\(/.test(coreSrc) && (coreSrc.match(/authorizeMutation\(req,/g) ?? []).length === 4 && /signInCore[\s\S]{0,200}assertSameOrigin/.test(coreSrc) && /signOutCore[\s\S]{0,200}assertSameOrigin/.test(coreSrc));
 
@@ -293,7 +295,9 @@ const tenantTableRefs = consoleCode.filter((f) => /\b(orgsTable|usersTable)\b/.t
 // PO-03A: and the seat service, which counts one company's users (orgId, isActive only — rule 46) and writes nothing.
 // PO-03B: and the customer-user read model (allow-listed columns, read only — rule 47). The user controls name no customer
 // table: their writes are the shared service's (src/lib/team/customer-user-core.ts).
-ok("only companies.ts, company-access.ts, (PO-02C) company-access-actions.ts, (PO-02D2) invitations.ts, (PO-03A) seat-accounting.ts and (PO-03B) customer-users.ts reference orgsTable / usersTable in platform code", JSON.stringify(tenantTableRefs.map(rel).sort()) === JSON.stringify([join("src", "lib", "platform", "companies.ts"), join("src", "lib", "platform", "company-access-actions.ts"), join("src", "lib", "platform", "company-access.ts"), join("src", "lib", "platform", "customer-users.ts"), join("src", "lib", "platform", "invitations.ts"), join("src", "lib", "platform", "seat-accounting.ts")]), tenantTableRefs.map(rel).join(", "));
+// PO-03C (sub-batch C): and the user-invitation read model and write core — orgsTable only, to name the invitation's
+// company (id, name) and to check that it exists; neither names usersTable, and neither writes either table (rule 49).
+ok("only companies.ts, company-access.ts, (PO-02C) company-access-actions.ts, (PO-02D2) invitations.ts, (PO-03A) seat-accounting.ts, (PO-03B) customer-users.ts and (PO-03C) user-invitations.ts / user-invitation-actions.ts reference orgsTable / usersTable in platform code", JSON.stringify(tenantTableRefs.map(rel).sort()) === JSON.stringify([join("src", "lib", "platform", "companies.ts"), join("src", "lib", "platform", "company-access-actions.ts"), join("src", "lib", "platform", "company-access.ts"), join("src", "lib", "platform", "customer-users.ts"), join("src", "lib", "platform", "invitations.ts"), join("src", "lib", "platform", "seat-accounting.ts"), join("src", "lib", "platform", "user-invitation-actions.ts"), join("src", "lib", "platform", "user-invitations.ts")]), tenantTableRefs.map(rel).join(", "));
 const invitationsLibCode = code(join(root, "src/lib/platform/invitations.ts"));
 ok("…PO-02D2: invitations.ts reads users.email only (the case-insensitive collision check) and orgs.name only (the name collision count), and writes neither",
   JSON.stringify([...new Set(invitationsLibCode.match(/usersTable\.\w+/g) ?? [])]) === JSON.stringify(["usersTable.email"]) && JSON.stringify([...new Set(invitationsLibCode.match(/orgsTable\.\w+/g) ?? [])]) === JSON.stringify(["orgsTable.name"]) &&
@@ -335,7 +339,8 @@ const inviteUsers = consoleCode.filter((f) => /"platform\.companies\.invite"/.te
 ok("the company permissions are exactly platform.companies.read, (PO-02C) platform.companies.manage_access — which only the access action checks — and (PO-02D2) platform.companies.invite, which only the invitation service checks; no other company permission exists",
   // PO-03B: plus platform.users.read and platform.users.manage (rule 47 pins the modules that check them).
   // PO-03C: plus platform.users.manage_roles (rule 48 pins the modules that check it).
-  /PLATFORM_PERMISSIONS = \["platform\.access", "platform\.sessions\.manage", "platform\.mfa\.manage", "platform\.companies\.read", "platform\.companies\.manage_access", "platform\.companies\.invite", "platform\.users\.read", "platform\.users\.manage", "platform\.users\.manage_roles"\] as const;/.test(guardsSrc) &&
+  // PO-03C (sub-batch C): plus platform.users.invite (rule 49 pins the module that checks it).
+  /PLATFORM_PERMISSIONS = \["platform\.access", "platform\.sessions\.manage", "platform\.mfa\.manage", "platform\.companies\.read", "platform\.companies\.manage_access", "platform\.companies\.invite", "platform\.users\.read", "platform\.users\.manage", "platform\.users\.manage_roles", "platform\.users\.invite"\] as const;/.test(guardsSrc) &&
     !/platform\.companies\.(write|update|suspend|edit|delete|accept|manage(?!_access\b)|invite(?!"))/.test(consoleCode.map(code).join("\n")) &&
     JSON.stringify(manageAccessUsers) === JSON.stringify([join("src", "lib", "platform", "company-access-actions.ts"), join("src", "lib", "platform", "guards.ts")]) &&
     JSON.stringify(inviteUsers) === JSON.stringify([join("src", "lib", "platform", "guards.ts"), join("src", "lib", "platform", "invitation-actions.ts")]),
@@ -352,10 +357,11 @@ ok("a failed view record is reported as an incident and re-thrown (never swallow
 // 25. Every console page, at any depth, checks the platform session itself; company pages read only the read model.
 const allConsolePages = consoleApp.filter((f) => /\(console\)\/.+\/page\.tsx$/.test(f));
 const unguardedNested = allConsolePages.filter((f) => !/await requirePlatformSession\(\)/.test(read(f)));
-ok("every page.tsx under (console), nested routes included, awaits requirePlatformSession() — nine since PO-02D2 added the invitation detail, ten since PO-03B added the user page", allConsolePages.length === 10 && unguardedNested.length === 0, unguardedNested.map(rel).join(", ") || String(allConsolePages.length));
+ok("every page.tsx under (console), nested routes included, awaits requirePlatformSession() — nine since PO-02D2 added the invitation detail, ten since PO-03B added the user page, twelve since PO-03C added the user-invitation list and detail", allConsolePages.length === 12 && unguardedNested.length === 0, unguardedNested.map(rel).join(", ") || String(allConsolePages.length));
 const pageImports = companyPages.flatMap((f) => importsOf(read(f)).filter((s) => s.startsWith("@/lib/platform/")).map((s) => `${rel(f)} → ${s}`));
 // PO-02D2: plus the invitation flag (flags) and the invitation history read model (invitations) — never the mutation cores.
-ok("company pages and the dashboard read data only through the read models (companies, PO-02D2 invitations) plus config, display, errors, flags, guards", pageImports.every((x) => /→ @\/lib\/platform\/(companies|config|display|errors|flags|guards|invitations)$/.test(x)), pageImports.filter((x) => !/→ @\/lib\/platform\/(companies|config|display|errors|flags|guards|invitations)$/.test(x)).join(", "));
+// PO-03C (sub-batch C): plus the user-invitation read model (user-invitations: the company's open invitations), never its write core.
+ok("company pages and the dashboard read data only through the read models (companies, PO-02D2 invitations, PO-03C user-invitations) plus config, display, errors, flags, guards", pageImports.every((x) => /→ @\/lib\/platform\/(companies|config|display|errors|flags|guards|invitations|user-invitations)$/.test(x)), pageImports.filter((x) => !/→ @\/lib\/platform\/(companies|config|display|errors|flags|guards|invitations|user-invitations)$/.test(x)).join(", "));
 
 // 26. Later-phase company actions never operate: no POST, no server action, disabled controls only.
 const companyPageCode = companyPages.map(code).join("\n");
@@ -495,10 +501,12 @@ ok("37. session issuance reads the company's access under a SHARE lock on its or
   inOrder(lockFn, [/export async function lockTenantAccessForSessionIssue\(tx: Tx, orgId: number\): Promise<TenantAccess \| null> \{/, /await tx\.select\(\{ id: orgsTable\.id \}\)\.from\(orgsTable\)\.where\(eq\(orgsTable\.id, orgId\)\)\.for\("share"\);/, /return getTenantAccess\(orgId, tx\);/]) &&
     (accessSrc.match(/\.for\(/g) ?? []).length === 1);
 const lockUsers = (name) => allSrc.filter((f) => new RegExp(`\\b${name}\\b`).test(code(f))).map(rel).sort();
-ok("…the gate wraps it fail-closed (missing access objects → TenantAccessUnavailableError); only the sign-in actions call the wrapper",
+// PO-03C (sub-batch C): the user-invitation write core takes the same SHARE lock (lockTenantAccessForSessionIssue, unwrapped:
+// a missing access object is its own failure there) so that a create or re-issue and a suspension serialize — rule 49.
+ok("…the gate wraps it fail-closed (missing access objects → TenantAccessUnavailableError); only the sign-in actions call the wrapper; (PO-03C) the user-invitation writes call the lock itself",
   /export async function lockOrgAccessForSessionIssue\(tx: SessionIssueTx, orgId: number\): Promise<"active" \| "suspended"> \{\s*try \{\s*return accessAllows\(await lockTenantAccessForSessionIssue\(tx, orgId\)\) \? "active" : "suspended";\s*\} catch \(err\) \{\s*failClosed\(err\);/.test(gateText) &&
     /function failClosed\(err: unknown\): never \{\s*if \(MISSING_OBJECT_CODES\.has\(sqlStateOf\(err\) \?\? ""\)\) \{[\s\S]*?throw new TenantAccessUnavailableError\(\);\s*\}\s*throw err;\s*\}/.test(gateText) &&
-    JSON.stringify(lockUsers("lockTenantAccessForSessionIssue")) === JSON.stringify([join("src", "lib", "platform", "company-access.ts"), join("src", "lib", "security", "tenant-access-gate.ts")]) &&
+    JSON.stringify(lockUsers("lockTenantAccessForSessionIssue")) === JSON.stringify([join("src", "lib", "platform", "company-access.ts"), join("src", "lib", "platform", "user-invitation-actions.ts"), join("src", "lib", "security", "tenant-access-gate.ts")]) &&
     JSON.stringify(lockUsers("lockOrgAccessForSessionIssue")) === JSON.stringify([join("src", "app", "(auth)", "actions.ts"), join("src", "lib", "security", "tenant-access-gate.ts")]),
   `${lockUsers("lockTenantAccessForSessionIssue").join(", ")} | ${lockUsers("lockOrgAccessForSessionIssue").join(", ")}`);
 ok("…the access action keeps its FOR NO KEY UPDATE organization lock (not strengthened — foreign-key KEY SHARE checks of ordinary inserts stay unblocked) and runs its transaction at READ COMMITTED explicitly",
@@ -541,15 +549,17 @@ ok("…no application code (comments ignored) names an onboarding table or its D
 // 39. No permission and no route but the named ones: PO-02D2's console invitation detail and PO-02D3's /register/accept.
 const d1GuardsSrc = read(join(root, "src/lib/platform/guards.ts"));
 const permsLine = (d1GuardsSrc.match(/export const PLATFORM_PERMISSIONS = \[([^\]]*)\] as const;/) ?? ["", "(not found)"])[1];
-ok("39. PO-02D1A: the platform permission list is unchanged except (PO-02D2) platform.companies.invite, (PO-03B) platform.users.read / platform.users.manage and (PO-03C) platform.users.manage_roles — no package, subscription, Trial or acceptance permission", permsLine === `"platform.access", "platform.sessions.manage", "platform.mfa.manage", "platform.companies.read", "platform.companies.manage_access", "platform.companies.invite", "platform.users.read", "platform.users.manage", "platform.users.manage_roles"`, permsLine);
+ok("39. PO-02D1A: the platform permission list is unchanged except (PO-02D2) platform.companies.invite, (PO-03B) platform.users.read / platform.users.manage, (PO-03C) platform.users.manage_roles and (PO-03C sub-batch C) platform.users.invite — no package, subscription, Trial or acceptance permission", permsLine === `"platform.access", "platform.sessions.manage", "platform.mfa.manage", "platform.companies.read", "platform.companies.manage_access", "platform.companies.invite", "platform.users.read", "platform.users.manage", "platform.users.manage_roles", "platform.users.invite"`, permsLine);
 const onboardingRoutes = walk(join(root, "src/app")).map(rel).filter((p) => /\/(page|route)\.tsx?$/.test(p) && /invit|accept|onboard|subscri|packag|trial|join|regist/i.test(p)).sort();
 // PO-02D3: plus /register/accept — in a route group of its own, (invite), which holds exactly its four files (no layout,
 // so the (auth) layout's signed-in redirect can never carry the link's fragment to another URL).
 const ACCEPT_ROUTE_FILES = ["accept-invitation.tsx", "actions.ts", "copy.ts", "page.tsx"].map((n) => join("src", "app", "(invite)", "register", "accept", n));
 const acceptDirFiles = walk(join(root, "src/app")).map(rel).filter((p) => /[\\/]accept[\\/]/.test(p)).sort();
 const inviteGroup = existsSync(join(root, "src/app/(invite)")) ? walk(join(root, "src/app/(invite)")).map(rel).sort() : [];
-ok("…the only invitation-, package-, subscription- or registration-named routes are the existing /register, the two console previews, (PO-02D2) the console invitation detail and (PO-02D3) /register/accept — in its own route group (invite) holding exactly its four files; nothing under src/app/(auth)/register/accept",
-  JSON.stringify(onboardingRoutes) === JSON.stringify([join("src", "app", "(auth)", "register", "page.tsx"), join("src", "app", "(invite)", "register", "accept", "page.tsx"), join("src", "app", "(platform)", "platform", "(console)", "companies", "invitations", "[invitationId]", "page.tsx"), join("src", "app", "(platform)", "platform", "(console)", "packages", "page.tsx"), join("src", "app", "(platform)", "platform", "(console)", "subscribers", "page.tsx")].sort()) &&
+// PO-03C (sub-batch C): plus the console's user-invitation list and detail. No /join route: a user invitation's link
+// (/join/accept#t=…) is served by nothing until PO-04 (rule 49).
+ok("…the only invitation-, package-, subscription- or registration-named routes are the existing /register, the two console previews, (PO-02D2) the console invitation detail, (PO-02D3) /register/accept — in its own route group (invite) holding exactly its four files — and (PO-03C) the console user-invitation list and detail; nothing under src/app/(auth)/register/accept",
+  JSON.stringify(onboardingRoutes) === JSON.stringify([join("src", "app", "(auth)", "register", "page.tsx"), join("src", "app", "(invite)", "register", "accept", "page.tsx"), join("src", "app", "(platform)", "platform", "(console)", "companies", "invitations", "[invitationId]", "page.tsx"), join("src", "app", "(platform)", "platform", "(console)", "packages", "page.tsx"), join("src", "app", "(platform)", "platform", "(console)", "subscribers", "page.tsx"), join("src", "app", "(platform)", "platform", "(console)", "users", "invitations", "[invitationId]", "page.tsx"), join("src", "app", "(platform)", "platform", "(console)", "users", "invitations", "page.tsx")].sort()) &&
     !existsSync(join(root, "src/app/(auth)/register/accept")) && JSON.stringify(acceptDirFiles) === JSON.stringify(ACCEPT_ROUTE_FILES) && JSON.stringify(inviteGroup) === JSON.stringify(ACCEPT_ROUTE_FILES),
   `${onboardingRoutes.join(", ")} | ${acceptDirFiles.join(", ")}`);
 
@@ -859,10 +869,11 @@ const gateSrc46 = read(OWNERSHIP_GATE);
 const ownershipGateImports = [...new Set([...importsOf(gateSrc46), ...sideEffectImports(gateSrc46)])].sort();
 const coreUsers46 = (spec, local) => allSrc.filter((f) => importsOf(read(f)).some((s) => s === spec || (under(f, "src/lib/platform") && s === local))).map(rel).sort();
 // PO-03B: inside src/lib/platform the customer-user read model (customer-users.ts) reads both cores too — display only.
-ok("46. PO-03A: the Team ownership gate imports exactly server-only, the database handle, its types and the TWO read-only platform cores; outside src/lib/platform nothing else imports either core, inside it only the company read model and (PO-03B) the customer-user read model do",
+// PO-03C (sub-batch C): and the user-invitation write core reads the seat core for its PREVIEW only (display: nothing is refused by seats).
+ok("46. PO-03A: the Team ownership gate imports exactly server-only, the database handle, its types and the TWO read-only platform cores; outside src/lib/platform nothing else imports either core, inside it only the company read model, (PO-03B) the customer-user read model and (PO-03C) the user-invitation preview (seat core only) do",
   JSON.stringify(ownershipGateImports) === JSON.stringify(["./seat-summary-types", "@/db", "@/lib/platform/primary-owners", "@/lib/platform/seat-accounting", "server-only"]) &&
     JSON.stringify(coreUsers46("@/lib/platform/primary-owners", "./primary-owners")) === JSON.stringify([join("src", "lib", "platform", "companies.ts"), join("src", "lib", "platform", "customer-users.ts"), rel(OWNERSHIP_GATE)].sort()) &&
-    JSON.stringify(coreUsers46("@/lib/platform/seat-accounting", "./seat-accounting")) === JSON.stringify([join("src", "lib", "platform", "companies.ts"), join("src", "lib", "platform", "customer-users.ts"), rel(OWNERSHIP_GATE)].sort()),
+    JSON.stringify(coreUsers46("@/lib/platform/seat-accounting", "./seat-accounting")) === JSON.stringify([join("src", "lib", "platform", "companies.ts"), join("src", "lib", "platform", "customer-users.ts"), join("src", "lib", "platform", "user-invitation-actions.ts"), rel(OWNERSHIP_GATE)].sort()),
   `${ownershipGateImports.join(", ")} | ${coreUsers46("@/lib/platform/primary-owners", "./primary-owners")} | ${coreUsers46("@/lib/platform/seat-accounting", "./seat-accounting")}`);
 const gateCallers = allSrc.filter((f) => importsOf(read(f)).some((s) => s === "@/lib/team/ownership-gate" || (under(f, "src/lib/team") && s === "./ownership-gate"))).map(rel).sort();
 // PO-03B: the locked mapping read moved, unchanged, into the shared customer-user service (src/lib/team/customer-user-core.ts),
@@ -880,13 +891,20 @@ ok("…the gate has exactly three importers: the Business Settings page (session
   gateCallers.join(", "));
 const poCore = code(PO_CORE);
 const seatCore = code(SEAT_CORE);
-ok("…both platform cores are server-only and READ-ONLY: no insert, update or delete, no environment read; the seat core takes no lock; the primary-owner core takes exactly one, FOR SHARE, in lockPrimaryOwnerMapping; the foundation is asked of the catalog (to_regclass on the unqualified names)",
+// PO-03C (sub-batch C): the seat core also reads the STAGED user_invitations declaration (src/db/staged) and asks the catalog
+// whether that table exists (to_regclass('user_invitations')) before counting reservations.
+ok("…both platform cores are server-only and READ-ONLY: no insert, update or delete, no environment read; the seat core takes no lock; the primary-owner core takes exactly one, FOR SHARE, in lockPrimaryOwnerMapping; the foundation is asked of the catalog (to_regclass on the unqualified names; PO-03C also user_invitations)",
   [poCore, seatCore].every((s) => /^import "server-only";/.test(s.trim()) && !/\.(insert|update|delete)\(|\b(insert\s+into|delete\s+from)\b|process\.env/i.test(s)) && !/\.for\(/.test(seatCore) &&
     (poCore.match(/\.for\(/g) ?? []).length === 1 && /export async function lockPrimaryOwnerMapping\(tx: Tx, orgId: number\)[\s\S]*?\.limit\(2\)\.for\("share"\);/.test(poCore) &&
     /to_regclass\('tenant_primary_owners'\) is not null as present/.test(poCore) && /to_regclass\('tenant_subscriptions'\)[\s\S]*to_regclass\('subscription_package_versions'\)[\s\S]*to_regclass\('subscription_packages'\)/.test(seatCore) &&
-    JSON.stringify(importsOf(poCore).sort()) === JSON.stringify(["./flags", "@/db", "drizzle-orm"]) && JSON.stringify(importsOf(seatCore).sort()) === JSON.stringify(["@/db", "drizzle-orm"]));
-ok("…seat accounting is display only: `enforced: false`, pending invitations counted as 0 (none exists), the current subscription's seats snapshot as the only allowance — and no seat-enforcement function exists anywhere",
-  /enforced: false;/.test(seatCore) && /enforced: false,/.test(seatCore) && /computeSeatAccounting\(orgId, \{ total: Number\(counts\?\.total \?\? 0\), active: Number\(counts\?\.active \?\? 0\) \}, 0, allowance\)/.test(seatCore) &&
+    /to_regclass\('user_invitations'\) is not null as present/.test(seatCore) &&
+    JSON.stringify(importsOf(poCore).sort()) === JSON.stringify(["./flags", "@/db", "drizzle-orm"]) && JSON.stringify(importsOf(seatCore).sort()) === JSON.stringify(["@/db", "@/db/staged/platform-user-invitations", "drizzle-orm"]));
+// PO-03C (sub-batch C): the pending term is now the open, unexpired user invitations whose e-mail no user holds
+// (pendingReservations; 0 where the staged table is absent) — the same term in the single and the batched read.
+ok("…seat accounting is display only: `enforced: false`, pending invitations counted from the open, unexpired user invitations whose e-mail no user holds (PO-03C; 0 where none can exist), the current subscription's seats snapshot as the only allowance — and no seat-enforcement function exists anywhere",
+  /enforced: false;/.test(seatCore) && /enforced: false,/.test(seatCore) && /computeSeatAccounting\(orgId, \{ total: Number\(counts\?\.total \?\? 0\), active: Number\(counts\?\.active \?\? 0\) \}, pending, allowance\)/.test(seatCore) &&
+    /const pending = \(await pendingReservations\(executor, \[orgId\], at\)\)\.get\(orgId\) \?\? 0;/.test(seatCore) && /reserved\.get\(orgId\) \?\? 0, allowances\.get\(orgId\)/.test(seatCore) &&
+    inOrder(fnBodies(read(SEAT_CORE)).find((f) => f.name === "pendingReservations")?.body ?? "", [/if \(!\(await userInvitationReservationsInstalled\(executor\)\)\) return new Map\(\);/, /inArray\(ui\.orgId, orgIds\),/, /isNull\(ui\.acceptedAt\),/, /isNull\(ui\.revokedAt\),/, /sql`\$\{ui\.expiresAt\} > \$\{at\.toISOString\(\)\}::timestamptz`,/, /sql`not exists \(select 1 from \$\{usersTable\} u where lower\(u\.email\) = \$\{ui\.emailNormalized\}\)`,/, /\.groupBy\(ui\.orgId\);/]) &&
     /seats: sub\.seatsSnapshot,/.test(seatCore) && /\.where\(and\(eq\(sub\.orgId, orgId\), isNull\(sub\.supersededAt\)\)\)/.test(seatCore) &&
     !allSrc.some((f) => /assertUserSeatAvailable|enforceSeat|seatLimitExceeded/i.test(code(f))));
 const teamSvc = code(TEAM_SERVICE);
@@ -1025,11 +1043,12 @@ ok("…the user detail is an audited view: authorize → validate the id → aud
 const usersReadPerm47 = consoleCode.filter((f) => /"platform\.users\.read"/.test(code(f))).map(rel).sort();
 const usersManagePerm47 = consoleCode.filter((f) => /"platform\.users\.manage"/.test(code(f))).map(rel).sort();
 const usersRolesPerm47 = consoleCode.filter((f) => /"platform\.users\.manage_roles"/.test(code(f))).map(rel).sort();
-ok("…platform.users.read is checked only by the read model; platform.users.manage only by the user controls and the read model's live-state read; (PO-03C) platform.users.manage_roles only by the role / transfer controls and their two reads; no other users permission exists",
-  JSON.stringify(usersReadPerm47) === JSON.stringify([join("src", "lib", "platform", "customer-users.ts"), join("src", "lib", "platform", "guards.ts")]) &&
+// PO-03C (sub-batch C): the user-invitation read model reads with platform.users.read too; platform.users.invite is rule 49's.
+ok("…platform.users.read is checked only by the read models (customer users; PO-03C user invitations); platform.users.manage only by the user controls and the read model's live-state read; (PO-03C) platform.users.manage_roles only by the role / transfer controls and their two reads, and platform.users.invite only by the user-invitation writes; no other users permission exists",
+  JSON.stringify(usersReadPerm47) === JSON.stringify([join("src", "lib", "platform", "customer-users.ts"), join("src", "lib", "platform", "guards.ts"), join("src", "lib", "platform", "user-invitations.ts")]) &&
     JSON.stringify(usersManagePerm47) === JSON.stringify([join("src", "lib", "platform", "customer-user-actions.ts"), join("src", "lib", "platform", "customer-users.ts"), join("src", "lib", "platform", "guards.ts")]) &&
     JSON.stringify(usersRolesPerm47) === JSON.stringify([join("src", "lib", "platform", "customer-user-actions.ts"), join("src", "lib", "platform", "customer-users.ts"), join("src", "lib", "platform", "guards.ts")]) &&
-    !/platform\.users\.(?!read"|manage"|manage_roles")/.test(consoleCode.map(code).join("\n")),
+    !/platform\.users\.(?!read"|manage"|manage_roles"|invite")/.test(consoleCode.map(code).join("\n")),
   `${usersReadPerm47.join(", ")} | ${usersManagePerm47.join(", ")} | ${usersRolesPerm47.join(", ")}`);
 const usersServer47 = read(USERS_SERVER_ACTIONS);
 const controls47 = read(USERS_CONTROLS);
@@ -1042,8 +1061,9 @@ ok("…the three customer-user server actions each validate a strict schema and 
     (controls47.match(/Action\(\{[^}]*\}\);\s*setCode\(""\);/g) ?? []).length === 2);
 const usersPageCode47 = USERS_PAGES.map(code).join("\n");
 const usersPageImports47 = USERS_PAGES.flatMap((f) => importsOf(read(f)).filter((x) => x.startsWith("@/lib/platform/")).map((x) => `${rel(f)} → ${x}`));
-const PAGE_DATA47 = /→ @\/lib\/platform\/(customer-users|config|display|errors|guards)$/;
-ok("…the user pages read data only through the customer-user read model (plus config, display, errors and guards); they hold no server action, no POST form and no handler — the only form is the GET search of /platform/users, and the controls are the client component alone",
+// PO-03C (sub-batch C): plus the user-invitation flag (flags) — the directory links to User invitations only while it is on.
+const PAGE_DATA47 = /→ @\/lib\/platform\/(customer-users|config|display|errors|flags|guards)$/;
+ok("…the user pages read data only through the customer-user read model (plus config, display, errors, flags and guards); they hold no server action, no POST form and no handler — the only form is the GET search of /platform/users, and the controls are the client component alone",
   usersPageImports47.every((x) => PAGE_DATA47.test(x)) && !/"use server"|<form[^>]*\saction=\{|method="post"|formAction/i.test(usersPageCode47) &&
     (usersPageCode47.match(/<form /g) ?? []).length === 1 && (usersPageCode47.match(/<form method="get" action="\/platform\/users" role="search"/g) ?? []).length === 1 && !/onClick|useActionState|useTransition/.test(usersPageCode47),
   usersPageImports47.filter((x) => !PAGE_DATA47.test(x)).join(", "));
@@ -1107,6 +1127,106 @@ ok("…the pages only place the controls: the company's Users tab gets a Primary
     /<CustomerUserRoleControl\s+locale=\{locale\}\s+userId=\{d\.userId\}\s+orgId=\{d\.company\.orgId\}/.test(userPage48) &&
     /"customer_user\.role_changed": "event\.userRoleChanged",\s*"customer_user\.role_change\.rejected": "event\.userRoleRejected",/.test(userPage48) &&
     !/"use server"|<form[^>]*\saction=\{|method="post"|formAction/i.test(companyPage48 + userPage48));
+
+// ---------------------------------------------------------------------------------------------
+// 49. PO-03C (sub-batch C) — customer-user invitations, behind platform.users.invite: the PO-02D2 order (both flags →
+//     same-origin → live session → permission → format → read-only pre-checks → step-up), ONE read-committed
+//     transaction in the shared lock order (operator row → the e-mail's advisory lock → the company row FOR SHARE →
+//     the e-mail's invitation rows), hash-only token storage, a link that nothing serves yet, a STAGED table outside the
+//     platform SQL chain, a flag that defaults off, and nothing sent, accepted or enforced.
+// ---------------------------------------------------------------------------------------------
+const UINV_ACTIONS = join(root, "src/lib/platform/user-invitation-actions.ts");
+const UINV_LIB = join(root, "src/lib/platform/user-invitations.ts");
+const UINV_WRAPPERS = join(root, "src/app/(platform)/user-invitation-actions.ts");
+const UINV_DIALOGS = join(root, "src/components/platform/user-invitation-dialogs.tsx");
+const UINV_STAGED = join(root, "src/db/staged/platform-user-invitations.ts");
+const UINV_PAGES = ["users/invitations/page.tsx", "users/invitations/[invitationId]/page.tsx", "users/invitations/not-found.tsx", "users/invitations/[invitationId]/not-found.tsx"].map((p) => join(root, "src/app/(platform)/platform/(console)", p));
+const uinvActions = code(UINV_ACTIONS);
+const uinvLib = code(UINV_LIB);
+const uinvFns = fnBodies(read(UINV_ACTIONS)).filter((f) => /^export async function /.test(f.body.trimStart()));
+const uinvUnordered = uinvFns.filter((f) => !/^\s*export async function \w+\(req: ConsoleRequest, [^)]*\)[^{]*\{\s*(const action = "[a-z_.]+";\s*)?try \{\s*(const ctx = )?await authorizeUserInvitationChange\(req\);/.test(f.body));
+const invitePerm49 = consoleCode.filter((f) => /"platform\.users\.invite"/.test(code(f))).map(rel).sort();
+ok("49. PO-03C (sub-batch C): every user-invitation change core starts with authorizeUserInvitationChange(req) = both flags → same-origin → the live platform session with platform.users.invite (checked nowhere else); every read authorizes with platform.users.read after both flags",
+  uinvFns.length === 5 && uinvUnordered.length === 0 &&
+    /async function authorizeUserInvitationChange\(req: ConsoleRequest\): Promise<PlatformSessionContext> \{\s*assertPlatformUserInvitationsEnabled\(\);\s*assertSameOrigin\(req\.headers\);\s*return authorizePlatformToken\(req\.token, "platform\.users\.invite"\);\s*\}/.test(uinvActions) &&
+    JSON.stringify(invitePerm49) === JSON.stringify([join("src", "lib", "platform", "guards.ts"), rel(UINV_ACTIONS)].sort()) &&
+    /async function authorizeUserInvitationRead\(req: ConsoleRequest\): Promise<PlatformSessionContext> \{\s*assertPlatformUserInvitationsEnabled\(\);\s*return authorizePlatformToken\(req\.token, "platform\.users\.read"\);\s*\}/.test(uinvLib) &&
+    (uinvLib.match(/await authorizeUserInvitationRead\(req\)/g) ?? []).length === 3,
+  uinvUnordered.map((f) => f.name).join(", ") || `${uinvFns.map((f) => f.name).join(",")} | ${invitePerm49.join(", ")}`);
+const uinvWriters49 = allSrc.filter((f) => /\.(insert|update|delete)\(\s*(uinv|ui|userInvitationsTable)\s*\)|\b(insert\s+into|update|delete\s+from)\s+user_invitations\b/i.test(code(f))).map(rel).sort();
+ok("…only user-invitation-actions.ts writes user_invitations — ONE insert (the new row with the token's digest), ONE update (the revocation: revoked_at and the operator, only while neither accepted nor revoked), no delete, never an acceptance; the read model writes nothing but its view record (user_invitation.viewed, once)",
+  JSON.stringify(uinvWriters49) === JSON.stringify([rel(UINV_ACTIONS)]) &&
+    (uinvActions.match(/\.insert\(uinv\)/g) ?? []).length === 1 && (uinvActions.match(/\.update\(uinv\)/g) ?? []).length === 1 &&
+    /\.update\(uinv\)\s*\.set\(\{ revokedAt: notBeforeCreation\(now\), revokedByPlatformAdminId: adminId \}\)\s*\.where\(and\(eq\(uinv\.id, id\), isNull\(uinv\.acceptedAt\), isNull\(uinv\.revokedAt\)\)\)/.test(uinvActions) &&
+    !/\.delete\(/.test(uinvActions) && !/acceptedUserId|accepted_user_id|\.set\(\{[^}]*accepted/i.test(uinvActions) &&
+    !/\b(db|tx|executor)\s*\.\s*(insert|update|delete)\(/.test(uinvLib) && (uinvLib.match(/recordPlatformAudit\(/g) ?? []).length === 1 && /action: "user_invitation\.viewed"/.test(uinvLib),
+  uinvWriters49.join(", "));
+ok("…the token is the PO-02D2 generator's (32 random bytes, base64url), one per insert; only its sha256 is stored; nothing selects or names the stored digest; the link is built only by create and re-issue from CUSTOMER_PUBLIC_ORIGIN (never from request headers), with the token in the fragment of /join/accept — a path NOTHING serves (acceptance is PO-04)",
+  (uinvActions.match(/newInvitationToken\(\)/g) ?? []).length === 1 && /const \{ token, tokenHash \} = newInvitationToken\(\);/.test(uinvActions) && (uinvActions.match(/\btokenHash\b/g) ?? []).length === 2 &&
+    !/token_hash|tokenHash:/.test(uinvActions + uinvLib) && !/\btokenHash\b/.test(uinvLib) && !allSrc.some((f) => /\b(ui|uinv|userInvitationsTable)\.tokenHash\b/.test(code(f))) &&
+    (uinvActions.match(/const origin = customerPublicOrigin\(\);/g) ?? []).length === 2 && (uinvActions.match(/link: userInvitationLink\(origin, outcome\.token\)/g) ?? []).length === 2 &&
+    /return `\$\{origin\}\/join\/accept#t=\$\{token\}`;/.test(uinvLib) && !walk(join(root, "src/app")).some((f) => /[\\/]join([\\/]|$)/.test(rel(f))) &&
+    !/headers\.get\(|x-forwarded/i.test(uinvActions + uinvLib));
+const createFn49 = uinvFns.find((f) => f.name === "createUserInvitation")?.body ?? "";
+const reissueFn49 = uinvFns.find((f) => f.name === "reissueUserInvitation")?.body ?? "";
+const revokeFn49 = uinvFns.find((f) => f.name === "revokeUserInvitation")?.body ?? "";
+const lockedChecks49 = fnBodies(read(UINV_ACTIONS)).find((f) => f.name === "lockedChecks")?.body ?? "";
+const AUDIT_NEW49 = /await recordPlatformAudit\(\s*\{ \.\.\.base, entityId: created\.id, action,/;
+ok("…create and re-issue: authorization → the origin → the table → audit protection → format → read-only pre-checks → throttle and password → ONE read-committed transaction: TOTP (the operator's row) → the e-mail's advisory lock (shared with company invitations) → the hourly limit → the company row FOR SHARE and its access (the PO-02C.1 lock) → the e-mail's open invitation rows FOR UPDATE → insert → audit, every success record written with the transaction; revoke: TOTP → the e-mail lock → its row FOR UPDATE → the one update → audit",
+  inOrder(createFn49, [/await authorizeUserInvitationChange\(req\)/, /const origin = customerPublicOrigin\(\);/, /await assertUserInvitationsInstalled\(db\);/, /await assertPlatformAuditProtection\(\);/, /parseUserInvitationFields\(input\)/, /stepUpPassword\(input\.password\)/, /stepUpCode\(input\.totpCode\)/, /recentUserInvitationsBy\(db, ctx\.adminId, now\)/, /await stepUpOutsideTransaction\(ctx, keys, password, now, rejected\);/, /db\.transaction\(/, /consumeTotpCode\(tx, ctx\.adminId, totpCode, now\)/, /await lockInvitationEmail\(tx, fields\.email\);/, /recentUserInvitationsBy\(tx, ctx\.adminId, now\)/, /await lockedChecks\(tx, fields, now\);/, /userInvitationSlotHolder\(tx, fields\.email, true\)/, /await insertUserInvitation\(tx, fields, ctx\.adminId, now\)/, AUDIT_NEW49, /\{ isolationLevel: "read committed" \}/]) &&
+    inOrder(reissueFn49, [/await authorizeUserInvitationChange\(req\)/, /const origin = customerPublicOrigin\(\);/, /await assertUserInvitationsInstalled\(db\);/, /await assertPlatformAuditProtection\(\);/, /parseUserInvitationId\(input\.invitationId\)/, /stepUpPassword\(input\.password\)/, /stepUpCode\(input\.totpCode\)/, /await stepUpOutsideTransaction\(ctx, keys, password, now, rejected\);/, /db\.transaction\(/, /consumeTotpCode\(tx, ctx\.adminId, totpCode, now\)/, /await lockInvitationEmail\(tx, fields\.email\);/, /recentUserInvitationsBy\(tx, ctx\.adminId, now\)/, /await lockedChecks\(tx, fields, now\);/, /\.from\(uinv\)\.where\(eq\(uinv\.id, id\)\)\.for\("update"\)/, /userInvitationSlotHolder\(tx, fields\.email, true\)/, /await insertUserInvitation\(tx, fields, ctx\.adminId, now\)/, AUDIT_NEW49, /\{ isolationLevel: "read committed" \}/]) &&
+    inOrder(revokeFn49, [/await authorizeUserInvitationChange\(req\)/, /await assertUserInvitationsInstalled\(db\);/, /await assertPlatformAuditProtection\(\);/, /parseUserInvitationId\(input\.invitationId\)/, /normalizeUserInvitationReason\(input\.reason\)/, /stepUpCode\(input\.totpCode\)/, /await stepUpOutsideTransaction\(ctx, keys, null, now, rejected\);/, /db\.transaction\(/, /consumeTotpCode\(tx, ctx\.adminId, totpCode, now\)/, /await lockInvitationEmail\(tx, before\.email\);/, /\.from\(uinv\)\.where\(eq\(uinv\.id, id\)\)\.for\("update"\)/, /await revokeRow\(tx, id, ctx\.adminId, now\)/, /await recordPlatformAudit\(\{ \.\.\.base, action, reason,/, /\{ isolationLevel: "read committed" \}/]) &&
+    inOrder(lockedChecks49, [/await lockTenantAccessForSessionIssue\(tx, fields\.orgId\)/, /throw new PlatformError\("COMPANY_SUSPENDED"/, /await customerEmailInUse\(tx, fields\.email\)/, /await pendingCompanyInvitationFor\(tx, fields\.email, now\)/]) &&
+    (uinvActions.match(/\.for\(/g) ?? []).length === 2 && (uinvLib.match(/\.for\(/g) ?? []).length === 1 && !/\busersTable\b/.test(uinvActions + uinvLib) &&
+    // every SUCCESS record (create: the replaced holder and the new invitation; revoke; re-issue: the revoked source and
+    // the new invitation) is written WITH the transaction, so an audit failure rolls the change back; rejections are not
+    (uinvActions.match(/result: "success"/g) ?? []).length === 5 && (uinvActions.match(/result: "success" \},\s*tx,?\s*\)/g) ?? []).length === 5 &&
+    (uinvActions.match(/result: "rejected"/g) ?? []).length === 3 && !/result: "rejected" \},\s*tx/.test(uinvActions));
+const stagedImporters49 = allSrc.filter((f) => importsOf(read(f)).some((x) => x === "@/db/staged/platform-user-invitations")).map(rel).sort();
+ok("…the user_invitations table is STAGED: declared in src/db/staged (outside the schema barrel; no schema module names it), imported only by the read model, the write core and the seat core; both reviewed SQL files say they are NOT authorized for production, and neither is in the platform SQL chain",
+  !walk(join(root, "src/db/schema")).some((f) => /staged|user_invitations|userInvitations/.test(code(f))) && !/staged/.test(code(join(root, "src/db/index.ts"))) &&
+    JSON.stringify(stagedImporters49) === JSON.stringify([rel(SEAT_CORE), rel(UINV_ACTIONS), rel(UINV_LIB)].sort()) && existsSync(UINV_STAGED) &&
+    ["PO03C_user_invitations.sql", "PO03C_user_invitations_rollback.sql"].every((n) => /NOT AUTHORIZED FOR PRODUCTION EXECUTION/.test(read(join(root, "drizzle/platform", n)))) &&
+    !/PO03C/.test(read(join(root, "scripts/platform/catalog.ts")) + read(join(root, "scripts/platform/apply-platform-sql.ts"))),
+  stagedImporters49.join(", "));
+const uinvFlagReaders49 = [...allSrc, ...platformScripts].filter((f) => /PLATFORM_USER_INVITATIONS_ENABLED/.test(code(f))).map(rel);
+ok("…PLATFORM_USER_INVITATIONS_ENABLED (off unless exactly \"true\") is read only in flags.ts, twice, and only after the console flag",
+  JSON.stringify(uinvFlagReaders49) === JSON.stringify([join("src", "lib", "platform", "flags.ts")]) &&
+    /return isPlatformConsoleEnabled\(\) && process\.env\.PLATFORM_USER_INVITATIONS_ENABLED === "true";/.test(flagsSrc) &&
+    /assertPlatformConsoleEnabled\(\);\s*if \(process\.env\.PLATFORM_USER_INVITATIONS_ENABLED !== "true"\) throw new PlatformError\("USER_INVITATIONS_DISABLED"/.test(flagsSrc) &&
+    (flagsSrc.match(/process\.env\.PLATFORM_USER_INVITATIONS_ENABLED/g) ?? []).length === 2,
+  uinvFlagReaders49.join(", "));
+const uinvServer49 = read(UINV_WRAPPERS);
+ok("…the five user-invitation server actions each validate input (strict schemas; the role an enum of admin and staff — never owner) and call their core; only create and re-issue return a link, once, in their response; none logs, stores or revalidates",
+  (uinvServer49.match(/^export async function /gm) ?? []).length === 5 && (uinvServer49.match(/\.strict\(\)/g) ?? []).length === 4 &&
+    /role: z\.enum\(\["admin", "staff"\]\)/.test(uinvServer49) && !/"owner"/.test(code(UINV_WRAPPERS)) &&
+    /previewUserInvitation\(await request\(\), parsed\.data\)/.test(uinvServer49) && /readUserInvitation\(await request\(\), parsed\.data\)/.test(uinvServer49) &&
+    ["createUserInvitation", "revokeUserInvitation", "reissueUserInvitation"].every((core) => new RegExp(`${core}\\(await request\\(\\), \\{ \\.\\.\\.parsed\\.data, totpCode: code\\(parsed\\.data\\.totpCode\\) \\}\\)`).test(uinvServer49)) &&
+    (uinvServer49.match(/link: outcome\.link/g) ?? []).length === 2 && !/revalidatePath|console\.|localStorage/.test(code(UINV_WRAPPERS)));
+const uinvUi49 = read(UINV_DIALOGS);
+ok("…the dialogs import only their own server actions, act on the CURRENT state (a changed invitation offers a refresh), clear the password and the code after every attempt, never offer the owner role and show the link once, to copy (no mail, share or open)",
+  JSON.stringify(importsOf(uinvUi49).filter((x) => x.startsWith("@/app/"))) === JSON.stringify(["@/app/(platform)/user-invitation-actions"]) &&
+    /const r = await readUserInvitationAction\(target\.id\);\s*if \(!r\.ok\) return setPhase\(\{ kind: "blocked", message: r\.message \}\);\s*if \(r\.state !== target\.state\) return setPhase\(\{ kind: "changed" \}\);/.test(uinvUi49) &&
+    /await createUserInvitationAction\(\{ \.\.\.f, password, totpCode: code \}\);\s*setPassword\(""\);\s*setTotp\(""\);/.test(uinvUi49) &&
+    /await revokeUserInvitationAction\(\{ invitationId: target\.id, reason: cleanReason, totpCode: code \}\);\s*setTotp\(""\);/.test(uinvUi49) &&
+    /await reissueUserInvitationAction\(\{ invitationId: target\.id, password, totpCode: code \}\);\s*setPassword\(""\);\s*setTotp\(""\);/.test(uinvUi49) &&
+    !/"owner"|mailto:|navigator\.share|window\.open|sms:|wa\.me|whatsapp/i.test(code(UINV_DIALOGS)) && (uinvUi49.match(/navigator\.clipboard\.writeText\(result\.link\)/g) ?? []).length === 1);
+const uinvPageImports49 = UINV_PAGES.flatMap((f) => importsOf(read(f)).filter((x) => x.startsWith("@/lib/platform/")).map((x) => `${rel(f)} → ${x}`));
+const uinvPagesCode49 = UINV_PAGES.map(code).join("\n");
+const UINV_PAGE_DATA49 = /→ @\/lib\/platform\/(user-invitations|config|display|errors|flags|guards)$/;
+ok("…the user-invitation pages are a 404 while the flag is off (checked before any read), read data only through the read model (plus config, display, errors, flags and guards), hold no server action, POST form or handler (the only form is the list's GET search); the company's Users tab and the users directory only place the dialog and a link",
+  [UINV_PAGES[0], UINV_PAGES[1]].every((f) => inOrder(code(f), [/await requirePlatformSession\(\);/, /if \(!isPlatformUserInvitationsEnabled\(\)\) notFound\(\);/, /await (listUserInvitations|getUserInvitationDetail)\(req, /])) &&
+    uinvPageImports49.every((x) => UINV_PAGE_DATA49.test(x)) &&
+    !/"use server"|<form[^>]*\saction=\{|method="post"|formAction|onClick|useActionState|useTransition/i.test(uinvPagesCode49) &&
+    (uinvPagesCode49.match(/<form /g) ?? []).length === 1 && (uinvPagesCode49.match(/<form method="get" action="\/platform\/users\/invitations" role="search"/g) ?? []).length === 1 &&
+    /<UserInvitationsPanel locale=\{locale\} d=\{d\} view=\{invitations\} \/>/.test(companyPage48) && /invitations = \{ state: "ready", data: await listCompanyUserInvitations\(req, d\.orgId\) \};/.test(companyPage48) &&
+    /isPlatformUserInvitationsEnabled\(\) \? \(/.test(code(join(root, "src/app/(platform)/platform/(console)/users/page.tsx"))),
+  uinvPageImports49.filter((x) => !UINV_PAGE_DATA49.test(x)).join(", "));
+const uinvFiles49 = [UINV_ACTIONS, UINV_LIB, UINV_WRAPPERS, UINV_DIALOGS, ...UINV_PAGES].map(code).join("\n");
+ok("…nothing in the user-invitation code sends anything (no mail, SMS or WhatsApp library, no network call), and nothing accepts: no join or user-invitation acceptance route, and accepted_at / accepted_user_id are written nowhere",
+  !/nodemailer|twilio|whatsapp|sendgrid|mailgun|postmark|\bfetch\(|https?\.request\(|XMLHttpRequest/i.test(uinvFiles49) &&
+    !allSrc.some((f) => /user-invitation-accept|accept-user-invitation|[\\/]join[\\/]/i.test(rel(f))) &&
+    !allSrc.some((f) => f !== UINV_STAGED && /acceptedUserId\s*:|accepted_user_id\s*=/.test(code(f))));
 
 console.log(`\n${pass}/${pass + fail} platform boundary checks passed`);
 process.exit(fail ? 1 : 0);

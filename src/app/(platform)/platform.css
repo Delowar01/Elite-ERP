@@ -347,6 +347,11 @@ a.platform-pager-link:focus-visible { outline: 2px solid var(--focus); outline-o
 /* PO-03C — the role picker (a native radio group in a fieldset) and the transfer dialog's current-owner line. */
 .platform-role-picker { margin: 0; padding: 0; border: 0; min-width: 0; display: flex; flex-direction: column; gap: var(--space-8); }
 .platform-transfer-person { margin: var(--space-6) 0 0; display: flex; flex-direction: column; min-width: 0; }
+/* PO-03C (sub-batch C) — the user-invitation dialog's refusal notices, and the company page's open-invitation list. */
+.platform-preview-notices { list-style: none; margin: var(--space-8) 0 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-6); }
+.platform-uinv-item { gap: var(--space-4); }
+.platform-uinv-line { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-8); min-width: 0; }
+.platform-uinv-actions { padding-block-start: var(--space-6); }
 .platform-owner-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
 .platform-owner { display: flex; flex-direction: column; padding-block: var(--space-12); }
 .platform-owner + .platform-owner { border-block-start: 1px solid var(--border); }

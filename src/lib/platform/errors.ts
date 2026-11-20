@@ -36,6 +36,9 @@ export const PLATFORM_ERROR_MESSAGES = {
   // PO-03C: the primary-owner transfer (src/lib/platform/customer-user-actions.ts).
   OWNER_NOT_DESIGNATED: { en: "This company has no designated primary owner. A primary owner is designated only through a separately approved process.", ar: "لا يوجد مالك رئيسي محدد لهذه الشركة. لا يُحدَّد المالك الرئيسي إلا عبر إجراء معتمد مستقل." },
   TRANSFER_TARGET_INVALID: { en: "The new primary owner must be another active user of the same company.", ar: "يجب أن يكون المالك الرئيسي الجديد مستخدمًا نشطًا آخر في الشركة نفسها." },
+  // PO-03C (sub-batch C): customer-user invitations — switched off by default, and a staged table.
+  USER_INVITATIONS_DISABLED: { en: "User invitations are switched off in this environment.", ar: "دعوات المستخدمين متوقفة في هذه البيئة." },
+  USER_INVITATIONS_NOT_INSTALLED: { en: "User invitations are not set up in this environment's database.", ar: "دعوات المستخدمين غير مُعدّة في قاعدة بيانات هذه البيئة." },
   // Reserved for later phases (TRD §8); defined now so the code set is stable.
   COMPANY_SUSPENDED: { en: "This company's access is suspended.", ar: "تم إيقاف وصول هذه الشركة." },
   INVITE_EXPIRED: { en: "This invitation has expired.", ar: "انتهت صلاحية هذه الدعوة." },
