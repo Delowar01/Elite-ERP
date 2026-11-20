@@ -396,7 +396,8 @@ async function main() {
     await console_.signOutCore(reqOf(ended));
     const gone = await create(ended);
     ok("#7 a signed-out platform session → UNAUTHORIZED / SESSION_EXPIRED", !gone.ok && ["UNAUTHORIZED", "SESSION_EXPIRED"].includes(gone.code), codeOf(gone));
-    ok("#7 platform.companies.invite is a separate entry in the permission allowlist (after read and manage_access)", JSON.stringify(guards.PLATFORM_PERMISSIONS.slice(-3)) === JSON.stringify(["platform.companies.read", "platform.companies.manage_access", "platform.companies.invite"]));
+    // PO-03B appends platform.users.read and platform.users.manage after it (verify:platform-users); the tail is pinned whole.
+    ok("#7 platform.companies.invite is a separate entry in the permission allowlist (after read and manage_access; PO-03B's two users permissions follow it)", JSON.stringify(guards.PLATFORM_PERMISSIONS.slice(-5)) === JSON.stringify(["platform.companies.read", "platform.companies.manage_access", "platform.companies.invite", "platform.users.read", "platform.users.manage"]));
     let forbidden = "";
     try {
       await guards.authorizePlatformToken(op.token, "platform.companies.unknown" as never);

@@ -295,7 +295,9 @@ try {
     const rel = (p: string) => relative(ROOT, p);
     const code = (p: string) => readFileSync(p, "utf8").replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:"'`])\/\/.*$/gm, "$1");
     const importers = files.filter((f) => /from "(@\/lib\/platform|\.)\/seat-accounting"/.test(code(f))).map(rel).sort();
-    ok("N1 only the Team ownership gate and the console read model use the seat service", same(importers, ["src/lib/platform/companies.ts", "src/lib/team/ownership-gate.ts"]), importers.join(", "));
+    // PO-03B: the customer-user read model (src/lib/platform/customer-users.ts) reads it too — one batch read per directory
+    // page and one for a user page, display only; the user controls never read it (N5).
+    ok("N1 only the Team ownership gate, the console read model and (PO-03B) the customer-user read model use the seat service", same(importers, ["src/lib/platform/companies.ts", "src/lib/platform/customer-users.ts", "src/lib/team/ownership-gate.ts"]), importers.join(", "));
     ok("N2 no seat-enforcement function exists anywhere (assertUserSeatAvailable is a later, separately approved phase)", !files.some((f) => /assertUserSeatAvailable|enforceSeat|seatLimitExceeded/i.test(code(f))));
     ok("N3 the service declares itself display-only (`enforced: false`, a literal type) and the gate exposes reads only",
       /enforced: false;/.test(code(join(ROOT, "src/lib/platform/seat-accounting.ts"))) && same([...code(join(ROOT, "src/lib/team/ownership-gate.ts")).matchAll(/^export (?:async )?(?:function|class) (\w+)/gm)].map((m) => m[1]).sort(), ["TeamProtectionUnavailableError", "lockPrimaryOwnerForTeamChange", "readTeamOwnershipSummary"]));
@@ -304,8 +306,12 @@ try {
     const second = await acceptedCompany();
     const after = await seats.readSeatAccounting(db, T.orgId);
     ok("N4 above the allowance (4 of 3), a fifth user is still created and another company still onboards", before.overLimit && after.occupied === before.occupied + 1 && after.overBy === 2 && second.orgId > 0);
-    ok("N5 no module refuses, hides or blocks on these numbers: overLimit/remaining are read only by the two display components",
-      files.filter((f) => /\boverLimit\b/.test(code(f))).map(rel).sort().join(",") === ["src/app/(platform)/platform/(console)/companies/[orgId]/page.tsx", "src/lib/platform/seat-accounting.ts"].join(","));
+    // PO-03B: the user directory, the user page and their read model show the same over-the-allowance fact (display
+    // only); the user controls (cores, shared service, server actions, dialog) name no seat number at all.
+    const userControls = ["src/lib/platform/customer-user-actions.ts", "src/lib/team/customer-user-core.ts", "src/app/(platform)/customer-user-actions.ts", "src/components/platform/customer-user-controls.tsx"];
+    ok("N5 no module refuses, hides or blocks on these numbers: overLimit/remaining are read only by the display components (company detail; PO-03B the user directory, the user page and their read model) — and the PO-03B user controls read none of them",
+      files.filter((f) => /\boverLimit\b/.test(code(f))).map(rel).sort().join(",") === ["src/app/(platform)/platform/(console)/companies/[orgId]/page.tsx", "src/app/(platform)/platform/(console)/users/[userId]/page.tsx", "src/app/(platform)/platform/(console)/users/page.tsx", "src/lib/platform/customer-users.ts", "src/lib/platform/seat-accounting.ts"].join(",") &&
+        !userControls.some((f) => /\b(overLimit|overBy|remaining|seat-accounting|readSeatAccounting\w*)\b/.test(code(join(ROOT, f)))));
   }
 
   // =====================================================================================================================
