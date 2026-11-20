@@ -30,6 +30,7 @@ import { PO02C1_EDITS, undoPo02c1 } from "./po02c1-approved-delta.mjs";
 import { PO02D3_EDITS, undoPo02d3 } from "./po02d3-approved-delta.mjs";
 import { PO03A_EDITS, PO03A_NEW, undoPo03a } from "./po03a-approved-delta.mjs";
 import { PO03B_EDITS, undoPo03b } from "./po03b-approved-delta.mjs";
+import { PO03D_EDITS, undoPo03d } from "./po03d-approved-delta.mjs";
 
 const testDbName = disposableName("po01b1_containment");
 process.env.DATABASE_URL = databaseUrlFor(testDbName);
@@ -412,6 +413,10 @@ async function main() {
     // PO-03B changes two of these Team files again — the Business Settings page's member query names exactly the five
     // fields the panel renders and the Team panel takes exactly that shape (the TFX security hotfix, carried) — recorded
     // byte for byte (verify/po03b-approved-delta.mts): its hunks are undone before PO-03A's. It adds no file here.
+    // PO-03C changes none of these files. PO-03D changes two of the Team files again — the Add Member action (it now
+    // hands the form to the Add Member service, src/lib/team/member-add.ts) and the seat card (who occupies the seats,
+    // the user-limit line and its note) — recorded byte for byte (verify/po03d-approved-delta.mts): its hunks are undone
+    // first, before PO-03B's. It adds no file here.
     const LIVE = "621f156f7b129b9c2e289bc46d314ce7587beec2";
     const TENANT_PATHS = ["src/lib/session.ts", "src/lib/auth.ts", "src/lib/security", "src/app/(auth)", "src/app/auth", "src/app/(app)", "src/components/layout", "src/components/ui"];
     const lines = (out: string) => out.split("\n").map((l) => l.trim()).filter(Boolean);
@@ -421,18 +426,36 @@ async function main() {
     ])].sort();
     const h16 = (b: Buffer | string) => createHash("sha256").update(b).digest("hex").slice(0, 16);
     const unexplained = differing.filter((f) => {
-      const text = existsSync(f) ? undoPo02c1(f, undoPo02d3(f, undoPo03a(f, undoPo03b(f, readFileSync(f, "utf8"))))) : null;
+      const text = existsSync(f) ? undoPo02c1(f, undoPo02d3(f, undoPo03a(f, undoPo03b(f, undoPo03d(f, readFileSync(f, "utf8")))))) : null;
       if (f in PO02C_NEW) return text === null || h16(text) !== PO02C_NEW[f];
       if (f in PO03A_NEW) return text === null || h16(text) !== PO03A_NEW[f];
       if ((!(f in PO02C_EDITS) && !(f in PO02C1_EDITS) && !(f in PO02D3_EDITS) && !(f in PO03A_EDITS) && !(f in PO03B_EDITS)) || text === null) return true;
       return undoPo02c(f, text) !== execFileSync("git", ["show", `${LIVE}:${f}`], { encoding: "utf8" });
     });
-    ok("no tenant session, authentication, app-route, layout or UI-component file differs from the live ERP (621f156) except by PO-02C's, PO-02C.1's, PO-02D3's, PO-03A's and PO-03B's recorded changes (621f156's text plus exactly their hunks; added files as pinned)", unexplained.length === 0, unexplained.join(", "));
+    ok("no tenant session, authentication, app-route, layout or UI-component file differs from the live ERP (621f156) except by PO-02C's, PO-02C.1's, PO-02D3's, PO-03A's, PO-03B's and PO-03D's recorded changes (621f156's text plus exactly their hunks; added files as pinned)", unexplained.length === 0, unexplained.join(", "));
     ok("…and in these paths PO-02C changed exactly sign-in, the session store and the session check and added exactly the tenant-access gate; PO-02C.1 also changed the security-event writer; PO-03A changed exactly the two Team member actions, the Team panel and the Business Settings page and added exactly the seat card; PO-03B changed only the Team panel and the Business Settings page again (the five-field allowlist) and added nothing",
       JSON.stringify(differing) === JSON.stringify(["src/app/(app)/settings/organization/page.tsx", "src/app/(app)/settings/team/actions.ts", "src/app/(app)/settings/team/seat-summary.tsx", "src/app/(app)/settings/team/team-panel.tsx", "src/app/(auth)/actions.ts", "src/lib/security/audit.ts", "src/lib/security/session-store.ts", "src/lib/security/tenant-access-gate.ts", "src/lib/session.ts"]), differing.join(", "));
-    const proxyDiff = execFileSync("git", ["diff", "621f156f7b129b9c2e289bc46d314ce7587beec2", "--", "src/proxy.ts"], { encoding: "utf8" });
+    // PO-03D adds the /join/accept pass-through to src/proxy.ts, recorded byte for byte (verify/po03d-approved-delta.mts):
+    // undone, the file is PO-03C's (8c21044) to the byte, and THAT must differ from the live ERP only by PO-01B's lines.
+    const PO03C_HEAD = "8c21044cde85a5e67ede4d7802e5825742ec6b23";
+    const proxyNow = readFileSync("src/proxy.ts", "utf8");
+    const proxyUndone = undoPo03d("src/proxy.ts", proxyNow);
+    const proxyDiff = execFileSync("git", ["diff", "621f156f7b129b9c2e289bc46d314ce7587beec2", PO03C_HEAD, "--", "src/proxy.ts"], { encoding: "utf8" });
     const changed = proxyDiff.split("\n").filter((l) => /^[+-](?![+-])/.test(l));
-    ok("src/proxy.ts differs from the live ERP only by the PO-01B edge-gate import and /platform delegation (2 code lines plus a comment, nothing removed)", changed.every((l) => l.startsWith("+")) && changed.filter((l) => !/^\+\s*\/\//.test(l)).length === 2, changed.join(" | "));
+    ok("src/proxy.ts differs from the live ERP only by the PO-01B edge-gate import and /platform delegation (2 code lines plus a comment, nothing removed) — read with PO-03D's recorded pass-through undone (then it is 8c21044's to the byte)",
+      proxyUndone === execFileSync("git", ["show", `${PO03C_HEAD}:src/proxy.ts`], { encoding: "utf8" }) && changed.every((l) => l.startsWith("+")) && changed.filter((l) => !/^\+\s*\/\//.test(l)).length === 2, changed.join(" | "));
+    const proxyAdded = (PO03D_EDITS["src/proxy.ts"] ?? []).flatMap(([was, is]) => {
+      const rest = is.split("\n");
+      for (const line of was.split("\n")) {
+        const i = rest.indexOf(line);
+        if (i < 0) return [`<removed> ${line}`];
+        rest.splice(i, 1);
+      }
+      return rest;
+    });
+    ok("…and PO-03D's recorded change to it is exactly the /join/accept pass-through — one exact-path set and one early return (with their comment), nothing removed",
+      proxyUndone !== proxyNow && JSON.stringify(proxyAdded.filter((l) => l.trim() && !/^\s*\/\//.test(l)).map((l) => l.trim())) === JSON.stringify(['const PUBLIC_INVITE_PATHS = new Set(["/join/accept"]);', "if (PUBLIC_INVITE_PATHS.has(pathname)) return pass();"]),
+      proxyAdded.join(" | "));
   }
 
   section("8. Nothing sensitive leaks");
