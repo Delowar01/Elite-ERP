@@ -131,6 +131,7 @@ import ts from "typescript";
 import { createElement as h } from "react";
 import { ACC01_BASE, ACC01_EDITS, ACC01_NEW, acc01Drift, undoAcc01 } from "./acc01-approved-delta.mjs";
 import { LCP_BASE, LCP_EDITS, LCP_NEW, lcpDrift, undoLcp } from "./lcp-approved-delta.mjs";
+import { TFX_BASE, TFX_EDITS, TFX_NEW, tfxDrift, undoTfx } from "./team-fields-hotfix-approved-delta.mjs";
 import { renderToStaticMarkup } from "react-dom/server";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
@@ -141,7 +142,10 @@ const WRITE = process.argv.includes("--write-pins");
 // LCP design adoption: `actualRead` itself undoes the LCP stage's recorded hunks first (group 20 proves they are each
 // file's only change), so every older group — ACC-01's included — reads main's bytes; `diskRead` is the file on disk.
 const diskRead = (p: string) => readFileSync(path.join(ROOT, p), "utf8");
-const actualRead = (p: string) => undoLcp(p, diskRead(p));
+// Security hotfix TFX (Team sensitive fields): its recorded hunks are undone first (group 21 proves they are each file's
+// only change), so every pin below reads main's (621f156) bytes of the two Team files.
+const tfxRead = (p: string) => undoTfx(p, diskRead(p));
+const actualRead = (p: string) => undoLcp(p, tfxRead(p));
 const rawRead = (p: string) => undoAcc01(p, actualRead(p));
 // DEV-UI-01.7 C8 final: every group but 17 reads the four files the final batch changed as the approved remediation
 // (c47c65a) left them — their FIN_EDITS hunks undone — so each older pin keeps its strength; group 17 proves those hunks
@@ -504,7 +508,7 @@ const MAIN_EDITS: Record<string, [string, string][]> = {
 /** A file's bytes for a byte-identity hash: main's approved change undone (MAIN_EDITS), every other file as it is. */
 const frozen = (f: string): string | Buffer =>
   f in MAIN_EDITS ? MAIN_EDITS[f].reduce((acc, [was, is]) => acc.replace(is, () => was), rawRead(f))
-    : f in ACC01_EDITS ? rawRead(f) : f in LCP_EDITS ? actualRead(f) : readFileSync(path.join(ROOT, f));
+    : f in ACC01_EDITS ? rawRead(f) : f in LCP_EDITS || f in TFX_EDITS ? actualRead(f) : readFileSync(path.join(ROOT, f));
 
 let pass = 0;
 let fail = 0;
@@ -2985,7 +2989,7 @@ check(`C8 final changed no other application file: every file under src/ but the
   finRest === "c05dcaf4283af501 (495 files)", finRest);
 check("C8 final is presentation only: project-costing.ts, finance-reports.ts (grossProfit, operatingProfit, netProfit still computed), accounting.ts, settlement.ts, the status registry and the shared exporter report-export.ts are their business pins, read as they are",
   ["src/lib/project-costing.ts", "src/lib/finance-reports.ts", "src/lib/accounting.ts", "src/lib/settlement.ts", "src/lib/status-registry.ts", "src/lib/report-export.ts"]
-    .every((f) => !!pins.business[f] && h16(f in LCP_EDITS ? actualRead(f) : readFileSync(path.join(ROOT, f))) === pins.business[f]) &&
+    .every((f) => !!pins.business[f] && h16(f in LCP_EDITS || f in TFX_EDITS ? actualRead(f) : readFileSync(path.join(ROOT, f))) === pins.business[f]) &&
     ["const grossProfit = revenueTotal - costOfSalesTotal;", "operatingProfit", "netProfit"].every((s) => rawRead("src/lib/finance-reports.ts").includes(s)));
 
 const P_NOTICE = "Profit figures are temporarily hidden because Cost of Sales and inventory valuation are not yet complete.";
@@ -3145,6 +3149,20 @@ check(`the LCP stage changed its ${Object.keys(LCP_EDITS).length} files (src/, a
 const LCP_FORBIDDEN = /^src\/(db|app\/api|app\/print|app\/uploads)\/|^src\/lib\/(inventory-|credit-note-returns|invoice-posting|purchase-posting|reversal-currency|zatca|session|auth|finance-reports|csrf|rate-limit)|\/actions\.ts$|^drizzle\//;
 const lcpBusiness = [...Object.keys(LCP_EDITS), ...Object.keys(LCP_NEW)].filter((f) => LCP_FORBIDDEN.test(f));
 check("the LCP stage touched no business, schema, posting, API, auth, print or server-action file", lcpBusiness.length === 0, lcpBusiness.join(" "));
+
+// ---------- 21. Security hotfix TFX — the approved change to frozen files ----------
+section("21. Security hotfix TFX — the Team page sends only the five member fields it renders (the approved change to frozen files)");
+// Read as they are on disk: each changed file is main's (621f156) plus exactly its recorded hunks.
+const tfxDriftNow = tfxDrift((f) => (existsSync(path.join(ROOT, f)) ? diskRead(f) : null));
+check(`the hotfix changed exactly its ${Object.keys(TFX_EDITS).length} files by exactly their ${Object.values(TFX_EDITS).flat().length} recorded hunks — undone, each is ${TFX_BASE.slice(0, 7)}'s to the byte — and added no file (verify/team-fields-hotfix-approved-delta.mts)`,
+  tfxDriftNow.length === 0 && TFX_BASE === "621f156f7b129b9c2e289bc46d314ce7587beec2" && Object.keys(TFX_NEW).length === 0 &&
+    JSON.stringify(Object.keys(TFX_EDITS).sort()) === JSON.stringify(["src/app/(app)/settings/organization/page.tsx", "src/app/(app)/settings/team/team-panel.tsx"]),
+  tfxDriftNow.map(rel).join(" "));
+const tfxPage = diskRead("src/app/(app)/settings/organization/page.tsx");
+const tfxPanel = diskRead("src/app/(app)/settings/team/team-panel.tsx");
+check("…the Team members query names exactly id, name, email, role and isActive (no unqualified select of users), and TeamPanel takes exactly that shape",
+  /\.select\(\{ id: usersTable\.id, name: usersTable\.name, email: usersTable\.email, role: usersTable\.role, isActive: usersTable\.isActive \}\)\s*\.from\(usersTable\)/.test(tfxPage) &&
+    !/select\(\)\s*\.from\(usersTable\)/.test(tfxPage) && /export type TeamMember = Pick<User, "id" \| "name" \| "email" \| "role" \| "isActive">;/.test(tfxPanel) && /members: TeamMember\[\];/.test(tfxPanel) && !/members: User\[\]/.test(tfxPanel), "");
 
 console.log("\nGroups:");
 for (const [g, [p, f]] of Object.entries(counts)) console.log(`  ${g}: ${p}/${p + f}`);
