@@ -424,5 +424,5 @@ try {
   await pool.end().catch(() => undefined);
   if (created) await dropDisposableDatabase(testDbName).catch(() => undefined);
 }
-summary("verify:platform-seat-enforcement");
-if (crashed) process.exitCode = 1;
+// A failed check fails the run (the exit code is what a runner reads), as does a crash.
+if (summary("verify:platform-seat-enforcement") !== 0 || crashed) process.exitCode = 1;

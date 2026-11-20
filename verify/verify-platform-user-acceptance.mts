@@ -593,6 +593,34 @@ async function main() {
     await longHold.release();
     ok("K10 lock waits are bounded: a company row held for longer than 5 s makes the acceptance answer `unavailable` (lock_timeout, audited); nothing created; the same link then works",
       k10Res === "unavailable" && waited >= 4_500 && (await usersWith(k10.email)) === 0 && (await stagesOf(k10.id)).includes("lock_timeout") && reasonOf(await accept({ token: k10.token })) === "OK");
+
+    // K11 the seat check runs UNDER the company lock, on fresh values: seats taken away while the acceptance waits for
+    //     the lock (a subscription change that follows the contract — company row first — and commits first) refuse it,
+    //     though the lock-free link check had allowed it.
+    process.env.CUSTOMER_SEAT_ENFORCEMENT_ENABLED = "true";
+    const K11 = await newOrg("Join Fixture Downgrade");
+    await newUser(K11, "owner", `owner.k11.${tag()}@join-fixture.test`);
+    await newUser(K11, "staff", `staff.k11.${tag()}@join-fixture.test`);
+    await subscribe(K11, 3);
+    const k11 = await invite(K11, `downgrade.${tag()}@join-fixture.test`);
+    const k11Check = await check(k11.token);
+    const downgrade = await blocker([
+      { text: `select id from orgs where id = $1 for no key update`, values: [K11] },
+      { text: `update tenant_subscriptions set superseded_at = now(), updated_at = now() where org_id = $1 and superseded_at is null`, values: [K11] },
+      {
+        text: `insert into tenant_subscriptions (org_id, package_version_id, version_state, is_trial, cycle, lifecycle_state, start_date, end_date, price_snapshot_sar, seats_snapshot, storage_snapshot_gb, module_groups_snapshot, assignment_source)
+               values ($1, $2, 'published', true, 'trial', 'trialing', current_date, current_date + 13, 0, 2, 5, '[]'::jsonb, 'invitation_acceptance')`,
+        values: [K11, trialV1],
+      },
+    ]);
+    const k11Accept = accept({ token: k11.token });
+    const k11Waits = await until(async () => (await lockWaiters(ORG_LOCK)) === 1);
+    await downgrade.release(true);
+    const k11Res = reasonOf(await k11Accept);
+    delete process.env.CUSTOMER_SEAT_ENFORCEMENT_ENABLED;
+    ok("K11 the acceptance's seat check runs under the company lock on fresh values: the link check allowed it (2 users + this reservation = 3 of 3), then a downgrade to 2 seats committed while the acceptance waited — it is refused `seats_full` (seat_limit, audited); nothing created, the invitation still open",
+      k11Check.ok === true && k11Waits && k11Res === "seats_full" && (await usersWith(k11.email)) === 0 && (await invState(k11.id))!.accepted_at === null && (await stagesOf(k11.id)).includes("seat_limit"),
+      `${JSON.stringify(k11Check).slice(0, 80)} waits=${k11Waits} ${k11Res}`);
   }
 
   // ===================================================================================================================
@@ -714,5 +742,5 @@ try {
   await pool.end().catch(() => undefined);
   if (created) await dropDisposableDatabase(testDbName).catch(() => undefined);
 }
-summary("verify:platform-user-acceptance");
-if (crashed) process.exitCode = 1;
+// A failed check fails the run (the exit code is what a runner reads), as does a crash.
+if (summary("verify:platform-user-acceptance") !== 0 || crashed) process.exitCode = 1;

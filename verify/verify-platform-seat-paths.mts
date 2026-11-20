@@ -469,6 +469,23 @@ async function main() {
     await q(`insert into users (org_id, email, password_hash, name, role) values ($1, $2, $3, 'Fixture External', 'staff')`, [elsewhere.orgId, mixed, HASH]);
     const r21 = await teamAdd(k21.owner, mixed.toLowerCase());
     ok("K21 (§13 case 21, the Team path) an account whose e-mail differs only in letter case refuses the add ('already exists'); nothing is created", r21.error === "A user with this email already exists." && (await usersWith(mixed)) === 1);
+
+    // §13 case 21 at the same instant — an acceptance and a Team add typed in ANOTHER letter case: the Team add normalizes
+    // the address first, so both take the SAME e-mail lock and queue; exactly one account exists in any case.
+    const k21b = await company(5, 0);
+    const email21 = `race.case.${tag()}@seatpath-fixture.test`;
+    const inv21 = await create(operator, k21b.orgId, email21);
+    const token21 = inv21.ok ? tokenOf(inv21.link) : "";
+    const typed = email21.replace(/^race\.case/, "Race.CASE").replace("@seatpath-fixture.test", "@SeatPath-Fixture.TEST");
+    const hold21 = await blocker([{ text: `select pg_advisory_xact_lock(hashtextextended('platform-invitation-email:' || $1, 0))`, values: [email21] }]);
+    const p21a = accept(token21);
+    const p21t = teamAdd(k21b.owner, typed);
+    const waits21 = await until(async () => (await lockWaiters(EMAIL_LOCK)) === 2);
+    await hold21.release();
+    const r21a = reasonOf(await p21a);
+    const r21t = (await p21t).error ?? "OK";
+    ok("K21b (§13 case 21, simultaneous) an acceptance and a Team add of the same address in another letter case, at once: both queue on the one e-mail lock (the Team add normalizes first); exactly one account — the other answers neutrally (`unavailable`) or 'already exists'",
+      typed !== email21 && waits21 && (await usersWith(email21)) === 1 && ((r21a === "OK" && r21t === "A user with this email already exists.") || (r21a === "unavailable" && r21t === "OK")), `${r21a} | ${r21t}`);
   }
 
   // ===================================================================================================================
@@ -484,6 +501,42 @@ async function main() {
     await q(`alter table tenant_subscriptions_po03d_away rename to tenant_subscriptions`);
     ok("Z1 subscription records missing, enforcement on: the Team add answers 'can't be checked' and the invitation SEAT_ENFORCEMENT_UNAVAILABLE — nothing created; enforcement off: the Team works as before",
       zAdd.error === "User limits can't be checked right now. Nothing was changed. Try again later." && codeOf(zCreate) === "SEAT_ENFORCEMENT_UNAVAILABLE" && !zOff.error && (await usersIn(c.orgId)) === 2, `${zAdd.error} | ${codeOf(zCreate)} | ${zOff.error ?? "OK"}`);
+  }
+
+  // ===================================================================================================================
+  section("Y. A failure anywhere rolls the Team add back whole (§13 cases 20 and 22, the Team path)");
+  {
+    // A test-only trigger on THIS disposable database makes one write fail; it is dropped again at once.
+    const failing = async (table: string, on: boolean) => {
+      const fn = `po03d_test_only_fail_${table}`;
+      if (on) {
+        await q(`create or replace function ${fn}() returns trigger language plpgsql as $$ begin raise exception 'injected outage (test only)'; end $$`);
+        await q(`create trigger ${fn} before insert on ${table} for each row execute function ${fn}()`);
+      } else {
+        await q(`drop trigger if exists ${fn} on ${table}`);
+        await q(`drop function if exists ${fn}()`);
+      }
+    };
+    const y = await company(3, 1, "Seat Path Rollback");
+    const events = () => n(`select count(*)::int as n from security_events where org_id = $1`, [y.orgId]);
+    const activities = () => n(`select count(*)::int as n from activity_logs where org_id = $1`, [y.orgId]);
+    const outcomes: string[] = [];
+    for (const table of ["activity_logs", "users"]) {
+      const email = `rollback.${table}.${tag()}@seatpath-fixture.test`;
+      const [u0, e0, a0] = [await usersIn(y.orgId), await events(), await activities()];
+      await failing(table, true);
+      let r: { error?: string };
+      try {
+        r = await teamAdd(y.owner, email);
+      } finally {
+        await failing(table, false);
+      }
+      const clean = r.error === "The change couldn't be saved. Nothing was changed." && (await usersIn(y.orgId)) === u0 && (await usersWith(email)) === 0 && (await events()) === e0 && (await activities()) === a0;
+      outcomes.push(`${table}:${clean ? "clean" : JSON.stringify(r)}`);
+    }
+    const next = await teamAdd(y.owner, `rollback.after.${tag()}@seatpath-fixture.test`);
+    ok("Y1 (§13 cases 20 and 22, the Team path) an injected failure at the activity record (after the user insert) or at the user insert rolls the whole add back: the generic message, no user, no activity, no security event — and the next add then works",
+      outcomes.every((o) => o.endsWith(":clean")) && !next.error && (await usersIn(y.orgId)) === 3 && (await activities()) === 1, outcomes.join(" "));
   }
 
   // ===================================================================================================================
@@ -507,5 +560,5 @@ try {
   await pool.end().catch(() => undefined);
   if (created) await dropDisposableDatabase(testDbName).catch(() => undefined);
 }
-summary("verify:platform-seat-paths");
-if (crashed) process.exitCode = 1;
+// A failed check fails the run (the exit code is what a runner reads), as does a crash.
+if (summary("verify:platform-seat-paths") !== 0 || crashed) process.exitCode = 1;

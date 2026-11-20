@@ -263,6 +263,16 @@ async function main() {
     ok("production: both use __Host-elite_erp_platform (distinct from the customer __Host-elite_erp_session)", names.edge === "__Host-elite_erp_platform" && names.config === "__Host-elite_erp_platform", probe.status === 0 ? "" : "probe failed");
     ok("PLATFORM_PUBLIC_PATHS is exactly login, recover and session-expired", [...gate.PLATFORM_PUBLIC_PATHS].sort().join(",") === "/platform/login,/platform/recover,/platform/session-expired");
   }
+
+  section("8. PO-03D: /join/accept is ONE exact public path (the user-invitation acceptance page decides for itself)");
+  {
+    const open = [await run("/join/accept"), await run("/join/accept", { [CCOOKIE]: customer }), await run("/join/accept?utm=1")];
+    ok("/join/accept passes through without a session, with a customer session and with a query string (the page decides: switched off, signed in, ready)", open.every(passes));
+    const near = ["/join", "/join/", "/join/accept/", "/join/accept/extra", "/join/acceptx", "/join/accepted", "/JOIN/accept", "/join/Accept", "/joinx/accept"];
+    const answers = await Promise.all(near.map(async (p) => [p, await run(p)] as const));
+    const leaked = answers.filter(([, s]) => passes(s) || s.status !== 307 || !(s.location ?? "").startsWith(`${ORIGIN}/login`)).map(([p, s]) => `${p} → ${s.status} ${s.location ?? ""}`);
+    ok("…and nothing near it does: /join, /join/, /join/accept/, /join/accept/extra, /join/acceptx, /join/accepted, /JOIN/accept, /join/Accept and /joinx/accept stay protected (no session → /login) — an exact match, never a prefix", leaked.length === 0, leaked.join("; "));
+  }
 }
 
 let exitCode = 1;
