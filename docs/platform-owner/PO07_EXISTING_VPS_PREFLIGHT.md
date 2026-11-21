@@ -172,6 +172,20 @@ The Platform Owner branch is neither merged nor deployed by this sequence.
 Placeholders `<…>` are fixed after Phase A. **Each step is production-affecting: run it only with the owner's go-ahead
 for that stage.**
 
+**Relation to the PO-06 runbook.** `po06/STAGING_DEPLOYMENT_RUNBOOK.md` assumed a new host and forbade the Hostinger
+VPS. The owner's instruction of 21 Nov 2026 replaces only the host. Option A follows that runbook's steps 3–19 on the
+existing VPS, and everything else it forbids still holds:
+- production credentials, production storage and production Neon;
+- live messaging or payment services;
+- production DNS records other than the new admin name.
+
+The deltas for a VPS shared with the ERP:
+- no host-wide firewall change. Instead, the test unit's runtime traffic is limited to loopback (§I.3);
+- its own Linux user, port `<ADMIN_PORT>`, systemd unit, `0600` env file and PostgreSQL database;
+- the build runs under a memory cap at a quiet time;
+- nginx gets a new vhost only (the ERP vhost is untouched), with `nginx -t` before a graceful reload;
+- verification adds the "ERP unchanged" checks (§I.5).
+
 ### I.1 DNS and TLS
 
 | Item | Change |
@@ -234,12 +248,12 @@ proxy_set_header Connection        "";
 | Item | Proposal |
 |---|---|
 | Linux user | a new unprivileged user (or a CloudPanel site user), owning only its own directory |
-| Code | `feat/platform-owner` at `1c8682f` (the PO-07 commits change files under `docs/` only), cloned from the public repository (no credential needed) or copied as a verified `git bundle` |
+| Code | the approved head of `feat/platform-owner` (application code as at `1c8682f`; PO-07 changed only `docs/`), cloned from the public repository (no credential needed) or copied as a verified `git bundle` |
 | Node.js | 22.x. Reuse the ERP's Node if it is 22. Otherwise install a separate copy for this user only — **never change the ERP's Node** |
 | Database | PostgreSQL bound to 127.0.0.1 only (16, or the distribution's version ≥ 14, rehearsed first), with a database named `*_test_only_*`, a migration role and a DML-only runtime role |
-| Service | a new systemd unit:<br>• `next start -H 127.0.0.1 -p <ADMIN_PORT>`<br>• `MemoryMax`, `NoNewPrivileges=yes`, `PrivateTmp=yes`, `ProtectSystem=strict` with only its own build and storage paths writable<br>• its own env file (0640) |
+| Service | a new systemd unit:<br>• `next start -H 127.0.0.1 -p <ADMIN_PORT>`<br>• `MemoryMax`, `NoNewPrivileges=yes`, `PrivateTmp=yes`, `ProtectSystem=strict` with only its own build and storage paths writable<br>• runtime network limited to loopback: `IPAddressDeny=any` with `IPAddressAllow=localhost` (needs cgroup v2, Phase A2; checked after start)<br>• its own env file (`0600`, owned by that user) |
 | Environment | its own `AUTH_SECRET` and `PLATFORM_AUTH_SECRET` (distinct) and `FIELD_ENCRYPTION_KEYS`, generated on the host without being printed; `PLATFORM_TRUSTED_PROXY_HOPS=1`; `STORAGE_DRIVER=fake`; `NEXT_TELEMETRY_DISABLED=1`; every switch unset at first; the rest as in `po06/STAGING_ENV_TEMPLATE.md` (for example `STORAGE_FAKE_DIR`, and `RATE_API_BASE` pointing at a local stub). **No variable of the ERP is copied** |
-| Migration | `release-manifest.ts --check`, then `--status`, then `--apply --base --concurrent-indexes --include-staged-user-invitations --verify-data`:<br>• `--base` (B00) creates the customer schema, and only on a new, empty database<br>• S01 and S04 run only with `--concurrent-indexes`<br>• S08, the staged user-invitation schema, runs only with the staged flag (L-3 approves it for staging) |
+| Migration | the rehearsed sequence of PO-06 runbook steps 6–10:<br>• `release-manifest.ts --check`, then `--status`<br>• `--apply --base --concurrent-indexes --verify-data` (B00, S00–S07). `--base` creates the customer schema, and only on a new, empty database<br>• then, because L-3 is approved for staging, `--apply --concurrent-indexes --include-staged-user-invitations --verify-data` (S08, S09)<br>• then `npm run platform:db:check` and `npm run verify:db-hardening` |
 | Build | `next build` as that user, under a memory cap, at a quiet time, so the ERP is never starved. Build-time egress is needed only for npm and Google Fonts |
 | First administrator | **the owner runs `npm run platform:bootstrap` personally** in their own terminal. It prints the TOTP secret and recovery codes once, and these must not pass through an AI session |
 | Switches | F1 → F7, one per restart of **this unit only**, each with its checks. F4/F6 need a customer origin for the test instance (§D-P7-3) |
@@ -353,7 +367,7 @@ proxy_set_header Connection        "";
 
 | Id | Decision |
 |---|---|
-| D-P7-1 | Option A now? Accept that the admin host shows **fictional** companies, labelled as testing, until Option B |
+| D-P7-1 | Option A now? Accept that the admin host shows **fictional** companies, labelled as testing, until Option B. For this test instance, this replaces S-1 (a separate hosting account) and the PO-06 runbook's "never the Hostinger VPS" |
 | D-P7-2 | Accept installing PostgreSQL on the existing VPS for the test instance (a new local service, loopback only) |
 | D-P7-3 | Invitation acceptance (F4/F6) in Option A. Either add a test customer hostname, or test F1–F3 and F5 only. The admin host must not serve customer routes |
 | D-P7-4 | Add an IP allow-list or basic auth on the admin host (it becomes discoverable through Certificate Transparency)? |
