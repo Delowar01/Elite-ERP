@@ -21,7 +21,8 @@ VPS execution not yet authorized.**
 | `<APP_USER>`, `<PG_USER>` | new system users for the app and for the test PostgreSQL cluster |
 | `<APP_DIR>` | `/srv/elite-po-staging` (code in `<APP_DIR>/app`) |
 | `<NS>` | the private network namespace |
-| `<ADMIN_PORT>`, `<CUST_PORT>` | host loopback ports of the two proxy sockets. Verified free |
+| `<ADMIN_SOCK>`, `<CUST_SOCK>` | the two proxy **Unix-domain** sockets, `/run/elite-po-staging/{admin,customer}.sock` (`0660`, group `<NGINX_GROUP>`) |
+| `<NGINX_GROUP>` | the group the nginx worker processes run as (read at S0; nothing else may be in it) |
 | `<ADMIN_IN>`, `<CUST_IN>` | the app listeners inside `<NS>` |
 | `<PG_PORT>` | the test cluster's port, inside `<NS>` only |
 | `<CLUSTER>`, `<DB>` | the new PostgreSQL 16 cluster, and its database (name contains `_test_only_`) |
@@ -276,7 +277,13 @@ WantedBy=multi-user.target
 ~~~ini
 # .socket
 [Socket]
-ListenStream=127.0.0.1:<ADMIN_PORT>
+# Unix-domain, not host TCP: on a shared VPS any local process can reach a loopback port, bypassing nginx (Basic
+# Auth, the X-Forwarded-Host overwrite). Only nginx can open this socket.
+ListenStream=<ADMIN_SOCK>
+SocketUser=root
+SocketGroup=<NGINX_GROUP>
+SocketMode=0660
+DirectoryMode=0750
 [Install]
 WantedBy=sockets.target
 
@@ -295,7 +302,7 @@ MemoryMax=64M
 
 - This is the documented pattern: the socket is listened on in the host's namespace, while the proxy runs
   inside `<NS>`.
-- nginx → proxy → app. The app sees peer `127.0.0.1`.
+- nginx → Unix socket → proxy → app. The app sees peer `127.0.0.1`. **Direct upstream access is restricted:** there is no host TCP listener at all; the socket is `0660` for `<NGINX_GROUP>` only, so no other local process can reach the apps or forge `X-Forwarded-Host` (the apps trust exactly one proxy hop).
 - The client address comes from `X-Forwarded-For`: nginx sets it to `$remote_addr`, and the app is set to
   `PLATFORM_TRUSTED_PROXY_HOPS=1`.
 
@@ -393,7 +400,7 @@ loopback only. Every `local-db-guard` and bootstrap target check passes.
 - `X-Robots-Tag: noindex, nofollow` and a deny-all `robots.txt` from nginx.
 - CloudPanel Basic Auth, with `.well-known` exempt.
 
-| `<ADMIN_HOST>` → `127.0.0.1:<ADMIN_PORT>` | `<CUST_HOST>` → `127.0.0.1:<CUST_PORT>` |
+| `<ADMIN_HOST>` → `proxy_pass http://unix:<ADMIN_SOCK>:` | `<CUST_HOST>` → `proxy_pass http://unix:<CUST_SOCK>:` |
 |---|---|
 | `= /` → 302 `/platform/login`; proxy `= /platform`, `^~ /platform/`, `^~ /_next/static/`, `= /favicon.ico`; everything else 404 | `= /platform` and `^~ /platform/` → 404; everything else proxied (customer pages, `/register/accept`, `/join/accept`, `/api/*`, `/print/*`, `/uploads/*`, `/assets/*`, exports, `/_next/static/*`) |
 
@@ -545,7 +552,7 @@ Stop immediately, then run that stage's rollback (§J), if any of these happens:
 1. The PID of `<ERP_UNIT>` changes, or it is not `active`.
 2. Any unit that was `active` at S0 is no longer `active`.
 3. Any existing vhost checksum changes, or `main`'s `postgresql.conf` or `pg_hba.conf` checksum, or `main`'s PID.
-4. A new listener appears on the host other than the two proxy sockets (S9 and later).
+4. Any new TCP listener appears on the host, or a Unix socket other than `<ADMIN_SOCK>` / `<CUST_SOCK>`, or either socket is not `0660 root:<NGINX_GROUP>` (S9 and later).
 5. `MemAvailable` falls below 2.5 GiB, swap use grows by more than 256 MiB within a stage, 1-minute load
    stays above 1.8 for 5 minutes, or free disk falls below 25 GB.
 6. Any V-NET or V-SBX probe that should fail succeeds.
@@ -622,7 +629,7 @@ These are not part of staging. The ERP's own release is planned in `PO07_ERP_SEC
 
 | Stage | Action | Prerequisites | DNS? | Existing services changed? | Stage-specific stop conditions (plus §I) |
 |---|---|---|---|---|---|
-| **S0** | Baseline (read-only): ERP PID and uptime; all active units; TCP and unix listener sets; vhost and `main` checksums; `pg_lsclusters`; memory, swap, load, disk; public `<ERP_HOST>` status, headers and certificate fingerprint | owner authorization | no | no | none (read-only) |
+| **S0** | Baseline (read-only): the nginx worker user and group `<NGINX_GROUP>` and that group's members (stop if anything but nginx is in it); ERP PID and uptime; all active units; TCP and unix listener sets; vhost and `main` checksums; `pg_lsclusters`; memory, swap, load, disk; public `<ERP_HOST>` status, headers and certificate fingerprint | owner authorization | no | no | none (read-only) |
 | **S1** | `useradd --system --shell /usr/sbin/nologin` for `<APP_USER>` (home `<APP_DIR>`) and `<PG_USER>` | S0 | no | no | either name taken |
 | **S2** | Slice; netns unit; tmpfiles entry; `elite-po-run`. Start the netns unit. Check `ip netns exec <NS> ip -o link` shows only `lo` | S1 | no | no | the host's links, routes or ufw rules differ from S0 |
 | **S3** | `pg_createcluster` (no `--start`); conf.d; `pg_hba`; drop-in; `daemon-reload`; `systemctl start postgresql@16-<CLUSTER>` | S2 | no | no | `main`'s PID or checksums change; any new host listener; start failure (see §B.3 rehearsal risk) |
@@ -631,7 +638,7 @@ These are not part of staging. The ERP's own release is planned in `PO07_ERP_SEC
 | **S6** | `npm ci`, then `next build`, as `<APP_USER>` in a capped transient unit, in the quiet window | S5, **P4** (22 Nov 2026 10:00–14:00 Saudi time, if still valid); start thresholds (§F) | no | no | the build abort thresholds; any §I item |
 | **S7** | Generate both env files on the host (root `0600`, never printed); the owner escrows the keys. **Check that both files set `PLATFORM_CONSOLE_HOST` and `CUSTOMER_APP_HOST` identically and that `customer.env` has no `PLATFORM_*_ENABLED`** (names and these non-secret values only) | S6 | no | no | any secret printed or logged; a binding variable missing or different |
 | **S8** | **V-NET for the tool path**; then migrations (§M step 1) through `elite-po-run` | S4, S7 | no | no | any V-NET failure; any non-zero tool exit |
-| **S9** | Install and start both app units and proxy sockets; **V-NET and V-SBX inside each unit**; R2–R10 against the proxy sockets with explicit headers; footprint sampling starts | S8 | no | no | a unit fails; a new listener appears other than the two sockets; any R-test fails; the budget is exceeded |
+| **S9** | Install and start both app units and proxy sockets; **V-NET and V-SBX inside each unit**; R2–R10 against the proxy sockets with explicit headers (`curl --unix-socket`); **a TCP connection from the host to the apps must be impossible, and a non-nginx user must get EACCES on both sockets**; footprint sampling starts | S8 | no | no | a unit fails; any new TCP listener, or a socket mode other than `0660 root:<NGINX_GROUP>`; any R-test fails; the budget is exceeded |
 | **S9b** | Owner: key escrow check, `platform:bootstrap` (own terminal, through `elite-po-run`) | S9 | no | no | bootstrap exit ≠ 0 |
 | **S10** | Owner creates the two A records; propagation check (§D) | owner | **yes** | no (DNS only) | the `<ERP_HOST>` record changes |
 | **S11a** | Two CloudPanel reverse-proxy sites to the proxy ports; vhost edits (§C); Basic Auth; `nginx -t` before each save (graceful reload); R1–R12 with `curl --resolve` | S9, **separate owner authorization** | no | **yes**: nginx reloaded | `nginx -t` fails; any existing vhost checksum changes; any `<ERP_HOST>` check differs |

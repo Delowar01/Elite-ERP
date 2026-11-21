@@ -40,7 +40,6 @@ jobs:
       - run: npm ci
 
       - name: Disposable PostgreSQL 16 (loopback only)
-        if: matrix.group != 'static'
         run: |
           sudo systemctl start postgresql.service
           sudo -u postgres psql -v ON_ERROR_STOP=1 -c "ALTER SYSTEM SET listen_addresses = '127.0.0.1'" -c "ALTER SYSTEM SET max_connections = 200" -c "ALTER USER postgres PASSWORD 'ci-test-only'"
@@ -50,7 +49,7 @@ jobs:
           echo "PLATFORM_TEST_ADMIN_DATABASE_URL=postgres://postgres:ci-test-only@127.0.0.1:5432/admin_test_only_" >> "$GITHUB_ENV"
 
       - name: A schema'd, hardened disposable ERP database (customer suites)
-        if: matrix.group == 'server' || matrix.group == 'browser'
+        if: matrix.group != 'platform'
         run: |
           cat > verify/zz-ci-db.tmp.mts <<'EOF'
           import { createPlatformTestDatabase } from "../scripts/platform/disposable-db";
@@ -69,6 +68,8 @@ jobs:
           CH=$(node -e "console.log(require('playwright').chromium.executablePath())")
           echo "PO01B_CHROMIUM=$CH" >> "$GITHUB_ENV"
           echo "PO07_CHROMIUM=$CH" >> "$GITHUB_ENV"
+          echo "CHROMIUM_PATH=$CH" >> "$GITHUB_ENV"
+          echo "PLAYWRIGHT_CHROMIUM=$CH" >> "$GITHUB_ENV"
 
       - name: Gates
         shell: bash
@@ -99,7 +100,7 @@ jobs:
               gate "tests/security/platform-boundary" node tests/security/platform-boundary.test.mjs
               gate "tests/security/access-control" node tests/security/access-control.test.mjs
               gate "tests/security/crypto-policy" node tests/security/crypto-policy.test.mjs
-              for s in $(scripts 'c("verify:static")') verify:po05-security-update verify:platform-proxy; do gate "$s" npm run -s "$s"; done
+              for s in $(scripts 'c("verify:static")') verify:po05-security-update verify:platform-proxy; do gate "$s" env DATABASE_URL="$ERP_DATABASE_URL" npm run -s "$s"; done
               ;;
             platform)
               for s in $(scripts 'c("verify:platform").filter(x=>x!=="verify:platform-boundary"&&x!=="verify:platform-proxy")'); do gate "$s" npm run -s "$s"; done
@@ -111,7 +112,10 @@ jobs:
               gate "next build" env DATABASE_URL="postgres://build@127.0.0.1:9/build_test_only_" npx next build
               if [ -f verify/verify-platform-host-binding.mts ]; then gate "H-1 verify-platform-host-binding" npx tsx --conditions=react-server verify/verify-platform-host-binding.mts; fi
               for s in $(scripts 'Object.keys(s).filter(n=>/^verify:platform-.*browser$/.test(n))'); do gate "$s" npm run -s "$s"; done
-              gate "verify:browser (customer tier)" env DATABASE_URL="$ERP_DATABASE_URL" AUTH_SECRET="ci-only-$(openssl rand -hex 24)" FIELD_ENCRYPTION_KEYS="1:$(openssl rand -base64 32)" npm run -s verify:browser -- --skip-build
+              # the customer suites read .env directly: a throw-away CI-only file (disposable database, per-run test secrets)
+              printf 'DATABASE_URL=%s\nAUTH_SECRET=ci-only-%s\nFIELD_ENCRYPTION_KEYS=1:%s\n' "$ERP_DATABASE_URL" "$(openssl rand -hex 24)" "$(openssl rand -base64 32)" > .env
+              gate "verify:browser (customer tier)" npm run -s verify:browser -- --skip-build
+              rm -f .env
               ;;
           esac
           echo "" >> "$GITHUB_STEP_SUMMARY"

@@ -234,7 +234,13 @@ async function main() {
       const off = await Promise.all(paths.map(async (p) => JSON.stringify(shape(await base.proxy(req(p, { [CCOOKIE]: customer })))) === JSON.stringify(shape(await proxy(req(p, { [CCOOKIE]: customer }))))));
       process.env.PLATFORM_CONSOLE_ENABLED = savedFlag;
       ok("…and also with the console flag off", off.every(Boolean));
-      ok("the matcher is byte-for-byte 621f156's (static assets still bypass the proxy)", JSON.stringify(config) === JSON.stringify(base.config));
+      // PO-07 H-1 adds exactly one matcher entry: every request carrying a Next-Action header runs the proxy (a dynamic page
+      // also matches "<path>.png", so a Server Action may never be exempt). 621f156's entry stays first and unchanged.
+      ok("the matcher is 621f156's (static assets still bypass the proxy) plus exactly H-1's one Next-Action entry",
+        Array.isArray(base.config.matcher) && base.config.matcher.length === 1 && Array.isArray(config.matcher) && config.matcher.length === 2 &&
+          JSON.stringify(config.matcher[0]) === JSON.stringify(base.config.matcher[0]) &&
+          JSON.stringify(config.matcher[1]) === JSON.stringify({ source: "/((?!_next/static|_next/image|favicon.ico).*)", has: [{ type: "header", key: "next-action" }] }),
+        JSON.stringify(config.matcher));
     } finally {
       if (existsSync(tmp)) rmSync(tmp);
     }
