@@ -1,0 +1,317 @@
+{
+  "manifest": "elite-erp/platform-owner/d6-migration-manifest",
+  "manifestVersion": 1,
+  "status": "PROPOSAL (PO-06). Rehearsed only on loopback, disposable *_test_only_* databases with fictional data. Not approved for any real database: decision D-6 is the owner's. The tool that reads this file refuses every other target before it connects.",
+  "tool": "npx tsx --conditions=react-server scripts/platform/release-manifest.ts --check | --plan | --status | --apply | --rollback",
+  "neverRun": [
+    "drizzle-kit push without the release preflight (unrestricted push): H-1 offers to TRUNCATE a populated users table, H-2 fails half-way with 42830, H-3 leaves four customer foreign keys dropped",
+    "drizzle-kit push --force, at any time",
+    "drizzle-kit push after S08 while the staged user_invitations declaration is outside src/db/schema: its plan is ALTER TABLE \"user_invitations\" DISABLE ROW LEVEL SECURITY and DROP TABLE \"user_invitations\" CASCADE (rehearsal finding D6-F1)",
+    "drizzle-kit migrate or drizzle-kit generate: the committed journal builds 59 tables against the schema's 80 (db:preflight reports INCONSISTENT)",
+    "any file of this manifest by hand, in a different order, or with psql -1 / inside an outer BEGIN"
+  ],
+  "server": {
+    "minimumServerVersionNum": 140000,
+    "minimumReason": "CREATE OR REPLACE TRIGGER (PO01) and the server_version_num checks inside PO02A, PO02D1 and PO03C",
+    "rehearsedVersion": "PostgreSQL 16.15",
+    "encoding": "UTF8",
+    "primaryOnly": "not a standby (pg_is_in_recovery() = false)",
+    "searchPath": "the session's current schema is public",
+    "connection": "a direct connection: the autocommit CONCURRENTLY steps cannot run through a transaction-mode pooler",
+    "privileges": [
+      "CREATE on the database (each reviewed file builds its scratch reference schema inside its own transaction)",
+      "ownership of users and sessions (S01, S03, S04 and S05 add an index or a constraint to them)",
+      "REFERENCES on orgs, users and the platform tables (new foreign keys)",
+      "the same role for every step; no step changes a role, a grant or a setting outside its own transaction"
+    ]
+  },
+  "targets": {
+    "accepted": "a loopback-only PostgreSQL server and a database whose name contains _test_only_ (scripts/platform/local-db-guard.ts: URL form, loopback host, name marker, then server-side loopback, listen_addresses and current_database checks)",
+    "staging": "the PO-06 recommendation: a PostgreSQL server on the isolated staging host, listening on 127.0.0.1 only, holding one fictional-data database named with _test_only_ (for example elite_staging_test_only_01); the guarded tools then work unchanged, the Trial seed included (its SQL refuses any other database name by itself)",
+    "production": "not supported by this tool. A production mode (an approved target list, a dedicated migration role, a maintenance window) is part of decision D-6 and is not built."
+  },
+  "pins": {
+    "$comment": "Catalog fingerprints from scripts/platform/catalog.ts projectCatalog(): platform = every platform-owned table, column, constraint, index, trigger, function and sequence; other = everything else in public. Computed in PO-06 on two independent clean copies of the 621f156 schema (identical) and re-checked by the rehearsal on every shape.",
+    "platformDigest": {
+      "none": "c1dd80435497ef3799525a4ee0485f53e9042d3225355195b97fae459b16760d",
+      "afterS02": "0059c326fd71902b82091080e63d52c64ecb6082e91c162474e7b84033f7a070",
+      "afterS03": "8a00be2089bffb5a5d0aabe780a32e369574fd67a0238348e9a9999a26d16df5",
+      "afterS05": "2aac461e06e7966e4b613028b31a284df0ef05bcb00442f6ae01243bc6f3c545"
+    },
+    "m4Lines": [
+      "sessions | sessions_org_active_idx | CREATE INDEX sessions_org_active_idx ON public.sessions USING btree (org_id) WHERE (revoked_at IS NULL)"
+    ],
+    "usersKeyLines": [
+      "users | users_org_id_id_uq | u | UNIQUE (id, org_id) | validated | immediate",
+      "users | users_org_id_id_uq | CREATE UNIQUE INDEX users_org_id_id_uq ON public.users USING btree (id, org_id)"
+    ],
+    "po03c": {
+      "objects": ["user_invitations", "user_invitation_guard"],
+      "lineCount": 38,
+      "digest": "aaec69799a17a34d24fab0145e188f3e8db96776443789f3a0d7b33deaba84b1"
+    },
+    "baseSchema": {
+      "$comment": "The other-projection of a NEW database after B00: exactly the customer ERP schema of main 621f156 (drizzle-kit push of main's own configuration plus drizzle/immutable_audit.sql produced a byte-identical pg_dump --schema-only, 5,240 lines, sha256 c0e02373…).",
+      "otherDigest": "c712ee56287b8561edf6cffb6f31c0df37fd8e202c81a5156f75c075b57c4575",
+      "otherLineCount": 1298
+    }
+  },
+  "base": [
+    {
+      "id": "B00",
+      "name": "erp-base-schema",
+      "title": "NEW database only: the customer ERP schema at the 621f156 shape, then the immutable-audit hardening",
+      "when": "only on an empty new database (staging). Refused when public holds any table. Never on an existing ERP database.",
+      "execution": "restricted push: scripts/platform/disposable-db.ts pushPreCompanyTenantSchema (the tenant schema modules only, minus M4 and the users key — the 621f156 shape), then drizzle/immutable_audit.sql",
+      "file": "drizzle/immutable_audit.sql",
+      "expectedAfter": "other-projection digest = pins.baseSchema.otherDigest; no platform object (platformDigest = pins.platformDigest.none)",
+      "retry": "refused on a non-empty database: a failed B00 is recovered by dropping and re-creating the new database",
+      "locks": "a new, empty database: none that any user can feel",
+      "onFailure": "drop the new database and start again; nothing else exists yet",
+      "rollback": "drop the new staging database (it holds nothing but the schema)"
+    }
+  ],
+  "forward": [
+    {
+      "id": "S00",
+      "name": "target-check",
+      "title": "Read-only target check and release preflight",
+      "kind": "check",
+      "when": "always, first",
+      "requires": [],
+      "checks": [
+        "the local-db-guard accepts the target (loopback-only server, _test_only_ name)",
+        "PostgreSQL >= 14, UTF8, not a standby, current schema public",
+        "an Elite ERP database (orgs.id, users.id, users.org_id, users.email, sessions.org_id)",
+        "no leftover scratch schema (po02a_reference, po02d1_reference, po03c_reference)",
+        "no INVALID index in public",
+        "the immutable-audit triggers audit_logs_immutable and security_events_immutable exist, are enabled and are bound to their tables",
+        "the release preflight's state is REVIEWED_SQL_NOT_APPLIED or REVIEWED_SQL_COMPLETE; PARTIAL_PUSH_CREATED, PARTIAL_OR_DRIFTED and UNSUPPORTED_TARGET stop here with the preflight's recovery text",
+        "the platform catalog fingerprint equals one of pins.platformDigest (otherwise: drifted, stop)"
+      ],
+      "onFailure": "nothing has been changed; follow the recovery the finding names (PO02D1A1_MIGRATION_HARDENING.md §F.6 for a push-created partial schema)"
+    },
+    {
+      "id": "S01",
+      "name": "m4-sessions-index-concurrently",
+      "title": "M4 sessions_org_active_idx built CONCURRENTLY (large sessions table)",
+      "kind": "sql-autocommit",
+      "file": "drizzle/platform/PO02A_m4_sessions_index_concurrently.sql",
+      "timeouts": { "lock": "0", "statement": "0" },
+      "when": "REQUIRED (--concurrent-indexes) on any database in use — staging with testers, and production: S03's plain M4 build holds SHARE on sessions (every sign-in's session write waits) for the build. Only on an empty, disposable database may S03 build M4 itself.",
+      "requires": ["S00"],
+      "approval": "D-6",
+      "expectedAfter": "pins.m4Lines present; the index valid and ready",
+      "retry": "a no-op when the valid, identical index exists; refuses over an INVALID leftover and prints DROP INDEX CONCURRENTLY public.sessions_org_active_idx",
+      "locks": "SHARE UPDATE EXCLUSIVE on sessions: reads and writes continue; the build waits for transactions already open when it starts; no timeout inside (bounded by the maintenance window)",
+      "onFailure": "an interrupted build leaves an INVALID index: DROP INDEX CONCURRENTLY public.sessions_org_active_idx, then run S01 again",
+      "rollback": "R03"
+    },
+    {
+      "id": "S02",
+      "name": "po01-platform-identity",
+      "title": "PO-01A platform identity: four platform tables, platform_reject_mutation(), the append-only audit triggers",
+      "kind": "sql-transaction",
+      "file": "drizzle/platform/PO01_platform_identity.sql",
+      "timeouts": { "lock": "5s", "statement": "60s" },
+      "when": "always",
+      "requires": ["S00"],
+      "approval": "D-6",
+      "expectedBefore": "pins.platformDigest.none",
+      "expectedAfter": "pins.platformDigest.afterS02; checkPlatformObjects OK; preflight component po01a complete",
+      "retry": "idempotent (CREATE … IF NOT EXISTS, CREATE OR REPLACE). It cannot see a differently shaped table of the same name, so the tool's catalog fingerprint check is what refuses a malformed pre-existing object (rehearsal scenario G)",
+      "locks": "measured (PO-06 C5): SHARE ROW EXCLUSIVE on orgs until COMMIT (the platform_audit_events.org_id foreign key); ACCESS EXCLUSIVE only on the four new platform tables. A verify-only re-run (CREATE OR REPLACE of the function and triggers) locks only platform tables (SHARE / SHARE ROW EXCLUSIVE on platform_admins and platform_audit_events)",
+      "onFailure": "one transaction: nothing persists; fix the cause and run again",
+      "rollback": "R02"
+    },
+    {
+      "id": "S03",
+      "name": "po02a-company-foundation",
+      "title": "PO-02A company foundation: tenant_access_controls, organization_invitations, M4 (verify or create), the audit entity index",
+      "kind": "sql-transaction",
+      "file": "drizzle/platform/PO02A_company_foundation.sql",
+      "timeouts": { "lock": "5s", "statement": "120s" },
+      "when": "always",
+      "requires": ["S02"],
+      "approval": "D-6",
+      "expectedBefore": "pins.platformDigest.afterS02",
+      "expectedAfter": "pins.platformDigest.afterS03; pins.m4Lines present; checkCompanyFoundation OK; preflight component po02a complete",
+      "retry": "absent -> created; identical -> verified, untouched; any difference -> the whole file aborts naming every difference. The corrected reference schema (PO-02D1A.1) uses stand-ins, so a verify-only re-run locks no customer table",
+      "locks": "measured (PO-06 C5/C6): SHARE ROW EXCLUSIVE on orgs and platform_admins until COMMIT; ACCESS EXCLUSIVE only on the two new tables. Without S01 the plain M4 build holds SHARE on sessions until COMMIT (session writes wait). A verify-only re-run holds only ACCESS SHARE",
+      "onFailure": "one transaction: nothing persists. An INVALID M4 left by an interrupted S01 is refused with its recovery",
+      "rollback": "R03"
+    },
+    {
+      "id": "S04",
+      "name": "users-key-concurrently",
+      "title": "F1 users_org_id_id_uq built CONCURRENTLY, then attached as the UNIQUE (id, org_id) constraint",
+      "kind": "sql-autocommit",
+      "file": "drizzle/platform/PO02D1_users_org_id_id_concurrently.sql",
+      "timeouts": { "lock": "0 for the build; 5s for the attach", "statement": "0" },
+      "when": "REQUIRED (--concurrent-indexes) on any database whose users table is in use — staging with testers, and production. Only on an empty, disposable database may S05 build the key itself: that plain path holds ACCESS EXCLUSIVE on users until S05 commits (rehearsal finding D6-F4).",
+      "requires": ["S03"],
+      "approval": "D-6",
+      "expectedAfter": "pins.usersKeyLines present; preflight component f1 complete",
+      "retry": "a no-op when the valid, attached key exists; refuses over an INVALID leftover or a different definition and prints the recovery",
+      "locks": "build: SHARE UPDATE EXCLUSIVE on users (reads and writes continue; waits for transactions already open). Attach: ACCESS EXCLUSIVE on users for the catalog change only (no scan), bounded by lock_timeout 5s",
+      "onFailure": "an interrupted build leaves an INVALID index: DROP INDEX CONCURRENTLY public.users_org_id_id_uq, then run S04 again",
+      "rollback": "R04"
+    },
+    {
+      "id": "S05",
+      "name": "po02d1-onboarding-foundation",
+      "title": "PO-02D1 onboarding foundation: seven tables, three guard functions, ten triggers, the users key (verify or create)",
+      "kind": "sql-transaction",
+      "file": "drizzle/platform/PO02D1_onboarding_foundation.sql",
+      "timeouts": { "lock": "5s", "statement": "120s" },
+      "when": "always",
+      "requires": ["S03"],
+      "approval": "D-6",
+      "expectedBefore": "pins.platformDigest.afterS03",
+      "expectedAfter": "pins.platformDigest.afterS05; pins.usersKeyLines present; checkOnboardingFoundation OK; preflight PUSH_SAFE and REVIEWED_SQL_COMPLETE",
+      "retry": "absent -> created; identical -> verified; any difference -> the whole file aborts naming every difference",
+      "locks": "measured (PO-06 C5/C7): after S04, SHARE ROW EXCLUSIVE on orgs, users, platform_admins and organization_invitations until COMMIT, nothing stronger on a customer table. WITHOUT S04 the users key is built inside this transaction by ALTER TABLE users ADD CONSTRAINT … UNIQUE: ACCESS EXCLUSIVE on users until COMMIT — every read of users (each sign-in and session check) waits for the whole transaction (D6-F4). A verify-only re-run holds no lock on any watched table",
+      "onFailure": "one transaction: nothing persists; an INVALID users key is refused with its recovery",
+      "rollback": "R05 then R04"
+    },
+    {
+      "id": "S06",
+      "name": "foundation-gate",
+      "title": "Read-only gate before any row is written",
+      "kind": "check",
+      "when": "always",
+      "requires": ["S05"],
+      "checks": [
+        "the release preflight reports PUSH_SAFE and REVIEWED_SQL_COMPLETE (the Trial seed runner refuses otherwise)",
+        "checkPlatformObjects, checkCompanyFoundation and checkOnboardingFoundation all OK",
+        "platform fingerprint = pins.platformDigest.afterS05",
+        "no scratch schema, no INVALID index, every trigger in public enabled",
+        "the immutable-audit triggers still present and enabled"
+      ],
+      "onFailure": "stop; the foundation is installed but unverified — investigate before any seed"
+    },
+    {
+      "id": "S07",
+      "name": "trial-seed",
+      "title": "PO-02D1B default Trial package, its published version 1 and the platform settings row",
+      "kind": "seed-runner",
+      "file": "drizzle/platform/PO02D1B_seed_trial_and_settings.sql",
+      "runner": "scripts/platform/trial-seed.ts runSeed() — guard, then the release preflight (PUSH_SAFE + REVIEWED_SQL_COMPLETE), then the SQL, then a read-only post-check",
+      "timeouts": { "lock": "5s", "statement": "120s" },
+      "when": "always (owner decision: the Trial values of PO02D1B_DEVELOPMENT.md §D)",
+      "requires": ["S06"],
+      "approval": "D-6 and the Trial values (T-1 … T-8)",
+      "expectedAfter": "checkTrialSeed state complete; platform fingerprint unchanged (rows only)",
+      "retry": "absent -> inserted; equal to the approved values -> verified, nothing written (not even an audit record); different -> refused, naming every difference",
+      "locks": "SHARE ROW EXCLUSIVE on the three platform catalog tables; no customer table is read or written",
+      "onFailure": "one transaction: nothing persists. The SQL refuses by itself any database not named *_test_only_ on a loopback-only server",
+      "rollback": "R07"
+    },
+    {
+      "id": "S08",
+      "name": "po03c-user-invitations",
+      "title": "PO-03C staged user_invitations table, user_invitation_guard() and its two triggers",
+      "kind": "sql-transaction",
+      "file": "drizzle/platform/PO03C_user_invitations.sql",
+      "timeouts": { "lock": "5s", "statement": "120s" },
+      "when": "only after the owner approves L-3 (the staged schema). It is not part of PLATFORM_SQL_FILES, so npm run platform:db:apply never runs it.",
+      "requires": ["S07"],
+      "approval": "D-6 and L-3",
+      "expectedAfter": "pins.po03c (38 catalog lines, digest aaec6979…) present; platform fingerprint unchanged; no other customer object changed",
+      "retry": "absent -> created; identical -> verified; any difference -> abort naming every difference",
+      "locks": "measured (PO-06 C4/C5): SHARE ROW EXCLUSIVE on orgs, users and platform_admins until COMMIT, nothing stronger; a verify-only re-run holds no lock on any watched table",
+      "onFailure": "one transaction: nothing persists",
+      "afterwards": "the release preflight reports BLOCKED with exactly two X-01 findings — ALTER TABLE \"user_invitations\" DISABLE ROW LEVEL SECURITY and DROP TABLE \"user_invitations\" CASCADE: a push of src/db/schema would drop the staged table. Correct and expected while L-3 keeps the declaration in src/db/staged — it is why push must never run after S08 (neverRun); the seed runner, which needs PUSH_SAFE, therefore refuses after S08 until R08 has run",
+      "rollback": "R08"
+    },
+    {
+      "id": "S09",
+      "name": "final-verification",
+      "title": "Read-only final verification",
+      "kind": "check",
+      "when": "always, last",
+      "requires": ["S08"],
+      "checks": [
+        "platform fingerprint = pins.platformDigest.afterS05; pins.m4Lines and pins.usersKeyLines present",
+        "the PO-03C objects match pins.po03c exactly",
+        "checkPlatformObjects, checkCompanyFoundation, checkOnboardingFoundation OK; checkTrialSeed complete",
+        "no scratch schema, no INVALID index, every trigger in public enabled, the immutable-audit triggers present",
+        "the release preflight: BLOCKED with exactly the two X-01 findings for user_invitations (expected after S08); PUSH_SAFE when S08 was not run"
+      ]
+    }
+  ],
+  "rollback": [
+    {
+      "id": "R08",
+      "undoes": "S08",
+      "file": "drizzle/platform/PO03C_user_invitations_rollback.sql",
+      "kind": "sql-transaction",
+      "timeouts": { "lock": "5s", "statement": "60s" },
+      "preconditions": "the application no longer writes user_invitations (PLATFORM_USER_INVITATIONS_ENABLED off, or the release rolled back)",
+      "refuses": "while user_invitations holds ANY row (open, expired, revoked or accepted): nothing is changed and no audit record is added",
+      "effect": "drops the table, its two triggers and user_invitation_guard(); appends one platform audit record schema.user_invitations_removed; a repeated run adds nothing",
+      "locks": "ACCESS EXCLUSIVE on orgs, users and platform_admins until COMMIT (milliseconds)"
+    },
+    {
+      "id": "R07",
+      "undoes": "S07",
+      "file": "drizzle/platform/PO02D1B_seed_rollback.sql",
+      "kind": "seed-runner",
+      "runner": "scripts/platform/trial-seed.ts runSeed(url, { rollback: true }) — needs the preflight PUSH_SAFE, so R08 must run first",
+      "timeouts": { "lock": "5s", "statement": "60s" },
+      "refuses": "while anything references the Trial (a subscription, an invitation term, a second version) or the rows differ from the approved seed: nothing is removed",
+      "effect": "removes Trial version 1, the Trial package and the settings row; appends one audit record"
+    },
+    {
+      "id": "R05",
+      "undoes": "S05",
+      "file": "drizzle/platform/PO02D1_rollback.sql",
+      "kind": "sql-transaction",
+      "timeouts": { "lock": "5s", "statement": "60s" },
+      "refuses": "while ANY of the seven onboarding tables holds a row (so R07 first)",
+      "effect": "drops the seven tables (their ten triggers go with them) and the three guard functions; the users key stays (R04)",
+      "locks": "ACCESS EXCLUSIVE on orgs, users, platform_admins and organization_invitations until COMMIT (milliseconds)"
+    },
+    {
+      "id": "R04",
+      "undoes": "S04/S05 (the users key)",
+      "file": "drizzle/platform/PO02D1_users_org_id_id_drop.sql",
+      "kind": "sql-autocommit",
+      "timeouts": { "lock": "5s for the constraint drop; 0 for DROP INDEX CONCURRENTLY", "statement": "default" },
+      "refuses": "while the primary-owner foreign key (R05 not yet run) still depends on the key",
+      "effect": "drops the constraint (ACCESS EXCLUSIVE on users for the catalog change, no scan) or a bare/INVALID index CONCURRENTLY; appends one audit record when something is removed"
+    },
+    {
+      "id": "R03",
+      "undoes": "S03 (and S01)",
+      "file": "drizzle/platform/PO02A_rollback.sql",
+      "kind": "sql-transaction",
+      "timeouts": { "lock": "5s", "statement": "60s" },
+      "preconditions": "on a large sessions table first run, in autocommit: DROP INDEX CONCURRENTLY IF EXISTS public.sessions_org_active_idx",
+      "refuses": "while tenant_access_controls or organization_invitations holds a row",
+      "effect": "drops the two PO-02A tables, M4 and the audit entity index"
+    },
+    {
+      "id": "R02",
+      "undoes": "S02",
+      "file": null,
+      "kind": "none",
+      "effect": "NO reviewed rollback exists for PO-01A. Its tables hold the append-only platform audit trail; removing them destroys evidence and needs its own owner-approved, backed-up plan (rehearsal finding D6-F3). The objects are inert while PLATFORM_CONSOLE_ENABLED is off."
+    }
+  ],
+  "files": [
+    { "path": "drizzle/platform/PO01_platform_identity.sql", "sha256": "337cdfe1469037bfe265d521aeb997680a2b4c06f9116383cb1b7124b9fa8ee1", "bytes": 11176, "step": "S02" },
+    { "path": "drizzle/platform/PO02A_m4_sessions_index_concurrently.sql", "sha256": "db89d75915df8320afc54bb5ed7db83b63027eea60ae83e8367d9debd012b9b9", "bytes": 4162, "step": "S01" },
+    { "path": "drizzle/platform/PO02A_company_foundation.sql", "sha256": "81c4b1c9dc74f06d3314d34982d714e18f35a42c184883b50747b393737172e8", "bytes": 23275, "step": "S03" },
+    { "path": "drizzle/platform/PO02D1_users_org_id_id_concurrently.sql", "sha256": "1da56a0358a1083520fd76408a0c04d7fe29da3c733ef24ad149a8908c3838e1", "bytes": 6620, "step": "S04" },
+    { "path": "drizzle/platform/PO02D1_onboarding_foundation.sql", "sha256": "3fae0e23310f1ae3c430c65a19d27f4f6cfd3e696201052515e4d1add2eb9fe2", "bytes": 50104, "step": "S05" },
+    { "path": "drizzle/platform/PO02D1B_seed_trial_and_settings.sql", "sha256": "0bce59ca04e43b3511223f157066b9cbd5841d684bf1906d39b40e24ec93e1c1", "bytes": 27125, "step": "S07" },
+    { "path": "drizzle/platform/PO03C_user_invitations.sql", "sha256": "d72a48f0abdf3fc5ca9c8047ffd47fa678e02e80d9b9c8881e72cb49e6babeca", "bytes": 23330, "step": "S08" },
+    { "path": "drizzle/platform/PO03C_user_invitations_rollback.sql", "sha256": "e74d68ed8aa5e780a7470f49fb1e3fc68714ff0620f7c8000eaa8a81fff721f3", "bytes": 3203, "step": "R08" },
+    { "path": "drizzle/platform/PO02D1B_seed_rollback.sql", "sha256": "026848ed4efd9a30ce34d43638580df945c3dcdb18f1b8bf76977d55b2c9fa5a", "bytes": 18705, "step": "R07" },
+    { "path": "drizzle/platform/PO02D1_rollback.sql", "sha256": "e5f40f3433c47e9c97447092c86125bfef985ae2b9ae2c749f866de2ce5e0296", "bytes": 4900, "step": "R05" },
+    { "path": "drizzle/platform/PO02D1_users_org_id_id_drop.sql", "sha256": "c4a6f0aa5d47197e4482e68add6e231dfea8abdfc218eda3aac34c95bba765ac", "bytes": 4669, "step": "R04" },
+    { "path": "drizzle/platform/PO02A_rollback.sql", "sha256": "ed87e54c409f187e4d32eca15403cbd705a66a1baf7089788178d3e75a9ffcf0", "bytes": 2439, "step": "R03" },
+    { "path": "drizzle/immutable_audit.sql", "sha256": "a3b0138667359a63c08b7354c9c0bed7c22e274dcd73f7b018b19bcb068cf2f8", "bytes": 927, "step": "B00" }
+  ]
+}
