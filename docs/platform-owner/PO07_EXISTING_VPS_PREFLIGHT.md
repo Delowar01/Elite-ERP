@@ -251,7 +251,7 @@ proxy_set_header Connection        "";
 | Code | the approved head of `feat/platform-owner` (application code as at `1c8682f`; PO-07 changed only `docs/`), cloned from the public repository (no credential needed) or copied as a verified `git bundle` |
 | Node.js | 22.x. Reuse the ERP's Node if it is 22. Otherwise install a separate copy for this user only — **never change the ERP's Node** |
 | Database | PostgreSQL bound to 127.0.0.1 only (16, or the distribution's version ≥ 14, rehearsed first), with a database named `*_test_only_*`, a migration role and a DML-only runtime role |
-| Service | a new systemd unit:<br>• `next start -H 127.0.0.1 -p <ADMIN_PORT>`<br>• `MemoryMax`, `NoNewPrivileges=yes`, `PrivateTmp=yes`, `ProtectSystem=strict` with only its own build and storage paths writable<br>• runtime network limited to loopback: `IPAddressDeny=any` with `IPAddressAllow=localhost` (needs cgroup v2, Phase A2; checked after start)<br>• its own env file (`0600`, owned by that user) |
+| Service | a new systemd unit:<br>• `next start -H 127.0.0.1 -p <ADMIN_PORT>`<br>• `MemoryMax`, `NoNewPrivileges=yes`, `PrivateTmp=yes`, `ProtectSystem=strict` with only its own build and storage paths writable<br>• runtime network limited to loopback: `IPAddressDeny=any` with `IPAddressAllow=localhost` (needs cgroup v2, Phase A2; checked after start)<br>• its own env file: root-owned, `0600`, in a `0700` directory, read by systemd (`po06/STAGING_ENV_TEMPLATE.md` §7). The service user cannot read or change it |
 | Environment | its own `AUTH_SECRET` and `PLATFORM_AUTH_SECRET` (distinct) and `FIELD_ENCRYPTION_KEYS`, generated on the host without being printed; `PLATFORM_TRUSTED_PROXY_HOPS=1`; `STORAGE_DRIVER=fake`; `NEXT_TELEMETRY_DISABLED=1`; every switch unset at first; the rest as in `po06/STAGING_ENV_TEMPLATE.md` (for example `STORAGE_FAKE_DIR`, and `RATE_API_BASE` pointing at a local stub). **No variable of the ERP is copied** |
 | Migration | the rehearsed sequence of PO-06 runbook steps 6–10:<br>• `release-manifest.ts --check`, then `--status`<br>• `--apply --base --concurrent-indexes --verify-data` (B00, S00–S07). `--base` creates the customer schema, and only on a new, empty database<br>• then, because L-3 is approved for staging, `--apply --concurrent-indexes --include-staged-user-invitations --verify-data` (S08, S09)<br>• then `npm run platform:db:check` and `npm run verify:db-hardening` |
 | Build | `next build` as that user, under a memory cap, at a quiet time, so the ERP is never starved. Build-time egress is needed only for npm and Google Fonts |
@@ -284,6 +284,63 @@ proxy_set_header Connection        "";
 - the cookie is `__Host-elite_erp_platform` (Secure, HttpOnly, `Path=/`, no `Domain`);
 - password + TOTP login, a refused cross-origin POST, sign-out and revocation, and the F1–F7 checks;
 - then the staging regression subset of `po06/STAGING_REGRESSION_SPEC.md`.
+
+### I.6 Command sketch (for review; placeholders; nothing here was run)
+
+The execution prompt finalizes these commands after Phase A and the owner's decisions.
+
+Secrets follow `po06/STAGING_ENV_TEMPLATE.md` §1 and §7:
+- they are generated straight into root-owned `0600` files;
+- they are never printed and never put on a command line.
+
+The owner personally does the key escrow (§7 step 5) and the bootstrap (§7 step 7), in their own terminal and never
+through an AI session. `<NODE_DIR>` must be outside `/home`, because the unit uses `ProtectHome=yes`.
+
+~~~bash
+# 0. Baseline. Record these; they are compared after every stage (§I.5)
+ps -o pid=,etime= -p <ERP_PID>
+curl -sSI https://<ERP_HOST>/login | grep -iE '^(HTTP|strict-transport|content-security|x-robots)'
+
+# 1. PostgreSQL on loopback, only if Phase A shows none (Ubuntu 24.04 ships 16)
+sudo apt-get install -y postgresql
+sudo -u postgres psql -tAc 'SHOW listen_addresses'            # must print: localhost
+#    roles <OWNER_ROLE> / <APP_ROLE> / <BACKUP_ROLE> and database <DB> (contains _test_only_): template §5 and §7
+
+# 2. Service user and code (public repository, no credential)
+sudo useradd --system --create-home --home-dir /srv/<APP_USER> --shell /usr/sbin/nologin <APP_USER>
+sudo -u <APP_USER> git clone <REPO_URL> /srv/<APP_USER>/app
+sudo -u <APP_USER> git -C /srv/<APP_USER>/app checkout --detach <APPROVED_SHA>
+cd /srv/<APP_USER>/app && sudo -u <APP_USER> -H env PATH=<NODE_DIR>/bin:/usr/bin:/bin npm ci
+
+# 3. Database: PO-06 runbook steps 6-10, run by the operator with <OWNER_ROLE> and its pgpass file
+export PATH=<NODE_DIR>/bin:$PATH PGPASSFILE=<OPERATOR_PGPASS> DATABASE_URL=postgres://<OWNER_ROLE>@127.0.0.1:5432/<DB>
+npx tsx scripts/platform/release-manifest.ts --check
+npx tsx scripts/platform/release-manifest.ts --status
+npx tsx scripts/platform/release-manifest.ts --apply --base --concurrent-indexes --verify-data
+npx tsx scripts/platform/release-manifest.ts --apply --concurrent-indexes --include-staged-user-invitations --verify-data
+npm run platform:db:check && npm run verify:db-hardening
+
+# 4. Build at a quiet time, capped so the ERP is never starved
+sudo systemd-run --wait --pipe --collect --uid=<APP_USER> --gid=<APP_USER> \
+  -p WorkingDirectory=/srv/<APP_USER>/app -p EnvironmentFile=<ENV_DIR>/app.env \
+  -p MemoryMax=<BUILD_CAP> -p CPUWeight=20 -E PATH=<NODE_DIR>/bin:/usr/bin:/bin npx next build
+
+# 5. The unit /etc/systemd/system/<APP_USER>.service; then start this unit only
+#    ExecStart=<NODE_DIR>/bin/node node_modules/next/dist/bin/next start -H 127.0.0.1 -p <ADMIN_PORT>
+#    User=<APP_USER>  Group=<APP_USER>  WorkingDirectory=/srv/<APP_USER>/app  EnvironmentFile=<ENV_DIR>/app.env
+#    Restart=on-failure  MemoryMax=<RUN_CAP>  NoNewPrivileges=yes  PrivateTmp=yes  ProtectHome=yes
+#    ProtectSystem=strict  ReadWritePaths=/srv/<APP_USER>/app/.next <STORAGE_FAKE_DIR>
+#    IPAddressDeny=any  IPAddressAllow=localhost
+sudo systemctl daemon-reload && sudo systemctl enable --now <APP_USER>.service
+curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:<ADMIN_PORT>/platform/login   # 404 while every switch is off
+
+# 6. nginx: the new vhost only (§I.2), then a graceful reload. On CloudPanel, use its site UI and vhost editor
+sudo nginx -t && sudo systemctl reload nginx
+#    TLS once DNS resolves: CloudPanel's Let's Encrypt, or "certbot certonly --webroot" (it does not edit nginx files)
+
+# 7. Switches F1 -> F7: edit the env file, restart this unit only, run the checks of SECURITY_AND_FLAG_MATRIX.md §2
+sudo systemctl restart <APP_USER>.service
+~~~
 
 ## J. Rollback plan
 
