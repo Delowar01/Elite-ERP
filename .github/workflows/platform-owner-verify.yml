@@ -1,0 +1,127 @@
+# Platform Owner development branch — full verification on Linux (PO-07 H-1).
+#
+# Runs every gate on the pushed commit AND on the unchanged baseline (BASE_SHA), so each failure can be classified as
+# introduced or pre-existing. Disposable PostgreSQL 16 on the runner's loopback only (the PO-06 guard refuses anything
+# else), fictional records only, TEST-ONLY secrets generated per run. No production service, credential or network
+# target is used; nothing is deployed. Each gate runs on its own (one failure never hides the next) and the job fails
+# if any gate failed. Logs are uploaded as an artifact.
+name: platform-owner-verify
+
+on:
+  push:
+    branches: [feat/platform-owner]
+
+permissions:
+  contents: read
+
+env:
+  BASE_SHA: ae37b2839a69c45c01a2bc8929e78ab26fff4590
+  NEXT_TELEMETRY_DISABLED: "1"
+
+jobs:
+  verify:
+    name: ${{ matrix.group }} (${{ matrix.tree }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 150
+    strategy:
+      fail-fast: false
+      matrix:
+        tree: [head, base]
+        group: [static, platform, server, browser]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ matrix.tree == 'base' && env.BASE_SHA || github.sha }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+
+      - name: Disposable PostgreSQL 16 (loopback only)
+        if: matrix.group != 'static'
+        run: |
+          sudo systemctl start postgresql.service
+          sudo -u postgres psql -v ON_ERROR_STOP=1 -c "ALTER SYSTEM SET listen_addresses = '127.0.0.1'" -c "ALTER SYSTEM SET max_connections = 200" -c "ALTER USER postgres PASSWORD 'ci-test-only'"
+          sudo systemctl restart postgresql.service
+          sudo -u postgres createdb admin_test_only_
+          sudo -u postgres psql -tAc "SHOW server_version" -c "SHOW listen_addresses"
+          echo "PLATFORM_TEST_ADMIN_DATABASE_URL=postgres://postgres:ci-test-only@127.0.0.1:5432/admin_test_only_" >> "$GITHUB_ENV"
+
+      - name: A schema'd, hardened disposable ERP database (customer suites)
+        if: matrix.group == 'server' || matrix.group == 'browser'
+        run: |
+          cat > verify/zz-ci-db.tmp.mts <<'EOF'
+          import { createPlatformTestDatabase } from "../scripts/platform/disposable-db";
+          await createPlatformTestDatabase("ci", "ci_erp_test_only_");
+          process.exit(0);
+          EOF
+          npx tsx --conditions=react-server verify/zz-ci-db.tmp.mts
+          rm verify/zz-ci-db.tmp.mts
+          echo "ERP_DATABASE_URL=postgres://postgres:ci-test-only@127.0.0.1:5432/ci_erp_test_only_" >> "$GITHUB_ENV"
+          DATABASE_URL="postgres://postgres:ci-test-only@127.0.0.1:5432/ci_erp_test_only_" npm run -s db:harden
+
+      - name: Chromium (Playwright)
+        if: matrix.group == 'browser'
+        run: |
+          npx playwright install --with-deps chromium
+          CH=$(node -e "console.log(require('playwright').chromium.executablePath())")
+          echo "PO01B_CHROMIUM=$CH" >> "$GITHUB_ENV"
+          echo "PO07_CHROMIUM=$CH" >> "$GITHUB_ENV"
+
+      - name: Gates
+        shell: bash
+        run: |
+          set +e
+          mkdir -p ci-logs
+          FAILED=0
+          echo "### ${{ matrix.group }} — ${{ matrix.tree }} ($(git rev-parse --short HEAD))" >> "$GITHUB_STEP_SUMMARY"
+          echo "| gate | exit | summary |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|---|---|---|" >> "$GITHUB_STEP_SUMMARY"
+          gate() { # name, command...
+            local name="$1"; shift
+            local log="ci-logs/$(echo "$name" | tr -c 'A-Za-z0-9.-' '_').log"
+            timeout 2400 "$@" > "$log" 2>&1
+            local code=$?
+            local line
+            line=$(grep -aE '[0-9]+ ?/ ?[0-9]+|passed|failed|VERIFICATION (PASS|FAIL)|aborted|error TS|problems? \(' "$log" | tail -1 | tr '|' '/' | cut -c1-180)
+            [ -z "$line" ] && line=$(grep -av '^\s*$' "$log" | tail -1 | tr '|' '/' | cut -c1-180)
+            echo "| $name | $code | $line |" >> "$GITHUB_STEP_SUMMARY"
+            echo "::group::$name → exit $code"; tail -40 "$log"; echo "::endgroup::"
+            [ "$code" -ne 0 ] && FAILED=$((FAILED + 1))
+          }
+          scripts() { node -e "const s=require('./package.json').scripts; const c=n=>s[n].split('&&').map(x=>x.trim().replace(/^npm run /,'')); console.log(($1).join(' '))"; }
+          case "${{ matrix.group }}" in
+            static)
+              gate "tsc --noEmit" npx tsc --noEmit
+              gate "eslint src --max-warnings=0" npx eslint src --max-warnings=0
+              gate "tests/security/platform-boundary" node tests/security/platform-boundary.test.mjs
+              gate "tests/security/access-control" node tests/security/access-control.test.mjs
+              gate "tests/security/crypto-policy" node tests/security/crypto-policy.test.mjs
+              for s in $(scripts 'c("verify:static")') verify:po05-security-update verify:platform-proxy; do gate "$s" npm run -s "$s"; done
+              ;;
+            platform)
+              for s in $(scripts 'c("verify:platform").filter(x=>x!=="verify:platform-boundary"&&x!=="verify:platform-proxy")'); do gate "$s" npm run -s "$s"; done
+              ;;
+            server)
+              for s in $(scripts 'c("verify:server")'); do gate "$s" env DATABASE_URL="$ERP_DATABASE_URL" npm run -s "$s"; done
+              ;;
+            browser)
+              gate "next build" env DATABASE_URL="postgres://build@127.0.0.1:9/build_test_only_" npx next build
+              if [ -f verify/verify-platform-host-binding.mts ]; then gate "H-1 verify-platform-host-binding" npx tsx --conditions=react-server verify/verify-platform-host-binding.mts; fi
+              for s in $(scripts 'Object.keys(s).filter(n=>/^verify:platform-.*browser$/.test(n))'); do gate "$s" npm run -s "$s"; done
+              gate "verify:browser (customer tier)" env DATABASE_URL="$ERP_DATABASE_URL" AUTH_SECRET="ci-only-$(openssl rand -hex 24)" FIELD_ENCRYPTION_KEYS="1:$(openssl rand -base64 32)" npm run -s verify:browser -- --skip-build
+              ;;
+          esac
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "failed gates: $FAILED" >> "$GITHUB_STEP_SUMMARY"
+          exit $([ "$FAILED" -eq 0 ] && echo 0 || echo 1)
+
+      - name: Logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: logs-${{ matrix.group }}-${{ matrix.tree }}
+          path: ci-logs/
+          retention-days: 14
