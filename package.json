@@ -125,7 +125,8 @@
     "verify:platform-seat-paths": "tsx --conditions=react-server verify/verify-platform-seat-paths.mts",
     "verify:platform-user-invitations-browser": "tsx --conditions=react-server verify/verify-platform-user-invitations-browser.mts",
     "verify:platform-user-acceptance-browser": "tsx --conditions=react-server verify/verify-platform-user-acceptance-browser.mts",
-    "verify:platform-seat-enforcement-browser": "tsx --conditions=react-server verify/verify-platform-seat-enforcement-browser.mts"
+    "verify:platform-seat-enforcement-browser": "tsx --conditions=react-server verify/verify-platform-seat-enforcement-browser.mts",
+    "verify:po05-security-update": "tsx verify/verify-po05-security-update.mts"
   },
   "dependencies": {
     "@radix-ui/react-avatar": "^1.2.2",
