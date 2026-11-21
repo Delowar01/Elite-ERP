@@ -89,7 +89,7 @@ not evidence.
 | 4 | Authentication and cookies | separate secrets; `__Host-` host-only cookies per hostname. A customer cookie can neither reach the admin host nor validate there | `__Host-` cookies are still per host, so customer and console cookies stay apart, but both route trees are reachable on both hosts unless nginx separates them (§I.2) |
 | 5 | Origin / CSRF | the admin vhost forwards `X-Forwarded-Host $host`; `PLATFORM_TRUSTED_PROXY_HOPS=1`. The console's `assertSameOrigin` requires `same-origin`, so a request from the ERP host (same-site, not same-origin) is refused | the same, and the ERP vhost must forward consistent headers too |
 | 6 | TLS, nginx, proxy | one new vhost and one new certificate. The ERP vhost is unchanged | one new vhost and one new certificate, plus a `/platform` block on the ERP vhost |
-| 7 | Resources | a second Node.js process (several hundred MB), PostgreSQL (~150–300 MB), and a build peak of ~1.5–2.5 GB under a memory cap. **Capacity check required** (Phase A2) | no new process; the same build peak |
+| 7 | Resources | a second Node.js process (expect about the ERP's own RSS, which Phase A reports), PostgreSQL (roughly 150–300 MB), and a build peak measured at about 0.9 GB (§I.4). **Capacity check required** (Phase A2) | no new process; the same build peak |
 | 8 | Deployment / rollback | independent and reversible in minutes (remove the vhost, stop the unit, drop the test database) | a full release with app rollback (keep the previous build) and schema rollback (the reviewed R08 … R02 path, whose guards refuse rather than destroy data; or leave the additive objects, which the old code ignores) |
 | 9 | ERP restart | **no** — only a graceful `nginx` reload | **yes** — the ERP process restarts on the new release |
 | 10 | Production migrations | **none** | **yes** — on the existing database, through a production-safe method the D-6 tool deliberately does not provide (§G) |
@@ -254,7 +254,7 @@ proxy_set_header Connection        "";
 | Service | a new systemd unit:<br>• `next start -H 127.0.0.1 -p <ADMIN_PORT>`<br>• `MemoryMax`, `NoNewPrivileges=yes`, `PrivateTmp=yes`, `ProtectSystem=strict` with only its own build and storage paths writable<br>• runtime network limited to loopback: `IPAddressDeny=any` with `IPAddressAllow=localhost` (needs cgroup v2, Phase A2; checked after start)<br>• its own env file: root-owned, `0600`, in a `0700` directory, read by systemd (`po06/STAGING_ENV_TEMPLATE.md` §7). The service user cannot read or change it |
 | Environment | its own `AUTH_SECRET` and `PLATFORM_AUTH_SECRET` (distinct) and `FIELD_ENCRYPTION_KEYS`, generated on the host without being printed; `PLATFORM_TRUSTED_PROXY_HOPS=1`; `STORAGE_DRIVER=fake`; `NEXT_TELEMETRY_DISABLED=1`; every switch unset at first; the rest as in `po06/STAGING_ENV_TEMPLATE.md` (for example `STORAGE_FAKE_DIR`, and `RATE_API_BASE` pointing at a local stub). **No variable of the ERP is copied** |
 | Migration | the rehearsed sequence of PO-06 runbook steps 6–10:<br>• `release-manifest.ts --check`, then `--status`<br>• `--apply --base --concurrent-indexes --verify-data` (B00, S00–S07). `--base` creates the customer schema, and only on a new, empty database<br>• then, because L-3 is approved for staging, `--apply --concurrent-indexes --include-staged-user-invitations --verify-data` (S08, S09)<br>• then `npm run platform:db:check` and `npm run verify:db-hardening` |
-| Build | `next build` as that user, under a memory cap, at a quiet time, so the ERP is never starved. Build-time egress is needed only for npm and Google Fonts |
+| Build | `next build` as that user, under a memory cap, at a quiet time, so the ERP is never starved:<br>• build-time egress is needed only for npm and Google Fonts<br>• the build reads `DATABASE_URL` from the env file, but did not connect: measured with an unreachable loopback URL, 71/71 pages, exit 0 |
 | First administrator | **the owner runs `npm run platform:bootstrap` personally** in their own terminal. It prints the TOTP secret and recovery codes once, and these must not pass through an AI session |
 | Switches | F1 → F7, one per restart of **this unit only**, each with its checks. F4/F6 need a customer origin for the test instance (§D-P7-3) |
 
@@ -267,6 +267,18 @@ proxy_set_header Connection        "";
 - DNS and TLS for one new name.
 
 **Not affected:** the ERP's process, code, `.env`, port, database and vhost.
+
+**Capacity guide.** Measured in the cloud sandbox at this branch, on 4 CPUs:
+- a cold `next build` peaked at about 0.9 GB of summed RSS, with 3 page workers;
+- `node_modules` is 884 MB, and `.next` is 903 MB including its cache.
+
+On the VPS, plan for:
+- at least about 2 GB of RAM available at a quiet time (the build cap of 1.5 GB, plus the running test instance and
+  PostgreSQL);
+- at least about 4 GB of free disk.
+
+More CPUs mean more build workers and more memory. Below these figures, the owner decides between adding swap, a
+quieter build time, or a larger plan.
 
 ### I.5 Post-deployment verification
 
@@ -323,7 +335,7 @@ npm run platform:db:check && npm run verify:db-hardening
 # 4. Build at a quiet time, capped so the ERP is never starved
 sudo systemd-run --wait --pipe --collect --uid=<APP_USER> --gid=<APP_USER> \
   -p WorkingDirectory=/srv/<APP_USER>/app -p EnvironmentFile=<ENV_DIR>/app.env \
-  -p MemoryMax=<BUILD_CAP> -p CPUWeight=20 -E PATH=<NODE_DIR>/bin:/usr/bin:/bin npx next build
+  -p MemoryMax=<BUILD_CAP> -p CPUWeight=20 -E PATH=<NODE_DIR>/bin:/usr/bin:/bin npx next build   # e.g. 1536M
 
 # 5. The unit /etc/systemd/system/<APP_USER>.service; then start this unit only
 #    ExecStart=<NODE_DIR>/bin/node node_modules/next/dist/bin/next start -H 127.0.0.1 -p <ADMIN_PORT>
