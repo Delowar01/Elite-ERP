@@ -112,9 +112,14 @@ jobs:
               gate "next build" env DATABASE_URL="postgres://build@127.0.0.1:9/build_test_only_" npx next build
               if [ -f verify/verify-platform-host-binding.mts ]; then gate "H-1 verify-platform-host-binding" npx tsx --conditions=react-server verify/verify-platform-host-binding.mts; fi
               for s in $(scripts 'Object.keys(s).filter(n=>/^verify:platform-.*browser$/.test(n))'); do gate "$s" npm run -s "$s"; done
-              # the customer suites read .env directly: a throw-away CI-only file (disposable database, per-run test secrets)
-              printf 'DATABASE_URL=%s\nAUTH_SECRET=ci-only-%s\nFIELD_ENCRYPTION_KEYS=1:%s\n' "$ERP_DATABASE_URL" "$(openssl rand -hex 24)" "$(openssl rand -base64 32)" > .env
-              gate "verify:browser (customer tier)" npm run -s verify:browser -- --skip-build
+              # The customer browser tier, by the PO-05 C8 procedure: a fresh copy of the fictional visual-baseline seed
+              # (tests/ui-baseline/run.mjs prepare), fake storage, per-run TEST-only secrets, and a throw-away CI-only
+              # .env (11 suites read it directly), removed afterwards.
+              gate "ui-baseline prepare (fictional seed)" env UI_BASELINE_ADMIN_URL="postgres://postgres:ci-test-only@127.0.0.1:5432/postgres" node tests/ui-baseline/run.mjs prepare
+              sudo -u postgres createdb -T devui010_test_only_seed ci_browser_test_only_
+              mkdir -p "$RUNNER_TEMP/fake-storage"
+              printf 'DATABASE_URL=%s\nAUTH_SECRET=ci-only-%s\nFIELD_ENCRYPTION_KEYS=1:%s\nSTORAGE_DRIVER=fake\nSTORAGE_FAKE_DIR=%s\n' "postgres://postgres:ci-test-only@127.0.0.1:5432/ci_browser_test_only_" "$(openssl rand -hex 24)" "$(openssl rand -base64 32)" "$RUNNER_TEMP/fake-storage" > .env
+              gate "verify:browser (customer tier)" env STORAGE_DRIVER=fake STORAGE_FAKE_DIR="$RUNNER_TEMP/fake-storage" DATABASE_URL="postgres://postgres:ci-test-only@127.0.0.1:5432/ci_browser_test_only_" npm run -s verify:browser -- --skip-build
               rm -f .env
               ;;
           esac
