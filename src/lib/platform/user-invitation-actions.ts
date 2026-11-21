@@ -14,7 +14,7 @@ import { authorizePlatformToken } from "./guards";
 import { errorClass, reportSecurityIncident } from "./incident";
 import { customerEmailInUse, customerPublicOrigin, lockInvitationEmail, newInvitationToken } from "./invitations";
 import { consumeTotpCode } from "./mfa";
-import { assertSameOrigin } from "./origin";
+import { assertConsoleHost, assertSameOrigin } from "./origin";
 import { readSeatAccounting, type SeatAccounting } from "./seat-accounting";
 import { assertUserSeatAvailable, isSeatRefusal, lockCompanyForSeatChange, previewUserSeat, type CompanySeatLock, type SeatDecision, type SeatRefusalCode, type SeatVerdict } from "./seat-enforcement";
 import type { PlatformSessionContext } from "./session";
@@ -122,6 +122,7 @@ export type ReissueUserInvitationInput = { invitationId: unknown; password: unkn
 /** flags → same-origin (CSRF) → live platform session → platform.users.invite. */
 async function authorizeUserInvitationChange(req: ConsoleRequest): Promise<PlatformSessionContext> {
   assertPlatformUserInvitationsEnabled();
+  assertConsoleHost(req.headers);
   assertSameOrigin(req.headers);
   return authorizePlatformToken(req.token, "platform.users.invite");
 }

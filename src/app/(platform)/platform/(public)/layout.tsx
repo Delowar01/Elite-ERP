@@ -1,5 +1,5 @@
 import { notFound, redirect } from "next/navigation";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { ClipboardList, Fingerprint, Layers } from "lucide-react";
 import { LogoLockup } from "@/components/brand/logo-lockup";
 import { pt } from "@/components/platform/i18n";
@@ -7,6 +7,7 @@ import { getLocale } from "@/lib/i18n/server";
 import { PLATFORM_SESSION_COOKIE } from "@/lib/platform/config";
 import { isPlatformConsoleEnabled } from "@/lib/platform/flags";
 import { authorizePlatformToken } from "@/lib/platform/guards";
+import { isConsoleHost } from "@/lib/platform/origin";
 import "@/app/(auth)/auth.css";
 import "@/app/(platform)/platform.css";
 
@@ -18,6 +19,8 @@ import "@/app/(platform)/platform.css";
 // The customer session cookie plays no part on these pages.
 export default async function PlatformPublicLayout({ children }: { children: React.ReactNode }) {
   if (!isPlatformConsoleEnabled()) notFound();
+  // PO-07 H-1: the sign-in pages exist only on the configured console host.
+  if (!isConsoleHost(await headers())) notFound();
   const token = (await cookies()).get(PLATFORM_SESSION_COOKIE)?.value;
   if (token && (await authorizePlatformToken(token).then(() => true, () => false))) redirect("/platform/dashboard");
 

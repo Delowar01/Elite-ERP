@@ -1,6 +1,6 @@
 "use server";
 
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
@@ -16,6 +16,7 @@ import { verifyTotp } from "@/lib/security/totp";
 import { decryptField, encryptField } from "@/lib/crypto/field-encryption";
 import { COUNTRIES } from "@/lib/geo/countries";
 import { isValidCurrencyCode } from "@/lib/currency/currencies";
+import { hostAllowed } from "@/lib/security/host-binding";
 import bcrypt from "bcryptjs";
 
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 30; // 30 days
@@ -26,6 +27,14 @@ export type ActionState = { error?: string } | undefined;
 // customer dictionary. Before that point every failure stays generic.
 const COMPANY_SUSPENDED_MESSAGE = "Your company's access is suspended. Contact your service provider.";
 const SIGN_IN_UNAVAILABLE_MESSAGE = "Sign-in is temporarily unavailable. Try again later.";
+// PO-07 H-1: shown when sign-up is attempted on a host that is not the customer host (translated in the
+// customer dictionary). It names neither host.
+const REGISTER_UNAVAILABLE_MESSAGE = "Something went wrong. Please try again.";
+
+/** PO-07 H-1: customer sign-in and sign-up run only on the configured customer host (always, while unbound). */
+async function onCustomerHost(): Promise<boolean> {
+  return hostAllowed("customer", await headers());
+}
 
 // PO-02C.1: the sign-in and session-issue transactions run at READ COMMITTED explicitly — the company-lock
 // protocol (src/lib/platform/company-access.ts) relies on each statement seeing what committed before it began.
@@ -125,6 +134,8 @@ function errorClass(err: unknown): string {
 }
 
 export async function loginAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  // PO-07 H-1: before any lookup, throttle or record — so the console host never checks a customer credential.
+  if (!(await onCustomerHost())) return { error: SIGN_IN_UNAVAILABLE_MESSAGE };
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const password = String(formData.get("password") ?? "");
   const mfaCode = String(formData.get("mfaCode") ?? "").trim();
@@ -231,6 +242,8 @@ export async function loginAction(_prev: ActionState, formData: FormData): Promi
 }
 
 export async function registerAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  // PO-07 H-1: no company or account is created from any host but the customer host.
+  if (!(await onCustomerHost())) return { error: REGISTER_UNAVAILABLE_MESSAGE };
   const orgName = String(formData.get("orgName") ?? "").trim();
   const name = String(formData.get("name") ?? "").trim();
   const email = String(formData.get("email") ?? "").trim().toLowerCase();

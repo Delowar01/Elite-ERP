@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { jwtVerify } from "jose";
 import { isPlatformPath, platformGate } from "@/lib/platform-edge/proxy-gate";
+import { hostDecision } from "@/lib/security/host-binding";
 
 // Kept in sync with src/lib/auth.ts (middleware can't import it — bcryptjs isn't edge-safe).
 const SESSION_COOKIE = process.env.NODE_ENV === "production" ? "__Host-elite_erp_session" : "elite_erp_session";
@@ -33,8 +34,19 @@ async function tokenIsCryptoValid(token: string | undefined): Promise<boolean> {
   }
 }
 
+// PO-07 H-1: assets every surface needs (the matcher normally skips them; an action POST still runs here).
+const SHARED_ASSET = (pathname: string) => pathname.startsWith("/_next/static/") || pathname === "/favicon.ico";
+const NOT_HERE = { "x-robots-tag": "noindex, nofollow", "cache-control": "no-store" };
+
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  // PO-07 H-1: with PLATFORM_CONSOLE_HOST / CUSTOMER_APP_HOST configured, /platform answers only on the
+  // console host and every other path only on the customer host — first, for every request (a
+  // forwarded Server Action re-enters here with the original headers). Unbound: nothing changes. The
+  // server-side entry points repeat this check; this is the first layer, not the only one.
+  if (!SHARED_ASSET(pathname) && !hostDecision(isPlatformPath(pathname) ? "console" : "customer", request.headers).allowed) {
+    return new NextResponse(null, { status: 404, headers: NOT_HERE });
+  }
   // Platform Owner console (PO-01B): its own narrowly scoped branch, decided before — and without —
   // the customer session cookie. Nothing below this line changes for customer routes.
   if (isPlatformPath(pathname)) return platformGate(request);
@@ -73,5 +85,9 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|webp)$).*)"],
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|webp)$).*)",
+    // PO-07 H-1: a Server Action is never exempt — a dynamic page also matches "<anything>.png".
+    { source: "/((?!_next/static|_next/image|favicon.ico).*)", has: [{ type: "header", key: "next-action" }] },
+  ],
 };

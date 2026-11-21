@@ -147,6 +147,7 @@ import { PO03A_BASE, PO03A_EDITS, PO03A_NEW, po03aDrift, undoPo03a } from "./po0
 import { PO03B_BASE, PO03B_EDITS, PO03B_NEW, po03bDrift, undoPo03b } from "./po03b-approved-delta.mjs";
 import { PO03C_BASE, PO03C_EDITS, PO03C_NEW, po03cDrift, undoPo03c } from "./po03c-approved-delta.mjs";
 import { PO03D_BASE, PO03D_EDITS, PO03D_NEW, po03dDrift, undoPo03d } from "./po03d-approved-delta.mjs";
+import { PO07H1_BASE, PO07H1_EDITS, PO07H1_NEW, po07h1Drift, undoPo07h1 } from "./po07h1-approved-delta.mjs";
 import { renderToStaticMarkup } from "react-dom/server";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
@@ -202,7 +203,11 @@ const diskRead = (p: string) => readFileSync(path.join(ROOT, p), "utf8");
 // change), so the PO-03C layer — its added-file pins included — and every older group read PO-03C's (8c21044) bytes; the
 // nine src files it added (the /join/accept route — page, form, server action and copy — the acceptance bridge and its
 // types, the acceptance core, the shared seat-enforcement core and the Team's Add Member service) stay out of `walk`.
-const po03dRead = (p: string) => undoPo03d(p, diskRead(p));
+// Platform Owner PO-07 H-1: its recorded hunks are undone before PO-03D's (group 37 proves they are each file's only
+// change), so the PO-03D layer — its added-file pins included — and every older group read PO-03D's (ae37b28) bytes; the
+// one src file it added (the hostname-binding decision, src/lib/security/host-binding.ts) stays out of `walk`.
+const po07h1Read = (p: string) => undoPo07h1(p, diskRead(p));
+const po03dRead = (p: string) => undoPo03d(p, po07h1Read(p));
 const po03cRead = (p: string) => undoPo03c(p, po03dRead(p));
 const po03bRead = (p: string) => undoPo03b(p, po03cRead(p));
 const po03aRead = (p: string) => undoPo03a(p, po03bRead(p));
@@ -581,7 +586,7 @@ const MAIN_EDITS: Record<string, [string, string][]> = {
 /** A file's bytes for a byte-identity hash: main's approved change undone (MAIN_EDITS), every other file as it is. */
 const frozen = (f: string): string | Buffer =>
   f in MAIN_EDITS ? MAIN_EDITS[f].reduce((acc, [was, is]) => acc.replace(is, () => was), rawRead(f))
-    : f in ACC01_EDITS ? rawRead(f) : f in LCP_EDITS || f in PO01A_EDITS || f in PO01B_EDITS || f in PO01B1_EDITS || f in PO02A_EDITS || f in PO02B_EDITS || f in PO02C_EDITS || f in PO02C1_EDITS || f in PO02D1A_EDITS || f in PO02D1A1_EDITS || f in PO02D1B_EDITS || f in PO02D2_EDITS || f in PO02D3_EDITS || f in PO03A_EDITS || f in PO03B_EDITS || f in PO03C_EDITS || f in PO03D_EDITS ? actualRead(f) : readFileSync(path.join(ROOT, f));
+    : f in ACC01_EDITS ? rawRead(f) : f in LCP_EDITS || f in PO01A_EDITS || f in PO01B_EDITS || f in PO01B1_EDITS || f in PO02A_EDITS || f in PO02B_EDITS || f in PO02C_EDITS || f in PO02C1_EDITS || f in PO02D1A_EDITS || f in PO02D1A1_EDITS || f in PO02D1B_EDITS || f in PO02D2_EDITS || f in PO02D3_EDITS || f in PO03A_EDITS || f in PO03B_EDITS || f in PO03C_EDITS || f in PO03D_EDITS || f in PO07H1_EDITS ? actualRead(f) : readFileSync(path.join(ROOT, f));
 
 let pass = 0;
 let fail = 0;
@@ -616,7 +621,7 @@ function walk(dir: string): string[] {
   for (const name of readdirSync(path.join(ROOT, dir)).sort()) {
     const p = path.posix.join(dir, name);
     if (statSync(path.join(ROOT, p)).isDirectory()) out.push(...walk(p));
-    else if (!(p in ACC01_NEW) && !(p in LCP_NEW) && !(p in PO01A_NEW) && !(p in PO01B_NEW) && !(p in PO01B1_NEW) && !(p in PO02A_NEW) && !(p in PO02B_NEW) && !(p in PO02C_NEW) && !(p in PO02C1_NEW) && !(p in PO02D1A_NEW) && !(p in PO02D1A1_NEW) && !(p in PO02D1B_NEW) && !(p in PO02D2_NEW) && !(p in PO02D3_NEW) && !(p in PO03A_NEW) && !(p in PO03B_NEW) && !(p in PO03C_NEW) && !(p in PO03D_NEW)) out.push(p);
+    else if (!(p in ACC01_NEW) && !(p in LCP_NEW) && !(p in PO01A_NEW) && !(p in PO01B_NEW) && !(p in PO01B1_NEW) && !(p in PO02A_NEW) && !(p in PO02B_NEW) && !(p in PO02C_NEW) && !(p in PO02C1_NEW) && !(p in PO02D1A_NEW) && !(p in PO02D1A1_NEW) && !(p in PO02D1B_NEW) && !(p in PO02D2_NEW) && !(p in PO02D3_NEW) && !(p in PO03A_NEW) && !(p in PO03B_NEW) && !(p in PO03C_NEW) && !(p in PO03D_NEW) && !(p in PO07H1_NEW)) out.push(p);
   }
   return out;
 }
@@ -3205,7 +3210,7 @@ check(`ACC-01 changed its ${Object.keys(ACC01_EDITS).length} files (src/, and ve
 // No file under src/ outside the record differs from main: every other file is in the older groups' byte-identity hashes
 // (groups 4, 16 and 17), and a new file the record does not list is caught there too — `walk` leaves out only ACC01_NEW.
 check(`ACC-01 added no file under src/ but the recorded ${Object.keys(ACC01_NEW).length} (an unrecorded new file would sit in groups 16 and 17's src trees)`,
-  walk("src").length + Object.keys(ACC01_NEW).length + Object.keys(LCP_NEW).length + Object.keys(PO01A_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO01B_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO01B1_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO02A_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO02B_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO02C_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO02C1_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO02D1A_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO02D1A1_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO02D1B_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO02D2_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO02D3_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO03A_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO03B_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO03C_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO03D_NEW).filter((f) => f.startsWith("src/")).length === (function all(d: string): number {
+  walk("src").length + Object.keys(ACC01_NEW).length + Object.keys(LCP_NEW).length + Object.keys(PO01A_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO01B_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO01B1_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO02A_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO02B_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO02C_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO02C1_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO02D1A_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO02D1A1_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO02D1B_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO02D2_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO02D3_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO03A_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO03B_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO03C_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO03D_NEW).filter((f) => f.startsWith("src/")).length + Object.keys(PO07H1_NEW).filter((f) => f.startsWith("src/")).length === (function all(d: string): number {
     return readdirSync(path.join(ROOT, d)).reduce((n, name) => n + (statSync(path.join(ROOT, d, name)).isDirectory() ? all(path.posix.join(d, name)) : 1), 0);
   })("src"));
 
@@ -3745,7 +3750,7 @@ check("…the only new routes are the console's user-invitation list and detail 
 
 section("36. Platform Owner PO-03D — customer-user invitation acceptance and user-seat enforcement (the approved change to frozen files)");
 // Read as they are on disk: each changed file is PO-03C's (8c21044) plus exactly its recorded hunks, each added file as recorded.
-const po03dDriftNow = po03dDrift((f) => (existsSync(path.join(ROOT, f)) ? diskRead(f) : null));
+const po03dDriftNow = po03dDrift((f) => (existsSync(path.join(ROOT, f)) ? po07h1Read(f) : null));
 const PO03D_EDITABLE = ["src/app/(app)/settings/team/actions.ts", "src/app/(app)/settings/team/seat-summary.tsx", "src/app/(platform)/platform/(console)/companies/[orgId]/page.tsx", "src/app/(platform)/platform/(console)/users/[userId]/page.tsx", "src/app/(platform)/platform/(console)/users/invitations/[invitationId]/page.tsx", "src/app/(platform)/platform/(console)/users/invitations/page.tsx", "src/app/(platform)/platform/(console)/users/page.tsx", "src/app/(platform)/user-invitation-actions.ts", "src/components/platform/i18n.ts", "src/components/platform/user-invitation-dialogs.tsx", "src/components/platform/users-kit.tsx", "src/lib/i18n/dict.ts", "src/lib/platform/companies.ts", "src/lib/platform/config.ts", "src/lib/platform/customer-users.ts", "src/lib/platform/display.ts", "src/lib/platform/errors.ts", "src/lib/platform/flags.ts", "src/lib/platform/seat-accounting.ts", "src/lib/platform/user-invitation-actions.ts", "src/lib/platform/user-invitations.ts", "src/lib/team/member-changes.ts", "src/lib/team/ownership-gate.ts", "src/lib/team/seat-summary-types.ts", "src/proxy.ts", "verify/verify-document-form.mts", "verify/verify-page-archetypes.mts"];
 const PO03D_ADDED = ["src/app/(invite)/join/accept/actions.ts", "src/app/(invite)/join/accept/copy.ts", "src/app/(invite)/join/accept/join-invitation.tsx", "src/app/(invite)/join/accept/page.tsx", "src/lib/onboarding/user-acceptance-types.ts", "src/lib/onboarding/user-invitation-acceptance.ts", "src/lib/platform/seat-enforcement.ts", "src/lib/platform/user-invitation-acceptance.ts", "src/lib/team/member-add.ts"];
 check(`PO-03D changed exactly its ${PO03D_EDITABLE.length} files by exactly their ${Object.values(PO03D_EDITS).flat().length} recorded hunks — undone, each is ${PO03D_BASE.slice(0, 7)}'s to the byte — and added exactly its ${PO03D_ADDED.length} files, as recorded (verify/po03d-approved-delta.mts)`,
@@ -3769,6 +3774,25 @@ check("…the only new route is /join/accept, beside /register/accept in the (in
     !existsSync(path.join(ROOT, "src/app/(invite)/layout.tsx")) && !existsSync(path.join(ROOT, "src/app/(invite)/join/layout.tsx")) &&
     Object.keys(PO03D_EDITS).filter((f) => /\/page\.tsx$/.test(f)).sort().join() === "src/app/(platform)/platform/(console)/companies/[orgId]/page.tsx,src/app/(platform)/platform/(console)/users/[userId]/page.tsx,src/app/(platform)/platform/(console)/users/invitations/[invitationId]/page.tsx,src/app/(platform)/platform/(console)/users/invitations/page.tsx,src/app/(platform)/platform/(console)/users/page.tsx" &&
     !("src/app/(app)/settings/team/page.tsx" in PO03D_EDITS), "");
+
+section("37. Platform Owner PO-07 H-1 — hostname binding of the console and the customer ERP (the approved change to frozen files)");
+// Read as they are on disk: each changed file is PO-03D's (ae37b28) plus exactly its recorded hunks, the added file as recorded.
+const po07h1DriftNow = po07h1Drift((f) => (existsSync(path.join(ROOT, f)) ? diskRead(f) : null));
+const PO07H1_EDITABLE = ["src/app/(auth)/actions.ts", "src/app/(platform)/platform/(public)/layout.tsx", "src/app/(platform)/platform/session-expired/route.ts", "src/app/uploads/[...path]/route.ts", "src/lib/platform/company-access-actions.ts", "src/lib/platform/console.ts", "src/lib/platform/customer-user-actions.ts", "src/lib/platform/guards.ts", "src/lib/platform/invitation-acceptance.ts", "src/lib/platform/invitation-actions.ts", "src/lib/platform/origin.ts", "src/lib/platform/user-invitation-acceptance.ts", "src/lib/platform/user-invitation-actions.ts", "src/lib/session.ts", "src/proxy.ts", "tests/security/platform-boundary.test.mjs", "verify/verify-document-form.mts", "verify/verify-page-archetypes.mts", "verify/verify-platform-containment.mts", "verify/verify-platform-invitations.mts"];
+const PO07H1_ADDED = ["src/lib/security/host-binding.ts"];
+check(`PO-07 H-1 changed exactly its ${PO07H1_EDITABLE.length} files by exactly their ${Object.values(PO07H1_EDITS).flat().length} recorded hunks — undone, each is ${PO07H1_BASE.slice(0, 7)}'s to the byte — and added exactly its ${PO07H1_ADDED.length} file, as recorded (verify/po07h1-approved-delta.mts)`,
+  po07h1DriftNow.length === 0 && PO07H1_BASE === "ae37b2839a69c45c01a2bc8929e78ab26fff4590" &&
+    JSON.stringify(Object.keys(PO07H1_EDITS).sort()) === JSON.stringify(PO07H1_EDITABLE) && JSON.stringify(Object.keys(PO07H1_NEW).sort()) === JSON.stringify(PO07H1_ADDED),
+  po07h1DriftNow.map(rel).join(" "));
+check("…no database, schema, migration, seed, SQL or dependency file; no page, layout or route is added; the customer-side files it changes are exactly the session check, sign-in / sign-up, the uploads route and the proxy",
+  ![...Object.keys(PO07H1_EDITS), ...Object.keys(PO07H1_NEW)].some((f) => /^(src\/db\/|drizzle\/|package(-lock)?\.json$)/.test(f)) &&
+    !Object.keys(PO07H1_NEW).some((f) => /\/(page|layout|route|loading|error|not-found)\.tsx?$/.test(f)) &&
+    JSON.stringify(Object.keys(PO07H1_EDITS).filter((f) => f.startsWith("src/") && !/^src\/(lib\/platform|app\/\(platform\))\//.test(f)).sort()) === JSON.stringify(["src/app/(auth)/actions.ts", "src/app/uploads/[...path]/route.ts", "src/lib/session.ts", "src/proxy.ts"]), "");
+check("…every recorded hunk only ADDS the binding: undone, no hunk removes a line other than an import it widens or the matcher it extends",
+  Object.entries(PO07H1_EDITS).filter(([f]) => f.startsWith("src/")).every(([, hunks]) => hunks.every(([was, is]) => {
+    const rest = is.split("\n");
+    return was.split("\n").every((line) => { const i = rest.indexOf(line); if (i >= 0) { rest.splice(i, 1); return true; } return /^import |matcher: \[|^\s*assertSameOrigin|^\s*if \(!isPlatformConsoleEnabled\(\)\)/.test(line); });
+  })), "");
 
 console.log("\nGroups:");
 for (const [g, [p, f]] of Object.entries(counts)) console.log(`  ${g}: ${p}/${p + f}`);

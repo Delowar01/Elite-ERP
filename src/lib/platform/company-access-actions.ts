@@ -12,7 +12,7 @@ import { assertPlatformConsoleEnabled } from "./flags";
 import { authorizePlatformToken } from "./guards";
 import { errorClass, reportSecurityIncident } from "./incident";
 import { consumeTotpCode } from "./mfa";
-import { assertSameOrigin } from "./origin";
+import { assertConsoleHost, assertSameOrigin } from "./origin";
 import type { PlatformSessionContext } from "./session";
 import { activeLoginBlock, recordLoginAttempt, throttleKeys } from "./throttle";
 
@@ -93,6 +93,7 @@ function parseChange(input: CompanyAccessChangeInput): ParsedChange {
 
 async function authorizeAccessChange(req: ConsoleRequest): Promise<PlatformSessionContext> {
   assertPlatformConsoleEnabled();
+  assertConsoleHost(req.headers);
   assertSameOrigin(req.headers);
   return authorizePlatformToken(req.token, "platform.companies.manage_access");
 }

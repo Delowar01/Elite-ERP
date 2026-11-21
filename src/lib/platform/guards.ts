@@ -1,5 +1,6 @@
 import "server-only";
 import { cache } from "react";
+import { hostAllowed } from "@/lib/security/host-binding";
 import { assertPlatformConfiguration, PLATFORM_SESSION_COOKIE } from "./config";
 import { isPlatformError, PlatformError } from "./errors";
 import { assertPlatformConsoleEnabled, isPlatformConsoleEnabled } from "./flags";
@@ -62,11 +63,19 @@ async function platformCookie(): Promise<string | undefined> {
   return (await cookies()).get(PLATFORM_SESSION_COOKIE)?.value;
 }
 
+/** PO-07 H-1: did this request address the configured console host? (Always true while unbound.) */
+async function onConsoleHost(): Promise<boolean> {
+  const { headers } = await import("next/headers");
+  return hostAllowed("console", await headers());
+}
+
 /** For pages/layouts: 404 while the console is disabled, otherwise redirect to the platform login. */
 export const requirePlatformSession = cache(async (): Promise<PlatformSessionContext> => {
   const { notFound, redirect } = await import("next/navigation");
   // `return` makes the never-returning Next.js helpers explicit to the type checker.
   if (!isPlatformConsoleEnabled()) return notFound();
+  // PO-07 H-1: on any other host the console does not exist (404), whatever the cookie says.
+  if (!(await onConsoleHost())) return notFound();
   try {
     return await authorizePlatformToken(await platformCookie());
   } catch (err) {
@@ -80,5 +89,8 @@ export const requirePlatformSession = cache(async (): Promise<PlatformSessionCon
 /** For server actions and exports: throws instead of redirecting. */
 export async function requirePlatformPermission(permission: PlatformPermission): Promise<PlatformSessionContext> {
   if (!isPlatformConsoleEnabled()) throw new PlatformError("CONSOLE_DISABLED");
+  // PO-07 H-1: an action or export reached on another host (e.g. a forwarded Server Action) is refused
+  // exactly like a disabled console — before the cookie is even read.
+  if (!(await onConsoleHost())) throw new PlatformError("CONSOLE_DISABLED", "not the console host");
   return authorizePlatformToken(await platformCookie(), permission);
 }

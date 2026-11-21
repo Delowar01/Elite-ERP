@@ -1,11 +1,12 @@
 import "server-only";
 import { cache } from "react";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { usersTable, orgsTable, type Role } from "@/db/schema";
 import { SESSION_COOKIE, verifySessionToken } from "./auth";
+import { hostAllowed } from "./security/host-binding";
 import { isSessionValid, readSessionRow } from "./security/session-store";
 import { legacyCustomerTokensRejected, ORG_SUSPENDED_REVOKE_REASON, orgAccessDecision, tenantAccessEnforcementEnabled } from "./security/tenant-access-gate";
 
@@ -127,6 +128,10 @@ const lookupSessionByToken = cache(resolveSessionToken);
 
 /** PO-02C: the current request's session state (the access-suspended screen and requireSession). */
 export async function getSessionState(): Promise<SessionState> {
+  // PO-07 H-1: a customer session exists only on the configured customer host (always, while unbound).
+  // Everywhere else — the console host, a forwarded action, an unknown or listed host — it is signed out,
+  // so no customer page, action, export, PDF or file can be reached there with a customer cookie.
+  if (!hostAllowed("customer", await headers())) return SIGNED_OUT;
   const cookieStore = await cookies();
   const token = cookieStore.get(SESSION_COOKIE)?.value;
   if (!token) return SIGNED_OUT;

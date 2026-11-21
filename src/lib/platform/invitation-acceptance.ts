@@ -26,7 +26,7 @@ import { isPlatformError } from "./errors";
 import { isCustomerInviteAcceptanceEnabled } from "./flags";
 import { errorClass, reportSecurityIncident } from "./incident";
 import { customerEmailInUse, customerPublicOrigin, INVITATION_ENTITY, INVITATION_LIMITS, invitationState, invitationTokenHash, lockInvitationEmail } from "./invitations";
-import { assertSameOrigin } from "./origin";
+import { assertCustomerHost, assertSameOrigin } from "./origin";
 
 // ---------------------------------------------------------------------------------------------
 // PO-02D3 — invitation acceptance: the platform core (docs/platform-owner/PO02D3_DEVELOPMENT.md §F, §I).
@@ -116,6 +116,7 @@ export async function beginAcceptance(headers: HeaderSource): Promise<Acceptance
   }
   try {
     assertSameOrigin(headers);
+    assertCustomerHost(headers); // PO-07 H-1: the customer host only
   } catch {
     throw new AcceptanceRefusal("unavailable", "origin");
   }

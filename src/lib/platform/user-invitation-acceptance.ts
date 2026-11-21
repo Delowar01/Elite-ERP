@@ -16,7 +16,7 @@ import { isPlatformError } from "./errors";
 import { isCustomerSeatEnforcementEnabled, isCustomerUserInviteAcceptanceEnabled } from "./flags";
 import { errorClass, reportSecurityIncident } from "./incident";
 import { customerEmailInUse, customerPublicOrigin, invitationTokenHash, lockInvitationEmail } from "./invitations";
-import { assertSameOrigin } from "./origin";
+import { assertCustomerHost, assertSameOrigin } from "./origin";
 import { readSeatAccounting } from "./seat-accounting";
 import { assertUserSeatAvailable, boundSeatLockWait, isSeatRefusal, lockCompanyForSeatChange, previewUserSeat, type SeatDecision, type SeatRefusalCode } from "./seat-enforcement";
 import { USER_INVITATION_ENTITY, USER_INVITATION_LIMITS, USER_INVITATION_ROLES, userInvitationReference, userInvitationsInstalled, userInvitationState, type UserInvitationRole } from "./user-invitations";
@@ -110,6 +110,7 @@ export async function beginUserAcceptance(headers: HeaderSource): Promise<UserAc
   }
   try {
     assertSameOrigin(headers);
+    assertCustomerHost(headers); // PO-07 H-1: the customer host only
   } catch {
     throw new UserAcceptanceRefusal("unavailable", "origin");
   }

@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { PLATFORM_SESSION_COOKIE, platformSessionCookieOptions } from "@/lib/platform/config";
 import { authorizePlatformToken } from "@/lib/platform/guards";
 import { isPlatformConsoleEnabled } from "@/lib/platform/flags";
+import { isConsoleHost } from "@/lib/platform/origin";
 
 // Platform Owner session-ended boundary (PO-01B). Server Components cannot change cookies while
 // rendering, so requirePlatformSession() sends a request whose database session is no longer usable
@@ -19,6 +20,8 @@ const NO_STORE = { "cache-control": "no-store", "x-robots-tag": "noindex, nofoll
 
 export async function GET(request: NextRequest) {
   if (!isPlatformConsoleEnabled()) return new NextResponse(null, { status: 404, headers: NO_STORE });
+  // PO-07 H-1: only on the configured console host.
+  if (!isConsoleHost(request.headers)) return new NextResponse(null, { status: 404, headers: NO_STORE });
   const store = await cookies();
   const token = store.get(PLATFORM_SESSION_COOKIE)?.value;
 

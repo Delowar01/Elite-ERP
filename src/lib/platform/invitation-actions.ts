@@ -33,7 +33,7 @@ import {
   type InvitationLifecycleState,
 } from "./invitations";
 import { consumeTotpCode } from "./mfa";
-import { assertSameOrigin } from "./origin";
+import { assertConsoleHost, assertSameOrigin } from "./origin";
 import type { PlatformSessionContext } from "./session";
 import { activeLoginBlock, recordLoginAttempt, throttleKeys, type ThrottleKeys } from "./throttle";
 
@@ -113,6 +113,7 @@ export type ReissueInvitationInput = { invitationId: unknown; password: unknown;
 /** flags → same-origin (CSRF) → live platform session → platform.companies.invite. */
 async function authorizeInvitationChange(req: ConsoleRequest): Promise<PlatformSessionContext> {
   assertPlatformInvitationsEnabled();
+  assertConsoleHost(req.headers);
   assertSameOrigin(req.headers);
   return authorizePlatformToken(req.token, "platform.companies.invite");
 }

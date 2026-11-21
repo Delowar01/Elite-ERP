@@ -410,7 +410,7 @@ async function main() {
     const readSrc = stripComments(read("src/lib/platform/invitations.ts"));
     ok("#7 every invitation change and the dialogs' current-state read require platform.companies.invite (5 entry points); the history reads platform.companies.read",
       /authorizePlatformToken\(req\.token, "platform\.companies\.invite"\)/.test(actionsSrc) && (actionsSrc.match(/await authorizeInvitationChange\(req\)/g) ?? []).length === 5 && /authorizePlatformToken\(req\.token, "platform\.companies\.read"\)/.test(readSrc));
-    ok("#8 the change entry point checks the flags, then same-origin, then the session (in that order)", /assertPlatformInvitationsEnabled\(\);\s*assertSameOrigin\(req\.headers\);\s*return authorizePlatformToken/.test(actionsSrc));
+    ok("#8 the change entry point checks the flags, then same-origin, then the session (in that order)", /assertPlatformInvitationsEnabled\(\);\s*assertConsoleHost\(req\.headers\);\s*assertSameOrigin\(req\.headers\);\s*return authorizePlatformToken/.test(actionsSrc));
     process.env.PLATFORM_TRUSTED_PROXY_HOPS = "x";
     const badHops = await create(op);
     process.env.PLATFORM_TRUSTED_PROXY_HOPS = "1";

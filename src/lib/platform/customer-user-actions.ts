@@ -39,7 +39,7 @@ import { assertPlatformConsoleEnabled } from "./flags";
 import { authorizePlatformToken } from "./guards";
 import { errorClass, reportSecurityIncident } from "./incident";
 import { consumeTotpCode } from "./mfa";
-import { assertSameOrigin } from "./origin";
+import { assertConsoleHost, assertSameOrigin } from "./origin";
 import type { PlatformSessionContext } from "./session";
 import { activeLoginBlock, recordLoginAttempt, throttleKeys } from "./throttle";
 
@@ -102,6 +102,7 @@ function parseCode(value: unknown): string {
 
 async function authorizeUserManagement(req: ConsoleRequest): Promise<PlatformSessionContext> {
   assertPlatformConsoleEnabled();
+  assertConsoleHost(req.headers);
   assertSameOrigin(req.headers);
   return authorizePlatformToken(req.token, "platform.users.manage");
 }
@@ -313,6 +314,7 @@ export type PrimaryOwnerTransferred = { ok: true; orgId: number; fromUserId: num
 
 async function authorizeRoleManagement(req: ConsoleRequest): Promise<PlatformSessionContext> {
   assertPlatformConsoleEnabled();
+  assertConsoleHost(req.headers);
   assertSameOrigin(req.headers);
   return authorizePlatformToken(req.token, "platform.users.manage_roles");
 }

@@ -1,4 +1,5 @@
 import { getSession } from "@/lib/session";
+import { hostAllowed } from "@/lib/security/host-binding";
 import { verifySignedFile } from "@/lib/security/signed-url";
 import { orgAccessAllowed, tenantAccessEnforcementEnabled } from "@/lib/security/tenant-access-gate";
 import { recordFileAccess } from "@/lib/security/audit";
@@ -26,6 +27,9 @@ const BRANDING_FOLDERS = new Set(["logos", "seals", "signatures", "client-logos"
 const FILE_RE = /^(\d+)-\d+-[0-9a-f]{16}\.(png|jpg|pdf)$/;
 
 export async function GET(req: Request, ctx: { params: Promise<{ path: string[] }> }) {
+  // PO-07 H-1: files are served only on the customer host (the session path is bound by getSession() too;
+  // this also binds the signed-URL path, which has no session).
+  if (!hostAllowed("customer", req.headers)) return new Response("Not found", { status: 404 });
   const { path } = await ctx.params;
   // Expected shape: ["organizations", "{orgId}", "{folder}", "{file}"]
   if (!path || path.length !== 4 || path[0] !== "organizations") return new Response("Not found", { status: 404 });

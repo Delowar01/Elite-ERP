@@ -13,7 +13,7 @@ import { authorizePlatformToken, type PlatformPermission } from "./guards";
 import { platformLogin } from "./login";
 import { consumeTotpCode, replaceRecoveryCodes } from "./mfa";
 import { errorClass, reportSecurityIncident } from "./incident";
-import { assertSameOrigin } from "./origin";
+import { assertConsoleHost, assertSameOrigin } from "./origin";
 import {
   containPlatformSessionByToken,
   containPlatformSessions,
@@ -83,6 +83,7 @@ async function reconcileQuietly(): Promise<void> {
 
 async function authorizeMutation(req: ConsoleRequest, permission: PlatformPermission): Promise<PlatformSessionContext> {
   assertPlatformConsoleEnabled();
+  assertConsoleHost(req.headers);
   assertSameOrigin(req.headers);
   return authorizePlatformToken(req.token, permission);
 }
@@ -97,6 +98,7 @@ export type SignInOutcome =
 export async function signInCore(input: SignInInput, req: ConsoleRequest): Promise<SignInOutcome> {
   try {
     assertPlatformConsoleEnabled();
+    assertConsoleHost(req.headers);
     assertSameOrigin(req.headers);
     const result = await platformLogin({ ...input, ...requestMeta(req.headers) });
     await reconcileQuietly();
@@ -121,6 +123,7 @@ export async function signInCore(input: SignInInput, req: ConsoleRequest): Promi
 export async function signOutCore(req: ConsoleRequest): Promise<{ ok: true; audited: boolean } | ConsoleFailure> {
   try {
     assertPlatformConsoleEnabled();
+    assertConsoleHost(req.headers);
     assertSameOrigin(req.headers);
     const meta = requestMeta(req.headers);
     try {
