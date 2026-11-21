@@ -256,7 +256,7 @@ proxy_set_header Connection        "";
 | Migration | the rehearsed sequence of PO-06 runbook steps 6–10:<br>• `release-manifest.ts --check`, then `--status`<br>• `--apply --base --concurrent-indexes --verify-data` (B00, S00–S07). `--base` creates the customer schema, and only on a new, empty database<br>• then, because L-3 is approved for staging, `--apply --concurrent-indexes --include-staged-user-invitations --verify-data` (S08, S09)<br>• then `npm run platform:db:check` and `npm run verify:db-hardening` |
 | Build | `next build` as that user, under a memory cap, at a quiet time, so the ERP is never starved:<br>• build-time egress is needed only for npm and Google Fonts<br>• the build reads `DATABASE_URL` from the env file, but did not connect: measured with an unreachable loopback URL, 71/71 pages, exit 0 |
 | First administrator | **the owner runs `npm run platform:bootstrap` personally** in their own terminal. It prints the TOTP secret and recovery codes once, and these must not pass through an AI session |
-| Switches | F1 → F7, one per restart of **this unit only**, each with its checks. F4/F6 need a customer origin for the test instance (§D-P7-3) |
+| Switches | F1 → F7, one per restart of **this unit only**, each with its checks (`po06/SECURITY_AND_FLAG_MATRIX.md` §2). The customer-side checks need a test customer origin (D-P7-3) |
 
 ### I.4 What is affected on the VPS
 
@@ -438,7 +438,7 @@ sudo systemctl restart <APP_USER>.service
 |---|---|
 | D-P7-1 | Option A now? Accept that the admin host shows **fictional** companies, labelled as testing, until Option B. For this test instance, this replaces S-1 (a separate hosting account) and the PO-06 runbook's "never the Hostinger VPS" |
 | D-P7-2 | Accept installing PostgreSQL on the existing VPS for the test instance (a new local service, loopback only) |
-| D-P7-3 | Invitation acceptance (F4/F6) in Option A. Either add a test customer hostname, or test F1–F3 and F5 only. The admin host must not serve customer routes |
+| D-P7-3 | A test customer hostname for the test instance (customer routes only, protected like the admin host because `/register` would otherwise be open). Without it, Option A tests the console only: F1, F3, F5, and the console side of F2. The customer-side checks need it: F0's customer regression, F2's session ending, F4, F6, F7, and runbook steps 15–19. The admin host never serves customer routes |
 | D-P7-4 | Add an IP allow-list or basic auth on the admin host (it becomes discoverable through Certificate Transparency)? |
 | D-P7-5 | The Node.js 22 source for the test instance, if the ERP runs another version |
 | D-P7-6 | The repository is public. Keep VPS evidence out of it (recommended); review the existing public mention of the internal port |
