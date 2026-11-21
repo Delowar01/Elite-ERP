@@ -53,13 +53,13 @@ The locks are read from `pg_locks` at the point of COMMIT, inside the step's own
 
 | Step | Locks held on customer tables until COMMIT | Effect on a live database |
 |---|---|---|
-| S02 (PO-01A), first application | `orgs`: SHARE ROW EXCLUSIVE; ACCESS EXCLUSIVE only on the new platform tables | writes to `orgs` wait for the transaction (milliseconds) |
+| S02 (PO-01A), first application | `orgs`: SHARE ROW EXCLUSIVE; ACCESS EXCLUSIVE only on the new platform tables | writes to `orgs` wait while the step's transaction runs |
 | S03 (PO-02A) **without** S01 | `sessions`: **SHARE** (the plain M4 build); `orgs`: SHARE ROW EXCLUSIVE | every session write (sign-in, sign-out, touch) waits for the whole build |
 | S03 **after** S01 (M4 built CONCURRENTLY) | `sessions`: ACCESS SHARE only; `orgs`: SHARE ROW EXCLUSIVE | no session write waits |
 | S05 (PO-02D1) **without** S04 — finding **D6-F4** | `users`: **ACCESS EXCLUSIVE** (`ALTER TABLE users ADD CONSTRAINT … UNIQUE` builds the key inside the transaction) | every read of `users`, so every sign-in, waits for the whole transaction |
-| S05 **after** S04 (the key built CONCURRENTLY, then attached) | `users`, `orgs`: SHARE ROW EXCLUSIVE at most | writes to `users` wait for milliseconds; reads never wait |
+| S05 **after** S04 (the key built CONCURRENTLY, then attached) | `users`, `orgs`: SHARE ROW EXCLUSIVE at most | writes to `users` wait while the step's short transaction runs; reads never wait |
 | S07 (the seed) | none (only platform tables) | none |
-| S08 (PO-03C, staged) | `orgs`, `users`: SHARE ROW EXCLUSIVE | writes wait for milliseconds |
+| S08 (PO-03C, staged) | `orgs`, `users`: SHARE ROW EXCLUSIVE | writes wait while the step's short transaction runs |
 | re-run (verify only) of S02 / S03 / S05 / S08 | none stronger than ACCESS SHARE on a customer table | none |
 | S01 / S04 (CONCURRENTLY, autocommit) | SHARE UPDATE EXCLUSIVE; waits for transactions already open (observed in D2) | no reader or writer waits |
 
