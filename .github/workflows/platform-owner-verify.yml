@@ -118,8 +118,8 @@ jobs:
               gate "ui-baseline prepare (fictional seed)" env UI_BASELINE_ADMIN_URL="postgres://postgres:ci-test-only@127.0.0.1:5432/postgres" node tests/ui-baseline/run.mjs prepare
               sudo -u postgres createdb -T devui010_test_only_seed ci_browser_test_only_
               mkdir -p "$RUNNER_TEMP/fake-storage"
-              printf 'DATABASE_URL=%s\nAUTH_SECRET=ci-only-%s\nFIELD_ENCRYPTION_KEYS=1:%s\nSTORAGE_DRIVER=fake\nSTORAGE_FAKE_DIR=%s\n' "postgres://postgres:ci-test-only@127.0.0.1:5432/ci_browser_test_only_" "$(openssl rand -hex 24)" "$(openssl rand -base64 32)" "$RUNNER_TEMP/fake-storage" > .env
-              gate "verify:browser (customer tier)" env STORAGE_DRIVER=fake STORAGE_FAKE_DIR="$RUNNER_TEMP/fake-storage" DATABASE_URL="postgres://postgres:ci-test-only@127.0.0.1:5432/ci_browser_test_only_" npm run -s verify:browser -- --skip-build
+              printf 'DATABASE_URL=%s\nAUTH_SECRET=ci-only-%s\nFIELD_ENCRYPTION_KEYS=1:%s\nSTORAGE_DRIVER=fake\nSTORAGE_FAKE_DIR=%s\nCHROMIUM_EXECUTABLE_PATH=%s\n' "postgres://postgres:ci-test-only@127.0.0.1:5432/ci_browser_test_only_" "$(openssl rand -hex 24)" "$(openssl rand -base64 32)" "$RUNNER_TEMP/fake-storage" "$CHROMIUM_PATH" > .env
+              gate "verify:browser (customer tier)" env STORAGE_DRIVER=fake STORAGE_FAKE_DIR="$RUNNER_TEMP/fake-storage" CHROMIUM_EXECUTABLE_PATH="$CHROMIUM_PATH" DATABASE_URL="postgres://postgres:ci-test-only@127.0.0.1:5432/ci_browser_test_only_" npm run -s verify:browser -- --skip-build
               rm -f .env
               ;;
           esac
