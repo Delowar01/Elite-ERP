@@ -59,9 +59,13 @@ props_ok() { # the running units' effective sandbox equals the reviewed unit fil
   done
   [ "$(systemctl show -p MemoryMax --value elite-po-admin.service)" = 536870912 ] && [ "$(systemctl show -p MemoryMax --value elite-po-customer.service)" = 939524096 ] || bad=1
   # decision J1: no writable path in the code tree for either process; the customer binds ONLY the storage directory
-  for u in "${APPS[@]}"; do [ -z "$(systemctl show -p ReadWritePaths --value "$u")" ] || { say "$u: ReadWritePaths=$(systemctl show -p ReadWritePaths --value "$u")"; bad=1; }; done
-  [ "$(systemctl show -p BindReadOnlyPaths --value elite-po-admin.service)" = "$APP_SRC /opt/google" ] && [ "$(systemctl show -p BindReadOnlyPaths --value elite-po-customer.service)" = "$APP_SRC /opt/google" ] || { say "BindReadOnlyPaths differ"; bad=1; }
-  [ -z "$(systemctl show -p BindPaths --value elite-po-admin.service)" ] && [ "$(systemctl show -p BindPaths --value elite-po-customer.service)" = "$STORAGE_DIR" ] || { say "BindPaths differ"; bad=1; }
+  # (systemctl prints a bind as "source:destination:options"; only the sources are compared, as a sorted set)
+  srcs() { systemctl show -p "$1" --value "$2" | tr ' ' '\n' | sed '/^$/d' | cut -d: -f1 | LC_ALL=C sort -u | tr '\n' ' '; }
+  for u in "${APPS[@]}"; do [ -z "$(srcs ReadWritePaths "$u")" ] || { say "$u: ReadWritePaths=$(srcs ReadWritePaths "$u")"; bad=1; }; done
+  local want_ro; want_ro="$(printf '%s\n' "$APP_SRC" /opt/google | LC_ALL=C sort -u | tr '\n' ' ')"
+  for u in "${APPS[@]}"; do [ "$(srcs BindReadOnlyPaths "$u")" = "$want_ro" ] || { say "$u: BindReadOnlyPaths=$(srcs BindReadOnlyPaths "$u")"; bad=1; }; done
+  [ -z "$(srcs BindPaths elite-po-admin.service)" ] || { say "admin: BindPaths=$(srcs BindPaths elite-po-admin.service)"; bad=1; }
+  [ "$(srcs BindPaths elite-po-customer.service)" = "$STORAGE_DIR " ] || { say "customer: BindPaths=$(srcs BindPaths elite-po-customer.service)"; bad=1; }
   [ "$bad" -eq 0 ]
 }
 check "the running units' properties equal the reviewed unit files (systemctl show; no writable code path, J1)" props_ok

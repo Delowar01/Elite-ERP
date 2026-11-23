@@ -17,8 +17,12 @@ step() { echo "::group::$1"; }
 end() { echo "::endgroup::"; }
 fail() { echo "::endgroup::"; echo "::error::$*"; for f in "$STATE_DIR"/logs/*.log; do [ -f "$f" ] && { echo "--- $f (tail)"; tail -25 "$f"; }; done; exit 1; }
 
-step "the stand-in web-server group (only root and this group may open the proxy sockets)"
+step "the stand-in web-server group; the directories the sandbox hides, as on the VPS"
 getent group "$NGINX_GROUP" >/dev/null || groupadd --system "$NGINX_GROUP"
+# The units' TemporaryFileSystem= covers /var/www, /var/backups, /var/spool and /opt (they exist on the VPS); /opt/google
+# is bound read-only for Chromium. Create whichever a runner lacks (empty), so the reviewed units start unchanged.
+for d in /var/www /var/backups /var/spool /opt; do [ -d "$d" ] || install -d -m 0755 "$d"; done
+[ -x /opt/google/chrome/chrome ] || fail "no Google Chrome under /opt/google (the customer unit binds it read-only)"
 end
 
 step "install the rendered kit at $KIT_DIR (root 0700) and take the CI S0"
