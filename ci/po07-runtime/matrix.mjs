@@ -68,10 +68,10 @@ const CASES = [
   ["static chunk (immutable)", "customer", "GET", `/_next/${CHUNK}`, {}, (r) => r.status === 200 && sha(r.body) === CHUNK_SHA && /immutable/.test(r.headers["cache-control"] ?? "") || `status ${r.status}`],
   ["customer sign-in page (dynamic)", "customer", "GET", "/login", {}, (r) => r.status === 200 && html(r) && r.text.includes(BUILD_ID) && /type="password"/.test(r.text) || `status ${r.status}`],
   ["protected page without a session → /login", "customer", "GET", "/dashboard", {}, (r) => [303, 307, 308].includes(r.status) && /\/login/.test(r.headers.location ?? "") || `status ${r.status} → ${r.headers.location}`],
-  ["unknown page → the not-found page", "customer", "GET", "/po07-no-such-page", {}, (r) => r.status === 404 && html(r) && r.text.includes(BUILD_ID) || `status ${r.status}`],
+  ["unknown path without a session → /login (the proxy, before routing)", "customer", "GET", "/po07-no-such-page", {}, (r) => [303, 307, 308].includes(r.status) && /\/login/.test(r.headers.location ?? "") || `status ${r.status} → ${r.headers.location}`],
   ["PDF route handler without a session (dynamic route handler)", "customer", "GET", "/api/document-pdf/invoice/00000000-0000-4000-8000-000000000000", {}, (r) => r.status > 0 && r.status < 500 || `status ${r.status}`],
   ["image optimizer, SVG source (refused by default)", "customer", "GET", "/_next/image?url=%2Fnext.svg&w=64&q=75", {}, (r) => r.status === 400 || `status ${r.status}`],
-  ["image optimizer, ICO source", "customer", "GET", "/_next/image?url=%2Ffavicon.ico&w=32&q=75", {}, (r) => r.status > 0 && r.status < 500 || `status ${r.status}`],
+  ["image optimizer, ICO source (unused by the app; reachable without a session)", "customer", "GET", "/_next/image?url=%2Ffavicon.ico&w=32&q=75", {}, (r) => r.status === 200 && r.body.length > 0 || `status ${r.status}`],
   ["unknown Server Action id → refused, not a crash", "customer", "POST", "/", { headers: { "next-action": "0".repeat(42), "content-type": "text/plain;charset=UTF-8" }, body: "[]" }, (r) => r.status > 0 && r.status < 500 || `status ${r.status}`],
   ["console host on the customer process → refused (H-1)", "customer", "GET", "/login", { host: HOSTS.admin }, (r) => r.status >= 400 && r.status < 500 && !/type="password"/.test(r.text) || `status ${r.status}`],
   ["console sign-in page (console process)", "admin", "GET", "/platform/login", {}, (r) => r.status === 200 && html(r) && r.text.includes(BUILD_ID) && /type="password"/.test(r.text) || `status ${r.status}`],
@@ -115,9 +115,11 @@ try {
 } catch (e) {
   failures++; console.log(`FAIL [${mode}] harness: ${e.message}`);
 }
-const logs = { customer: journal("customer"), admin: journal("admin") };
 stop("customer"); stop("admin");
-const notable = Object.fromEntries(Object.entries(logs).map(([k, v]) => [k, v.split("\n").filter((l) => /EROFS|EACCES|EPERM|fail|error|warn|unhandled/i.test(l)).slice(0, 40)]));
+const logs = { customer: journal("customer"), admin: journal("admin") };
+const exits = Object.fromEntries(["customer", "admin"].map((k) => [k, sh("sudo", ["systemctl", "show", "-p", "ExecMainCode,ExecMainStatus,Result", unit(k)]).stdout.trim().replace(/\n/g, " ")]));
+console.log(`${mode}: after systemctl stop: ${JSON.stringify(exits)}`);
+const notable = Object.fromEntries(Object.entries(logs).map(([k, v]) => [k, v.split("\n").filter((l) => /EROFS|EACCES|EPERM|ENOENT|fail|error|warn|unhandled|Main process exited/i.test(l)).slice(0, 40)]));
 const written = execFileSync("find", [path.join(app, ".next"), path.join(app, "node_modules"), "-newermt", `@${Math.floor(marker / 1000)}`, "(", "-type", "f", "-o", "-type", "d", ")"], { encoding: "utf8" })
   .split("\n").filter(Boolean).map((p) => path.relative(app, p));
 const report = { mode, build_id: BUILD_ID, failures, results, server_log_lines_of_note: notable, files_written: written };

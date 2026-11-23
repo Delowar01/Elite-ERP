@@ -123,6 +123,7 @@ jobs:
           MX_UID=$(id -u) MX_GID=$(id -g) node tools/ci/po07-runtime/matrix.mjs "${{ steps.inst.outputs.app }}" readonly "$RUNNER_TEMP/matrix-readonly.json"
           (cd "${{ steps.inst.outputs.app }}" && sha256sum --quiet --strict -c "$MANIFEST") && echo "PASS the build is byte-identical after the read-only matrix"
       - name: J1 matrix — the build WRITABLE (a separate copy, for comparison)
+        if: ${{ !cancelled() }}
         run: |
           set -Eeuo pipefail
           cp -a "${{ steps.inst.outputs.app }}" "$RUNNER_TEMP/t1-writable"
@@ -135,6 +136,7 @@ jobs:
             console.log(`read-only vs writable: ${r.results.length} responses compared, ${diff} differ; files written: read-only ${r.files_written.length}, writable ${w.files_written.length}`);
             process.exit(diff ? 1 : 0);' "$RUNNER_TEMP/matrix-readonly.json" "$RUNNER_TEMP/matrix-writable.json"
       - name: Security suites with the build read-only
+        if: ${{ !cancelled() }}
         run: bash tools/ci/po07-runtime/suites.sh "${{ steps.inst.outputs.app }}" "$RUNNER_TEMP/suite-logs"
       - name: Reports
         if: always()

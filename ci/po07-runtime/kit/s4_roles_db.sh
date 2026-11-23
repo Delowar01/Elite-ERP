@@ -54,11 +54,12 @@ if [ "$MODE" = plan ]; then plan "psql (peer, db $DB): schema public usage for $
 else sql_db | spsql "$DB" >/dev/null; say "schema grants and default privileges ensured"; fi
 roles_ok() {
   local got
-  got="$(printf "select string_agg(rolname||':'||rolsuper::int||rolcreatedb::int||rolcreaterole::int||rolreplication::int||rolbypassrls::int, ' ' order by rolname) from pg_roles where rolname like 'po07_%%';\n" | spsql postgres)"
+  # (an exact prefix, not LIKE: "_" is a LIKE wildcard, so 'po_cit_%' would also match other names of that shape)
+  got="$(printf "select string_agg(rolname||':'||rolsuper::int||rolcreatedb::int||rolcreaterole::int||rolreplication::int||rolbypassrls::int, ' ' order by rolname) from pg_roles where left(rolname, 7) = 'po_cit_';\n" | spsql postgres)"
   [ "$got" = "$APP_ROLE:00000 $BACKUP_ROLE:00000 $OWNER_ROLE:00000" ] || { say "roles: $got"; return 1; }
 }
 db_ok() { [ "$(printf "select pg_get_userbyid(datdba) from pg_database where datname = '%s';\n" "$DB" | spsql postgres)" = "$OWNER_ROLE" ]; }
-scram_ok() { [ "$(printf "select count(*) from pg_authid where rolname like 'po07_%%' and rolpassword like 'SCRAM-SHA-256\$%%';\n" | spsql postgres)" = 3 ]; }
+scram_ok() { [ "$(printf "select count(*) from pg_authid where left(rolname, 7) = 'po_cit_' and left(rolpassword, 14) = 'SCRAM-SHA-256\$';\n" | spsql postgres)" = 3 ]; }
 check "three roles exist, none privileged" roles_ok
 check "database $DB exists, owned by $OWNER_ROLE" db_ok
 check "all three passwords are stored as SCRAM verifiers" scram_ok
