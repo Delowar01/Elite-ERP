@@ -35,7 +35,10 @@ for f in $(find node_modules -type f \( -name '*.node' -o -name '*.so' -o -name 
 done
 echo "native: $checked glibc binaries checked, $missing with a missing library"
 [ "$missing" -eq 0 ] || fail "native libraries"
-npm ls --all > /tmp/npm-ls.txt 2>&1 || true
-if grep -qE 'missing:|invalid:|UNMET|ERR!' /tmp/npm-ls.txt; then tail -15 /tmp/npm-ls.txt; fail "npm ls reports a missing or invalid package"; fi
-echo "npm ls: no missing or invalid package"
+# npm's own verdict is the exit code (0 in CI on the same tree). "UNMET OPTIONAL DEPENDENCY" lines are the other
+# platforms' optional packages (darwin, win32, …), never installed on Linux: not a problem.
+rc=0; npm ls --all > /tmp/npm-ls.txt 2>&1 || rc=$?
+bad="$(grep -nE 'missing:|invalid:|UNMET DEPENDENCY|npm (ERR|error)' /tmp/npm-ls.txt | head -5 || true)"
+if [ "$rc" -ne 0 ] || [ -n "$bad" ]; then echo "npm ls exit $rc"; echo "$bad"; fail "npm ls reports a missing or invalid package"; fi
+echo "npm ls: exit 0, no missing or invalid package ($(grep -c 'UNMET OPTIONAL DEPENDENCY' /tmp/npm-ls.txt || true) other-platform optional packages not installed)"
 echo "RUNTIME-CHECK PASS"
