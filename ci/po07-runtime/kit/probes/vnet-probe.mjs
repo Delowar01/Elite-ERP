@@ -106,12 +106,23 @@ if (CFG.profile === "admin") rec(tryWrite("/var/lib/elite-po-staging/storage/.po
 if (CFG.profile === "customer") {
   const c = spawnSync(CFG.chromium, ["--headless=new", "--no-sandbox", "--disable-dev-shm-usage", "--disable-gpu", "--no-first-run", "--user-data-dir=/tmp/po-probe-chrome", "--dump-dom", "about:blank"], { encoding: "utf8", timeout: 90000 });
   rec(c.status === 0 && /<html/i.test(c.stdout || ""), "Chromium starts headless inside the sandbox", `exit ${c.status} ${(c.stderr || "").split("\n").filter(Boolean).slice(-1)[0] ?? ""}`.slice(0, 200));
-  // ...and prints a PDF (what the customer process does for documents), inside its private /tmp
-  const pdfArgs = ["--headless=new", "--no-sandbox", "--disable-dev-shm-usage", "--disable-gpu", "--no-first-run", "--user-data-dir=/tmp/po-probe-chrome-pdf",
-    "--print-to-pdf=/tmp/po-probe.pdf", "--no-pdf-header-footer", "data:text/html,<h1>PO-07 V-SBX</h1>"];
-  const p = spawnSync(CFG.chromium, pdfArgs, { encoding: "utf8", timeout: 90000 });
-  let head = ""; try { head = fs.readFileSync("/tmp/po-probe.pdf").subarray(0, 5).toString("latin1"); } catch { /* no file */ }
-  rec(p.status === 0 && head === "%PDF-", "Chromium prints a PDF inside the sandbox", `exit ${p.status} head ${JSON.stringify(head)}`);
+  // ...and renders a PDF the way the customer process does (src/lib/pdf/document-pdf.ts with CHROMIUM_EXECUTABLE_PATH):
+  // puppeteer-core from the installed build, the same launch options, page.pdf(); its profile lives in the private /tmp
+  let head = "", why = "";
+  try {
+    const { createRequire } = await import("node:module");
+    const { pathToFileURL } = await import("node:url");
+    const req = createRequire("/srv/elite-po-staging/app/package.json");
+    const mod = await import(pathToFileURL(req.resolve("puppeteer-core")).href);
+    const puppeteer = mod.default ?? mod;
+    const browser = await puppeteer.launch({ executablePath: CFG.chromium, headless: true, args: ["--no-sandbox", "--disable-dev-shm-usage"] });
+    try {
+      const page = await browser.newPage();
+      await page.setContent("<h1>PO-07 V-SBX</h1><p>العربية · 123</p>", { waitUntil: "load" });
+      head = Buffer.from(await page.pdf({ format: "A4" })).subarray(0, 5).toString("latin1");
+    } finally { await browser.close(); }
+  } catch (e) { why = String(e?.message ?? e).split("\n")[0].slice(0, 160); }
+  rec(head === "%PDF-", "Chromium renders a PDF through puppeteer-core inside the sandbox (the app's own path)", why || `head ${JSON.stringify(head)}`);
 }
 
 const fail = results.filter((x) => !x).length;
