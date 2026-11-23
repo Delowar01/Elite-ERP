@@ -81,7 +81,8 @@ rec(noteworthy.length === 0, "no write attempt, permission error or error in eit
 // footprint after the load
 for (const u of [...units, "postgresql@16-po07ns.service", "elite-po-staging.slice"]) {
   const v = (p) => Math.round(Number(sh("systemctl", ["show", "-p", p, "--value", u]).stdout.trim()) / 1048576);
-  console.log(`footprint ${u}: current ${v("MemoryCurrent")} MB, peak ${v("MemoryPeak")} MB`);
+  const t = (p) => sh("systemctl", ["show", "-p", p, "--value", u]).stdout.trim();
+  console.log(`footprint ${u}: memory current ${v("MemoryCurrent")} MB, peak ${v("MemoryPeak")} MB; tasks current ${t("TasksCurrent")}, max ${t("TasksMax")}`);
 }
 console.log(`AFTER-S9 pass=${pass} fail=${fail}`);
 process.exit(fail ? 1 : 0);

@@ -21,7 +21,8 @@ RestartSec=5s
 MemoryHigh=768M
 MemoryMax=896M
 CPUQuota=60%
-TasksMax=128
+# PROPOSED, PENDING OWNER REVIEW (D31): the plan's 128 is too low for Chromium PDFs (measured: pthread_create EAGAIN)
+TasksMax=512
 LimitNOFILE=4096
 # --- sandbox (identical in every staging unit and in elite-po-run: units/sandbox.inc) ---
 NoNewPrivileges=yes
