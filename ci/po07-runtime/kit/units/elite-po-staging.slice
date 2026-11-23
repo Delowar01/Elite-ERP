@@ -1,0 +1,12 @@
+# PO-07 staging (fictional data only) — plan §B.1. Caps the whole staging footprint.
+[Unit]
+Description=PO staging slice (fictional data only)
+[Slice]
+MemoryAccounting=yes
+MemoryHigh=1536M
+MemoryMax=1792M
+MemorySwapMax=256M
+CPUQuota=80%
+CPUWeight=20
+IOWeight=20
+TasksMax=512

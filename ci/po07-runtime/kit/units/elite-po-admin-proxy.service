@@ -1,0 +1,36 @@
+# PO-07 staging — plan §B.1. The socket lives in the host namespace; this proxy runs inside the private namespace.
+[Unit]
+Description=PO staging - admin upstream proxy (into the private namespace)
+Requires=elite-po-admin.service
+After=elite-po-admin.service
+[Service]
+ExecStart=/usr/lib/systemd/systemd-socket-proxyd 127.0.0.1:13310
+NetworkNamespacePath=/run/netns/po07ns
+DynamicUser=yes
+Slice=elite-po-staging.slice
+MemoryMax=64M
+# --- sandbox (units/sandbox.inc), minus the Bind*/ReadWrite lines ---
+NoNewPrivileges=yes
+CapabilityBoundingSet=
+AmbientCapabilities=
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+PrivateIPC=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+ProtectProc=invisible
+ProcSubset=pid
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+SystemCallArchitectures=native
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX AF_NETLINK
+UMask=0077
+TemporaryFileSystem=/run:ro /srv:ro /var/www:ro /opt:ro /var/backups:ro /var/spool:ro /var/lib:ro

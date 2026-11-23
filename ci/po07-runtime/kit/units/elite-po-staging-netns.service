@@ -1,0 +1,11 @@
+# PO-07 staging — plan §B.1/§B.2: a private network namespace with loopback only (no route, no DNS server).
+[Unit]
+Description=PO staging private network namespace (loopback only)
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/sbin/ip netns add po07ns
+ExecStart=/usr/sbin/ip -n po07ns link set lo up
+ExecStop=/usr/sbin/ip netns delete po07ns
+[Install]
+WantedBy=multi-user.target

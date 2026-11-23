@@ -1,0 +1,12 @@
+# PO-07 staging — plan §B.1. Unix-domain, not host TCP: on a shared VPS any local process can reach a loopback port,
+# bypassing nginx (Basic Auth, the X-Forwarded-Host overwrite). Only <NGINX_GROUP> can open this socket.
+[Unit]
+Description=PO staging - customer upstream socket (nginx only)
+[Socket]
+ListenStream=/run/elite-po-staging/customer.sock
+SocketUser=root
+SocketGroup=po07web
+SocketMode=0660
+DirectoryMode=0750
+[Install]
+WantedBy=sockets.target

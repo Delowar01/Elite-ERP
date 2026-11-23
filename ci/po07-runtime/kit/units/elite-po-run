@@ -1,0 +1,121 @@
+#!/usr/bin/env bash
+# /usr/local/sbin/elite-po-run (root 0700) — PO-07 plan §B.2: the ONE sandboxed entry point for every command that
+# touches the staging database: migrations, platform:db:check, verify:db-hardening, the bootstrap, probes.
+#
+#   elite-po-run --env admin|customer [--profile admin|customer] [--pty] <command>
+#
+# Every command runs in a transient unit as po07app, inside the private namespace (no route, no DNS), in the slice,
+# with the units' exact sandbox (units/sandbox.inc) and the chosen env file. Commands are allow-listed:
+#   npm run platform:bootstrap | platform:db:check | verify:db-hardening | db:harden      (owner role)
+#   manifest <flags>        scripts/platform/release-manifest.ts, flags allow-listed     (owner role; --check: none)
+#   guard-probe             the release tool against a NON-loopback URL: must exit 2 before connecting
+#   probe                   node reads a probe script from stdin (V-NET / V-SBX)       (no database credential)
+#   pty-check               prints whether stdin/stdout are terminals (for the owner's bootstrap)
+# The owner role's connection string reaches the command only through LoadCredential= (never a command line or an
+# environment property of the unit); it is never printed. --profile adds that app unit's own paths and limits, so a
+# probe sees exactly what the unit sees.
+set -Eeuo pipefail
+umask 077
+export LC_ALL=C
+[ "$(id -u)" -eq 0 ] || { echo "elite-po-run: root only" >&2; exit 64; }
+
+ENVNAME="" PROFILE="" PTY=0
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --env) ENVNAME="${2:-}"; shift 2 ;;
+    --profile) PROFILE="${2:-}"; shift 2 ;;
+    --pty) PTY=1; shift ;;
+    --) shift; break ;;
+    *) break ;;
+  esac
+done
+case "$ENVNAME" in admin|customer) ;; *) echo "elite-po-run: --env admin|customer is required" >&2; exit 64 ;; esac
+case "$PROFILE" in ""|admin|customer) ;; *) echo "elite-po-run: bad --profile" >&2; exit 64 ;; esac
+[ $# -gt 0 ] || { echo "elite-po-run: no command" >&2; exit 64; }
+
+ETC=/etc/elite-po-staging
+APP=/srv/elite-po-staging/app
+ENVFILE="$ETC/$ENVNAME.env"
+[ -f "$ENVFILE" ] || { echo "elite-po-run: $ENVFILE missing" >&2; exit 65; }
+[ -e /run/netns/po07ns ] || { echo "elite-po-run: the private namespace is not up" >&2; exit 65; }
+TSX="$APP/node_modules/.bin/tsx"
+DBCRED=""          # "owner" → LoadCredential of owner-db.env
+CMD=()
+case "$1" in
+  npm)
+    [ "${2:-}" = run ] && [ $# -eq 3 ] || { echo "elite-po-run: only 'npm run <allowed script>'" >&2; exit 64; }
+    case "$3" in
+      platform:bootstrap|platform:db:check|verify:db-hardening|db:harden) DBCRED=owner; CMD=(npm run -s "$3") ;;
+      *) echo "elite-po-run: npm script not allowed: $3" >&2; exit 64 ;;
+    esac
+    [ "$3" = platform:bootstrap ] && PTY=1 ;;
+  manifest)
+    shift
+    for f in "$@"; do
+      case "$f" in --check|--status|--apply|--base|--concurrent-indexes|--verify-data|--include-staged-user-invitations) ;;
+        *) echo "elite-po-run: manifest flag not allowed: $f" >&2; exit 64 ;; esac
+    done
+    [ "$*" = "--check" ] || DBCRED=owner
+    CMD=("$TSX" --conditions=react-server scripts/platform/release-manifest.ts "$@") ;;
+  guard-probe)
+    # A Neon-shaped, NON-loopback target with no credential. The guard must refuse it (exit 2) before any connection.
+    CMD=(/usr/bin/env "DATABASE_URL=postgres://probe@ep-guard-probe.example-region.aws.neon.tech:5432/neondb_test_only_" "$TSX" --conditions=react-server scripts/platform/release-manifest.ts --status) ;;
+  probe) CMD=(/usr/bin/node --input-type=module -) ;;
+  pty-check) PTY=1; CMD=(/usr/bin/node -e 'console.log("stdin-tty=" + Boolean(process.stdin.isTTY) + " stdout-tty=" + Boolean(process.stdout.isTTY))') ;;
+  *) echo "elite-po-run: command not allowed: $1" >&2; exit 64 ;;
+esac
+
+UNIT="elite-po-run-$(date -u +%Y%m%d%H%M%S)-$$"
+P=(
+  --unit="$UNIT" --uid=po07app --gid=po07app --slice=elite-po-staging.slice --wait --collect --quiet
+  --expand-environment=no
+  -p NetworkNamespacePath=/run/netns/po07ns
+  -p WorkingDirectory="$APP"
+  -p EnvironmentFile="$ENVFILE"
+  -E HOME=/tmp -E npm_config_cache=/tmp/.npm -E npm_config_update_notifier=false -E npm_config_fund=false
+  -E npm_config_audit=false -E NEXT_TELEMETRY_DISABLED=1
+  # --- sandbox: units/sandbox.inc, line for line ---
+  -p NoNewPrivileges=yes
+  -p CapabilityBoundingSet=
+  -p AmbientCapabilities=
+  -p ProtectSystem=strict
+  -p ProtectHome=yes
+  -p PrivateTmp=yes
+  -p PrivateDevices=yes
+  -p PrivateIPC=yes
+  -p ProtectKernelTunables=yes
+  -p ProtectKernelModules=yes
+  -p ProtectKernelLogs=yes
+  -p ProtectControlGroups=yes
+  -p ProtectClock=yes
+  -p ProtectHostname=yes
+  -p ProtectProc=invisible
+  -p ProcSubset=pid
+  -p RestrictNamespaces=yes
+  -p RestrictRealtime=yes
+  -p RestrictSUIDSGID=yes
+  -p LockPersonality=yes
+  -p SystemCallArchitectures=native
+  "-p RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX AF_NETLINK"
+  -p UMask=0077
+  "-p TemporaryFileSystem=/run:ro /srv:ro /var/www:ro /opt:ro /var/backups:ro /var/spool:ro /var/lib:ro"
+  # --- end sandbox ---
+  "-p BindReadOnlyPaths=$APP /opt/google"
+)
+case "$PROFILE" in
+  admin)    P+=(-p MemoryHigh=448M -p MemoryMax=512M -p CPUQuota=40% -p TasksMax=128 -p LimitNOFILE=4096) ;;
+  customer) P+=(-p "BindPaths=/var/lib/elite-po-staging/storage" -p MemoryHigh=768M -p MemoryMax=896M -p CPUQuota=60% -p TasksMax=128 -p LimitNOFILE=4096) ;;
+esac
+# systemd-run takes "-p KEY=VALUE" as two words; split the quoted "-p K=V with spaces" entries back into two.
+ARGS=()
+for a in "${P[@]}"; do
+  case "$a" in "-p "*) ARGS+=(-p "${a#-p }") ;; *) ARGS+=("$a") ;; esac
+done
+if [ "$DBCRED" = owner ]; then
+  [ -f "$ETC/owner-db.env" ] || { echo "elite-po-run: $ETC/owner-db.env missing" >&2; exit 65; }
+  ARGS+=(-p "LoadCredential=db.env:$ETC/owner-db.env")
+  # shellcheck disable=SC2016  # expanded by the sandboxed sh, not here
+  CMD=(/bin/sh -ec 'set -a; . "$CREDENTIALS_DIRECTORY/db.env"; set +a; exec "$@"' elite-po-run "${CMD[@]}")
+fi
+if [ "$PTY" -eq 1 ]; then ARGS+=(--pty); else ARGS+=(--pipe); fi
+exec /usr/bin/systemd-run "${ARGS[@]}" -- "${CMD[@]}"

@@ -1,0 +1,202 @@
+# PO-07 J1 / S6-R → S9 runtime tests of the VERIFIED staging artifact, on isolated GitHub-hosted runners.
+#
+# The owner approved the archive built by run 45228504829 (SHA-256 below). Both jobs download THAT artifact, refuse it
+# unless its SHA-256 equals the pinned value and the validator passes, and never rebuild anything.
+#   matrix-and-suites — the route-cache question (decision J1): `next start` with the build writable vs fully
+#                       read-only, every route class checked by content, logs and written files recorded; then the
+#                       application's security suites (H-1, MFA, sessions, invitations, PDF, storage) with the build
+#                       read-only.
+#   rehearsal         — the private staging kit, rendered with fictional values (ci/po07-runtime/kit/), run S1 → S9
+#                       under real systemd (S6 = S6-R installing the archive; S8 migrations through elite-po-run;
+#                       S9 units, sockets, V-NET/V-SBX probes, R2–R9), then extra runtime checks and the full rollback.
+# Fictional data, disposable databases and test-only secrets on the runner only. No repository secret, no production
+# service, no VPS access. This repository is public: so are the logs; they contain no private value.
+name: po07-staging-runtime-test
+
+on:
+  push:
+    branches: [feat/platform-owner]
+    paths:
+      - .github/workflows/po07-staging-runtime-test.yml
+      - ci/po07-runtime/**
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read # to download the approved artifact from its own run
+
+concurrency:
+  group: po07-staging-runtime-test
+  cancel-in-progress: false
+
+env:
+  APPROVED_SHA: cf64ebc492b56ad91c28ba3aa7640722935e21c5
+  APPROVED_TREE: 6403cf5d822df491f6e16a56068ab9d7c2f1f138
+  ARTIFACT_RUN_ID: "45228504829"
+  ARTIFACT_NAME: po07-staging-build-cf64ebc492b5-run45228504829
+  ARCHIVE: po07-staging-build-cf64ebc492b5.tar.gz
+  PINNED_ARCHIVE_SHA256: df96cb5b12b5d2b5723e14f626a8619ef062c5d3d9fea990d67745ecca9e561c
+  NODE_VERSION: 22.23.2
+  NEXT_VERSION: 16.4.6
+  NEXT_TELEMETRY_DISABLED: "1"
+
+jobs:
+  matrix-and-suites:
+    name: J1 read-only matrix + security suites (read-only build)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          path: tools
+          sparse-checkout: |
+            ci/po07-artifact
+            ci/po07-runtime
+          persist-credentials: false
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: ${{ env.APPROVED_SHA }}
+          path: src
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: The approved artifact (run 45228504829)
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: ${{ env.ARTIFACT_NAME }}
+          path: art
+          run-id: ${{ env.ARTIFACT_RUN_ID }}
+          github-token: ${{ github.token }}
+      - name: Refuse anything but the owner-approved bytes
+        run: |
+          set -Eeuo pipefail
+          test "$(sha256sum "art/$ARCHIVE" | cut -d' ' -f1)" = "$PINNED_ARCHIVE_SHA256" || { echo "::error::not the approved archive"; exit 1; }
+          test "$(git -C src rev-parse HEAD^{tree})" = "$APPROVED_TREE"
+          node tools/ci/po07-artifact/check-archive.mjs "art/$ARCHIVE" --expect source.sha="$APPROVED_SHA" --expect source.tree="$APPROVED_TREE" \
+            --expect runtime.node="v$NODE_VERSION" --expect runtime.next="$NEXT_VERSION" --expect workflow.run_id="$ARTIFACT_RUN_ID"
+      - name: Install the archive next to a pristine tree of the commit (as S6-R does)
+        id: inst
+        run: |
+          set -Eeuo pipefail
+          bash tools/ci/po07-artifact/relocate-test.sh "art/$ARCHIVE" src "$RUNNER_TEMP/t1" | tee "$RUNNER_TEMP/relocate.log"
+          app="$(grep '^RELOCATED_APP=' "$RUNNER_TEMP/relocate.log" | cut -d= -f2-)"
+          echo "app=$app" >> "$GITHUB_OUTPUT"
+          echo "MANIFEST=$RUNNER_TEMP/t1/extract/po07-artifact/MANIFEST.sha256" >> "$GITHUB_ENV"
+      - name: Disposable PostgreSQL 16 (loopback only) and fictional databases
+        working-directory: ${{ steps.inst.outputs.app }}
+        run: |
+          set -Eeuo pipefail
+          sudo systemctl start postgresql.service
+          sudo -u postgres psql -v ON_ERROR_STOP=1 -c "ALTER SYSTEM SET listen_addresses = '127.0.0.1'" -c "ALTER SYSTEM SET max_connections = 200" -c "ALTER USER postgres PASSWORD 'ci-test-only'"
+          sudo systemctl restart postgresql.service
+          sudo -u postgres createdb admin_test_only_
+          echo "PLATFORM_TEST_ADMIN_DATABASE_URL=postgres://postgres:ci-test-only@127.0.0.1:5432/admin_test_only_" >> "$GITHUB_ENV"
+          export PLATFORM_TEST_ADMIN_DATABASE_URL=postgres://postgres:ci-test-only@127.0.0.1:5432/admin_test_only_
+          cat > verify/zz-ci-db.tmp.mts <<'EOF'
+          import { createPlatformTestDatabase } from "../scripts/platform/disposable-db";
+          await createPlatformTestDatabase("ci", "ci_erp_test_only_");
+          process.exit(0);
+          EOF
+          npx tsx --conditions=react-server verify/zz-ci-db.tmp.mts && rm verify/zz-ci-db.tmp.mts
+          DATABASE_URL="postgres://postgres:ci-test-only@127.0.0.1:5432/ci_erp_test_only_" npm run -s db:harden
+          echo "MX_DATABASE_URL=postgres://postgres:ci-test-only@127.0.0.1:5432/ci_erp_test_only_" >> "$GITHUB_ENV"
+          UI_BASELINE_ADMIN_URL="postgres://postgres:ci-test-only@127.0.0.1:5432/postgres" node tests/ui-baseline/run.mjs prepare
+          sudo -u postgres createdb -T devui010_test_only_seed ci_browser_test_only_
+          echo "CUSTOMER_DATABASE_URL=postgres://postgres:ci-test-only@127.0.0.1:5432/ci_browser_test_only_" >> "$GITHUB_ENV"
+          mkdir -p "$RUNNER_TEMP/fake-storage"
+          printf 'DATABASE_URL=%s\nAUTH_SECRET=ci-only-%s\nFIELD_ENCRYPTION_KEYS=1:%s\nSTORAGE_DRIVER=fake\nSTORAGE_FAKE_DIR=%s\n' \
+            "postgres://postgres:ci-test-only@127.0.0.1:5432/ci_browser_test_only_" "$(openssl rand -hex 24)" "$(openssl rand -base64 32)" "$RUNNER_TEMP/fake-storage" > .env
+      - name: Chromium (Playwright, from the installed tree)
+        working-directory: ${{ steps.inst.outputs.app }}
+        run: |
+          npx playwright install --with-deps chromium
+          CH=$(node -e "console.log(require('playwright').chromium.executablePath())")
+          echo "PO07_CHROMIUM=$CH" >> "$GITHUB_ENV"
+          echo "CHROMIUM_EXECUTABLE_PATH=$CH" >> "$GITHUB_ENV"
+      - name: J1 matrix — the build READ-ONLY (systemd ReadOnlyPaths= on the whole tree)
+        run: |
+          set -Eeuo pipefail
+          MX_UID=$(id -u) MX_GID=$(id -g) node tools/ci/po07-runtime/matrix.mjs "${{ steps.inst.outputs.app }}" readonly "$RUNNER_TEMP/matrix-readonly.json"
+          (cd "${{ steps.inst.outputs.app }}" && sha256sum --quiet --strict -c "$MANIFEST") && echo "PASS the build is byte-identical after the read-only matrix"
+      - name: J1 matrix — the build WRITABLE (a separate copy, for comparison)
+        run: |
+          set -Eeuo pipefail
+          cp -a "${{ steps.inst.outputs.app }}" "$RUNNER_TEMP/t1-writable"
+          MX_UID=$(id -u) MX_GID=$(id -g) node tools/ci/po07-runtime/matrix.mjs "$RUNNER_TEMP/t1-writable" writable "$RUNNER_TEMP/matrix-writable.json" || true
+          node -e '
+            const r = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8")), w = JSON.parse(require("fs").readFileSync(process.argv[2], "utf8"));
+            const key = (x) => `${x.phase}|${x.id}`, wm = new Map(w.results.map((x) => [key(x), x]));
+            let diff = 0;
+            for (const x of r.results) { const y = wm.get(key(x)); if (!y || y.status !== x.status || (x.sha256 && /favicon|static/.test(x.id) && y.sha256 !== x.sha256)) { diff++; console.log(`DIFF ${key(x)}: read-only ${x.status} ${x.sha256 ?? ""} / writable ${y?.status} ${y?.sha256 ?? ""}`); } }
+            console.log(`read-only vs writable: ${r.results.length} responses compared, ${diff} differ; files written: read-only ${r.files_written.length}, writable ${w.files_written.length}`);
+            process.exit(diff ? 1 : 0);' "$RUNNER_TEMP/matrix-readonly.json" "$RUNNER_TEMP/matrix-writable.json"
+      - name: Security suites with the build read-only
+        run: bash tools/ci/po07-runtime/suites.sh "${{ steps.inst.outputs.app }}" "$RUNNER_TEMP/suite-logs"
+      - name: Reports
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: po07-runtime-matrix-and-suites
+          path: |
+            ${{ runner.temp }}/matrix-*.json
+            ${{ runner.temp }}/suite-logs/
+          retention-days: 30
+
+  rehearsal:
+    name: kit rehearsal S1 → S9 (S6-R) + rollback, real systemd
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          path: tools
+          sparse-checkout: |
+            ci/po07-artifact
+            ci/po07-runtime
+          persist-credentials: false
+      - name: The approved artifact (run 45228504829)
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: ${{ env.ARTIFACT_NAME }}
+          path: art
+          run-id: ${{ env.ARTIFACT_RUN_ID }}
+          github-token: ${{ github.token }}
+      - name: Node.js 22.23.2 at /usr/bin (as on the staging VPS), the only node on PATH
+        run: |
+          set -Eeuo pipefail
+          cd "$RUNNER_TEMP"
+          curl -fsSLO "https://nodejs.org/dist/v$NODE_VERSION/node-v$NODE_VERSION-linux-x64.tar.xz"
+          curl -fsSL "https://nodejs.org/dist/v$NODE_VERSION/SHASUMS256.txt" | grep " node-v$NODE_VERSION-linux-x64.tar.xz$" | sha256sum -c -
+          sudo tar -xJf "node-v$NODE_VERSION-linux-x64.tar.xz" -C /usr --strip-components=1 --no-same-owner \
+            "node-v$NODE_VERSION-linux-x64/bin" "node-v$NODE_VERSION-linux-x64/lib" "node-v$NODE_VERSION-linux-x64/include" "node-v$NODE_VERSION-linux-x64/share"
+          for f in node npm npx corepack; do if [ -e "/usr/local/bin/$f" ]; then sudo mv "/usr/local/bin/$f" "/usr/local/bin/$f.ci-hidden"; fi; done
+          echo "root sees: $(sudo sh -c 'command -v node; node -v; command -v npm; npm -v')"
+          test "$(sudo node -v)" = "v$NODE_VERSION"
+          echo "chrome: $(/usr/bin/google-chrome --version)"; echo "postgres: $(ls /usr/lib/postgresql)"; systemctl --version | head -1
+      - name: Refuse anything but the owner-approved bytes
+        run: |
+          set -Eeuo pipefail
+          test "$(sha256sum "art/$ARCHIVE" | cut -d' ' -f1)" = "$PINNED_ARCHIVE_SHA256" || { echo "::error::not the approved archive"; exit 1; }
+          /usr/bin/node tools/ci/po07-artifact/check-archive.mjs "art/$ARCHIVE" --expect source.sha="$APPROVED_SHA" --expect source.tree="$APPROVED_TREE" \
+            --expect runtime.node="v$NODE_VERSION" --expect runtime.next="$NEXT_VERSION" --expect workflow.run_id="$ARTIFACT_RUN_ID"
+      - name: Rehearsal S1 → S9, extra runtime checks, rollback
+        run: sudo -E bash tools/ci/po07-runtime/rehearsal.sh art "$ARTIFACT_RUN_ID"
+      - name: Collect the kit's logs
+        if: always()
+        run: |
+          mkdir -p "$RUNNER_TEMP/kit-logs"
+          sudo sh -c "cp -a /root/elite-po-kit/state/logs/. '$RUNNER_TEMP/kit-logs/' 2>/dev/null; chown -R $(id -u):$(id -g) '$RUNNER_TEMP/kit-logs'" || true
+      - name: Logs
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: po07-runtime-rehearsal-logs
+          path: ${{ runner.temp }}/kit-logs/
+          retention-days: 30
