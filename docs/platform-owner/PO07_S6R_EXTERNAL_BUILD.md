@@ -75,7 +75,7 @@ source commit's). It has one top-level directory:
 
 | Path | Content |
 |---|---|
-| `po07-artifact/.next/` | the build output. Removed: the build cache (`.next/cache/*`, shipped as an **empty** `.next/cache`, which the staging units mount read-write) and the build traces (`.next/trace*`) |
+| `po07-artifact/.next/` | the build output. Removed: the build cache (`.next/cache/*`, shipped as an **empty** `.next/cache`, which stays empty and read-only, like the whole build: §8, J1) and the build traces (`.next/trace*`) |
 | `po07-artifact/node_modules/` | exactly what `npm ci` installed from the lockfile, development tools included (S8 and S9b use `tsx`, `drizzle-kit` and the verify scripts). esbuild's hard-linked binary is shipped as independent copies (the list is in `ARTIFACT.json`) |
 | `po07-artifact/MANIFEST.sha256` | the SHA-256 of every file |
 | `po07-artifact/SYMLINKS.txt` | every link and its (relative, in-tree) target |
@@ -199,17 +199,155 @@ directory for audit until acceptance.
 | Attestation | Sigstore build provenance for the archive; verified on the owner's PC (with the GitHub digest of the zip, its contents, `SHA256SUMS`, the validator and `ARTIFACT.json`) |
 | Build resources | 2 CPUs: 44 s, largest process 2,118 MB, all build processes 2,631 MB at peak. 4 CPUs: 36 s, 2,174 MB / 2,998 MB |
 
-## 8. Open points
+## 8. The route cache and decision J1 (23 Nov 2026): the whole build stays read-only
 
-- **R2: `next start` writes outside `.next/cache` (found by this run).** While the H-1 servers served `/favicon.ico`, Next.js
-  16.4.6 wrote `.next/server/route-cache/APP_ROUTE/<hash>/$/favicon.ico.{body,meta}`. The reviewed staging units
-  mount the app tree read-only except `.next/cache`, so this needs a reviewed decision before S9. There are two
-  options:
-  1. add `.next/server/route-cache` (created empty and owned by `<APP_USER>` by S6-R) to the units' and
-     `elite-po-run`'s writable paths;
-  2. prove in CI that the application tolerates a read-only route cache.
+**What writes `.next/server/route-cache/`.** This is the file-system response cache of Next.js 16.4.6.
+- In `next/dist/server/lib/incremental-cache/` (`file-system-cache.js`, `index.js`, with `../route-cache-key.js`), a
+  cached response is stored under an owner-scoped key: `/route-cache/<kind>/<sha256 of the source route>/$<path>`.
+- The build writes its prerendered output once, in place, as an immutable seed. This build has exactly two seeds,
+  both with `revalidate: false`: `/favicon.ico` (an app route; its body is byte-identical to `src/app/favicon.ico`)
+  and `/_global-error`. All 100 application routes are dynamic, and there is no ISR, no cached `fetch` (the one
+  `fetch` uses `cache: "no-store"`) and no `use cache`.
+- On the first read of a scoped key with no file yet, `FileSystemCache.get()` reads the seed and `promoteSeed()`
+  copies it to the scoped path. That copy is the only write seen in CI.
+- The promotion is wrapped in `promotion.catch(…)`: a failure is logged only in cache-debug mode, the seed's data is
+  returned anyway, and the entry is kept in the in-memory LRU.
+- Any later `set()` failure is caught in `IncrementalCache.set()` and logged as a warning. `revalidatePath` and
+  `revalidateTag` only update an in-memory tag manifest.
 
-  The units are not changed by this preparation.
-- The `www1` aliases of two other sites didn't answer on 23 Nov 2026. The owner accepted this as non-blocking; S0
-  comparisons report it as KNOWN.
+**Is the write required?** No. It is an optimisation that saves re-reading the seed. Correct responses come from the
+seed or from memory.
+
+**Measured** (run [45244291151](https://github.com/Delowar01/Elite-ERP/actions/runs/45244291151), the approved
+archive):
+- **Setup:** `next start` ran with the whole app tree read-only (systemd `ReadOnlyPaths=`), as a customer process and
+  a console process bound with the H-1 variables, against a copy that was writable.
+- **Route classes, checked by content, not status alone:**
+  - favicon bytes;
+  - an immutable static chunk;
+  - the dynamic sign-in pages of both processes;
+  - the protected-route and unknown-path redirects;
+  - a dynamic route handler;
+  - the image optimizer (SVG refused, ICO served);
+  - an unknown Server Action;
+  - the H-1 cross-host refusals;
+  - 240 concurrent requests;
+  - a restart.
+- **Read-only result:** 22/22 cases pass, **0 files written**, and the build is byte-identical afterwards.
+- **Writable result:** the same 22 responses (0 differ), with 11 entries written (the route-cache seed promotions and
+  the image optimizer's cache).
+- **The application's own suites with `.next` and `node_modules` read-only:** all pass.
+
+  | Suite | Result |
+  |---|---|
+  | H-1 | 65/65 |
+  | MFA browser suite | 138/138 |
+  | Platform auth | 136/136 |
+  | Session revocation | 28/28 |
+  | Company invitation acceptance | 98/98 |
+  | User invitation acceptance | 41/41 |
+  | PDF branding with Chromium, print, private storage | pass |
+- **Errors observed under read-only:** only for the image optimizer (`/_next/image`). It isn't used by the application,
+  since every `next/image` is `unoptimized`, but it is reachable without a session. A crafted
+  `?url=/favicon.ico` request was served (200), and its disk-cache setup then logged `⨯ unhandledRejection: ENOENT …
+  mkdir '.next/cache/images'` and `Failed to write image to cache`. The process kept serving correctly. With a writable
+  shared `.next/cache`, the same unauthenticated request would have written files that both processes then shared.
+
+**Decision taken (J1): the complete build stays read-only.** Neither process gets any writable path in the code tree:
+- the units' former `ReadWritePaths=<APP_DIR>/app/.next/cache` is removed from both units and from `elite-po-run`'s
+  profiles;
+- the response cache lives in each process's own memory;
+- so no cache state is shared between the console and the customer hostname.
+
+The per-process tmpfs fallback (a private, size-capped `TemporaryFileSystem=` per unit) was not needed.
+
+**Also measured:** `next start` exits with status 143 when systemd stops it (128 + SIGTERM). Both units now declare
+`SuccessExitStatus=143`, so a clean stop no longer leaves a failed unit.
+
+## 9. Rehearsal of the staging kit under real systemd (`.github/workflows/po07-staging-runtime-test.yml`)
+
+The private staging kit is rendered with fictional values (`ci/po07-runtime/kit/`; no private value). The SAME stage
+scripts, units, `elite-po-run`, probes and rollback then run on a GitHub-hosted Ubuntu 24.04 runner (systemd 255,
+PostgreSQL 16, Google Chrome). The run installs the approved archive and executes S1 → S9 and the full rollback. Only
+the VPS-identity, window and authorization gates and the shared-service guard are replaced by a CI subset (no new
+host listener, own sockets only, memory, disk).
+
+The rehearsal found and fixed eight defects before any of them could reach the VPS:
+1. S4's role check used `LIKE 'prefix_%'`, where `_` is a wildcard. It now compares an exact prefix.
+2. The app user's `git` inherited an untraversable working directory and the caller's environment. It now runs from
+   the staging directory with `env -i`.
+3. S6-R's tar flags: GNU tar 1.35 refuses `--no-overwrite-dir` together with `--keep-old-files`.
+4. S6-R's env-file check was too blunt, because the repository tracks `.env.example`. It now refuses exactly what
+   `next start` loads, plus anything untracked.
+5. S6-R's `npm ls` check: npm's exit code now decides.
+6. S9 now creates the socket directory with the web-server group itself.
+7. S9's journal pattern now matches `unhandledRejection`.
+8. Rollback now stops the slice and removes the cluster's config directory, which `pg_dropcluster` leaves behind.
+
+**And one design gap: the customer unit's `TasksMax=128` is too low for Chromium.**
+- In the customer unit's exact sandbox, PDF rendering through the installed `puppeteer-core` (the application's own
+  path) failed with `pthread_create: Resource temporarily unavailable` and `Zygote could not fork`.
+- One render peaks at 169 tasks and two concurrent renders at 256–261, while memory stays at 545 MB of the 896 MB
+  cap.
+- **Proposed, pending the owner's approval:** customer `TasksMax=320`. The admin unit (128) and the slice (512) stay
+  unchanged.
+
+**Green rehearsal:** run [45261652332](https://github.com/Delowar01/Elite-ERP/actions/runs/45261652332), job
+"kit rehearsal":
+
+| Stage | Result |
+|---|---|
+| S1–S5 | PASS; the staging cluster runs inside the namespace, on its loopback only |
+| S6-R | PASS. Re-run at once: re-checks only. After S9: refuses to touch the installed build under running apps |
+| S7 | PASS |
+| S8 | PASS: V-NET for the tool path 94/94; the migrations through `elite-po-run` with the owner credential via `LoadCredential`; 67 existing customer tables byte-identical |
+| S9 | PASS. Properties: no writable code path, the reviewed binds only. Sockets 0660 in a 0750 directory; other users get EACCES; no host TCP path. V-SBX admin 97/97 and customer 99/99 (two concurrent real PDFs: 265 tasks, 553 MB). R2–R9 all PASS. After the R-tests every build file is unchanged and the journal is clean. Budget: the slice is ≤ 600 MB steady |
+| After S9 | 22/22: content through the sockets, a restart of both units, 240 concurrent requests, integrity, journal |
+| Footprint | admin 64 MB, customer 101 MB, cluster 49 MB, slice 441 MB current (695 MB peak, during the migrations and probes) |
+| Rollback, all stages | removes every staging unit, path, user and listener; the archive stays for audit |
+
+## 10. Revised execution plan: S6-R → S7 → S8 → S9 → S9b (prepared; not executed)
+
+**Preconditions:**
+- the owner's approval of D31 (the customer task limit) or another value;
+- the owner's new written execution authorization, with its window;
+- the owner available for S9b.
+
+**In the window:**
+1. **Health and traceability.**
+   - Run a fresh S0, and compare it with the last S0 of the previous window (S1–S5 in place).
+   - That reference must itself be traceable to the original baseline: every difference must be in the private
+     register of documented, owner-accepted differences, by exact value. Any new difference is a HOLD for the owner.
+2. **Kit update.** kit-3 replaces kit-1 on the VPS; the state stays. The retired on-VPS build script is moved aside.
+   The previous authorization and baseline are kept.
+3. **STOP resolution, only on the owner's explicit words.**
+   - The original S6 failure record is kept unchanged, read-only.
+   - The resolution (the owner's reason, verbatim, and the authorization it relies on) is appended.
+   - An S6 STOP can be cleared only if the old build is not installed and S6-R is.
+4. **Transfer.** The verified archive goes into the root-only incoming directory, with its SHA-256 re-checked on the
+   VPS.
+5. **S6-R**, as in §6. On the rehearsal it was re-entrant, and it refuses once the applications are running.
+6. **S7:** the env files.
+7. **S8:** V-NET for the tool path, then the migrations through `elite-po-run`.
+8. **S9:**
+   - the units and sockets;
+   - V-NET/V-SBX in both profiles, including a real PDF;
+   - R2–R9;
+   - J1: no writable code path, build integrity after the R-tests, and a clean journal;
+   - the footprint.
+9. **S9b:** the owner's own bootstrap, then the post-check.
+
+**Unchanged:** S10–S13 keep their separate authorization gates. Production security fixes and any ERP or Neon work
+stay outside this staging task.
+
+## 11. Open points
+
+- **D31:** the customer task limit needs the owner's decision before S9.
+- **The image optimizer endpoint** is not needed by the application. Recommendation for S11a (a separate
+  authorization, nginx): deny `/_next/image` on both staging hosts. Until then the read-only build keeps it from
+  writing anything.
+- **Not provable off the VPS:** the VPS's own kernel and its coexistence with the live services, nginx with Basic
+  Auth in front of the sockets (S11a), and the owner's interactive bootstrap (S9b).
+- The `www1` aliases of two other sites didn't answer on 23 Nov 2026. The owner accepted this as non-blocking; it is
+  recorded in the private register of documented S0 differences.
 - PO07-A11Y-01 is accepted temporarily, not resolved.
