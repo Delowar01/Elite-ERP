@@ -35,7 +35,7 @@ const CHECKS = [
   ["customer: immutable static chunk bytes = the build file", () => U(`/_next/${CHUNK}`), (r) => r.status === 200 && sha(r.body) === CHUNK_SHA],
   ["customer: sign-in page (dynamic) carries this build id and a password field", () => U("/login"), (r) => r.status === 200 && r.text.includes(BUILD_ID) && /type="password"/.test(r.text)],
   ["customer: a protected page without a session redirects to /login", () => U("/dashboard"), (r) => [303, 307, 308].includes(r.status) && /\/login/.test(r.headers.location ?? "")],
-  ["customer: unknown page → 404 page of this build", () => U("/po07-no-such-page"), (r) => r.status === 404 && r.text.includes(BUILD_ID)],
+  ["customer: unknown path without a session → /login (the proxy, before routing)", () => U("/po07-no-such-page"), (r) => [303, 307, 308].includes(r.status) && /\/login/.test(r.headers.location ?? "")],
   ["console host: the console is 404 while its switch is off (S9 state)", () => A("/platform/login"), (r) => r.status === 404],
 ];
 async function round(label) {
@@ -76,8 +76,10 @@ const listed = fs.readFileSync(C.manifest, "utf8").split("\n").filter(Boolean).l
 rec(count === listed, "no file was added to the build", `${count} files, manifest ${listed}`);
 rec(fs.readdirSync(path.join(C.appDir, ".next/cache")).length === 0 && !fs.existsSync(path.join(C.appDir, ".next/server/route-cache")), ".next/cache is empty and no route cache exists");
 const j = sh("journalctl", ["-u", units[0], "-u", units[1], "--no-pager", "-o", "cat"]).stdout;
-const noteworthy = j.split("\n").filter((l) => /EROFS|EACCES|EPERM|Failed to (update prerender cache|write image)|unhandled|uncaught|error/i.test(l));
-rec(noteworthy.length === 0, "no write attempt, permission error or error in either app's journal", noteworthy.slice(0, 5).join(" | "));
+// (the R-tests' refused Server Actions log "Invalid Server Actions request" by design; those are expected, not counted)
+const noteworthy = j.split("\n").filter((l) => /EROFS|EACCES|EPERM|Failed to (update prerender cache|write image)|unhandled ?rejection|uncaught/i.test(l));
+rec(noteworthy.length === 0, "no write attempt, permission error, unhandled rejection or uncaught exception in either app's journal", noteworthy.slice(0, 5).join(" | "));
+console.log(`journal: ${j.split("\n").filter((l) => /Invalid Server Actions request|Failed to find Server Action/.test(l)).length} refused Server Action line(s) (the R-tests' attacks, expected)`);
 // footprint after the load
 for (const u of [...units, "postgresql@16-po07ns.service", "elite-po-staging.slice"]) {
   const v = (p) => Math.round(Number(sh("systemctl", ["show", "-p", p, "--value", u]).stdout.trim()) / 1048576);

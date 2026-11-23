@@ -104,7 +104,7 @@ P=(
 )
 case "$PROFILE" in
   admin)    P+=(-p MemoryHigh=448M -p MemoryMax=512M -p CPUQuota=40% -p TasksMax=128 -p LimitNOFILE=4096) ;;
-  customer) P+=(-p "BindPaths=/var/lib/elite-po-staging/storage" -p MemoryHigh=768M -p MemoryMax=896M -p CPUQuota=60% -p TasksMax=512 -p LimitNOFILE=4096) ;;
+  customer) P+=(-p "BindPaths=/var/lib/elite-po-staging/storage" -p MemoryHigh=768M -p MemoryMax=896M -p CPUQuota=60% -p TasksMax=320 -p LimitNOFILE=4096) ;;
 esac
 # systemd-run takes "-p KEY=VALUE" as two words; split the quoted "-p K=V with spaces" entries back into two.
 ARGS=()

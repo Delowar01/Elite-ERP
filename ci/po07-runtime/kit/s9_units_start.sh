@@ -123,7 +123,7 @@ build_intact() {
 }
 check "after the R-tests every build file is unchanged, none was added, .next/cache is empty and no route cache exists" build_intact
 no_write_errors() { ! journalctl -u elite-po-admin.service -u elite-po-customer.service --since "-30min" --no-pager -o cat 2>/dev/null |
-  grep -qiE 'EROFS|EACCES|Failed to (update prerender cache|write image to cache)|uncaught|unhandled rejection'; }
+  grep -qiE 'EROFS|EACCES|Failed to (update prerender cache|write image to cache)|uncaught|unhandled ?rejection'; }
 check "neither app logged a write attempt, a permission error or an unhandled error" no_write_errors
 
 # ---- 6. stability and footprint (sampling continues with tools/footprint.sh until S9b and after) ----
