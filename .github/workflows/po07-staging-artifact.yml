@@ -196,7 +196,8 @@ jobs:
           touch "$RUNNER_TEMP/before-h1"
           timeout 1800 npx tsx --conditions=react-server verify/verify-platform-host-binding.mts 2>&1 | tee "$RUNNER_TEMP/h1.log"
           echo "files the running servers wrote inside the installed tree (the staging units allow writes only to .next/cache):"
-          find .next node_modules -newer "$RUNNER_TEMP/before-h1" \( -type f -o -type d \) | sed 's/^/  /' | head -50
+          find .next node_modules -newer "$RUNNER_TEMP/before-h1" \( -type f -o -type d \) > "$RUNNER_TEMP/runtime-writes.txt" || true
+          echo "  $(wc -l < "$RUNNER_TEMP/runtime-writes.txt") entries"; head -50 "$RUNNER_TEMP/runtime-writes.txt" | sed 's/^/  /'
 
       - name: Upload (only after every step above passed)
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

@@ -58,7 +58,7 @@ MEASURE_CPUS=2 bash "$HERE/measure.sh" "probe_build_2cpu" "$REP" "$RUNNER_TEMP/e
 grep -q "Compiled successfully" "$RUNNER_TEMP/env-probe-build.log" || { echo "::error::probe build: no 'Compiled successfully'"; exit 1; }
 hits=0
 while IFS=$'\t' read -r name value; do
-  files="$(grep -rlaF -- "$value" .next | wc -l)"
+  files="$( { grep -rlaF -- "$value" .next || true; } | wc -l)"   # pipefail: no match is the expected result
   if [ "$files" -gt 0 ]; then echo "::error::$name is embedded at build time ($files file(s) under .next)"; hits=$((hits + 1))
   else echo "runtime-only: $name (canary absent from all of .next)"; fi
 done < "$CAN"

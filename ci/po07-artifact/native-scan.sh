@@ -7,9 +7,10 @@ export LC_ALL=C
 cd "${1:?dir}"; OUT="$(realpath -m "${2:?out.json}")"
 tsv="$(mktemp)"
 while IFS= read -r -d '' f; do
-  file -b "$f" | grep -q '^ELF' || continue
-  g="$(objdump -T "$f" 2>/dev/null | grep -o 'GLIBC_[0-9][0-9.]*' | sed 's/GLIBC_//' | sort -Vu | tail -1)"
-  nf="$(ldd "$f" 2>/dev/null | grep -c 'not found' || true)"
+  case "$(file -b "$f")" in ELF*) ;; *) continue ;; esac
+  # (pipefail: grep finding nothing — a static binary, a library with no missing dependency — is not an error)
+  g="$( { objdump -T "$f" 2>/dev/null || true; } | { grep -o 'GLIBC_[0-9][0-9.]*' || true; } | sed 's/GLIBC_//' | sort -Vu | tail -1)"
+  nf="$( { ldd "$f" 2>/dev/null || true; } | { grep -c 'not found' || true; })"
   printf '%s\t%s\t%s\n' "$f" "${g:-none}" "$nf" >> "$tsv"
 done < <(find node_modules -type f \( -name '*.node' -o -name '*.so' -o -name '*.so.*' -o -path '*/bin/*' \) -print0)
 sort -o "$tsv" "$tsv"
