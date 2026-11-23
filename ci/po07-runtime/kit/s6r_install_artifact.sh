@@ -25,7 +25,7 @@ guard_shared
 start_thresholds
 EXP="$STATE_DIR/ARTIFACT.expected"
 TOOLS="$APP_DIR/.kit-tools"   # root-owned, readable by the app user: the validator and the runtime check
-as_app() { runuser -u "$APP_USER" -- env HOME="$BUILD_HOME" GIT_TERMINAL_PROMPT=0 GIT_CONFIG_NOSYSTEM=1 GIT_OPTIONAL_LOCKS=0 "$@"; }
+as_app() { (cd "$APP_DIR" && runuser -u "$APP_USER" -- env HOME="$BUILD_HOME" GIT_TERMINAL_PROMPT=0 GIT_CONFIG_NOSYSTEM=1 GIT_OPTIONAL_LOCKS=0 "$@"); }
 x() { if [ "$MODE" = plan ]; then printf '<%s>' "$1"; else sed -n "s/^$1=//p" "$EXP" | head -1; fi; }
 HIDE="InaccessiblePaths=-/srv/po07-absent-erp -/etc/elite-po-staging -/var/lib/elite-po-staging -/var/lib/postgresql -/var/run/postgresql -/var/run/po07-absent-c -/var/www -/var/backups"
 SANDBOX=(--uid="$APP_USER" --gid="$APP_USER" --expand-environment=no --wait --pipe --quiet --collect
@@ -86,11 +86,11 @@ mkdir_staging "$TOOLS" 0750 "root:$APP_USER"
 put_file "$TOOLS/check-archive.mjs" 0640 "root:$APP_USER" "$KIT_HERE/tools/check-archive.mjs"
 put_file "$TOOLS/s6r-runtime-check.sh" 0640 "root:$APP_USER" "$KIT_HERE/probes/s6r-runtime-check.sh"
 validate_archive() { # as the app user; the archive (root 0600) arrives on stdin, opened by root
-  runuser -u "$APP_USER" -- "$NODE_BIN" "$TOOLS/check-archive.mjs" - \
+  (cd "$APP_DIR" && runuser -u "$APP_USER" -- "$NODE_BIN" "$TOOLS/check-archive.mjs" - \
     --expect source.sha="$APPROVED_SHA" --expect source.tree="$APPROVED_TREE" --expect build_id="$(x build_id)" \
     --expect workflow.commit="$(x workflow_commit)" --expect workflow.run_id="$(x run_id)" \
     --expect runtime.node="$ARTIFACT_NODE" --expect runtime.next="$ARTIFACT_NEXT" --expect contents.files="$(x files)" \
-    --expect contents.symlinks="$(x symlinks)" < "$ARCHIVE" > "$STATE_DIR/logs/S6R-archive-check.txt" 2>&1 || { tail -20 "$STATE_DIR/logs/S6R-archive-check.txt"; return 1; }
+    --expect contents.symlinks="$(x symlinks)" < "$ARCHIVE" > "$STATE_DIR/logs/S6R-archive-check.txt" 2>&1) || { tail -20 "$STATE_DIR/logs/S6R-archive-check.txt"; return 1; }
   tail -1 "$STATE_DIR/logs/S6R-archive-check.txt"
 }
 check "the archive validator passes (format, names, links, permissions, every file's SHA-256, provenance)" validate_archive
