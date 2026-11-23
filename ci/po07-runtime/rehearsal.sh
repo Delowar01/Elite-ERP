@@ -81,9 +81,14 @@ end
 step "rollback all --execute (S9 → S1), then nothing of the staging may remain"
 bash "$KIT_DIR/rollback.sh" all --execute || fail "rollback failed"
 left=""
-for u in elite-po-admin.service elite-po-customer.service elite-po-admin-proxy.socket elite-po-customer-proxy.socket elite-po-staging-netns.service elite-po-staging.slice "postgresql@16-$CLUSTER.service" elite-po-install.service; do
+for u in elite-po-admin.service elite-po-customer.service elite-po-admin-proxy.socket elite-po-customer-proxy.socket elite-po-staging-netns.service elite-po-staging.slice elite-po-install.service; do
   [ "$(systemctl show -p LoadState --value "$u")" = not-found ] || left="$left unit:$u($(systemctl show -p LoadState,ActiveState --value "$u" | tr '\n' '/'))"
 done
+# postgresql@16-<cluster> is an instance of the distribution's template, so it always loads: it must be inactive,
+# not failed, without the kit's drop-in, and its cluster gone from pg_lsclusters
+pgu="postgresql@16-$CLUSTER.service"
+[ "$(systemctl show -p ActiveState --value "$pgu")" = inactive ] && [ ! -e "/etc/systemd/system/$pgu.d" ] && ! pg_lsclusters -h | awk -v c="$CLUSTER" '$2 == c' | grep -q . ||
+  left="$left unit:$pgu($(systemctl show -p ActiveState --value "$pgu"))"
 for p in "$APP_DIR" "$ETC_DIR" "$RUN_DIR" "$PG_RUN" "/etc/postgresql/16/$CLUSTER" "/var/lib/postgresql/16/$CLUSTER" /usr/local/sbin/elite-po-run /etc/tmpfiles.d/elite-po-staging.conf "/run/netns/$NS"; do
   [ ! -e "$p" ] || left="$left path:$p"
 done

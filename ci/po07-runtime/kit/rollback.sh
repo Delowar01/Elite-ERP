@@ -90,6 +90,14 @@ rb_S3() {
     [ "$(stat -c %U "/var/lib/postgresql/$PG_VER/$CLUSTER")" = "$PG_USER" ] || stop_now "the cluster's data is not owned by $PG_USER"
     act pg_dropcluster "$PG_VER" "$CLUSTER"
   fi
+  # pg_dropcluster leaves the files the kit added to the cluster's config directory (its conf.d file and the kept
+  # original pg_hba), so the directory survives it: removed here, only when the kit created the cluster (S3 marker).
+  if [ "$MODE" = plan ]; then plan "rm -rf /etc/postgresql/$PG_VER/$CLUSTER (only if the kit created the cluster)"
+  elif [ -d "/etc/postgresql/$PG_VER/$CLUSTER" ]; then
+    [ -f "$STATE_DIR/S3.created" ] || stop_now "/etc/postgresql/$PG_VER/$CLUSTER exists but the cluster was not created by this kit"
+    pg_lsclusters -h | awk -v v="$PG_VER" -v c="$CLUSTER" '$1==v && $2==c' | grep -q . && stop_now "the cluster still exists after pg_dropcluster"
+    safe_rm "/etc/postgresql/$PG_VER/$CLUSTER"
+  fi
   rm_kit_file "/etc/systemd/system/postgresql@16-po07ns.service.d/10-staging.conf" "$U/postgresql@16-po07ns.10-staging.conf"
   safe_rm "/etc/systemd/system/postgresql@16-po07ns.service.d"
   sctl daemon-reload
@@ -99,6 +107,7 @@ rb_S3() {
 rb_S2() {
   later_done S3 S4 S5 S6 S7 S8 S9 && stop_now "roll back S3 first"
   sctl disable --now elite-po-staging-netns.service
+  sctl stop elite-po-staging.slice   # a slice stays active after its file is removed unless it is stopped
   rm_kit_file /etc/systemd/system/elite-po-staging-netns.service "$U/elite-po-staging-netns.service"
   rm_kit_file /etc/systemd/system/elite-po-staging.slice "$U/elite-po-staging.slice"
   rm_kit_file /etc/tmpfiles.d/elite-po-staging.conf "$U/elite-po-staging.tmpfiles.conf"
