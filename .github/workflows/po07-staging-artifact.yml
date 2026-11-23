@@ -1,0 +1,257 @@
+# PO-07 S6-R: the off-VPS build of the APPROVED Platform Owner staging release (owner decision S6-R1, 23 Nov 2026).
+#
+# Why: on the shared staging VPS, `next build` of this release cannot finish inside the memory the shared services can
+# spare (measured on 23 Nov 2026: plan cap 1536 MB pushed host swap +300 MB; a 1280 MB soft limit throttled it for
+# 60 minutes; a 2304 MB hard limit was exceeded during type checking). The build moves here; the VPS only installs it.
+#
+# What: EXACTLY the approved source commit (APPROVED_SHA, its tree verified, in this branch's history) on a
+# GitHub-hosted Ubuntu 24.04 runner with the staging VPS's Node.js version: `npm ci` from the committed lockfile;
+# TypeScript, ESLint and the platform boundary test; an env-embedding probe (no runtime value may be fixed at build
+# time); a normal `next build` (type checking included, nothing ignored); a completeness check of the output; then ONE
+# archive of the build output and its dependencies with a per-file SHA-256 manifest and a provenance record
+# (ARTIFACT.json), secret-scanned before archiving and validated after (ci/po07-artifact/check-archive.mjs, the same
+# validator the staging kit runs). The archive is then installed at another path next to a pristine `git archive` of
+# the same commit, with the build directory moved away, and the H-1 hostname-security suite runs against THOSE bytes.
+# Only if every step passed is it uploaded; a separate job, which never runs npm, attests its provenance (Sigstore).
+#
+# Inputs are fictional and disposable: the build sees one unreachable, password-less dummy DATABASE_URL; the H-1 suite
+# uses a disposable PostgreSQL on the runner's loopback and TEST-ONLY secrets generated in memory. No repository
+# secret, no production service, no Neon, no VPS access, nothing deployed. This repository is public, and so are this
+# run's logs and artifacts: nothing private is in them.
+name: po07-staging-artifact
+
+on:
+  push:
+    branches: [feat/platform-owner]
+    paths:
+      - .github/workflows/po07-staging-artifact.yml
+      - ci/po07-artifact/**
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: po07-staging-artifact
+  cancel-in-progress: false
+
+env:
+  APPROVED_SHA: cf64ebc492b56ad91c28ba3aa7640722935e21c5
+  APPROVED_TREE: 6403cf5d822df491f6e16a56068ab9d7c2f1f138
+  SOURCE_BRANCH: feat/platform-owner
+  NODE_VERSION: 22.23.2 # the staging runtime's version (recorded at S0, 23 Nov 2026)
+  NEXT_VERSION: 16.4.6
+  NEXT_TELEMETRY_DISABLED: "1"
+
+jobs:
+  build:
+    name: build, verify, package
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    permissions:
+      contents: read
+    outputs:
+      artifact_name: ${{ steps.pack.outputs.artifact_name }}
+      archive: ${{ steps.pack.outputs.archive }}
+      archive_sha256: ${{ steps.pack.outputs.archive_sha256 }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Packaging tools (this workflow's own commit)
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          path: tools
+          sparse-checkout: ci/po07-artifact
+          persist-credentials: false
+
+      - name: Approved source commit
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: ${{ env.APPROVED_SHA }}
+          path: build/app
+          fetch-depth: 0
+          filter: blob:none
+          persist-credentials: false
+
+      - name: Source identity
+        working-directory: build/app
+        run: |
+          set -Eeuo pipefail
+          test "$(git rev-parse HEAD)" = "$APPROVED_SHA" || { echo "::error::HEAD is not the approved commit"; exit 1; }
+          test "$(git rev-parse 'HEAD^{tree}')" = "$APPROVED_TREE" || { echo "::error::the source tree is not the approved tree"; exit 1; }
+          test -z "$(git status --porcelain --untracked-files=all)" || { echo "::error::the checkout is not clean"; exit 1; }
+          git merge-base --is-ancestor "$APPROVED_SHA" "$GITHUB_SHA" || { echo "::error::the approved commit is not in this branch's history"; exit 1; }
+          if grep -nE 'ignoreBuildErrors|ignoreDuringBuilds' next.config.*; then echo "::error::next.config disables a build check"; exit 1; fi
+          git log -1 --format='commit %H%ntree   %T%ndate   %cI%n       %s' "$APPROVED_SHA"
+          echo "lockfile sha256 $(sha256sum package-lock.json | cut -d' ' -f1)"
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Runtime versions (must equal the staging VPS)
+        run: |
+          set -Eeuo pipefail
+          test "$(node -v)" = "v$NODE_VERSION" || { echo "::error::node $(node -v) is not v$NODE_VERSION"; exit 1; }
+          echo "NPM_VERSION=$(npm -v)" >> "$GITHUB_ENV"
+          echo "node $(node -v), npm $(npm -v), $(ldd --version | head -1), ${ImageOS:-} ${ImageVersion:-}, $(nproc) CPUs, $(free -m | awk '/Mem:/ {print $2}') MB"
+
+      - name: Archive validator self-test
+        run: node tools/ci/po07-artifact/test-check-archive.mjs
+
+      - name: npm ci (committed lockfile)
+        working-directory: build/app
+        run: |
+          set -Eeuo pipefail
+          npm ci --no-audit --no-fund
+          v="$(node -p "require('next/package.json').version")"
+          test "$v" = "$NEXT_VERSION" || { echo "::error::next $v installed, expected $NEXT_VERSION"; exit 1; }
+          test -z "$(git status --porcelain --untracked-files=no)" || { echo "::error::npm ci changed a tracked file"; git status --short; exit 1; }
+
+      - name: TypeScript
+        working-directory: build/app
+        run: npx tsc --noEmit
+
+      - name: ESLint
+        working-directory: build/app
+        run: npx eslint src --max-warnings=0
+
+      - name: Platform boundary test
+        working-directory: build/app
+        run: node tests/security/platform-boundary.test.mjs
+
+      - name: Env-embedding probe (one discarded build, 2 CPUs)
+        run: bash tools/ci/po07-artifact/env-probe.sh build/app "$RUNNER_TEMP/canaries.tsv" "$RUNNER_TEMP/build-report.json"
+
+      - name: next build (the artifact build; type checking included)
+        working-directory: build/app
+        run: |
+          set -Eeuo pipefail
+          rm -rf .next
+          bash "$GITHUB_WORKSPACE/tools/ci/po07-artifact/measure.sh" artifact_build "$RUNNER_TEMP/build-report.json" "$RUNNER_TEMP/build.log" -- \
+            env DATABASE_URL="postgres://build@127.0.0.1:9/build_test_only_" node node_modules/next/dist/bin/next build \
+            || { tail -60 "$RUNNER_TEMP/build.log"; echo "::error::next build failed"; exit 1; }
+          cat "$RUNNER_TEMP/build.log"
+          grep -q "Compiled successfully" "$RUNNER_TEMP/build.log" || { echo "::error::no 'Compiled successfully'"; exit 1; }
+          grep -q "Running TypeScript" "$RUNNER_TEMP/build.log" || { echo "::error::the build did not run its TypeScript check"; exit 1; }
+          if grep -qiE "Skipping (validation of types|type checking)" "$RUNNER_TEMP/build.log"; then echo "::error::type checking was skipped"; exit 1; fi
+          git checkout --quiet -- next-env.d.ts 2>/dev/null || true
+          test -z "$(git status --porcelain --untracked-files=no)" || { echo "::error::the build changed a tracked file"; git status --short; exit 1; }
+
+      - name: Build output complete
+        run: node tools/ci/po07-artifact/check-build.mjs build/app
+
+      - name: Native binaries
+        run: bash tools/ci/po07-artifact/native-scan.sh build/app "$RUNNER_TEMP/native.json"
+
+      - name: Package
+        id: pack
+        run: |
+          set -Eeuo pipefail
+          name="po07-staging-build-${APPROVED_SHA:0:12}"
+          NATIVE_FILE="$RUNNER_TEMP/native.json" BUILD_REPORT="$RUNNER_TEMP/build-report.json" CANARY_FILE="$RUNNER_TEMP/canaries.tsv" \
+            bash tools/ci/po07-artifact/package.sh build/app "$RUNNER_TEMP/out" "$name"
+          echo "archive=$name.tar.gz" >> "$GITHUB_OUTPUT"
+          echo "archive_sha256=$(sha256sum "$RUNNER_TEMP/out/$name.tar.gz" | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+          echo "artifact_name=$name-run$GITHUB_RUN_ID" >> "$GITHUB_OUTPUT"
+
+      - name: Validate the archive (the staging kit's validator)
+        run: |
+          set -Eeuo pipefail
+          node tools/ci/po07-artifact/check-archive.mjs "$RUNNER_TEMP/out/${{ steps.pack.outputs.archive }}" \
+            --expect source.sha="$APPROVED_SHA" --expect source.tree="$APPROVED_TREE" \
+            --expect runtime.node="v$NODE_VERSION" --expect runtime.next="$NEXT_VERSION" \
+            --expect build_id="$(cat build/app/.next/BUILD_ID)" --expect workflow.commit="$GITHUB_SHA"
+
+      - name: Move the build directory away (no absolute build path may still resolve)
+        run: mv build build.moved
+
+      - name: Install elsewhere and resolve (relocated, as S6-R will)
+        id: reloc
+        run: |
+          set -Eeuo pipefail
+          bash "$GITHUB_WORKSPACE/tools/ci/po07-artifact/relocate-test.sh" "$RUNNER_TEMP/out/${{ steps.pack.outputs.archive }}" build.moved/app "$RUNNER_TEMP/reloc" | tee "$RUNNER_TEMP/relocate.log"
+          echo "app=$(grep '^RELOCATED_APP=' "$RUNNER_TEMP/relocate.log" | cut -d= -f2-)" >> "$GITHUB_OUTPUT"
+
+      - name: Disposable PostgreSQL 16 (loopback only)
+        run: |
+          sudo systemctl start postgresql.service
+          sudo -u postgres psql -v ON_ERROR_STOP=1 -c "ALTER SYSTEM SET listen_addresses = '127.0.0.1'" -c "ALTER SYSTEM SET max_connections = 200" -c "ALTER USER postgres PASSWORD 'ci-test-only'"
+          sudo systemctl restart postgresql.service
+          sudo -u postgres createdb admin_test_only_
+
+      - name: Chromium (Playwright, from the installed tree)
+        working-directory: ${{ steps.reloc.outputs.app }}
+        run: |
+          npx playwright install --with-deps chromium
+          echo "PO07_CHROMIUM=$(node -e "console.log(require('playwright').chromium.executablePath())")" >> "$GITHUB_ENV"
+
+      - name: H-1 hostname-security suite against the installed artifact
+        working-directory: ${{ steps.reloc.outputs.app }}
+        env:
+          PLATFORM_TEST_ADMIN_DATABASE_URL: postgres://postgres:ci-test-only@127.0.0.1:5432/admin_test_only_
+        run: |
+          set -Eeuo pipefail
+          touch "$RUNNER_TEMP/before-h1"
+          timeout 1800 npx tsx --conditions=react-server verify/verify-platform-host-binding.mts 2>&1 | tee "$RUNNER_TEMP/h1.log"
+          echo "files the running servers wrote inside the installed tree (the staging units allow writes only to .next/cache):"
+          find .next node_modules -newer "$RUNNER_TEMP/before-h1" \( -type f -o -type d \) | sed 's/^/  /' | head -50
+
+      - name: Upload (only after every step above passed)
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: ${{ steps.pack.outputs.artifact_name }}
+          path: |
+            ${{ runner.temp }}/out/${{ steps.pack.outputs.archive }}
+            ${{ runner.temp }}/out/ARTIFACT.json
+            ${{ runner.temp }}/out/SHA256SUMS
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 30
+
+      - name: Summary
+        run: |
+          set -Eeuo pipefail
+          A="$RUNNER_TEMP/out/ARTIFACT.json"
+          j() { node -p "const a=require('$A'); $1"; }
+          {
+            echo "### PO-07 staging build artifact"
+            echo "| item | value |"; echo "|---|---|"
+            echo "| source commit / tree | \`$(j a.source.sha)\` / \`$(j a.source.tree)\` |"
+            echo "| workflow commit | \`$GITHUB_SHA\` |"
+            echo "| build id | \`$(j a.build_id)\` |"
+            echo "| node / npm / next | $(j a.runtime.node) / $(j a.runtime.npm) / $(j a.runtime.next) |"
+            echo "| lockfile sha256 | \`$(j a.inputs.lockfile_sha256)\` |"
+            echo "| archive | \`${{ steps.pack.outputs.archive }}\` |"
+            echo "| archive sha256 | \`${{ steps.pack.outputs.archive_sha256 }}\` |"
+            echo "| files / links / bytes | $(j a.contents.files) / $(j a.contents.symlinks) / $(j a.contents.bytes) |"
+            echo "| native binaries, highest glibc | $(j a.native_modules.count), $(j a.native_modules.max_glibc) |"
+            echo "| probe build (2 CPUs) | $(j "JSON.stringify(a.build_measurements.probe_build_2cpu)") |"
+            echo "| artifact build ($(nproc) CPUs) | $(j "JSON.stringify(a.build_measurements.artifact_build)") |"
+            echo "| H-1 suite (installed artifact) | $(grep -E 'passed|failed|VERIFICATION' "$RUNNER_TEMP/h1.log" | tail -1 | tr '|' '/') |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  attest:
+    name: attest provenance
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: ${{ needs.build.outputs.artifact_name }}
+          path: dl
+      - name: Same bytes as the build job
+        run: |
+          set -Eeuo pipefail
+          cd dl
+          sha256sum --strict -c SHA256SUMS
+          test "$(sha256sum "${{ needs.build.outputs.archive }}" | cut -d' ' -f1)" = "${{ needs.build.outputs.archive_sha256 }}"
+      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: dl/${{ needs.build.outputs.archive }}
