@@ -71,6 +71,9 @@ props_ok() { # the running units' effective sandbox equals the reviewed unit fil
 check "the running units' properties equal the reviewed unit files (systemctl show; no writable code path, J1)" props_ok
 
 # ---- 3. the proxy sockets (host namespace, nginx group only) ----
+# The socket directory is created by the kit, so its group is <NGINX_GROUP> whatever that group is (systemd would create
+# it root:root; on this VPS <NGINX_GROUP> is root, so the result is the same). DirectoryMode applies only if it is missing.
+mkdir_staging "$RUN_DIR" 0750 "root:$NGINX_GROUP"
 sctl enable --now "${SOCKS[@]}"
 socks_ok() {
   local s
