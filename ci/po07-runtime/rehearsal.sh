@@ -15,7 +15,7 @@ HERE="$(cd "$(dirname "$0")" && pwd -P)"
 A="po07-staging-build-${APPROVED_SHA:0:12}.tar.gz"
 step() { echo "::group::$1"; }
 end() { echo "::endgroup::"; }
-fail() { echo "::endgroup::"; echo "::error::$*"; for f in "$STATE_DIR"/logs/*.log; do [ -f "$f" ] && { echo "--- $f (tail)"; tail -25 "$f"; }; done; exit 1; }
+fail() { echo "::endgroup::"; echo "::error::$*"; for f in "$STATE_DIR"/logs/*.log; do [ -f "$f" ] && { echo "--- $f (tail)"; tail -25 "$f"; }; done; grep -h "^DIAG" "$STATE_DIR"/logs/*probe*.txt 2>/dev/null || true; exit 1; }
 
 step "the stand-in web-server group; the directories the sandbox hides, as on the VPS"
 getent group "$NGINX_GROUP" >/dev/null || groupadd --system "$NGINX_GROUP"

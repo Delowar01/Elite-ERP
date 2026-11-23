@@ -253,7 +253,7 @@ run_probe() {
   local rc=0
   { printf 'const CFG = %s;\n' "$cfg"; cat "$KIT_HERE/probes/vnet-probe.mjs"; } |
     /usr/local/sbin/elite-po-run --env "$env" "${prof[@]}" probe > "$STATE_DIR/logs/$STAGE-probe-$profile.txt" 2>&1 || rc=$?
-  grep -E '^(FAIL|VNET-SUMMARY)' "$STATE_DIR/logs/$STAGE-probe-$profile.txt" || true
+  grep -E '^(FAIL|VNET-SUMMARY|DIAG)' "$STATE_DIR/logs/$STAGE-probe-$profile.txt" || true
   [ "$rc" -eq 0 ] || stop_now "V-NET/V-SBX ($profile) failed: see $STATE_DIR/logs/$STAGE-probe-$profile.txt"
   say "V-NET/V-SBX ($profile): all checks passed"
 }

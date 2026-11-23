@@ -123,6 +123,15 @@ if (CFG.profile === "customer") {
     } finally { await browser.close(); }
   } catch (e) { why = String(e?.message ?? e).split("\n")[0].slice(0, 160); }
   rec(head === "%PDF-", "Chromium renders a PDF through puppeteer-core inside the sandbox (the app's own path)", why || `head ${JSON.stringify(head)}`);
+  // diagnostics (printed, never a secret): this unit's task and memory limits and events, and Chrome's own stderr
+  const cg = (() => { try { return fs.readFileSync("/proc/self/cgroup", "utf8").trim().split(":").pop(); } catch { return ""; } })();
+  const rd = (f) => { try { return fs.readFileSync(`/sys/fs/cgroup${cg}/${f}`, "utf8").trim().replace(/\n/g, " "); } catch (e) { return e.code; } };
+  console.log(`DIAG cgroup ${cg}: pids.max=${rd("pids.max")} pids.peak=${rd("pids.peak")} pids.events=[${rd("pids.events")}] memory.max=${rd("memory.max")} memory.peak=${rd("memory.peak")} memory.events=[${rd("memory.events")}]`);
+  if (head !== "%PDF-") {
+    const d = spawnSync(CFG.chromium, ["--headless=new", "--no-sandbox", "--disable-dev-shm-usage", "--remote-debugging-port=0", "--user-data-dir=/tmp/po-probe-diag", "about:blank"], { encoding: "utf8", timeout: 20000 });
+    console.log(`DIAG chrome with remote debugging: status ${d.status} signal ${d.signal}; stderr tail:\n${(d.stderr || "").split("\n").filter(Boolean).slice(-10).map((l) => `DIAG   ${l.slice(0, 200)}`).join("\n")}`);
+    console.log(`DIAG after: pids.events=[${rd("pids.events")}] memory.events=[${rd("memory.events")}]`);
+  }
 }
 
 const fail = results.filter((x) => !x).length;
