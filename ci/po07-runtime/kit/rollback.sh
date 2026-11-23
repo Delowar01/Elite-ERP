@@ -92,12 +92,11 @@ rb_S3() {
   fi
   # pg_dropcluster leaves the files the kit added to the cluster's config directory (its conf.d file and the kept
   # original pg_hba), so the directory survives it: removed here, only when the kit created the cluster (S3 marker).
-  if [ "$MODE" = plan ]; then plan "rm -rf /etc/postgresql/$PG_VER/$CLUSTER (only if the kit created the cluster)"
-  elif [ -d "/etc/postgresql/$PG_VER/$CLUSTER" ]; then
+  if [ "$MODE" = execute ] && [ -d "/etc/postgresql/$PG_VER/$CLUSTER" ]; then
     [ -f "$STATE_DIR/S3.created" ] || stop_now "/etc/postgresql/$PG_VER/$CLUSTER exists but the cluster was not created by this kit"
     pg_lsclusters -h | awk -v v="$PG_VER" -v c="$CLUSTER" '$1==v && $2==c' | grep -q . && stop_now "the cluster still exists after pg_dropcluster"
-    safe_rm "/etc/postgresql/$PG_VER/$CLUSTER"
   fi
+  safe_rm "/etc/postgresql/$PG_VER/$CLUSTER"
   rm_kit_file "/etc/systemd/system/postgresql@16-po07ns.service.d/10-staging.conf" "$U/postgresql@16-po07ns.10-staging.conf"
   safe_rm "/etc/systemd/system/postgresql@16-po07ns.service.d"
   sctl daemon-reload
