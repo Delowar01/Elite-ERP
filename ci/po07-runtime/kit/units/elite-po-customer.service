@@ -21,9 +21,9 @@ RestartSec=5s
 MemoryHigh=768M
 MemoryMax=896M
 CPUQuota=60%
-# PROPOSED, PENDING OWNER REVIEW (D31): the plan's 128 is too low for Chromium PDFs (CI: pthread_create EAGAIN at 128;
-# one render peaks at 169 tasks, two concurrent at 261). 320 = two concurrent renders + margin; admin 128 + 320 + the
-# cluster and proxies stay under the slice's TasksMax=512.
+# D31 (owner-approved, 24 Nov 2026): 320, not the plan's 128 — Chromium PDFs need it (CI: pthread_create EAGAIN at 128;
+# one render 169 tasks, two concurrent 256-265). Admin 128 + customer 320 + the cluster (<= 40) + proxies stay under the
+# slice's TasksMax=512; S9 measures the unit and the slice under two concurrent PDFs.
 TasksMax=320
 LimitNOFILE=4096
 # --- sandbox (identical in every staging unit and in elite-po-run: units/sandbox.inc) ---

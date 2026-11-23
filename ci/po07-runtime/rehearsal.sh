@@ -2,8 +2,10 @@
 # PO-07 CI rehearsal of S1 → S9 (S6 = S6-R) and the full rollback, on a GitHub-hosted runner, as root.
 #   sudo -E bash rehearsal.sh <dir holding the verified archive and ARTIFACT.json> <run id>
 # Uses ci/po07-runtime/kit/: the private staging kit rendered with fictional values (tools/render-ci.sh): the SAME
-# stage scripts, units, wrapper and probes as on the VPS; only the VPS-identity, window and authorization gates and the
-# shared-service guard are replaced (see the end of kit/lib.sh). Fictional data only; nothing leaves the runner.
+# stage scripts, units, wrapper and probes as on the VPS; only the VPS identity check and the shared-service guard are
+# replaced (see the end of kit/lib.sh). The window, authorization, S0-age and STOP gates and the D24 recovery state are
+# the kit's own: this script records a CI-window authorization, a fresh baseline and the kit manifest, as pc-kit.sh does.
+# Fictional data only; nothing leaves the runner.
 set -Eeuo pipefail
 export LC_ALL=C
 [ "${GITHUB_ACTIONS:-}" = true ] && [ "$(id -u)" -eq 0 ] || { echo "rehearsal.sh: GitHub Actions runner, as root, only" >&2; exit 64; }
@@ -36,6 +38,11 @@ sum16() { sha256sum | cut -c1-16; }
   echo "B_LINKS=$(ip -o link | sed -E 's/ (link\/ether|brd) [0-9a-f:]+//g' | sum16)"; echo "B_ROUTES4=$(ip route | sum16)"
   echo "B_ROUTES6=$(ip -6 route | sum16)"; echo "B_UFW=$(ufw status verbose 2>/dev/null | sum16)"; echo "B_SWAP_MB=0"; } > "$STATE_DIR/baseline.env"
 echo "host TCP listeners before S1: $(tr '\n' ' ' < "$STATE_DIR/baseline-tcp.txt")"
+# what pc-kit.sh upload records: the kit manifest and the owner go-ahead for this window (here: the CI window)
+(cd "$KIT_DIR" && find . \( -path ./state -o -path ./incoming \) -prune -o -type f -print | LC_ALL=C sort | xargs sha256sum) > "$STATE_DIR/KIT.sha256"
+printf 'window=%s/%s\nstages=%s\nrecorded=%s\nsha=%s\nowner_instruction=%s\n' "$WINDOW_START_UTC" "$WINDOW_END_UTC" "S1 S2 S3 S4 S5 S6 S7 S8 S9 S9b" \
+  "$(date -u +%FT%TZ)" "$APPROVED_SHA" "CI rehearsal go-ahead (fictional; GitHub-hosted runner only)" > "$STATE_DIR/AUTHORIZED"
+echo "kit manifest: $(wc -l < "$STATE_DIR/KIT.sha256") files, digest $(sha256sum < "$STATE_DIR/KIT.sha256" | cut -c1-16)"
 end
 
 step "place the verified archive as pc-kit.sh artifact-upload would (root 0600) and its expected values"
@@ -52,18 +59,21 @@ RUN_ID="$RUN_ID" A="$A" ASHA="$ASHA" node -e '
 chmod 0600 "$STATE_DIR/ARTIFACT.expected"
 end
 
-for s in s1_users s2_slice_netns s3_pgcluster s4_roles_db s5_clone s6r_install_artifact s7_envfiles s8_vnet_migrate s9_units_start; do
-  step "$s --execute"
-  bash "$KIT_DIR/$s.sh" --execute || fail "$s failed"
-  end
-  if [ "$s" = s6r_install_artifact ]; then
-    step "S6-R again, at once (re-entrant: must re-check the installed build, not reinstall)"
-    out="$(bash "$KIT_DIR/s6r_install_artifact.sh" --execute 2>&1)" || { echo "$out" | tail -30; fail "S6-R re-run failed"; }
-    echo "$out" | grep -q "already installed" || fail "S6-R re-run did not recognise the installed build"
-    echo "$out" | grep -E "already installed|installed: every|S6 COMPLETE" | head -5
-    end
-  fi
-done
+run_stage() { step "$1 --execute"; bash "$KIT_DIR/$1.sh" --execute || fail "$1 failed"; end; }
+for s in s1_users s2_slice_netns s3_pgcluster s4_roles_db s5_clone; do run_stage "$s"; done
+# D24: the VPS state after the failed on-VPS S6, every refusal, two failed recoveries, then the successful S6-R
+# shellcheck source=d24-recovery.sh
+. "$HERE/d24-recovery.sh"
+step "S6-R again, at once (re-entrant: must re-check the installed build, not reinstall)"
+out="$(bash "$KIT_DIR/s6r_install_artifact.sh" --execute 2>&1)" || { echo "$out" | tail -30; fail "S6-R re-run failed"; }
+echo "$out" | grep -q "already installed" || fail "S6-R re-run did not recognise the installed build"
+echo "$out" | grep -E "already installed|installed: every|S6 COMPLETE" | head -5
+end
+for s in s7_envfiles s8_vnet_migrate s9_units_start; do run_stage "$s"; done
+step "S9: the customer service rendered one and two concurrent PDFs within its limits (D31)"
+grep -E "^(PASS|FAIL|TASKS|MEMORY|CPU|PDF-LOAD)" "$STATE_DIR/logs/S9-pdf-load.txt" || fail "no PDF load record"
+grep -q "^PDF-LOAD pass=[0-9]* fail=0$" "$STATE_DIR/logs/S9-pdf-load.txt" || fail "the PDF load test did not pass"
+end
 
 step "S6-R after S9 must refuse (it never touches an installed build under running apps)"
 if bash "$KIT_DIR/s6r_install_artifact.sh" --execute > "$STATE_DIR/logs/ci-s6r-after-s9.txt" 2>&1; then fail "S6-R ran with the apps up"; fi
@@ -102,4 +112,4 @@ newtcp="$(comm -13 "$STATE_DIR/baseline-tcp.txt" <(ss -ltnH | awk '{print $4}' |
 [ -z "$newtcp" ] || fail "host TCP listener(s) left after rollback: $newtcp"
 echo "rollback removed every staging unit, path, user and listener; the archive stays in $INCOMING_DIR for audit"
 end
-echo "REHEARSAL PASS: S1–S9 (S6 = S6-R) and the full rollback"
+echo "REHEARSAL PASS: S1–S9 (S6 = S6-R under the D24 recovery state: $D24_PASS checks), the D31 PDF load and the full rollback"

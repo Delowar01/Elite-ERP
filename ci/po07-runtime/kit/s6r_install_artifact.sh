@@ -176,4 +176,6 @@ runtime_ok() {
 }
 check "read-only, network-less sandbox: next $ARTIFACT_NEXT runs; dependencies, Turbopack externals and native libraries resolve; npm ls agrees" runtime_ok
 guard_shared
+# D24: in the restricted recovery of the recorded S6 STOP, the STOP is resolved only here, after every check passed
+recovery_complete
 mark_done

@@ -269,8 +269,9 @@ The per-process tmpfs fallback (a private, size-capped `TemporaryFileSystem=` pe
 The private staging kit is rendered with fictional values (`ci/po07-runtime/kit/`; no private value). The SAME stage
 scripts, units, `elite-po-run`, probes and rollback then run on a GitHub-hosted Ubuntu 24.04 runner (systemd 255,
 PostgreSQL 16, Google Chrome). The run installs the approved archive and executes S1 → S9 and the full rollback. Only
-the VPS-identity, window and authorization gates and the shared-service guard are replaced by a CI subset (no new
-host listener, own sockets only, memory, disk).
+the VPS-identity check and the shared-service guard are replaced by a CI subset (no new host listener, own sockets
+only, memory, disk). Since 24 Nov 2026 the window, the authorization record, the S0 age and the STOP gate are the
+kit's own: the rehearsal records a CI-window authorization and the kit manifest, as `pc-kit.sh` does.
 
 The rehearsal found and fixed eight defects before any of them could reach the VPS:
 1. S4's role check used `LIKE 'prefix_%'`, where `_` is a wildcard. It now compares an exact prefix.
@@ -289,8 +290,84 @@ The rehearsal found and fixed eight defects before any of them could reach the V
   path) failed with `pthread_create: Resource temporarily unavailable` and `Zygote could not fork`.
 - One render peaks at 169 tasks and two concurrent renders at 256–261, while memory stays at 545 MB of the 896 MB
   cap.
-- **Proposed, pending the owner's approval:** customer `TasksMax=320`. The admin unit (128) and the slice (512) stay
-  unchanged.
+- **D31, approved by the owner on 24 Nov 2026:** customer `TasksMax=320`. The admin unit (128) and the slice (512)
+  stay unchanged; the kit's lint enforces the three values and the combined budget (128 + 320 + the cluster ≤ 40 +
+  the proxies ≤ 8 = 496 ≤ 512). S9 checks the limits in effect and runs a PDF load test through the customer service
+  itself (§9.2).
+
+### 9.1 D24 — the restricted recovery state for the recorded S6 STOP (24 Nov 2026)
+
+The earlier sequence cleared the S6 failure marker (`resolve-stop`) *before* S6-R ran, so the record was gone before
+the recovery conditions were proven. Corrected in the kit, without disabling or bypassing the STOP gate:
+
+1. **The STOP record is never modified.** A later STOP is appended to a separate `STOPPED.later`, marked "before any
+   change" (a gate refused) or "AFTER changes" (a rollback, or a stage that had passed its gates).
+2. **A recovery authorization, not a clearance.** On the owner's written reason, `pc-kit.sh recovery-authorize`
+   writes a root-only record that binds:
+   - the SHA-256 of the STOP record;
+   - the window and the host;
+   - the approved release and tree, and the app path (the deployment target);
+   - the artifact (run, archive SHA-256, build id);
+   - the kit manifest.
+
+   It is refused when:
+   - the STOP has an entry other than S6, or a later STOP happened after changes;
+   - S5 is not done, or S6 is done;
+   - the archive does not match its expected values, or the kit does not verify;
+   - an authorization already exists;
+   - the reason is missing.
+3. **Only S6-R passes the gate** while the STOP is recorded, and only if the whole binding still holds and the
+   installed kit files match their manifest. S7, S8 and S9 are refused.
+4. **S6-R resolves the STOP last**, after every check:
+   - the incomplete output was recorded and replaced;
+   - every installed file's SHA-256 matches;
+   - the build id is the authorized one;
+   - the runtime check and the §I guard pass.
+
+   Then the original record moves, byte-identical and read-only, to `STOPPED.<ts>.recovered`. The owner's reason
+   and the authorization are appended to `STOPPED.resolved`, and the authorization is consumed. Only then can S7
+   start.
+5. **A failed recovery stops safely.** Any failure, a STOP or an unexpected exit, writes its own
+   `STOPPED.recovery-<ts>` and voids the authorization (`RECOVERY.<ts>.failed`). The original STOP and the
+   incomplete output that was not yet replaced stay, and a new attempt needs a new authorization.
+6. `resolve-stop` now refuses the S6 STOP; it remains, with its guards, for any other STOP.
+
+**Rehearsed in CI** (`ci/po07-runtime/d24-recovery.sh`, between S5 and S6-R). The rehearsal reproduces the VPS: an S6
+STOP record, and incomplete `.next`/`node_modules`/npm-cache output owned by the app user. Then:
+- **Refused, with the STOP byte-identical:**
+  - S6-R without an authorization;
+  - S7, S8 and S9;
+  - an authorization without a reason, for a tampered archive, or after a later STOP "AFTER changes";
+  - a second authorization;
+  - S7 and S9 while a recovery is authorized;
+  - S6-R under an authorization for another artifact, release, deployment target, window, host, STOP record or kit
+    manifest;
+  - S6-R with a kit file changed after the authorization.
+- **Failed recovery 1:** an unexpected root-owned path in the output to remove. It stopped, kept the evidence, voided
+  the authorization and removed nothing.
+- **Failed recovery 2:** the archive was changed after the authorization. Same outcome, and the incomplete output was
+  untouched.
+- **Successful recovery:** under a new authorization. The original STOP is kept byte-identical (0400), and the reason
+  is in `STOPPED.resolved`. The incomplete output is recorded, removed and replaced by the verified build. S7–S9 then
+  pass.
+
+The PC validation (`validate-kit.sh` §6b) also unit-tests these STOP-record mechanics.
+
+### 9.2 D31 — the customer service under concurrent PDF load (S9)
+
+`probes/s9-pdf-load.mjs` runs at S9, after the R-tests, through the customer Unix socket and with fictional data only:
+1. a sign-up (`example.invalid`), one client and one quotation in the staging database;
+2. the print view of that quotation, which must render for that session;
+3. `/api/document-pdf/quotation/<id>` once, then twice at the same time. Each response must be `200`,
+   `application/pdf` and begin with `%PDF-`. Chromium runs inside the customer unit, as in production use.
+
+While the renders run, it samples the customer unit's and the slice's cgroup counters (tasks, memory) and records
+CPU time and throttling. S9 STOPs if any of these happens:
+- a task is refused (`pids.events max`);
+- a task peak exceeds 90 % of the unit's `TasksMax` (288) or of the slice's (460);
+- any `MemoryHigh`, `MemoryMax` or OOM event occurs.
+
+The measured values are in the run listed below.
 
 **Green rehearsal:** run [45261652332](https://github.com/Delowar01/Elite-ERP/actions/runs/45261652332), job
 "kit rehearsal":
@@ -309,8 +386,10 @@ The rehearsal found and fixed eight defects before any of them could reach the V
 ## 10. Revised execution plan: S6-R → S7 → S8 → S9 → S9b (prepared; not executed)
 
 **Preconditions:**
-- the owner's approval of D31 (the customer task limit) or another value;
-- the owner's new written execution authorization, with its window;
+- D31: approved (24 Nov 2026);
+- the owner's new written execution authorization, with its window (proposed: 24 Nov 2026, 18:00–22:00 Saudi time —
+  a proposal, not a permission);
+- the owner's written recovery reason for the S6 STOP (D24);
 - the owner available for S9b.
 
 **In the window:**
@@ -320,19 +399,21 @@ The rehearsal found and fixed eight defects before any of them could reach the V
      register of documented, owner-accepted differences, by exact value. Any new difference is a HOLD for the owner.
 2. **Kit update.** kit-3 replaces kit-1 on the VPS; the state stays. The retired on-VPS build script is moved aside.
    The previous authorization and baseline are kept.
-3. **STOP resolution, only on the owner's explicit words.**
-   - The original S6 failure record is kept unchanged, read-only.
-   - The resolution (the owner's reason, verbatim, and the authorization it relies on) is appended.
-   - An S6 STOP can be cleared only if the old build is not installed and S6-R is.
-4. **Transfer.** The verified archive goes into the root-only incoming directory, with its SHA-256 re-checked on the
-   VPS.
-5. **S6-R**, as in §6. On the rehearsal it was re-entrant, and it refuses once the applications are running.
+3. **Transfer.** The verified archive goes into the root-only incoming directory, with its SHA-256 re-checked on the
+   VPS. The S6 STOP stays recorded.
+4. **Recovery authorization (D24, §9.1)**, only on the owner's written reason: bound to this STOP record, window,
+   host, release, target, artifact and kit. Nothing else changes.
+5. **S6-R**, as in §6, in the restricted recovery state. It resolves the STOP only after every check has passed; on
+   any failure the STOP stays and the evidence is kept. Stop and report. On the rehearsal it was re-entrant, and it
+   refuses once the applications are running.
 6. **S7:** the env files.
 7. **S8:** V-NET for the tool path, then the migrations through `elite-po-run`.
 8. **S9:**
    - the units and sockets;
    - V-NET/V-SBX in both profiles, including a real PDF;
    - R2–R9;
+   - D31: the limits in effect (admin 128, customer 320, slice 512), then one and two concurrent PDFs through the
+     customer service, within its task, memory and CPU limits (§9.2);
    - J1: no writable code path, build integrity after the R-tests, and a clean journal;
    - the footprint.
 9. **S9b:** the owner's own bootstrap, then the post-check.
@@ -342,7 +423,6 @@ stay outside this staging task.
 
 ## 11. Open points
 
-- **D31:** the customer task limit needs the owner's decision before S9.
 - **The image optimizer endpoint** is not needed by the application. Recommendation for S11a (a separate
   authorization, nginx): deny `/_next/image` on both staging hosts. Until then the read-only build keeps it from
   writing anything.

@@ -7,8 +7,10 @@ not yet executed.** Architecture approved (D-B1); H-1 host binding implemented a
   in place. S6 (`next build` on the VPS) failed three times on memory (§F.1) and stopped with no effect on any shared
   service. No DNS record, site, nginx or CloudPanel change, deployment, reload or restart of an existing service was
   made, and no existing service was changed.
-- The build now runs off the VPS (§F.1, §N S6-R, `PO07_S6R_EXTERNAL_BUILD.md`). The VPS's STOP record stays until the
-  owner's next written execution authorization.
+- The build now runs off the VPS (§F.1, §N S6-R, `PO07_S6R_EXTERNAL_BUILD.md`). The VPS's S6 STOP record stays
+  recorded. Under D24 (24 Nov 2026) it is never cleared in advance: only S6-R, under the owner's bound recovery
+  authorization, may run while it is recorded, and S6-R resolves it only after every check has passed
+  (`PO07_S6R_EXTERNAL_BUILD.md` §9.1).
 - This repository is public. The plan uses placeholders only. The real hostnames, ports, users, paths, addresses
   and sensitive findings are in the owner's private evidence directory, outside the repository.
 - Evidence (read-only, 21 Nov 2026):
@@ -229,7 +231,8 @@ Restart=on-failure
 # next start exits 143 (128 + SIGTERM) when stopped: a clean stop, not a failure (measured, 23 Nov 2026)
 SuccessExitStatus=143
 RestartSec=5s
-# † customer: MemoryHigh=768M, MemoryMax=896M (Chromium for PDFs), CPUQuota=60%
+# † customer: MemoryHigh=768M, MemoryMax=896M (Chromium for PDFs), CPUQuota=60%, TasksMax=320 (D31, owner-approved
+#   24 Nov 2026: Chromium needs it; admin stays 128 and the slice 512)
 MemoryHigh=448M
 MemoryMax=512M
 CPUQuota=40%

@@ -28,10 +28,23 @@ say()  { printf '%s [%s] %s\n' "$(date -u +%H:%M:%SZ)" "$STAGE" "$*"; }
 plan() { printf '  [plan] %s\n' "$*"; }
 # STOP: a §I stop condition or a failed check. Never rolls back by itself: the operator runs rollback.sh for the
 # stage after reading the reason (each rollback step re-checks ownership before removing anything).
+# A recorded STOP is never modified: while $STATE_DIR/STOPPED exists, later STOPs are appended to STOPPED.later (the
+# gate stays closed), each marked "before any change" (a gate refused) or "AFTER changes" (a rollback or a stage that
+# had passed its gates); an "AFTER changes" entry blocks the S6 recovery until the owner has reviewed it. During an authorized S6 recovery (D24) a failure writes its own STOPPED.recovery-<ts>, and the
+# recovery authorization becomes RECOVERY.<ts>.failed: the original STOP stays, and a new attempt needs a new
+# authorization from the owner.
 stop_now() {
   say "STOP: $*"
   if [ "$MODE" = execute ] && [ -d "$STATE_DIR" ]; then
-    { date -u +%FT%TZ; echo "$STAGE: $*"; } >> "$STATE_DIR/STOPPED"
+    local ts; ts="$(date -u +%Y%m%dT%H%M%SZ).$$"
+    if [ "${RECOVERING:-0}" = 1 ]; then
+      { date -u +%FT%TZ; echo "$STAGE (recovery of the recorded S6 STOP): $*"; } > "$STATE_DIR/STOPPED.recovery-$ts"
+      [ -f "$STATE_DIR/RECOVERY.authorized" ] && mv -f -- "$STATE_DIR/RECOVERY.authorized" "$STATE_DIR/RECOVERY.$ts.failed"
+      RECOVERING=0; RECOVERY_EVIDENCE=1
+      say "recovery failed: the original STOP is unchanged; evidence $STATE_DIR/STOPPED.recovery-$ts; authorization invalidated"
+    elif [ -f "$STATE_DIR/STOPPED" ]; then
+      { date -u +%FT%TZ; if [ "$GATE_PASSED" = 1 ]; then echo "$STAGE: $* [AFTER changes]"; else echo "$STAGE: $* [before any change]"; fi; } >> "$STATE_DIR/STOPPED.later"
+    else { date -u +%FT%TZ; echo "$STAGE: $*"; } > "$STATE_DIR/STOPPED"; fi
   fi
   say "Nothing further runs. Review, then: $KIT_DIR/rollback.sh $STAGE --execute (only with the owner's agreement)."
   exit 3
@@ -134,7 +147,74 @@ require_authorized() {
   [ -f "$STATE_DIR/AUTHORIZED" ] || stop_now "no in-window owner go-ahead recorded ($STATE_DIR/AUTHORIZED)"
   grep -q "^window=$WINDOW_START_UTC/$WINDOW_END_UTC$" "$STATE_DIR/AUTHORIZED" || stop_now "AUTHORIZED is not for this window"
   grep -q "^stages=.*\b$STAGE\b" "$STATE_DIR/AUTHORIZED" || stop_now "$STAGE is not in the recorded authorization"
-  [ ! -f "$STATE_DIR/STOPPED" ] || stop_now "a previous STOP is recorded ($STATE_DIR/STOPPED); resolve it with the owner first"
+  if [ -f "$STATE_DIR/STOPPED" ]; then
+    # The ONE exception to the STOP gate (D24): S6 — i.e. S6-R — under an owner recovery authorization that matches this
+    # exact STOP record, window, release, artifact and kit. Every other stage stays blocked until S6-R has passed.
+    if [ "$STAGE" = S6 ] && recovery_valid; then
+      RECOVERING=1; trap 'recovery_exit' EXIT
+      say "RESTRICTED RECOVERY of the recorded S6 STOP ($(sed -n 2p "$STATE_DIR/STOPPED")): only S6-R may run; the STOP stays recorded until S6-R has passed every check"
+    else
+      stop_now "a previous STOP is recorded ($STATE_DIR/STOPPED): only S6-R under a valid recovery authorization may run (pc-kit.sh recovery-authorize)"
+    fi
+  fi
+  GATE_PASSED=1
+}
+# ---- the restricted S6 recovery state (D24, owner decision of 24 Nov 2026) ---------------------------------------------
+RECOVERING=0 RECOVERY_DONE=0 RECOVERY_EVIDENCE=0 GATE_PASSED=0
+rv() { sed -n "s/^$1=//p" "$STATE_DIR/RECOVERY.authorized" | head -1; }
+xv() { sed -n "s/^$1=//p" "$STATE_DIR/ARTIFACT.expected" | head -1; }
+kit_digest() { sha256sum < "$STATE_DIR/KIT.sha256" | cut -c1-16; }
+host_id() { sha256sum < /etc/machine-id | cut -c1-16; }
+stop_is_s6() { [ -s "$STATE_DIR/STOPPED" ] && [ "$(awk 'NR % 2 == 0' "$STATE_DIR/STOPPED" | cut -d: -f1 | sort -u)" = S6 ]; }  # every recorded entry is S6
+later_clean() { [ ! -f "$STATE_DIR/STOPPED.later" ] || ! grep -qF "[AFTER changes]" "$STATE_DIR/STOPPED.later"; }
+recovery_valid() { # the authorization binds this STOP record, window, release, target path, artifact and kit; all must hold
+  local f="$STATE_DIR/RECOVERY.authorized" why=""
+  [ -f "$f" ] || { say "no recovery authorization ($f)"; return 1; }
+  [ "$(rv stop_sha256)" = "$(sha256sum < "$STATE_DIR/STOPPED" | cut -d' ' -f1)" ] || why="the recorded STOP differs from the one the owner authorized to recover"
+  [ "$(rv stage)" = S6 ] && stop_is_s6 || why="${why:-the recorded STOP is not (only) the S6 failure}"
+  later_clean || why="${why:-a later STOP happened after changes (STOPPED.later): the owner reviews it first}"
+  [ "$(rv host)" = "$(host_id)" ] || why="${why:-the authorization is for another host}"
+  [ "$(rv window)" = "$WINDOW_START_UTC/$WINDOW_END_UTC" ] || why="${why:-the authorization is for another window}"
+  [ "$(rv approved_sha)" = "$APPROVED_SHA" ] && [ "$(rv approved_tree)" = "$APPROVED_TREE" ] || why="${why:-the authorization is for another release}"
+  [ "$(rv app_src)" = "$APP_SRC" ] || why="${why:-the authorization is for another deployment target}"
+  [ -f "$STATE_DIR/ARTIFACT.expected" ] && [ "$(rv archive_sha256)" = "$(xv archive_sha256)" ] && [ "$(rv run_id)" = "$(xv run_id)" ] &&
+    [ "$(rv build_id)" = "$(xv build_id)" ] || why="${why:-the authorization is for another artifact}"
+  [ "$(rv kit_manifest)" = "$(kit_digest)" ] || why="${why:-the kit manifest changed since the authorization}"
+  (cd "$KIT_DIR" && sha256sum --quiet -c "$STATE_DIR/KIT.sha256" > /dev/null 2>&1) || why="${why:-the installed kit does not match its manifest}"
+  [ "${#why}" -eq 0 ] || { say "recovery authorization refused: $why"; return 1; }
+}
+recovery_exit() { # EXIT trap while recovering: any exit before recovery_complete is a failed recovery, with evidence
+  local rc=$?
+  if [ "$RECOVERING" = 1 ] && [ "$RECOVERY_DONE" != 1 ] && [ "$RECOVERY_EVIDENCE" != 1 ] && [ "$MODE" = execute ]; then
+    local ts; ts="$(date -u +%Y%m%dT%H%M%SZ).$$"
+    { date -u +%FT%TZ; echo "$STAGE (recovery of the recorded S6 STOP): exited with status $rc before completing"; } > "$STATE_DIR/STOPPED.recovery-$ts"
+    [ -f "$STATE_DIR/RECOVERY.authorized" ] && mv -f -- "$STATE_DIR/RECOVERY.authorized" "$STATE_DIR/RECOVERY.$ts.failed"
+    say "recovery failed (exit $rc): the original STOP is unchanged; evidence $STATE_DIR/STOPPED.recovery-$ts"
+  fi
+}
+# Called by S6-R after EVERY check passed (installed build verified, partial output replaced, §I guard): the original
+# STOP record is moved, byte-identical and read-only, to STOPPED.<ts>.recovered; the resolution is appended to
+# STOPPED.resolved; the authorization is consumed. Only now is the gate open for S7–S9.
+recovery_complete() {
+  [ "$MODE" = execute ] && [ "$RECOVERING" = 1 ] || return 0
+  recovery_valid || stop_now "the recovery authorization no longer matches (the STOP, the window, the artifact or the kit changed)"
+  ls "$STATE_DIR"/logs/S6R-removed-*.txt > /dev/null 2>&1 || stop_now "no record of the removed incomplete S6 output"
+  [ -f "$STATE_DIR/S6R.installed" ] && grep -q "build $(xv build_id) " "$STATE_DIR/S6R.installed" || stop_now "the installed build is not the authorized artifact"
+  [ "$(cat "$APP_SRC/.next/BUILD_ID" 2> /dev/null)" = "$(rv build_id)" ] || stop_now "the build id in $APP_SRC/.next is not the authorized build"
+  local ts h kept; ts="$(date -u +%Y%m%dT%H%M%SZ)"; h="$(sha256sum < "$STATE_DIR/STOPPED" | cut -d' ' -f1)"; kept="$STATE_DIR/STOPPED.$ts.recovered"
+  [ ! -e "$kept" ] || stop_now "$kept exists"
+  { echo "---"; cat "$STATE_DIR/STOPPED"
+    echo "recovered $(date -u +%FT%TZ) by S6-R (kit $KIT_VERSION, window $WINDOW_START_UTC/$WINDOW_END_UTC): $(rv reason)"
+    echo "  authorization: $(rv owner_instruction) (recovery authorized $(rv authorized_at))"
+    echo "  artifact: run $(rv run_id), archive SHA-256 $(rv archive_sha256), build $(rv build_id); release $APPROVED_SHA"
+    echo "  the incomplete S6 output was recorded ($(ls "$STATE_DIR"/logs/S6R-removed-*.txt | tail -1)) and replaced; every installed file verified"
+    echo "  original STOP record kept unchanged and read-only: $kept (SHA-256 $h)"
+  } >> "$STATE_DIR/STOPPED.resolved"
+  mv -- "$STATE_DIR/STOPPED" "$kept" && chmod 0400 "$kept"
+  [ "$(sha256sum < "$kept" | cut -d' ' -f1)" = "$h" ] || stop_now "the kept STOP record changed"
+  mv -- "$STATE_DIR/RECOVERY.authorized" "$STATE_DIR/RECOVERY.$ts.consumed"
+  RECOVERY_DONE=1; RECOVERING=0
+  say "RECOVERY COMPLETE: the S6 STOP is resolved by S6-R; original kept as $kept; S7 may follow"
 }
 require_done() { [ "$MODE" = plan ] && return 0; [ -f "$STATE_DIR/$1.done" ] || stop_now "prerequisite $1 not completed"; }
 mark_done() {
@@ -265,15 +345,14 @@ assert_staging_cluster() {
 }
 
 # ===== CI REHEARSAL OVERRIDES — appended by tools/render-ci.sh; this file is NEVER installed on the VPS. =====
-# A GitHub runner has no live ERP, nginx, cluster main or execution window, so these four gates are replaced. Every
-# allow-list (act, sctl, put_file, safe_rm, mkdir_staging) and every stage check above is the kit's own, unchanged.
+# A GitHub runner has no live ERP, nginx or cluster main, so exactly two functions are replaced: the VPS identity and
+# the shared-service guard. The window, the authorization record, the S0 age, the STOP gate and the D24 recovery state,
+# every allow-list (act, sctl, put_file, safe_rm, mkdir_staging) and every stage check above are the kit's own, unchanged
+# (the rehearsal writes a real AUTHORIZED for the CI window and a fresh baseline).
 require_vps() {
   [ "$(uname -s)" = Linux ] && [ "$(id -u)" -eq 0 ] || stop_now "CI: root on Linux required"
   [ "${GITHUB_ACTIONS:-}" = true ] && [ -n "${RUNNER_TEMP:-}" ] || stop_now "the CI rehearsal overrides run only on a GitHub Actions runner"
 }
-require_window() { say "CI rehearsal: no execution window"; }
-require_authorized() { [ ! -f "$STATE_DIR/STOPPED" ] || stop_now "a previous STOP is recorded ($STATE_DIR/STOPPED)"; }
-load_baseline() { [ -f "$STATE_DIR/baseline.env" ] || stop_now "no CI baseline"; . "$STATE_DIR/baseline.env"; }
 guard_shared() { # the §I items a runner has: no new host TCP listener, only the kit's own unix sockets, memory and disk
   [ "$MODE" = plan ] && { plan "verify §I (CI subset: listeners, memory, disk)"; return 0; }
   local f=() newtcp newunix allowed m d

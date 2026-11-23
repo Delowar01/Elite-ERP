@@ -194,7 +194,10 @@ jobs:
         if: always()
         run: |
           mkdir -p "$RUNNER_TEMP/kit-logs"
-          sudo sh -c "cp -a /root/elite-po-kit/state/logs/. '$RUNNER_TEMP/kit-logs/' 2>/dev/null; chown -R $(id -u):$(id -g) '$RUNNER_TEMP/kit-logs'" || true
+          # the logs, and the D24 records (the kept STOP, the failed and consumed recovery authorizations, STOPPED.later/.resolved)
+          sudo sh -c "cp -a /root/elite-po-kit/state/logs/. '$RUNNER_TEMP/kit-logs/' 2>/dev/null; mkdir -p '$RUNNER_TEMP/kit-logs/d24-state'
+            cp -a /root/elite-po-kit/state/STOPPED* /root/elite-po-kit/state/RECOVERY* '$RUNNER_TEMP/kit-logs/d24-state/' 2>/dev/null
+            chown -R $(id -u):$(id -g) '$RUNNER_TEMP/kit-logs'; chmod -R u+r '$RUNNER_TEMP/kit-logs'" || true
       - name: Logs
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

@@ -108,11 +108,28 @@ run_probe customer customer "$PG_PORT $ADMIN_IN $CUST_IN"
 if [ "$MODE" = plan ]; then plan "node probes/s9-rtests.mjs (R2–R9 + controls, via curl-equivalent requests on the two Unix sockets)"
 else
   cfg="$STATE_DIR/s9-rtests.json"
-  printf '{"adminHost":"%s","custHost":"%s","adminSock":"%s","custSock":"%s","appDir":"%s","r9Register":true,"psql":["runuser","-u","%s","--","psql","-X","-At","-h","%s","-p","%s","-d","%s"]}\n' \
+  printf '{"adminHost":"%s","custHost":"%s","adminSock":"%s","custSock":"%s","appDir":"%s","r9Register":true,"psql":["runuser","-u","%s","--","psql","-X","-q","-At","-h","%s","-p","%s","-d","%s"]}\n' \
     "$ADMIN_HOST" "$CUST_HOST" "$RUN_DIR/admin.sock" "$RUN_DIR/customer.sock" "$APP_SRC" "$PG_USER" "$PG_RUN" "$PG_PORT" "$DB" > "$cfg"
   rc=0; node "$KIT_HERE/probes/s9-rtests.mjs" "$cfg" > "$STATE_DIR/logs/S9-rtests.txt" 2>&1 || rc=$?
   cat "$STATE_DIR/logs/S9-rtests.txt"
   [ "$rc" -eq 0 ] || stop_now "R-tests failed"
+fi
+
+# ---- 5a. D31: the customer service renders one PDF, then two at once, within its task, memory and CPU limits ----
+tasks_ok() { [ "$(systemctl show -p TasksMax --value elite-po-admin.service)" = 128 ] && [ "$(systemctl show -p TasksMax --value elite-po-customer.service)" = 320 ] &&
+  [ "$(systemctl show -p TasksMax --value elite-po-staging.slice)" = 512 ]; }
+check "task limits in effect: admin 128, customer 320 (D31), slice 512" tasks_ok
+if [ "$MODE" = plan ]; then plan "node probes/s9-pdf-load.mjs (a fictional sign-up, one fictional client and quotation in $DB; one PDF, then two concurrent, through the customer socket; the unit's and the slice's task, memory and CPU counters; STOP above 90 % of a task ceiling or on any limit event)"
+else
+  pcfg="$STATE_DIR/s9-pdf-load.json"
+  printf '{"custHost":"%s","custSock":"%s","appDir":"%s","custCg":"%s","sliceCg":"%s","custTasksMax":%s,"sliceTasksMax":%s,"custMemHighMB":%s,"custMemMaxMB":%s,"psql":["runuser","-u","%s","--","psql","-X","-q","-At","-h","%s","-p","%s","-d","%s"]}\n' \
+    "$CUST_HOST" "$RUN_DIR/customer.sock" "$APP_SRC" "$(systemctl show -p ControlGroup --value elite-po-customer.service)" "$(systemctl show -p ControlGroup --value elite-po-staging.slice)" \
+    "$(systemctl show -p TasksMax --value elite-po-customer.service)" "$(systemctl show -p TasksMax --value elite-po-staging.slice)" \
+    "$(( $(systemctl show -p MemoryHigh --value elite-po-customer.service) / 1048576 ))" "$(( $(systemctl show -p MemoryMax --value elite-po-customer.service) / 1048576 ))" \
+    "$PG_USER" "$PG_RUN" "$PG_PORT" "$DB" > "$pcfg"
+  rc=0; node "$KIT_HERE/probes/s9-pdf-load.mjs" "$pcfg" > "$STATE_DIR/logs/S9-pdf-load.txt" 2>&1 || rc=$?
+  cat "$STATE_DIR/logs/S9-pdf-load.txt"
+  [ "$rc" -eq 0 ] || stop_now "the customer PDF load test failed (D31): see $STATE_DIR/logs/S9-pdf-load.txt"
 fi
 
 # ---- 5b. the build is unchanged after real requests, and nothing tried to write it (decision J1) ----

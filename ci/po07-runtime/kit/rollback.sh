@@ -14,6 +14,7 @@ if [ "$MODE" = execute ]; then
   load_baseline
   require_vps
   if [ "${PO_ROLLBACK_OUTSIDE_WINDOW:-}" != owner-approved ]; then require_window 1; fi
+  GATE_PASSED=1   # from here a rollback changes things: a STOP below is recorded as "AFTER changes"
   mkdir -p "$STATE_DIR/logs"; exec > >(tee -a "$STATE_DIR/logs/$STAGE-$(date -u +%Y%m%dT%H%M%SZ).log") 2>&1
 fi
 say "==== rollback $TARGET ($MODE) ===="
