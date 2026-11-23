@@ -367,21 +367,36 @@ CPU time and throttling. S9 STOPs if any of these happens:
 - a task peak exceeds 90 % of the unit's `TasksMax` (288) or of the slice's (460);
 - any `MemoryHigh`, `MemoryMax` or OOM event occurs.
 
-The measured values are in the run listed below.
+**Measured in run 45273065636** (the customer service, two concurrent renders):
 
-**Green rehearsal:** run [45261652332](https://github.com/Delowar01/Elite-ERP/actions/runs/45261652332), job
-"kit rehearsal":
+| Counter | Value | Limit |
+|---|---|---|
+| Customer unit tasks, peak | 253 | `TasksMax` 320 (STOP above 288) |
+| Slice tasks, peak during the PDFs | 287 (lifetime peak 295) | `TasksMax` 512 (STOP above 460) |
+| Customer unit memory, peak | 435 MB | `MemoryHigh` 768 MB / `MemoryMax` 896 MB; no high, max or OOM event |
+| Slice memory, peak | 796 MB | `MemoryMax` 1792 MB |
+| Customer unit CPU | 5.4 s; 88 throttled periods (19.2 s) | `CPUQuota` 60 %: enforced |
+| Refused tasks (`pids.events max`) | 0 in the unit and in the slice | — |
+| One PDF / two concurrent PDFs | 200, 186 KB, 3.9 s / both 200, 6.0 s | — |
+
+**Green rehearsal:** run [45273065636](https://github.com/Delowar01/Elite-ERP/actions/runs/45273065636) (commit
+`c698dfa`), job "kit rehearsal". The earlier green run, 45261652332, preceded D24 and the S9 PDF load test.
 
 | Stage | Result |
 |---|---|
 | S1–S5 | PASS; the staging cluster runs inside the namespace, on its loopback only |
-| S6-R | PASS. Re-run at once: re-checks only. After S9: refuses to touch the installed build under running apps |
+| D24 (§9.1) | 30/30: every refusal with the STOP byte-identical; two failed recoveries with their evidence kept and the authorization voided; the successful recovery, with the original STOP kept read-only and the incomplete output replaced |
+| S6-R | PASS in the restricted recovery state. Re-run at once: re-checks only. After S9: refuses to touch the installed build under running apps |
 | S7 | PASS |
 | S8 | PASS: V-NET for the tool path 94/94; the migrations through `elite-po-run` with the owner credential via `LoadCredential`; 67 existing customer tables byte-identical |
-| S9 | PASS. Properties: no writable code path, the reviewed binds only. Sockets 0660 in a 0750 directory; other users get EACCES; no host TCP path. V-SBX admin 97/97 and customer 99/99 (two concurrent real PDFs: 265 tasks, 553 MB). R2–R9 all PASS. After the R-tests every build file is unchanged and the journal is clean. Budget: the slice is ≤ 600 MB steady |
+| S9 | PASS. Task limits in effect: 128 / 320 / 512. No writable code path, the reviewed binds only. Sockets 0660 in a 0750 directory; other users get EACCES; no host TCP path. V-SBX admin 97/97 and customer 99/99. R2–R9 27/27. D31 PDF load 12/12 (above). After the R-tests and the PDFs every build file is unchanged and the journal is clean. Budget: the slice is ≤ 600 MB steady (436 MB) |
 | After S9 | 22/22: content through the sockets, a restart of both units, 240 concurrent requests, integrity, journal |
-| Footprint | admin 64 MB, customer 101 MB, cluster 49 MB, slice 441 MB current (695 MB peak, during the migrations and probes) |
+| Footprint | admin 64 MB / 12 tasks, customer 100 MB / 12 tasks (104 MB peak after the restart), cluster 50 MB / 6 tasks, slice 447 MB / 34 tasks (796 MB peak, during the PDFs) |
 | Rollback, all stages | removes every staging unit, path, user and listener; the archive stays for audit |
+
+The J1 matrix and the security suites on the read-only build passed in the same run: matrix 22/22; H-1 65/65, MFA
+browser 138/138, auth 136/136, team sessions 28/28, invitation acceptance 98/98, user acceptance 41/41, PDF branding,
+print-apply, private storage.
 
 ## 10. Revised execution plan: S6-R → S7 → S8 → S9 → S9b (prepared; not executed)
 
