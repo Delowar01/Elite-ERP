@@ -56,12 +56,19 @@ for s in s1_users s2_slice_netns s3_pgcluster s4_roles_db s5_clone s6r_install_a
   step "$s --execute"
   bash "$KIT_DIR/$s.sh" --execute || fail "$s failed"
   end
+  if [ "$s" = s6r_install_artifact ]; then
+    step "S6-R again, at once (re-entrant: must re-check the installed build, not reinstall)"
+    out="$(bash "$KIT_DIR/s6r_install_artifact.sh" --execute 2>&1)" || { echo "$out" | tail -30; fail "S6-R re-run failed"; }
+    echo "$out" | grep -q "already installed" || fail "S6-R re-run did not recognise the installed build"
+    echo "$out" | grep -E "already installed|installed: every|S6 COMPLETE" | head -5
+    end
+  fi
 done
 
-step "S6-R again (re-entrant: must re-check the installed build, not reinstall)"
-out="$(bash "$KIT_DIR/s6r_install_artifact.sh" --execute 2>&1)" || { echo "$out" | tail -30; fail "S6-R re-run failed"; }
-echo "$out" | grep -q "already installed" || fail "S6-R re-run did not recognise the installed build"
-echo "$out" | grep -E "already installed|SHA-256|S6 COMPLETE" | head -5
+step "S6-R after S9 must refuse (it never touches an installed build under running apps)"
+if bash "$KIT_DIR/s6r_install_artifact.sh" --execute > "$STATE_DIR/logs/ci-s6r-after-s9.txt" 2>&1; then fail "S6-R ran with the apps up"; fi
+grep -m1 "STOP" "$STATE_DIR/logs/ci-s6r-after-s9.txt"
+mv "$STATE_DIR/STOPPED" "$STATE_DIR/STOPPED.ci-expected"   # the expected refusal; the rehearsal continues
 end
 
 step "after S9: content through the sockets, restart, concurrency, integrity, journal, footprint"

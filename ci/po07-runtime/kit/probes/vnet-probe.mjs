@@ -127,6 +127,17 @@ if (CFG.profile === "customer") {
   const cg = (() => { try { return fs.readFileSync("/proc/self/cgroup", "utf8").trim().split(":").pop(); } catch { return ""; } })();
   const rd = (f) => { try { return fs.readFileSync(`/sys/fs/cgroup${cg}/${f}`, "utf8").trim().replace(/\n/g, " "); } catch (e) { return e.code; } };
   console.log(`DIAG cgroup ${cg}: pids.max=${rd("pids.max")} pids.peak=${rd("pids.peak")} pids.events=[${rd("pids.events")}] memory.max=${rd("memory.max")} memory.peak=${rd("memory.peak")} memory.events=[${rd("memory.events")}]`);
+  if (head === "%PDF-") { // measurement: the application launches one browser per PDF request — two at once
+    try {
+      const { createRequire } = await import("node:module");
+      const { pathToFileURL } = await import("node:url");
+      const mod = await import(pathToFileURL(createRequire("/srv/elite-po-staging/app/package.json").resolve("puppeteer-core")).href);
+      const one = async () => { const b = await (mod.default ?? mod).launch({ executablePath: CFG.chromium, headless: true, args: ["--no-sandbox", "--disable-dev-shm-usage"] });
+        try { const p = await b.newPage(); await p.setContent("<h1>x</h1>"); return Buffer.from(await p.pdf()).subarray(0, 5).toString("latin1"); } finally { await b.close(); } };
+      const two = await Promise.all([one(), one()]);
+      console.log(`DIAG two concurrent PDF renders: ${two.join(",")}; pids.peak=${rd("pids.peak")} memory.peak=${rd("memory.peak")} pids.events=[${rd("pids.events")}]`);
+    } catch (e) { console.log(`DIAG two concurrent PDF renders failed: ${String(e?.message ?? e).split("\n")[0].slice(0, 160)}; pids.peak=${rd("pids.peak")}`); }
+  }
   if (head !== "%PDF-") {
     const d = spawnSync(CFG.chromium, ["--headless=new", "--no-sandbox", "--disable-dev-shm-usage", "--remote-debugging-port=0", "--user-data-dir=/tmp/po-probe-diag", "about:blank"], { encoding: "utf8", timeout: 20000 });
     console.log(`DIAG chrome with remote debugging: status ${d.status} signal ${d.signal}; stderr tail:\n${(d.stderr || "").split("\n").filter(Boolean).slice(-10).map((l) => `DIAG   ${l.slice(0, 200)}`).join("\n")}`);
