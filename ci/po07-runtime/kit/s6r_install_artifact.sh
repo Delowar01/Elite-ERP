@@ -123,7 +123,7 @@ else
   mkdir_staging "$EXTRACT_DIR" 0700 "$APP_USER:$APP_USER"
   if [ "$MODE" = execute ] && [ -n "$(ls -A "$EXTRACT_DIR")" ]; then stop_now "$EXTRACT_DIR is not empty"; fi
   EXTRACT_CMD=(systemd-run --unit=elite-po-install.service "${SANDBOX[@]}" -p "ReadWritePaths=$EXTRACT_DIR" -p "$HIDE -$APP_SRC"
-    -p "WorkingDirectory=$EXTRACT_DIR" -- /usr/bin/tar -xzf - -C "$EXTRACT_DIR" --no-same-owner --no-same-permissions --keep-old-files --no-overwrite-dir)
+    -p "WorkingDirectory=$EXTRACT_DIR" -- /usr/bin/tar -xzf - -C "$EXTRACT_DIR" --no-same-owner --no-same-permissions --keep-old-files)
   if [ "$MODE" = plan ]; then plan "${EXTRACT_CMD[*]} < $ARCHIVE"
   else act "${EXTRACT_CMD[@]}" < "$ARCHIVE" || stop_now "the sandboxed extraction failed"; fi
 
