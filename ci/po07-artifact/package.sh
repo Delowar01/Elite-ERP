@@ -32,6 +32,14 @@ cp -a "$APP/node_modules" "$R/node_modules"
 echo "2. names and file types the archive validator accepts"
 odd="$(cd "$R" && find .next node_modules -name $'*[\t\n\r\\\\]*' -print -quit)"; [ -z "$odd" ] || fail "file name with a tab, newline or backslash: $odd"
 sp="$(cd "$R" && find .next node_modules ! -type f ! -type d ! -type l -print -quit)"; [ -z "$sp" ] || fail "special file: $sp"
+# Hard links (esbuild's install script links its binary to the platform package's copy) become independent copies:
+# the archive never carries a hard link. Listed first, then each replaced by a copy of itself.
+(cd "$R" && find .next node_modules -type f -links +1 -print0) > "$WORK/hardlinks.lst"
+hardlinks=0
+while IFS= read -r -d '' f; do
+  cp -p -- "$R/$f" "$R/$f.po07-copy" && mv -f -- "$R/$f.po07-copy" "$R/$f"; hardlinks=$((hardlinks + 1))
+  echo "   hard link replaced by a copy: $f"
+done < "$WORK/hardlinks.lst"
 hl="$(cd "$R" && find .next node_modules -type f -links +1 -print -quit)"; [ -z "$hl" ] || fail "hard-linked file: $hl"
 su="$(cd "$R" && find .next node_modules ! -type l -perm /7000 -print -quit)"; [ -z "$su" ] || fail "setuid/setgid/sticky: $su"
 gw="$(cd "$R" && find .next node_modules ! -type l -perm /022 | wc -l)"
@@ -70,7 +78,7 @@ echo "5. manifest and link list"
 (cd "$R" && find .next node_modules -type l -printf '%p\t%l\n' | sort) > "$R/SYMLINKS.txt"
 
 echo "6. provenance (ARTIFACT.json)"
-APP="$APP" R="$R" REWRITES="$WORK/rewrites.tsv" node - <<'EOF'
+APP="$APP" R="$R" REWRITES="$WORK/rewrites.tsv" HARDLINKS="$WORK/hardlinks.lst" node - <<'EOF'
 const fs = require("fs"), path = require("path"), crypto = require("crypto");
 const e = process.env, R = e.R, APP = e.APP;
 const sha = (p) => crypto.createHash("sha256").update(fs.readFileSync(p)).digest("hex");
@@ -99,6 +107,7 @@ const art = {
     manifest_sha256: shaText(path.join(R, "MANIFEST.sha256")), symlinks_sha256: shaText(path.join(R, "SYMLINKS.txt")),
     excluded: [".next/cache/* (build cache; the directory is shipped empty)", ".next/trace", ".next/trace-build"],
     symlink_rewrites: lines(e.REWRITES).map((l) => { const [link, target] = l.split("\t"); return { link, target }; }),
+    hard_links_copied: fs.readFileSync(e.HARDLINKS, "utf8").split("\0").filter(Boolean),
   },
   native_modules: e.NATIVE_FILE && fs.existsSync(e.NATIVE_FILE) ? readJson(e.NATIVE_FILE, null) : null,
   build_measurements: e.BUILD_REPORT && fs.existsSync(e.BUILD_REPORT) ? readJson(e.BUILD_REPORT, null) : null,
