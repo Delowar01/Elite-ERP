@@ -25,7 +25,7 @@ guard_shared
 start_thresholds
 EXP="$STATE_DIR/ARTIFACT.expected"
 TOOLS="$APP_DIR/.kit-tools"   # root-owned, readable by the app user: the validator and the runtime check
-as_app() { (cd "$APP_DIR" && runuser -u "$APP_USER" -- env HOME="$BUILD_HOME" GIT_TERMINAL_PROMPT=0 GIT_CONFIG_NOSYSTEM=1 GIT_OPTIONAL_LOCKS=0 "$@"); }
+as_app() { (cd "$APP_DIR" && runuser -u "$APP_USER" -- env -i HOME="$BUILD_HOME" PATH=/usr/bin:/bin LANG=C.UTF-8 GIT_TERMINAL_PROMPT=0 GIT_CONFIG_NOSYSTEM=1 GIT_OPTIONAL_LOCKS=0 "$@"); }
 x() { if [ "$MODE" = plan ]; then printf '<%s>' "$1"; else sed -n "s/^$1=//p" "$EXP" | head -1; fi; }
 HIDE="InaccessiblePaths=-/srv/po07-absent-erp -/etc/elite-po-staging -/var/lib/elite-po-staging -/var/lib/postgresql -/var/run/postgresql -/var/run/po07-absent-c -/var/www -/var/backups"
 SANDBOX=(--uid="$APP_USER" --gid="$APP_USER" --expand-environment=no --wait --pipe --quiet --collect
@@ -159,8 +159,14 @@ check "the action and page manifests exist; .next/cache is empty and no route ca
 owner_ok() { [ -z "$(find "$APP_SRC" -xdev ! -user "$APP_USER" -print -quit)" ]; }
 check "every file in the app tree belongs to $APP_USER" owner_ok
 check "no tracked file differs from the commit (next-env.d.ts excepted)" tracked_clean
-no_env_file() { ! ls -A "$APP_SRC" | grep -qE '^\.env'; }
-check "no .env file in the app tree" no_env_file
+# None of the env files `next start` would load may exist, and no .env* file may exist that is not the repository's
+# own (the tracked .env.example template holds no value). Configuration comes only from the root-only env files (S7).
+no_env_file() {
+  local f; for f in .env .env.local .env.production .env.production.local; do [ ! -e "$APP_SRC/$f" ] || { say "$f exists"; return 1; }; done
+  local stray; stray="$(cd "$APP_SRC" && find . -maxdepth 1 -name '.env*' -printf '%P\n' | LC_ALL=C sort | while read -r f; do as_app git -C "$APP_SRC" ls-files --error-unmatch -- "$f" >/dev/null 2>&1 || echo "$f"; done)"
+  [ -z "$stray" ] || { say "untracked env file(s): $stray"; return 1; }
+}
+check "no env file next start would load (.env, .env.local, .env.production[.local]) and no untracked .env* in the app tree" no_env_file
 runtime_ok() {
   systemd-run --unit=elite-po-install.service "${SANDBOX[@]}" -p "$HIDE" -p "WorkingDirectory=$APP_SRC" \
     -E HOME=/tmp -E npm_config_cache=/tmp/npm-cache -E npm_config_offline=true -E npm_config_update_notifier=false \

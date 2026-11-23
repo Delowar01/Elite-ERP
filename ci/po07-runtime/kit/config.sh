@@ -2,7 +2,7 @@
 # Sourced by lib.sh. Contains NO secret: every password and key is generated on the VPS (S4, S7) and never printed.
 # shellcheck shell=bash disable=SC2034
 
-KIT_VERSION="po07-s1s9-kit-2"   # kit-2: S6-R (verified external build) replaces the on-VPS build (decision S6-R1)
+KIT_VERSION="po07-s1s9-kit-3"   # kit-3: J1 read-only build, S6-R, guarded STOP resolution, traceable S0 reference
 
 # ---- approved release (owner, Prompt 7) -------------------------------------------------------------------------
 APPROVED_SHA="cf64ebc492b56ad91c28ba3aa7640722935e21c5"

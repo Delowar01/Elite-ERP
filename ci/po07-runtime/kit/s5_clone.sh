@@ -6,7 +6,7 @@ stage_begin S4
 guard_shared
 start_thresholds
 # (from $APP_DIR: git refuses a working directory the app user cannot traverse, e.g. the caller's /root/...)
-as_app() { (cd "$APP_DIR" && runuser -u "$APP_USER" -- env HOME="$BUILD_HOME" GIT_TERMINAL_PROMPT=0 GIT_CONFIG_NOSYSTEM=1 "$@"); }
+as_app() { (cd "$APP_DIR" && runuser -u "$APP_USER" -- env -i HOME="$BUILD_HOME" PATH=/usr/bin:/bin LANG=C.UTF-8 GIT_TERMINAL_PROMPT=0 GIT_CONFIG_NOSYSTEM=1 "$@"); }
 mkdir_staging "$BUILD_HOME" 0700 "$APP_USER:$APP_USER"
 if [ "$MODE" = execute ] && [ -e "$APP_SRC/.git" ]; then
   [ "$(as_app git -C "$APP_SRC" rev-parse HEAD)" = "$APPROVED_SHA" ] || stop_now "$APP_SRC exists at another commit (not removed automatically)"
