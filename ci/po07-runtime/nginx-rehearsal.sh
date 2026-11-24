@@ -40,7 +40,7 @@ bash "$KIT_DIR/tools/render-vhost.sh" A admin --ci "$N/$ADMIN_HOST.self.crt" "$N
 bash "$KIT_DIR/tools/render-vhost.sh" A customer --ci "$N/$CUST_HOST.self.crt" "$N/$CUST_HOST.self.key" "$N/customer.htpasswd" > /etc/nginx/sites-enabled/po07-customer.conf
 ! grep -q proxy_pass /etc/nginx/sites-enabled/po07-*.conf || fail "Phase A must not proxy anything"
 reload_ok
-probe A insecure false | tee "$STATE_DIR/logs/ci-s11-phaseA.txt" | grep -E '^(FAIL|S11-PROBE)'
+probe A insecure false | tee "$STATE_DIR/logs/ci-s11-phaseA.txt" | grep -E '^(FAIL|S11-PROBE)' || true
 grep -q '^S11-PROBE phase=A pass=[0-9]* fail=0$' "$STATE_DIR/logs/ci-s11-phaseA.txt" || fail "Phase A checks"
 ref="$(printf '{"phase":"B","adminHost":"a","custHost":"c","connect":"127.0.0.1","httpsPort":443,"httpPort":80,"caFile":null,"tlsInsecure":true,"appDir":"%s","psql":null,"credFd":3}' "$APP_SRC" > "$RUNNER_TEMP/refuse.json"; node "$KIT_DIR/probes/s11-nginx-probe.mjs" "$RUNNER_TEMP/refuse.json" 3< <(printf 'u\np\nu\np\n') 2>&1 || true)"
 grep -q 'REFUSED: credentials are never sent over unverified TLS' <<< "$ref" || fail "the probe must refuse credentials over unverified TLS"
@@ -57,16 +57,16 @@ bash "$KIT_DIR/tools/render-vhost.sh" A admin --ci "$N/$ADMIN_HOST.crt" "$N/$ADM
 bash "$KIT_DIR/tools/render-vhost.sh" A customer --ci "$N/$CUST_HOST.crt" "$N/$CUST_HOST.key" "$N/customer.htpasswd" > /etc/nginx/sites-enabled/po07-customer.conf
 reload_ok
 for h in "$ADMIN_HOST" "$CUST_HOST"; do
-  o="$(openssl s_client -connect 127.0.0.1:443 -servername "$h" -CAfile "$N/ca.crt" -verify_return_error -verify_hostname "$h" < /dev/null 2>&1)"
+  o="$(openssl s_client -connect 127.0.0.1:443 -servername "$h" -CAfile "$N/ca.crt" -verify_return_error -verify_hostname "$h" < /dev/null 2>&1 || true)"
   grep -q 'Verify return code: 0 (ok)' <<< "$o" || fail "$h: the certificate does not verify"
   c="$(openssl s_client -connect 127.0.0.1:443 -servername "$h" < /dev/null 2> /dev/null | openssl x509 -noout -enddate -ext subjectAltName)"
   grep -qE "DNS:$h$" <<< "$c" && [ "$(grep -o 'DNS:' <<< "$c" | wc -l)" -eq 1 ] || fail "$h: SAN is not exactly the host"
   d=$(( ( $(date -d "$(sed -n 's/^notAfter=//p' <<< "$c")" +%s) - $(date +%s) ) / 86400 )); [ "$d" -ge 60 ] || fail "$h: $d days left"
-  o2="$(openssl s_client -connect 127.0.0.1:443 -servername "$h" -CAfile "$N/ca.crt" -verify_return_error -verify_hostname "wrong.$h" < /dev/null 2>&1)"
+  o2="$(openssl s_client -connect 127.0.0.1:443 -servername "$h" -CAfile "$N/ca.crt" -verify_return_error -verify_hostname "wrong.$h" < /dev/null 2>&1 || true)"
   ! grep -q 'Verify return code: 0 (ok)' <<< "$o2" || fail "$h: a wrong host name verified"
   echo "ok: $h chain verified, SAN exactly the host, $d days left; a wrong name is refused"
 done
-probe A ca false | tee "$STATE_DIR/logs/ci-s11-phaseA-trusted.txt" | grep -E '^(FAIL|S11-PROBE)'
+probe A ca false | tee "$STATE_DIR/logs/ci-s11-phaseA-trusted.txt" | grep -E '^(FAIL|S11-PROBE)' || true
 grep -q 'fail=0$' "$STATE_DIR/logs/ci-s11-phaseA-trusted.txt" || fail "Phase A with the trusted certificate"
 end
 
@@ -77,9 +77,9 @@ bash "$KIT_DIR/tools/render-vhost.sh" B customer --ci "$N/$CUST_HOST.crt" "$N/$C
   bash "$KIT_DIR/tools/render-vhost.sh" common-ci "$ECHO" | sed 's/^/  /'; printf '  location / { proxy_pass http://unix:/run/po07-echo/echo.sock:; }\n}\n'; } > /etc/nginx/sites-enabled/po07-echo.conf
 node "$HERE/echo-headers.mjs" /run/po07-echo/echo.sock & ECHO_PID=$!; sleep 1
 reload_ok
-probe B ca true | tee "$STATE_DIR/logs/ci-s11-phaseB-unauth.txt" | grep -E '^(FAIL|S11-PROBE)'
+probe B ca true | tee "$STATE_DIR/logs/ci-s11-phaseB-unauth.txt" | grep -E '^(FAIL|S11-PROBE)' || true
 grep -q 'fail=0$' "$STATE_DIR/logs/ci-s11-phaseB-unauth.txt" || fail "Phase B unauthenticated checks"
-probe B ca true creds | tee "$STATE_DIR/logs/ci-s11-phaseB-auth.txt" | grep -E '^(PASS R|FAIL|S11-PROBE)'
+probe B ca true creds | tee "$STATE_DIR/logs/ci-s11-phaseB-auth.txt" | grep -E '^(PASS R|FAIL|S11-PROBE)' || true
 grep -q 'fail=0$' "$STATE_DIR/logs/ci-s11-phaseB-auth.txt" || fail "Phase B: R1–R12 through nginx"
 end
 
