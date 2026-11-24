@@ -1,0 +1,57 @@
+# PO-07 S12: a fast probe of the two S12 units' REAL sandboxes (the rendered kit unit files, fictional values), run in
+# minutes instead of the full rehearsal. Only Requires=/After= are removed (no cluster on this runner) and ExecStart is
+# replaced by a probe that reports what the sandbox allows. Nothing here is a test the rehearsal relies on.
+name: po07-s12-unit-probe
+
+on:
+  push:
+    branches: [feat/platform-owner]
+    paths: [ci/po07-runtime/kit/units/elite-po-backup.service, ci/po07-runtime/kit/units/elite-po-offsite.service, .github/workflows/po07-s12-unit-probe.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - name: The S12 units' sandboxes, as rendered for CI
+        run: |
+          set -Eeuo pipefail
+          K=ci/po07-runtime/kit/units
+          sudo useradd --system --no-create-home --shell /usr/sbin/nologin po07app
+          sudo groupadd --system elitepoup
+          sudo ip netns add po07ns && sudo ip -n po07ns link set lo up
+          sudo install -d -m 0755 /srv/elite-po-staging /etc/elite-po-staging /var/lib/elite-po-staging
+          sudo install -d -m 0750 -o root -g po07app /srv/elite-po-staging/.kit-tools
+          sudo install -d -m 0750 -o po07app -g po07app /var/lib/elite-po-staging/storage /var/lib/elite-po-staging/backups
+          sudo install -d -m 2750 -o po07app -g elitepoup /var/lib/elite-po-staging/backups/outbox
+          sudo install -d -m 0700 /etc/elite-po-staging/secrets /etc/elite-po-staging/backup /etc/elite-po-staging/offsite
+          for f in secrets/backup.pw backup/owner.pub.asc backup/owner.fpr backup/backup.conf offsite/rclone.conf admin.env; do echo fictional | sudo tee "/etc/elite-po-staging/$f" > /dev/null; sudo chmod 0600 "/etc/elite-po-staging/$f"; done
+          echo x | sudo tee /var/lib/elite-po-staging/backups/outbox/po07-staging-20260101T000000Z.tar.gpg > /dev/null
+          sudo chown po07app:elitepoup /var/lib/elite-po-staging/backups/outbox/*; sudo chmod 0640 /var/lib/elite-po-staging/backups/outbox/*
+          probe='set +e; echo "id: $(id)"; echo "tmp: $(findmnt -n -o FSTYPE,OPTIONS /tmp)"; echo "creds: $CREDENTIALS_DIRECTORY $(ls "$CREDENTIALS_DIRECTORY" | tr "\n" " ")"
+            for p in /var/lib/elite-po-staging/backups/outbox /var/lib/elite-po-staging/storage /var/lib/elite-po-staging/backups /var/lib/elite-po-offsite /var/lib/private/elite-po-offsite /run/systemd/resolve /etc/elite-po-staging/admin.env "$STATE_DIRECTORY"; do
+              printf "%-45s exists=%s r=%s w=%s\n" "$p" "$([ -e "$p" ] && echo y || echo n)" "$([ -r "$p" ] && echo y || echo n)" "$([ -w "$p" ] && echo y || echo n)"; done
+            echo "STATE_DIRECTORY=${STATE_DIRECTORY:-unset} HOME=${HOME:-unset}"; touch "${STATE_DIRECTORY:-/nonexistent}/probe" && echo "state write: ok" || echo "state write: FAILED"
+            ls -l /var/lib/elite-po-staging/backups/outbox/ 2>&1 | tail -2; cat /var/lib/elite-po-staging/backups/outbox/*.tar.gpg > /dev/null 2>&1 && echo "outbox read: ok" || echo "outbox read: FAILED"
+            touch /var/lib/elite-po-staging/backups/outbox/.w 2> /dev/null && echo "outbox write: YES" || echo "outbox write: no"
+            timeout 3 bash -c "exec 3<>/dev/tcp/127.0.0.1/22" 2> /dev/null && echo "127.0.0.1:22 reachable" || echo "127.0.0.1:22 unreachable"
+            timeout 5 bash -c "exec 3<>/dev/tcp/1.1.1.1/443" 2> /dev/null && echo "internet reachable" || echo "internet unreachable"; command -v gpg node pg_dump rclone findmnt | tr "\n" " "; echo'
+          printf '#!/bin/bash\n%s\n' "$probe" | sudo tee /srv/elite-po-staging/.kit-tools/backup-run.sh /srv/elite-po-staging/.kit-tools/offsite-run.sh > /dev/null
+          sudo chown root:po07app /srv/elite-po-staging/.kit-tools/backup-run.sh; sudo chmod 0640 /srv/elite-po-staging/.kit-tools/backup-run.sh
+          sudo chmod 0644 /srv/elite-po-staging/.kit-tools/offsite-run.sh
+          for u in elite-po-backup elite-po-offsite; do
+            sed -E '/^(Requires|After|Wants)=/d; /^Slice=/d' "$K/$u.service" | sudo tee "/etc/systemd/system/$u.service" > /dev/null
+          done
+          sudo systemctl daemon-reload
+          for u in elite-po-backup elite-po-offsite; do
+            echo "::group::$u"; rc=0; sudo systemctl start "$u.service" || rc=$?
+            echo "start exit $rc; result $(systemctl show -p Result --value "$u.service"), status $(systemctl show -p ExecMainStatus --value "$u.service")"
+            sudo journalctl --no-pager -o cat -u "$u.service" -n 60; echo "::endgroup::"
+          done
