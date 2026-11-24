@@ -65,12 +65,21 @@ grep -q ":pubkey enc packet: version 3, algo 18, keyid $ESUB" "$RUNNER_TEMP/list
 r="$(mc retention info "ci/$B/$OFFSITE_PREFIX/$ON" 2>&1)"; grep -qi governance <<< "$r" || fail "the off-host object is not retained (Object Lock): $r"
 echo "ok: $ON encrypted to the owner's subkey only; no plaintext on disk; the backup ran in the namespace; the uploader is a dynamic identity outside it; the off-host object is under GOVERNANCE retention"
 cp "$OBJ" "$RUNNER_TEMP/forged.tar.gpg"; printf 'x' | dd of="$RUNNER_TEMP/forged.tar.gpg" bs=1 seek=200 conv=notrunc 2> /dev/null
+cmp -s "$OBJ" "$RUNNER_TEMP/forged.tar.gpg" && fail "the forged copy does not differ (harness)"
+T="ci/$B/$OFFSITE_PREFIX/$ON"
+vers() { mc ls --versions --json "$T" | jq -r 'select(.type == "file") | "\(.versionId) \(.size) \(.isLatest // false) \(.isDeleteMarker // false)"'; }
+v0="$(vers)"; [ "$(grep -c . <<< "$v0")" = 1 ] || { echo "$v0"; fail "expected exactly one off-host version before the attack"; }
+vid="${v0%% *}"; [ -n "$vid" ] && [ "$vid" != null ] || { echo "$v0"; fail "the original version id could not be read"; }
+mc cat --version-id "$vid" "$T" | cmp -s - "$OBJ" || fail "the original off-host version does not equal the local backup (before any attack)"
 if rclone --config "$OFFSITE_CONF" deletefile "$OFFSITE_REMOTE:$B/$OFFSITE_PREFIX/$ON" > /dev/null 2>&1; then fail "the upload key could delete an off-host backup"; fi
-rclone --config "$OFFSITE_CONF" copyto --s3-no-head --no-check-dest "$RUNNER_TEMP/forged.tar.gpg" "$OFFSITE_REMOTE:$B/$OFFSITE_PREFIX/$ON" > /dev/null 2>&1 || true   # a hostile overwrite: the PUT itself is sent (a new version at most)
-v="$(mc ls --versions "ci/$B/$OFFSITE_PREFIX/$ON" 2> /dev/null | grep -c "$ON")"
-mc cat --version-id "$(mc ls --versions --json "ci/$B/$OFFSITE_PREFIX/$ON" 2> /dev/null | node -e 'const l=require("fs").readFileSync(0,"utf8").split("\n").filter(Boolean).map(JSON.parse);console.log(l.sort((a,b)=>a.lastModified.localeCompare(b.lastModified))[0].versionId)')" \
-  "ci/$B/$OFFSITE_PREFIX/$ON" 2> /dev/null | cmp -s - "$OBJ" || fail "the original off-host version is not intact after an overwrite attempt"
-echo "ok: the upload key cannot delete; a hostile overwrite leaves the original version retained and intact ($v version(s) listed); the uploader itself uses copy --immutable"
+rclone --config "$OFFSITE_CONF" copyto --s3-no-head --no-check-dest "$RUNNER_TEMP/forged.tar.gpg" "$OFFSITE_REMOTE:$B/$OFFSITE_PREFIX/$ON" > "$RUNNER_TEMP/overwrite.txt" 2>&1 \
+  && ow="the PUT was accepted as a new version" || ow="the PUT was refused ($(grep -oE 'status code: [0-9]+|AccessDenied|Forbidden' "$RUNNER_TEMP/overwrite.txt" | head -1))"
+v1="$(vers)"; echo "versions after the attack (id size latest deletemarker):"; sed 's/^/  /' <<< "$v1"
+mc cat --version-id "$vid" "$T" | cmp -s - "$OBJ" || fail "the original off-host version $vid is not intact after an overwrite attempt"
+grep -qi governance <<< "$(mc retention info --version-id "$vid" "$T" 2>&1)" || fail "the original version $vid lost its GOVERNANCE retention"
+if mc rm --version-id "$vid" "$T" > /dev/null 2>&1; then fail "a locked version could be deleted without bypassing governance (even by the root key)"; fi
+mc cat --version-id "$vid" "$T" | cmp -s - "$OBJ" || fail "the original version $vid is gone after a delete attempt"
+echo "ok: the upload key cannot delete; a hostile overwrite ($ow) leaves the original version $vid byte-identical and under GOVERNANCE retention; even the root key cannot delete it without bypass; the uploader itself uses copy --immutable"
 end
 
 step "S12 (CI): the restore drill — the 'owner' downloads with the read key, checks the sidecar, decrypts on the 'PC', streams to restore-verify.sh"
