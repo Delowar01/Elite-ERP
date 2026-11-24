@@ -43,7 +43,7 @@ rb_S13() { # every feature switch off (F7 → F1 at once), then one restart of t
     rm -f "$STATE_DIR/S13.switches"
     if [ "$changed" = 1 ]; then
       say "every feature switch removed from both env files"
-      if [ "$(systemctl is-active elite-po-admin.service)" = active ]; then sctl restart elite-po-admin.service elite-po-customer.service; fi
+      if [ "$(systemctl is-active elite-po-admin.service)" = active ]; then sctl reset-failed elite-po-admin.service elite-po-customer.service; sctl restart elite-po-admin.service elite-po-customer.service; fi
     else say "no feature switch was on"; fi
   fi
   unmark S13

@@ -173,15 +173,21 @@ echo "the VPS today: cluster pids.max $(cat "/sys/fs/cgroup$(systemctl show -p C
 sed -i 's/^stages=\(.*\)$/stages=\1 RECONCILE/' "$STATE_DIR/AUTHORIZED"
 bash "$KIT_DIR/tools/reconcile.sh" --execute "$PT" | grep -E 'reconciled|nothing was restarted' || fail "reconcile of the PROPOSED drop-in"
 [ "$(systemctl show -p TasksMax --value "$PGU")" = 64 ] || fail "TasksMax not 64 after daemon-reload"
-t0="$(date +%s)"; systemctl restart "$PGU"   # the separately authorized, controlled restart (the app units restart with it: Requires=)
+# the separately authorized, controlled restart — through the kit's own tool, exactly as on the VPS
+if bash "$KIT_DIR/tools/pg-restart.sh" --execute > "$STATE_DIR/logs/ci-pgrestart-refused.txt" 2>&1; then fail "pg-restart.sh ran without PGRESTART in the owner's authorization"; fi
+grep -q 'PGRESTART is not in the recorded authorization' "$STATE_DIR/logs/ci-pgrestart-refused.txt" || { tail -5 "$STATE_DIR/logs/ci-pgrestart-refused.txt"; fail "pg-restart.sh refused for another reason"; }
+[ ! -f "$STATE_DIR/STOPPED" ] || mv "$STATE_DIR/STOPPED" "$STATE_DIR/STOPPED.ci-expected-pgrestart"
+echo "ok: the controlled cluster restart is refused without PGRESTART in the owner's authorization"
+sed -i 's/^stages=\(.*\)$/stages=\1 PGRESTART/' "$STATE_DIR/AUTHORIZED"
+bash "$KIT_DIR/tools/pg-restart.sh" --execute | grep -E 'PGRESTART ok|STOP' || fail "the controlled cluster restart (tools/pg-restart.sh)"
 wait_apps || fail "staging did not recover after the controlled cluster restart"
-echo "controlled restart: staging answered again after $(( $(date +%s) - t0 )) s; cluster pids.max $(cat "/sys/fs/cgroup$(systemctl show -p ControlGroup --value "$PGU")/pids.max")"
+echo "controlled restart (tools/pg-restart.sh): cluster pids.max $(cat "/sys/fs/cgroup$(systemctl show -p ControlGroup --value "$PGU")/pids.max")"
 [ "$(cat "/sys/fs/cgroup$(systemctl show -p ControlGroup --value "$PGU")/pids.max")" = 64 ] || fail "the cap is not in effect after the restart"
 node "$KIT_DIR/probes/s9-rtests.mjs" "$STATE_DIR/s9-rtests.json" > "$STATE_DIR/logs/ci-rtests-after-pg-restart.txt" 2>&1 || true
 grep -q '^RTESTS-SUMMARY pass=[0-9]* fail=0$' "$STATE_DIR/logs/ci-rtests-after-pg-restart.txt" || { tail -20 "$STATE_DIR/logs/ci-rtests-after-pg-restart.txt"; fail "R-tests after the controlled restart"; }
 echo "ok: after reconcile + controlled restart the cap is in effect and the database-backed flows pass ($(tail -1 "$STATE_DIR/logs/ci-rtests-after-pg-restart.txt"))"
 bash "$KIT_DIR/tools/pg-capacity.sh" | tail -2
-sed -i 's/ RECONCILE$//' "$STATE_DIR/AUTHORIZED"
+sed -i 's/ RECONCILE PGRESTART$//' "$STATE_DIR/AUTHORIZED"
 main_unchanged "D2 (reconcile + two staging-cluster restarts)"
 end
 

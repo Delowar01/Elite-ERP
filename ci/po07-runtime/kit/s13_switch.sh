@@ -71,6 +71,9 @@ get() { # SOCK HOST PATH → HTTP status (root opens the socket; X-Forwarded-* a
   node -e 'const [s,h,p]=process.argv.slice(1);require("http").get({socketPath:s,path:p,headers:{host:h,"x-forwarded-host":h,"x-forwarded-proto":"https"}},r=>{console.log(r.statusCode);r.resume()}).on("error",()=>console.log(0)).setTimeout(20000,function(){this.destroy()})' "$1" "$2" "$3"; }
 restart_apps() {
   local since; since="$(date -u '+%F %T')"
+  # a deliberate restart: clear the start-rate counters first (StartLimitBurst=5/300s guards against crash loops of
+  # automatic restarts; a switch, its revert and the next switch within minutes would otherwise hit it — CI, F3)
+  sctl reset-failed elite-po-admin.service elite-po-customer.service
   sctl restart elite-po-admin.service elite-po-customer.service
   local i; for i in $(seq 1 45); do
     [ "$(get "$RUN_DIR/customer.sock" "$CUST_HOST" /login)" = 200 ] && [[ "$(get "$RUN_DIR/admin.sock" "$ADMIN_HOST" /platform/login)" =~ ^(200|404)$ ]] && { echo "$since"; return 0; }

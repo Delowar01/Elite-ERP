@@ -242,6 +242,8 @@ jobs:
         if: always()
         run: |
           sudo journalctl --no-pager -o short-iso -u elite-po-backup.service -u elite-po-offsite.service -n 80 2>/dev/null || true
+          echo '--- the app units (systemd result; last lines)'; sudo systemctl show -p Id,ActiveState,Result,NRestarts elite-po-admin.service elite-po-customer.service 2>/dev/null || true
+          sudo journalctl --no-pager -o short-iso -u elite-po-admin.service -u elite-po-customer.service -n 40 2>/dev/null || true
       - name: Collect the kit's logs
         if: always()
         run: |
