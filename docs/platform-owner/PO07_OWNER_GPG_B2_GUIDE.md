@@ -1,5 +1,8 @@
 # PO-07 S12 — the owner's own setup: backup key (GPG) and off-host storage (Backblaze B2)
 
+> **DEFERRED BY OWNER (24 Nov 2026), REQUIRED BEFORE FINAL PRODUCTION DEPLOYMENT.** Do none of this now: no account, no
+> bucket, no key pair, no expense. This guide is kept for Prompt 15 (Production Readiness; `PO07_PRODUCTION_GATES.md`).
+
 **For the owner only.** Do these steps yourself, on your own PC and in your own browser. **Claude Code never sees, types
 or receives** your private key, your passphrase, your Backblaze password, the application key's secret, or any recovery
 code. The only things you pass on are:

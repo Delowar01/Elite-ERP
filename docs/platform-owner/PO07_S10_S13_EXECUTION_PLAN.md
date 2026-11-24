@@ -1,5 +1,9 @@
 # PO-07 — S10–S13 final execution plan (kit-5), decisions D1–D8, rehearsal results and readiness
 
+> **Superseded for execution by `PO07_FINAL_STAGING_EXECUTION.md` (24 Nov 2026).** The owner then deferred S12: it is
+> **DEFERRED BY OWNER — REQUIRED BEFORE FINAL PRODUCTION DEPLOYMENT** (D9 below; `PO07_PRODUCTION_GATES.md`). This
+> document stays the design and evidence record.
+
 **Status (24 Nov 2026): prepared and rehearsed in isolated CI only. Nothing in this document has been executed on the
 VPS.** The repository is public, so this document uses placeholders:
 - No DNS record, CloudPanel site, nginx change, certificate, storage account, cloud credential or feature switch exists
@@ -29,6 +33,7 @@ Three different approvals. The first two never imply the third.
 | D6 | The owner's own GPG private key, never on the VPS (§8) | ✔ | ✔ | ✘ |
 | D7 | The PDF concurrency limiter design (`PO07_PDF_CONCURRENCY_SPEC.md`) | ✔ | spec only | ✘ |
 | D8 | HSTS `max-age=300` only after trusted HTTPS is verified; no `includeSubDomains`, no `preload` (§6) | ✔ | ✔ | ✘ |
+| D9 | **S12 DEFERRED BY OWNER — REQUIRED BEFORE FINAL PRODUCTION DEPLOYMENT.** A staging-only deferral (`tools/s12-defer.sh`, S12DEFER) lets S13 proceed on the isolated fictional-data staging; it is never S12 PASS and never valid for production, real data or Neon. Moved to Prompt 15. D5 and D6 stay recorded for Prompt 15 | ✔ | ✔ | ✘ |
 
 **Date correction:** several documents had dated the post-window work "25 Nov 2026". It all happened on the evening of
 **24 Nov 2026** (Saudi time), the same day as the window. All references are corrected.
@@ -326,7 +331,10 @@ worker group in the two `.socket` units. That is a kit change, CI-rehearsed, own
 reconcile and a restart of the two sockets only. Never `0666`, never a shared directory, never a user added to a
 privileged group.
 
-## 8. S12 — encrypted backups and the off-host copy (D5, D6)
+## 8. S12 — encrypted backups and the off-host copy (D5, D6) — DEFERRED BY OWNER (D9)
+
+> Not executed for staging. Required before final production deployment (Prompt 15). The design and tooling below are
+> kept and CI-verified.
 
 **Policy:**
 - daily, 14-day retention;
@@ -433,7 +441,8 @@ Results: §13.
 | F7 | `CUSTOMER_SEAT_ENFORCEMENT_ENABLED=true` (with the P-8 consent) | both | the 4th user refused on every path with nothing written; a company above its allowance keeps its users |
 
 **Each run:**
-1. **Preconditions:** S9b done; S11a-B and S11b passed; S12 done; the switch named in the window's authorization; all
+1. **Preconditions:** S9b done; S11b and S11a-B passed and **recorded** (`S11.tls-ok`, `S11.phaseB-ok`); S12 done **or
+   validly deferred (D9, staging only, re-checked at every run)**; the switch named in the window's authorization; all
    earlier switches on and no later switch on; the L-3 table check for F5 and F6.
 2. **The change:** the switch line in the env file(s), rewritten in place. Every other line is verified unchanged, and
    nothing is printed.
@@ -579,7 +588,7 @@ results.
 | Install kit-5 and run the read-only reconcile report (§2) | **GO when authorized**, once the owner has reviewed the kit-5 digest |
 | D2 (reconcile plus a controlled restart of the staging cluster) | **GO when authorized** (RECONCILE and the restart named in the window) |
 | S11a-A → S10 → S11b → S11a-B | **GO when authorized**, in that order, with the owner performing the CloudPanel, DNS and certificate steps and running the authenticated probe |
-| S12 | **GO when authorized**, after the owner's B2 and GPG setup; complete only with a passing restore drill |
-| S13 | **GO when authorized**, after S11a-B, S11b and S12; one switch per run |
+| S12 | **DEFERRED BY OWNER (D9)**: not part of staging; required before final production (Prompt 15) |
+| S13 | **GO when authorized**, after S11b and S11a-B are recorded and with S12 accepted or validly deferred (D9); one switch per run |
 | Production ERP security release | **NO-GO** until N1 is approved and the external-build path (§12) is built and rehearsed |
 | Public or production availability of the Platform Owner work | **NO-GO** (D7, §12, the staging plan §K) |

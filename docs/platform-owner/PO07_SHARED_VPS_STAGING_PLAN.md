@@ -4,8 +4,9 @@
 - 23 Nov 2026: S0–S5.
 - 24 Nov 2026: S6-R, S7, S8, S9 and S9b, in the authorized window. The verified external build is installed, both app
   processes run read-only inside the namespace, and one administrator exists (the owner's bootstrap).
-- S10–S13 are **prepared and rehearsed in isolated CI only** (owner decisions D1–D8; kit-5): see
-  `PO07_S10_S13_EXECUTION_PLAN.md`. No VPS execution is authorized. No DNS, site, nginx, CloudPanel, certificate,
+- S10–S13 are **prepared and rehearsed in isolated CI only** (owner decisions D1–D9; kit-5). The execution order is
+  `PO07_FINAL_STAGING_EXECUTION.md`; **S12 is DEFERRED BY OWNER, REQUIRED BEFORE FINAL PRODUCTION DEPLOYMENT** (D9).
+  The design record is `PO07_S10_S13_EXECUTION_PLAN.md`. No VPS execution is authorized. No DNS, site, nginx, CloudPanel, certificate,
   storage-account or feature-switch change has been made.
 
 The history below is kept as it was written.
