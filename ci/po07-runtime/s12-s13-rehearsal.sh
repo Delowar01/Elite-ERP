@@ -29,11 +29,15 @@ end
 
 step "S12 (CI): the owner's key pair on the 'PC' side; only its PUBLIC half and fingerprint reach the VPS side (pc-kit.sh backup-key)"
 OG="$RUNNER_TEMP/owner-pc-gnupg"; install -d -m 0700 "$OG"
-gpg --batch --homedir "$OG" --passphrase '' --quick-generate-key "PO07 CI owner (fictional) <owner@example.invalid>" ed25519 cert,sign 1d 2> /dev/null
-FPR="$(gpg --homedir "$OG" --list-keys --with-colons 2> /dev/null | awk -F: '$1 == "fpr" {print $10; exit}')"
-gpg --batch --homedir "$OG" --passphrase '' --quick-add-key "$FPR" cv25519 encr 1d 2> /dev/null
+# The owner's PC is another machine: in CI its GnuPG (and the gpg-agent it starts) runs in its own network namespace,
+# so the agent's sockets are not listeners on the "VPS" (the kit's §I guard would rightly refuse them); stopped after use.
+pcgpg() { unshare --net -- gpg --homedir "$OG" "$@"; }
+pc_agent_off() { gpgconf --homedir "$OG" --kill all 2> /dev/null || true; }
+pcgpg --batch --passphrase '' --quick-generate-key "PO07 CI owner (fictional) <owner@example.invalid>" ed25519 cert,sign 1d 2> /dev/null
+FPR="$(pcgpg --list-keys --with-colons 2> /dev/null | awk -F: '$1 == "fpr" {print $10; exit}')"
+pcgpg --batch --passphrase '' --quick-add-key "$FPR" cv25519 encr 1d 2> /dev/null
 install -d -m 0755 "$BACKUP_KEY_DIR"
-gpg --homedir "$OG" --armor --export "$FPR" > "$BACKUP_KEY_DIR/owner.pub.asc"; printf '%s\n' "$FPR" > "$BACKUP_KEY_DIR/owner.fpr"; chmod 0644 "$BACKUP_KEY_DIR"/owner.*
+pcgpg --armor --export "$FPR" > "$BACKUP_KEY_DIR/owner.pub.asc"; pc_agent_off; printf '%s\n' "$FPR" > "$BACKUP_KEY_DIR/owner.fpr"; chmod 0644 "$BACKUP_KEY_DIR"/owner.*
 ! grep -q 'PRIVATE KEY' "$BACKUP_KEY_DIR/owner.pub.asc" || fail "a private key reached the VPS side"
 # a representative encrypted field: a fictional customer user's MFA secret, encrypted with the staging field key
 env_val="$(sed -n 's/^FIELD_ENCRYPTION_KEYS=//p' "$ETC_DIR/customer.env" | PO07_PT="$(openssl rand -hex 10)" node -e '
@@ -50,9 +54,11 @@ step "S12 (CI): s12_backup.sh --execute — backup inside the namespace, encrypt
 bash "$KIT_DIR/s12_backup.sh" --execute 2>&1 | tail -22; [ -f "$STATE_DIR/S12.backup-ok" ] || fail "S12 backup"
 journalctl -u elite-po-backup.service -u elite-po-offsite.service -o cat --no-pager | grep -E '^(BACKUP|OFFSITE) ok' || fail "no BACKUP/OFFSITE ok in the journal"
 OBJ="$(ls -1t "$BACKUP_DIR"/outbox/po07-staging-*.tar.gpg | head -1)"; ON="$(basename "$OBJ")"
-install -d -m 0700 "$RUNNER_TEMP/listp"; gpg --batch --homedir "$RUNNER_TEMP/listp" --list-packets "$OBJ" 2>&1 | grep -q ":pubkey enc packet: version 3, algo 18, keyid $(gpg --homedir "$OG" --list-keys --with-colons | awk -F: '$1 == "sub" {print $5; exit}')" ||
+install -d -m 0700 "$RUNNER_TEMP/listp"; ESUB="$(pcgpg --list-keys --with-colons | awk -F: '$1 == "sub" {print $5; exit}')"
+gpg --batch --no-autostart --homedir "$RUNNER_TEMP/listp" --list-packets "$OBJ" > "$RUNNER_TEMP/listp/packets.txt" 2>&1 || true   # no key here: never an agent
+grep -q ":pubkey enc packet: version 3, algo 18, keyid $ESUB" "$RUNNER_TEMP/listp/packets.txt" ||
   fail "the backup is not encrypted to the owner's encryption subkey"
-! head -c 5 "$OBJ" | grep -q PGDMP && ! grep -aq 'CREATE TABLE' "$OBJ" || fail "plaintext in the encrypted backup"
+[ "$(head -c 5 "$OBJ")" != PGDMP ] && ! grep -aq 'CREATE TABLE' "$OBJ" || fail "plaintext in the encrypted backup"
 [ -z "$(find "$BACKUP_DIR" -type f ! -name 'po07-staging-*.tar.gpg' ! -name 'po07-staging-*.tar.gpg.sha256')" ] || fail "an unencrypted file is on disk"
 [ "$(systemctl show -p NetworkNamespacePath --value elite-po-backup.service)" = "/run/netns/$NS" ] || fail "the backup unit is not in the namespace"
 [ -z "$(systemctl show -p NetworkNamespacePath --value elite-po-offsite.service)" ] && [ "$(systemctl show -p DynamicUser --value elite-po-offsite.service)" = yes ] || fail "the uploader unit's identity"
@@ -71,14 +77,15 @@ step "S12 (CI): the restore drill — the 'owner' downloads with the read key, c
 DL="$RUNNER_TEMP/owner-download"; install -d -m 0700 "$DL"
 rclone --config "$RUNNER_TEMP/reader.conf" copy "$OFFSITE_REMOTE:$B/$OFFSITE_PREFIX" "$DL" --include "$ON" --include "$ON.sha256" > /dev/null || fail "the owner's download"
 SHA="$(cut -d' ' -f1 "$DL/$ON.sha256")"; [ "$(sha256sum "$DL/$ON" | cut -d' ' -f1)" = "$SHA" ] || fail "the downloaded object does not match its sidecar"
-dec() { gpg --batch --quiet --homedir "$OG" --pinentry-mode loopback --passphrase '' --decrypt "$1"; }
+dec() { pcgpg --batch --quiet --pinentry-mode loopback --passphrase '' --decrypt "$1"; }
 before_active="$(runuser -u "$PG_USER" -- psql -X -q -At -h "$PG_RUN" -p "$PG_PORT" -d "$DB" -c 'select count(*) from users')"
 expect_stop "restore-verify refuses an object the off-host copy never verified" "not among the off-host copies" bash "$KIT_DIR/tools/restore-verify.sh" --execute "$(openssl rand -hex 32)"
-expect_stop "a corrupted backup fails the drill (nothing restored, nothing accepted)" "STOP" bash -c "{ gpg --batch --quiet --homedir '$OG' --pinentry-mode loopback --passphrase '' --decrypt '$RUNNER_TEMP/forged.tar.gpg' 2> /dev/null || true; } | bash '$KIT_DIR/tools/restore-verify.sh' --execute '$SHA'"
+expect_stop "a corrupted backup fails the drill (nothing restored, nothing accepted)" "STOP" bash -c "{ unshare --net -- gpg --batch --quiet --homedir '$OG' --pinentry-mode loopback --passphrase '' --decrypt '$RUNNER_TEMP/forged.tar.gpg' 2> /dev/null || true; } | bash '$KIT_DIR/tools/restore-verify.sh' --execute '$SHA'"
 [ ! -f "$STATE_DIR/S12.done" ] || fail "a failed drill marked S12 done"
 for d in $(ls -d "$VAR_DIR"/restore-* 2> /dev/null); do rm -rf -- "$d"; done   # harness: the kept evidence of the expected failure
 for d in $(runuser -u "$PG_USER" -- psql -X -q -At -h "$PG_RUN" -p "$PG_PORT" -d postgres -c "select datname from pg_database where datname like 'elite_po_restore_%'"); do runuser -u "$PG_USER" -- psql -X -q -h "$PG_RUN" -p "$PG_PORT" -d postgres -c "drop database \"$d\""; done
 dec "$DL/$ON" | bash "$KIT_DIR/tools/restore-verify.sh" --execute "$SHA" 2>&1 | tail -10
+pc_agent_off
 [ -f "$STATE_DIR/S12.done" ] || fail "the restore drill did not pass"
 grep -q 'restore drill PASS' "$STATE_DIR/S12.restore-drills.log" && grep -qE ' [1-9][0-9]* envelope\(s\) decrypted' "$STATE_DIR/S12.restore-drills.log" || fail "the drill record"
 [ -z "$(ls -d "$VAR_DIR"/restore-* 2> /dev/null)" ] && [ -z "$(runuser -u "$PG_USER" -- psql -X -q -At -h "$PG_RUN" -p "$PG_PORT" -d postgres -c "select datname from pg_database where datname like 'elite_po_restore_%'")" ] || fail "the disposable restore resources were not removed"
