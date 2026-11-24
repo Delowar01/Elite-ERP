@@ -67,7 +67,8 @@ echo "ok: $ON encrypted to the owner's subkey only; no plaintext on disk; the ba
 cp "$OBJ" "$RUNNER_TEMP/forged.tar.gpg"; printf 'x' | dd of="$RUNNER_TEMP/forged.tar.gpg" bs=1 seek=200 conv=notrunc 2> /dev/null
 cmp -s "$OBJ" "$RUNNER_TEMP/forged.tar.gpg" && fail "the forged copy does not differ (harness)"
 T="ci/$B/$OFFSITE_PREFIX/$ON"
-vers() { mc ls --versions --json "$T" | jq -r 'select(.type == "file") | "\(.versionId) \(.size) \(.isLatest // false) \(.isDeleteMarker // false)"'; }
+# mc ls treats the name as a prefix (it would list the .sha256 sidecar too): keep the exact key only
+vers() { mc ls --versions --json "$T" | jq -r --arg k "$ON" 'select(.type == "file" and (.key | split("/") | last) == $k) | "\(.versionId) \(.size) \(.isLatest // false) \(.isDeleteMarker // false)"'; }
 v0="$(vers)"; [ "$(grep -c . <<< "$v0")" = 1 ] || { echo "$v0"; fail "expected exactly one off-host version before the attack"; }
 vid="${v0%% *}"; [ -n "$vid" ] && [ "$vid" != null ] || { echo "$v0"; fail "the original version id could not be read"; }
 mc cat --version-id "$vid" "$T" | cmp -s - "$OBJ" || fail "the original off-host version does not equal the local backup (before any attack)"
