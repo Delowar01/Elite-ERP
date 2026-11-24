@@ -47,7 +47,15 @@ env_val="$(sed -n 's/^FIELD_ENCRYPTION_KEYS=//p' "$ETC_DIR/customer.env" | PO07_
 printf "update users set mfa_secret = '%s' where id = (select min(id) from users);\n" "$env_val" | runuser -u "$PG_USER" -- psql -X -q -At -h "$PG_RUN" -p "$PG_PORT" -d "$DB" > /dev/null
 unset env_val
 sed -i 's/^stages=\(.*\)$/stages=\1 S12 S13 F1 F2 F3 F4 F5 F6 F7/' "$STATE_DIR/AUTHORIZED"   # the CI window's authorization
-echo "owner fingerprint $FPR; one fictional encrypted MFA field in place"
+# fictional uploads, so the backup and the restore drill carry real files (one nested; one binary), as the app's fake
+# storage would hold them (owned by the app user, readable by the backup unit)
+install -d -m 0750 -o "$APP_USER" -g "$APP_USER" "$STORAGE_DIR/ci-fictional" "$STORAGE_DIR/ci-fictional/org-0001"
+printf 'PO-07 CI fictional upload (not real data)\n' > "$STORAGE_DIR/ci-fictional/readme.txt"
+head -c 65536 /dev/urandom > "$STORAGE_DIR/ci-fictional/org-0001/logo-fictional.bin"
+chown "$APP_USER:$APP_USER" "$STORAGE_DIR/ci-fictional/readme.txt" "$STORAGE_DIR/ci-fictional/org-0001/logo-fictional.bin"
+chmod 0640 "$STORAGE_DIR/ci-fictional/readme.txt" "$STORAGE_DIR/ci-fictional/org-0001/logo-fictional.bin"
+NFILES="$(find "$STORAGE_DIR" -type f | wc -l)"; [ "$NFILES" -ge 2 ] || fail "the fictional uploads are not in place"
+echo "owner fingerprint $FPR; one fictional encrypted MFA field and $NFILES fictional upload file(s) in place"
 end
 
 step "S12 (CI): s12_backup.sh --execute — backup inside the namespace, encrypted, off-host copy, timers"
@@ -98,6 +106,7 @@ dec "$DL/$ON" | bash "$KIT_DIR/tools/restore-verify.sh" --execute "$SHA" 2>&1 | 
 pc_agent_off
 [ -f "$STATE_DIR/S12.done" ] || fail "the restore drill did not pass"
 grep -q 'restore drill PASS' "$STATE_DIR/S12.restore-drills.log" && grep -qE ' [1-9][0-9]* envelope\(s\) decrypted' "$STATE_DIR/S12.restore-drills.log" || fail "the drill record"
+grep -qE " $NFILES file\(s\)\$" "$STATE_DIR/S12.restore-drills.log" || { tail -1 "$STATE_DIR/S12.restore-drills.log"; fail "the drill did not restore all $NFILES fictional upload file(s)"; }
 [ -z "$(ls -d "$VAR_DIR"/restore-* 2> /dev/null)" ] && [ -z "$(runuser -u "$PG_USER" -- psql -X -q -At -h "$PG_RUN" -p "$PG_PORT" -d postgres -c "select datname from pg_database where datname like 'elite_po_restore_%'")" ] || fail "the disposable restore resources were not removed"
 [ "$(runuser -u "$PG_USER" -- psql -X -q -At -h "$PG_RUN" -p "$PG_PORT" -d "$DB" -c 'select count(*) from users')" = "$before_active" ] || fail "the active database changed"
 echo "ok: the drill restored into a disposable database and directory, verified schema, counts, files and the encrypted field, removed them, left the active database unchanged; S12 accepted"
