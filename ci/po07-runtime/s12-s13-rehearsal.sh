@@ -106,6 +106,8 @@ end
 
 step "S13 (CI): F1–F7 one at a time, strict order, automated checks, an injected failure reverts, then F7 → F1 off"
 install -m 0600 /dev/null "$STATE_DIR/S11.phaseB-ok"; install -m 0600 /dev/null "$STATE_DIR/S11.tls-ok"   # the S11 rehearsal above passed
+SWITCH_RE="$(grep '^SWITCH_RE=' "$KIT_DIR/lib.sh" | cut -d"'" -f2)"   # the kit's own pattern (the harness does not source lib.sh)
+[[ "$SWITCH_RE" == '^(PLATFORM_'* ]] || fail "could not read the kit's SWITCH_RE"
 S13="$KIT_DIR/s13_switch.sh"
 expect_stop "F2 before F1 is refused" "F1 must be on before F2" bash "$S13" --execute F2 on
 expect_stop "an unknown switch is refused" "usage" bash "$S13" --execute F9 on
