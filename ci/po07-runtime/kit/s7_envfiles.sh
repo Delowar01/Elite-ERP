@@ -67,7 +67,8 @@ binding_ok() {
   done
   say "binding: PLATFORM_CONSOLE_HOST=$ADMIN_HOST CUSTOMER_APP_HOST=$CUST_HOST HOPS=1 in both files"
 }
-no_switches() { ! grep -qE '^(PLATFORM_[A-Z_]*_ENABLED|CUSTOMER_[A-Z_]*_ENABLED|TENANT_ACCESS_ENFORCEMENT|PLATFORM_INVITATIONS_LOOPBACK_ORIGIN|ELITE_DESIGN_SPECIMEN|CHROMIUM_PACK_URL|BLOB_[A-Z_]*TOKEN|RATE_API_BASE)=' "$A" "$C"; }
+# the feature switches: exactly those S13 recorded as on (none before S13); every other listed variable: never
+no_switches() { ! grep -qE '^(PLATFORM_INVITATIONS_LOOPBACK_ORIGIN|ELITE_DESIGN_SPECIMEN|CHROMIUM_PACK_URL|BLOB_[A-Z_]*TOKEN|RATE_API_BASE)=' "$A" "$C" && { [ "$MODE" = plan ] || switches_ok; }; }
 secrets_ok() {
   local k
   for k in AUTH_SECRET PLATFORM_AUTH_SECRET FIELD_ENCRYPTION_KEYS DATABASE_URL; do

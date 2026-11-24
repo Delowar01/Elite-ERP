@@ -1,0 +1,54 @@
+# PO-07 staging S12 — the off-host copy. OUTSIDE the namespace (it needs the internet) and therefore with NO database,
+# application or secret access: a dynamic unprivileged identity that sees only the encrypted outbox (read-only, via the
+# outbox group) and its own rclone configuration (LoadCredential). Local addresses are denied (no local service is
+# reachable) except the system's DNS stub. rclone copy --immutable: never deletes, never overwrites.
+[Unit]
+Description=PO staging - off-host copy of the encrypted backups
+After=network-online.target
+Wants=network-online.target
+[Service]
+Type=oneshot
+DynamicUser=yes
+SupplementaryGroups=elitepoup
+Slice=elite-po-staging.slice
+LoadCredential=rclone.conf:/etc/elite-po-staging/offsite/rclone.conf
+LoadCredential=backup.conf:/etc/elite-po-staging/backup/backup.conf
+StateDirectory=elite-po-offsite
+Environment=HOME=/var/lib/elite-po-offsite RCLONE_CACHE_DIR=/var/lib/elite-po-offsite/cache
+ExecStart=/bin/bash /run/po07-offsite/offsite-run.sh
+IPAddressDeny=localhost link-local multicast 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16 100.64.0.0/10 fc00::/7
+IPAddressAllow=127.0.0.53/32 127.0.0.1/32
+MemoryMax=256M
+MemorySwapMax=0
+CPUQuota=20%
+TasksMax=64
+Nice=10
+IOSchedulingClass=idle
+RuntimeMaxSec=3600
+# --- sandbox (units/sandbox.inc) ---
+NoNewPrivileges=yes
+CapabilityBoundingSet=
+AmbientCapabilities=
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+PrivateIPC=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+ProtectProc=invisible
+ProcSubset=pid
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+SystemCallArchitectures=native
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX AF_NETLINK
+UMask=0077
+TemporaryFileSystem=/run:ro /srv:ro /var/www:ro /opt:ro /var/backups:ro /var/spool:ro /var/lib:ro
+# the script alone (0644), not its 0750 directory; the outbox through the outbox group; DNS through the system stub
+BindReadOnlyPaths=/srv/elite-po-staging/.kit-tools/offsite-run.sh:/run/po07-offsite/offsite-run.sh /var/lib/elite-po-staging/backups/outbox /run/systemd/resolve

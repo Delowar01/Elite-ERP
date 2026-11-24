@@ -1,0 +1,52 @@
+# PO-07 staging S12 — the daily encrypted backup (fictional data only). INSIDE the namespace (no internet), in the slice.
+# Plaintext exists only in this unit's private RAM /tmp; the one file written to disk is encrypted to the owner's public
+# key (gpg --recipient-file: no keyring, no private key on the VPS). Reads the database as the read-only backup role.
+[Unit]
+Description=PO staging - encrypted backup (fictional data only)
+Requires=elite-po-staging-netns.service postgresql@16-po07ns.service
+After=elite-po-staging-netns.service postgresql@16-po07ns.service
+[Service]
+Type=oneshot
+User=po07app
+Group=po07app
+Slice=elite-po-staging.slice
+NetworkNamespacePath=/run/netns/po07ns
+LoadCredential=backup.pw:/etc/elite-po-staging/secrets/backup.pw
+LoadCredential=owner.pub:/etc/elite-po-staging/backup/owner.pub.asc
+LoadCredential=owner.fpr:/etc/elite-po-staging/backup/owner.fpr
+LoadCredential=backup.conf:/etc/elite-po-staging/backup/backup.conf
+ExecStart=/bin/bash /srv/elite-po-staging/.kit-tools/backup-run.sh
+MemoryMax=384M
+MemorySwapMax=0
+CPUQuota=30%
+TasksMax=32
+Nice=10
+IOSchedulingClass=idle
+RuntimeMaxSec=1800
+# --- sandbox (units/sandbox.inc, with a private RAM /tmp instead of PrivateTmp) ---
+NoNewPrivileges=yes
+CapabilityBoundingSet=
+AmbientCapabilities=
+ProtectSystem=strict
+ProtectHome=yes
+PrivateDevices=yes
+PrivateIPC=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+ProtectProc=invisible
+ProcSubset=pid
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+SystemCallArchitectures=native
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX AF_NETLINK
+UMask=0077
+TemporaryFileSystem=/run:ro /srv:ro /var/www:ro /opt:ro /var/backups:ro /var/spool:ro /var/lib:ro
+TemporaryFileSystem=/tmp:mode=1777,size=256M
+BindReadOnlyPaths=/srv/elite-po-staging/.kit-tools /var/lib/elite-po-staging/storage
+BindPaths=/var/lib/elite-po-staging/backups

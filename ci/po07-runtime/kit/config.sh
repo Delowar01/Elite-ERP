@@ -69,6 +69,15 @@ NGINX_GROUP="po07web"   # CI: a stand-in web-server group (created by the rehear
 CHROMIUM="/usr/bin/google-chrome"
 NODE_BIN="/usr/bin/node"
 
+# ---- S12: encrypted backups (owner decisions D5 Backblaze B2, D6 the owner's GPG key; plan §G) ---------------------------
+BACKUP_DIR="/var/lib/elite-po-staging/backups"          # outbox/ holds only encrypted files (setgid 2750 po07app:elitepoup)
+UPLOAD_GROUP="elitepoup"                                # the uploader's supplementary group; no user is ever added to it
+BACKUP_KEY_DIR="/etc/elite-po-staging/backup"           # owner.pub.asc + owner.fpr (PUBLIC; pc-kit.sh backup-key) and backup.conf
+OFFSITE_CONF="/etc/elite-po-staging/offsite/rclone.conf" # the upload key: entered by the OWNER in their own terminal, root 0600
+OFFSITE_REMOTE="po07offsite"
+OFFSITE_BUCKET=""                                        # the owner's private bucket name (not a secret): set from the S12 instruction
+OFFSITE_PREFIX="elite-po-staging"
+
 # ---- SSH (K6, PC side only: tools/ssh-args.sh). The owner's existing alias; one trusted host identity ----------------
 SSH_ALIAS="po07-test-vps"
 VPS_IPV4="192.0.2.10"      # the alias's HostName = the name of the owner's known_hosts entry (HostKeyAlias)
@@ -97,3 +106,4 @@ WINDOW_END_UTC="2100-01-01T00:00:00Z"
 START_DISK_FREE_GB=8
 STOP_DISK_FREE_GB=4
 START_LOAD1="8.0"
+OFFSITE_BUCKET="po07-ci"   # CI: the MinIO stand-in's bucket (fictional); on the VPS the owner's B2 bucket

@@ -1,0 +1,9 @@
+# PO-07 staging S12 — daily, at a quiet hour (UTC); a missed run (host down) runs at the next boot.
+[Unit]
+Description=PO staging - daily encrypted backup
+[Timer]
+OnCalendar=*-*-* 00:20:00 UTC
+RandomizedDelaySec=15min
+Persistent=true
+[Install]
+WantedBy=timers.target

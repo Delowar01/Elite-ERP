@@ -1,0 +1,9 @@
+# PO-07 staging S12 — the off-host copy, one hour after the backup (UTC).
+[Unit]
+Description=PO staging - daily off-host copy
+[Timer]
+OnCalendar=*-*-* 01:20:00 UTC
+RandomizedDelaySec=10min
+Persistent=true
+[Install]
+WantedBy=timers.target

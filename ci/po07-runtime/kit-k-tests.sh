@@ -148,7 +148,7 @@ if [ "$LINUX" = 1 ]; then
   ln -s "$T/k3/kit1" "$T/k3/link"
   ok "K3 a link in a file's place is NOT-A-FILE (never followed)" test "$(st "$T/k3/link" 0700 "$OG2" units/elite-po-run S2 wrapper -)" = NOT-A-FILE
 else sk "K3 WRONG-OWNER-OR-MODE" "chmod semantics need Linux"; sk "K3 link in a file's place" "symlinks need Linux"; fi
-k3_list() { local bad; bad="$(grep -v -e '^#' -e '^$' "$KIT/units/installed-files.tsv" | awk -F'\t' 'NF != 7 || $2 !~ /^0[0-7]{3}$/ || $5 !~ /^S[0-9]b?$/ || $1 !~ /^\//')"; [ -z "$bad" ]; }
+k3_list() { local bad; bad="$(grep -v -e '^#' -e '^$' "$KIT/units/installed-files.tsv" | awk -F'\t' 'NF != 7 || $2 !~ /^0[0-7]{3}$/ || $5 !~ /^S[0-9]+b?$/ || $1 !~ /^\//')"; [ -z "$bad" ]; }
 ok "K3 units/installed-files.tsv: 7 fields, absolute destinations, octal modes, stage names" k3_list
 k3_src() { grep -v -e '^#' -e '^$' "$KIT/units/installed-files.tsv" | cut -f4 | while read -r s; do [ -f "$KIT/$s" ] || { echo "missing $s"; exit 1; }; done; }
 ok "K3 every listed kit source exists in the kit" k3_src

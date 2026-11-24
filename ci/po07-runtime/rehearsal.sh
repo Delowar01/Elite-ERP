@@ -142,6 +142,27 @@ sed -i 's/ RECONCILE$//' "$STATE_DIR/AUTHORIZED"
 K3_PASS=13
 end
 
+step "D2 on the VPS path: capacity check; the cap absent (as on the VPS today); authorized reconcile; controlled cluster restart; staging recovers"
+bash "$KIT_DIR/tools/pg-capacity.sh" || fail "the capacity check"
+PGU="postgresql@16-$CLUSTER.service"; PT="/etc/systemd/system/$PGU.d/20-tasks.conf"
+wait_apps() { local i; for i in $(seq 1 60); do
+  [ "$(node -e 'require("http").get({socketPath:process.argv[1],path:"/login",headers:{host:process.argv[2],"x-forwarded-host":process.argv[2],"x-forwarded-proto":"https"}},r=>{console.log(r.statusCode);r.resume()}).on("error",()=>console.log(0))' "$RUN_DIR/customer.sock" "$CUST_HOST")" = 200 ] && return 0; sleep 2; done; return 1; }
+mv "$PT" "$RUNNER_TEMP/20-tasks.conf.vps-today"; systemctl daemon-reload; systemctl restart "$PGU"; wait_apps || fail "staging did not recover without the cap"
+echo "the VPS today: cluster pids.max $(cat "/sys/fs/cgroup$(systemctl show -p ControlGroup --value "$PGU")/pids.max") (no own cap; the slice bounds it)"
+sed -i 's/^stages=\(.*\)$/stages=\1 RECONCILE/' "$STATE_DIR/AUTHORIZED"
+bash "$KIT_DIR/tools/reconcile.sh" --execute "$PT" | grep -E 'reconciled|nothing was restarted' || fail "reconcile of the PROPOSED drop-in"
+[ "$(systemctl show -p TasksMax --value "$PGU")" = 64 ] || fail "TasksMax not 64 after daemon-reload"
+t0="$(date +%s)"; systemctl restart "$PGU"   # the separately authorized, controlled restart (the app units restart with it: Requires=)
+wait_apps || fail "staging did not recover after the controlled cluster restart"
+echo "controlled restart: staging answered again after $(( $(date +%s) - t0 )) s; cluster pids.max $(cat "/sys/fs/cgroup$(systemctl show -p ControlGroup --value "$PGU")/pids.max")"
+[ "$(cat "/sys/fs/cgroup$(systemctl show -p ControlGroup --value "$PGU")/pids.max")" = 64 ] || fail "the cap is not in effect after the restart"
+node "$KIT_DIR/probes/s9-rtests.mjs" "$STATE_DIR/s9-rtests.json" > "$STATE_DIR/logs/ci-rtests-after-pg-restart.txt" 2>&1 || true
+grep -q '^RTESTS-SUMMARY pass=[0-9]* fail=0$' "$STATE_DIR/logs/ci-rtests-after-pg-restart.txt" || { tail -20 "$STATE_DIR/logs/ci-rtests-after-pg-restart.txt"; fail "R-tests after the controlled restart"; }
+echo "ok: after reconcile + controlled restart the cap is in effect and the database-backed flows pass ($(tail -1 "$STATE_DIR/logs/ci-rtests-after-pg-restart.txt"))"
+bash "$KIT_DIR/tools/pg-capacity.sh" | tail -2
+sed -i 's/ RECONCILE$//' "$STATE_DIR/AUTHORIZED"
+end
+
 step "PostgreSQL task cap (proposed TasksMax=64): the measured need, and PostgreSQL's own connection limit binds first"
 PGU="postgresql@16-$CLUSTER.service"; CG="/sys/fs/cgroup$(systemctl show -p ControlGroup --value "$PGU")"
 [ "$(systemctl show -p TasksMax --value "$PGU")" = 64 ] && [ "$(cat "$CG/pids.max")" = 64 ] || fail "the cluster's task cap is not 64"
@@ -164,6 +185,10 @@ echo "saturation: 36 sessions on top of $held held by the apps → $okc ran, $re
 systemctl is-active --quiet "$PGU" && [ "$(psql_pg -d postgres -c 'select 1')" = 1 ] || fail "the cluster is not healthy after the saturation test"
 echo "PG-TASKS peak=$(cat "$CG/pids.peak") cap=64 events=$(cat "$CG/pids.events" | tr ' ' '=') refused_by_postgres=$refused"
 end
+
+# S12 (encrypted backups, off-host copy, restore drill) and S13 (F1–F7)
+# shellcheck source=s12-s13-rehearsal.sh
+. "$HERE/s12-s13-rehearsal.sh"
 
 step "S6-R after S9 must refuse (it never touches an installed build under running apps)"
 if bash "$KIT_DIR/s6r_install_artifact.sh" --execute > "$STATE_DIR/logs/ci-s6r-after-s9.txt" 2>&1; then fail "S6-R ran with the apps up"; fi
@@ -202,4 +227,4 @@ newtcp="$(comm -13 "$STATE_DIR/baseline-tcp.txt" <(ss -ltnH | awk '{print $4}' |
 [ -z "$newtcp" ] || fail "host TCP listener(s) left after rollback: $newtcp"
 echo "rollback removed every staging unit, path, user and listener; the archive stays in $INCOMING_DIR for audit"
 end
-echo "REHEARSAL PASS: S1–S9 (S6 = S6-R under the D24 recovery state: $D24_PASS checks; K2 receive), the D31 PDF load, K3 reconciliation ($K3_PASS checks), the PostgreSQL task cap and the full rollback"
+echo "REHEARSAL PASS: S1–S9 (S6 = S6-R under the D24 recovery state: $D24_PASS checks; K2 receive), the D31 PDF load, S11 through nginx ($S11_PASS probe checks), K3 ($K3_PASS checks), the PostgreSQL cap (reconcile, controlled restart, saturation), S12 backup + off-host + restore drill, S13 F1–F7, and the full rollback"

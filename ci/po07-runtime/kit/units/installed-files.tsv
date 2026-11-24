@@ -20,3 +20,9 @@
 /etc/systemd/system/elite-po-admin-proxy.service	0644	root:root	units/elite-po-admin-proxy.service	S9	admin-proxy-service	-
 /etc/systemd/system/elite-po-customer-proxy.socket	0644	root:root	units/elite-po-customer-proxy.socket	S9	customer-proxy-socket	-
 /etc/systemd/system/elite-po-customer-proxy.service	0644	root:root	units/elite-po-customer-proxy.service	S9	customer-proxy-service	-
+/etc/systemd/system/elite-po-backup.service	0644	root:root	units/elite-po-backup.service	S12	backup-service	-
+/etc/systemd/system/elite-po-backup.timer	0644	root:root	units/elite-po-backup.timer	S12	backup-timer	-
+/etc/systemd/system/elite-po-offsite.service	0644	root:root	units/elite-po-offsite.service	S12	offsite-service	-
+/etc/systemd/system/elite-po-offsite.timer	0644	root:root	units/elite-po-offsite.timer	S12	offsite-timer	-
+/srv/elite-po-staging/.kit-tools/backup-run.sh	0640	root:po07app	tools/backup-run.sh	S12	kit-backup-run	-
+/srv/elite-po-staging/.kit-tools/offsite-run.sh	0644	root:root	tools/offsite-run.sh	S12	kit-offsite-run	-

@@ -17,9 +17,9 @@ bind_again() {
   for f in "$ETC_DIR/admin.env" "$ETC_DIR/customer.env"; do
     grep -qx "PLATFORM_CONSOLE_HOST=$ADMIN_HOST" "$f" && grep -qx "CUSTOMER_APP_HOST=$CUST_HOST" "$f" && grep -qx 'PLATFORM_TRUSTED_PROXY_HOPS=1' "$f" || return 1
   done
-  ! grep -qE '^PLATFORM_[A-Z_]*_ENABLED=' "$ETC_DIR/customer.env" "$ETC_DIR/admin.env"
+  switches_ok
 }
-check "both env files carry the H-1 binding; no console switch is on (F1 is S13)" bind_again
+check "both env files carry the H-1 binding; the feature switches are exactly those S13 recorded (none before S13)" bind_again
 
 # ---- 1. storage and unit files ----
 mkdir_staging "$VAR_DIR" 0750 "root:$APP_USER"
@@ -108,8 +108,8 @@ run_probe customer customer "$PG_PORT $ADMIN_IN $CUST_IN"
 if [ "$MODE" = plan ]; then plan "node probes/s9-rtests.mjs (R2–R9 + controls, via curl-equivalent requests on the two Unix sockets)"
 else
   cfg="$STATE_DIR/s9-rtests.json"
-  printf '{"adminHost":"%s","custHost":"%s","adminSock":"%s","custSock":"%s","appDir":"%s","r9Register":true,"psql":["runuser","-u","%s","--","psql","-X","-q","-At","-h","%s","-p","%s","-d","%s"]}\n' \
-    "$ADMIN_HOST" "$CUST_HOST" "$RUN_DIR/admin.sock" "$RUN_DIR/customer.sock" "$APP_SRC" "$PG_USER" "$PG_RUN" "$PG_PORT" "$DB" > "$cfg"
+  printf '{"adminHost":"%s","custHost":"%s","adminSock":"%s","custSock":"%s","appDir":"%s","r9Register":true,"f1":%s,"psql":["runuser","-u","%s","--","psql","-X","-q","-At","-h","%s","-p","%s","-d","%s"]}\n' \
+    "$ADMIN_HOST" "$CUST_HOST" "$RUN_DIR/admin.sock" "$RUN_DIR/customer.sock" "$APP_SRC" "$(grep -qx F1 <<< "$(switches_on)" && echo true || echo false)" "$PG_USER" "$PG_RUN" "$PG_PORT" "$DB" > "$cfg"
   rc=0; node "$KIT_HERE/probes/s9-rtests.mjs" "$cfg" > "$STATE_DIR/logs/S9-rtests.txt" 2>&1 || rc=$?
   cat "$STATE_DIR/logs/S9-rtests.txt"
   [ "$rc" -eq 0 ] || stop_now "R-tests failed"

@@ -62,7 +62,7 @@ for (const p of ["/login", "/register", "/dashboard", "/api/document-pdf/x/y", "
   rec(r.status === 404 && noindex(r), `R2 admin ${p} → 404 noindex`, `${r.status}`);
 }
 // R3 — admin /platform/login: 404 while F1 is off, noindex
-{ const r = await A("GET", "/platform/login"); rec(r.status === 404 && noindex(r), "R3 admin /platform/login → 404 noindex (F1 off)", `${r.status}`); }
+{ const r = await A("GET", "/platform/login"); rec(r.status === (C.f1 ? 200 : 404) && noindex(r), `R3 admin /platform/login → ${C.f1 ? "200 (F1 on, S13)" : "404 (F1 off)"} noindex`, `${r.status}`); }
 // R4 — customer host: the console is 404
 for (const p of ["/platform/login", "/platform/dashboard"]) {
   const r = await U("GET", p);
@@ -87,7 +87,7 @@ before = rows();
 {
   const a = await postForm(A, "/platform/login", "loginAction", { email: fakeEmail, password: fakePw }, ADMIN_ORIGIN);
   const b = await postForm(A, "/platform/dashboard", "loginAction", { email: fakeEmail, password: fakePw }, ADMIN_ORIGIN);
-  rec([a, b].every((r) => r.status === 404 && !setsCookie(r, CCOOKIE)) && rows() === before, "R6 customer login action at admin /platform/login and /platform/dashboard: 404, no session cookie, no row", `${a.status}/${b.status}`);
+  rec([a, b].every((r) => (C.f1 || r.status === 404) && !setsCookie(r, CCOOKIE)) && rows() === before, "R6 customer login action at admin /platform/login and /platform/dashboard: refused (404 while F1 is off), no session cookie, no row", `${a.status}/${b.status}`);
 }
 // control for R5/R6: the customer login action DOES run on the customer host (a failed sign-in is recorded)
 before = rows();

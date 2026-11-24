@@ -3,11 +3,11 @@
 # every path passes the staging allow-list and a no-symlink check, every unit the staging-unit allow-list, every
 # file is removed only if it still equals the kit's copy, users only if the kit's S1 marker exists. Nothing here
 # touches the ERP, cluster main, nginx, CloudPanel, DNS, ufw or any other application.
-#   rollback.sh <S9|S8|S7|S6|S5|S4|S3|S2|S1|all> [--plan|--execute]
-# A stage is rolled back only after every later stage has been (S9 first). Outside the execution window it refuses
+#   rollback.sh <S13|S12|S9|S8|S7|S6|S5|S4|S3|S2|S1|all> [--plan|--execute]
+# A stage is rolled back only after every later stage has been (S13 first). Outside the execution window it refuses
 # unless the owner approved it: PO_ROLLBACK_OUTSIDE_WINDOW=owner-approved.
 TARGET="${1:-}"; shift || true
-case "$TARGET" in S1|S2|S3|S4|S5|S6|S7|S8|S9|all) ;; *) echo "usage: $0 <S1..S9|all> [--plan|--execute]" >&2; exit 64 ;; esac
+case "$TARGET" in S1|S2|S3|S4|S5|S6|S7|S8|S9|S12|S13|all) ;; *) echo "usage: $0 <S1..S9|S12|S13|all> [--plan|--execute]" >&2; exit 64 ;; esac
 STAGE="RB-$TARGET"; . "$(dirname "$0")/lib.sh" "${1:---plan}"
 U="$KIT_HERE/units"
 if [ "$MODE" = execute ]; then
@@ -31,7 +31,42 @@ later_done() { [ "$MODE" = plan ] && return 1; local s; for s in "$@"; do [ -f "
 unmark() { [ "$MODE" = execute ] && rm -f "$STATE_DIR/$1.done"; say "$1 rolled back"; }
 spsql_ok() { [ "$MODE" = plan ] || [ "$(systemctl is-active postgresql@16-po07ns.service)" = active ]; }
 
+rb_S13() { # every feature switch off (F7 → F1 at once), then one restart of the two app units only
+  if [ "$MODE" = plan ]; then plan "remove every S13 switch line from both env files (values never printed); restart the two app units"
+  else
+    local w f t changed=0
+    for w in admin customer; do
+      f="$ETC_DIR/$w.env"; assert_staging_path "$f"; [ -f "$f" ] || continue
+      grep -qE "$SWITCH_RE" "$f" || continue
+      t="$f.rb13.tmp"; grep -vE "$SWITCH_RE" "$f" > "$t"; chmod 0600 "$t"; chown root:root "$t"; mv -- "$t" "$f"; changed=1
+    done
+    rm -f "$STATE_DIR/S13.switches"
+    if [ "$changed" = 1 ]; then
+      say "every feature switch removed from both env files"
+      if [ "$(systemctl is-active elite-po-admin.service)" = active ]; then sctl restart elite-po-admin.service elite-po-customer.service; fi
+    else say "no feature switch was on"; fi
+  fi
+  unmark S13
+}
+rb_S12() { # timers, units and kit tools removed; the encrypted backups, the owner's public key and the offsite config stay
+  later_done S13 && stop_now "roll back S13 first"
+  if [ "$MODE" = execute ] && [ ! -e /etc/systemd/system/elite-po-backup.service ] && [ ! -e /etc/systemd/system/elite-po-backup.timer ] && [ ! -f "$STATE_DIR/S12.backup-ok" ]; then
+    say "S12 is not installed"; unmark S12; return 0; fi
+  sctl disable --now elite-po-backup.timer elite-po-offsite.timer
+  sctl stop elite-po-backup.service elite-po-offsite.service
+  sctl clean --what=state elite-po-offsite.service   # its receipts (the dynamic identity's state directory)
+  local f; for f in elite-po-backup.service elite-po-backup.timer elite-po-offsite.service elite-po-offsite.timer; do rm_kit_file "/etc/systemd/system/$f" "$U/$f"; done
+  sctl daemon-reload
+  rm_kit_file "$APP_DIR/.kit-tools/backup-run.sh" "$KIT_HERE/tools/backup-run.sh"
+  rm_kit_file "$APP_DIR/.kit-tools/offsite-run.sh" "$KIT_HERE/tools/offsite-run.sh"
+  safe_rm "$BACKUP_KEY_DIR/backup.conf"
+  if [ "$MODE" = plan ]; then plan "groupdel $UPLOAD_GROUP (only if S12 created it); the encrypted backups in $BACKUP_DIR stay for the owner to decide"
+  elif [ -f "$STATE_DIR/S12.created.group" ]; then act groupdel "$UPLOAD_GROUP"; rm -f "$STATE_DIR/S12.created.group"; fi
+  [ "$MODE" = execute ] && rm -f "$STATE_DIR/S12.backup-ok"
+  unmark S12
+}
 rb_S9() {
+  later_done S12 S13 && stop_now "roll back S12 first"
   sctl disable --now elite-po-admin-proxy.socket elite-po-customer-proxy.socket
   sctl stop elite-po-admin-proxy.service elite-po-customer-proxy.service
   sctl disable --now elite-po-admin.service elite-po-customer.service
@@ -132,7 +167,7 @@ rb_S1() {
   done
   unmark S1
 }
-if [ "$TARGET" = all ]; then for s in S9 S8 S7 S6 S5 S4 S3 S2 S1; do
+if [ "$TARGET" = all ]; then for s in S13 S12 S9 S8 S7 S6 S5 S4 S3 S2 S1; do
   # S8's rollback re-opens S4; "all" goes on to drop everything anyway.
   "rb_$s"; done
 else "rb_$TARGET"; fi

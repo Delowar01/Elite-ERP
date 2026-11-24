@@ -53,7 +53,7 @@ trap 'rc=$?; [ $rc -ne 0 ] && [ $rc -ne 3 ] && say "FAILED (exit $rc) at line $L
 
 # ---- staging allow-lists ---------------------------------------------------------------------------------------------
 STAGING_PATH_RE='^(/srv/elite-po-staging|/etc/elite-po-staging|/var/lib/elite-po-staging|/run/elite-po-staging|/run/elite-po-pg|/etc/postgresql/16/po07ns|/var/lib/postgresql/16/po07ns|/etc/systemd/system/elite-po-[a-z-]+\.(service|socket|slice|timer)|/etc/systemd/system/postgresql@16-po07ns\.service\.d|/usr/local/sbin/elite-po-run|/etc/tmpfiles\.d/elite-po-staging\.conf)(/.*)?$'
-STAGING_UNIT_RE='^(elite-po-(staging\.slice|staging-netns\.service|admin\.service|customer\.service|admin-proxy\.(socket|service)|customer-proxy\.(socket|service)|build\.service|install\.service)|postgresql@16-po07ns\.service)$'
+STAGING_UNIT_RE='^(elite-po-(staging\.slice|staging-netns\.service|admin\.service|customer\.service|admin-proxy\.(socket|service)|customer-proxy\.(socket|service)|build\.service|install\.service|backup\.(service|timer)|offsite\.(service|timer))|postgresql@16-po07ns\.service)$'
 assert_staging_path() { [[ "$1" =~ $STAGING_PATH_RE ]] || stop_now "refusing a non-staging path: $1"; }
 assert_staging_unit() { [[ "$1" =~ $STAGING_UNIT_RE ]] || stop_now "refusing a non-staging unit: $1"; }
 
@@ -68,15 +68,42 @@ sctl() {
   local verb="$1"; shift
   case "$verb" in
     daemon-reload) act systemctl daemon-reload; return ;;
-    start|stop|enable|disable|reset-failed|kill) ;;
+    start|stop|restart|enable|disable|reset-failed|kill|clean) ;;
     *) stop_now "sctl: verb not allowed: $verb" ;;
   esac
   local u args=()
   for u in "$@"; do
-    case "$u" in --now|--no-block) args+=("$u"); continue ;; esac
+    case "$u" in --now|--no-block|--what=state) args+=("$u"); continue ;; esac
     assert_staging_unit "$u"; args+=("$u")
   done
   act systemctl "$verb" "${args[@]}"
+}
+# ---- S13 feature switches (SECURITY_AND_FLAG_MATRIX.md §2): name variable value files ---------------------------------
+# The console switches live only in admin.env; the tenant and customer switches are identical in both files.
+SWITCHES="F1 PLATFORM_CONSOLE_ENABLED true admin
+F2 TENANT_ACCESS_ENFORCEMENT enabled both
+F3 PLATFORM_INVITATIONS_ENABLED true admin
+F4 CUSTOMER_INVITE_ACCEPTANCE_ENABLED true both
+F5 PLATFORM_USER_INVITATIONS_ENABLED true admin
+F6 CUSTOMER_USER_INVITE_ACCEPTANCE_ENABLED true both
+F7 CUSTOMER_SEAT_ENFORCEMENT_ENABLED true both"
+SWITCH_RE='^(PLATFORM_[A-Z_]*_ENABLED|CUSTOMER_[A-Z_]*_ENABLED|TENANT_ACCESS_ENFORCEMENT)='
+# s13_ci_fault SWITCH — false on the VPS; the CI rehearsal replaces it (render-ci.sh) to rehearse the S13 failure path
+s13_ci_fault() { return 1; }
+switches_on() { [ -f "$STATE_DIR/S13.switches" ] && grep -E '^F[1-7]$' "$STATE_DIR/S13.switches" | sort -u || true; }
+# switch_lines_expected admin|customer → the switch lines that file must hold for the switches S13 recorded as on
+switch_lines_expected() {
+  local on n v val files; on="$(switches_on)"
+  while read -r n v val files; do
+    grep -qx "$n" <<< "$on" || continue
+    { [ "$files" = both ] || [ "$files" = "$1" ]; } && printf '%s=%s\n' "$v" "$val"
+  done <<< "$SWITCHES" | sort
+}
+# switches_ok — both env files hold exactly the recorded switches (before S13: none), nothing else switch-like
+switches_ok() {
+  local w; for w in admin customer; do
+    [ "$(grep -E "$SWITCH_RE" "$ETC_DIR/$w.env" | sort)" = "$(switch_lines_expected "$w")" ] || { say "$w.env switch lines differ from the S13 record"; return 1; }
+  done
 }
 # put_file DEST MODE OWNER:GROUP SRC — install a kit file. Same content already there: no-op. Different content
 # there: STOP (never overwrite something the kit did not write, never silently change a reviewed file).
@@ -427,3 +454,5 @@ guard_shared() { # the §I items a runner has: no new host TCP listener, only th
   if [ ${#f[@]} -gt 0 ]; then stop_now "§I (CI subset): $(printf '%s; ' "${f[@]}")"; fi
   say "§I guard (CI subset) ok (MemAvailable ${m}MB, disk ${d}G, no new host listener)"
 }
+# S13 failure path, CI only: PO07_S13_FORCE_FAIL=<switch> makes that switch's automated checks fail once
+s13_ci_fault() { [ -n "${PO07_S13_FORCE_FAIL:-}" ] && [ "$1" = "$PO07_S13_FORCE_FAIL" ]; }
