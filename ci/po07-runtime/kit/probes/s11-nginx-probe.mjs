@@ -185,5 +185,18 @@ if (C.phase === "B" && creds) {
       "duplicate and spoofed forwarding headers are normalized: exactly one of each, set by nginx; the rest and the Basic Auth header never reach the application", JSON.stringify(Object.fromEntries(Object.entries(e).map(([k, v]) => [k, v.length]))).slice(0, 160));
   }
 }
+// S13's website gate, part 2 (kit-5): only a fully passing AUTHENTICATED Phase B run, over verified TLS, after the
+// trusted certificates were recorded (part 1, requireFile = S11.tls-ok), writes recordFile (S11.phaseB-ok). The record
+// holds the time, the hosts and the counts only: never a credential or any response content.
+if (C.recordFile) {
+  const prior = C.requireFile && fs.existsSync(C.requireFile);
+  if (fail === 0 && C.phase === "B" && creds && !C.tlsInsecure && prior) {
+    fs.writeFileSync(`${C.recordFile}.tmp`, `${new Date().toISOString()} S11a-B authenticated through nginx (R1–R12 and the full matrix): pass=${pass} fail=0, hosts ${C.adminHost} ${C.custHost}\n`, { mode: 0o600 });
+    fs.renameSync(`${C.recordFile}.tmp`, C.recordFile);
+    console.log(`RECORDED ${C.recordFile}`);
+  } else {
+    console.log(`NOT RECORDED: the S13 website gate needs a fully passing authenticated Phase B run over verified TLS after ${C.requireFile ?? "S11.tls-ok"}`);
+  }
+}
 console.log(`S11-PROBE phase=${C.phase} pass=${pass} fail=${fail}`);
 process.exit(fail === 0 ? 0 : 1);

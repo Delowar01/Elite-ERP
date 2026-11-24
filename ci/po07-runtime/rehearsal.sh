@@ -259,4 +259,4 @@ newtcp="$(comm -13 "$STATE_DIR/baseline-tcp.txt" <(ss -ltnH | awk '{print $4}' |
 echo "rollback removed every staging unit, path, user and listener; the archive stays in $INCOMING_DIR for audit"
 main_unchanged "rollback all"
 end
-echo "REHEARSAL PASS: S1–S9 (S6 = S6-R under the D24 recovery state: $D24_PASS checks; K2 receive), the D31 PDF load, S11 through nginx ($S11_PASS probe checks), K3 ($K3_PASS checks), the PostgreSQL cap (reconcile, controlled restart, saturation), S12 backup + off-host + restore drill, S13 F1–F7, and the full rollback"
+echo "REHEARSAL PASS: S1–S9 (S6 = S6-R under the D24 recovery state: $D24_PASS checks; K2 receive), the D31 PDF load, S11 through nginx ($S11_PASS probe checks), K3 ($K3_PASS checks), the PostgreSQL cap (reconcile, controlled restart, saturation), S13 F1–F7 on the owner's staging-only S12 deferral (website, Neon, real-data and production gates), the retained S12 tooling (backup + off-host + restore drill), and the full rollback"

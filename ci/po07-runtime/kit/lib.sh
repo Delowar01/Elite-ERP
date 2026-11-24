@@ -109,6 +109,42 @@ switches_ok() {
     [ "$(printf '%s' "$have" | sort)" = "$(switch_lines_expected "$w")" ] || { say "$w.env switch lines differ from the S13 record"; return 1; }
   done
 }
+# ---- S12 deferral (owner decision, 24 Nov 2026 — Prompt 7 "final staging deployment — backup requirement deferred") ----
+# S12 (encrypted backups, off-host copy, restore drill) is DEFERRED BY OWNER for THIS isolated fictional-data staging
+# only. The deferral is a record, never S12 PASS: S12.done is not written, and production readiness
+# (tools/acceptance-status.sh) never accepts it. It is void whenever this is not the isolated staging (checked at every
+# use, not only when recorded).
+S12_DEFER_DECISION="DEFERRED BY OWNER — REQUIRED BEFORE FINAL PRODUCTION DEPLOYMENT"
+S12_DEFER_SCOPE="isolated-fictional-data-staging-only"
+host_binding() { sha256sum /etc/machine-id 2> /dev/null | cut -c1-16; }
+# staging_only_reasons → one line per reason this is NOT the isolated fictional-data staging (no output: it is)
+staging_only_reasons() {
+  local w f line u
+  [[ "$DB" == *_test_only_ ]] || echo "the database $DB is not a _test_only_ staging database"
+  for w in admin customer owner-db; do
+    f="$ETC_DIR/$w.env"
+    [ -f "$f" ] || { echo "$w.env is missing"; continue; }
+    u="$(sed -n 's/^DATABASE_URL=//p' "$f")"
+    [[ "$u" =~ ^postgres(ql)?://[^@/]+@127\.0\.0\.1:${PG_PORT}/${DB}$ ]] || echo "$w.env: DATABASE_URL is not the isolated staging cluster (127.0.0.1:$PG_PORT/$DB)"
+    while IFS= read -r line; do   # every database URL in the file, under any name, must be the isolated staging cluster
+      [ -n "$line" ] || continue
+      [[ "$line" =~ ^[A-Z0-9_]+=postgres(ql)?://[^@/]+@127\.0\.0\.1:${PG_PORT}/${DB}$ ]] || echo "$w.env: ${line%%=*} is a database URL outside the isolated staging cluster"
+    done <<< "$(grep -iE 'postgres(ql)?://' "$f" || true)"
+    if grep -qiE 'neon\.(tech|build|com)' "$f"; then echo "$w.env refers to Neon"; fi
+    line="$(sed -n 's/^STORAGE_DRIVER=//p' "$f")"
+    if [ -n "$line" ] && [ "$line" != fake ]; then echo "$w.env: STORAGE_DRIVER=$line (only the fictional fake storage is allowed)"; fi
+  done
+  [ "$(sed -n 's/^STORAGE_DRIVER=//p' "$ETC_DIR/customer.env" 2> /dev/null)" = fake ] || echo "customer.env: STORAGE_DRIVER is not fake"
+}
+# s12_deferral_valid → 0 when state/S12.deferred is the owner's deferral for this host and database AND this is still
+# the isolated fictional-data staging
+s12_deferral_valid() {
+  local r="$STATE_DIR/S12.deferred"
+  [ -f "$r" ] || return 1
+  grep -qxF "decision=$S12_DEFER_DECISION" "$r" && grep -qxF "scope=$S12_DEFER_SCOPE" "$r" && grep -qxF "db=$DB" "$r" &&
+    grep -qxF "host=$(host_binding)" "$r" || return 1
+  [ -z "$(staging_only_reasons)" ]
+}
 # put_file DEST MODE OWNER:GROUP SRC — install a kit file. Same content already there: no-op. Different content
 # there: STOP (never overwrite something the kit did not write, never silently change a reviewed file).
 put_file() {

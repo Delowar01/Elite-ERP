@@ -1,0 +1,10 @@
+# PO-07 — what FINAL PRODUCTION acceptance (Prompt 15, Production Readiness) still needs. Tracked here so nothing is
+# forgotten; the staging kit can confirm none of these itself (except S12 by its own restore drill), so production
+# readiness is always BLOCKED from the staging kit's view. id<TAB>item
+S12	Additional automated encrypted backups, an independent off-host copy and a passing restore drill (deferred by owner for staging; the kit's S12 tooling is ready and CI-verified)
+PROD-DB	Production database migration and recovery preparation
+PROD-BUILD	An external, attested production build (the on-VPS build cannot fit: 2.8–2.9 GB peak, OOM-killed under 1536M)
+PROD-SEC	The independent production ERP security release (Team sensitive-field fix + Next.js 16.4.6)
+PDF-LIMIT	The PDF concurrency limiter (D7: 2 renders, queue 4, 15 s, 503 + Retry-After, EN/AR)
+A11Y-01	PO07-A11Y-01 accessibility issue (accepted temporarily, not resolved)
+B10	The intermittent invitation-acceptance browser check B10 (failed once, run 45498360294; 98/98 elsewhere)

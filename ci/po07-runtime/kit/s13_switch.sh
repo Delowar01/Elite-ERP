@@ -2,8 +2,10 @@
 # S13 — the feature switches F1–F7, ONE per run (plan §M; po06/SECURITY_AND_FLAG_MATRIX.md §2; owner policy S-7).
 #   s13_switch.sh --plan | --status
 #   s13_switch.sh --execute <F1..F7> on|off
-# Gates (besides the kit's own): S12 accepted (S12.done: backup, off-host copy and restore drill passed); S11 verified
-# (S11.phaseB-ok and S11.tls-ok, written by tools/s11-verify.sh); the owner's recorded authorization lists S13 AND this
+# Gates (besides the kit's own): S12 accepted (S12.done: backup, off-host copy and restore drill passed) OR validly
+# deferred by the owner for this isolated fictional-data staging only (tools/s12-defer.sh; re-checked at every run;
+# never valid for production, real data or Neon); S11 verified (S11.tls-ok, written by tools/s11-verify.sh --tls, and
+# S11.phaseB-ok, written by the authenticated R1–R12 probe, tools/s11-owner-probe.sh); the owner's recorded authorization lists S13 AND this
 # switch (F7 additionally means the owner's P-8 seat consent); strict order — on: F1..F(n-1) on, Fn..F7 off; off: F(n+1)..F7
 # off; F5/F6 only after L-3 (the user_invitations table exists).
 # Each run: the variable's line is rewritten in the env file(s) — never printed — with every other line unchanged; only
@@ -14,17 +16,23 @@
 # answers; no unhandled error in either app's journal since the restart. The functional acceptance of each switch
 # (sign-in with MFA, company management, invitations, seats, …) is the owner's checklist (PO07_S10_S13_EXECUTION_PLAN.md
 # §10), performed in the browser with fictional records only.
-STAGE=S13; . "$(dirname "$0")/lib.sh" "${1:---plan}"
+STAGE=S13; . "$(dirname "$0")/lib.sh" "$([ "${1:-}" = --status ] && echo --plan || echo "${1:---plan}")"
 SW="${2:-}"; ACT="${3:-}"
 if [ "${1:-}" = --status ]; then echo "switches on: $(switches_on | tr '\n' ' ')"; exit 0; fi
-stage_begin S12
+stage_begin S9
 if [ "$MODE" = plan ]; then
   plan "one switch per run: rewrite its line in admin.env / both env files (never printed), restart the two app units, verify, record; revert on any failure"
   exit 0
 fi
 [[ "$SW" =~ ^F[1-7]$ ]] && [[ "$ACT" =~ ^(on|off)$ ]] || stop_now "usage: s13_switch.sh --execute <F1..F7> on|off"
 grep -q "^stages=.*\b$SW\b" "$STATE_DIR/AUTHORIZED" || stop_now "$SW is not in this window's recorded owner authorization"
-for m in S11.phaseB-ok S11.tls-ok; do [ -f "$STATE_DIR/$m" ] || stop_now "$m is not recorded (tools/s11-verify.sh): S13 follows S11b"; done
+for m in S11.tls-ok S11.phaseB-ok; do [ -f "$STATE_DIR/$m" ] || stop_now "$m is not recorded (tools/s11-verify.sh --tls, then tools/s11-owner-probe.sh): S13 follows the verified website security (S11b, S11a-B, R1–R12)"; done
+if [ -f "$STATE_DIR/S12.done" ]; then say "S12 accepted (backup, off-host copy and restore drill passed)"
+elif s12_deferral_valid; then say "S12: $S12_DEFER_DECISION (staging-only owner deferral, recorded $(sed -n 's/^recorded=//p' "$STATE_DIR/S12.deferred"); fictional data only; production stays blocked until S12 passes)"
+else
+  why="$(staging_only_reasons)"
+  stop_now "S12 is neither accepted nor validly deferred for this staging${why:+ ($(tr '\n' ';' <<< "$why"))}: tools/s12-defer.sh (owner decision) or S12"
+fi
 read -r _ VAR VAL FILES <<< "$(grep "^$SW " <<< "$SWITCHES")"
 n="${SW#F}"; on="$(switches_on)"
 if [ "$ACT" = on ]; then

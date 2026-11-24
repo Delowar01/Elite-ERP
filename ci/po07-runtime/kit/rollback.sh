@@ -50,6 +50,9 @@ rb_S13() { # every feature switch off (F7 → F1 at once), then one restart of t
 }
 rb_S12() { # timers, units and kit tools removed; the encrypted backups, the owner's public key and the offsite config stay
   later_done S13 && stop_now "roll back S13 first"
+  # the owner's staging-only S12 deferral (tools/s12-defer.sh) is withdrawn with S12; the record is kept as evidence
+  if [ "$MODE" = plan ]; then plan "withdraw the S12 deferral record if any (renamed, kept)"
+  elif [ -f "$STATE_DIR/S12.deferred" ]; then mv -- "$STATE_DIR/S12.deferred" "$STATE_DIR/S12.deferred.withdrawn-$(date -u +%Y%m%dT%H%M%SZ)"; say "the S12 deferral record is withdrawn (kept as evidence)"; fi
   if [ "$MODE" = execute ] && [ ! -e /etc/systemd/system/elite-po-backup.service ] && [ ! -e /etc/systemd/system/elite-po-backup.timer ] && [ ! -f "$STATE_DIR/S12.backup-ok" ]; then
     say "S12 is not installed"; unmark S12; return 0; fi
   sctl disable --now elite-po-backup.timer elite-po-offsite.timer

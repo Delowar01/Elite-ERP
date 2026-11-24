@@ -13,8 +13,9 @@ reload_ok() { nginx -t > /dev/null 2>&1 || { nginx -t; fail "nginx -t failed"; }
 probe() { # PHASE CA|insecure EXPECT_HSTS [credentials on fd 3]
   local cfg="$RUNNER_TEMP/s11-$1-$2.json" ca=null ins=false cred=null
   [ "$2" = insecure ] && ins=true || ca="\"$N/ca.crt\""; [ "${4:-}" = creds ] && cred=3
-  printf '{"phase":"%s","adminHost":"%s","custHost":"%s","connect":"127.0.0.1","httpsPort":443,"httpPort":80,"caFile":%s,"tlsInsecure":%s,"appDir":"%s","psql":["runuser","-u","%s","--","psql","-X","-q","-At","-h","%s","-p","%s","-d","%s"],"expectClientIp":"127.0.0.1","credFd":%s,"expectHsts":%s,"f1":false,"echoHost":%s}\n' \
-    "$1" "$ADMIN_HOST" "$CUST_HOST" "$ca" "$ins" "$APP_SRC" "$PG_USER" "$PG_RUN" "$PG_PORT" "$DB" "$cred" "$3" "$([ "${4:-}" = creds ] && echo "\"$ECHO\"" || echo null)" > "$cfg"
+  printf '{"phase":"%s","adminHost":"%s","custHost":"%s","connect":"127.0.0.1","httpsPort":443,"httpPort":80,"caFile":%s,"tlsInsecure":%s,"appDir":"%s","psql":["runuser","-u","%s","--","psql","-X","-q","-At","-h","%s","-p","%s","-d","%s"],"expectClientIp":"127.0.0.1","credFd":%s,"expectHsts":%s,"f1":false,"echoHost":%s,"recordFile":%s,"requireFile":%s}\n' \
+    "$1" "$ADMIN_HOST" "$CUST_HOST" "$ca" "$ins" "$APP_SRC" "$PG_USER" "$PG_RUN" "$PG_PORT" "$DB" "$cred" "$3" "$([ "${4:-}" = creds ] && echo "\"$ECHO\"" || echo null)" \
+    "$([ "${4:-}" = creds ] && echo "\"$STATE_DIR/S11.phaseB-ok\"" || echo null)" "$([ "${4:-}" = creds ] && echo "\"$STATE_DIR/S11.tls-ok\"" || echo null)" > "$cfg"
   if [ "${4:-}" = creds ]; then node "$KIT_DIR/probes/s11-nginx-probe.mjs" "$cfg" 3< <(printf '%s\n%s\n%s\n%s\n' "$AU" "$AP" "$CU" "$CP")
   else node "$KIT_DIR/probes/s11-nginx-probe.mjs" "$cfg"; fi
 }
@@ -68,6 +69,9 @@ for h in "$ADMIN_HOST" "$CUST_HOST"; do
 done
 probe A ca false | tee "$STATE_DIR/logs/ci-s11-phaseA-trusted.txt" | grep -E '^(FAIL|S11-PROBE)' || true
 grep -q 'fail=0$' "$STATE_DIR/logs/ci-s11-phaseA-trusted.txt" || fail "Phase A with the trusted certificate"
+# CI STAND-IN for S13's website gate, part 1: on the VPS, tools/s11-verify.sh --tls writes S11.tls-ok after checking
+# the Let's Encrypt chain against the system trust store; a runner has a CI test CA instead, verified just above.
+printf '%s CI stand-in: trusted chain (CI test CA), SAN, expiry and a refused wrong name verified above\n' "$(date -u +%FT%TZ)" > "$STATE_DIR/S11.tls-ok"; chmod 0600 "$STATE_DIR/S11.tls-ok"
 end
 
 step "S11a-B (CI): the protected proxy routes and HSTS max-age=300 (D8), only after trusted TLS and Basic Auth passed"
@@ -81,6 +85,10 @@ probe B ca true | tee "$STATE_DIR/logs/ci-s11-phaseB-unauth.txt" | grep -E '^(FA
 grep -q 'fail=0$' "$STATE_DIR/logs/ci-s11-phaseB-unauth.txt" || fail "Phase B unauthenticated checks"
 probe B ca true creds | tee "$STATE_DIR/logs/ci-s11-phaseB-auth.txt" | grep -E '^(PASS R|FAIL|S11-PROBE)' || true
 grep -q 'fail=0$' "$STATE_DIR/logs/ci-s11-phaseB-auth.txt" || fail "Phase B: R1–R12 through nginx"
+grep -qx "RECORDED $STATE_DIR/S11.phaseB-ok" "$STATE_DIR/logs/ci-s11-phaseB-auth.txt" && grep -q 'authenticated through nginx.*fail=0' "$STATE_DIR/S11.phaseB-ok" ||
+  fail "the passing authenticated probe did not record S11.phaseB-ok (S13's website gate)"
+if grep -qE '^(NOT )?RECORDED' "$STATE_DIR/logs/ci-s11-phaseB-unauth.txt"; then fail "an unauthenticated run touched the S13 website record"; fi
+echo "ok: the passing authenticated R1–R12 probe recorded S11.phaseB-ok itself; the unauthenticated run never touches it"
 end
 
 step "S11 (CI): certificate renewal without interruption; sockets, permissions and listeners"

@@ -1,5 +1,6 @@
-# PO-07 S12 (encrypted backups, off-host copy, restore drill) and S13 (F1–F7), rehearsed — sourced by rehearsal.sh as
-# root after S9, S11 and the PostgreSQL cap. LOCAL REHEARSAL ONLY: a disposable MinIO (S3 with Object Lock) stands in
+# PO-07 S13 (F1–F7) on the owner's staging-only S12 DEFERRAL (24 Nov 2026), with its gates, then the RETAINED S12 tooling
+# (encrypted backups, off-host copy, restore drill: required before final production, Prompt 15) — sourced by
+# rehearsal.sh as root after S9, S11 and the PostgreSQL cap. LOCAL REHEARSAL ONLY: a disposable MinIO (S3 with Object Lock) stands in
 # for Backblaze B2, with fictional credentials; the owner's GPG key is a fictional CI key whose private half stays in
 # a separate "PC" directory and never enters the kit. Real B2 behaviour (key capabilities, lock, lifecycle, caps) is
 # verified only by the owner's own setup steps (PO07_S10_S13_EXECUTION_PLAN.md §9); this proves the kit's mechanics.
@@ -10,6 +11,74 @@ expect_stop() { # LABEL PATTERN CMD... — must refuse for that reason; the expe
   echo "ok: $l"
 }
 sock_get() { node -e 'const [s,h,p]=process.argv.slice(1);require("http").get({socketPath:s,path:p,headers:{host:h,"x-forwarded-host":h,"x-forwarded-proto":"https"}},r=>{console.log(r.statusCode);r.resume()}).on("error",()=>console.log(0))' "$1" "$2" "$3"; }
+
+step "S12 DEFERRED BY OWNER (staging only) and S13's gates: website verification, no Neon, no real data, no production"
+# The owner's decision of 24 Nov 2026: S12 is deferred for this isolated fictional-data staging and required before final
+# production. The S12 tooling stays in the kit and is still rehearsed below (for Prompt 15), AFTER S13 ran on the deferral.
+sed -i 's/^stages=\(.*\)$/stages=\1 S13 F1 F2 F3 F4 F5 F6 F7/' "$STATE_DIR/AUTHORIZED"   # the CI window's authorization (no S12DEFER yet)
+S13="$KIT_DIR/s13_switch.sh"; DEF="$KIT_DIR/tools/s12-defer.sh"; ACC="$KIT_DIR/tools/acceptance-status.sh"
+[ -f "$STATE_DIR/S11.phaseB-ok" ] && [ -f "$STATE_DIR/S11.tls-ok" ] || fail "the S11 records are missing (the nginx rehearsal writes them)"
+[ ! -f "$STATE_DIR/S12.done" ] || fail "S12 is already done before the deferral tests (harness order)"
+expect_stop "S13 is refused while S12 is neither accepted nor deferred" "neither accepted nor validly deferred" bash "$S13" --execute F1 on
+expect_stop "the deferral needs S12DEFER in the owner's authorization" "S12DEFER is not in the recorded authorization" bash "$DEF" --execute
+sed -i 's/^stages=\(.*\)$/stages=\1 S12DEFER/' "$STATE_DIR/AUTHORIZED"
+envtry() { # LABEL FILE LINE-TO-ADD|sed:EXPR PATTERN CMD... — a temporary, fictional change to one env file, always restored
+  local l="$1" f="$ETC_DIR/$2" ch="$3" p="$4"; shift 4
+  cp -p "$f" "$f.ci-orig"
+  case "$ch" in sed:*) sed -i "${ch#sed:}" "$f" ;; *) printf '%s\n' "$ch" >> "$f" ;; esac
+  expect_stop "$l" "$p" "$@"
+  mv -f "$f.ci-orig" "$f"
+}
+NEON='PO07_CI_EXTRA_DB=postgresql://ci:fictional@ep-ci-fictional-000000.eu-central-1.aws.neon.tech/neondb?sslmode=require'
+envtry "the deferral is refused when an env file names a Neon database" customer.env "$NEON" "not the isolated fictional-data staging" bash "$DEF" --execute
+envtry "the deferral is refused when DATABASE_URL leaves the isolated cluster" admin.env "sed:s#@127\.0\.0\.1:$PG_PORT/#@198.51.100.7:5432/#" "DATABASE_URL is not the isolated staging cluster" bash "$DEF" --execute
+envtry "the deferral is refused with real (non-fake) file storage" customer.env "sed:s/^STORAGE_DRIVER=fake$/STORAGE_DRIVER=s3/" "STORAGE_DRIVER" bash "$DEF" --execute
+[ ! -f "$STATE_DIR/S12.deferred" ] || fail "a refused deferral left a record"
+bash "$DEF" --execute | tail -1
+[ -f "$STATE_DIR/S12.deferred" ] && [ ! -f "$STATE_DIR/S12.done" ] || fail "the deferral must write its record and never S12.done"
+bash "$DEF" --status | grep -q 'valid for this isolated fictional-data staging only' || fail "the deferral is not reported valid"
+rc=0; bash "$ACC" --require production > "$STATE_DIR/logs/ci-acceptance-deferred.txt" 2>&1 || rc=$?
+[ "$rc" -eq 3 ] && grep -q 'S12 backup and restore verification: NOT PASSED (DEFERRED BY OWNER' "$STATE_DIR/logs/ci-acceptance-deferred.txt" &&
+  grep -q '^PRODUCTION: BLOCKED' "$STATE_DIR/logs/ci-acceptance-deferred.txt" || { cat "$STATE_DIR/logs/ci-acceptance-deferred.txt"; fail "production readiness must stay blocked on a deferral"; }
+echo "ok: with the deferral, production readiness is BLOCKED (S12 NOT PASSED) — exit $rc"
+mv "$STATE_DIR/S11.phaseB-ok" "$RUNNER_TEMP/S11.phaseB-ok.aside"
+expect_stop "S13 is refused without the authenticated website verification (S11.phaseB-ok)" "S11.phaseB-ok is not recorded" bash "$S13" --execute F1 on
+mv "$RUNNER_TEMP/S11.phaseB-ok.aside" "$STATE_DIR/S11.phaseB-ok"; mv "$STATE_DIR/S11.tls-ok" "$RUNNER_TEMP/S11.tls-ok.aside"
+expect_stop "S13 is refused without the trusted-certificate verification (S11.tls-ok)" "S11.tls-ok is not recorded" bash "$S13" --execute F1 on
+mv "$RUNNER_TEMP/S11.tls-ok.aside" "$STATE_DIR/S11.tls-ok"
+envtry "S13 re-checks the deferral at every run: Neon in an env file voids it" admin.env "$NEON" "neither accepted nor validly deferred" bash "$S13" --execute F1 on
+[ -z "$(grep -E '^(PLATFORM_[A-Z_]*_ENABLED|CUSTOMER_[A-Z_]*_ENABLED|TENANT_ACCESS_ENFORCEMENT)=' "$ETC_DIR/admin.env" "$ETC_DIR/customer.env")" ] || fail "a refused S13 run changed an env file"
+echo "ok: S13 proceeds only with the website verification and S12 accepted or validly deferred; the deferral is void for Neon, other databases or real storage and never counts for production"
+end
+
+step "S13 (CI) on the owner's S12 deferral: F1–F7 one at a time, strict order, automated checks, an injected failure reverts, then F7 → F1 off"
+# the website records are the ones the S11 rehearsal wrote (the probe's own S11.phaseB-ok; the labelled CI stand-in
+# for S11.tls-ok); S12 is DEFERRED, not done
+[ ! -f "$STATE_DIR/S12.done" ] && [ -f "$STATE_DIR/S12.deferred" ] || fail "S13 must run here on the deferral, without S12.done"
+SWITCH_RE="$(grep '^SWITCH_RE=' "$KIT_DIR/lib.sh" | cut -d"'" -f2)"   # the kit's own pattern (the harness does not source lib.sh)
+[[ "$SWITCH_RE" == '^(PLATFORM_'* ]] || fail "could not read the kit's SWITCH_RE"
+S13="$KIT_DIR/s13_switch.sh"
+expect_stop "F2 before F1 is refused" "F1 must be on before F2" bash "$S13" --execute F2 on
+expect_stop "an unknown switch is refused" "usage" bash "$S13" --execute F9 on
+for f in F1 F2 F3 F4 F5 F6; do bash "$S13" --execute "$f" on 2>&1 | grep -E 'automated checks|STOP' | tail -1; grep -qx "$f" "$STATE_DIR/S13.switches" || fail "$f did not go on"; done
+[ "$(sock_get "$RUN_DIR/admin.sock" "$ADMIN_HOST" /platform/login)" = 200 ] && [ "$(sock_get "$RUN_DIR/customer.sock" "$CUST_HOST" /platform/login)" = 404 ] || fail "F1: the console state"
+expect_stop "an injected failure of F7 turns it back off and STOPs" "F7 on failed its checks; F7 is back off" env PO07_S13_FORCE_FAIL=F7 bash "$S13" --execute F7 on
+! grep -q '^CUSTOMER_SEAT_ENFORCEMENT_ENABLED=' "$ETC_DIR/admin.env" "$ETC_DIR/customer.env" && ! grep -qx F7 "$STATE_DIR/S13.switches" || fail "F7 not reverted"
+bash "$S13" --execute F7 on 2>&1 | grep -E 'automated checks' | tail -1; grep -qx F7 "$STATE_DIR/S13.switches" || fail "F7 did not go on"
+[ "$(grep -cE "$SWITCH_RE" "$ETC_DIR/admin.env")" = 7 ] && [ "$(grep -cE "$SWITCH_RE" "$ETC_DIR/customer.env")" = 4 ] && ! grep -qE '^PLATFORM_[A-Z_]*_ENABLED=' "$ETC_DIR/customer.env" || fail "the switch lines per file"
+[ -f "$STATE_DIR/S13.done" ] || fail "S13 not marked after F1–F7"
+rc=0; bash "$ACC" --require staging > "$STATE_DIR/logs/ci-acceptance-staging.txt" 2>&1 || rc=$?
+[ "$rc" -eq 0 ] && grep -q '^STAGING: COMPLETE' "$STATE_DIR/logs/ci-acceptance-staging.txt" && grep -q '^PRODUCTION: BLOCKED' "$STATE_DIR/logs/ci-acceptance-staging.txt" ||
+  { cat "$STATE_DIR/logs/ci-acceptance-staging.txt"; fail "staging acceptance with F1–F7 on and S12 deferred"; }
+echo "ok: with F1–F7 on and S12 deferred, STAGING is complete and PRODUCTION stays BLOCKED"
+bash "$KIT_DIR/s7_envfiles.sh" --execute > /dev/null 2>&1 || fail "S7's re-check refuses the recorded switches"
+expect_stop "F3 off while F4 is on is refused (reverse order)" "turn F4 off first" bash "$S13" --execute F3 off
+for f in F7 F6 F5 F4 F3 F2 F1; do bash "$S13" --execute "$f" off > /dev/null 2>&1 || fail "$f off"; done
+[ -z "$(grep -E "$SWITCH_RE" "$ETC_DIR/admin.env" "$ETC_DIR/customer.env")" ] && [ "$(sock_get "$RUN_DIR/admin.sock" "$ADMIN_HOST" /platform/login)" = 404 ] || fail "not back to all switches off"
+grep -c ' on: automated checks passed\| off: automated checks passed' "$STATE_DIR/S13.log"
+echo "ok: F1–F7 on in order and off in reverse, each with its automated checks; the injected failure reverted F7; every file and process back to no switch"
+S13_OK=1
+end
 
 step "S12 (CI): the object-storage stand-in (MinIO, Object Lock, default retention GOVERNANCE 14 days) and its two keys"
 DEBIAN_FRONTEND=noninteractive apt-get install -y -qq rclone > /dev/null || fail "apt-get install rclone"
@@ -46,7 +115,7 @@ env_val="$(sed -n 's/^FIELD_ENCRYPTION_KEYS=//p' "$ETC_DIR/customer.env" | PO07_
   console.log(`v${v}:${iv.toString("base64")}:${x.getAuthTag().toString("base64")}:${ct.toString("base64")}`);')"
 printf "update users set mfa_secret = '%s' where id = (select min(id) from users);\n" "$env_val" | runuser -u "$PG_USER" -- psql -X -q -At -h "$PG_RUN" -p "$PG_PORT" -d "$DB" > /dev/null
 unset env_val
-sed -i 's/^stages=\(.*\)$/stages=\1 S12 S13 F1 F2 F3 F4 F5 F6 F7/' "$STATE_DIR/AUTHORIZED"   # the CI window's authorization
+sed -i 's/^stages=\(.*\)$/stages=\1 S12/' "$STATE_DIR/AUTHORIZED"   # the retained S12 tooling, rehearsed for Prompt 15 (S13 already ran on the deferral)
 # fictional uploads, so the backup and the restore drill carry real files (one nested; one binary), as the app's fake
 # storage would hold them (owned by the app user, readable by the backup unit)
 install -d -m 0750 -o "$APP_USER" -g "$APP_USER" "$STORAGE_DIR/ci-fictional" "$STORAGE_DIR/ci-fictional/org-0001"
@@ -113,25 +182,10 @@ echo "ok: the drill restored into a disposable database and directory, verified 
 S12_OK=1
 end
 
-step "S13 (CI): F1–F7 one at a time, strict order, automated checks, an injected failure reverts, then F7 → F1 off"
-install -m 0600 /dev/null "$STATE_DIR/S11.phaseB-ok"; install -m 0600 /dev/null "$STATE_DIR/S11.tls-ok"   # the S11 rehearsal above passed
-SWITCH_RE="$(grep '^SWITCH_RE=' "$KIT_DIR/lib.sh" | cut -d"'" -f2)"   # the kit's own pattern (the harness does not source lib.sh)
-[[ "$SWITCH_RE" == '^(PLATFORM_'* ]] || fail "could not read the kit's SWITCH_RE"
-S13="$KIT_DIR/s13_switch.sh"
-expect_stop "F2 before F1 is refused" "F1 must be on before F2" bash "$S13" --execute F2 on
-expect_stop "an unknown switch is refused" "usage" bash "$S13" --execute F9 on
-for f in F1 F2 F3 F4 F5 F6; do bash "$S13" --execute "$f" on 2>&1 | grep -E 'automated checks|STOP' | tail -1; grep -qx "$f" "$STATE_DIR/S13.switches" || fail "$f did not go on"; done
-[ "$(sock_get "$RUN_DIR/admin.sock" "$ADMIN_HOST" /platform/login)" = 200 ] && [ "$(sock_get "$RUN_DIR/customer.sock" "$CUST_HOST" /platform/login)" = 404 ] || fail "F1: the console state"
-expect_stop "an injected failure of F7 turns it back off and STOPs" "F7 on failed its checks; F7 is back off" env PO07_S13_FORCE_FAIL=F7 bash "$S13" --execute F7 on
-! grep -q '^CUSTOMER_SEAT_ENFORCEMENT_ENABLED=' "$ETC_DIR/admin.env" "$ETC_DIR/customer.env" && ! grep -qx F7 "$STATE_DIR/S13.switches" || fail "F7 not reverted"
-bash "$S13" --execute F7 on 2>&1 | grep -E 'automated checks' | tail -1; grep -qx F7 "$STATE_DIR/S13.switches" || fail "F7 did not go on"
-[ "$(grep -cE "$SWITCH_RE" "$ETC_DIR/admin.env")" = 7 ] && [ "$(grep -cE "$SWITCH_RE" "$ETC_DIR/customer.env")" = 4 ] && ! grep -qE '^PLATFORM_[A-Z_]*_ENABLED=' "$ETC_DIR/customer.env" || fail "the switch lines per file"
-[ -f "$STATE_DIR/S13.done" ] || fail "S13 not marked after F1–F7"
-bash "$KIT_DIR/s7_envfiles.sh" --execute > /dev/null 2>&1 || fail "S7's re-check refuses the recorded switches"
-expect_stop "F3 off while F4 is on is refused (reverse order)" "turn F4 off first" bash "$S13" --execute F3 off
-for f in F7 F6 F5 F4 F3 F2 F1; do bash "$S13" --execute "$f" off > /dev/null 2>&1 || fail "$f off"; done
-[ -z "$(grep -E "$SWITCH_RE" "$ETC_DIR/admin.env" "$ETC_DIR/customer.env")" ] && [ "$(sock_get "$RUN_DIR/admin.sock" "$ADMIN_HOST" /platform/login)" = 404 ] || fail "not back to all switches off"
-grep -c ' on: automated checks passed\| off: automated checks passed' "$STATE_DIR/S13.log"
-echo "ok: F1–F7 on in order and off in reverse, each with its automated checks; the injected failure reverted F7; every file and process back to no switch"
-S13_OK=1
+step "Acceptance gates after the retained S12 tooling passed (Prompt 15 evidence): production is still never granted by the kit"
+rc=0; bash "$ACC" --require production > "$STATE_DIR/logs/ci-acceptance-after-s12.txt" 2>&1 || rc=$?
+[ "$rc" -eq 3 ] && grep -q 'S12 backup and restore verification: PASSED' "$STATE_DIR/logs/ci-acceptance-after-s12.txt" &&
+  grep -q '^PRODUCTION: BLOCKED' "$STATE_DIR/logs/ci-acceptance-after-s12.txt" || { cat "$STATE_DIR/logs/ci-acceptance-after-s12.txt"; fail "production readiness after S12"; }
+grep -E '^   OPEN ' "$STATE_DIR/logs/ci-acceptance-after-s12.txt" | sed 's/^   /  /'
+echo "ok: S12 PASSED only by its own drill; production readiness stays BLOCKED by the tracked Prompt 15 items (exit $rc)"
 end

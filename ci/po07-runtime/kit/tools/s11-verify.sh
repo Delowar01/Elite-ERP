@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# PO-07 S11: read-only verification ON THE VPS (as root), with no credentials. Changes nothing.
+# PO-07 S11: read-only verification ON THE VPS (as root), with no credentials. Changes nothing outside the kit state
+# (--tls writes its own result record, S11.tls-ok, on a full pass).
 #   s11-verify.sh --pre                the S11a pre-step: nginx -t, master PID, worker identity, every nginx file checksum
 #   s11-verify.sh --phase A|B          the unauthenticated probe through nginx (Phase A: CloudPanel's self-signed
 #                                      certificate, so TLS is not verified AND no credential is ever sent)
@@ -12,7 +13,7 @@ export LC_ALL=C
 K="$(cd "$(dirname "$0")/.." && pwd)"
 . "$K/config.sh"
 OUT="$STATE_DIR/logs"; mkdir -p "$OUT"; ts="$(date -u +%Y%m%dT%H%M%SZ)"
-f=0; ok() { echo "OK    $1"; }; no() { echo "FAIL  $1"; f=$((f + 1)); }
+f=0; fps=(); ok() { echo "OK    $1"; }; no() { echo "FAIL  $1"; f=$((f + 1)); }
 master() { systemctl show -p MainPID --value nginx.service; }
 can_open() { runuser -u "$1" -- node -e 'require("net").connect(process.argv[1]).on("connect",()=>process.exit(0)).on("error",()=>process.exit(1))' "$2" 2> /dev/null; }
 sockets() {
@@ -56,6 +57,7 @@ case "${1:-}" in
       if grep -q 'Verify return code: 0 (ok)' <<< "$o"; then ok "$h: the chain verifies with the system trust store and the name matches"; else no "$h: not a trusted certificate for this name"; fi
       c="$(openssl s_client -connect "$VPS_IPV4:443" -servername "$h" < /dev/null 2> /dev/null | openssl x509 -noout -issuer -enddate -ext subjectAltName 2> /dev/null)"
       if grep -qiE "Let.s Encrypt" <<< "$c"; then ok "$h: issued by Let's Encrypt"; else no "$h: issuer $(grep -m1 issuer <<< "$c")"; fi
+      fps+=("$h $(openssl s_client -connect "$VPS_IPV4:443" -servername "$h" < /dev/null 2> /dev/null | openssl x509 -noout -fingerprint -sha256 2> /dev/null | cut -d= -f2)")
       end="$(sed -n 's/^notAfter=//p' <<< "$c")"; d=$(( ( $(date -d "$end" +%s 2> /dev/null || echo 0) - $(date +%s) ) / 86400 ))
       if [ "$d" -ge 30 ]; then ok "$h: $d days left"; else no "$h: only $d days left"; fi
       if grep -qE "DNS:$h(,|$)" <<< "$c" && [ "$(grep -o 'DNS:' <<< "$c" | wc -l)" -eq 1 ]; then ok "$h: the subject alternative name is exactly this host"; else no "$h: subject alternative names: $(grep -A1 'Alternative' <<< "$c" | tail -1)"; fi
@@ -64,4 +66,12 @@ case "${1:-}" in
     if grep -rqsiE "lets-encrypt|letsencrypt" /etc/cron.d /var/spool/cron/crontabs; then ok "a certificate renewal job exists (CloudPanel)"; else no "no renewal job found: check CloudPanel's renewal before relying on 90-day certificates"; fi ;;
   *) echo "usage: $0 --pre | --phase A|B | --tls" >&2; exit 64 ;;
 esac
+# S13's website gate, part 1: only a fully passing --tls run records the trusted certificates (their fingerprints; no
+# secret). Part 2, S11.phaseB-ok, is written by the authenticated R1–R12 probe (tools/s11-owner-probe.sh), after this.
+if [ "${1:-}" = --tls ]; then
+  if [ "$f" -eq 0 ]; then
+    { printf '%s S11b trusted certificates verified (chain, name, issuer, >= 30 days, renewal job)\n' "$(date -u +%FT%TZ)"; printf 'cert %s\n' "${fps[@]}"; } > "$STATE_DIR/S11.tls-ok.tmp"
+    chmod 0600 "$STATE_DIR/S11.tls-ok.tmp"; mv -- "$STATE_DIR/S11.tls-ok.tmp" "$STATE_DIR/S11.tls-ok"; echo "RECORDED $STATE_DIR/S11.tls-ok"
+  else echo "NOT RECORDED: the trusted-certificate checks did not all pass (S13 stays blocked)"; fi
+fi
 echo "S11-VERIFY fail=$f"; exit $([ "$f" -eq 0 ] && echo 0 || echo 3)

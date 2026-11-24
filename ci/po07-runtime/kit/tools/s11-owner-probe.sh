@@ -14,6 +14,8 @@ K="$(cd "$(dirname "$0")/.." && pwd)"
 read -rp "Basic Auth user for $ADMIN_HOST: " au; read -rsp "password (not shown): " ap; echo
 read -rp "Basic Auth user for $CUST_HOST: " cu; read -rsp "password (not shown): " cpw; echo
 cfg="$(mktemp)"; trap 'rm -f "$cfg"; unset au ap cu cpw' EXIT
-printf '{"phase":"B","adminHost":"%s","custHost":"%s","connect":"%s","httpsPort":443,"httpPort":80,"caFile":null,"tlsInsecure":false,"appDir":"%s","psql":["runuser","-u","%s","--","psql","-X","-q","-At","-h","%s","-p","%s","-d","%s"],"expectClientIp":null,"credFd":3,"expectHsts":true,"f1":false,"echoHost":null}\n' \
-  "$ADMIN_HOST" "$CUST_HOST" "$VPS_IPV4" "$APP_SRC" "$PG_USER" "$PG_RUN" "$PG_PORT" "$DB" > "$cfg"
+printf '{"phase":"B","adminHost":"%s","custHost":"%s","connect":"%s","httpsPort":443,"httpPort":80,"caFile":null,"tlsInsecure":false,"appDir":"%s","psql":["runuser","-u","%s","--","psql","-X","-q","-At","-h","%s","-p","%s","-d","%s"],"expectClientIp":null,"credFd":3,"expectHsts":true,"f1":false,"echoHost":null,"recordFile":"%s","requireFile":"%s"}\n' \
+  "$ADMIN_HOST" "$CUST_HOST" "$VPS_IPV4" "$APP_SRC" "$PG_USER" "$PG_RUN" "$PG_PORT" "$DB" "$STATE_DIR/S11.phaseB-ok" "$STATE_DIR/S11.tls-ok" > "$cfg"
+# a full pass records S11.phaseB-ok (S13's website gate) only if tools/s11-verify.sh --tls recorded S11.tls-ok first
+[ -f "$STATE_DIR/S11.tls-ok" ] || echo "note: S11.tls-ok is not recorded yet (tools/s11-verify.sh --tls): this run cannot open the S13 gate"
 node "$K/probes/s11-nginx-probe.mjs" "$cfg" 3< <(printf '%s\n%s\n%s\n%s\n' "$au" "$ap" "$cu" "$cpw")
