@@ -42,7 +42,8 @@ for m in db.dump schema.tsv rowcounts.tsv storage.tar storage.sha256; do
 done
 say "integrity: every member matches the manifest (backup of $(mf created_at), kit $(mf kit), build $(mf release.build))"
 printf 'create database "%s" owner "%s" template template0;\n' "$RDB" "$OWNER_ROLE" | spsql postgres > /dev/null
-runuser -u "$PG_USER" -- /usr/lib/postgresql/16/bin/pg_restore -h "$PG_RUN" -p "$PG_PORT" -d "$RDB" --no-owner --role="$OWNER_ROLE" --exit-on-error "$R/db.dump" ||
+# root opens the dump and hands it over on stdin: the drill directory stays root-only (0700)
+runuser -u "$PG_USER" -- /usr/lib/postgresql/16/bin/pg_restore -h "$PG_RUN" -p "$PG_PORT" -d "$RDB" --no-owner --role="$OWNER_ROLE" --exit-on-error < "$R/db.dump" ||
   stop_now "pg_restore failed (kept: database $RDB, directory $R)"
 schema_now="$(printf "select table_name, column_name, data_type, is_nullable from information_schema.columns where table_schema = 'public' order by 1, 2;\n" | spsql "$RDB")"   # psql -At, as backup-run.sh wrote it
 [ "$schema_now" = "$(cat "$R/schema.tsv")" ] || stop_now "the restored schema differs from the backup's (kept: $RDB, $R)"
