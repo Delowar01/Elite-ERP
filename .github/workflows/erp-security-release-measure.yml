@@ -1,0 +1,92 @@
+# ERP security release (independent of the Platform Owner work): MEASURE the release build on an isolated runner.
+# The release = main's Team sensitive-field fix branch (621f156 + 35d5dcc + 94f936e) + the Next.js 16.4.3 → 16.4.6 commit
+# 9b8aa85, cherry-picked HERE on the runner only (nothing is pushed, merged or deployed). PO07_ERP_SECURITY_RELEASE_PLAN.md
+# planned an on-VPS build under MemoryMax=1536M (N3); a Next.js 16.4.6 build of another branch needed more than 2.3 GB on
+# that VPS. This workflow records, with 2 CPUs as on the VPS:
+#   - the N1a gates (npm ci, TypeScript, ESLint);
+#   - `next build` peak memory with no cap, and whether it completes under the old 1536M cap with no swap;
+#   - the archive a verified external build would install (size, file count, SHA-256) — MEASUREMENT ONLY, not attested,
+#     not approved for deployment, kept 3 days.
+# No secret, no production service, no database: a dummy, unreachable DATABASE_URL as in the staging artifact build.
+name: erp-security-release-measure
+
+on:
+  push:
+    branches: [feat/platform-owner]
+    paths: [.github/workflows/erp-security-release-measure.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  FIX_TIP: 94f936e
+  NEXT_BUMP: 9b8aa85
+  NEXT_TELEMETRY_DISABLED: "1"
+
+jobs:
+  measure:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: fix/team-sensitive-fields-exposure
+          fetch-depth: 0
+          persist-credentials: false
+      - name: The release candidate (fix branch + the Next.js 16.4.6 commit, on this runner only)
+        run: |
+          set -Eeuo pipefail
+          git fetch -q origin feat/platform-owner
+          test "$(git rev-parse --short=7 HEAD)" = "$FIX_TIP" || { echo "::error::the fix branch moved: $(git rev-parse HEAD)"; exit 1; }
+          git -c user.name=ci -c user.email=ci@example.invalid cherry-pick "$NEXT_BUMP" || { git cherry-pick --abort || true; echo "::error::9b8aa85 does not apply cleanly on the fix branch: the release branch needs a reviewed resolution (plan N1)"; exit 1; }
+          echo "candidate $(git rev-parse HEAD) tree $(git rev-parse 'HEAD^{tree}')"; git log --oneline -4
+          echo "next: $(node -p 'require("./package.json").dependencies.next')"; echo "node wanted: $(cat .nvmrc 2>/dev/null || echo unspecified)"
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version-file: .nvmrc
+      - name: npm ci, TypeScript, ESLint (the plan's N1a gates)
+        run: |
+          set -Eeuo pipefail
+          npm ci --no-audit --no-fund > /dev/null
+          echo "next installed: $(node -p 'require("next/package.json").version')"
+          npx tsc --noEmit && echo "TypeScript: pass"
+          npx eslint src --max-warnings=0 && echo "ESLint: pass"
+      - name: next build, no cap, 2 CPUs — peak memory of the whole build (cgroup)
+        run: |
+          set -Eeuo pipefail
+          sudo systemd-run --wait --pipe --collect --uid="$(id -u)" --gid="$(id -g)" -p MemoryAccounting=yes -p CPUQuota=200% \
+            --working-directory="$PWD" -E PATH="$PATH" -E HOME="$HOME" -E NEXT_TELEMETRY_DISABLED=1 -E DATABASE_URL="postgres://build@127.0.0.1:9/build_test_only_" \
+            node node_modules/next/dist/bin/next build > "$RUNNER_TEMP/build-nocap.log" 2>&1 || { tail -60 "$RUNNER_TEMP/build-nocap.log"; echo "::error::next build failed"; exit 1; }
+          tail -5 "$RUNNER_TEMP/build-nocap.log"
+          grep -E 'Memory peak|CPU time consumed|Finished with result' "$RUNNER_TEMP/build-nocap.log" | tee "$RUNNER_TEMP/peak-nocap.txt"
+      - name: next build under the old on-VPS cap (MemoryMax=1536M, no swap, 2 CPUs) — does it fit?
+        run: |
+          set -Eeuo pipefail
+          rm -rf .next
+          rc=0; sudo systemd-run --wait --pipe --collect --uid="$(id -u)" --gid="$(id -g)" -p MemoryAccounting=yes -p MemoryMax=1536M -p MemorySwapMax=0 -p CPUQuota=200% \
+            --working-directory="$PWD" -E PATH="$PATH" -E HOME="$HOME" -E NEXT_TELEMETRY_DISABLED=1 -E DATABASE_URL="postgres://build@127.0.0.1:9/build_test_only_" \
+            node node_modules/next/dist/bin/next build > "$RUNNER_TEMP/build-cap.log" 2>&1 || rc=$?
+          grep -E 'Memory peak|oom|Failed with result|Finished with result|CPU time consumed' "$RUNNER_TEMP/build-cap.log" | tee "$RUNNER_TEMP/peak-cap.txt" || true
+          if [ "$rc" -eq 0 ]; then echo "UNDER-1536M: completed"; else echo "UNDER-1536M: FAILED (exit $rc) — the on-VPS build path N3 does not fit"; tail -15 "$RUNNER_TEMP/build-cap.log"; fi
+      - name: The archive an external verified build would install (measurement only)
+        run: |
+          set -Eeuo pipefail
+          [ -d .next ] || { rm -rf .next; NEXT_TELEMETRY_DISABLED=1 DATABASE_URL="postgres://build@127.0.0.1:9/build_test_only_" node node_modules/next/dist/bin/next build > /dev/null 2>&1; }
+          tar --sort=name --mtime='2026-01-01' --owner=0 --group=0 --numeric-owner -czf "$RUNNER_TEMP/erp-release-candidate.tar.gz" .next node_modules package.json package-lock.json
+          echo "archive: $(stat -c %s "$RUNNER_TEMP/erp-release-candidate.tar.gz") bytes, $(tar -tzf "$RUNNER_TEMP/erp-release-candidate.tar.gz" | wc -l) entries, SHA-256 $(sha256sum "$RUNNER_TEMP/erp-release-candidate.tar.gz" | cut -d' ' -f1)"
+          { echo "## ERP security release — build measurement (not a deployable artifact)"; echo; echo "- candidate: $(git rev-parse HEAD) (tree $(git rev-parse 'HEAD^{tree}'))"
+            echo "- no cap: $(cat "$RUNNER_TEMP/peak-nocap.txt" | tr '\n' ' ')"; echo "- under MemoryMax=1536M: $(cat "$RUNNER_TEMP/peak-cap.txt" | tr '\n' ' ')"
+            echo "- archive: $(stat -c %s "$RUNNER_TEMP/erp-release-candidate.tar.gz") bytes"; } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: erp-security-release-measurement-only
+          path: |
+            ${{ runner.temp }}/build-nocap.log
+            ${{ runner.temp }}/build-cap.log
+            ${{ runner.temp }}/peak-nocap.txt
+            ${{ runner.temp }}/peak-cap.txt
+          retention-days: 3
