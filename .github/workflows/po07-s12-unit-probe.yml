@@ -34,7 +34,7 @@ jobs:
           sudo install -d -m 0700 /etc/elite-po-staging/secrets /etc/elite-po-staging/backup /etc/elite-po-staging/offsite
           for f in secrets/backup.pw backup/owner.pub.asc backup/owner.fpr backup/backup.conf offsite/rclone.conf admin.env; do echo fictional | sudo tee "/etc/elite-po-staging/$f" > /dev/null; sudo chmod 0600 "/etc/elite-po-staging/$f"; done
           echo x | sudo tee /var/lib/elite-po-staging/backups/outbox/po07-staging-20260101T000000Z.tar.gpg > /dev/null
-          sudo chown po07app:elitepoup /var/lib/elite-po-staging/backups/outbox/*; sudo chmod 0640 /var/lib/elite-po-staging/backups/outbox/*
+          sudo sh -c 'chown po07app:elitepoup /var/lib/elite-po-staging/backups/outbox/*; chmod 0640 /var/lib/elite-po-staging/backups/outbox/*'
           probe='set +e; echo "id: $(id)"; echo "tmp: $(findmnt -n -o FSTYPE,OPTIONS /tmp)"; echo "creds: $CREDENTIALS_DIRECTORY $(ls "$CREDENTIALS_DIRECTORY" | tr "\n" " ")"
             for p in /var/lib/elite-po-staging/backups/outbox /var/lib/elite-po-staging/storage /var/lib/elite-po-staging/backups /var/lib/elite-po-offsite /var/lib/private/elite-po-offsite /run/systemd/resolve /etc/elite-po-staging/admin.env "$STATE_DIRECTORY"; do
               printf "%-45s exists=%s r=%s w=%s\n" "$p" "$([ -e "$p" ] && echo y || echo n)" "$([ -r "$p" ] && echo y || echo n)" "$([ -w "$p" ] && echo y || echo n)"; done
