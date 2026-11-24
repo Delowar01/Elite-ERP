@@ -84,7 +84,7 @@ W=/usr/local/sbin/elite-po-run
 rep() { bash "$KIT_DIR/tools/reconcile.sh" --report; }
 expect_stop() { # LABEL PATTERN CMD... — must STOP for that reason; the expected STOP record is then set aside (harness)
   local l="$1" p="$2"; shift 2; local o rc=0; o="$("$@" 2>&1)" || rc=$?
-  [ "$rc" -ne 0 ] && printf '%s\n' "$o" | grep -q -- "$p" || { printf '%s\n' "$o" | tail -15; fail "K3: $l: no STOP for '$p'"; }
+  [ "$rc" -ne 0 ] && grep -q -- "$p" <<< "$o" || { printf '%s\n' "$o" | tail -15; fail "K3: $l: no STOP for '$p'"; }
   [ ! -f "$STATE_DIR/STOPPED" ] || mv "$STATE_DIR/STOPPED" "$STATE_DIR/STOPPED.ci-expected-k3-$(date +%s%N)"
   echo "ok: $l"
 }
@@ -92,7 +92,7 @@ gate() { bash -c 'STAGE=S9; . "$1/lib.sh" --execute; load_baseline; installed_fi
 rep | tee "$STATE_DIR/logs/ci-reconcile-1.txt"
 grep -q '^RECONCILE-REPORT listed=16 attention=0' "$STATE_DIR/logs/ci-reconcile-1.txt" || fail "K3: after S9 every installed file must be UNCHANGED"
 install -m 0700 -o root -g root "$KIT_DIR/units/history/wrapper@kit-1" "$W"   # the VPS state of 24 Nov 2026
-rep | grep -q "^OUTDATED(kit-1) .* $W$" || fail "K3: the kit-1 wrapper is not reported OUTDATED(kit-1)"
+grep -q "^OUTDATED(kit-1) .* $W$" <<< "$(rep)" || fail "K3: the kit-1 wrapper is not reported OUTDATED(kit-1)"
 echo "ok: the kit-1 wrapper is reported OUTDATED(kit-1)"
 expect_stop "a real stage (S7 re-check) refuses to run on the stale wrapper" "OUTDATED(kit-1) $W" bash "$KIT_DIR/s7_envfiles.sh" --execute
 expect_stop "reconcile without RECONCILE in the owner's authorization is refused" "RECONCILE is not in" bash "$KIT_DIR/tools/reconcile.sh" --execute "$W"
@@ -120,7 +120,7 @@ printf '[Service]\nReadWritePaths=/srv\n' > /etc/systemd/system/elite-po-admin.s
 expect_stop "an unexpected drop-in for a staging unit blocks every stage" "UNEXPECTED /etc/systemd/system/elite-po-admin.service.d" gate
 rm -r /etc/systemd/system/elite-po-admin.service.d; systemctl daemon-reload
 PT="/etc/systemd/system/postgresql@16-$CLUSTER.service.d/20-tasks.conf"; mv "$PT" "$RUNNER_TEMP/20-tasks.conf.aside"
-rep | grep -q "^PROPOSED .* $PT$" || fail "K3: an absent proposed file is not reported PROPOSED"
+grep -q "^PROPOSED .* $PT$" <<< "$(rep)" || fail "K3: an absent proposed file is not reported PROPOSED"
 gate > /dev/null || fail "K3: an absent PROPOSED file must not block a stage"
 expect_stop "a completed stage never installs a proposed file by itself (S3 re-check)" "S3 is complete and $PT is not installed" bash "$KIT_DIR/s3_pgcluster.sh" --execute
 mv "$RUNNER_TEMP/20-tasks.conf.aside" "$PT"

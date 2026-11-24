@@ -111,16 +111,16 @@ ok "K2 a final file without its .verified record (the 24 Nov kind of copy) is no
 no "K2 malformed expected values are refused" bash "$R" "$INC" 2007 "$A" "$SHA" "$SIZE" "$SRC" "$TREE" "bad build!"
 no "K2 a relative incoming directory is refused" bash "$R" "inc" 2008 "$A" "$SHA" "$SIZE" "$SRC" "$TREE" "$BUILD"
 if [ "$LINUX" = 1 ] && command -v setsid > /dev/null; then
-  k2_interrupt() {
-    { head -c $((SIZE / 2)) "$T/$A"; sleep 8; } | setsid bash "$R" "$INC" 2009 "$A" "$SHA" "$SIZE" "$SRC" "$TREE" "$BUILD" > "$T/.int" 2>&1 &
-    local i pg=""; for i in $(seq 1 50); do pg="$(pgrep -f "artifact-receive.sh $INC 2009" | head -1)"; [ -n "$pg" ] && [ -n "$(find "$INC/run2009" -name '.receiving.*' -size +1k 2> /dev/null)" ] && break; sleep 0.2; done
+  k2_interrupt() { INC="$T/inc-int"   # its own directory, the fixture's run id (the archive names run $RUN)
+    { head -c $((SIZE / 2)) "$T/$A"; sleep 8; } | setsid bash "$R" "$INC" "$RUN" "$A" "$SHA" "$SIZE" "$SRC" "$TREE" "$BUILD" > "$T/.int" 2>&1 &
+    local i pg=""; for i in $(seq 1 50); do pg="$(pgrep -f "artifact-receive.sh $INC $RUN" | head -1)"; [ -n "$pg" ] && [ -n "$(find "$INC/run$RUN" -name '.receiving.*' -size +1k 2> /dev/null)" ] && break; sleep 0.2; done
     [ -n "$pg" ] || return 1
     kill -HUP -- "-$(ps -o pgid= -p "$pg" | tr -d ' ')" 2> /dev/null; wait 2> /dev/null
-    for i in $(seq 1 50); do [ -d "$INC/run2009/quarantine" ] && break; sleep 0.1; done
-    quarantined 2009 interrupted && [ -z "$(find "$INC/run2009" -maxdepth 1 -name '.receiving.*')" ] && [ ! -d "$INC/run2009/.receive.lock" ]
+    for i in $(seq 1 50); do [ -d "$INC/run$RUN/quarantine" ] && break; sleep 0.1; done
+    quarantined "$RUN" interrupted && [ -z "$(find "$INC/run$RUN" -maxdepth 1 -name '.receiving.*')" ] && [ ! -d "$INC/run$RUN/.receive.lock" ]
   }
   ok "K2 an interrupted transfer (SIGHUP to the session, as when SSH drops) is quarantined; no final name; the lock is released" k2_interrupt
-  k2_retry() { recv 2009 < "$T/$A" && [ "$(bash "$R" --status "$INC" 2009 "$A" "$SHA")" = verified ]; }
+  k2_retry() { recv "$RUN" < "$T/$A" && [ "$(bash "$R" --status "$INC" "$RUN" "$A" "$SHA")" = verified ]; }
   ok "K2 the retry after the interrupted transfer succeeds" k2_retry
 else sk "K2 interrupted transfer" "needs Linux setsid/pgrep"; sk "K2 retry after interruption" "depends on the interrupted case"; fi
 
