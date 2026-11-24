@@ -10,6 +10,14 @@
   Platform Owner release.
 - **Readiness:** the plan is complete. The next step, N1 (branch and cherry-pick), needs the owner's go-ahead; nothing
   after it can start without that.
+- **Revision needed before N3 (finding of 25 Nov 2026, PO-07):**
+  - A Next.js 16.4.6 build of the Platform Owner branch needed more than 2.3 GB on this VPS and failed three times
+    (`PO07_SHARED_VPS_STAGING_PLAN.md` §F.1).
+  - N3's on-VPS build under `MemoryMax=1536M` is therefore unlikely to fit.
+  - **Measure the ERP release build in CI first.** Then replace N3 with a verified external build (as S6-R): a
+    GitHub-hosted build, an attested archive, its SHA-256 checked on the VPS, and installation beside the live release.
+  - Until then the release is **not ready to execute**. State on 25 Nov 2026: `main` = `621f156`; the fix branch is
+    unchanged; `9b8aa85` exists only on `feat/platform-owner`; nothing is merged or deployed.
 
 ## 1. Scope (verified in git, 21 Nov 2026)
 

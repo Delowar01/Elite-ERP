@@ -1,7 +1,16 @@
 # PO-07 Phase B — Shared-VPS staging plan (Platform Owner test instance)
 
-**Status: S0–S5 EXECUTED (23 Nov 2026); S6 FAILED on the VPS and is replaced by S6-R (decision S6-R1); S6-R–S9b
-not yet executed.** Architecture approved (D-B1); H-1 host binding implemented and tested on `feat/platform-owner`.
+**Status (25 Nov 2026): S0–S9b EXECUTED and ACCEPTED by the owner.**
+- 23 Nov 2026: S0–S5.
+- 24 Nov 2026: S6-R, S7, S8, S9 and S9b, in the authorized window. The verified external build is installed, both app
+  processes run read-only inside the namespace, and one administrator exists (the owner's bootstrap).
+- S10–S13 are **planned only**: `PO07_S10_S13_EXECUTION_PLAN.md`, together with the kit-4 corrections K1–K6 and the
+  resource reviews. No DNS, site, nginx, CloudPanel or certificate change has been made.
+
+The history below is kept as it was written.
+
+**Earlier status: S0–S5 EXECUTED (23 Nov 2026); S6 FAILED on the VPS and was replaced by S6-R (decision S6-R1).**
+Architecture approved (D-B1); H-1 host binding implemented and tested on `feat/platform-owner`.
 - 23 Nov 2026, in the owner-authorized window: S0 (read-only), then S1–S5 passed: the two users, the slice and the
   private namespace, the test cluster inside it, its roles and database, and the clone at `<APPROVED_SHA>`. They stay
   in place. S6 (`next build` on the VPS) failed three times on memory (§F.1) and stopped with no effect on any shared
