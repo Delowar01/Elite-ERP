@@ -18,10 +18,13 @@ APPROVED_BUILD_ID="zsnzn4exuiKvGWNoIKHtj"
 REPO_BRANCH="feat/platform-owner"
 
 # ---- execution window (owner) ---------------------------------------------------------------------------------------
-# 24 Nov 2026 18:00–22:00 Saudi time (UTC+3): the owner's written authorization of S6-R, S7, S8, S9 and S9b (Prompt 7,
-# final authorization). Previous window: 23 Nov 2026 15:00–19:00 UTC (S0–S5). Every --execute refuses outside the window.
-WINDOW_START_UTC="2026-11-24T15:00:00Z"
-WINDOW_END_UTC="2026-11-24T19:00:00Z"
+# 25 Nov 2026 16:00–23:00 Saudi time (UTC+3): the owner's written authorization of the final staging deployment and
+# acceptance (Prompt 7, "final staging deployment and acceptance authorization"): revised kit-5 installation, RECONCILE,
+# PGRESTART, S9 verification, S11a-A, S10, S11b, S11a-B, S12DEFER, S13, F1–F7 (P-8 consent given), final acceptance.
+# Previous windows: 24 Nov 2026 18:00–22:00 Saudi (S6-R → S9b); 23 Nov 2026 15:00–19:00 UTC (S0–S5).
+# Every --execute refuses outside the window.
+WINDOW_START_UTC="2026-11-25T13:00:00Z"
+WINDOW_END_UTC="2026-11-25T20:00:00Z"
 # A stage is not STARTED when fewer than this many minutes remain (S6-R: archive checks, extraction, verification).
 MIN_MINUTES_LEFT=15
 S6_MIN_MINUTES_LEFT=30
