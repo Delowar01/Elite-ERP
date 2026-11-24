@@ -28,8 +28,12 @@ bad="$(find "$O" -mindepth 1 -maxdepth 1 ! -name 'po07-staging-*.tar.gpg' ! -nam
 [ -z "$bad" ] || die "unexpected files in the outbox: $bad"
 [ -n "$OFFSITE_BUCKET" ] && [ -r "$RC" ] || die "no off-host bucket or rclone configuration"
 DEST="$OFFSITE_REMOTE:$OFFSITE_BUCKET/$OFFSITE_PREFIX"
-R=(rclone --config "$RC" --cache-dir "$ST/cache" --s3-no-check-bucket --retries 3 --low-level-retries 5 --stats 0)
-"${R[@]}" copy "$O" "$DEST" --immutable --no-traverse --include 'po07-staging-*.tar.gpg' --include 'po07-staging-*.tar.gpg.sha256' \
+# The upload key can list and write but never read (B2: listBuckets,listFiles,writeFiles; no readFiles), so rclone must
+# never HEAD an object: the destination is LISTED (not --no-traverse), existing objects are compared by the listed size
+# only (--size-only; --immutable refuses any that differs), and uploads are not HEADed afterwards (--s3-no-head: a
+# single-part PUT's MD5 is still checked from the response). The listing check below verifies every object's size.
+R=(rclone --config "$RC" --cache-dir "$ST/cache" --s3-no-check-bucket --s3-no-head --retries 3 --low-level-retries 5 --stats 0)
+"${R[@]}" copy "$O" "$DEST" --immutable --size-only --include 'po07-staging-*.tar.gpg' --include 'po07-staging-*.tar.gpg.sha256' \
   || die "rclone copy failed (nothing is deleted or overwritten; the next run retries)"
 # ---- verify: every local backup and sidecar is there with the same size ----
 remote="$("${R[@]}" lsf "$DEST" --format "ps" --separator " " --files-only)" || die "cannot list the off-host copies"

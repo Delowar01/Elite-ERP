@@ -22,7 +22,8 @@ CPUQuota=30%
 TasksMax=32
 Nice=10
 IOSchedulingClass=idle
-RuntimeMaxSec=1800
+# oneshot: the start timeout bounds the whole run (RuntimeMaxSec= is ignored for Type=oneshot)
+TimeoutStartSec=1800
 # --- sandbox (units/sandbox.inc, with a private RAM /tmp instead of PrivateTmp) ---
 NoNewPrivileges=yes
 CapabilityBoundingSet=

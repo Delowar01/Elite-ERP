@@ -66,7 +66,7 @@ r="$(mc retention info "ci/$B/$OFFSITE_PREFIX/$ON" 2>&1)"; grep -qi governance <
 echo "ok: $ON encrypted to the owner's subkey only; no plaintext on disk; the backup ran in the namespace; the uploader is a dynamic identity outside it; the off-host object is under GOVERNANCE retention"
 cp "$OBJ" "$RUNNER_TEMP/forged.tar.gpg"; printf 'x' | dd of="$RUNNER_TEMP/forged.tar.gpg" bs=1 seek=200 conv=notrunc 2> /dev/null
 if rclone --config "$OFFSITE_CONF" deletefile "$OFFSITE_REMOTE:$B/$OFFSITE_PREFIX/$ON" > /dev/null 2>&1; then fail "the upload key could delete an off-host backup"; fi
-rclone --config "$OFFSITE_CONF" copyto "$RUNNER_TEMP/forged.tar.gpg" "$OFFSITE_REMOTE:$B/$OFFSITE_PREFIX/$ON" > /dev/null 2>&1 || true   # a hostile overwrite attempt (a new version at most)
+rclone --config "$OFFSITE_CONF" copyto --s3-no-head --no-check-dest "$RUNNER_TEMP/forged.tar.gpg" "$OFFSITE_REMOTE:$B/$OFFSITE_PREFIX/$ON" > /dev/null 2>&1 || true   # a hostile overwrite: the PUT itself is sent (a new version at most)
 v="$(mc ls --versions "ci/$B/$OFFSITE_PREFIX/$ON" 2> /dev/null | grep -c "$ON")"
 mc cat --version-id "$(mc ls --versions --json "ci/$B/$OFFSITE_PREFIX/$ON" 2> /dev/null | node -e 'const l=require("fs").readFileSync(0,"utf8").split("\n").filter(Boolean).map(JSON.parse);console.log(l.sort((a,b)=>a.lastModified.localeCompare(b.lastModified))[0].versionId)')" \
   "ci/$B/$OFFSITE_PREFIX/$ON" 2> /dev/null | cmp -s - "$OBJ" || fail "the original off-host version is not intact after an overwrite attempt"
