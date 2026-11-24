@@ -89,6 +89,9 @@ put_file() {
     if cmp -s "$src" "$dest"; then say "unchanged: $dest"; return 0; fi
     stop_now "$dest exists with different content (not written by this kit version)"
   fi
+  # K3: a completed stage never installs a file by itself (e.g. one added to the kit after the stage ran): only an
+  # owner-authorized tools/reconcile.sh does.
+  [ ! -f "$STATE_DIR/$STAGE.done" ] || stop_now "$STAGE is complete and $dest is not installed: a kit change is never installed by re-running a stage (tools/reconcile.sh --report; an owner-authorized reconcile installs it)"
   act install -m "$mode" -o "${og%%:*}" -g "${og##*:}" "$src" "$dest"
 }
 # safe_rm PATH... — recursive removal of a staging path only: allow-listed, absent is fine, never through a symlink.
@@ -217,6 +220,63 @@ recovery_complete() {
   say "RECOVERY COMPLETE: the S6 STOP is resolved by S6-R; original kept as $kept; S7 may follow"
 }
 require_done() { [ "$MODE" = plan ] && return 0; [ -f "$STATE_DIR/$1.done" ] || stop_now "prerequisite $1 not completed"; }
+# ---- K4: the owner-approved artifact is pinned in config.sh; ARTIFACT.expected must name exactly it -------------------
+artifact_pinned() {
+  [ "$(xv run_id)" = "$APPROVED_RUN_ID" ] && [ "$(xv archive_sha256)" = "$APPROVED_ARCHIVE_SHA256" ] && [ "$(xv build_id)" = "$APPROVED_BUILD_ID" ] &&
+    [ "$(xv source_sha)" = "$APPROVED_SHA" ] && [ "$(xv source_tree)" = "$APPROVED_TREE" ]
+}
+# K2: the archive was published by tools/artifact-receive.sh, which wrote <archive>.verified only after the size,
+# SHA-256 and identity checks passed.
+archive_verified() { # ARCHIVE
+  [ -f "$1.verified" ] && [ ! -L "$1.verified" ] && grep -qx "sha256=$(xv archive_sha256)" "$1.verified" &&
+    grep -qx "build_id=$(xv build_id)" "$1.verified" && grep -qx "run_id=$(xv run_id)" "$1.verified"
+}
+
+# ---- K3: installed-file reconciliation (units/installed-files.tsv) ----------------------------------------------------
+INSTALLED_LIST="$KIT_HERE/units/installed-files.tsv"
+installed_entries() { grep -v -e '^#' -e '^$' "$INSTALLED_LIST"; }
+# installed_state DEST MODE OWNER:GROUP SRC STAGE KEY FLAGS → UNCHANGED | OUTDATED(<kit>) | MODIFIED | MISSING |
+# PROPOSED | NOT-INSTALLED | WRONG-OWNER-OR-MODE | NOT-A-FILE
+installed_state() {
+  local dest="$1" mode="$2" og="$3" src="$KIT_HERE/$4" stage="$5" key="$6" flags="$7" h
+  if [ ! -e "$dest" ] && [ ! -L "$dest" ]; then
+    if [ -f "$STATE_DIR/$stage.done" ]; then case "$flags" in *proposed*) echo PROPOSED ;; *) echo MISSING ;; esac
+    else echo NOT-INSTALLED; fi
+    return 0
+  fi
+  [ -f "$dest" ] && [ ! -L "$dest" ] || { echo NOT-A-FILE; return 0; }
+  [ "$(stat -c '%a %U:%G' "$dest")" = "${mode#0} $og" ] || { echo WRONG-OWNER-OR-MODE; return 0; }
+  if cmp -s "$src" "$dest"; then echo UNCHANGED; return 0; fi
+  for h in "$KIT_HERE/units/history/$key"@*; do
+    if [ -f "$h" ] && cmp -s "$h" "$dest"; then echo "OUTDATED(${h##*@})"; return 0; fi
+  done
+  echo MODIFIED
+}
+# installed_extras — anything in the kit's install locations that the list does not name (the kit creates no
+# drop-in directory for its own units, so one there is unexpected too).
+installed_extras() {
+  local f listed
+  listed="$(installed_entries | cut -f1)"
+  for f in /etc/systemd/system/elite-po-* "/etc/systemd/system/postgresql@16-po07ns.service.d"/* \
+    "/etc/postgresql/16/po07ns/conf.d"/* "$APP_DIR/.kit-tools"/*; do
+    [ -e "$f" ] || [ -L "$f" ] || continue
+    printf '%s\n' "$listed" | grep -qxF -- "$f" || printf '%s\n' "$f"
+  done
+}
+# installed_files_gate — at the start of every stage: each listed file of a completed stage must be the kit's own;
+# anything else STOPs (the 24 Nov 2026 S9 STOP: the S2 wrapper was still kit-1's). Only an owner-authorized
+# tools/reconcile.sh changes an installed file; a stage never does it on its own.
+installed_files_gate() {
+  [ "$MODE" = plan ] && { plan "verify: every kit-installed system file of a completed stage equals this kit (units/installed-files.tsv)"; return 0; }
+  local bad=() dest mode og src stage key flags st x
+  while IFS=$'\t' read -r dest mode og src stage key flags; do
+    st="$(installed_state "$dest" "$mode" "$og" "$src" "$stage" "$key" "$flags")"
+    case "$st" in UNCHANGED|NOT-INSTALLED|PROPOSED) ;; *) bad+=("$st $dest") ;; esac
+  done < <(installed_entries)
+  while IFS= read -r x; do [ -z "$x" ] || bad+=("UNEXPECTED $x"); done < <(installed_extras)
+  [ ${#bad[@]} -eq 0 ] || stop_now "installed staging files differ from this kit: $(printf '%s; ' "${bad[@]}")review: tools/reconcile.sh --report; only an owner-authorized reconcile changes them"
+  say "installed files: every kit-installed file of a completed stage equals this kit"
+}
 mark_done() {
   if [ "$MODE" = plan ]; then plan "mark $STAGE done"; return 0; fi
   date -u +%FT%TZ > "$STATE_DIR/$STAGE.done"; say "$STAGE COMPLETE"
@@ -301,6 +361,7 @@ stage_begin() {
     require_authorized
     require_window "${2:-$MIN_MINUTES_LEFT}"
     [ -z "${1:-}" ] || require_done "$1"
+    [ "$STAGE" = RECONCILE ] || installed_files_gate
     if [ -f "$STATE_DIR/$STAGE.done" ]; then say "$STAGE already completed at $(cat "$STATE_DIR/$STAGE.done"): re-checking only"; fi
     mkdir -p "$STATE_DIR/logs"
     exec > >(tee -a "$STATE_DIR/logs/$STAGE-$(date -u +%Y%m%dT%H%M%SZ).log") 2>&1

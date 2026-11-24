@@ -34,6 +34,8 @@ later_clean || { say "refused: a later STOP happened after changes ($STATE_DIR/S
 a="$INCOMING_DIR/run$(xv run_id)/$(xv archive)"
 [ -f "$a" ] && [ "$(sha256sum "$a" | cut -d' ' -f1)" = "$(xv archive_sha256)" ] || { say "refused: the archive in $INCOMING_DIR does not match ARTIFACT.expected"; exit 3; }
 [ "$(xv source_sha)" = "$APPROVED_SHA" ] && [ "$(xv source_tree)" = "$APPROVED_TREE" ] || { say "refused: the artifact is not for the approved release"; exit 3; }
+artifact_pinned || { say "refused: ARTIFACT.expected is not the owner-approved artifact pinned in config.sh (K4)"; exit 3; }
+archive_verified "$a" || { say "refused: the archive was not published by artifact-receive (no matching .verified record, K2)"; exit 3; }
 (cd "$KIT_DIR" && sha256sum --quiet -c "$STATE_DIR/KIT.sha256") || { say "refused: the installed kit does not match its manifest"; exit 3; }
 reason="$(printf '%s' "$REASON_B64" | base64 -d 2>/dev/null | tr '\n\r\t' '   ')"
 [ "${#reason}" -ge 20 ] || { say "refused: the owner's recovery reason is required, verbatim (at least 20 characters)"; exit 3; }

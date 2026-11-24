@@ -2,12 +2,17 @@
 # Sourced by lib.sh. Contains NO secret: every password and key is generated on the VPS (S4, S7) and never printed.
 # shellcheck shell=bash disable=SC2034
 
-KIT_VERSION="po07-s1s9-kit-3"   # kit-3: J1 read-only build, S6-R, guarded STOP resolution, traceable S0 reference
+KIT_VERSION="po07-s1s9-kit-4"   # kit-4 (25 Nov 2026): K1 manifest formats, K2 verified transfer, K3 installed-file reconciliation,
+                                 # K4 pinned source/artifact, K5 baseline chain, K6 IPv4/NAT64 SSH. kit-3: J1, S6-R, D24
 
 # ---- approved release (owner, Prompt 7) -------------------------------------------------------------------------
 APPROVED_SHA="cf64ebc492b56ad91c28ba3aa7640722935e21c5"
 APPROVED_TREE="6403cf5d822df491f6e16a56068ab9d7c2f1f138"   # git rev-parse cf64ebc^{tree}, computed on the PC
 REPO_URL="https://github.com/Delowar01/Elite-ERP.git"
+# The owner-approved artifact (S6-R1, 23 Nov 2026; installed 24 Nov 2026), pinned (K4): ARTIFACT.expected must name exactly it.
+APPROVED_RUN_ID="45228504829"
+APPROVED_ARCHIVE_SHA256="df96cb5b12b5d2b5723e14f626a8619ef062c5d3d9fea990d67745ecca9e561c"
+APPROVED_BUILD_ID="zsnzn4exuiKvGWNoIKHtj"
 REPO_BRANCH="feat/platform-owner"
 
 # ---- execution window (owner) ---------------------------------------------------------------------------------------
@@ -63,6 +68,11 @@ BACKUP_ROLE="po_cit_backup_test_only_"
 NGINX_GROUP="po07web"   # CI: a stand-in web-server group (created by the rehearsal)
 CHROMIUM="/usr/bin/google-chrome"
 NODE_BIN="/usr/bin/node"
+
+# ---- SSH (K6, PC side only: tools/ssh-args.sh). The owner's existing alias; one trusted host identity ----------------
+SSH_ALIAS="po07-test-vps"
+VPS_IPV4="192.0.2.10"      # the alias's HostName = the name of the owner's known_hosts entry (HostKeyAlias)
+SSH_ROUTE="ipv4"               # ipv4 | nat64 (64:ff9b::/96 of VPS_IPV4); PO07_SSH_ROUTE overrides it per session
 
 # ---- the on-VPS kit location (root 0700) -----------------------------------------------------------------------------
 KIT_DIR="/root/elite-po-kit"

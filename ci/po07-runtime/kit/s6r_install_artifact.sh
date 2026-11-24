@@ -71,6 +71,9 @@ if [ "$MODE" = execute ]; then
   [ "$(x source_sha)" = "$APPROVED_SHA" ] && [ "$(x source_tree)" = "$APPROVED_TREE" ] || stop_now "ARTIFACT.expected is not for the approved commit and tree"
   case " $ARTIFACT_WORKFLOW_COMMITS " in *" $(x workflow_commit) "*) ;; *) stop_now "the artifact's workflow commit $(x workflow_commit) is not a reviewed one";; esac
   [[ "$(x run_id)" =~ ^[0-9]+$ ]] && [[ "$(x archive)" =~ ^po07-staging-build-[0-9a-f]{12}\.tar\.gz$ ]] || stop_now "malformed ARTIFACT.expected"
+  # K4: a substituted or mismatched build is refused even if its receipt is self-consistent: the owner-approved run,
+  # archive SHA-256, build id, commit and tree are pinned in config.sh.
+  artifact_pinned || stop_now "ARTIFACT.expected is not the owner-approved artifact pinned in config.sh (run $APPROVED_RUN_ID, build $APPROVED_BUILD_ID)"
 fi
 ARCHIVE="$INCOMING_DIR/run$(x run_id)/$(x archive)"
 file_ok() { [ -f "$ARCHIVE" ] && [ ! -L "$ARCHIVE" ] && [ "$(stat -c '%U %a' "$ARCHIVE")" = "root 600" ]; }
@@ -98,6 +101,9 @@ check "the archive validator passes (format, names, links, permissions, every fi
 if [ "$MODE" = execute ] && [ -f "$STATE_DIR/S6R.installed" ]; then
   say "S6-R already installed ($(cat "$STATE_DIR/S6R.installed")): re-checking the installed build only"
 else
+  # K2: an archive is installed only if tools/artifact-receive.sh published it (size, SHA-256 and identity verified
+  # BEFORE it got its final name); a leftover or quarantined transfer never has this record.
+  check "the archive was published by artifact-receive after its size, SHA-256 and identity were verified (K2)" archive_verified "$ARCHIVE"
   say "-- 5. record, then remove, the incomplete output of the retired on-VPS build"
   build_unit_idle() { [ "$(systemctl is-active elite-po-build.service)" != active ] && [ "$(systemctl is-active elite-po-install.service)" != active ]; }
   check "no build or install unit is running" build_unit_idle

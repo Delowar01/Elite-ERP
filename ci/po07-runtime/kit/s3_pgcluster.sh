@@ -39,12 +39,16 @@ elif ! cmp -s "$U/pg_hba.conf" "$CONF/pg_hba.conf"; then
 fi
 mkdir_staging "$DROPIN_DIR" 0755 root:root
 put_file "$DROPIN_DIR/10-staging.conf" 0644 root:root "$U/postgresql@16-po07ns.10-staging.conf"
+# PROPOSED 25 Nov 2026 (owner review): the cluster's own task cap (units/pg-tasks.conf). A fresh install (the CI
+# rehearsal) gets it here; where S3 is already complete (the VPS) put_file refuses, and only an owner-authorized
+# tools/reconcile.sh installs it.
+put_file "$DROPIN_DIR/20-tasks.conf" 0644 root:root "$U/pg-tasks.conf"
 sctl daemon-reload
 dropin_ok() {
-  local s; s="$(systemctl show -p NetworkNamespacePath,Slice,PIDFile,MemoryMax postgresql@16-po07ns.service | sort | tr '\n' ' ')"
-  [ "$s" = "MemoryMax=402653184 NetworkNamespacePath=/run/netns/$NS PIDFile=$PG_RUN/16-$CLUSTER.pid Slice=elite-po-staging.slice " ] || { say "drop-in view: $s"; return 1; }
+  local s; s="$(systemctl show -p NetworkNamespacePath,Slice,PIDFile,MemoryMax,TasksMax postgresql@16-po07ns.service | sort | tr '\n' ' ')"
+  [ "$s" = "MemoryMax=402653184 NetworkNamespacePath=/run/netns/$NS PIDFile=$PG_RUN/16-$CLUSTER.pid Slice=elite-po-staging.slice TasksMax=64 " ] || { say "drop-in view: $s"; return 1; }
 }
-check "the drop-in is in effect (namespace, slice, PID file, 384M)" dropin_ok
+check "the drop-ins are in effect (namespace, slice, PID file, 384M, 64 tasks)" dropin_ok
 sctl start postgresql@16-po07ns.service
 pg_active() { sleep 3; [ "$(systemctl is-active postgresql@16-po07ns.service)" = active ] && [ "$(cluster_row)" = "$PG_PORT online $PG_USER" ]; }
 check "postgresql@16-po07ns is active and pg_lsclusters shows it online" pg_active

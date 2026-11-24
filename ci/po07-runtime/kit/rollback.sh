@@ -99,6 +99,7 @@ rb_S3() {
   fi
   safe_rm "/etc/postgresql/$PG_VER/$CLUSTER"
   rm_kit_file "/etc/systemd/system/postgresql@16-po07ns.service.d/10-staging.conf" "$U/postgresql@16-po07ns.10-staging.conf"
+  rm_kit_file "/etc/systemd/system/postgresql@16-po07ns.service.d/20-tasks.conf" "$U/pg-tasks.conf"   # absent is fine (proposed)
   safe_rm "/etc/systemd/system/postgresql@16-po07ns.service.d"
   sctl daemon-reload
   [ "$MODE" = execute ] && rm -f "$STATE_DIR/S3.created"

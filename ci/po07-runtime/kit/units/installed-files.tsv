@@ -1,0 +1,22 @@
+# PO-07 K3 (25 Nov 2026): every system file the kit installs outside its own directory — the reconciliation list.
+# dest<TAB>mode<TAB>owner:group<TAB>kit source<TAB>stage<TAB>history key<TAB>flags
+# Checked at the start of every stage (lib.sh installed_files_gate) and by tools/reconcile.sh. A file equal to its kit
+# source is UNCHANGED; equal to units/history/<key>@<kit> it is OUTDATED; anything else is MODIFIED. flags "proposed":
+# added to the kit after its stage ran on the VPS; it is installed only by an owner-authorized reconcile, and its
+# absence never blocks a stage. Generated files (env files, credentials) and the application tree are not listed.
+/etc/systemd/system/elite-po-staging.slice	0644	root:root	units/elite-po-staging.slice	S2	slice	-
+/etc/systemd/system/elite-po-staging-netns.service	0644	root:root	units/elite-po-staging-netns.service	S2	netns	-
+/etc/tmpfiles.d/elite-po-staging.conf	0644	root:root	units/elite-po-staging.tmpfiles.conf	S2	tmpfiles	-
+/usr/local/sbin/elite-po-run	0700	root:root	units/elite-po-run	S2	wrapper	-
+/etc/postgresql/16/po07ns/conf.d/10-staging.conf	0644	po07pg:po07pg	units/pg-10-staging.conf	S3	pg-conf	-
+/etc/postgresql/16/po07ns/pg_hba.conf	0640	po07pg:po07pg	units/pg_hba.conf	S3	pg-hba	-
+/etc/systemd/system/postgresql@16-po07ns.service.d/10-staging.conf	0644	root:root	units/postgresql@16-po07ns.10-staging.conf	S3	pg-dropin	-
+/etc/systemd/system/postgresql@16-po07ns.service.d/20-tasks.conf	0644	root:root	units/pg-tasks.conf	S3	pg-tasks	proposed
+/srv/elite-po-staging/.kit-tools/check-archive.mjs	0640	root:po07app	tools/check-archive.mjs	S6	kit-check-archive	-
+/srv/elite-po-staging/.kit-tools/s6r-runtime-check.sh	0640	root:po07app	probes/s6r-runtime-check.sh	S6	kit-runtime-check	-
+/etc/systemd/system/elite-po-admin.service	0644	root:root	units/elite-po-admin.service	S9	admin-unit	-
+/etc/systemd/system/elite-po-customer.service	0644	root:root	units/elite-po-customer.service	S9	customer-unit	-
+/etc/systemd/system/elite-po-admin-proxy.socket	0644	root:root	units/elite-po-admin-proxy.socket	S9	admin-proxy-socket	-
+/etc/systemd/system/elite-po-admin-proxy.service	0644	root:root	units/elite-po-admin-proxy.service	S9	admin-proxy-service	-
+/etc/systemd/system/elite-po-customer-proxy.socket	0644	root:root	units/elite-po-customer-proxy.socket	S9	customer-proxy-socket	-
+/etc/systemd/system/elite-po-customer-proxy.service	0644	root:root	units/elite-po-customer-proxy.service	S9	customer-proxy-service	-

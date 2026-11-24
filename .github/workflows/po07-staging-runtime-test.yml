@@ -148,6 +148,30 @@ jobs:
             ${{ runner.temp }}/suite-logs/
           retention-days: 30
 
+  kit-k-tests:
+    # K1–K6 (25 Nov 2026): the six kit corrections after the 24 Nov 2026 window, on fictional fixtures, plus the
+    # approved commit's reachability on the real repository (K4) — offline from a full clone and via the GitHub API.
+    name: kit corrections K1–K6 (Linux) + approved-source reachability
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: K1–K6 regression tests (the rendered kit's own code)
+        run: bash ci/po07-runtime/kit-k-tests.sh ci/po07-runtime/kit
+      - name: K4 — the approved commit exists, has the pinned tree and is reachable (not the branch tip)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -Eeuo pipefail
+          bash ci/po07-runtime/kit/tools/verify-source.sh --git . origin/feat/platform-owner --receipt /nonexistent
+          bash ci/po07-runtime/kit/tools/verify-source.sh --github --receipt /nonexistent
+
   rehearsal:
     name: kit rehearsal S1 → S9 (S6-R) + rollback, real systemd
     runs-on: ubuntu-24.04
