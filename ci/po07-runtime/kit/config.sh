@@ -11,10 +11,10 @@ REPO_URL="https://github.com/Delowar01/Elite-ERP.git"
 REPO_BRANCH="feat/platform-owner"
 
 # ---- execution window (owner) ---------------------------------------------------------------------------------------
-# EXPIRED: 23 Nov 2026 18:00–22:00 Saudi time (UTC+3). Set the NEXT window here from the owner's new written
-# authorization before `pc-kit.sh update`; every --execute refuses outside the window.
-WINDOW_START_UTC="2026-11-23T15:00:00Z"
-WINDOW_END_UTC="2026-11-23T19:00:00Z"
+# 24 Nov 2026 18:00–22:00 Saudi time (UTC+3): the owner's written authorization of S6-R, S7, S8, S9 and S9b (Prompt 7,
+# final authorization). Previous window: 23 Nov 2026 15:00–19:00 UTC (S0–S5). Every --execute refuses outside the window.
+WINDOW_START_UTC="2026-11-24T15:00:00Z"
+WINDOW_END_UTC="2026-11-24T19:00:00Z"
 # A stage is not STARTED when fewer than this many minutes remain (S6-R: archive checks, extraction, verification).
 MIN_MINUTES_LEFT=15
 S6_MIN_MINUTES_LEFT=30
