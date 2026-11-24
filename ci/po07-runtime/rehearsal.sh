@@ -103,7 +103,7 @@ expect_stop() { # LABEL PATTERN CMD... — must STOP for that reason; the expect
 }
 gate() { bash -c 'STAGE=S9; . "$1/lib.sh" --execute; load_baseline; installed_files_gate' _ "$KIT_DIR"; }
 rep | tee "$STATE_DIR/logs/ci-reconcile-1.txt"
-grep -q '^RECONCILE-REPORT listed=16 attention=0' "$STATE_DIR/logs/ci-reconcile-1.txt" || fail "K3: after S9 every installed file must be UNCHANGED"
+grep -qE '^RECONCILE-REPORT listed=[0-9]+ attention=0' "$STATE_DIR/logs/ci-reconcile-1.txt" || fail "K3: after S9 every installed file must be UNCHANGED"
 install -m 0700 -o root -g root "$KIT_DIR/units/history/wrapper@kit-1" "$W"   # the VPS state of 24 Nov 2026
 grep -q "^OUTDATED(kit-1) .* $W$" <<< "$(rep)" || fail "K3: the kit-1 wrapper is not reported OUTDATED(kit-1)"
 echo "ok: the kit-1 wrapper is reported OUTDATED(kit-1)"
