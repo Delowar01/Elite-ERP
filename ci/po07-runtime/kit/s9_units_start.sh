@@ -94,7 +94,7 @@ eacces_ok() {
 }
 check "a non-nginx user (nobody, $APP_USER) gets EACCES on both sockets" eacces_ok
 no_host_tcp() {
-  ! ss -ltnH | awk '{print $4}' | grep -qE ":($ADMIN_IN|$CUST_IN|$PG_PORT)\$" &&
+  ! grep -qE ":($ADMIN_IN|$CUST_IN|$PG_PORT)\$" <<< "$(ss -ltnH | awk '{print $4}')" &&
     [ "$(curl -s -o /dev/null -m 5 -w '%{http_code}' "http://127.0.0.1:$ADMIN_IN/" || true)" = 000 ] &&
     [ "$(curl -s -o /dev/null -m 5 -w '%{http_code}' "http://127.0.0.1:$CUST_IN/" || true)" = 000 ]
 }

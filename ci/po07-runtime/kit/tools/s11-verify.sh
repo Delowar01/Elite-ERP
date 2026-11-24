@@ -25,7 +25,9 @@ sockets() {
   # root can open any socket whatever its mode: the mode protects against every NON-root identity only
   w="$(ps -o user=,group= --ppid "$(master)" | sort -u | tr -s ' ' | tr '\n' ';')"
   echo "INFO  site nginx worker identity: $w (recorded at S0; never changed by the kit)"
-  if grep -hs "unix:$RUN_DIR" /var/log/nginx/error.log /home/*/logs/nginx/error.log 2> /dev/null | grep -q "Permission denied"; then no "nginx logged a permission error on a staging socket"
+  # captured first: the error logs can be large, and a pipe into grep -q under pipefail can hide a match
+  local el; el="$(grep -hs "unix:$RUN_DIR" /var/log/nginx/error.log /home/*/logs/nginx/error.log 2> /dev/null || true)"
+  if grep -q "Permission denied" <<< "$el"; then no "nginx logged a permission error on a staging socket"
   else ok "no permission error on a staging socket in the nginx logs"; fi
 }
 case "${1:-}" in

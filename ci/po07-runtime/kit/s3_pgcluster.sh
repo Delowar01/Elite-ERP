@@ -17,7 +17,7 @@ if [ "$MODE" = execute ]; then
     say "cluster exists (kit)"
   else
     { [ ! -e "$CONF" ] && [ ! -e "$DATA" ]; } || stop_now "$CONF or $DATA exists without a cluster"
-    if pg_lsclusters -h | awk '{print $3}' | grep -qx "$PG_PORT"; then stop_now "port $PG_PORT is configured for another cluster"; fi
+    if grep -qx -- "$PG_PORT" <<< "$(pg_lsclusters -h | awk '{print $3}')"; then stop_now "port $PG_PORT is configured for another cluster"; fi
   fi
 fi
 if [ "$MODE" = plan ] || [ ! -f "$STATE_DIR/S3.created" ]; then
@@ -65,7 +65,7 @@ expect_settings() {
 check "cluster settings: loopback, ssl off, port, own socket and pid dir, 64MB, 30 connections, scram" expect_settings
 hba_ok() { [ "$(printf 'select count(*) from pg_hba_file_rules where error is null;\n' | spsql postgres)" = 2 ]; }
 check "pg_hba in effect: exactly the kit's 2 rules" hba_ok
-no_host_5433() { ! ss -ltnH | awk '{print $4}' | grep -qE ":$PG_PORT\$"; }
+no_host_5433() { ! grep -qE ":$PG_PORT\$" <<< "$(ss -ltnH | awk '{print $4}')"; }
 check "the host has no new TCP listener ($PG_PORT exists only inside $NS)" no_host_5433
 guard_shared
 mark_done

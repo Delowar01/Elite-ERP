@@ -56,8 +56,9 @@ node -e '
 tar -C "$D" -cf - manifest.json db.dump schema.tsv rowcounts.tsv storage.tar storage.sha256 |
   gpg --batch --quiet --homedir "$W/gnupg" --no-auto-key-locate --trust-model always --recipient-file "$CREDENTIALS_DIRECTORY/owner.pub" \
     --cipher-algo AES256 --compress-algo none --encrypt --output "$O/.$name.tar.gpg.part"
-gpg --batch --homedir "$W/gnupg" --list-packets "$O/.$name.tar.gpg.part" 2>&1 | grep -q ':pubkey enc packet:' || die "the output is not public-key encrypted"
-if head -c 5 "$O/.$name.tar.gpg.part" | grep -q 'PGDMP'; then die "plaintext dump in the output"; fi
+pk="$(gpg --batch --no-autostart --homedir "$W/gnupg" --list-packets "$O/.$name.tar.gpg.part" 2>&1 || true)"   # captured: no pipe into grep -q
+grep -q ':pubkey enc packet:' <<< "$pk" || die "the output is not public-key encrypted"
+if [ "$(head -c 5 "$O/.$name.tar.gpg.part")" = PGDMP ]; then die "plaintext dump in the output"; fi
 (cd "$O" && sha256sum ".$name.tar.gpg.part" | sed "s/\.$name\.tar\.gpg\.part/$name.tar.gpg/") > "$O/.$name.tar.gpg.sha256.part"
 chmod 0640 "$O/.$name.tar.gpg.part" "$O/.$name.tar.gpg.sha256.part"
 mv -- "$O/.$name.tar.gpg.part" "$O/$name.tar.gpg"; mv -- "$O/.$name.tar.gpg.sha256.part" "$O/$name.tar.gpg.sha256"

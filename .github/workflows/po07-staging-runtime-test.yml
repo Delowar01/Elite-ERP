@@ -238,10 +238,15 @@ jobs:
           echo "PO07_S3BIN=$B" >> "$GITHUB_ENV"
       - name: Rehearsal S1 → S9, extra runtime checks, rollback
         run: sudo -E bash tools/ci/po07-runtime/rehearsal.sh art "$ARTIFACT_RUN_ID"
+      - name: The S12 units' journals (fictional data; shown so a backup or upload failure is diagnosable)
+        if: always()
+        run: |
+          sudo journalctl --no-pager -o short-iso -u elite-po-backup.service -u elite-po-offsite.service -n 80 2>/dev/null || true
       - name: Collect the kit's logs
         if: always()
         run: |
           mkdir -p "$RUNNER_TEMP/kit-logs"
+          sudo journalctl --no-pager -o short-iso -u elite-po-backup.service -u elite-po-offsite.service > "$RUNNER_TEMP/kit-logs/journal-s12-units.txt" 2>/dev/null || true
           # the logs, and the D24 records (the kept STOP, the failed and consumed recovery authorizations, STOPPED.later/.resolved)
           sudo sh -c "cp -a /root/elite-po-kit/state/logs/. '$RUNNER_TEMP/kit-logs/' 2>/dev/null; mkdir -p '$RUNNER_TEMP/kit-logs/d24-state'
             cp -a /root/elite-po-kit/state/STOPPED* /root/elite-po-kit/state/RECOVERY* '$RUNNER_TEMP/kit-logs/d24-state/' 2>/dev/null

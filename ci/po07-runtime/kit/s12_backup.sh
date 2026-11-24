@@ -47,9 +47,12 @@ newest() { ls -1t "$BACKUP_DIR"/outbox/po07-staging-*.tar.gpg 2> /dev/null | hea
 backup_ok() {
   local f; f="$(newest)"; [ -n "$f" ] && [ -f "$f.sha256" ] || return 1
   (cd "$BACKUP_DIR/outbox" && sha256sum --quiet -c "$(basename "$f").sha256") || return 1
-  local g; g="$(mktemp -d)"; gpg --batch --homedir "$g" --list-packets "$f" 2>&1 | grep -q ':pubkey enc packet:' || { rm -rf -- "$g"; return 1; }; rm -rf -- "$g"
+  # no key in the empty home and --no-autostart: never a gpg-agent (a listener the §I guard would refuse); output
+  # captured first (a pipe into grep -q under pipefail can turn a match into a failure)
+  local g p; g="$(mktemp -d)"; p="$(gpg --batch --no-autostart --homedir "$g" --list-packets "$f" 2>&1 || true)"; rm -rf -- "$g"
+  grep -q ':pubkey enc packet:' <<< "$p" || return 1
   [ "$(stat -c '%a %G' "$f")" = "640 $UPLOAD_GROUP" ] || return 1
-  ! find "$BACKUP_DIR" -type f ! -name 'po07-staging-*.tar.gpg' ! -name 'po07-staging-*.tar.gpg.sha256' | grep -q .
+  [ -z "$(find "$BACKUP_DIR" -type f ! -name 'po07-staging-*.tar.gpg' ! -name 'po07-staging-*.tar.gpg.sha256')" ]
 }
 check "one backup exists, encrypted to the owner's public key, its SHA-256 sidecar verifies, nothing unencrypted is on disk" backup_ok
 sctl start elite-po-offsite.service || stop_now "the off-host copy failed (journalctl -u elite-po-offsite.service); the encrypted backup stays in the outbox"

@@ -121,7 +121,7 @@ rb_S3() {
   later_done S4 S5 S6 S7 S8 S9 && stop_now "roll back S4 first"
   sctl stop postgresql@16-po07ns.service
   if [ "$MODE" = plan ]; then plan "pg_dropcluster $PG_VER $CLUSTER (only if owned by $PG_USER and created by the kit)"
-  elif pg_lsclusters -h | awk -v v="$PG_VER" -v c="$CLUSTER" '$1==v && $2==c' | grep -q .; then
+  elif [ -n "$(pg_lsclusters -h | awk -v v="$PG_VER" -v c="$CLUSTER" '$1==v && $2==c')" ]; then
     [ -f "$STATE_DIR/S3.created" ] || stop_now "the cluster was not created by this kit"
     [ "$(stat -c %U "/var/lib/postgresql/$PG_VER/$CLUSTER")" = "$PG_USER" ] || stop_now "the cluster's data is not owned by $PG_USER"
     act pg_dropcluster "$PG_VER" "$CLUSTER"
@@ -130,7 +130,7 @@ rb_S3() {
   # original pg_hba), so the directory survives it: removed here, only when the kit created the cluster (S3 marker).
   if [ "$MODE" = execute ] && [ -d "/etc/postgresql/$PG_VER/$CLUSTER" ]; then
     [ -f "$STATE_DIR/S3.created" ] || stop_now "/etc/postgresql/$PG_VER/$CLUSTER exists but the cluster was not created by this kit"
-    pg_lsclusters -h | awk -v v="$PG_VER" -v c="$CLUSTER" '$1==v && $2==c' | grep -q . && stop_now "the cluster still exists after pg_dropcluster"
+    [ -z "$(pg_lsclusters -h | awk -v v="$PG_VER" -v c="$CLUSTER" '$1==v && $2==c')" ] || stop_now "the cluster still exists after pg_dropcluster"
   fi
   safe_rm "/etc/postgresql/$PG_VER/$CLUSTER"
   rm_kit_file "/etc/systemd/system/postgresql@16-po07ns.service.d/10-staging.conf" "$U/postgresql@16-po07ns.10-staging.conf"

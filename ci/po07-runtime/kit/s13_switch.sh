@@ -70,9 +70,9 @@ restart_apps() {
 }
 in_env() { # UNIT VAR=VAL → yes|no (the running process's environment; only the one variable is compared, nothing printed)
   local pid; pid="$(systemctl show -p MainPID --value "$1")"
-  tr '\0' '\n' < "/proc/$pid/environ" | grep -qx "$2" && echo yes || echo no; }
+  grep -qx -- "$2" <<< "$(tr '\0' '\n' < "/proc/$pid/environ")" && echo yes || echo no; }
 verify() { # STATE SINCE → 0 when every automated check of this switch passes
-  local want_a want_c a c f1
+  local want_a want_c a c f1 j
   want_a=$([ "$1" = on ] && echo yes || echo no); want_c=$([ "$1" = on ] && [ "$FILES" = both ] && echo yes || echo no)
   a="$(in_env elite-po-admin.service "$VAR=$VAL")"; c="$(in_env elite-po-customer.service "$VAR=$VAL")"
   [ "$a" = "$want_a" ] && [ "$c" = "$want_c" ] || { say "process environment: admin $a (want $want_a), customer $c (want $want_c)"; return 1; }
@@ -80,7 +80,9 @@ verify() { # STATE SINCE → 0 when every automated check of this switch passes
   [ "$(get "$RUN_DIR/admin.sock" "$ADMIN_HOST" /platform/login)" = "$f1" ] || { say "admin /platform/login is not $f1"; return 1; }
   [ "$(get "$RUN_DIR/customer.sock" "$CUST_HOST" /platform/login)" = 404 ] || { say "the console answers on the customer host"; return 1; }
   [ "$(get "$RUN_DIR/customer.sock" "$CUST_HOST" /login)" = 200 ] || { say "the customer sign-in page does not answer"; return 1; }
-  if journalctl -u elite-po-admin.service -u elite-po-customer.service --since "$2" -o cat --no-pager 2> /dev/null | grep -qiE 'unhandled|uncaught|EACCES|EROFS|Error: '; then say "an app logged an error since the restart"; return 1; fi
+  # captured first: a pipe into grep -q under pipefail can report "no match" when the writer dies of SIGPIPE
+  j="$(journalctl -u elite-po-admin.service -u elite-po-customer.service --since "$2" -o cat --no-pager 2> /dev/null || true)"
+  if grep -qiE 'unhandled|uncaught|EACCES|EROFS|Error: ' <<< "$j"; then say "an app logged an error since the restart"; return 1; fi
   if s13_ci_fault "$SW"; then say "CI fault injection for $SW"; return 1; fi
   return 0
 }
