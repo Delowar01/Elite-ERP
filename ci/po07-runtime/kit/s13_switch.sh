@@ -55,8 +55,17 @@ set_line() { # STATE(on|off) — rewrite VAR's line in each target file; every o
   done
   say "$VAR $([ "$1" = on ] && echo "set" || echo "removed") in: $(targets) (value not printed)"
 }
+# target_switches on|off → the switch set after this run, one per line, sorted. No pipeline whose first part can fail:
+# lib.sh's ERR trap is inherited (set -E) by command substitutions and pipeline subshells, and the earlier form
+# "{ switches_on | grep -vx F1; echo F1; }" lost its output when no other switch was on (CI: F1 on expected 404).
+target_switches() {
+  local s out=""
+  for s in $(switches_on); do [ "$s" = "$SW" ] || out+="$s"$'\n'; done
+  if [ "$1" = on ]; then out+="$SW"$'\n'; fi
+  printf '%s' "$out" | sort -u
+}
 record() { # the switch list after this run
-  { switches_on | grep -vx "$SW"; [ "$1" = on ] && echo "$SW"; } | sort -u > "$STATE_DIR/S13.switches.tmp"; mv -- "$STATE_DIR/S13.switches.tmp" "$STATE_DIR/S13.switches"
+  target_switches "$1" > "$STATE_DIR/S13.switches.tmp"; mv -- "$STATE_DIR/S13.switches.tmp" "$STATE_DIR/S13.switches"
 }
 get() { # SOCK HOST PATH → HTTP status (root opens the socket; X-Forwarded-* as nginx sets them)
   node -e 'const [s,h,p]=process.argv.slice(1);require("http").get({socketPath:s,path:p,headers:{host:h,"x-forwarded-host":h,"x-forwarded-proto":"https"}},r=>{console.log(r.statusCode);r.resume()}).on("error",()=>console.log(0)).setTimeout(20000,function(){this.destroy()})' "$1" "$2" "$3"; }
@@ -76,7 +85,7 @@ verify() { # STATE SINCE → 0 when every automated check of this switch passes
   want_a=$([ "$1" = on ] && echo yes || echo no); want_c=$([ "$1" = on ] && [ "$FILES" = both ] && echo yes || echo no)
   a="$(in_env elite-po-admin.service "$VAR=$VAL")"; c="$(in_env elite-po-customer.service "$VAR=$VAL")"
   [ "$a" = "$want_a" ] && [ "$c" = "$want_c" ] || { say "process environment: admin $a (want $want_a), customer $c (want $want_c)"; return 1; }
-  f1=404; grep -qx F1 <<< "$( { switches_on | grep -vx "$SW"; [ "$1" = on ] && echo "$SW"; } )" && f1=200
+  f1=404; grep -qx F1 <<< "$(target_switches "$1")" && f1=200
   [ "$(get "$RUN_DIR/admin.sock" "$ADMIN_HOST" /platform/login)" = "$f1" ] || { say "admin /platform/login is not $f1"; return 1; }
   [ "$(get "$RUN_DIR/customer.sock" "$CUST_HOST" /platform/login)" = 404 ] || { say "the console answers on the customer host"; return 1; }
   [ "$(get "$RUN_DIR/customer.sock" "$CUST_HOST" /login)" = 200 ] || { say "the customer sign-in page does not answer"; return 1; }

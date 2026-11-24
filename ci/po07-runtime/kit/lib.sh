@@ -92,17 +92,21 @@ SWITCH_RE='^(PLATFORM_[A-Z_]*_ENABLED|CUSTOMER_[A-Z_]*_ENABLED|TENANT_ACCESS_ENF
 s13_ci_fault() { return 1; }
 switches_on() { [ -f "$STATE_DIR/S13.switches" ] && grep -E '^F[1-7]$' "$STATE_DIR/S13.switches" | sort -u || true; }
 # switch_lines_expected admin|customer → the switch lines that file must hold for the switches S13 recorded as on
+# (no pipeline whose first part may fail: under set -E the ERR trap above is inherited by command substitutions and
+# pipeline subshells, so "a | b" with a failing "a" would end that subshell before the rest of its output)
 switch_lines_expected() {
-  local on n v val files; on="$(switches_on)"
+  local on n v val files out=""; on="$(switches_on)"
   while read -r n v val files; do
     grep -qx "$n" <<< "$on" || continue
-    { [ "$files" = both ] || [ "$files" = "$1" ]; } && printf '%s=%s\n' "$v" "$val"
-  done <<< "$SWITCHES" | sort
+    if [ "$files" = both ] || [ "$files" = "$1" ]; then out+="$v=$val"$'\n'; fi
+  done <<< "$SWITCHES"
+  printf '%s' "$out" | sort
 }
 # switches_ok — both env files hold exactly the recorded switches (before S13: none), nothing else switch-like
 switches_ok() {
-  local w; for w in admin customer; do
-    [ "$(grep -E "$SWITCH_RE" "$ETC_DIR/$w.env" | sort)" = "$(switch_lines_expected "$w")" ] || { say "$w.env switch lines differ from the S13 record"; return 1; }
+  local w have; for w in admin customer; do
+    have="$(grep -E "$SWITCH_RE" "$ETC_DIR/$w.env" || true)"
+    [ "$(printf '%s' "$have" | sort)" = "$(switch_lines_expected "$w")" ] || { say "$w.env switch lines differ from the S13 record"; return 1; }
   done
 }
 # put_file DEST MODE OWNER:GROUP SRC — install a kit file. Same content already there: no-op. Different content
