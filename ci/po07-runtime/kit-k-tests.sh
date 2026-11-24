@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# PO-07 regression tests of the six kit corrections K1–K6 (25 Nov 2026), on fictional fixtures in a temporary
+# PO-07 regression tests of the six kit corrections K1–K6 (24 Nov 2026), on fictional fixtures in a temporary
 # directory only: nothing is installed, no VPS, no network, no root needed.
 #   kit-k-tests.sh <kit dir>
 # <kit dir>: the rendered CI kit (ci/po07-runtime/kit, on a GitHub-hosted Linux runner) or the owner's private kit

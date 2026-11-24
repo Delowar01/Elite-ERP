@@ -1,0 +1,10 @@
+# PHASE B (S11a-B, only after trusted HTTPS and the Phase A checks): the console host's exact allow-list.
+# D8: HSTS only now, after trusted HTTPS was verified; no includeSubDomains, no preload.
+add_header Strict-Transport-Security "max-age=300" always;
+location = / { return 302 /platform/login; }
+location = /platform { proxy_pass http://unix:@SOCK@:; }
+location ^~ /platform/ { proxy_pass http://unix:@SOCK@:; }
+location ^~ /_next/image { return 404; }
+location ^~ /_next/static/ { proxy_pass http://unix:@SOCK@:; }
+location = /favicon.ico { proxy_pass http://unix:@SOCK@:; }
+location / { return 404; }

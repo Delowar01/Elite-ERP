@@ -1,6 +1,6 @@
 # PO-07 — S10–S13 execution plan, kit-4 corrections and resource reviews
 
-**Status (25 Nov 2026): PLAN ONLY.** The repository is public, so this document uses placeholders.
+**Status (24 Nov 2026): PLAN ONLY.** The repository is public, so this document uses placeholders.
 - Nothing in this document has been executed.
 - No DNS record, CloudPanel site, nginx change, certificate, storage account or feature switch exists or was changed.
 - The real values (`<VPS_IPV4>`, the host names, the web server's worker identity, the current DNS state) are in the
@@ -8,7 +8,7 @@
 - S10 and every later stage needs its own written authorization from the owner. **The first change to a shared
   service is S11a, an nginx reload.**
 
-## 1. S0–S9b closure (owner decision of 25 Nov 2026: ACCEPTED)
+## 1. S0–S9b closure (owner decision of 24 Nov 2026: ACCEPTED)
 
 | Item | State |
 |---|---|
@@ -149,7 +149,7 @@ reservations: the measured concurrent peak of the whole slice is 280–287.
 - a 4-job `VACUUM ANALYZE` and a `pg_dump`;
 - a saturation test: 36 extra sessions on top of the apps' pools.
 
-**Measured, CI run 45461135817 (25 Nov 2026), cluster unit cgroup:**
+**Measured, CI run 45461135817 (24 Nov 2026), cluster unit cgroup:**
 
 | Measure | Value |
 |---|---|
@@ -170,7 +170,7 @@ PO07-A11Y-01 stays an open, tracked issue (accepted temporarily, not resolved). 
 
 ## 5. S10 — DNS (owner-performed in Hostinger DNS; NOT authorized now)
 
-**Conflict checks, done read-only on 25 Nov 2026 over DNS-over-HTTPS (values in the private instructions):**
+**Conflict checks, done read-only on 24 Nov 2026 over DNS-over-HTTPS (values in the private instructions):**
 - `<ADMIN_HOST>` and `<CUST_HOST>`: **NXDOMAIN**, so both are free.
 - A random label under `<ERP_HOST>`: NXDOMAIN, so **there is no wildcard**.
 - `<ERP_HOST>`: one A record `<VPS_IPV4>`, TTL `<ERP_TTL>`; **no AAAA, no CNAME**.
@@ -504,7 +504,7 @@ only. **It is not public or production availability.** That needs, separately:
 
 ## 13. The production ERP security release (a separate workstream; not merged, not deployed)
 
-Plan: `PO07_ERP_SECURITY_RELEASE_PLAN.md`. State on 25 Nov 2026:
+Plan: `PO07_ERP_SECURITY_RELEASE_PLAN.md`. State on 24 Nov 2026:
 - `main` = `621f156` (Next.js 16.4.3); it no longer passes the build's advisory gate.
 - `fix/team-sensitive-fields-exposure` = `621f156` + `35d5dcc` (the Team fix) + `94f936e` (handover), unchanged.
 - The Next.js 16.4.6 commit `9b8aa85` exists only on `feat/platform-owner`. N1 (the release branch and the

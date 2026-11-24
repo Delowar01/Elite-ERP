@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# PO-07 K2 (25 Nov 2026): receive the S6-R archive ON THE VPS without ever giving an unverified file its final name.
+# PO-07 K2 (24 Nov 2026): receive the S6-R archive ON THE VPS without ever giving an unverified file its final name.
 #   artifact-receive.sh --status <incoming dir> <run id> <archive> <sha256>
 #       prints absent | verified | DIFFERS (an existing final file with other bytes) — reads nothing from stdin
 #   artifact-receive.sh <incoming dir> <run id> <archive> <sha256> <size> <source sha> <source tree> <build id> < archive

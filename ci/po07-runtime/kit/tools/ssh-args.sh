@@ -1,4 +1,4 @@
-# PO-07 SSH connection arguments (K6, 25 Nov 2026). Sourced (bash) by tools/pc-kit.sh after config.sh.
+# PO-07 SSH connection arguments (K6, 24 Nov 2026). Sourced (bash) by tools/pc-kit.sh after config.sh.
 # shellcheck shell=bash
 #
 # The owner's existing alias ($SSH_ALIAS in ~/.ssh/config, IPv4 HostName) is reached over one of two routes:

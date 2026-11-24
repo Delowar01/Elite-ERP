@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# PO-07 K4 (25 Nov 2026): the approved application source, verified without assuming it is the branch tip.
+# PO-07 K4 (24 Nov 2026): the approved application source, verified without assuming it is the branch tip.
 #   verify-source.sh --github                 GitHub API (gh, the owner's login; read-only)
 #   verify-source.sh --git <repo> [<ref>]     a local clone (offline; <ref> default origin/$REPO_BRANCH)
 #   [--receipt <ARTIFACT.expected>]           also check the artifact receipt (default: ../artifacts/run$APPROVED_RUN_ID/)

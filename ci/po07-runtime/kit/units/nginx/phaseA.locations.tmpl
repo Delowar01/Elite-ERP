@@ -1,0 +1,3 @@
+# PHASE A (S11a-A, closed): no proxy at all. Behind Basic Auth every path is 404 (try_files runs after the access
+# phase, so an unauthenticated request gets 401); nothing of the application is reachable.
+location / { try_files /.po07-closed =404; }

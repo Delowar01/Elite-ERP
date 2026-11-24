@@ -27,6 +27,15 @@ for d in /var/www /var/backups /var/spool /opt; do [ -d "$d" ] || install -d -m 
 [ -x /opt/google/chrome/chrome ] || fail "no Google Chrome under /opt/google (the customer unit binds it read-only)"
 end
 
+step "the shared web server, as on the VPS (CI only, before the CI S0): nginx with root workers and a default server"
+DEBIAN_FRONTEND=noninteractive apt-get update -qq > /dev/null && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq nginx > /dev/null || fail "apt-get install nginx"
+sed -i -E 's/^user [^;]+;/user root;/' /etc/nginx/nginx.conf   # the VPS's site nginx runs its workers as root (S0 evidence)
+rm -f /etc/nginx/sites-enabled/default
+printf 'server {\n  listen 80 default_server;\n  listen 443 ssl default_server;\n  ssl_reject_handshake on;\n  return 444;\n}\n' > /etc/nginx/sites-enabled/00-po07-ci-default.conf
+nginx -t && systemctl restart nginx.service || fail "nginx did not start"
+echo "nginx $(nginx -v 2>&1 | cut -d/ -f2), workers: $(ps -o user= --ppid "$(systemctl show -p MainPID --value nginx.service)" | sort -u | tr '\n' ' ')"
+end
+
 step "install the rendered kit at $KIT_DIR (root 0700) and take the CI S0"
 install -d -m 0700 "$KIT_DIR" "$STATE_DIR" "$STATE_DIR/logs"
 cp -a "$HERE/kit/." "$KIT_DIR/"; chmod -R go-rwx "$KIT_DIR"
@@ -78,6 +87,10 @@ step "S9: the customer service rendered one and two concurrent PDFs within its l
 grep -E "^(PASS|FAIL|TASKS|MEMORY|CPU|PDF-LOAD)" "$STATE_DIR/logs/S9-pdf-load.txt" || fail "no PDF load record"
 grep -q "^PDF-LOAD pass=[0-9]* fail=0$" "$STATE_DIR/logs/S9-pdf-load.txt" || fail "the PDF load test did not pass"
 end
+
+# S11a → S10 → S11b, the fail-closed nginx sequence with Basic Auth and trusted TLS, R1–R12 through nginx
+# shellcheck source=nginx-rehearsal.sh
+. "$HERE/nginx-rehearsal.sh"
 
 step "K3: installed-file reconciliation on the real installed files (the 24 Nov 2026 stale-wrapper S9 STOP)"
 W=/usr/local/sbin/elite-po-run

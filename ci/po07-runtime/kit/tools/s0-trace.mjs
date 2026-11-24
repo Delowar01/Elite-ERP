@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// PO-07 K5 (25 Nov 2026): the S0 baseline chain, traceable end to end (PC only, read-only).
+// PO-07 K5 (24 Nov 2026): the S0 baseline chain, traceable end to end (PC only, read-only).
 //   node tools/s0-trace.mjs <directory of the S0 files> [--chain <tsv>] [--register <tsv>] [--last <S0 file>]
 // Defaults: tools/baseline-chain.tsv and tools/baseline-register.tsv next to this script.
 // For every step between consecutive baselines of the chain (original 22 Nov 2026 → … → the latest accepted one):

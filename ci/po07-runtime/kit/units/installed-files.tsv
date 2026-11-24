@@ -1,4 +1,4 @@
-# PO-07 K3 (25 Nov 2026): every system file the kit installs outside its own directory — the reconciliation list.
+# PO-07 K3 (24 Nov 2026): every system file the kit installs outside its own directory — the reconciliation list.
 # dest<TAB>mode<TAB>owner:group<TAB>kit source<TAB>stage<TAB>history key<TAB>flags
 # Checked at the start of every stage (lib.sh installed_files_gate) and by tools/reconcile.sh. A file equal to its kit
 # source is UNCHANGED; equal to units/history/<key>@<kit> it is OUTDATED; anything else is MODIFIED. flags "proposed":

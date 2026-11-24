@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# PO-07 K3 (25 Nov 2026): reconcile the system files the kit installed (units/installed-files.tsv) with this kit.
+# PO-07 K3 (24 Nov 2026): reconcile the system files the kit installed (units/installed-files.tsv) with this kit.
 #   reconcile.sh --report                      read-only (default): one row per listed file, then any UNEXPECTED file in
 #                                              the kit's install locations. Changes nothing; needs no authorization.
 #   reconcile.sh --execute <dest>...           owner-authorized: AUTHORIZED for this window must list RECONCILE. Each

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# PO-07 kit update ON THE VPS (K1 + K6, 25 Nov 2026), run by `pc-kit.sh update` from the freshly transferred copy:
+# PO-07 kit update ON THE VPS (K1 + K6, 24 Nov 2026), run by `pc-kit.sh update` from the freshly transferred copy:
 #   kit-install.sh <incoming dir> <kit dir>
 # pc-kit.sh sends the new kit and its records as ONE tar stream over ONE SSH connection into a new, empty
 # <kit dir>.incoming.XXXXXX (root 0700), then runs this script from there. <incoming dir> holds:

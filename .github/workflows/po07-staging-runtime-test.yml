@@ -149,7 +149,7 @@ jobs:
           retention-days: 30
 
   kit-k-tests:
-    # K1–K6 (25 Nov 2026): the six kit corrections after the 24 Nov 2026 window, on fictional fixtures, plus the
+    # K1–K6 (24 Nov 2026): the six kit corrections after the 24 Nov 2026 window, on fictional fixtures, plus the
     # approved commit's reachability on the real repository (K4) — offline from a full clone and via the GitHub API.
     name: kit corrections K1–K6 (Linux) + approved-source reachability
     runs-on: ubuntu-24.04

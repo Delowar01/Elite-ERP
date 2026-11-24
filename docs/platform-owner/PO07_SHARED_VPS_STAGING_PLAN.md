@@ -1,6 +1,6 @@
 # PO-07 Phase B — Shared-VPS staging plan (Platform Owner test instance)
 
-**Status (25 Nov 2026): S0–S9b EXECUTED and ACCEPTED by the owner.**
+**Status (24 Nov 2026): S0–S9b EXECUTED and ACCEPTED by the owner.**
 - 23 Nov 2026: S0–S5.
 - 24 Nov 2026: S6-R, S7, S8, S9 and S9b, in the authorized window. The verified external build is installed, both app
   processes run read-only inside the namespace, and one administrator exists (the owner's bootstrap).

@@ -1,0 +1,7 @@
+# PHASE B (S11a-B, only after trusted HTTPS and the Phase A checks): the customer host. The console never exists here.
+# D8: HSTS only now, after trusted HTTPS was verified; no includeSubDomains, no preload.
+add_header Strict-Transport-Security "max-age=300" always;
+location = /platform { return 404; }
+location ^~ /platform/ { return 404; }
+location ^~ /_next/image { return 404; }
+location / { proxy_pass http://unix:@SOCK@:; }

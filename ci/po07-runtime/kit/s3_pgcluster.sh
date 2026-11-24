@@ -39,7 +39,7 @@ elif ! cmp -s "$U/pg_hba.conf" "$CONF/pg_hba.conf"; then
 fi
 mkdir_staging "$DROPIN_DIR" 0755 root:root
 put_file "$DROPIN_DIR/10-staging.conf" 0644 root:root "$U/postgresql@16-po07ns.10-staging.conf"
-# PROPOSED 25 Nov 2026 (owner review): the cluster's own task cap (units/pg-tasks.conf). A fresh install (the CI
+# PROPOSED 24 Nov 2026 (owner review): the cluster's own task cap (units/pg-tasks.conf). A fresh install (the CI
 # rehearsal) gets it here; where S3 is already complete (the VPS) put_file refuses, and only an owner-authorized
 # tools/reconcile.sh installs it.
 put_file "$DROPIN_DIR/20-tasks.conf" 0644 root:root "$U/pg-tasks.conf"

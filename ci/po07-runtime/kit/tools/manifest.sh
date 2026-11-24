@@ -1,4 +1,4 @@
-# PO-07 kit manifest parsing (K1, 25 Nov 2026). Sourced (bash) by tools/kit-install.sh on the VPS and by the PC tools.
+# PO-07 kit manifest parsing (K1, 24 Nov 2026). Sourced (bash) by tools/kit-install.sh on the VPS and by the PC tools.
 # shellcheck shell=bash
 #
 # A kit manifest is the output of `sha256sum` over the kit's files, run from the kit directory. Two line formats are
