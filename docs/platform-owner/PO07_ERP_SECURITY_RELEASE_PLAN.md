@@ -14,10 +14,17 @@
   - A Next.js 16.4.6 build of the Platform Owner branch needed more than 2.3 GB on this VPS and failed three times
     (`PO07_SHARED_VPS_STAGING_PLAN.md` §F.1).
   - N3's on-VPS build under `MemoryMax=1536M` is therefore unlikely to fit.
-  - **Measure the ERP release build in CI first.** Then replace N3 with a verified external build (as S6-R): a
-    GitHub-hosted build, an attested archive, its SHA-256 checked on the VPS, and installation beside the live release.
-  - Until then the release is **not ready to execute**. State on 24 Nov 2026: `main` = `621f156`; the fix branch is
-    unchanged; `9b8aa85` exists only on `feat/platform-owner`; nothing is merged or deployed.
+  - **Measured, 24 Nov 2026** (isolated runner, 2 CPUs; `.github/workflows/erp-security-release-measure.yml`, runs
+    45478667896 and 45479330665):
+    - The candidate (the fix branch plus `9b8aa85`, cherry-picked on the runner only) has the same tree,
+      `211bc69abed66d0d47cf28fb79607c564f2e9223`, in both runs. TypeScript and ESLint pass.
+    - With no cap, `next build` completes at a **2.8–2.9 GB peak**. **Under `MemoryMax=1536M` it is OOM-killed**
+      (1.5 G), in both runs.
+    - **N3 as written cannot work.** It is replaced by a verified external build: see
+      `PO07_S10_S13_EXECUTION_PLAN.md` §12 for the packaging, transfer, installation and rollback requirements.
+  - Until N1 is approved and that path is built and rehearsed, the release is **not ready to execute**. State on
+    24 Nov 2026: `main` = `621f156`; the fix branch is unchanged; `9b8aa85` exists only on `feat/platform-owner`;
+    nothing is merged or deployed.
 
 ## 1. Scope (verified in git, 21 Nov 2026)
 

@@ -1,524 +1,585 @@
-# PO-07 — S10–S13 execution plan, kit-4 corrections and resource reviews
+# PO-07 — S10–S13 final execution plan (kit-5), decisions D1–D8, rehearsal results and readiness
 
-**Status (24 Nov 2026): PLAN ONLY.** The repository is public, so this document uses placeholders.
-- Nothing in this document has been executed.
-- No DNS record, CloudPanel site, nginx change, certificate, storage account or feature switch exists or was changed.
-- The real values (`<VPS_IPV4>`, the host names, the web server's worker identity, the current DNS state) are in the
-  owner's private operational instructions, `plans/PO07_S10_S13_PRIVATE.md`, which are kept outside the repository.
-- S10 and every later stage needs its own written authorization from the owner. **The first change to a shared
-  service is S11a, an nginx reload.**
+**Status (24 Nov 2026): prepared and rehearsed in isolated CI only. Nothing in this document has been executed on the
+VPS.** The repository is public, so this document uses placeholders:
+- No DNS record, CloudPanel site, nginx change, certificate, storage account, cloud credential or feature switch exists
+  or was changed.
+- The real values (`<VPS_IPV4>`, the host names, the web server's worker identity, the current DNS state, the rendered
+  vhost text) are in the owner's private operational instructions, kept outside the repository. The owner's decisions
+  are recorded in a private decision register.
+- Every VPS step below needs its own written execution authorization (§0).
 
-## 1. S0–S9b closure (owner decision of 24 Nov 2026: ACCEPTED)
+## 0. Approval levels and the owner's decisions D1–D8
+
+Three different approvals. The first two never imply the third.
+
+| Level | Meaning | State on 24 Nov 2026 |
+|---|---|---|
+| **T** — technical approval | the owner accepts a design or a value | D1–D8 approved |
+| **L** — local implementation approval | build, test and rehearse in the repository and in isolated CI | granted for D1–D8 (D7: specification only, §11) |
+| **X** — VPS execution authorization | an action on the VPS, inside a written window, with the stages listed | **none open.** The last one (S0–S9b, 24 Nov 2026, 18:00–22:00 Saudi time) was executed and accepted |
+
+| # | Decision (approved 24 Nov 2026) | T | L | X |
+|---|---|---|---|---|
+| D1 | Kit-4, manifest `cbab8b7a0e19aa65`. Kit-5 (this round) supersedes it for the next window; its digest is in the final report for the owner's review | ✔ | ✔ | ✘ |
+| D2 | PostgreSQL staging-only `TasksMax=64` (§3) | ✔ | ✔ | ✘ |
+| D3 | Order S11a → S10 → S11b, fail-closed (§4) | ✔ | ✔ | ✘ |
+| D4 | Basic Auth credentials owner-controlled: the owner types them, in a separate terminal (§4.3) | ✔ | ✔ | ✘ |
+| D5 | Backblaze B2 for the off-host copy (§8, owner guide) | ✔ | ✔ | ✘ |
+| D6 | The owner's own GPG private key, never on the VPS (§8) | ✔ | ✔ | ✘ |
+| D7 | The PDF concurrency limiter design (`PO07_PDF_CONCURRENCY_SPEC.md`) | ✔ | spec only | ✘ |
+| D8 | HSTS `max-age=300` only after trusted HTTPS is verified; no `includeSubDomains`, no `preload` (§6) | ✔ | ✔ | ✘ |
+
+**Date correction:** several documents had dated the post-window work "25 Nov 2026". It all happened on the evening of
+**24 Nov 2026** (Saudi time), the same day as the window. All references are corrected.
+
+## 1. S0–S9b closure (owner decision of 24 Nov 2026: ACCEPTED) — unchanged
 
 | Item | State |
 |---|---|
 | Approved source | `cf64ebc492b56ad91c28ba3aa7640722935e21c5`, tree `6403cf5d822df491f6e16a56068ab9d7c2f1f138` |
 | Approved build | run 45228504829; archive SHA-256 `df96cb5b12b5d2b5723e14f626a8619ef062c5d3d9fea990d67745ecca9e561c`; build `zsnzn4exuiKvGWNoIKHtj` |
-| Development baseline | `b84bc318c97b4c73c409d4c6e196582b4008bcc0` at acceptance. The kit-4 commits after it touch only `ci/`, `.github/` and `docs/`; the approved release does not change |
-| Installed kit | kit-3, manifest `7177fade9cdda9b4`. kit-4 is prepared (§2) and is NOT on the VPS |
-| Staging on the VPS | S1–S9b complete: the isolated cluster and namespace; both app processes (read-only build, J1); proxy sockets; one administrator with MFA (the owner's bootstrap); staging keys rotated on 24 Nov 2026; no feature switch on; no nginx route |
-| Evidence | the owner's private window log and the S0 chain B0–B4 (private) |
+| Development head | `3de1f449250ea8f9dc9a622ebe8ace02fafeafa1` at the start of this round; later commits touch only `ci/`, `.github/` and `docs/` |
+| Installed kit | kit-3, manifest `7177fade9cdda9b4`. Neither kit-4 nor kit-5 is on the VPS |
+| Staging on the VPS | S1–S9b complete; one administrator with MFA; keys rotated 24 Nov 2026; no feature switch on; no nginx route |
 
 **Preserved; never repeated without a new decision:**
-- the running staging services and their resources;
-- the administrator account and its MFA enrollment (S9b is not repeated);
-- the rotated keys (no new rotation without a genuine reason and a separate approval);
-- the read-only application tree;
-- the artifact and its provenance;
-- every earlier STOP record and all execution evidence.
+- the installed application and its read-only tree;
+- the administrator and its MFA enrollment (S9b is never repeated);
+- the rotated keys;
+- the staging database;
+- every STOP record and all execution evidence.
 
-## 2. Kit-4: the six corrections (K1–K6)
+## 2. Kit-5 and the installation and reconciliation procedure for the next window
 
-Each correction is in the private kit, rendered with fictional values into `ci/po07-runtime/kit/`, and covered by
-regression tests: `ci/po07-runtime/kit-k-tests.sh`, plus the real-systemd steps in `rehearsal.sh`.
+**Kit-5 adds to kit-4's K1–K6:**
+- **S11:** the kit-owned vhost text (Phase A closed, Phase B allow-list); read-only checks; the owner-terminal probe;
+  the DNS check.
+- **S12:** encrypted backup, the off-host uploader, the restore check and the owner-PC drill tool.
+- **S13:** the switch tool.
+- **D2:** the capacity check and the cap's drop-in.
 
-| # | Defect in the 24 Nov 2026 window | Correction |
-|---|---|---|
-| K1 | `pc-kit.sh update`'s retire step parsed only the Linux `hash  ./path` form. The PC writes `hash *./path`, so all 45 kit files were moved to `state/retired/` | `tools/manifest.sh`: one strict parser for both forms. It refuses traversal, absolute paths, duplicates, escaped names, a CR, a tab, any other layout, and `state/` or `incoming/` paths. `tools/kit-install.sh` receives the whole kit as ONE tar stream over ONE connection into a new directory, verifies every file and the exact file set, then replaces the kit. Retired files are moved (never deleted, structure kept), at most 10 and never all of them; links are refused |
-| K2 | `artifact-upload` renamed `.part` to the final name BEFORE checking the SHA-256. An interrupted transfer got the final name with 77 of 249 MB | `tools/artifact-receive.sh` (on the VPS): a unique temporary file → size → SHA-256 → the archive's `ARTIFACT.json` identity (run, commit, tree, build) → an atomic hard link to the final name (never over an existing file) → `<archive>.verified`. Failed or interrupted transfers are quarantined (0400). S6-R and recovery-authorize require the `.verified` record. The 24 Nov partial copy is kept untouched |
-| K3 | The S2 wrapper `/usr/local/sbin/elite-po-run` was still kit-1's (`ReadWritePaths=.next/cache`) after the kit was updated: the S9 STOP | §3 below |
-| K4 | S0 required the approved commit to be the branch TIP | `tools/verify-source.sh`: the commit exists, has the pinned tree, and is reachable from the branch (0 behind). It lists later non-tooling changes as a NOTE. The approved run, archive SHA-256 and build are pinned in the kit's config; S6-R and recovery-authorize refuse any other artifact. S0 §9b shows, read-only, the commit, tree and build installed in the staging tree |
-| K5 | One single-step register (22 Nov → post-S5) | The chain B0 (22 Nov) → B1 (post-S5) → B2 (24 Nov pre-execution) → B3 (post-S9) → B3b (post-rotation) → B4 (final post-S9b). Each file's SHA-256 is recorded. `tools/s0-trace.mjs` classifies every difference as STAGING (a kit resource, by name; never a TCP listener), KNOWN (registered for that step with the owner's acceptance) or FAIL. The 24 Nov listener change of another application (a restart outside staging) is registered with the owner's recorded acceptance. Compare `--trace` requires the latest baseline |
-| K6 | The SSH alias was pinned to IPv4. On 24 Nov the PC lost its IPv4 route | `tools/ssh-args.sh`: route `ipv4` or `nat64` (RFC 6052 `64:ff9b::/96` of the same address). There is ONE host identity in both (`HostKeyAlias` = the known_hosts name); `StrictHostKeyChecking=yes`; `UpdateHostKeys=no`; BatchMode with the owner's agent; no forwarding. A state-changing command first proves the route, so a dead route changes nothing |
+The kit's systemctl allow-list gains `restart` (S13's two app units, D2's staging cluster unit) and `clean --what=state`
+(rollback S12). Every unit must still match the staging-unit allow-list.
 
-## 3. Installed-file reconciliation plan (K3)
+**The procedure, in this order. Any unexpected result is HOLD: report it to the owner and change nothing.**
+1. **Clock and route:** `pc-kit.sh time`; `pc-kit.sh route` (IPv4, or NAT64 on a network without IPv4; strict
+   host-key checking either way).
+2. **A fresh S0** (read-only, streamed; nothing written on the VPS), then `compare <new s0> --staged --trace`:
+   - the chain must trace from B0 (22 Nov) to B4 (post-S9b);
+   - `verify-source --github` must pass;
+   - every difference must be STAGING (a kit resource, by name) or registered KNOWN with the owner's acceptance;
+     anything else is HOLD.
+3. **Shared-service health** (read-only):
+   - the live ERP: public status, headers and certificate fingerprint;
+   - every other site's status;
+   - `nginx -t`, the nginx master PID;
+   - the cluster `main`'s config hashes and postmaster PID;
+   - the §I guard.
 
-**The list:** `units/installed-files.tsv` names all 16 system files the kit installs outside its directory, each
-with its destination, mode, owner, kit source, stage and history key:
-- S2: the slice, the namespace unit, tmpfiles and the wrapper;
-- S3: the cluster's `conf.d`, its `pg_hba` and its drop-ins;
-- S6: the two kit tools in the app directory;
-- S9: the six unit files.
+   They must equal S0/B4.
+4. **Install the final kit:** `pc-kit.sh update` (one verified stream over one connection).
+   - The digest must equal the one the owner reviewed.
+   - Every replaced kit file is kept under `state/retired/<ts>/` (never deleted).
+   - **Nothing is restarted or reloaded, and no installed system file is touched**: the update writes only the
+     kit's own directory.
+5. **The read-only reconcile report:** `pc-kit.sh reconcile --report`. Expected:
+   - every S2/S3/S6/S9 file UNCHANGED;
+   - the D2 drop-in PROPOSED;
+   - the six S12 files NOT-INSTALLED.
+6. **Report every difference.** OUTDATED, MODIFIED, MISSING, WRONG-OWNER-OR-MODE, NOT-A-FILE and UNEXPECTED are
+   listed file by file to the owner. They block every stage, and none is fixed automatically.
+7. **Reconcile only individually authorized files:** `reconcile --execute <dest>`, with RECONCILE in that window's
+   stages; one named file per decision, never "all".
+   - The previous version is kept read-only under `state/installed-previous/<ts>/` and the change is logged.
+   - Unit files get a `daemon-reload` only. **No restart**: a restart is its own authorized step.
+   - `reconcile --execute --restore <dest>` puts the kept version back.
 
-Generated files (env files, credentials) and the application tree are not listed.
+**Reconcile states** (unchanged from kit-4):
 
-**The states:**
-
-| State | Meaning | Effect |
-|---|---|---|
-| UNCHANGED | the file equals this kit's source, with the listed mode and owner | none |
-| NOT-INSTALLED | its stage has not run | none |
-| PROPOSED | added to the kit after its stage ran (flag `proposed`) | never blocks; installed only by an authorized reconcile |
-| OUTDATED(kit-N) | equals a known earlier kit version in `units/history/` (e.g. `wrapper@kit-1`) | blocks every stage; an authorized reconcile can replace it |
-| MODIFIED | any other content | blocks; never replaced by the kit (owner review) |
-| MISSING | absent although its stage is complete | blocks (owner review) |
-| WRONG-OWNER-OR-MODE, NOT-A-FILE | anything else in its place (links are never followed) | blocks (owner review) |
-| UNEXPECTED | a file or directory in the kit's install locations that is not listed (e.g. an override drop-in) | blocks (owner review) |
-
-**Gates and mechanics:**
-- **The gate.** Every stage starts with `installed_files_gate`. A stage never installs a file by itself once it is
-  complete: `put_file` refuses a missing destination for a completed stage.
-- **Report.** `pc-kit.sh reconcile --report` is read-only and needs no authorization.
-- **Apply.**
-  - `pc-kit.sh reconcile --execute <dest>…` needs RECONCILE in the owner's recorded authorization for the window.
-  - Every file must be named; there is no "all".
-  - It replaces only OUTDATED files and installs only PROPOSED ones, inside the staging allow-list.
-  - The previous version is kept read-only under `state/installed-previous/<ts>/<dest>`, and the change is logged.
-  - Unit files get a `daemon-reload`. Nothing is restarted: a restart is a separate, authorized step.
-- **Rollback.** `reconcile --execute --restore <dest>` puts the kept version back, but only while the file is still
-  what reconcile installed.
-
-**Regression evidence (CI, real systemd):**
-1. The stale kit-1 wrapper is put back in place and reported `OUTDATED(kit-1)`.
-2. A real stage refuses to run.
-3. Reconcile without RECONCILE is refused.
-4. With it, reconcile replaces the wrapper and keeps kit-1 read-only; restore works.
-5. A MODIFIED wrapper is never replaced.
-6. An unexpected drop-in blocks.
-7. An absent proposed file does not block, and S3's re-check does not install it.
-
-**On the VPS at the next authorized window**, after `update` to kit-4: `reconcile --report` should show every file
-UNCHANGED except the proposed `20-tasks.conf` (§4.2), which shows as PROPOSED.
-
-## 4. Remaining resource risks
-
-### 4.1 PDF concurrency (R9): recommendation, no code change in this task
-
-- **Measured:** one render, then two concurrent renders through the customer socket, stay within the customer unit's
-  limits (tasks 247–254 of 320; memory 454–463 MB of MemoryHigh 768).
-- **The risk:** Chromium needs about 120 tasks per render, so a third simultaneous render would hit the unit's cap and
-  fail inside the unit. The application has no concurrency limit.
-
-**Recommendation** (application code; a separate approved change, verified before any unrestricted public access):
-1. **A per-process render limiter** in the PDF path (`src/lib/pdf/`):
-   - at most `PDF_MAX_CONCURRENT` renders at once (2 on staging, from the measurement);
-   - a bounded queue of waiting requests (`PDF_QUEUE_MAX`, e.g. 4), each waiting at most `PDF_QUEUE_WAIT_MS`
-     (e.g. 15 000);
-   - beyond either limit: **503 with `Retry-After`** and a bilingual message (native Arabic and English, per the
-     project rule) instead of a failed render;
-   - log the queue depth and the rejections.
-2. **Tests:**
-   - unit tests of the limiter;
-   - an integration test with 3 and 5 concurrent requests: 2 render, the rest wait or get 503, the customer unit stays
-     below 90 % of `TasksMax` (288), and there are no memory events;
-   - the existing PDF tests are unchanged.
-3. **Optional, measured first:** reuse one browser per process, with a fresh `BrowserContext` per render. This cuts
-   the tasks and memory per render; tenant isolation is kept by the separate context.
-
-**Until it is done:** the staging test stays owner-only behind Basic Auth (S11a), and the unit and slice caps contain
-any failure.
-
-### 4.2 PostgreSQL task cap (R10): proposed `TasksMax=64` for the staging cluster's unit only
-
-**Derivation** (from the cluster's own configuration, not from the arithmetic of the slice):
-
-| Component | Tasks |
+| State | Effect |
 |---|---|
-| postmaster | 1 |
-| auxiliary processes (checkpointer, background writer, WAL writer, autovacuum launcher, logical replication launcher) | 5 |
-| `max_connections` | 30 |
-| `autovacuum_max_workers` | 3 |
-| `max_worker_processes` (parallel query) | 8 |
-| **full configured capacity** | **47** |
-| pg_ctlcluster's start/stop helpers | 3 |
-| **total** | **50** |
+| UNCHANGED, NOT-INSTALLED | none |
+| PROPOSED | never blocks; installed only by an authorized reconcile |
+| OUTDATED(kit-N) | blocks; an authorized reconcile may replace it |
+| MODIFIED, MISSING, WRONG-OWNER-OR-MODE, NOT-A-FILE, UNEXPECTED | blocks; owner review; never replaced by the kit |
 
-The idle count was measured at 6. **64** leaves 14 for connection attempts beyond `max_connections`, each of which
-is forked before PostgreSQL refuses it. So PostgreSQL's own limit binds first: a client beyond 30 gets "too many
-clients", never a failed fork. The cap stops only a runaway from taking the slice's tasks from the two app units.
+## 3. PostgreSQL `TasksMax=64` for the staging cluster's unit only (D2)
 
-**What stays the same:**
-- slice 512, admin 128, customer 320;
-- every memory and CPU limit.
+**Derivation** (the configured capacity, not the slice arithmetic):
+- postmaster 1;
+- auxiliary processes 5;
+- `max_connections` 30;
+- `autovacuum_max_workers` 3;
+- `max_worker_processes` 8;
+- pg_ctlcluster's helpers 3.
 
-Every unit's cap is below the slice's. The sum of caps (520) exceeds the slice by 8 only as ceilings, not as
-reservations: the measured concurrent peak of the whole slice is 280–287.
+That totals **50 ≤ 64**. A client beyond `max_connections` is refused by PostgreSQL ("too many clients") before the
+cap can matter. Unchanged:
+- admin 128, customer 320, slice 512;
+- every memory and CPU limit;
+- the cluster `main` and its unit.
 
-**Tested in CI:** the rehearsal's fresh S3 installs the drop-in, so the whole rehearsal runs under the cap:
-- S8 migrations, the S9 probes and R-tests, the PDF load;
-- a 4-job `VACUUM ANALYZE` and a `pg_dump`;
-- a saturation test: 36 extra sessions on top of the apps' pools.
+The caps are ceilings, not reservations.
 
-**Measured, CI run 45461135817 (24 Nov 2026), cluster unit cgroup:**
+**Before applying (read-only, `tools/pg-capacity.sh`):**
+- It proves it is talking to the staging cluster (`cluster_name`).
+- It prints the settings that drive the task count:
+  - `max_connections`, `superuser_reserved_connections`, `reserved_connections`;
+  - `autovacuum_max_workers`, `max_worker_processes`, `max_parallel_workers`, `max_parallel_workers_per_gather`;
+  - `max_wal_senders`.
+- It shows the current backends and the unit's current and peak tasks.
+- It refuses (exit 3) if the configured capacity exceeds the cap.
 
-| Measure | Value |
+Maintenance (autovacuum, `VACUUM --jobs`, `pg_dump`/`pg_restore`) runs inside `max_connections` and the autovacuum
+workers, so it is covered by the same count.
+
+**Installation, in a window that authorizes RECONCILE and PGRESTART:**
+1. `pg-capacity.sh` → OK.
+2. `reconcile --execute /etc/systemd/system/postgresql@16-<cluster>.service.d/20-tasks.conf` (daemon-reload only).
+3. **`tools/pg-restart.sh --execute`**: the controlled restart of **the staging cluster unit only**. It runs under the
+   stage gates (window, PGRESTART authorization, the installed-files gate, the §I guard), and refuses without PGRESTART.
+   - It runs the capacity check again.
+   - It resets the start-rate counters and restarts the unit. The two app units restart with it (`Requires=`): expect a
+     few seconds of staging downtime and nothing else.
+4. The tool then verifies:
+   - both apps answer;
+   - the configured `TasksMax` (64) is what the cgroup enforces (`pids.max`);
+   - the staging cluster answers;
+   - `main`'s postmaster PID is unchanged;
+   - the §I guard.
+
+   Then the S8/S9 checks and the R-tests.
+5. **Rollback:** `reconcile --execute --restore` and `pg-restart.sh --execute` again.
+
+**Tests (real systemd, CI; the whole rehearsal runs under the cap):**
+
+| Test | Result |
 |---|---|
-| idle | 6 tasks |
-| lifetime peak through S4, S8, S9 and the two-PDF load | 18 tasks |
-| after `VACUUM ANALYZE --jobs=4` and `pg_dump` | 18 tasks |
-| saturation: 36 extra sessions on top of 1 held by the apps | 30 ran; **6 refused by PostgreSQL itself** ("too many clients"); 0 other errors; sampled peak 36, lifetime peak **42 of 64** |
-| task-cap events | `pids.events max 0` (no fork was ever refused) |
+| normal load: S4 roles, S8 migrations, S9 probes, R-tests, two concurrent PDFs | pass; cluster peak 18 tasks (run 45461135817) |
+| maintenance: 4-job `VACUUM ANALYZE` and `pg_dump` | pass; peak 18 |
+| max and excess connections: 36 extra sessions on top of the apps' pools | 30 ran; **6 refused by PostgreSQL itself**; 0 other errors; peak **42 of 64**; `pids.events max 0` (45461135817). This round: peak **45 of 64**, 16 refused by PostgreSQL, events 0 (45479906055) |
+| the VPS path: the drop-in removed (as on the VPS today; `pids.max` 16654), the authorized reconcile, then `tools/pg-restart.sh` | `TasksMax=64` after daemon-reload; the tool is refused without PGRESTART. With it, only the staging cluster restarts; the apps answer again after **5–6 s**; `pids.max` 64; `main` unchanged; **R-tests 27/27** (45479906055; with the tool: 45502721823) |
+| backup and restore under the cap | S12's `pg_dump` and the restore drill's `pg_restore` (§8–§9) |
+| the cluster `main` unchanged | a real `main` cluster runs from before the CI S0. Its postmaster PID, config, pg_hba and task cap are checked after D2, after S1–S13 and after rollback (§13) |
 
-The cluster stayed healthy, and the slice's PDF peak was 287 of 512.
+## 4. S11 — the fail-closed nginx sequence (D3, D4)
 
-**On the VPS:** only after the owner's approval, by `reconcile --execute` (RECONCILE authorized), then an authorized
-restart of the staging cluster unit, then the S8/S9 checks. Never automatic.
+### 4.1 Order
 
-### 4.3 Accessibility
+| Step | What | Gate to the next step |
+|---|---|---|
+| **S11a-A** (closed) | The owner creates both sites in CloudPanel with **Basic Auth from the first save** (a different user and password per host) and pastes the kit's **Phase A** text: no `proxy_pass` at all; `location / { try_files /.po07-closed =404; }` | `s11-verify.sh --pre` before; `--phase A` after. Every protected path answers 401, nothing of the application is reachable, `nginx -t` OK, the master PID unchanged |
+| **S10** (DNS) | The owner creates the two A records (§5) | `dns-check.sh --after` PASS from two public resolvers |
+| **S11b** (TLS) | The owner issues Let's Encrypt certificates in CloudPanel (still Phase A: nothing proxied) | `s11-verify.sh --tls`: a trusted chain; the SAN exactly the host; about 90 days; a wrong name refused; renewal configured |
+| **S11a-B** (open) | Only after trusted TLS and the Phase A checks pass: the owner pastes the **Phase B** text (the allow-list and HSTS 300) | `--phase B`; then the owner's authenticated probe (R1–R12, §4.4) in the owner's own terminal |
 
-PO07-A11Y-01 stays an open, tracked issue (accepted temporarily, not resolved). No browser test is weakened.
+If any gate fails, the sites stay in Phase A (or are deleted); nothing is proxied. **Rollback:** delete both sites in
+CloudPanel; the nginx tree checksum must return to its pre-change value.
 
-## 5. S10 — DNS (owner-performed in Hostinger DNS; NOT authorized now)
+### 4.2 The only responses a request without credentials can get
 
-**Conflict checks, done read-only on 24 Nov 2026 over DNS-over-HTTPS (values in the private instructions):**
-- `<ADMIN_HOST>` and `<CUST_HOST>`: **NXDOMAIN**, so both are free.
-- A random label under `<ERP_HOST>`: NXDOMAIN, so **there is no wildcard**.
-- `<ERP_HOST>`: one A record `<VPS_IPV4>`, TTL `<ERP_TTL>`; **no AAAA, no CNAME**.
-- The zone's NS are the registrar's (Hostinger) name servers; its negative-cache TTL is 600 s.
-- **No CAA record** on the zone or `<ERP_HOST>`, so Let's Encrypt may issue.
+`return` and `rewrite` run in nginx's rewrite phase, before the access phase where Basic Auth is checked. So these
+fixed responses are answered without credentials. None of them carries application content, and none reaches the
+application.
 
-**The records**, only these two, created by the owner in the Hostinger DNS editor of `<ZONE>`:
+| Request (either host unless noted) | Phase A | Phase B |
+|---|---|---|
+| `http://…` any path | 301 → `https://<host>/…`, **no** `WWW-Authenticate` (credentials are never requested over plain HTTP) | same |
+| `/.well-known/acme-challenge/<token>` | HTTP: 301 to HTTPS; HTTPS: served by nginx from the challenge directory, Basic Auth off (404 if absent) | same |
+| `/robots.txt` | 200 `Disallow: /`, `X-Robots-Tag: noindex` | same |
+| admin `/` | 401 | **302 → `/platform/login`** (a fixed redirect) |
+| blocked paths (admin: the ERP's paths and acceptance pages; customer: `/platform*`) | 401 | **404 from nginx** |
+| `/_next/image` | 401 | **404** (denied, R8) |
+| a path with `/../`, `%2e`, `%2f` or `%5c` | 400 | **400** (refused before routing) |
+| an unknown host | the existing default server, unchanged (never a staging vhost) | same |
+| **everything else, including every proxied page and every Server Action POST** | **401** | **401** (the application is reachable only with that host's credentials) |
 
-| Type | Name (relative to `<ZONE>`) | Points to | TTL |
+Also enforced:
+- wrong credentials → 401;
+- the customer host's credentials do not open the admin host;
+- no unauthenticated request writes anything (sessions, attempts, events, users, companies are counted before and
+  after);
+- the `Authorization` header is never forwarded to the application.
+
+### 4.3 Credentials (D4)
+
+- Separate credentials per host, created by the owner in CloudPanel and kept in the owner's password manager. They are
+  never in an AI session, a file, argv or the environment.
+- The owner runs `tools/s11-owner-probe.sh` **in their own terminal**. It reads each host's user and password with
+  `read -rs` and passes them to the probe on a file descriptor, never on disk or in a process listing.
+- The probe **refuses to send credentials** over plain HTTP and over any TLS connection it has not verified (no `-k`).
+  So the authenticated checks run only after S11b's trusted certificates.
+
+### 4.4 R1–R12 through nginx (exact outcomes, CI run 45475691931; repeated in every later rehearsal)
+
+| # | Check | Outcome |
+|---|---|---|
+| R1 | admin `/` | 302 → `/platform/login` |
+| R2 | admin `/login`, `/register`, `/dashboard`, `/api/document-pdf/…`, `/print/…`, `/uploads/…` | 404 each |
+| R3 | admin `/platform/login` (F1 off) | 404, noindex (after F1: 200, §10) |
+| R4 | customer `/platform/login`, `/platform/dashboard` | 404 each |
+| R5 | the console sign-in action posted at customer `/login`, with spoofed forwarding headers | 200 from the customer page; the action never runs; no platform cookie; no row |
+| R6 | the customer login action posted at admin `/platform/login` and `/platform/dashboard` | 404, 404; no session cookie; no row |
+| R7 | actions at `*.png` paths on the wrong host (admin `/login.png`, `/dashboard/x.png`; customer `/platform/companies/x.png`, `/dashboard/x.png`) | 404, 404, 404, 307; no cookie; no row |
+| R8 | admin `/register/accept` and `/join/accept`; a customer action with a foreign Origin or the admin Origin | 404, 404; 500 and 500 (refused); no cookie; nothing written |
+| R9 | the customer session cookie through nginx (fictional sign-up) | `__Host-`, Secure, HttpOnly, `Path=/`, no `Domain` |
+| R10 | client-sent `X-Forwarded-For`, `X-Real-IP` and `Forwarded` | replaced by nginx: the forged address recorded 0 times; the real address +1 |
+| R11 | customer `/register/accept` and `/join/accept` (the invitation landing pages) | 200 each, behind Basic Auth |
+| R12 | a customer PDF through nginx | 200 `application/pdf`, 189,076 bytes |
+
+**Also measured in the same run:**
+
+| Check | Result |
+|---|---|
+| Phase A (unauthenticated) | 47/47, both with the self-signed certificate and after the trusted one |
+| Phase B | unauthenticated 57/57; authenticated 95/95 |
+| Header normalization | single, constant `Host` and `X-Forwarded-Host`; `X-Forwarded-Proto: https`; `X-Forwarded-For` = the real address (overwritten, never appended); duplicates collapsed; `Forwarded`, `X-Forwarded-Server/Port/Prefix`, `X-Original-URL`, `X-Rewrite-URL`, `X-Middleware-Subrequest`, `Authorization` and `Proxy` removed (a header-echo backend behind the same text) |
+| Static paths | `/_next/static/*`, `/favicon.ico`, `/uploads/*` (authorized by the app) and the PDF route proxied; `/_next/image` 404 |
+| TLS | each chain verified; SAN exactly the host; 89 days; a wrong name refused; a renewed certificate served after a graceful reload, with all 40 requests during the reload answered 200 |
+| Sockets and listeners | sockets `0660 root:<NGINX_GROUP>`; `nobody` and the app user cannot open them; no permission error in the nginx log; no new TCP listener |
+| Rollback | the nginx file tree equal to its pre-change checksum; master PID unchanged |
+
+## 5. S10 — DNS (owner-performed in the DNS provider's editor; never through an AI session)
+
+1. **Repeat the conflict checks first:** `pc-kit.sh dns-check --before` (DNS-over-HTTPS, two resolvers). It must
+   PASS:
+   - both names NXDOMAIN;
+   - no wildcard under `<ERP_HOST>`;
+   - `<ERP_HOST>` exactly its recorded A record and TTL, no AAAA, no CNAME;
+   - no CAA restriction.
+
+   It passed on 24 Nov 2026; repeat it in the window.
+2. **Create exactly two records:**
+
+| Type | Name | Value | TTL |
 |---|---|---|---|
-| A | `<ADMIN_LABEL>` (= `<ADMIN_HOST>` without `.<ZONE>`) | `<VPS_IPV4>`, exactly the value of the existing `<ERP_HOST>` record | 300 |
+| A | `<ADMIN_LABEL>` | `<VPS_IPV4>` (the existing VPS address, the same as `<ERP_HOST>`'s) | 300 |
 | A | `<CUST_LABEL>` | `<VPS_IPV4>` | 300 |
 
-**Never:**
-- an AAAA record (the ERP has none);
-- a wildcard;
-- a CNAME (it would follow any later change of `<ERP_HOST>`);
-- any change to the existing `<ERP_HOST>` record or to any other record;
-- Hostinger credentials in an AI session.
+   - **No AAAA, no CNAME, no wildcard.**
+   - No change to `<ERP_HOST>` or to any other record.
+3. **Verify:** `dns-check --after`. Each name has exactly one A record to the VPS, TTL ≤ 300, no AAAA or CNAME, and
+   `<ERP_HOST>` is unchanged. Allow up to 10 minutes for the cached NXDOMAIN (negative TTL 600 s) to expire.
+4. **Rollback:** the owner deletes the two records.
 
-**Verification (read-only):**
-1. Two public resolvers (DNS-over-HTTPS) return `<VPS_IPV4>` for both names. Allow up to 10 minutes for a cached
-   NXDOMAIN to expire.
-2. `<ERP_HOST>` still returns exactly its old record and TTL.
-3. There is no AAAA for either name.
-4. The VPS's own resolver agrees.
+## 6. S11b — HTTPS and HSTS (D8)
 
-**Rollback:** the owner deletes the two A records.
+- **Prerequisites:**
+  - S10 verified;
+  - Phase A in place (nothing proxied);
+  - the ACME path reachable as in §4.2;
+  - no CAA restriction.
+- **Issue** in CloudPanel → site → SSL/TLS → Let's Encrypt: one certificate per host, its own name only (no `www`
+  alias).
+- **Verify** with `s11-verify.sh --tls`, without `-k`:
+  - a trusted chain to a Let's Encrypt root;
+  - the SAN equals the host exactly;
+  - about 90 days to expiry;
+  - a wrong host name refused;
+  - CloudPanel's automatic renewal configured (checked again after the first renewal).
+- **HSTS:**
+  - `Strict-Transport-Security: max-age=300` is part of the Phase B text, so it appears **only after** trusted HTTPS
+    has been verified;
+  - no `includeSubDomains`, no `preload`.
+  - It is raised (for example to one year) only at staging acceptance, by a separate decision.
+- **Inherited HSTS (reviewed 24 Nov 2026, read-only):**
+  - the zone apex sends none;
+  - a sibling host sends `includeSubDomains`, which covers only names under that sibling, not `<ERP_HOST>` or the two
+    new names;
+  - `<ERP_HOST>` sends none;
+  - the zone is not in Chromium's HSTS preload list.
 
-**Recommended order (decision D3):** S11a **before** S10. Both sites exist behind Basic Auth, with CloudPanel's
-self-signed certificate, and are tested with `curl --resolve` before any public name points at them. Only then S10,
-then S11b. The plan's §N lists S10 first; S11a does not need DNS.
+  So nothing forces HTTPS on the new names before Phase B, and nothing in this plan adds a policy above them.
+- **Unchanged:**
+  - every existing certificate file;
+  - `<ERP_HOST>`'s certificate fingerprint and vhost;
+  - every other site.
+- **If issuance fails:** stay in Phase A; S11a-B and S13 do not start. Fix the cause (DNS, port 80, the challenge
+  path), or roll back (§4.1).
 
-## 6. S11a — CloudPanel and nginx (NOT authorized now)
+## 7. The web server's worker identity and the Unix sockets
 
-**Pre-change evidence (read-only, the S11a pre-step):**
-1. A fresh S0: the nginx tree checksum, every vhost checksum, the master PID and the worker identity (§7), the
-   certificate files, and every site's status.
-2. `nginx -t`, which must be OK.
-3. The content of `sites-enabled/default.conf`. Requests for an unknown host must keep getting what they get today.
-   It is not changed.
+**Facts:**
+- Both sockets are `0660 root:<NGINX_GROUP>` in `/run/elite-po-staging` (0750).
+- S0 records, every time, the user and group of the site web server's workers. The current identity, and an
+  observation about it, are in the private instructions. **The kit never changes the worker identity.**
+- What the socket mode does:
+  - it refuses every identity that is neither the owner nor a member of `<NGINX_GROUP>`;
+  - S9 and the CI rehearsal prove it: `nobody` and the app user get EACCES.
+- What the socket mode does **not** do: **it does not exclude root.** Any process running as root on the host can open
+  both sockets. Against a root-level actor, staging relies on what sits behind the socket:
+  - H-1 host binding;
+  - sign-in with TOTP;
+  - tenant enforcement;
+  - fictional data only.
 
-**Steps (owner in the CloudPanel UI; Claude Code only verifies; CloudPanel credentials never in an AI session):**
-1. Create site `<ADMIN_HOST>` (type: reverse proxy, or static, as CloudPanel offers). **Before anything is proxied**,
-   enable Basic Authentication on the site:
-   - a staging-only user and password, different per site, stored in the owner's password manager;
-   - check that `curl -sk --resolve <ADMIN_HOST>:443:<VPS_IPV4> https://<ADMIN_HOST>/` returns **401**;
-   - check that `http://` returns a **301 to https without a `WWW-Authenticate` header**. CloudPanel's
-     scheme redirect runs in nginx's rewrite phase, before the access phase, so credentials are never requested over
-     plain HTTP.
-2. Edit the vhost:
-   - delete every generated `location` block except CloudPanel's `/.well-known` handling, which stays outside Basic
-     Auth (`auth_basic off`);
-   - keep the generated certificate, log, Basic Auth and scheme-redirect lines;
-   - add the block below.
-   - On save, CloudPanel runs `nginx -t` and reloads gracefully (the master PID is unchanged).
-3. The same for `<CUST_HOST>`, with its own block.
-4. Verify (below), then the regression checks.
+**Checks at S11a, before and after each save:**
+1. The worker identity equals S0's.
+2. Both sockets and their directory are unchanged.
+3. `nobody` and the app user still get EACCES.
+4. R1 reaches the application through nginx (not 502).
+5. No permission error in the nginx error log.
 
-**`<ADMIN_HOST>`** (inside its server block):
-```nginx
-# PO-07 staging, fictional data only. Server-level: every request header the app trusts is set here, never passed on.
-add_header X-Robots-Tag "noindex, nofollow" always;
-add_header X-Content-Type-Options "nosniff" always;
-add_header Referrer-Policy "no-referrer" always;
-client_max_body_size 2m;
-proxy_http_version 1.1;
-proxy_set_header Connection "";
-proxy_set_header Host "<ADMIN_HOST>";              # a constant: never the client's Host
-proxy_set_header X-Forwarded-Host "<ADMIN_HOST>";  # H-1 binds the console to this name
-proxy_set_header X-Forwarded-Proto "https";
-proxy_set_header X-Forwarded-For $remote_addr;     # overwrites, never appends (PLATFORM_TRUSTED_PROXY_HOPS=1)
-proxy_set_header X-Real-IP $remote_addr;
-proxy_set_header Forwarded "";                     # strip every other forwarding or override header a client sends
-proxy_set_header X-Forwarded-Server "";
-proxy_set_header X-Forwarded-Port "";
-proxy_set_header X-Original-URL "";
-proxy_set_header X-Rewrite-URL "";
-proxy_set_header X-Middleware-Subrequest "";
-proxy_connect_timeout 5s;
-proxy_read_timeout 60s;
-location = /robots.txt { auth_basic off; default_type text/plain; return 200 "User-agent: *\nDisallow: /\n"; }
-location = / { return 302 /platform/login; }
-location = /platform { proxy_pass http://unix:<ADMIN_SOCK>:; }
-location ^~ /platform/ { proxy_pass http://unix:<ADMIN_SOCK>:; }
-location ^~ /_next/image { return 404; }           # the image optimizer is unused (R8): denied
-location ^~ /_next/static/ { proxy_pass http://unix:<ADMIN_SOCK>:; }
-location = /favicon.ico { proxy_pass http://unix:<ADMIN_SOCK>:; }
-location / { return 404; }                         # nothing else of the application exists on this host
-```
+**If a worker cannot connect** (for example after a web-server update changes its user): set `SocketGroup=` to that
+worker group in the two `.socket` units. That is a kit change, CI-rehearsed, owner-approved, applied by an authorized
+reconcile and a restart of the two sockets only. Never `0666`, never a shared directory, never a user added to a
+privileged group.
 
-**`<CUST_HOST>`** (inside its server block): the same server-level lines, with `<CUST_HOST>` in `Host` and
-`X-Forwarded-Host` and `client_max_body_size 12m;`. Then:
-```nginx
-location = /robots.txt { auth_basic off; default_type text/plain; return 200 "User-agent: *\nDisallow: /\n"; }
-location = /platform { return 404; }               # the console never exists on the customer host
-location ^~ /platform/ { return 404; }
-location ^~ /_next/image { return 404; }
-location / { proxy_pass http://unix:<CUST_SOCK>:; } # pages, /register/accept, /join/accept, /api/*, /print/*, /uploads/*, /assets/*, /_next/static/*
-```
+## 8. S12 — encrypted backups and the off-host copy (D5, D6)
 
-**Notes:**
-- **Unexpected hosts:** they never reach these server blocks. `server_name` is exact, and an unknown host goes to
-  the existing default server, unchanged.
-- **Inside the application:** H-1 still refuses a wrong host or forwarded host on its own (R5–R8 at S9). nginx is the
-  first line, not the only one.
-- **Static assets:** `/_next/static/` on both hosts; `/assets/*` and `/uploads/*` through the customer app (its own
-  authorization).
-- **No new TCP listener:** nginx already listens on 80 and 443. The apps are reachable only through the two Unix
-  sockets.
+**Policy:**
+- daily, 14-day retention;
+- a private bucket with Object Lock, default retention 14 days, Governance mode;
+- a bucket-scoped key without `deleteFiles` or `bypassGovernance`; **no master key on the VPS**;
+- unique timestamped names; a lifecycle compatible with the lock (hide after 15 days, delete hidden after 1 day);
+- billing caps and alerts;
+- encrypted files only leave the host.
 
-**Verification (`curl --resolve`, `-k` until S11b):**
-- **Without credentials:** every path returns 401 except `/.well-known/acme-challenge/*` and `/robots.txt`; HTTP
-  returns a 301 to HTTPS with no `WWW-Authenticate`.
-- **With the owner's Basic Auth (decision D4: the owner runs the probe in their own terminal, or creates a root-only
-  credential file on the VPS that the probe reads and never prints):** R1–R12 through nginx:
+The owner's setup is in `PO07_OWNER_GPG_B2_GUIDE.md`.
 
-| # | Expected |
-|---|---|
-| R1 | admin `/` → 302 `/platform/login` |
-| R2 | admin customer paths → 404 |
-| R3 | admin `/platform/login` → 404 (F1 off) |
-| R4 | customer `/platform*` → 404 |
-| R5–R8 | cross-host actions refused |
-| R9 | `__Host-` Secure cookies |
-| R10 | a client-sent `X-Forwarded-For: 1.2.3.4` is replaced by the real address (seen in the app's throttle and audit records) |
-| R11 | invitation links point at `https://<CUST_HOST>` |
-| R12 | a customer PDF downloads |
+**What a backup holds:** `po07-staging-<UTC>.tar.gpg` holds:
+- a custom-format `pg_dump` of the staging database;
+- a tar of the fictional file storage, with its SHA-256 list;
+- `schema.tsv` and `rowcounts.tsv`;
+- `manifest.json`: the kit version, the release, tree, build and run, and the member checksums.
 
-  Plus: `/_next/image` → 404 on both hosts; spoofed `Host`, `X-Forwarded-Host` and `Forwarded` headers have no
-  effect; nginx's error log shows no `connect() … (13: Permission denied)`.
-- **Prerequisite (to be built and rehearsed in CI before the S11a window):** an nginx stage in the rehearsal that
-  applies exactly these blocks (stock nginx, self-signed certificate, Basic Auth, the rehearsal's sockets) and runs
-  the checks above.
+It is encrypted to the owner's public key only, and a `.sha256` sidecar sits next to it. **No env file, no key, no
+password and no recovery code is in any backup.** Administrator and MFA data are in the dump only as their stored
+forms: password hashes, and field-encrypted secrets that need the owner-held field key.
 
-**Regression (must all hold after each save):**
-- the nginx tree checksum differs ONLY by the new site's files (its vhost, certificate, Basic Auth file);
-- every existing vhost checksum is unchanged, including `<ERP_HOST>`'s;
-- `nginx -t` OK, and the master PID unchanged;
-- every existing site answers exactly as in S0;
-- the `<ERP_HOST>` public status, headers and certificate fingerprint are unchanged;
-- the §I guard.
+**Two separate identities:**
 
-**Rollback:** the owner deletes the two sites in CloudPanel (vhost, certificate, Basic Auth). Then `nginx -t`, and
-the nginx tree checksum must equal the pre-change value. The staging services stay as they are.
-
-## 7. Unix socket access: verification requirements
-
-Facts:
-- Both sockets are `0660 root:<NGINX_GROUP>`, in `/run/elite-po-staging` (0750).
-- S0 records, at every stage, the user and group of the site web server's worker processes (the children of the
-  `nginx.service` master). The current identity is in the private instructions.
-- A worker can connect only if its user owns the socket, or its group is the socket's group, or it is root.
-
-Requirements, at the S11a pre-step and again after each save:
-1. The workers' user and group equal the identity recorded in S0 (`ps -o user=,group= --ppid <master>`). CloudPanel's
-   own panel nginx is a separate service and is not involved.
-2. Both sockets are `0660 root:<NGINX_GROUP>` and their directory is unchanged.
-3. Non-web-server users (`nobody`, the app user) still get EACCES (as at S9).
-4. Through nginx, R1 reaches the application (not a 502); the error log has no permission error.
-
-**If the worker identity ever cannot connect**, e.g. after a web-server update changes its user, the narrowest change
-is:
-- set `SocketGroup=` in the two `.socket` units to that worker group;
-- that is a kit change, CI-rehearsed, owner-approved, applied by an authorized reconcile and a restart of the two
-  sockets only.
-
-Never `0666`, never a socket in a shared directory, never a user added to a privileged group.
-
-## 8. S11b — HTTPS (NOT authorized now)
-
-**Prerequisites:**
-- S10 propagated, verified by public resolvers;
-- S11a passed (the sites exist behind Basic Auth);
-- `/.well-known/acme-challenge/` reachable over HTTP without Basic Auth (CloudPanel's handling);
-- no CAA restriction (verified).
-
-**Steps (owner, CloudPanel → site → SSL/TLS):** a new Let's Encrypt certificate for each host, its own name only (no
-`www` alias). CloudPanel renews it automatically.
-
-**Verification:**
-- `curl -v` without `-k`: a valid chain, the subject alternative name equals the host, about 90 days to expiry;
-- HTTP → 301 → HTTPS;
-- the cookies are `__Host-`, Secure, HttpOnly, with no `Domain` (R9);
-- then `add_header Strict-Transport-Security "max-age=300" always;` on both hosts, without `includeSubDomains`. It is
-  raised (e.g. to one year) only at staging acceptance.
-
-**Unchanged:**
-- every existing certificate file;
-- `<ERP_HOST>`'s certificate fingerprint;
-- every existing site's status.
-
-**If issuance fails:** the sites stay behind Basic Auth with the self-signed certificate and S13 does not start. Fix
-the cause (DNS, port 80, challenge path), or roll back the sites (§6).
-
-## 9. S12 — backup and restore (NOT authorized; nothing purchased or provisioned)
-
-**Policy (preserved):**
-- daily encrypted staging backups, 14-day retention;
-- an independent off-host copy in object storage;
-- an upload credential **without delete permission**;
-- the owner's GPG private key never on the VPS and never seen by Claude Code;
-- a verified restore before staging acceptance.
-
-**Provider recommendation: Backblaze B2** (S3-compatible; rclone has a native B2 backend):
-- **Application keys** have explicit per-key capabilities. The upload key is restricted to one bucket with
-  `listBuckets`, `listFiles` and `writeFiles` only: **no `deleteFiles`**, no `bypassGovernance`, and no
-  retention-write capabilities.
-- **Object Lock** with a bucket default retention of 14 days. Every upload is retained automatically, even if the key
-  leaked. Governance mode is recommended: only the owner's master key can shorten it.
-- **A lifecycle rule** deletes versions after 15 days, once their retention has passed.
-- **Cost (published price, 2026):** US$6.95 per TB-month, the first 10 GB free, egress free up to three times the
-  stored volume. The fictional staging dumps are small (megabytes each): 14 copies stay well inside the free 10 GB,
-  so the expected cost is **US$0 per month**. Even 1 GB a day would be about US$0.03 a month. Check the price at
-  sign-up.
-- **Not recommended:**
-  - Cloudflare R2: its object read-and-write token does not clearly exclude deletion; only bucket locks would protect
-    the copies.
-  - Wasabi: it bills a minimum of 1 TB.
-
-**Owner-only steps (no credential ever in an AI session):**
-1. Create the B2 account and a private bucket with Object Lock enabled at creation and a default retention of 14 days
-   (Governance).
-2. Create the bucket-restricted upload key with exactly the capabilities above. Store its ID and secret only in the
-   password manager. Later, enter them on the VPS yourself, into a root-only 0600 file, in your own terminal.
-3. **The GPG key on Windows (Gpg4win / Kleopatra):**
-   - install Gpg4win from its official site and verify the installer's signature or checksum;
-   - Kleopatra → *New OpenPGP Key Pair*: name "Elite PO staging backups", a staging-only e-mail address;
-     *Advanced settings*: ECC (Curve25519) or RSA 4096; expiry 2 years; a strong passphrase in the password manager;
-   - *Export* the **public** key (`.asc`) and note its **fingerprint**: these two are the only things given to the VPS;
-   - *Backup Secret Keys* to an offline encrypted medium (and the password manager), never to the VPS or the
-     repository;
-   - CLI alternative: `gpg --quick-generate-key "Elite PO staging backups <…>" ed25519 sign 2y`, then
-     `gpg --quick-add-key <fingerprint> cv25519 encr 2y`, then `gpg --armor --export <fingerprint>`.
-
-**Kit stage S12** (to be written, CI-rehearsed and owner-approved before its window):
-
-| Unit | Design |
-|---|---|
-| `elite-po-backup.service` / `.timer` | inside the namespace and the slice, sandboxed, as the backup role (its credential by `LoadCredential`, never printed). Daily: `pg_dump -Fc` of `<DB>`, a tar of the fake storage, and a row-count sidecar → `gpg --encrypt` to the owner's public key only (a keyring holding just that key) → `/var/lib/elite-po-staging/backups/` (0700). The 14 newest are kept. An unencrypted file is never written outside the private temporary directory |
-| `elite-po-offsite.service` / `.timer` | outside the namespace (it needs the internet), with **no** database access: it reads only the encrypted files. `rclone copy --immutable` (never `sync`, never deletes), with the owner-entered key |
-
-Stop conditions: an unencrypted file is written; the off-host copy fails; any §I item.
-
-**The restore drill** (fictional data; the running staging database is never touched):
-1. The owner downloads one off-host copy (the web console, or a separate read-only key on the PC) and checks its
-   SHA-256 sidecar.
-2. They decrypt it **on the PC** with their private key.
-3. They stream it over SSH into a kit restore tool, which:
-   - creates a new `*_restore_test_only_` database in the staging cluster;
-   - runs `pg_restore --no-owner` as the owner role;
-   - compares every table's row count with the sidecar;
-   - drops the restore database.
-
-The drill passes when every count matches. It is required before staging acceptance.
-
-## 10. S13 — feature activation and acceptance (NOT authorized; every switch stays off)
-
-**Mechanics** (a kit stage, to be written and CI-rehearsed):
-- one switch per step: the env file(s) are edited on the host (root 0600, never printed);
-- `PLATFORM_CONSOLE_ENABLED`, `PLATFORM_INVITATIONS_ENABLED` and `PLATFORM_USER_INVITATIONS_ENABLED` go only in the
-  admin file; `TENANT_ACCESS_ENFORCEMENT` and the `CUSTOMER_*` switches are identical in both files;
-- then a restart of **the two staging units only**, the matrix check for that switch (`po06/SECURITY_AND_FLAG_MATRIX.md`
-  §2), and a footprint sample;
-- any failure turns that switch off. Turning back is in reverse order, F7 → F1.
-
-| Step | Switch | Acceptance checks (fictional records only) |
+| | Backup (`elite-po-backup.service`, daily 00:20 UTC) | Upload (`elite-po-offsite.service`, daily 01:20 UTC) |
 |---|---|---|
-| F1 | `PLATFORM_CONSOLE_ENABLED=true` | the administrator signs in with password and TOTP; a wrong code is refused and throttled; a recovery code works once; idle timeout; sign-out revokes the session; R3 now 200 on admin only; the customer ERP is unaffected |
-| F2 | `TENANT_ACCESS_ENFORCEMENT=enabled` | company management; suspending a fictional company ends its sessions at the next request and refuses sign-in; restoring it allows a fresh sign-in; other companies are unaffected; step-up for sensitive actions |
-| F3 | `PLATFORM_INVITATIONS_ENABLED=true` | create, revoke and re-issue a company invitation; the link is shown once and points at `https://<CUST_HOST>`; audit records for each step |
-| F4 | `CUSTOMER_INVITE_ACCEPTANCE_ENABLED=true` | customer onboarding: acceptance creates one company, one primary owner and one Trial (14 days, 3 seats); a second use and an expired token are refused; primary-owner management |
-| F5 | `PLATFORM_USER_INVITATIONS_ENABLED=true` (after L-3) | user invitations: a pending invitation occupies a seat; revoke and re-issue |
-| F6 | `CUSTOMER_USER_INVITE_ACCEPTANCE_ENABLED=true` | acceptance creates the user in the right company without a second seat; a second use is refused |
-| F7 | `CUSTOMER_SEAT_ENFORCEMENT_ENABLED=true` (with the P-8 consent) | seat limits: the 4th user is refused on every path with nothing written; a company above its allowance keeps its users |
+| Network | inside the staging namespace: **no internet** | outside the namespace; the internet only; localhost, link-local, multicast and private ranges denied (`IPAddressDeny`); the namespace is not weakened |
+| Identity | the app's backup role, read-only database access by `LoadCredential` | a **dynamic user** with only the upload group: no database role, no secret, no app or storage path |
+| Reads / writes | reads the database and the fictional storage; writes **only** the encrypted outbox (setgid 2750) | reads only the outbox; writes only its own receipts; never modifies the database |
+| Plaintext | only in a RAM-backed `/tmp` (tmpfs, 256 M) | none |
+| Encryption | `gpg --recipient-file` (no keyring, no private key), AES-256 | — |
+| Self-checks (refuses on failure) | no internet; `/tmp` is tmpfs; env files unreadable; the fingerprint matches; no secret key present | secrets, database, app and storage paths absent; local database ports unreachable; the outbox read-only; only expected files |
+| Copy | — | `rclone copy --immutable --size-only --s3-no-head` (never `sync`, never delete, never overwrite; never a HEAD or GET, because the key cannot read: the destination is listed); size verified by listing after upload |
 
-**Across all steps:**
+**Stage `s12_backup.sh` (one authorized window):**
+1. It checks:
+   - the bucket name set;
+   - the owner's public key and fingerprint (`pc-kit.sh backup-key`; a file with a private key is refused);
+   - the owner-entered `rclone.conf` (0600 root, the expected section; never printed).
+2. It creates the upload group (empty) and the outbox, then installs the tools and the four units.
+3. It runs one backup and one upload, and verifies both.
+4. It enables the timers.
+5. **S12 is complete only after a successful restore drill (§9).** If the off-host copy or the restore fails, the S12
+   gate fails.
+
+Rollback S12 removes the units, timers, tools, the group and the uploader's state, and keeps every backup.
+
+**CI rehearsal** (an object-storage **stand-in**, not B2, with fictional credentials):
+- **The stand-in:** MinIO built from its archived upstream source at a pinned commit, because MinIO no longer
+  publishes images. It runs a bucket with Object Lock, default retention Governance 14 days, and two keys: upload
+  (put and list only) and read.
+- **The "owner":** a fictional owner key pair on the "PC" side. Only its public half reaches the VPS side.
+- **Checks:**
+  - the object is encrypted to the owner's encryption subkey, with no plaintext anywhere;
+  - the namespace and dynamic-user properties in effect;
+  - retention applied;
+  - **delete refused**;
+  - an overwrite attempt leaves the original version intact.
+- Results: §13.
+
+## 9. The restore drill (required before staging acceptance)
+
+1. **Retrieve.** The owner downloads one off-host copy and its `.sha256` sidecar: from the provider's web console, or
+   with a separate read-only key kept on the PC.
+2. **Decrypt privately.** In the owner's own terminal, `tools/pc-restore-drill.sh <file> <sidecar>`:
+   - it checks the sidecar;
+   - GnuPG asks for the owner's passphrase;
+   - the decrypted stream goes over the owner's SSH route straight into `restore-verify.sh --execute <sha>`;
+   - nothing decrypted is written to the PC's disk.
+3. **Restore and verify** (`restore-verify.sh`, on the VPS). It accepts only a backup whose SHA-256 the uploader
+   recorded as verified off-host.
+   - It restores into a **disposable database** `elite_po_restore_<ts>_test_only_` (`pg_restore --no-owner`) and an
+     **isolated directory**.
+   - It verifies:
+     - every member's checksum;
+     - the schema equal to the recorded one;
+     - every table's row count;
+     - the files' SHA-256 list;
+     - the administrator count;
+     - **field-encrypted data decrypts** with the field key currently in use (counts only; nothing is printed).
+   - **The active database is never overwritten:** its checksum of row counts is compared before and after.
+   - The disposable database and directory are removed **only after** every check passed. A failure keeps them for
+     review and STOPs.
+4. **Disaster recovery:** a full rebuild needs three owner-held items. The administrator's MFA stays recoverable
+   without exposing anything, because the dump holds only encrypted forms.
+   - the GPG private key and passphrase;
+   - the staging keys saved at S9b (`FIELD_ENCRYPTION_KEYS` is essential for MFA and other encrypted fields);
+   - the administrator password (only its hash is in the dump).
+
+**CI:** the drill runs end to end, plus negative cases: an unknown SHA-256 refused, and a corrupted object refused.
+Results: §13.
+
+## 10. S13 — feature activation (one switch at a time)
+
+`s13_switch.sh --execute F<n> on|off` (one switch per run, in strict order; `--plan` and `--status` are read-only):
+
+| Step | Switch | Files | Owner acceptance (fictional records only) |
+|---|---|---|---|
+| F1 | `PLATFORM_CONSOLE_ENABLED=true` | admin | sign-in with password and TOTP; a wrong code refused and throttled; a recovery code works once; idle timeout; sign-out revokes the session; R3 now 200 on admin only |
+| F2 | `TENANT_ACCESS_ENFORCEMENT=enabled` | both | company management; suspending a company ends its sessions and refuses sign-in; restoring allows a fresh sign-in; other companies unaffected; step-up for sensitive actions |
+| F3 | `PLATFORM_INVITATIONS_ENABLED=true` | admin | company invitation create, revoke, re-issue; the link shown once, pointing at `https://<CUST_HOST>`; audit records |
+| F4 | `CUSTOMER_INVITE_ACCEPTANCE_ENABLED=true` | both | onboarding: one company, one primary owner, one Trial (14 days, 3 seats); reuse and expiry refused; primary-owner management |
+| F5 | `PLATFORM_USER_INVITATIONS_ENABLED=true` (after L-3) | admin | user invitations; a pending one occupies a seat; revoke and re-issue |
+| F6 | `CUSTOMER_USER_INVITE_ACCEPTANCE_ENABLED=true` | both | the user created in the right company without a second seat; reuse refused |
+| F7 | `CUSTOMER_SEAT_ENFORCEMENT_ENABLED=true` (with the P-8 consent) | both | the 4th user refused on every path with nothing written; a company above its allowance keeps its users |
+
+**Each run:**
+1. **Preconditions:** S9b done; S11a-B and S11b passed; S12 done; the switch named in the window's authorization; all
+   earlier switches on and no later switch on; the L-3 table check for F5 and F6.
+2. **The change:** the switch line in the env file(s), rewritten in place. Every other line is verified unchanged, and
+   nothing is printed.
+3. **The restart:** **the two staging app units only**, followed by a health poll.
+4. **Automated checks:**
+   - the variable in effect in each process (yes/no only);
+   - F1's route 200 on admin and 404 on customer;
+   - customer `/login` 200;
+   - no error in either journal since the restart.
+5. **Then the owner's acceptance checks** for that switch, plus the cross-cutting ones below.
+6. **On failure:** the switch is reverted, the apps are restarted, and the tool STOPs. Turning off runs in reverse
+   order, F7 → F1.
+
+**Across all steps (owner-run, fictional data only):**
 - session revocation;
-- the customer ERP regression subset (`po06/STAGING_REGRESSION_SPEC.md`) and R1–R12 again;
-- **English and Arabic** (RTL mirrored, numbers and dates LTR), **mobile and desktop** widths, **light and dark**
-  themes, on both hosts;
-- PDF generation (§4.1 limits);
-- the §F footprint for at least 30 minutes, including a PDF burst;
-- the live ERP's and the shared services' S0 checks unchanged after every restart.
+- the customer ERP regression subset and R1–R12 again;
+- **English and Arabic** (RTL mirrored; numbers, dates and currency LTR), **desktop and mobile**, **light and dark**,
+  on both hosts;
+- PDF generation and storage;
+- the shared services' health after every restart;
+- **30 minutes of footprint monitoring** after F7, including a PDF burst.
 
-**Scope:** this is **controlled, owner-only staging testing**: behind Basic Auth, fictional data, named operator
-only. **It is not public or production availability.** That needs, separately:
-- the PDF limiter (§4.1);
-- the production ERP security release (§13);
-- the production hardening items (staging plan §K);
-- a production plan of its own.
+Nothing is activated on the VPS by this plan. **Scope:** controlled, owner-only staging behind Basic Auth. It is not
+public or production availability.
 
-## 11. Remaining risks and decisions
+## 11. The PDF limiter (D7) — a separate application workstream
 
-**Decisions for the owner:**
+`PO07_PDF_CONCURRENCY_SPEC.md`:
+- at most 2 concurrent renders per customer process;
+- a FIFO queue of 4 with a 15 s maximum wait;
+- 503 with `Retry-After: 10` beyond either limit;
+- native English and Arabic messages;
+- timeout and cancellation release the slot; nothing leaks in the response;
+- a full regression plan.
 
-| # | Decision |
+It is not implemented, and `cf64ebc` is unchanged. It needs its own approved release before any unrestricted public
+availability.
+
+## 12. The production ERP security release — strategy (no merge, no deploy, no production credentials)
+
+Plan: `PO07_ERP_SECURITY_RELEASE_PLAN.md`.
+
+**The candidate:**
+- `main` `621f156` + the Team fix (`35d5dcc`, `94f936e`) + the Next.js 16.4.6 commit `9b8aa85`;
+- assembled **only on an isolated runner** (`.github/workflows/erp-security-release-measure.yml`); nothing is pushed,
+  merged or deployed.
+
+**Measured on 24 Nov 2026, with 2 CPUs as on the VPS** (runs 45478667896 and 45479330665):
+
+| Measure | Result |
 |---|---|
-| D1 | Approve kit-4 (manifest digest in the closure report) for installation, as the first step of the next authorized window |
-| D2 | Approve the proposed PostgreSQL `TasksMax=64` (reconcile, then a restart of the staging cluster only) — or keep the slice-only bound |
-| D3 | The order S11a → S10 → S11b (recommended) instead of S10 → S11a |
-| D4 | How the authenticated R1–R12 run through nginx: the owner runs the probe, or a root-only credential file read by the kit's probe |
-| D5 | The backup provider (Backblaze B2 recommended), the Object Lock mode (Governance recommended), and the account and key, created by the owner |
-| D6 | The owner's backup GPG key: generate it and provide the public key and fingerprint |
-| D7 | The PDF limiter (§4.1) as an application change, before any unrestricted access |
-| D8 | The HSTS policy (short `max-age` at S11b; one year at acceptance) |
+| Candidate tree | `211bc69abed66d0d47cf28fb79607c564f2e9223`, identical in both runs (the cherry-pick is clean and reproducible) |
+| `npm ci`, TypeScript, ESLint | pass |
+| `next build`, no memory cap | **completes; peak 2.8–2.9 GB**; about 1 min 15–20 s CPU |
+| `next build` under the old on-VPS cap (`MemoryMax=1536M`, no swap) | **OOM-killed** at 1.5 G, in both runs |
+| The archive a verified external build would install (`.next`, `node_modules`, the lockfiles) | 421 MB, 48,661 entries. Measurement only: not attested, not approved |
+
+**Conclusion: the plan's N3 (building on the VPS) cannot work.** The release must use a **verified external build**,
+as S6-R did for staging.
+
+**Requirements before any production step:**
+1. **Owner go-ahead for N1:** a release branch from `main` with the three commits, reviewed; the H-1 and ERP suites
+   green.
+2. **The build:** a GitHub-hosted workflow on that branch.
+   - `npm ci`, the gates, `next build`;
+   - an archive with `ARTIFACT.json` (commit, tree, build, run);
+   - a Sigstore build-provenance attestation;
+   - the runner's SHA-256.
+3. **Transfer and checks:**
+   - the PC verifies the digest and the attestation (as `pc-artifact.sh`);
+   - the VPS receives it verify-then-publish (as K2) and checks the archive offline (as `check-archive.mjs`);
+   - nothing is built, downloaded or installed by a package script on the VPS.
+4. **Installation beside the live release** (a new directory), switched by one owner-authorized restart.
+   - The previous release directory and its unit configuration are kept untouched.
+   - **Rollback:** the previous unit configuration and one restart, measured in a rehearsal first.
+5. **Separations kept:**
+   - the production ERP, its database (Neon) and its credentials are never used in CI or by the staging kit;
+   - staging and production share no file, socket, database or key.
+
+## 13. Final CI (isolated GitHub-hosted runners, fictional data)
+
+**The final run, 45502721823: all three jobs green.** It used the final kit-5 code (77 files; final manifest digest `d6f9bebf4929216e`, which differs from the rehearsed one only by the private README, a documentation file the render excludes) and
+the approved archive only.
+
+| Area | Result |
+|---|---|
+| K1–K6 regression tests (Linux) | 82/82, no skip |
+| K4: the approved commit reachable, pinned tree (offline and through the GitHub API) | pass |
+| S1–S9 (S6 = S6-R) | pass. V-NET tool 107, admin 110, customer 112, all passing; R-tests 27/27; after S9 22/22 |
+| D24 restricted recovery | 30/30 |
+| D31 PDF load | 12/12. Customer unit tasks peak 252/320; slice 286/512 |
+| K3 reconciliation | 13 checks; 22 files listed, 0 needing attention |
+| D2 (the VPS path) | as on the VPS today, `pids.max` 16654 (no own cap) → authorized reconcile → `tools/pg-restart.sh` refused without PGRESTART, then restarts the staging cluster only. Apps back in 5 s, `pids.max` 64, R-tests 27/27 |
+| PG saturation under the cap | peak 41 of 64; 16 sessions refused by PostgreSQL itself; `pids.events max 0` |
+| The cluster `main` (a real cluster from before the CI S0) | the same postmaster PID, config, pg_hba and task cap after D2, after S1–S13 and after the full rollback |
+| nginx, TLS, Basic Auth, R1–R12 | 246 probe checks: Phase A 47 + 47, Phase B unauthenticated 57, authenticated 95. TLS, renewal, sockets and listeners pass; the nginx tree is restored (§4.4) |
+| S12 backup | encrypted to the owner's subkey only (440,534 bytes, 81 tables); no plaintext on disk; the backup ran in the namespace; the uploader is a dynamic identity outside it |
+| S12 simulated off-host copy | the stand-in (MinIO from pinned source, not B2), Object Lock GOVERNANCE 14 days. The upload key cannot delete; a hostile overwrite PUT is refused; the original version stays byte-identical and retained; even the root key cannot delete it without a bypass |
+| S12 restore drill | an unverified object refused; a corrupted backup refused. The success path: schema (988 columns) and 81 tables' counts identical; the encrypted MFA field decrypts; both fictional uploads (one nested, one 64 KiB binary) restored with matching SHA-256; the active database unchanged; the disposable database and directory removed; S12 accepted |
+| S13 | F2 before F1 refused; an unknown switch refused. F1–F7 on in order, each with its automated checks; an injected F7 failure reverts and STOPs; F3 off while F4 is on refused; F7 → F1 off. 14 recorded passes; every file and process back to no switch |
+| Rollback | the full rollback (S13 → S1) leaves no staging unit, path, user, group or listener; the encrypted backups and fictional storage are kept for the owner |
+| J1 read-only matrix and the H-1 security suites | pass: `SUITES PASS failed=0`; invitation acceptance browser 98/98 |
+
+**Defects this round found and fixed in the kit, not in the tests:**
+- Refuse-on-match checks piped into `grep -q` under pipefail, where SIGPIPE could hide a match. This hid the
+  journal-error and log-permission checks, and caused the first backup failure. A lint rule now forbids the pattern.
+- The upload key cannot read, but rclone HEADs objects (403).
+- `RuntimeMaxSec` is ignored for `Type=oneshot` (both units are now capped by `TimeoutStartSec`).
+- The S13 expected-state computation was defeated by the inherited ERR trap.
+- Deliberate restarts hit systemd's start limit.
+- D2 had no kit tool for its restart (now `tools/pg-restart.sh`).
+- The restore could not read its root-only directory.
+
+**One intermittent failure, recorded, not hidden:** in run 45498360294 one J1 browser check failed once,
+`invitation-acceptance-browser` B10 (a signed-in customer sees "You're signed in"; 97/98). The same suite passed 98/98 in
+every other run of this round, on the same archive and suite code. It is reported for the application workstream; the
+suite was not changed.
+
+**PO07-A11Y-01 remains open** (accepted temporarily, not resolved). No test was weakened or skipped to obtain these
+results.
+
+## 14. Remaining risks and blockers
 
 **Risks:**
-- R4: the template's `OOMScoreAdjust` applies to the staging cluster.
+- R2: the sandbox is unproven on the VPS's own kernel until each stage runs there.
+- R4: `OOMScoreAdjust` applies to the staging cluster.
 - R6: the strict listener rule versus services opening random ports.
-- R8: `/_next/image`, denied at S11a.
-- R9: §4.1.
-- R10: §4.2.
+- R9: PDF concurrency, until D7 is released.
 - PO07-A11Y-01 is open.
-- The staging services run continuously (contained; no route).
-- The 24 Nov partial archive is kept as evidence.
-- The owner's PC network may need the NAT64 route.
-- The production-side items of the staging plan §K are still open (SSH root and password login, the CloudPanel
-  admin port, internal services on all interfaces).
+- The production-hardening items of the staging plan §K are open.
+- A shared-host observation about the web server is recorded privately.
 
-## 12. GO / NO-GO for the next separately authorized execution phase
+**Blockers to the next VPS phase** (all are the owner's to resolve; none is a code defect):
+- an execution authorization (window, stages);
+- the owner's review of the kit-5 digest;
+- for S12: the B2 account, bucket and restricted key, and the GPG key pair (owner guide);
+- for S13: S11a-B, S11b and S12 passed.
+
+## 15. GO / NO-GO for the next separately authorized execution phase
 
 | Phase | Verdict |
 |---|---|
-| A window to install kit-4 (`update`), then `reconcile --report` (read-only), and, if D2 is approved, the PostgreSQL cap | **GO, when authorized**, once the kit-4 CI run is green and the owner approves the digest |
-| S11a (nginx) | **GO only with a separate authorization**, after D3/D4 and after the nginx rehearsal (§6) is built and green |
-| S10 (DNS), S11b (certificates) | the owner performs them, after S11a (D3) |
-| S12 | **NO-GO** until D5/D6 and the S12 kit stage is written and rehearsed |
-| S13 | **NO-GO** until S11b and S12 pass and the S13 kit stage is written and rehearsed |
-| Public or production availability | **NO-GO** (§10 scope) |
-
-## 13. The production ERP security release (a separate workstream; not merged, not deployed)
-
-Plan: `PO07_ERP_SECURITY_RELEASE_PLAN.md`. State on 24 Nov 2026:
-- `main` = `621f156` (Next.js 16.4.3); it no longer passes the build's advisory gate.
-- `fix/team-sensitive-fields-exposure` = `621f156` + `35d5dcc` (the Team fix) + `94f936e` (handover), unchanged.
-- The Next.js 16.4.6 commit `9b8aa85` exists only on `feat/platform-owner`. N1 (the release branch and the
-  cherry-pick) has not started.
-
-**New finding from PO-07:**
-- The plan's N3 builds the release **on the VPS** under `MemoryMax=1536M`.
-- A Next.js 16.4.6 build of the Platform Owner branch needed **more than 2.3 GB** on this VPS and failed three times
-  (`PO07_SHARED_VPS_STAGING_PLAN.md` §F.1). An ERP build is likely to need a similar amount.
-- **Recommendation:** first measure the ERP release build in CI. Then replace N3 with a verified external build
-  (as S6-R): a GitHub-hosted build, an attested archive, its SHA-256 checked on the VPS, and installation beside the
-  live release.
-
-**Readiness: the plan is complete, but NOT ready to execute.**
-- N1 needs the owner's go-ahead.
-- N3 must be revised and measured first.
-- Nothing is merged or deployed.
+| Install kit-5 and run the read-only reconcile report (§2) | **GO when authorized**, once the owner has reviewed the kit-5 digest |
+| D2 (reconcile plus a controlled restart of the staging cluster) | **GO when authorized** (RECONCILE and the restart named in the window) |
+| S11a-A → S10 → S11b → S11a-B | **GO when authorized**, in that order, with the owner performing the CloudPanel, DNS and certificate steps and running the authenticated probe |
+| S12 | **GO when authorized**, after the owner's B2 and GPG setup; complete only with a passing restore drill |
+| S13 | **GO when authorized**, after S11a-B, S11b and S12; one switch per run |
+| Production ERP security release | **NO-GO** until N1 is approved and the external-build path (§12) is built and rehearsed |
+| Public or production availability of the Platform Owner work | **NO-GO** (D7, §12, the staging plan §K) |
