@@ -212,6 +212,30 @@ jobs:
           test "$(sha256sum "art/$ARCHIVE" | cut -d' ' -f1)" = "$PINNED_ARCHIVE_SHA256" || { echo "::error::not the approved archive"; exit 1; }
           /usr/bin/node tools/ci/po07-artifact/check-archive.mjs "art/$ARCHIVE" --expect source.sha="$APPROVED_SHA" --expect source.tree="$APPROVED_TREE" \
             --expect runtime.node="v$NODE_VERSION" --expect runtime.next="$NEXT_VERSION" --expect workflow.run_id="$ARTIFACT_RUN_ID"
+      # S12's object-storage stand-in (fictional credentials; NOT Backblaze B2). MinIO no longer publishes community
+      # images or binaries (the pinned images are gone from Docker Hub and quay.io), so the archived upstream source is
+      # built at pinned, peeled tag commits; Go verifies its toolchain and every module through the checksum database.
+      - name: S12 stand-in — MinIO server and client from source at pinned commits
+        env:
+          MINIO_TAG: RELEASE.2025-04-22T22-12-26Z
+          MINIO_COMMIT: 0d7408fc9969caf07de6a8c3a84f9fbb10a6739e
+          MC_TAG: RELEASE.2025-04-16T18-13-26Z
+          MC_COMMIT: b00526b153a31b36767991a4f5ce2cced435ee8e
+        run: |
+          set -Eeuo pipefail
+          S="$RUNNER_TEMP/s3src"; B="$RUNNER_TEMP/s3bin"; mkdir -p "$S" "$B"
+          build() { # repo tag commit toolchain output
+            git -c advice.detachedHead=false clone -q --depth 1 --branch "$2" "https://github.com/$1" "$S/$5"
+            test "$(git -C "$S/$5" rev-parse HEAD)" = "$3" || { echo "::error::$1 $2 is not commit $3"; exit 1; }
+            (cd "$S/$5" && GOTOOLCHAIN="$4" GOFLAGS=-mod=readonly CGO_ENABLED=0 go build -trimpath -o "$B/$5" . )
+          }
+          go version
+          build minio/minio "$MINIO_TAG" "$MINIO_COMMIT" go1.24.2 minio > "$RUNNER_TEMP/build-minio.log" 2>&1 & p1=$!
+          build minio/mc "$MC_TAG" "$MC_COMMIT" go1.23.6 mc > "$RUNNER_TEMP/build-mc.log" 2>&1 & p2=$!
+          rc=0; wait "$p1" || { rc=1; tail -30 "$RUNNER_TEMP/build-minio.log"; }; wait "$p2" || { rc=1; tail -30 "$RUNNER_TEMP/build-mc.log"; }
+          [ "$rc" -eq 0 ] || { echo "::error::the stand-in did not build"; exit 1; }
+          "$B/minio" --version | head -1; "$B/mc" --version | head -1; sha256sum "$B/minio" "$B/mc"
+          echo "PO07_S3BIN=$B" >> "$GITHUB_ENV"
       - name: Rehearsal S1 → S9, extra runtime checks, rollback
         run: sudo -E bash tools/ci/po07-runtime/rehearsal.sh art "$ARTIFACT_RUN_ID"
       - name: Collect the kit's logs

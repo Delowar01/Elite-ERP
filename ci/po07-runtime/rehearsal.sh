@@ -27,13 +27,34 @@ for d in /var/www /var/backups /var/spool /opt; do [ -d "$d" ] || install -d -m 
 [ -x /opt/google/chrome/chrome ] || fail "no Google Chrome under /opt/google (the customer unit binds it read-only)"
 end
 
-step "the shared web server, as on the VPS (CI only, before the CI S0): nginx with root workers and a default server"
+step "a shared web server (CI only, before the CI S0): nginx, most permissive worker identity, and a default server"
 DEBIAN_FRONTEND=noninteractive apt-get update -qq > /dev/null && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq nginx > /dev/null || fail "apt-get install nginx"
-sed -i -E 's/^user [^;]+;/user root;/' /etc/nginx/nginx.conf   # the VPS's site nginx runs its workers as root (S0 evidence)
+sed -i -E 's/^user [^;]+;/user root;/' /etc/nginx/nginx.conf   # CI design: the most permissive worker identity (any root process can reach a root-owned socket)
 rm -f /etc/nginx/sites-enabled/default
 printf 'server {\n  listen 80 default_server;\n  listen 443 ssl default_server;\n  ssl_reject_handshake on;\n  return 444;\n}\n' > /etc/nginx/sites-enabled/00-po07-ci-default.conf
 nginx -t && systemctl restart nginx.service || fail "nginx did not start"
 echo "nginx $(nginx -v 2>&1 | cut -d/ -f2), workers: $(ps -o user= --ppid "$(systemctl show -p MainPID --value nginx.service)" | sort -u | tr '\n' ' ')"
+end
+
+step "a shared PostgreSQL cluster 'main' (CI only, before the CI S0): it must stay untouched by every staging step"
+pg_lsclusters -h | awk '$1 == 16 && $2 == "main"' | grep -q . || pg_createcluster 16 main > /dev/null || fail "pg_createcluster 16 main"
+systemctl start postgresql@16-main.service && systemctl is-active --quiet postgresql@16-main.service || fail "cluster main did not start"
+main_state() { printf '%s %s %s %s\n' "$(head -1 /var/lib/postgresql/16/main/postmaster.pid)" "$(sha256sum /etc/postgresql/16/main/postgresql.conf | cut -c1-16)" \
+  "$(sha256sum /etc/postgresql/16/main/pg_hba.conf | cut -c1-16)" "$(systemctl show -p TasksMax --value postgresql@16-main.service)"; }
+MAIN0="$(main_state)"; echo "main: pid conf hba TasksMax = $MAIN0"
+main_unchanged() { [ "$(main_state)" = "$MAIN0" ] || fail "cluster main changed during '$1': $(main_state) (was $MAIN0)"; echo "ok: cluster main unchanged after $1 (same postmaster PID, config, pg_hba, no task cap)"; }
+end
+
+step "S12's object-storage stand-in (CI only, before the CI S0, like the external provider): MinIO at 127.0.0.2, fictional root key"
+# NOT Backblaze B2: a local substitute with fictional credentials. It listens on 127.0.0.2 only, so the uploader's
+# CI allowance (127.0.0.2/32) never opens 127.0.0.1, where cluster main listens (the uploader must not reach it).
+[ -x "${PO07_S3BIN:-}/minio" ] && [ -x "$PO07_S3BIN/mc" ] || fail "the stand-in binaries were not built (PO07_S3BIN)"
+MR="$(openssl rand -hex 16)"; install -d -m 0700 "$RUNNER_TEMP/minio-data"
+systemd-run --quiet --unit=po07-ci-objstore --setenv=MINIO_ROOT_USER=ci-root --setenv=MINIO_ROOT_PASSWORD="$MR" \
+  "$PO07_S3BIN/minio" server --quiet --address 127.0.0.2:9000 --console-address 127.0.0.2:9001 "$RUNNER_TEMP/minio-data" || fail "the stand-in did not start"
+for i in $(seq 1 30); do [ "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.2:9000/minio/health/live)" = 200 ] && break; sleep 1; done
+[ "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.2:9000/minio/health/live)" = 200 ] || fail "the stand-in is not healthy"
+echo "stand-in: $("$PO07_S3BIN/minio" --version | head -1) at 127.0.0.2:9000 (not B2; fictional credentials)"
 end
 
 step "install the rendered kit at $KIT_DIR (root 0700) and take the CI S0"
@@ -161,6 +182,7 @@ grep -q '^RTESTS-SUMMARY pass=[0-9]* fail=0$' "$STATE_DIR/logs/ci-rtests-after-p
 echo "ok: after reconcile + controlled restart the cap is in effect and the database-backed flows pass ($(tail -1 "$STATE_DIR/logs/ci-rtests-after-pg-restart.txt"))"
 bash "$KIT_DIR/tools/pg-capacity.sh" | tail -2
 sed -i 's/ RECONCILE$//' "$STATE_DIR/AUTHORIZED"
+main_unchanged "D2 (reconcile + two staging-cluster restarts)"
 end
 
 step "PostgreSQL task cap (proposed TasksMax=64): the measured need, and PostgreSQL's own connection limit binds first"
@@ -201,12 +223,13 @@ printf '{"adminHost":"%s","custHost":"%s","adminSock":"%s","custSock":"%s","appD
   "$ADMIN_HOST" "$CUST_HOST" "$RUN_DIR/admin.sock" "$RUN_DIR/customer.sock" "$APP_SRC" "$STATE_DIR/artifact/MANIFEST.sha256" > "$STATE_DIR/after-s9.json"
 node "$HERE/after-s9.mjs" "$STATE_DIR/after-s9.json" || fail "after-S9 checks failed"
 bash "$KIT_DIR/tools/footprint.sh"
+main_unchanged "S1–S13, the saturation test, the backups and the restore drill"
 end
 
 step "rollback all --execute (S9 → S1), then nothing of the staging may remain"
 bash "$KIT_DIR/rollback.sh" all --execute || fail "rollback failed"
 left=""
-for u in elite-po-admin.service elite-po-customer.service elite-po-admin-proxy.socket elite-po-customer-proxy.socket elite-po-staging-netns.service elite-po-install.service; do
+for u in elite-po-admin.service elite-po-customer.service elite-po-admin-proxy.socket elite-po-customer-proxy.socket elite-po-staging-netns.service elite-po-install.service elite-po-backup.service elite-po-backup.timer elite-po-offsite.service elite-po-offsite.timer; do
   [ "$(systemctl show -p LoadState --value "$u")" = not-found ] || left="$left unit:$u($(systemctl show -p LoadState,ActiveState --value "$u" | tr '\n' '/'))"
 done
 # systemd synthesizes any slice on demand (it always loads): the slice must be inactive and its unit file gone
@@ -221,10 +244,13 @@ for p in "$APP_DIR" "$ETC_DIR" "$RUN_DIR" "$PG_RUN" "/etc/postgresql/16/$CLUSTER
   [ ! -e "$p" ] || left="$left path:$p"
 done
 for u in "$APP_USER" "$PG_USER"; do getent passwd "$u" >/dev/null && left="$left user:$u"; done
+getent group "$UPLOAD_GROUP" >/dev/null && left="$left group:$UPLOAD_GROUP"
+for p in /var/lib/private/elite-po-offsite /var/lib/elite-po-offsite "$APP_DIR/.kit-tools"; do [ ! -e "$p" ] || left="$left path:$p"; done
 [ -z "$left" ] || fail "left after rollback:$left"
 [ ! -e "$VAR_DIR" ] || echo "note: $VAR_DIR kept by rollback S9 because the fictional storage is not empty: $(find "$VAR_DIR" -type f | wc -l) file(s) (the owner decides, plan §J step 7)"
 newtcp="$(comm -13 "$STATE_DIR/baseline-tcp.txt" <(ss -ltnH | awk '{print $4}' | sort -u) | tr '\n' ' ')"
 [ -z "$newtcp" ] || fail "host TCP listener(s) left after rollback: $newtcp"
 echo "rollback removed every staging unit, path, user and listener; the archive stays in $INCOMING_DIR for audit"
+main_unchanged "rollback all"
 end
 echo "REHEARSAL PASS: S1–S9 (S6 = S6-R under the D24 recovery state: $D24_PASS checks; K2 receive), the D31 PDF load, S11 through nginx ($S11_PASS probe checks), K3 ($K3_PASS checks), the PostgreSQL cap (reconcile, controlled restart, saturation), S12 backup + off-host + restore drill, S13 F1–F7, and the full rollback"

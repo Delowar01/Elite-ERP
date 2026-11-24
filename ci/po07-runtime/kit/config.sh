@@ -2,8 +2,10 @@
 # Sourced by lib.sh. Contains NO secret: every password and key is generated on the VPS (S4, S7) and never printed.
 # shellcheck shell=bash disable=SC2034
 
-KIT_VERSION="po07-s1s9-kit-4"   # kit-4 (24 Nov 2026): K1 manifest formats, K2 verified transfer, K3 installed-file reconciliation,
-                                 # K4 pinned source/artifact, K5 baseline chain, K6 IPv4/NAT64 SSH. kit-3: J1, S6-R, D24
+KIT_VERSION="po07-s1s13-kit-5"  # kit-5 (24 Nov 2026): S11 nginx templates and checks, S12 backup/off-host/restore, S13 switches,
+                                 # D2 PostgreSQL TasksMax=64 procedure. kit-4: K1 manifest formats, K2 verified transfer,
+                                 # K3 installed-file reconciliation, K4 pinned source/artifact, K5 baseline chain, K6 IPv4/NAT64 SSH.
+                                 # kit-3: J1, S6-R, D24
 
 # ---- approved release (owner, Prompt 7) -------------------------------------------------------------------------
 APPROVED_SHA="cf64ebc492b56ad91c28ba3aa7640722935e21c5"

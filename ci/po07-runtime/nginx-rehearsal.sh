@@ -4,7 +4,7 @@
 # (listen, server_name, certificate, Basic Auth, the scheme redirect, /.well-known) and the owner pastes the kit-owned
 # part; here tools/render-vhost.sh --ci emulates the scaffolding and includes the SAME kit-owned text.
 # nginx was installed at the start of the rehearsal, before the CI S0 (as on the VPS, its listeners are in the baseline),
-# with root workers — the VPS's recorded worker identity.
+# with the most permissive worker identity (root), so the separation is proven by the vhost rules and the app, not by the socket mode.
 N=/etc/nginx/po07-ci; install -d -m 0750 "$N" /var/www/po07-empty /run/po07-echo
 ECHO=echo.po07.test
 pre_tree() { find /etc/nginx -type f ! -path "$N/*" -print0 | sort -z | xargs -0 sha256sum | sha256sum | cut -c1-16; }

@@ -17,7 +17,7 @@ StateDirectory=elite-po-offsite
 Environment=HOME=/var/lib/elite-po-offsite RCLONE_CACHE_DIR=/var/lib/elite-po-offsite/cache
 ExecStart=/bin/bash /run/po07-offsite/offsite-run.sh
 IPAddressDeny=localhost link-local multicast 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16 100.64.0.0/10 fc00::/7
-IPAddressAllow=127.0.0.53/32 127.0.0.1/32
+IPAddressAllow=127.0.0.53/32 127.0.0.2/32
 MemoryMax=256M
 MemorySwapMax=0
 CPUQuota=20%

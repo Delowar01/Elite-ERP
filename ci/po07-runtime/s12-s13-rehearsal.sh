@@ -13,26 +13,16 @@ sock_get() { node -e 'const [s,h,p]=process.argv.slice(1);require("http").get({s
 
 step "S12 (CI): the object-storage stand-in (MinIO, Object Lock, default retention GOVERNANCE 14 days) and its two keys"
 DEBIAN_FRONTEND=noninteractive apt-get install -y -qq rclone > /dev/null || fail "apt-get install rclone"
-MR="$(openssl rand -hex 16)"; UPW="$(openssl rand -hex 16)"; RPW="$(openssl rand -hex 16)"; B=po07-ci
-started=""
-for img in quay.io/minio/minio:RELEASE.2025-04-22T22-12-26Z minio/minio:RELEASE.2025-04-22T22-12-26Z minio/minio:latest; do
-  if docker run -d --name po07-minio -p 127.0.0.1:9000:9000 -e MINIO_ROOT_USER=ci-root -e MINIO_ROOT_PASSWORD="$MR" "$img" server /data > /dev/null 2>&1; then started="$img"; break; fi
-  docker rm -f po07-minio > /dev/null 2>&1 || true
-done
-[ -n "$started" ] || fail "no MinIO image could be started"
-for i in $(seq 1 30); do [ "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:9000/minio/health/live)" = 200 ] && break; sleep 1; done
-echo "MinIO stand-in: $started ($(docker inspect --format '{{index .RepoDigests 0}}' "$started" 2> /dev/null || echo "digest n/a"))"
+UPW="$(openssl rand -hex 16)"; RPW="$(openssl rand -hex 16)"; B=po07-ci   # MR: the stand-in's fictional root key (rehearsal.sh)
 W="$RUNNER_TEMP/mc"; install -d -m 0700 "$W"
 printf '{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":["s3:PutObject","s3:ListBucket","s3:GetBucketLocation"],"Resource":["arn:aws:s3:::%s","arn:aws:s3:::%s/*"]}]}' "$B" "$B" > "$W/upload.json"
 printf '{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":["s3:GetObject","s3:ListBucket","s3:GetBucketLocation"],"Resource":["arn:aws:s3:::%s","arn:aws:s3:::%s/*"]}]}' "$B" "$B" > "$W/read.json"
-mcimg=""; for img in quay.io/minio/mc:RELEASE.2025-04-16T18-13-26Z minio/mc:RELEASE.2025-04-16T18-13-26Z minio/mc:latest; do docker pull -q "$img" > /dev/null 2>&1 && { mcimg="$img"; break; }; done
-[ -n "$mcimg" ] || fail "no mc image"
-mc() { docker run --rm --network host -e "MC_HOST_ci=http://ci-root:$MR@127.0.0.1:9000" -v "$W:/w:ro" "$mcimg" "$@"; }
+mc() { MC_CONFIG_DIR="$W/.mc" MC_HOST_ci="http://ci-root:$MR@127.0.0.2:9000" "$PO07_S3BIN/mc" --quiet --no-color "$@"; }
 mc mb --with-lock "ci/$B" > /dev/null && mc retention set --default GOVERNANCE 14d "ci/$B" > /dev/null || fail "bucket with Object Lock"
-mc admin user add ci uploader "$UPW" > /dev/null && mc admin policy create ci po07-upload /w/upload.json > /dev/null && mc admin policy attach ci po07-upload --user uploader > /dev/null || fail "the upload key"
-mc admin user add ci reader "$RPW" > /dev/null && mc admin policy create ci po07-read /w/read.json > /dev/null && mc admin policy attach ci po07-read --user reader > /dev/null || fail "the owner's read key"
+mc admin user add ci uploader "$UPW" > /dev/null && mc admin policy create ci po07-upload "$W/upload.json" > /dev/null && mc admin policy attach ci po07-upload --user uploader > /dev/null || fail "the upload key"
+mc admin user add ci reader "$RPW" > /dev/null && mc admin policy create ci po07-read "$W/read.json" > /dev/null && mc admin policy attach ci po07-read --user reader > /dev/null || fail "the owner's read key"
 echo "bucket $B: Object Lock on, default retention $(mc retention info --default "ci/$B" 2> /dev/null | tr -s ' ' | head -1); keys: uploader (put/list only), reader (get/list)"
-rconf() { printf '[%s]\ntype = s3\nprovider = Minio\nendpoint = http://127.0.0.1:9000\naccess_key_id = %s\nsecret_access_key = %s\nregion = us-east-1\n' "$OFFSITE_REMOTE" "$1" "$2"; }
+rconf() { printf '[%s]\ntype = s3\nprovider = Minio\nendpoint = http://127.0.0.2:9000\naccess_key_id = %s\nsecret_access_key = %s\nregion = us-east-1\n' "$OFFSITE_REMOTE" "$1" "$2"; }
 install -d -m 0700 "$(dirname "$OFFSITE_CONF")"; rconf uploader "$UPW" > "$OFFSITE_CONF"; chmod 0600 "$OFFSITE_CONF"
 rconf reader "$RPW" > "$RUNNER_TEMP/reader.conf"
 end
