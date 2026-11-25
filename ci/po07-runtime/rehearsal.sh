@@ -32,7 +32,13 @@ DEBIAN_FRONTEND=noninteractive apt-get update -qq > /dev/null && DEBIAN_FRONTEND
 sed -i -E 's/^user [^;]+;/user root;/' /etc/nginx/nginx.conf   # CI design: the most permissive worker identity (any root process can reach a root-owned socket)
 rm -f /etc/nginx/sites-enabled/default
 printf 'server {\n  listen 80 default_server;\n  listen 443 ssl default_server;\n  ssl_reject_handshake on;\n  return 444;\n}\n' > /etc/nginx/sites-enabled/00-po07-ci-default.conf
+# The worst case of an inherited http-level real-IP trust (every address a trusted proxy, recursive, nginx's default
+# header X-Real-IP), pre-existing like any shared configuration: R10 and s11-verify.sh --realip prove that the staging
+# server blocks never depend on the shared http block (each carries its own set_real_ip_from unix:;).
+printf 'set_real_ip_from 0.0.0.0/0;\nreal_ip_recursive on;\n' > /etc/nginx/conf.d/00-po07-ci-inherited-realip.conf
 nginx -t && systemctl restart nginx.service || fail "nginx did not start"
+loaded="$(nginx -T 2> /dev/null)"   # captured first: grep -q on a pipe under pipefail can fail on SIGPIPE
+grep -q '^set_real_ip_from 0.0.0.0/0;' <<< "$loaded" || fail "the inherited real-IP emulation is not part of the loaded configuration"
 echo "nginx $(nginx -v 2>&1 | cut -d/ -f2), workers: $(ps -o user= --ppid "$(systemctl show -p MainPID --value nginx.service)" | sort -u | tr '\n' ' ')"
 end
 

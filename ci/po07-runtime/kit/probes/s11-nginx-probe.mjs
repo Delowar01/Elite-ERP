@@ -152,12 +152,18 @@ if (C.phase === "B" && creds) {
   const cookie = sc.split(";")[0];
   if (C.psql) {
     const ip = C.expectClientIp ?? C.connect;
-    const c0 = Number(psqlOut(`select count(*) from security_events where ip_address = '${ip}'`));
+    // Per run (25 Nov 2026): only the events THIS spoofed request creates decide R10 (ids above the highest id before
+    // it). Every one must carry the address nginx saw, and at least one must exist; an event at ANY other address
+    // (forged or not) fails. Rows from before the run are reported, never counted as this run's result.
+    const id0 = Number(psqlOut("select coalesce(max(id), 0) from security_events"));
     const spoof = { "x-forwarded-for": ["1.2.3.4", "5.6.7.8"], "x-real-ip": "1.2.3.4", forwarded: "for=1.2.3.4" };
     await postAction("customer", "/login", "loginAction", { email: fakeEmail, password: "wrong-password-on-purpose" }, ORIGIN.customer, spoof);
-    const forged = Number(psqlOut("select count(*) from security_events where ip_address in ('1.2.3.4', '5.6.7.8')"));
-    const real = Number(psqlOut(`select count(*) from security_events where ip_address = '${ip}'`));
-    rec(forged === 0 && real > c0, "R10 client X-Forwarded-For / X-Real-IP / Forwarded are replaced: the application records the address nginx saw", `forged ${forged}, recorded at the real address +${real - c0}`);
+    // an event without an address counts as "elsewhere" (never silently dropped)
+    const fresh = psqlOut(`select coalesce(nullif(ip_address, ''), '(none)') from security_events where id > ${id0} order by id`).split("\n").filter((l) => l !== "");
+    const atReal = fresh.filter((a) => a === ip).length, elsewhere = fresh.length - atReal;
+    const older = Number(psqlOut(`select count(*) from security_events where ip_address in ('1.2.3.4', '5.6.7.8') and id <= ${id0}`));
+    rec(atReal > 0 && elsewhere === 0, "R10 client X-Forwarded-For / X-Real-IP / Forwarded are replaced: the application records the address nginx saw",
+      `this run: ${fresh.length} new event(s), ${atReal} at the real address, ${elsewhere} elsewhere${older ? `; ${older} forged row(s) from before this run (not this run's result)` : ""}`);
   } else rec(false, "R10 needs the read-only database check (psql)");
   for (const p of ["/register/accept", "/join/accept"]) { const r = await req({ who: "customer", path: p, auth: true }); rec(r.status === 200, `R11 customer ${p} (the invitation landing pages) → 200 behind Basic Auth`, `${r.status}`); }
   if (C.psql && cookie) {

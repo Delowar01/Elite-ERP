@@ -91,6 +91,20 @@ if grep -qE '^(NOT )?RECORDED' "$STATE_DIR/logs/ci-s11-phaseB-unauth.txt"; then 
 echo "ok: the passing authenticated R1–R12 probe recorded S11.phaseB-ok itself; the unauthenticated run never touches it"
 end
 
+step "R10 at the nginx layer (CI): the inherited real-IP trust never reaches the staging server blocks; a negative control without the override is detected"
+realip() { S11_CONNECT=127.0.0.1 bash "$KIT_DIR/tools/s11-verify.sh" --realip > "$STATE_DIR/logs/ci-s11-realip-$1.txt" 2>&1; }
+realip kit || true; grep -E '^(OK|FAIL)' "$STATE_DIR/logs/ci-s11-realip-kit.txt"
+grep -q 'S11-VERIFY fail=0' "$STATE_DIR/logs/ci-s11-realip-kit.txt" || fail "the real-IP check with the kit's own server blocks"
+cp /etc/nginx/sites-enabled/po07-customer.conf "$RUNNER_TEMP/po07-customer.conf.keep"
+sed -i '/set_real_ip_from unix:;/d' /etc/nginx/sites-enabled/po07-customer.conf; reload_ok
+realip negative || true
+grep -qF "FAIL  $CUST_HOST: nginx took the client address from a client header (logged 192.0.2.71, connected as 127.0.0.1)" "$STATE_DIR/logs/ci-s11-realip-negative.txt" ||
+  { cat "$STATE_DIR/logs/ci-s11-realip-negative.txt"; fail "negative control: without the server block's override the forged X-Real-IP must be detected"; }
+cp "$RUNNER_TEMP/po07-customer.conf.keep" /etc/nginx/sites-enabled/po07-customer.conf; reload_ok
+realip restored || true; grep -q 'S11-VERIFY fail=0' "$STATE_DIR/logs/ci-s11-realip-restored.txt" || fail "the real-IP check after restoring the kit's server block"
+echo "ok: with the inherited trust of every address, both staging server blocks log the real peer; without the override the forged X-Real-IP is detected; restored"
+end
+
 step "S11 (CI): certificate renewal without interruption; sockets, permissions and listeners"
 s0="$(openssl s_client -connect 127.0.0.1:443 -servername "$ADMIN_HOST" < /dev/null 2> /dev/null | openssl x509 -noout -serial)"
 ( for i in $(seq 1 40); do curl -s -o /dev/null -w '%{http_code}\n' --cacert "$N/ca.crt" --resolve "$ADMIN_HOST:443:127.0.0.1" "https://$ADMIN_HOST/robots.txt"; sleep 0.05; done ) > "$RUNNER_TEMP/during-renewal.txt" &
